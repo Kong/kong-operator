@@ -5,12 +5,11 @@ metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0
-  name: eventgatewayvirtualclusterproducepolicies.konnect.konghq.com
+  name: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
 spec:
-  group: konnect.konghq.com
+  group: configuration.konghq.com
   names:
     categories:
-    - konnect
     - kong
     kind: EventGatewayVirtualClusterProducePolicy
     listKind: EventGatewayVirtualClusterProducePolicyList

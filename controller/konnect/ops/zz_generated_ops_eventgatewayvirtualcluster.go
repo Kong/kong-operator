@@ -9,13 +9,13 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 func createEventGatewayVirtualCluster(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayVirtualClustersSDK,
-	obj *konnectv1alpha1.EventGatewayVirtualCluster,
+	obj *configurationv1alpha1.EventGatewayVirtualCluster,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -42,7 +42,7 @@ func createEventGatewayVirtualCluster(
 func updateEventGatewayVirtualCluster(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayVirtualClustersSDK,
-	obj *konnectv1alpha1.EventGatewayVirtualCluster,
+	obj *configurationv1alpha1.EventGatewayVirtualCluster,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -71,7 +71,7 @@ func updateEventGatewayVirtualCluster(
 func deleteEventGatewayVirtualCluster(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayVirtualClustersSDK,
-	obj *konnectv1alpha1.EventGatewayVirtualCluster,
+	obj *configurationv1alpha1.EventGatewayVirtualCluster,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -89,7 +89,7 @@ func deleteEventGatewayVirtualCluster(
 func getEventGatewayVirtualClusterForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayVirtualClustersSDK,
-	obj *konnectv1alpha1.EventGatewayVirtualCluster,
+	obj *configurationv1alpha1.EventGatewayVirtualCluster,
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {

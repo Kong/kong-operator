@@ -9,43 +9,43 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// GetKonnectStatus returns the Konnect status contained in the EventGatewayVirtualClusterProducePolicy status.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
+// GetKonnectStatus returns the Konnect status contained in the EventGatewayVirtualClusterConsumePolicy status.
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
 	return &obj.Status.KonnectEntityStatus
 }
 
-// SetKonnectID sets the Konnect ID in the EventGatewayVirtualClusterProducePolicy status.
-func (obj *EventGatewayVirtualClusterProducePolicy) SetKonnectID(id string) {
+// SetKonnectID sets the Konnect ID in the EventGatewayVirtualClusterConsumePolicy status.
+func (obj *EventGatewayVirtualClusterConsumePolicy) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
 
-// GetKonnectID returns the Konnect ID in the EventGatewayVirtualClusterProducePolicy status.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetKonnectID() string {
+// GetKonnectID returns the Konnect ID in the EventGatewayVirtualClusterConsumePolicy status.
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetKonnectID() string {
 	return obj.Status.ID
 }
 
-// GetTypeName returns the EventGatewayVirtualClusterProducePolicy Kind name.
-func (obj EventGatewayVirtualClusterProducePolicy) GetTypeName() string {
-	return "EventGatewayVirtualClusterProducePolicy"
+// GetTypeName returns the EventGatewayVirtualClusterConsumePolicy Kind name.
+func (obj EventGatewayVirtualClusterConsumePolicy) GetTypeName() string {
+	return "EventGatewayVirtualClusterConsumePolicy"
 }
 
-// HasParent returns true if the EventGatewayVirtualClusterProducePolicy has a parent entity.
-func (obj EventGatewayVirtualClusterProducePolicy) HasParent() bool {
+// HasParent returns true if the EventGatewayVirtualClusterConsumePolicy has a parent entity.
+func (obj EventGatewayVirtualClusterConsumePolicy) HasParent() bool {
 	return true
 }
 
 // GetConditions returns the Status Conditions.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetConditions() []metav1.Condition {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
 }
 
 // SetConditions sets the Status Conditions.
-func (obj *EventGatewayVirtualClusterProducePolicy) SetConditions(conditions []metav1.Condition) {
+func (obj *EventGatewayVirtualClusterConsumePolicy) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
 
 // GetGatewayID returns the Konnect ID of the parent Gateway.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetGatewayID() string {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetGatewayID() string {
 	if obj.Status.GatewayID == nil {
 		return ""
 	}
@@ -53,7 +53,7 @@ func (obj *EventGatewayVirtualClusterProducePolicy) GetGatewayID() string {
 }
 
 // SetGatewayID sets the Konnect ID of the parent Gateway.
-func (obj *EventGatewayVirtualClusterProducePolicy) SetGatewayID(id string) {
+func (obj *EventGatewayVirtualClusterConsumePolicy) SetGatewayID(id string) {
 	if obj.Status.GatewayID == nil {
 		obj.Status.GatewayID = &KonnectEntityRef{}
 	}
@@ -61,7 +61,7 @@ func (obj *EventGatewayVirtualClusterProducePolicy) SetGatewayID(id string) {
 }
 
 // GetVirtualClusterID returns the Konnect ID of the parent VirtualCluster.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetVirtualClusterID() string {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetVirtualClusterID() string {
 	if obj.Status.VirtualClusterID == nil {
 		return ""
 	}
@@ -69,7 +69,7 @@ func (obj *EventGatewayVirtualClusterProducePolicy) GetVirtualClusterID() string
 }
 
 // SetVirtualClusterID sets the Konnect ID of the parent VirtualCluster.
-func (obj *EventGatewayVirtualClusterProducePolicy) SetVirtualClusterID(id string) {
+func (obj *EventGatewayVirtualClusterConsumePolicy) SetVirtualClusterID(id string) {
 	if obj.Status.VirtualClusterID == nil {
 		obj.Status.VirtualClusterID = &KonnectEntityRef{}
 	}
@@ -77,52 +77,56 @@ func (obj *EventGatewayVirtualClusterProducePolicy) SetVirtualClusterID(id strin
 }
 
 // GetEventGatewayVirtualClusterRef returns the reference to the parent EventGatewayVirtualCluster.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetEventGatewayVirtualClusterRef() commonv1alpha1.ObjectRef {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetEventGatewayVirtualClusterRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.EventGatewayVirtualClusterRef
 }
 
 // GetParentRef returns the reference to the parent entity.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetParentRef() commonv1alpha1.ObjectRef {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayVirtualClusterRef()
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
-func (obj *EventGatewayVirtualClusterProducePolicy) SetParentID(id string) {
+func (obj *EventGatewayVirtualClusterConsumePolicy) SetParentID(id string) {
 	obj.SetVirtualClusterID(id)
 }
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("EventGatewayVirtualCluster")
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetParentGVK() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   "configuration.konghq.com",
+		Version: GroupVersion.Version,
+		Kind:    "EventGatewayVirtualCluster",
+	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type
 // indicating whether the parent reference is valid.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetStatusConditionTypeParentRefValid() string {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetStatusConditionTypeParentRefValid() string {
 	return EventGatewayVirtualClusterRefValidConditionType
 }
 
 // GetStatusConditionReasonParentRefValid returns the status condition reason
 // indicating that the parent reference is valid.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetStatusConditionReasonParentRefValid() string {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetStatusConditionReasonParentRefValid() string {
 	return EventGatewayVirtualClusterRefReasonValid
 }
 
 // GetStatusConditionReasonParentRefInvalid returns the status condition reason
 // indicating that the parent reference is invalid.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetStatusConditionReasonParentRefInvalid() string {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetStatusConditionReasonParentRefInvalid() string {
 	return EventGatewayVirtualClusterRefReasonInvalid
 }
 
 // GetStatusConditionReasonParentRefNotProgrammed returns the status condition
 // reason indicating that the referenced parent exists but is not yet
 // programmed in Konnect.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetStatusConditionReasonParentRefNotProgrammed() string {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return EventGatewayVirtualClusterRefReasonNotProgrammed
 }
 
 // GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
-func (obj *EventGatewayVirtualClusterProducePolicy) GetAncestorIDs() map[string]string {
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetAncestorIDs() map[string]string {
 	m := make(map[string]string, 1)
 	if obj.Status.GatewayID != nil {
 		m["KonnectEventGateway"] = obj.Status.GatewayID.ID
@@ -133,7 +137,7 @@ func (obj *EventGatewayVirtualClusterProducePolicy) GetAncestorIDs() map[string]
 }
 
 // SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
-func (obj *EventGatewayVirtualClusterProducePolicy) SetAncestorID(kind, id string) {
+func (obj *EventGatewayVirtualClusterConsumePolicy) SetAncestorID(kind, id string) {
 	switch kind {
 	case "KonnectEventGateway":
 		obj.SetGatewayID(id)

@@ -31,12 +31,12 @@ func TestWatchOptions(t *testing.T) {
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongCertificate{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongKey{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongKeySet{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayBackendCluster{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayListener{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayListenerPolicy{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayVirtualCluster{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.EventGatewayVirtualClusterProducePolicy{})
+	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayBackendCluster{})
+	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayListener{})
+	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayListenerPolicy{})
+	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayVirtualCluster{})
+	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{})
+	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventDataPlaneCertificate{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventGateway{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.Portal{})
@@ -100,9 +100,9 @@ func TestObjectListToReconcileRequests(t *testing.T) {
 }
 
 func TestEnqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(t *testing.T) {
-	backendCluster := &konnectv1alpha1.EventGatewayBackendCluster{
+	backendCluster := &configurationv1alpha1.EventGatewayBackendCluster{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayBackendCluster",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -111,12 +111,12 @@ func TestEnqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(t *testi
 		},
 	}
 
-	matching := &konnectv1alpha1.EventGatewayVirtualCluster{
+	matching := &configurationv1alpha1.EventGatewayVirtualCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "matching-virtual-cluster",
 			Namespace: "default",
 		},
-		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -125,12 +125,12 @@ func TestEnqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(t *testi
 			},
 		},
 	}
-	nonMatching := &konnectv1alpha1.EventGatewayVirtualCluster{
+	nonMatching := &configurationv1alpha1.EventGatewayVirtualCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "other-virtual-cluster",
 			Namespace: "default",
 		},
-		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -321,18 +321,18 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 		{
 			name: "no matching backend clusters",
 			objects: []client.Object{
-				&konnectv1alpha1.EventGatewayBackendCluster{
+				&configurationv1alpha1.EventGatewayBackendCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "backend-cluster-1",
 						Namespace: "default",
 					},
 				},
-				&konnectv1alpha1.EventGatewayBackendCluster{
+				&configurationv1alpha1.EventGatewayBackendCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "backend-cluster-2",
 						Namespace: "default",
 					},
-					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -346,12 +346,12 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 		{
 			name: "matching backend cluster",
 			objects: []client.Object{
-				&konnectv1alpha1.EventGatewayBackendCluster{
+				&configurationv1alpha1.EventGatewayBackendCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "backend-cluster-1",
 						Namespace: "default",
 					},
-					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -360,12 +360,12 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 						},
 					},
 				},
-				&konnectv1alpha1.EventGatewayBackendCluster{
+				&configurationv1alpha1.EventGatewayBackendCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "backend-cluster-2",
 						Namespace: "default",
 					},
-					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -387,12 +387,12 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 		{
 			name: "cross-namespace matching backend cluster",
 			objects: []client.Object{
-				&konnectv1alpha1.EventGatewayBackendCluster{
+				&configurationv1alpha1.EventGatewayBackendCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "backend-cluster-1",
 						Namespace: "other-ns",
 					},
-					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -402,12 +402,12 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 						},
 					},
 				},
-				&konnectv1alpha1.EventGatewayBackendCluster{
+				&configurationv1alpha1.EventGatewayBackendCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "backend-cluster-2",
 						Namespace: "other-ns",
 					},
-					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{
@@ -878,13 +878,13 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 			WithScheme(scheme.Get()).
 			WithObjects(
 				grant,
-				&konnectv1alpha1.EventGatewayListenerPolicy{
+				&configurationv1alpha1.EventGatewayListenerPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "policy-1",
 						Namespace: "source-ns",
 					},
 				},
-				&konnectv1alpha1.EventGatewayListenerPolicy{
+				&configurationv1alpha1.EventGatewayListenerPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "policy-2",
 						Namespace: "other-ns",
@@ -894,7 +894,7 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 		cl := builder.Build()
 		require.NotNil(t, cl)
 
-		requests := enqueueObjectsForKongReferenceGrant[konnectv1alpha1.EventGatewayListenerPolicyList](cl)(t.Context(), grant)
+		requests := enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayListenerPolicyList](cl)(t.Context(), grant)
 		require.Equal(t, []ctrl.Request{
 			{
 				NamespacedName: types.NamespacedName{

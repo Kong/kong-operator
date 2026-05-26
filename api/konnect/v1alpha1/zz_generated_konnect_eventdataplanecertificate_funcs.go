@@ -82,7 +82,11 @@ func (obj *KonnectEventDataPlaneCertificate) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *KonnectEventDataPlaneCertificate) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("KonnectEventGateway")
+	return schema.GroupVersionKind{
+		Group:   "konnect.konghq.com",
+		Version: GroupVersion.Version,
+		Kind:    "KonnectEventGateway",
+	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

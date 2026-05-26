@@ -14,13 +14,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
-func testGeneratedEventGatewayListenerPolicyForSDKOps() *konnectv1alpha1.EventGatewayListenerPolicy {
-	return &konnectv1alpha1.EventGatewayListenerPolicy{
+func testGeneratedEventGatewayListenerPolicyForSDKOps() *configurationv1alpha1.EventGatewayListenerPolicy {
+	return &configurationv1alpha1.EventGatewayListenerPolicy{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayListenerPolicy",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,11 +29,11 @@ func testGeneratedEventGatewayListenerPolicyForSDKOps() *konnectv1alpha1.EventGa
 			UID:        "eventgatewaylistenerpolicy-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.EventGatewayListenerPolicySpec{
-			APISpec: konnectv1alpha1.EventGatewayListenerPolicyAPISpec{
-				EventGatewayListenerPolicyConfig: &konnectv1alpha1.EventGatewayListenerPolicyConfig{
-					Type: konnectv1alpha1.EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen,
-					EventGatewayTLSListen: &konnectv1alpha1.EventGatewayTLSListenerPolicy{Config: konnectv1alpha1.EventGatewayTLSListenerPolicyConfig{Certificates: []konnectv1alpha1.TLSCertificate{{Certificate: konnectv1alpha1.SensitiveDataSource{Type: konnectv1alpha1.SensitiveDataSourceTypeInline, Value: new("certificate")}, Key: konnectv1alpha1.SensitiveDataSource{Type: konnectv1alpha1.SensitiveDataSourceTypeInline, Value: new("key")}}}}},
+		Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
+			APISpec: configurationv1alpha1.EventGatewayListenerPolicyAPISpec{
+				EventGatewayListenerPolicyConfig: &configurationv1alpha1.EventGatewayListenerPolicyConfig{
+					Type: configurationv1alpha1.EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen,
+					EventGatewayTLSListen: &configurationv1alpha1.EventGatewayTLSListenerPolicy{Config: configurationv1alpha1.EventGatewayTLSListenerPolicyConfig{Certificates: []configurationv1alpha1.TLSCertificate{{Certificate: configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("certificate")}, Key: configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("key")}}}}},
 				},
 			},
 		},

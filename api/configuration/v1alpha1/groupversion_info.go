@@ -92,6 +92,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&KongVaultList{},
 	)
 
+	if err := addKnownTypesGenerated(scheme); err != nil {
+		return err
+	}
+
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil
 }

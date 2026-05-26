@@ -3,6 +3,7 @@
 package manager
 
 import (
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
@@ -10,12 +11,12 @@ func generatedControllersForKonnectEntities(
 	controllerFactory konnectControllerFactory,
 ) []ControllerDef {
 	return []ControllerDef{
-		newKonnectEntityController[konnectv1alpha1.EventGatewayBackendCluster](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.EventGatewayListener](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.EventGatewayListenerPolicy](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.EventGatewayVirtualCluster](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.EventGatewayVirtualClusterProducePolicy](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayBackendCluster](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayListener](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayListenerPolicy](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualCluster](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectEventGateway](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory),

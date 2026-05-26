@@ -77,7 +77,11 @@ func (obj *PortalTeam) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *PortalTeam) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("Portal")
+	return schema.GroupVersionKind{
+		Group:   "konnect.konghq.com",
+		Version: GroupVersion.Version,
+		Kind:    "Portal",
+	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

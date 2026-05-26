@@ -5,12 +5,11 @@ metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0
-  name: eventgatewaybackendclusters.konnect.konghq.com
+  name: eventgatewaybackendclusters.configuration.konghq.com
 spec:
-  group: konnect.konghq.com
+  group: configuration.konghq.com
   names:
     categories:
-    - konnect
     - kong
     kind: EventGatewayBackendCluster
     listKind: EventGatewayBackendClusterList

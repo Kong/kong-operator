@@ -96,7 +96,7 @@ spec:
       namespace: konnect
 ---
 kind: EventGatewayBackendCluster
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: shared-backend-cluster
   namespace: event-gateways
@@ -143,7 +143,7 @@ spec:
         -----END CERTIFICATE-----
 ---
 kind: EventGatewayVirtualCluster
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: shared-virtual-cluster
   namespace: event-virtual-clusters
@@ -177,7 +177,7 @@ spec:
               glob: topic-*
 ---
 kind: EventGatewayVirtualClusterConsumePolicy
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: shared-consume-policy
   namespace: event-policies

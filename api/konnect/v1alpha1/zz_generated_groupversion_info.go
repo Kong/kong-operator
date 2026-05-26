@@ -9,18 +9,6 @@ import (
 
 func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
-		&EventGatewayBackendCluster{},
-		&EventGatewayBackendClusterList{},
-		&EventGatewayListener{},
-		&EventGatewayListenerList{},
-		&EventGatewayListenerPolicy{},
-		&EventGatewayListenerPolicyList{},
-		&EventGatewayVirtualCluster{},
-		&EventGatewayVirtualClusterList{},
-		&EventGatewayVirtualClusterConsumePolicy{},
-		&EventGatewayVirtualClusterConsumePolicyList{},
-		&EventGatewayVirtualClusterProducePolicy{},
-		&EventGatewayVirtualClusterProducePolicyList{},
 		&KonnectEventDataPlaneCertificate{},
 		&KonnectEventDataPlaneCertificateList{},
 		&KonnectEventGateway{},

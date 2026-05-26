@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
-func testGeneratedEventGatewayListenerForSDKOps() *konnectv1alpha1.EventGatewayListener {
-	return &konnectv1alpha1.EventGatewayListener{
+func testGeneratedEventGatewayListenerForSDKOps() *configurationv1alpha1.EventGatewayListener {
+	return &configurationv1alpha1.EventGatewayListener{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayListener",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -27,11 +27,11 @@ func testGeneratedEventGatewayListenerForSDKOps() *konnectv1alpha1.EventGatewayL
 			UID:        "eventgatewaylistener-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.EventGatewayListenerSpec{
-			APISpec: konnectv1alpha1.EventGatewayListenerAPISpec{
+		Spec: configurationv1alpha1.EventGatewayListenerSpec{
+			APISpec: configurationv1alpha1.EventGatewayListenerAPISpec{
 				Addresses: []string{"test-value"},
 				Description: "test-value",
-				Labels: konnectv1alpha1.Labels{"test-key": "test-value"},
+				Labels: configurationv1alpha1.Labels{"test-key": "test-value"},
 				Name: "test-value",
 			},
 		},

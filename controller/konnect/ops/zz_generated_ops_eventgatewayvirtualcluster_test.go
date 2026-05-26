@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
-func testGeneratedEventGatewayVirtualClusterForSDKOps() *konnectv1alpha1.EventGatewayVirtualCluster {
-	return &konnectv1alpha1.EventGatewayVirtualCluster{
+func testGeneratedEventGatewayVirtualClusterForSDKOps() *configurationv1alpha1.EventGatewayVirtualCluster {
+	return &configurationv1alpha1.EventGatewayVirtualCluster{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayVirtualCluster",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -27,12 +27,12 @@ func testGeneratedEventGatewayVirtualClusterForSDKOps() *konnectv1alpha1.EventGa
 			UID:        "eventgatewayvirtualcluster-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
-			APISpec: konnectv1alpha1.EventGatewayVirtualClusterAPISpec{
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterAPISpec{
 				AclMode: "test-value",
 				Description: "test-value",
 				DNSLabel: "test-value",
-				Labels: konnectv1alpha1.Labels{"test-key": "test-value"},
+				Labels: configurationv1alpha1.Labels{"test-key": "test-value"},
 				Name: "test-value",
 			},
 		},

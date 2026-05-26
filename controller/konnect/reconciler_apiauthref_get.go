@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 )
@@ -80,7 +81,7 @@ func getAPIAuthRefViaEventGatewayListener(
 	obj eventGatewayListenerRefAccessor,
 ) (types.NamespacedName, error) {
 	return getAPIAuthRefViaParent[
-		konnectv1alpha1.EventGatewayListener,
+		configurationv1alpha1.EventGatewayListener,
 		konnectv1alpha1.KonnectEventGateway,
 	](ctx, cl, obj)
 }
@@ -94,7 +95,7 @@ func getAPIAuthRefViaBackendCluster(
 	obj eventGatewayBackendClusterRefAccessor,
 ) (types.NamespacedName, error) {
 	return getAPIAuthRefViaParent[
-		konnectv1alpha1.EventGatewayBackendCluster,
+		configurationv1alpha1.EventGatewayBackendCluster,
 		konnectv1alpha1.KonnectEventGateway,
 	](ctx, cl, obj)
 }
@@ -114,7 +115,7 @@ func getAPIAuthRefViaVirtualCluster(
 			fmt.Errorf("invalid EventGatewayVirtualCluster reference: must be a NamespacedRef with a non-nil NamespacedRef field")
 	}
 
-	virtualCluster, nn, err := getParentForRef[konnectv1alpha1.EventGatewayVirtualCluster](ctx, cl, vcRef, obj.GetNamespace())
+	virtualCluster, nn, err := getParentForRef[configurationv1alpha1.EventGatewayVirtualCluster](ctx, cl, vcRef, obj.GetNamespace())
 	if err != nil {
 		return types.NamespacedName{}, fmt.Errorf("failed to get EventGatewayVirtualCluster %s: %w", nn, err)
 	}

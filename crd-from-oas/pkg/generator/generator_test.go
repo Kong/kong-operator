@@ -163,12 +163,14 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 	})
 
 	metadata := reconcilerEntityMetadata{
-		EntityName:           "KonnectEventDataPlaneCertificate",
-		EntityNameLowerCamel: "konnectEventDataPlaneCertificate",
-		ParentEntityName:     "KonnectEventGateway",
-		ParentRefFieldName:   "GatewayRef",
-		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
-		APIGroupPackageAlias: "konnectv1alpha1",
+		EntityName:                 "KonnectEventDataPlaneCertificate",
+		EntityNameLowerCamel:       "konnectEventDataPlaneCertificate",
+		ParentEntityName:           "KonnectEventGateway",
+		ParentRefFieldName:         "GatewayRef",
+		APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias:       "konnectv1alpha1",
+		ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		ParentAPIGroupPackageAlias: "konnectv1alpha1",
 	}
 
 	t.Run("watches parent entity", func(t *testing.T) {
@@ -178,11 +180,41 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		assert.Contains(t, content, `configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"`)
 		assert.Contains(t, content, `&konnectv1alpha1.KonnectEventGateway{}`)
 		assert.Contains(t, content, `enqueueKonnectEventDataPlaneCertificateForKonnectEventGateway(cl)`)
 		assert.Contains(t, content, `index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef: client.ObjectKeyFromObject(parent).String(),`)
 		assert.Contains(t, content, `&configurationv1alpha1.KongReferenceGrant{}`)
 		assert.Contains(t, content, `enqueueObjectsForKongReferenceGrant[konnectv1alpha1.KonnectEventDataPlaneCertificateList](cl)`)
+	})
+
+	t.Run("watches cross-group parent entity", func(t *testing.T) {
+		crossGroupMetadata := reconcilerEntityMetadata{
+			EntityName:                 "EventGatewayListener",
+			EntityNameLowerCamel:       "eventGatewayListener",
+			ParentEntityName:           "KonnectEventGateway",
+			ParentRefFieldName:         "GatewayRef",
+			APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+			APIGroupPackageAlias:       "configurationv1alpha1",
+			ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			ParentAPIGroupPackageAlias: "konnectv1alpha1",
+		}
+
+		content, err := g.generateWatch(crossGroupMetadata, &config.ReconcilerConfig{
+			IsRoot: new(false),
+			ParentEntityGVK: &config.EntityGVKConfig{
+				Kind:  "KonnectEventGateway",
+				Group: "konnect.konghq.com",
+			},
+		})
+		require.NoError(t, err)
+
+		assert.Contains(t, content, `configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"`)
+		assert.Contains(t, content, `konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
+		assert.Contains(t, content, `return b.For(&configurationv1alpha1.EventGatewayListener{})`)
+		assert.Contains(t, content, `&konnectv1alpha1.KonnectEventGateway{}`)
+		assert.Contains(t, content, `parent, ok := obj.(*konnectv1alpha1.KonnectEventGateway)`)
+		assert.Contains(t, content, `var l configurationv1alpha1.EventGatewayListenerList`)
 	})
 
 	t.Run("indexes by dependency namespaced ref", func(t *testing.T) {
@@ -951,6 +983,35 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj *EventGatewayListenerPolicy) SetAncestorID(kind, id string) {`)
 		assert.Contains(t, content, `case "KonnectEventGateway":`)
 		assert.Contains(t, content, `obj.SetGatewayID(id)`)
+	})
+
+	t.Run("cross-group parent gvk uses configured group", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "configuration.konghq.com",
+			APIVersion: "v1alpha1",
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"EventGatewayListener": {
+					ParentEntityGVK: &config.EntityGVKConfig{
+						Kind:  "KonnectEventGateway",
+						Group: "konnect.konghq.com",
+					},
+				},
+			},
+		})
+
+		schemaWithDependencies := &parser.Schema{
+			Name: "CreateEventGatewayListener",
+			Dependencies: []*parser.Dependency{
+				{EntityName: "Gateway", AccessorEntityName: "EventGateway", FieldName: "GatewayRef", JSONName: "gateway_ref"},
+			},
+		}
+
+		content, err := g.generateCRDFuncs("CreateEventGatewayListener", schemaWithDependencies)
+		require.NoError(t, err)
+		assert.Contains(t, content, `return schema.GroupVersionKind{`)
+		assert.Contains(t, content, `Group:   "konnect.konghq.com",`)
+		assert.Contains(t, content, `Version: GroupVersion.Version,`)
+		assert.Contains(t, content, `Kind:    "KonnectEventGateway",`)
 	})
 
 	t.Run("root ref accessor uses last (immediate) dependency", func(t *testing.T) {
@@ -1749,6 +1810,8 @@ func TestGenerateSchemaTypes_UsesActualDiscriminatorFieldName(t *testing.T) {
 		"EventGatewayModifyHeaderSetAction":    true,
 	}, parsed, nil)
 
+	assert.Contains(t, content, `"encoding/json"`)
+	assert.Contains(t, content, `"fmt"`)
 	assert.Contains(t, content, "Op EventGatewayModifyHeaderActionType `json:\"op,omitempty\"`")
 	assert.Contains(t, content, "Op string `json:\"op\"`")
 	assert.NotContains(t, content, "Type EventGatewayModifyHeaderActionType `json:\"type,omitempty\"`")
@@ -5338,6 +5401,8 @@ func TestGenerateSchemaTypes_NonScalarOneOfFallsBack(t *testing.T) {
 
 	content := g.generateSchemaTypes(map[string]bool{"AuthMethod": true}, parsed, nil)
 
+	assert.NotContains(t, content, `"encoding/json"`)
+	assert.NotContains(t, content, `"fmt"`)
 	assert.NotContains(t, content, `intstr.IntOrString`)
 	assert.NotContains(t, content, `XIntOrString`)
 }

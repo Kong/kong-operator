@@ -310,12 +310,12 @@ type WatchableEntityType interface {
 		konnectv1alpha1.PortalTeam |
 		konnectv1alpha1.PortalIdentityProviderRequest |
 		konnectv1alpha1.KonnectEventGateway |
-		konnectv1alpha1.EventGatewayBackendCluster |
-		konnectv1alpha1.EventGatewayListener |
-		konnectv1alpha1.EventGatewayListenerPolicy |
-		konnectv1alpha1.EventGatewayVirtualCluster |
-		konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy |
-		konnectv1alpha1.EventGatewayVirtualClusterProducePolicy |
+		configurationv1alpha1.EventGatewayBackendCluster |
+		configurationv1alpha1.EventGatewayListener |
+		configurationv1alpha1.EventGatewayListenerPolicy |
+		configurationv1alpha1.EventGatewayVirtualCluster |
+		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
 		konnectv1alpha1.KonnectEventDataPlaneCertificate |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |

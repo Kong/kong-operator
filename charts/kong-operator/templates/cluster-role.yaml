@@ -124,18 +124,12 @@ rules:
   - apiGroups:
       - configuration.konghq.com
     resources:
-      - ingressclassparameterses
-      - kongclusterplugins
-      - kongcustomentities
-      - konglicenses
-      - kongupstreampolicies
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - configuration.konghq.com
-    resources:
+      - eventgatewaybackendclusters
+      - eventgatewaylistenerpolicies
+      - eventgatewaylisteners
+      - eventgatewayvirtualclusterconsumepolicies
+      - eventgatewayvirtualclusterproducepolicies
+      - eventgatewayvirtualclusters
       - kongcacertificates
       - kongconsumergroups
       - kongconsumers
@@ -152,6 +146,18 @@ rules:
   - apiGroups:
       - configuration.konghq.com
     resources:
+      - eventgatewaybackendclusters/finalizers
+      - eventgatewaybackendclusters/status
+      - eventgatewaylistenerpolicies/finalizers
+      - eventgatewaylistenerpolicies/status
+      - eventgatewaylisteners/finalizers
+      - eventgatewaylisteners/status
+      - eventgatewayvirtualclusterconsumepolicies/finalizers
+      - eventgatewayvirtualclusterconsumepolicies/status
+      - eventgatewayvirtualclusterproducepolicies/finalizers
+      - eventgatewayvirtualclusterproducepolicies/status
+      - eventgatewayvirtualclusters/finalizers
+      - eventgatewayvirtualclusters/status
       - kongcacertificates/finalizers
       - kongcacertificates/status
       - kongcertificates/finalizers
@@ -181,6 +187,18 @@ rules:
     verbs:
       - patch
       - update
+  - apiGroups:
+      - configuration.konghq.com
+    resources:
+      - ingressclassparameterses
+      - kongclusterplugins
+      - kongcustomentities
+      - konglicenses
+      - kongupstreampolicies
+    verbs:
+      - get
+      - list
+      - watch
   - apiGroups:
       - configuration.konghq.com
     resources:
@@ -421,12 +439,6 @@ rules:
   - apiGroups:
       - konnect.konghq.com
     resources:
-      - eventgatewaybackendclusters
-      - eventgatewaylistenerpolicies
-      - eventgatewaylisteners
-      - eventgatewayvirtualclusterconsumepolicies
-      - eventgatewayvirtualclusterproducepolicies
-      - eventgatewayvirtualclusters
       - konnectapiauthconfigurations
       - konnectcloudgatewaydataplanegroupconfigurations
       - konnectcloudgatewaynetworks
@@ -449,18 +461,6 @@ rules:
   - apiGroups:
       - konnect.konghq.com
     resources:
-      - eventgatewaybackendclusters/finalizers
-      - eventgatewaybackendclusters/status
-      - eventgatewaylistenerpolicies/finalizers
-      - eventgatewaylistenerpolicies/status
-      - eventgatewaylisteners/finalizers
-      - eventgatewaylisteners/status
-      - eventgatewayvirtualclusterconsumepolicies/finalizers
-      - eventgatewayvirtualclusterconsumepolicies/status
-      - eventgatewayvirtualclusterproducepolicies/finalizers
-      - eventgatewayvirtualclusterproducepolicies/status
-      - eventgatewayvirtualclusters/finalizers
-      - eventgatewayvirtualclusters/status
       - konnectapiauthconfigurations/finalizers
       - konnectapiauthconfigurations/status
       - konnectcloudgatewaydataplanegroupconfigurations/finalizers

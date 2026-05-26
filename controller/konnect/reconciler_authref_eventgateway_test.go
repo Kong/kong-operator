@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -65,12 +66,12 @@ func TestGetAPIAuthRef(t *testing.T) {
 				newTestEventGateway(namespace, eventGatewayName, apiAuthName),
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
-				return getAPIAuthRef(ctx, cl, &konnectv1alpha1.EventGatewayBackendCluster{
+				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayBackendCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      backendClusterName,
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: testNamespacedObjectRef(eventGatewayName),
 					},
 				})
@@ -85,12 +86,12 @@ func TestGetAPIAuthRef(t *testing.T) {
 				newTestEventGatewayBackendCluster(namespace, backendClusterName, eventGatewayName),
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
-				return getAPIAuthRef(ctx, cl, &konnectv1alpha1.EventGatewayVirtualCluster{
+				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayVirtualCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      virtualClusterName,
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 						EventGatewayBackendClusterRef: testNamespacedObjectRef(backendClusterName),
 					},
 				})
@@ -106,12 +107,12 @@ func TestGetAPIAuthRef(t *testing.T) {
 				newTestEventGatewayVirtualCluster(namespace, virtualClusterName, backendClusterName),
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
-				return getAPIAuthRef(ctx, cl, &konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy{
+				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "consume-policy",
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
+					Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
 						EventGatewayVirtualClusterRef: testNamespacedObjectRef(virtualClusterName),
 					},
 				})
@@ -126,12 +127,12 @@ func TestGetAPIAuthRef(t *testing.T) {
 				newTestEventGatewayListener(namespace, listenerName, eventGatewayName),
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
-				return getAPIAuthRef(ctx, cl, &konnectv1alpha1.EventGatewayListenerPolicy{
+				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayListenerPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "listener-policy",
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.EventGatewayListenerPolicySpec{
+					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: testNamespacedObjectRef(listenerName),
 					},
 				})
@@ -141,12 +142,12 @@ func TestGetAPIAuthRef(t *testing.T) {
 		{
 			name: "listener child rejects unsupported ref type",
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
-				return getAPIAuthRef(ctx, cl, &konnectv1alpha1.EventGatewayListenerPolicy{
+				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayListenerPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "listener-policy",
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.EventGatewayListenerPolicySpec{
+					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: commonv1alpha1.ObjectRef{
 							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
 							KonnectID: new("listener-konnect-id"),
@@ -220,14 +221,14 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRefViaParent[
-					konnectv1alpha1.EventGatewayListener,
+					configurationv1alpha1.EventGatewayListener,
 					konnectv1alpha1.KonnectEventGateway,
-				](ctx, cl, &konnectv1alpha1.EventGatewayListenerPolicy{
+				](ctx, cl, &configurationv1alpha1.EventGatewayListenerPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "listener-policy",
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.EventGatewayListenerPolicySpec{
+					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: testNamespacedObjectRef(listenerName),
 					},
 				})
@@ -243,14 +244,14 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRefViaParent[
-					konnectv1alpha1.EventGatewayBackendCluster,
+					configurationv1alpha1.EventGatewayBackendCluster,
 					konnectv1alpha1.KonnectEventGateway,
-				](ctx, cl, &konnectv1alpha1.EventGatewayVirtualCluster{
+				](ctx, cl, &configurationv1alpha1.EventGatewayVirtualCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "virtual-cluster",
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 						EventGatewayBackendClusterRef: testNamespacedObjectRef(backendName),
 					},
 				})
@@ -261,14 +262,14 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 			name: "listener parent rejects unsupported ref type",
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRefViaParent[
-					konnectv1alpha1.EventGatewayListener,
+					configurationv1alpha1.EventGatewayListener,
 					konnectv1alpha1.KonnectEventGateway,
-				](ctx, cl, &konnectv1alpha1.EventGatewayListenerPolicy{
+				](ctx, cl, &configurationv1alpha1.EventGatewayListenerPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "listener-policy",
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.EventGatewayListenerPolicySpec{
+					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: commonv1alpha1.ObjectRef{
 							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
 							KonnectID: new("listener-konnect-id"),
@@ -286,14 +287,14 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRefViaParent[
-					konnectv1alpha1.EventGatewayBackendCluster,
+					configurationv1alpha1.EventGatewayBackendCluster,
 					konnectv1alpha1.KonnectEventGateway,
-				](ctx, cl, &konnectv1alpha1.EventGatewayVirtualCluster{
+				](ctx, cl, &configurationv1alpha1.EventGatewayVirtualCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "virtual-cluster",
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+					Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 						EventGatewayBackendClusterRef: testNamespacedObjectRef(backendName),
 					},
 				})
@@ -363,37 +364,37 @@ func newTestEventGateway(namespace, name, apiAuthName string) *konnectv1alpha1.K
 	}
 }
 
-func newTestEventGatewayBackendCluster(namespace, name, gatewayName string) *konnectv1alpha1.EventGatewayBackendCluster {
-	return &konnectv1alpha1.EventGatewayBackendCluster{
+func newTestEventGatewayBackendCluster(namespace, name, gatewayName string) *configurationv1alpha1.EventGatewayBackendCluster {
+	return &configurationv1alpha1.EventGatewayBackendCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+		Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 			GatewayRef: testNamespacedObjectRef(gatewayName),
 		},
 	}
 }
 
-func newTestEventGatewayVirtualCluster(namespace, name, backendClusterName string) *konnectv1alpha1.EventGatewayVirtualCluster {
-	return &konnectv1alpha1.EventGatewayVirtualCluster{
+func newTestEventGatewayVirtualCluster(namespace, name, backendClusterName string) *configurationv1alpha1.EventGatewayVirtualCluster {
+	return &configurationv1alpha1.EventGatewayVirtualCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: testNamespacedObjectRef(backendClusterName),
 		},
 	}
 }
 
-func newTestEventGatewayListener(namespace, name, gatewayName string) *konnectv1alpha1.EventGatewayListener {
-	return &konnectv1alpha1.EventGatewayListener{
+func newTestEventGatewayListener(namespace, name, gatewayName string) *configurationv1alpha1.EventGatewayListener {
+	return &configurationv1alpha1.EventGatewayListener{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: konnectv1alpha1.EventGatewayListenerSpec{
+		Spec: configurationv1alpha1.EventGatewayListenerSpec{
 			GatewayRef: testNamespacedObjectRef(gatewayName),
 		},
 	}

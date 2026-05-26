@@ -1655,7 +1655,10 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 	}
 
 	bodyString := strings.TrimRight(body.String(), "\n")
-	needsAPIExtJSON, needsIntStr, needsEncodingJSON, objectRefImport := g.schemaTypesImports(refNames, parsed)
+	needsAPIExtJSON, needsIntStr, objectRefImport := g.schemaTypesImports(refNames, parsed)
+	// encoding/json and fmt are only needed when the emitted schema body contains
+	// generated JSON helper methods.
+	needsEncodingJSON := strings.Contains(bodyString, "json.") || strings.Contains(bodyString, "fmt.")
 	if !needsAPIExtJSON && strings.Contains(bodyString, "apiextensionsv1.") {
 		needsAPIExtJSON = true
 	}
@@ -1691,7 +1694,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 	return strings.TrimRight(buf.String(), "\n") + "\n"
 }
 
-func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedSpec) (needsAPIExtJSON, needsIntStr, needsEncodingJSON bool, objectRefImport *config.ImportConfig) {
+func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedSpec) (needsAPIExtJSON, needsIntStr bool, objectRefImport *config.ImportConfig) {
 	for _, refName := range refNames {
 		schema, ok := parsed.Schemas[refName]
 		if !ok {
@@ -1704,14 +1707,11 @@ func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedS
 		if !needsIntStr && isScalarStringIntOneOf(schema.OneOf) {
 			needsIntStr = true
 		}
-		if !needsEncodingJSON && (hasRefVariants(schema.OneOf) || hasRefVariants(schema.AnyOf)) {
-			needsEncodingJSON = true
-		}
 		if objectRefImport == nil {
 			objectRefImport = g.objectRefImportIfNeeded(schema)
 		}
 
-		if needsAPIExtJSON && needsIntStr && needsEncodingJSON && objectRefImport != nil {
+		if needsAPIExtJSON && needsIntStr && objectRefImport != nil {
 			break
 		}
 	}
@@ -1987,7 +1987,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		parentRef = rc.ParentRef
 		parentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
 		parentRefJSONName = rc.ParentRef.FieldName
-		setParentIDEntityName = rc.ParentEntityType
+		setParentIDEntityName = rc.ParentEntityKind()
 		parentStatusEntityName = parentRefStatusEntityName(rootParentDep, rc)
 		emitParentRefStatusField = shouldEmitParentRefStatusField(rootParentDep, rc)
 	}
@@ -2220,7 +2220,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	if rc != nil && rc.ParentRef != nil {
 		funcsParentRef = rc.ParentRef
 		funcsParentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
-		funcsSetParentIDEntityName = rc.ParentEntityType
+		funcsSetParentIDEntityName = rc.ParentEntityKind()
 		funcsParentStatusEntityName = parentRefStatusEntityName(rootRefDependency, rc)
 		emitParentRefStatusField = shouldEmitParentRefStatusField(rootRefDependency, rc)
 	}
@@ -2264,17 +2264,26 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		if rootRefDependency == nil {
 			return ""
 		}
-		if rc != nil && rc.ParentEntityType != "" {
-			return rc.ParentEntityType
+		if rc != nil && rc.ParentEntityKind() != "" {
+			return rc.ParentEntityKind()
 		}
 		return refConditionEntityName(rootRefDependency)
+	}()
+	parentGroupForFuncs := func() string {
+		if rootRefDependency == nil {
+			return ""
+		}
+		if rc == nil {
+			return g.config.APIGroup
+		}
+		return rc.ParentEntityGroup(g.config.APIGroup)
 	}()
 	ancestorEntityTypes := func() []string {
 		if len(schema.Dependencies) == 0 {
 			return nil
 		}
-		if rc != nil && len(rc.AncestorEntityTypes) > 0 {
-			return rc.AncestorEntityTypes
+		if rc != nil && len(rc.AncestorEntityKinds()) > 0 {
+			return rc.AncestorEntityKinds()
 		}
 		if len(schema.Dependencies) == 1 {
 			return []string{parentKindForFuncs}
@@ -2301,6 +2310,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 		ParentKind                         string
+		ParentGroup                        string
 		References                         []TemplateReferenceConfig
 		ObjectRefTypeName                  string
 		ParentRef                          *config.ParentRefConfig
@@ -2325,14 +2335,15 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 			if rootRefDependency == nil {
 				return ""
 			}
-			if funcsParentRef != nil && rc != nil && rc.ParentEntityType != "" {
-				return rc.ParentEntityType
+			if funcsParentRef != nil && rc != nil && rc.ParentEntityKind() != "" {
+				return rc.ParentEntityKind()
 			}
 			return refConditionEntityName(rootRefDependency)
 		}(),
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
 		ParentKind:                         parentKindForFuncs,
+		ParentGroup:                        parentGroupForFuncs,
 		References:                         g.templateReferences(entityName),
 		ObjectRefTypeName:                  g.objectRefTypeName(),
 		ParentRef:                          funcsParentRef,
@@ -2394,13 +2405,13 @@ func parentRefStatusEntityName(dep *parser.Dependency, rc *config.ReconcilerConf
 	if rc == nil || rc.ParentRef == nil {
 		return ""
 	}
-	if rc.ParentRef.ReplacesAPISpecField != "" && rc.ParentEntityType != "" {
-		return rc.ParentEntityType
+	if rc.ParentRef.ReplacesAPISpecField != "" && rc.ParentEntityKind() != "" {
+		return rc.ParentEntityKind()
 	}
 	if dep != nil {
 		return dep.EntityName
 	}
-	return rc.ParentEntityType
+	return rc.ParentEntityKind()
 }
 
 func shouldEmitParentRefStatusField(dep *parser.Dependency, rc *config.ReconcilerConfig) bool {
