@@ -244,6 +244,9 @@
   **Attention**: This will re-create CA certificates in Konnect,
   as it changes the names of the generated `KongCertificate`s.
   [#4382](https://github.com/Kong/kong-operator/pull/4382)
+- `Gateway`: Pick the intersection of spec's `hostnames` and parent listener's
+  `hostname` as the hostnames in `TLSRoute` for translation in on-prem gateways.
+  [#4369](https://github.com/Kong/kong-operator/pull/4369)
 - `Gateway`: conflicting listeners (port/protocol or hostname conflict) now have
   `Accepted=False` with the conflict reason, per Gateway API spec rule that
   "ALL indistinct Listeners must not be accepted for processing".
