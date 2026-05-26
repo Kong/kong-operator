@@ -227,9 +227,8 @@ func createGatewayConfiguration(
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Name: consts.DataPlaneProxyContainerName,
-										// TODO: Use a dataplane image from environment variable or flag instead of the default image, to allow testing with different versions of the dataplane.
-										Image: consts.DefaultDataPlaneImage,
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: test.DataPlaneImage(),
 										ReadinessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,
