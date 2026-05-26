@@ -43,6 +43,8 @@ func GetSpecParentRefs[T SupportedRoute](route T) []ParentReference {
 		return r.Spec.ParentRefs
 	case TLSRoute:
 		return r.Spec.ParentRefs
+	case GRPCRoute:
+		return r.Spec.ParentRefs
 	}
 	return []ParentReference{}
 }

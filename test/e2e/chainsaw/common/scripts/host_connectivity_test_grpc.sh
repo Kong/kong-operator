@@ -31,6 +31,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../../.." && pwd)"
 CLIENT_PKG="./test/e2e/chainsaw/common/scripts/grpc_echo_client"
 GO_RUN_CMD="cd \"${REPO_ROOT}\" && PROXY_IP=\"${PROXY_IP}\" GRPC_HOST=\"${GRPC_HOST}\" PROXY_PORT=\"${PROXY_PORT}\" REQUEST_MESSAGE=\"${REQUEST_MESSAGE}\" USE_TLS=\"${USE_TLS}\" INSECURE_TLS=\"${INSECURE_TLS}\" MAX_RETRIES=\"${MAX_RETRIES}\" RETRY_DELAY=\"${RETRY_DELAY}\" CALL_TIMEOUT=\"${CALL_TIMEOUT}\" DIAL_TIMEOUT=\"${DIAL_TIMEOUT}\" go run ${CLIENT_PKG}"
+STDERR_FILE="$(mktemp)"
+trap 'rm -f "$STDERR_FILE"' EXIT
 
 if OUTPUT=$(cd "${REPO_ROOT}" && \
   PROXY_IP="${PROXY_IP}" \
@@ -43,14 +45,31 @@ if OUTPUT=$(cd "${REPO_ROOT}" && \
   RETRY_DELAY="${RETRY_DELAY}" \
   CALL_TIMEOUT="${CALL_TIMEOUT}" \
   DIAL_TIMEOUT="${DIAL_TIMEOUT}" \
-  go run "${CLIENT_PKG}" 2>&1); then
+  go run "${CLIENT_PKG}" 2>"${STDERR_FILE}"); then
   echo "$OUTPUT"
+  if [[ -s "${STDERR_FILE}" ]]; then
+    cat "${STDERR_FILE}" >&2
+  fi
   exit 0
 fi
 
+STDERR_OUTPUT="$(cat "${STDERR_FILE}")"
+
 if echo "$OUTPUT" | jq empty >/dev/null 2>&1; then
   echo "$OUTPUT"
+  if [[ -n "$STDERR_OUTPUT" ]]; then
+    printf '%s\n' "$STDERR_OUTPUT" >&2
+  fi
   exit 1
+fi
+
+COMBINED_OUTPUT="$OUTPUT"
+if [[ -n "$STDERR_OUTPUT" && -n "$COMBINED_OUTPUT" ]]; then
+  COMBINED_OUTPUT="${STDERR_OUTPUT}"
+  COMBINED_OUTPUT+=$'\n'
+  COMBINED_OUTPUT+="$OUTPUT"
+elif [[ -n "$STDERR_OUTPUT" ]]; then
+  COMBINED_OUTPUT="$STDERR_OUTPUT"
 fi
 
 jq -n \
@@ -59,7 +78,7 @@ jq -n \
   --arg grpc_host "$GRPC_HOST" \
   --arg proxy_port "$PROXY_PORT" \
   --arg go_run_command "$GO_RUN_CMD" \
-  --arg output "$OUTPUT" \
+  --arg output "$COMBINED_OUTPUT" \
   '{error: $error, proxy_ip: $proxy_ip, grpc_host: $grpc_host, proxy_port: $proxy_port, go_run_command: $go_run_command, output: $output}'
 exit 1
 

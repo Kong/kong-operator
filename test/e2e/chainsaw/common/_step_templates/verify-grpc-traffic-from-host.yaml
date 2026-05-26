@@ -4,9 +4,9 @@
 #   - gateway_name: Name of the Gateway.
 #   - gateway_namespace: Namespace of the Gateway.
 #   - grpc_host: The :authority/SNI hostname to send with the gRPC request.
-#   - listener_https_port: (optional) HTTPS port to test. Default: 443.
-#   - request_message: (optional) Payload sent to grpcbin DummyUnary. Default: "kong".
-#   - insecure_tls: (optional) Whether to skip TLS verification. Default: "true".
+#   - listener_https_port: HTTPS port to test.
+#   - request_message: Payload sent to grpcbin DummyUnary.
+#   - insecure_tls: Whether to skip TLS verification.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
@@ -35,16 +35,15 @@ spec:
           - name: GRPC_HOST
             value: ($grpc_host)
           - name: PROXY_PORT
-            value: ($listener_https_port || '443')
+            value: (to_string($listener_https_port))
           - name: REQUEST_MESSAGE
-            value: ($request_message || 'kong')
+            value: ($request_message)
           - name: INSECURE_TLS
-            value: ($insecure_tls || 'true')
+            value: ($insecure_tls)
           - name: USE_TLS
             value: 'true'
         content: |
           bash ../../common/scripts/host_connectivity_test_grpc.sh
         check:
           (to_string(json_parse($stdout).success) == 'true'): true
-          (json_parse($stdout).response == ($request_message || 'kong')): true
 

@@ -75,9 +75,9 @@ func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gc.Name),
 			Listeners: []gatewayv1.Listener{{
-				Name:     "http",
-				Protocol: gatewayv1.HTTPProtocolType,
-				Port:     80,
+				Name:          "http",
+				Protocol:      gatewayv1.HTTPProtocolType,
+				Port:          80,
 				AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
 			}},
 		},
@@ -156,4 +156,3 @@ func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
 
 	require.Eventually(t, assertGatewayListenerStatus(0), waitTime, tickTime)
 }
-

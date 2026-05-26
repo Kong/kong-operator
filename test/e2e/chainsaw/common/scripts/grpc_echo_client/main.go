@@ -153,8 +153,8 @@ func callDummyUnary(cfg config, address string) (string, error) {
 	clientOpts := []grpc.DialOption{grpc.WithAuthority(cfg.Host)}
 	if cfg.UseTLS {
 		clientOpts = append(clientOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
-			MinVersion:         tls.VersionTLS12,
-			ServerName:         cfg.Host,
+			MinVersion: tls.VersionTLS12,
+			ServerName: cfg.Host,
 			//nolint:gosec // E2E test helper intentionally accepts the self-signed certificate generated during the test.
 			InsecureSkipVerify: cfg.InsecureTLS,
 		})))
@@ -212,9 +212,8 @@ func getenvOrDefault(key, defaultValue string) string {
 func writeOutput(out output) {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetEscapeHTML(false)
-	_ = encoder.Encode(out)
+	err := encoder.Encode(out)
+	if err != nil {
+		os.Exit(1)
+	}
 }
-
-
-
-
