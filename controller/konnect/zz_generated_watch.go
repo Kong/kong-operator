@@ -32,8 +32,6 @@ func reconciliationWatchOptionsForEntity[
 		return EventGatewayVirtualClusterConsumePolicyReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.IdentityProviderRequest:
-		return IdentityProviderRequestReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
 		return KonnectEventDataPlaneCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventGateway:
@@ -48,6 +46,8 @@ func reconciliationWatchOptionsForEntity[
 		return PortalEmailConfigReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.PortalIPAllowList:
 		return PortalIPAllowListReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.PortalIdentityProviderRequest:
+		return PortalIdentityProviderRequestReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.PortalPage:
 		return PortalPageReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.PortalTeam:

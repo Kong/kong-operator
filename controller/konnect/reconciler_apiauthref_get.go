@@ -114,10 +114,7 @@ func getAPIAuthRefViaVirtualCluster(
 			fmt.Errorf("invalid EventGatewayVirtualCluster reference: must be a NamespacedRef with a non-nil NamespacedRef field")
 	}
 
-	virtualCluster, nn, err := getParentForRef[
-		konnectv1alpha1.EventGatewayVirtualCluster,
-		*konnectv1alpha1.EventGatewayVirtualCluster,
-	](ctx, cl, vcRef, obj.GetNamespace())
+	virtualCluster, nn, err := getParentForRef[konnectv1alpha1.EventGatewayVirtualCluster](ctx, cl, vcRef, obj.GetNamespace())
 	if err != nil {
 		return types.NamespacedName{}, fmt.Errorf("failed to get EventGatewayVirtualCluster %s: %w", nn, err)
 	}

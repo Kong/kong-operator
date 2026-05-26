@@ -29,11 +29,11 @@ func testGeneratedEventGatewayVirtualClusterForSDKOps() *konnectv1alpha1.EventGa
 		},
 		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
 			APISpec: konnectv1alpha1.EventGatewayVirtualClusterAPISpec{
-				AclMode: konnectv1alpha1.VirtualClusterACLMode("test-value"),
+				AclMode: "test-value",
 				Description: "test-value",
-				DNSLabel: konnectv1alpha1.VirtualClusterDNSLabel("test-value"),
+				DNSLabel: "test-value",
 				Labels: konnectv1alpha1.Labels{"test-key": "test-value"},
-				Name: konnectv1alpha1.VirtualClusterName("test-value"),
+				Name: "test-value",
 			},
 		},
 	}

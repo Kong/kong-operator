@@ -32,11 +32,6 @@ func (*EventGatewayVirtualClusterProducePolicy) PersistsKonnectID() bool {
 	return true
 }
 
-// PersistsKonnectID reports whether IdentityProviderRequest persists a Konnect ID in status.
-func (*IdentityProviderRequest) PersistsKonnectID() bool {
-	return true
-}
-
 // PersistsKonnectID reports whether KonnectEventDataPlaneCertificate persists a Konnect ID in status.
 func (*KonnectEventDataPlaneCertificate) PersistsKonnectID() bool {
 	return true
@@ -69,6 +64,11 @@ func (*PortalEmailConfig) PersistsKonnectID() bool {
 
 // PersistsKonnectID reports whether PortalIPAllowList persists a Konnect ID in status.
 func (*PortalIPAllowList) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether PortalIdentityProviderRequest persists a Konnect ID in status.
+func (*PortalIdentityProviderRequest) PersistsKonnectID() bool {
 	return true
 }
 

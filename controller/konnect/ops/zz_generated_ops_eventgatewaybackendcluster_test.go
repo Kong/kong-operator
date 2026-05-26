@@ -35,7 +35,7 @@ func testGeneratedEventGatewayBackendClusterForSDKOps() *konnectv1alpha1.EventGa
 				Description: "test-value",
 				InsecureAllowAnonymousVirtualClusterAuth: "Enabled",
 				Labels: konnectv1alpha1.Labels{"test-key": "test-value"},
-				Name: konnectv1alpha1.BackendClusterName("test-value"),
+				Name: "test-value",
 			},
 		},
 	}

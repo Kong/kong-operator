@@ -42,7 +42,7 @@ func handleKongCACertificateRefs[T constraints.SupportedKonnectEntityType, TEnt 
 	cl client.Client,
 	ent TEnt,
 ) (result ctrl.Result, err error) {
-	refs := getKongCACertificateRefs[T, TEnt](ent)
+	refs := getKongCACertificateRefs(ent)
 
 	svc, isSvc := any(ent).(*configurationv1alpha1.KongService)
 	if !isSvc {

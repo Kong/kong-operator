@@ -26,6 +26,13 @@ var EventGatewayVirtualClusterProducePolicySDKOpsBoolFields = []EventGatewayVirt
 		},
 	},
 	{
+		Label: "encrypt_fields.enabled",
+		Path: []string{
+			"encrypt_fields",
+			"enabled",
+		},
+	},
+	{
 		Label: "modify_headers.enabled",
 		Path: []string{
 			"modify_headers",
@@ -162,6 +169,9 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) selectedSDKOpsPayload(p
 	case EventGatewayVirtualClusterProducePolicyConfigTypeEncryptPolicy:
 		selected = payload["encrypt"]
 		variant = "EncryptPolicy"
+	case EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate:
+		selected = payload["encrypt_fields"]
+		variant = "ParsedRecordEncryptFieldsPolicyCreate"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewayVirtualClusterProducePolicy config type %q", s.EventGatewayVirtualClusterProducePolicyConfig.Type)
 	}
@@ -229,6 +239,15 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) ToCreateEventGatewayVir
 			return nil, fmt.Errorf("failed to unmarshal into EventGatewayEncryptPolicy: %w", err)
 		}
 		body := sdkkonnectcomp.CreateEventGatewayProducePolicyCreateEncrypt(member)
+		return &sdkkonnectoper.CreateEventGatewayVirtualClusterProducePolicyRequest{
+			EventGatewayProducePolicyCreate: &body,
+		}, nil
+	case "ParsedRecordEncryptFieldsPolicyCreate":
+		var member sdkkonnectcomp.EventGatewayParsedRecordEncryptFieldsPolicyCreate
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into EventGatewayParsedRecordEncryptFieldsPolicyCreate: %w", err)
+		}
+		body := sdkkonnectcomp.CreateEventGatewayProducePolicyCreateEncryptFields(member)
 		return &sdkkonnectoper.CreateEventGatewayVirtualClusterProducePolicyRequest{
 			EventGatewayProducePolicyCreate: &body,
 		}, nil

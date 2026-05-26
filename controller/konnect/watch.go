@@ -308,7 +308,7 @@ type WatchableEntityType interface {
 		konnectv1alpha1.PortalEmailConfig |
 		konnectv1alpha1.PortalIPAllowList |
 		konnectv1alpha1.PortalTeam |
-		konnectv1alpha1.IdentityProviderRequest |
+		konnectv1alpha1.PortalIdentityProviderRequest |
 		konnectv1alpha1.KonnectEventGateway |
 		konnectv1alpha1.EventGatewayBackendCluster |
 		konnectv1alpha1.EventGatewayListener |

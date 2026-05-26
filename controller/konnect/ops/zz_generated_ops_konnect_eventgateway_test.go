@@ -29,10 +29,10 @@ func testGeneratedKonnectEventGatewayForSDKOps() *konnectv1alpha1.KonnectEventGa
 		},
 		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 			APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
-				Description: konnectv1alpha1.GatewayDescription("test-value"),
+				Description: "test-value",
 				Labels: konnectv1alpha1.Labels{"test-key": "test-value"},
-				MinRuntimeVersion: konnectv1alpha1.MinRuntimeVersion("test-value"),
-				Name: konnectv1alpha1.GatewayName("test-value"),
+				MinRuntimeVersion: "test-value",
+				Name: "test-value",
 			},
 		},
 	}

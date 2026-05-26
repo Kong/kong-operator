@@ -5,6 +5,7 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
@@ -287,6 +288,19 @@ type BackendClusterTLSClientIdentity struct {
 // BackendMetadataUpdateIntervalSeconds The interval at which metadata is
 // updated in seconds.
 type BackendMetadataUpdateIntervalSeconds int
+
+// ConsumeFailureMode Describes how to handle a failure in a policy applied to
+// consumed records.
+// * `error` - the batch is not delivered to the client.
+// Use sparingly: erroring on a batch causes clients to get stuck on the
+// problematic offset and requires manual intervention to skip it.
+// * `skip` - the record is not delivered to the client.
+// * `passthrough` - passes the record to the client even though policy
+// execution failed.
+// * `mark` - passes the record to the client but marks it with a
+// `kong/policy-failure-<id>` header whose value is the reason for the policy
+// failure (truncated to 512 characters).
+type ConsumeFailureMode string
 
 // ConsumeKeyValidationAction Defines a behavior when record key is not valid.
 // * mark - marks a record with kong/server header and client ID value
@@ -1252,6 +1266,547 @@ type EventGatewayModifyHeadersPolicyCreateConfig struct {
 	Actions []EventGatewayModifyHeaderAction `json:"actions,omitempty"`
 }
 
+// EventGatewayParsedRecordDecryptFieldsConfig The configuration of the decrypt
+// parsed record fields policy.
+type EventGatewayParsedRecordDecryptFieldsConfig struct {
+	// Selects which fields to decrypt.
+	//
+	// +required
+	DecryptFields []EventGatewayParsedRecordDecryptionSelector `json:"decryptFields,omitempty"`
+	// Describes how to handle a failure in a policy applied to consumed records.
+	// * `error` - the batch is not delivered to the client.
+	// Use sparingly: erroring on a batch causes clients to get stuck on the
+	// problematic offset and requires manual intervention to skip it.
+	// * `skip` - the record is not delivered to the client.
+	// * `passthrough` - passes the record to the client even though policy
+	// execution failed.
+	// * `mark` - passes the record to the client but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;skip;passthrough;mark
+	FailureMode ConsumeFailureMode `json:"failureMode,omitzero"`
+	// Describes how to find a symmetric key for decryption.
+	//
+	// +required
+	KeySources []EventGatewayKeySource `json:"keySources,omitempty"`
+}
+
+// EventGatewayParsedRecordDecryptFieldsPolicyCreate Decrypts fields of parsed
+// Kafka records using AES_256_GCM.
+// Keys are therefore 256 bits long.
+//
+// Note this policy can only be used as a child of a
+// `EventGatewayConsumeSchemaValidationPolicy` policy.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type EventGatewayParsedRecordDecryptFieldsPolicyCreate struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// When the policy is applied as a child policy of schema_validation, the
+	// expression can also reference
+	// `record.value` fields.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the policy.
+	//
+	// +required
+	Config EventGatewayParsedRecordDecryptFieldsConfig `json:"config,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+	// The unique identifier of the parent schema validation policy.
+	//
+	// +required
+	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
+}
+
+// EventGatewayParsedRecordDecryptionSelector Selects fields of a parsed record
+// for decryption.
+type EventGatewayParsedRecordDecryptionSelector struct {
+	// Selects which fields of the parsed record to decrypt.
+	// A maximum of 50 path entries are allowed.
+	//
+	// +required
+	Paths *EventGatewayParsedRecordDecryptionSelectorPaths `json:"paths,omitempty"`
+}
+
+// EventGatewayParsedRecordDecryptionSelectorPathsVariant1 is a type alias.
+type EventGatewayParsedRecordDecryptionSelectorPathsVariant1 []apiextensionsv1.JSON
+
+// EventGatewayParsedRecordDecryptionSelectorPathsVariant2 This expression
+// should evaluate to an array of exact field paths,
+// equivalent to the `match` values in the array variant.
+type EventGatewayParsedRecordDecryptionSelectorPathsVariant2 string
+
+// EventGatewayParsedRecordDecryptionSelectorPaths represents a union type for paths.
+// Only one of the fields should be set based on the Type.
+//
+type EventGatewayParsedRecordDecryptionSelectorPaths struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=variant1;variant2
+	Type EventGatewayParsedRecordDecryptionSelectorPathsType `json:"type,omitempty"`
+
+	// Variant1 configuration.
+	//
+	// +optional
+	Variant1 *EventGatewayParsedRecordDecryptionSelectorPathsVariant1 `json:"variant1,omitempty"`
+	// Variant2 configuration.
+	//
+	// +optional
+	Variant2 *EventGatewayParsedRecordDecryptionSelectorPathsVariant2 `json:"variant2,omitempty"`
+}
+
+// EventGatewayParsedRecordDecryptionSelectorPathsType represents the type of paths.
+type EventGatewayParsedRecordDecryptionSelectorPathsType string
+
+// EventGatewayParsedRecordDecryptionSelectorPathsType values.
+const (
+	EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant1 EventGatewayParsedRecordDecryptionSelectorPathsType = "variant1"
+	EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant2 EventGatewayParsedRecordDecryptionSelectorPathsType = "variant2"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordDecryptionSelectorPaths) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordDecryptionSelectorPaths type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant1:
+		if u.Variant1 != nil {
+			raw, err := json.Marshal(u.Variant1)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordDecryptionSelectorPaths Variant1: %w", err)
+			}
+			m["variant1"] = raw
+		}
+	case EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant2:
+		if u.Variant2 != nil {
+			raw, err := json.Marshal(u.Variant2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordDecryptionSelectorPaths Variant2: %w", err)
+			}
+			m["variant2"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordDecryptionSelectorPaths) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelectorPaths: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordDecryptionSelectorPathsType(probe.Type)
+	switch probe.Type {
+	case "variant1":
+		payload, ok := raw["variant1"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordDecryptionSelectorPathsVariant1
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelectorPaths Variant1: %w", err)
+		}
+		u.Variant1 = &val
+	case "variant2":
+		payload, ok := raw["variant2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordDecryptionSelectorPathsVariant2
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelectorPaths Variant2: %w", err)
+		}
+		u.Variant2 = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordDecryptionSelector) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelector: nil receiver")
+	}
+	type alias EventGatewayParsedRecordDecryptionSelector
+	aux := alias{}
+	aux.Paths = &EventGatewayParsedRecordDecryptionSelectorPaths{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelector: %w", err)
+	}
+	if aux.Paths != nil && aux.Paths.Type == "" && aux.Paths.Variant1 == nil && aux.Paths.Variant2 == nil {
+		aux.Paths = nil
+	}
+	*s = EventGatewayParsedRecordDecryptionSelector(aux)
+	return nil
+}
+
+// EventGatewayParsedRecordEncryptFieldsConfig The configuration of the encrypt
+// parsed record policy.
+type EventGatewayParsedRecordEncryptFieldsConfig struct {
+	// Selects which fields to encrypt and with what keys.
+	//
+	// +required
+	EncryptFields []EventGatewayParsedRecordEncryptionSelector `json:"encryptFields,omitempty"`
+	// Describes how to handle a failure in a policy applied to produced records.
+	// * `reject` - rejects the record batch.
+	// * `passthrough` - passes the record silently to the backend cluster even
+	// though policy execution failed.
+	// * `mark` - passes the record to the backend cluster but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough;mark
+	FailureMode ProduceFailureMode `json:"failureMode,omitzero"`
+}
+
+// EventGatewayParsedRecordEncryptFieldsPolicyCreate Encrypts fields of parsed
+// Kafka records using AES_256_GCM.
+// Keys are therefore 256 bits long.
+//
+// Note this policy can only be used as a child of a
+// `EventGatewayProduceSchemaValidationPolicy` policy.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type EventGatewayParsedRecordEncryptFieldsPolicyCreate struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// When the policy is applied as a child policy of schema_validation, the
+	// expression can also reference
+	// `record.value` fields.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the policy.
+	//
+	// +required
+	Config EventGatewayParsedRecordEncryptFieldsConfig `json:"config,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+	// The unique identifier of the parent schema validation policy.
+	//
+	// +required
+	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
+}
+
+// EventGatewayParsedRecordEncryptionSelector Selects fields of a parsed record
+// for encryption and defines what key to encrypt them with.
+type EventGatewayParsedRecordEncryptionSelector struct {
+	// The key to use for encryption.
+	//
+	//
+	// +required
+	EncryptionKey *EventGatewayParsedRecordEncryptionSelectorEncryptionKey `json:"encryptionKey,omitempty"`
+	// Selects which fields of the parsed record to encrypt.
+	// A maximum of 50 path entries are allowed.
+	//
+	// +required
+	Paths *EventGatewayParsedRecordEncryptionSelectorPaths `json:"paths,omitempty"`
+}
+
+// EventGatewayParsedRecordEncryptionSelectorEncryptionKey represents a union type for encryption_key.
+// Only one of the fields should be set based on the Type.
+//
+type EventGatewayParsedRecordEncryptionSelectorEncryptionKey struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=aws;static
+	Type EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType `json:"type,omitempty"`
+
+	// AWS configuration.
+	//
+	// +optional
+	AWS *EncryptionKeyAWS `json:"aws,omitempty"`
+	// Static configuration.
+	//
+	// +optional
+	Static *EncryptionKeyStatic `json:"static,omitempty"`
+}
+
+// EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType represents the type of encryption_key.
+type EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType string
+
+// EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType values.
+const (
+	EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeAWS EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType = "aws"
+	EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeStatic EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType = "static"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordEncryptionSelectorEncryptionKey) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorEncryptionKey type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeAWS:
+		if u.AWS != nil {
+			raw, err := json.Marshal(u.AWS)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorEncryptionKey aws: %w", err)
+			}
+			m["aws"] = raw
+		}
+	case EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeStatic:
+		if u.Static != nil {
+			raw, err := json.Marshal(u.Static)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorEncryptionKey static: %w", err)
+			}
+			m["static"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordEncryptionSelectorEncryptionKey) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorEncryptionKey: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType(probe.Type)
+	switch probe.Type {
+	case "aws":
+		payload, ok := raw["aws"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EncryptionKeyAWS
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorEncryptionKey aws: %w", err)
+		}
+		u.AWS = &val
+	case "static":
+		payload, ok := raw["static"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EncryptionKeyStatic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorEncryptionKey static: %w", err)
+		}
+		u.Static = &val
+	}
+	return nil
+}
+// EventGatewayParsedRecordEncryptionSelectorPathsVariant1 is a type alias.
+type EventGatewayParsedRecordEncryptionSelectorPathsVariant1 []apiextensionsv1.JSON
+
+// EventGatewayParsedRecordEncryptionSelectorPathsVariant2 This expression
+// should evaluate to an array of exact field paths,
+// equivalent to the `match` values in the array variant.
+type EventGatewayParsedRecordEncryptionSelectorPathsVariant2 string
+
+// EventGatewayParsedRecordEncryptionSelectorPaths represents a union type for paths.
+// Only one of the fields should be set based on the Type.
+//
+type EventGatewayParsedRecordEncryptionSelectorPaths struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=variant1;variant2
+	Type EventGatewayParsedRecordEncryptionSelectorPathsType `json:"type,omitempty"`
+
+	// Variant1 configuration.
+	//
+	// +optional
+	Variant1 *EventGatewayParsedRecordEncryptionSelectorPathsVariant1 `json:"variant1,omitempty"`
+	// Variant2 configuration.
+	//
+	// +optional
+	Variant2 *EventGatewayParsedRecordEncryptionSelectorPathsVariant2 `json:"variant2,omitempty"`
+}
+
+// EventGatewayParsedRecordEncryptionSelectorPathsType represents the type of paths.
+type EventGatewayParsedRecordEncryptionSelectorPathsType string
+
+// EventGatewayParsedRecordEncryptionSelectorPathsType values.
+const (
+	EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant1 EventGatewayParsedRecordEncryptionSelectorPathsType = "variant1"
+	EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant2 EventGatewayParsedRecordEncryptionSelectorPathsType = "variant2"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordEncryptionSelectorPaths) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorPaths type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant1:
+		if u.Variant1 != nil {
+			raw, err := json.Marshal(u.Variant1)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorPaths Variant1: %w", err)
+			}
+			m["variant1"] = raw
+		}
+	case EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant2:
+		if u.Variant2 != nil {
+			raw, err := json.Marshal(u.Variant2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorPaths Variant2: %w", err)
+			}
+			m["variant2"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordEncryptionSelectorPaths) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorPaths: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordEncryptionSelectorPathsType(probe.Type)
+	switch probe.Type {
+	case "variant1":
+		payload, ok := raw["variant1"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordEncryptionSelectorPathsVariant1
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorPaths Variant1: %w", err)
+		}
+		u.Variant1 = &val
+	case "variant2":
+		payload, ok := raw["variant2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordEncryptionSelectorPathsVariant2
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorPaths Variant2: %w", err)
+		}
+		u.Variant2 = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordEncryptionSelector) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelector: nil receiver")
+	}
+	type alias EventGatewayParsedRecordEncryptionSelector
+	aux := alias{}
+	aux.EncryptionKey = &EventGatewayParsedRecordEncryptionSelectorEncryptionKey{}
+	aux.Paths = &EventGatewayParsedRecordEncryptionSelectorPaths{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelector: %w", err)
+	}
+	if aux.EncryptionKey != nil && aux.EncryptionKey.Type == "" && aux.EncryptionKey.AWS == nil && aux.EncryptionKey.Static == nil {
+		aux.EncryptionKey = nil
+	}
+	if aux.Paths != nil && aux.Paths.Type == "" && aux.Paths.Variant1 == nil && aux.Paths.Variant2 == nil {
+		aux.Paths = nil
+	}
+	*s = EventGatewayParsedRecordEncryptionSelector(aux)
+	return nil
+}
+
 // EventGatewayProduceSchemaValidationPolicy A policy that validates produce
 // messages against a schema registry.
 type EventGatewayProduceSchemaValidationPolicy struct {
@@ -2187,23 +2742,6 @@ type GatewaySecret string
 // information.
 type GatewaySecretReferenceOrLiteral string
 
-// IdentityProviderEnabled Indicates whether the identity provider is enabled.
-// Only one identity provider can be active at a time, such as SAML or OIDC.
-//
-// +kubebuilder:validation:Enum=Enabled;Disabled
-type IdentityProviderEnabled string
-
-const (
-	// IdentityProviderEnabledEnabled sets IdentityProviderEnabled as enabled.
-	IdentityProviderEnabledEnabled  IdentityProviderEnabled = "Enabled"
-	// IdentityProviderEnabledDisabled sets IdentityProviderEnabled as disabled.
-	IdentityProviderEnabledDisabled IdentityProviderEnabled = "Disabled"
-)
-
-// IdentityProviderLoginPath The path used for initiating login requests with
-// the identity provider.
-type IdentityProviderLoginPath string
-
 // IdentityProviderType Specifies the type of identity provider.
 type IdentityProviderType string
 
@@ -2386,6 +2924,35 @@ type PortalMenuItem struct {
 	Visibility string `json:"visibility,omitzero"`
 }
 
+// PortalSAMLIdentityProviderConfig The identity provider that contains
+// configuration data for the SAML authentication integration.
+type PortalSAMLIdentityProviderConfig struct {
+	// The identity provider's metadata URL where the identity provider's metadata
+	// can be obtained.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IdpMetadataURL SAMLIdentityProviderMetadataURL `json:"idpMetadataURL,omitzero"`
+	// The identity provider's SAML metadata.
+	// If the identity provider supports a metadata URL, you can use the
+	// `idp_metadata_url` field instead.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IdpMetadataXML SAMLIdentityProviderMetadata `json:"idpMetadataXML,omitzero"`
+}
+
+// ProduceFailureMode Describes how to handle a failure in a policy applied to
+// produced records.
+// * `reject` - rejects the record batch.
+// * `passthrough` - passes the record silently to the backend cluster even
+// though policy execution failed.
+// * `mark` - passes the record to the backend cluster but marks it with a
+// `kong/policy-failure-<id>` header whose value is the reason for the policy
+// failure (truncated to 512 characters).
+type ProduceFailureMode string
+
 // ProduceKeyValidationAction Defines a behavior when record key is not valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
@@ -2406,25 +2973,6 @@ type ProduceValueValidationAction string
 // PublishedStatus Whether the resource is visible on a given portal.
 // Defaults to unpublished.
 type PublishedStatus string
-
-// SAMLIdentityProviderConfig The identity provider that contains configuration
-// data for the SAML authentication integration.
-type SAMLIdentityProviderConfig struct {
-	// The identity provider's metadata URL where the identity provider's metadata
-	// can be obtained.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	IdpMetadataURL SAMLIdentityProviderMetadataURL `json:"idpMetadataURL,omitzero"`
-	// The identity provider's SAML metadata.
-	// If the identity provider supports a metadata URL, you can use the
-	// `idp_metadata_url` field instead.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	IdpMetadataXML SAMLIdentityProviderMetadata `json:"idpMetadataXML,omitzero"`
-}
 
 // SAMLIdentityProviderMetadata The identity provider's SAML metadata.
 // If the identity provider supports a metadata URL, you can use the

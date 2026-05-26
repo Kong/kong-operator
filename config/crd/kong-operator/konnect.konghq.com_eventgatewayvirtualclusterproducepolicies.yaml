@@ -182,6 +182,214 @@ spec:
                     required:
                     - config
                     type: object
+                  encryptFields:
+                    description: ParsedRecordEncryptFieldsPolicyCreate configuration.
+                    properties:
+                      condition:
+                        description: |-
+                          A string containing the boolean expression that determines whether the
+                          policy is applied.
+
+                          When the policy is applied as a child policy of schema_validation, the
+                          expression can also reference
+                          `record.value` fields.
+                        maxLength: 1000
+                        type: string
+                      config:
+                        description: The configuration of the policy.
+                        properties:
+                          encryptFields:
+                            description: Selects which fields to encrypt and with
+                              what keys.
+                            items:
+                              description: |-
+                                EventGatewayParsedRecordEncryptionSelector Selects fields of a parsed record
+                                for encryption and defines what key to encrypt them with.
+                              properties:
+                                encryptionKey:
+                                  description: The key to use for encryption.
+                                  properties:
+                                    aws:
+                                      description: AWS configuration.
+                                      properties:
+                                        arn:
+                                          description: The AWS KMS key ARN.
+                                          maxLength: 2048
+                                          minLength: 10
+                                          pattern: ^arn:aws:kms:.+
+                                          type: string
+                                      required:
+                                      - arn
+                                      type: object
+                                    static:
+                                      description: Static configuration.
+                                      properties:
+                                        key:
+                                          description: A static encryption key reference,
+                                            either by ID or by value.
+                                          maxProperties: 1
+                                          minProperties: 1
+                                          properties:
+                                            id:
+                                              type: string
+                                            name:
+                                              type: string
+                                          type: object
+                                      required:
+                                      - key
+                                      type: object
+                                    type:
+                                      description: Type designates the type of configuration.
+                                      enum:
+                                      - aws
+                                      - static
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                                paths:
+                                  description: |-
+                                    Selects which fields of the parsed record to encrypt.
+                                    A maximum of 50 path entries are allowed.
+                                  properties:
+                                    type:
+                                      description: Type designates the type of configuration.
+                                      enum:
+                                      - variant1
+                                      - variant2
+                                      minLength: 1
+                                      type: string
+                                    variant1:
+                                      description: Variant1 configuration.
+                                      items:
+                                        x-kubernetes-preserve-unknown-fields: true
+                                      type: array
+                                    variant2:
+                                      description: Variant2 configuration.
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                              required:
+                              - encryptionKey
+                              - paths
+                              type: object
+                            type: array
+                          failureMode:
+                            description: |-
+                              Describes how to handle a failure in a policy applied to produced records.
+                              * `reject` - rejects the record batch.
+                              * `passthrough` - passes the record silently to the backend cluster even
+                              though policy execution failed.
+                              * `mark` - passes the record to the backend cluster but marks it with a
+                              `kong/policy-failure-<id>` header whose value is the reason for the policy
+                              failure (truncated to 512 characters).
+                            enum:
+                            - reject
+                            - passthrough
+                            - mark
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                        required:
+                        - encryptFields
+                        - failureMode
+                        type: object
+                      description:
+                        description: A human-readable description of the policy.
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        description: Whether the policy is enabled.
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: LabelsValue is the value type for Labels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Labels store metadata of an entity that can be used for filtering an entity
+                          list or for searching across entity types.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        type: object
+                      name:
+                        description: A unique user-defined name of the policy.
+                        maxLength: 255
+                        type: string
+                      parentPolicyID:
+                        description: The unique identifier of the parent schema validation
+                          policy.
+                        properties:
+                          konnectID:
+                            description: |-
+                              KonnectID is the schema for the KonnectID type.
+                              This field is required when the Type is konnectID.
+                            maxLength: 36
+                            type: string
+                          namespacedRef:
+                            description: |-
+                              NamespacedRef is a reference to a KeySet entity inside the cluster.
+                              This field is required when the Type is namespacedRef.
+                            properties:
+                              name:
+                                description: Name is the name of the referred resource.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace is the namespace of the referred resource.
+
+                                  For namespace-scoped resources if no Namespace is provided then the
+                                  namespace of the parent object MUST be used.
+
+                                  This field MUST not be set when referring to cluster-scoped resources.
+                                maxLength: 253
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          type:
+                            description: |-
+                              Type defines type of the object which is referenced. It can be one of:
+
+                              - konnectID
+                              - namespacedRef
+                            enum:
+                            - konnectID
+                            - namespacedRef
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: when type is namespacedRef, namespacedRef must
+                            be set
+                          rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef)
+                            : true'
+                        - message: when type is namespacedRef, konnectID must not
+                            be set
+                          rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID)
+                            : true'
+                        - message: when type is konnectID, konnectID must be set
+                          rule: 'self.type == ''konnectID'' ? has(self.konnectID)
+                            : true'
+                        - message: when type is konnectID, namespacedRef must not
+                            be set
+                          rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef)
+                            : true'
+                    required:
+                    - config
+                    - parentPolicyID
+                    type: object
                   modifyHeaders:
                     description: ModifyHeadersPolicyCreate configuration.
                     properties:
@@ -508,6 +716,7 @@ spec:
                     description: Type designates the type of configuration.
                     enum:
                     - encrypt
+                    - encryptFields
                     - modifyHeaders
                     - schemaValidation
                     minLength: 1

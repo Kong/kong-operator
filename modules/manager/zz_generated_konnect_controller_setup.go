@@ -16,7 +16,6 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[konnectv1alpha1.EventGatewayVirtualCluster](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.EventGatewayVirtualClusterProducePolicy](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.IdentityProviderRequest](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectEventGateway](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory),
@@ -24,6 +23,7 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[konnectv1alpha1.PortalCustomization](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalEmailConfig](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalIPAllowList](controllerFactory),
+		newKonnectEntityController[konnectv1alpha1.PortalIdentityProviderRequest](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalPage](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalTeam](controllerFactory),
 	}

@@ -309,7 +309,7 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 				Type: "EventGatewayVirtualClusterProducePolicy",
 			},
 			{
-				Type: "IdentityProviderRequest",
+				Type: "PortalIdentityProviderRequest",
 			},
 			{
 				Type: "KonnectEventDataPlaneCertificate",

@@ -280,6 +280,84 @@ func TestEventGatewayModifyHeadersPolicyCreate_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestEventGatewayParsedRecordDecryptFieldsConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordDecryptFieldsConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordDecryptFieldsPolicyCreate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordDecryptFieldsPolicyCreate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordDecryptionSelector_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordDecryptionSelector
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordEncryptFieldsConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordEncryptFieldsConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordEncryptFieldsPolicyCreate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordEncryptFieldsPolicyCreate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordEncryptionSelector_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordEncryptionSelector
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEventGatewayProduceSchemaValidationPolicy_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -475,10 +553,10 @@ func TestPortalMenuItem_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestSAMLIdentityProviderConfig_MarshalEmpty(t *testing.T) {
+func TestPortalSAMLIdentityProviderConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
-	var spec SAMLIdentityProviderConfig
+	var spec PortalSAMLIdentityProviderConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -954,6 +1032,90 @@ func TestEventGatewayModifyHeaderActionUnmarshalJSON_NilReceiver(t *testing.T) {
 	}
 }
 
+func TestEventGatewayParsedRecordDecryptionSelectorPathsUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Variant1", payload: []byte("{\"type\":\"variant1\",\"variant1\":[]}")},
+		{name: "Variant2", payload: []byte("{\"type\":\"variant2\",\"variant2\":\"\"}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordDecryptionSelectorPaths
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordDecryptionSelectorPaths: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordEncryptionSelectorEncryptionKeyUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "aws", payload: []byte("{\"type\":\"aws\",\"aws\":{}}")},
+		{name: "static", payload: []byte("{\"type\":\"static\",\"static\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordEncryptionSelectorEncryptionKey
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordEncryptionSelectorEncryptionKey: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordEncryptionSelectorPathsUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Variant1", payload: []byte("{\"type\":\"variant1\",\"variant1\":[]}")},
+		{name: "Variant2", payload: []byte("{\"type\":\"variant2\",\"variant2\":\"\"}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordEncryptionSelectorPaths
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordEncryptionSelectorPaths: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestEventGatewayProduceSchemaValidationPolicyConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1201,6 +1363,150 @@ func TestEventGatewayEncryptConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			t.Parallel()
 
 			var target EventGatewayEncryptConfig
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordDecryptionSelectorUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		payload []byte
+		assert func(*testing.T, EventGatewayParsedRecordDecryptionSelector)
+	}{
+		{
+			name: "Paths/Variant1",
+			payload: []byte("{\"paths\":{\"type\":\"variant1\",\"variant1\":[]}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordDecryptionSelector) {
+				t.Helper()
+				if target.Paths == nil {
+					t.Fatalf("Paths should be allocated")
+				}
+				if got, want := target.Paths.Type, EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant1; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Paths.Variant1 == nil {
+					t.Fatalf("Paths.Variant1 should be allocated")
+				}
+			},
+		},
+		{
+			name: "Paths/Variant2",
+			payload: []byte("{\"paths\":{\"type\":\"variant2\",\"variant2\":\"\"}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordDecryptionSelector) {
+				t.Helper()
+				if target.Paths == nil {
+					t.Fatalf("Paths should be allocated")
+				}
+				if got, want := target.Paths.Type, EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant2; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Paths.Variant2 == nil {
+					t.Fatalf("Paths.Variant2 should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordDecryptionSelector
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordEncryptionSelectorUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		payload []byte
+		assert func(*testing.T, EventGatewayParsedRecordEncryptionSelector)
+	}{
+		{
+			name: "EncryptionKey/aws",
+			payload: []byte("{\"encryptionKey\":{\"type\":\"aws\",\"aws\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
+				t.Helper()
+				if target.EncryptionKey == nil {
+					t.Fatalf("EncryptionKey should be allocated")
+				}
+				if got, want := target.EncryptionKey.Type, EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeAWS; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.EncryptionKey.AWS == nil {
+					t.Fatalf("EncryptionKey.AWS should be allocated")
+				}
+			},
+		},
+		{
+			name: "EncryptionKey/static",
+			payload: []byte("{\"encryptionKey\":{\"type\":\"static\",\"static\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
+				t.Helper()
+				if target.EncryptionKey == nil {
+					t.Fatalf("EncryptionKey should be allocated")
+				}
+				if got, want := target.EncryptionKey.Type, EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeStatic; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.EncryptionKey.Static == nil {
+					t.Fatalf("EncryptionKey.Static should be allocated")
+				}
+			},
+		},
+		{
+			name: "Paths/Variant1",
+			payload: []byte("{\"paths\":{\"type\":\"variant1\",\"variant1\":[]}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
+				t.Helper()
+				if target.Paths == nil {
+					t.Fatalf("Paths should be allocated")
+				}
+				if got, want := target.Paths.Type, EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant1; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Paths.Variant1 == nil {
+					t.Fatalf("Paths.Variant1 should be allocated")
+				}
+			},
+		},
+		{
+			name: "Paths/Variant2",
+			payload: []byte("{\"paths\":{\"type\":\"variant2\",\"variant2\":\"\"}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
+				t.Helper()
+				if target.Paths == nil {
+					t.Fatalf("Paths should be allocated")
+				}
+				if got, want := target.Paths.Type, EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant2; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Paths.Variant2 == nil {
+					t.Fatalf("Paths.Variant2 should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordEncryptionSelector
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

@@ -13,6 +13,11 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
+type generatedEntityRename struct {
+	OldEntity string
+	NewEntity string
+}
+
 // Run is responsible for orchestrating the entire generation process:
 // parsing the OpenAPI spec, applying configurations, generating code, and writing files.
 func (r *Runner) Run(
@@ -51,10 +56,18 @@ func (r *Runner) Run(
 		// uses the custom CRD type name instead of the one derived from the
 		// OpenAPI schema.
 		nameOverrides := agvConfig.NameOverrides()
+		renamedGeneratedEntities := make([]generatedEntityRename, 0)
 		for name, schema := range parsed.RequestBodies {
 			override, ok := nameOverrides[schema.SourcePath]
 			if !ok {
 				continue
+			}
+			oldEntity := parser.GetEntityNameFromType(name)
+			if oldEntity != override {
+				renamedGeneratedEntities = append(renamedGeneratedEntities, generatedEntityRename{
+					OldEntity: oldEntity,
+					NewEntity: override,
+				})
 			}
 			delete(parsed.RequestBodies, name)
 			// Prefix with "Create" so GetEntityNameFromType strips it to
@@ -64,6 +77,7 @@ func (r *Runner) Run(
 			parsed.RequestBodies[newKey] = schema
 			logger.Info("applied name override", "path", schema.SourcePath, "from", parser.GetEntityNameFromType(name), "to", override)
 		}
+		renamedGeneratedEntities = append(renamedGeneratedEntities, legacyGeneratedEntityRenames(parsed)...)
 
 		// Build path → entity name mapping for field config resolution
 		pathToEntityName := make(map[string]string)
@@ -150,6 +164,9 @@ func (r *Runner) Run(
 
 		if err := cleanupLegacyGeneratedFiles(r.projectRoot, dir, parsed); err != nil {
 			return fmt.Errorf("failed to remove obsolete generated files in %q: %w", dir, err)
+		}
+		if err := cleanupRenamedGeneratedFiles(r.projectRoot, dir, renamedGeneratedEntities); err != nil {
+			return fmt.Errorf("failed to remove renamed generated files in %q: %w", dir, err)
 		}
 
 		// Remove legacy register.go to avoid symbol conflicts with
@@ -530,6 +547,80 @@ func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedS
 	}
 
 	return nil
+}
+
+func cleanupRenamedGeneratedFiles(projectRoot, dir string, renames []generatedEntityRename) error {
+	seen := make(map[string]struct{}, len(renames))
+	for _, rename := range renames {
+		if rename.OldEntity == "" || rename.OldEntity == rename.NewEntity {
+			continue
+		}
+		if _, ok := seen[rename.OldEntity]; ok {
+			continue
+		}
+		seen[rename.OldEntity] = struct{}{}
+
+		prefix := generator.EntityFilePrefix(rename.OldEntity)
+		for _, fileName := range []string{
+			"zz_generated_" + prefix + "_types.go",
+			"zz_generated_" + prefix + "_types_test.go",
+			"zz_generated_" + prefix + "_sdkops.go",
+			"zz_generated_" + prefix + "_sdkops_test.go",
+			"zz_generated_" + prefix + "_funcs.go",
+		} {
+			if err := removeFileIfExists(filepath.Join(dir, fileName)); err != nil {
+				return err
+			}
+		}
+		for _, fileName := range []string{
+			"zz_generated_ops_" + prefix + ".go",
+			"zz_generated_ops_" + prefix + "_test.go",
+		} {
+			if err := removeFileIfExists(filepath.Join(projectRoot, "controller/konnect/ops", fileName)); err != nil {
+				return err
+			}
+		}
+		if err := removeFileIfExists(filepath.Join(projectRoot, "controller/konnect", "zz_generated_watch_"+prefix+".go")); err != nil {
+			return err
+		}
+		for _, suffix := range []string{".go", "_test.go"} {
+			if err := removeFileIfExists(filepath.Join(projectRoot, "internal/utils/index", "zz_generated_"+prefix+suffix)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func legacyGeneratedEntityRenames(parsed *parser.ParsedSpec) []generatedEntityRename {
+	renames := make([]generatedEntityRename, 0)
+	seen := make(map[string]struct{})
+	for name, schema := range parsed.RequestBodies {
+		entity := parser.GetEntityNameFromType(name)
+		for _, dep := range schema.Dependencies {
+			if dep == nil || dep.EntityName == "" {
+				continue
+			}
+			if !strings.HasPrefix(entity, dep.EntityName) || len(entity) <= len(dep.EntityName) {
+				continue
+			}
+			legacyEntity := strings.TrimPrefix(entity, dep.EntityName)
+			if legacyEntity == "" || legacyEntity == entity {
+				continue
+			}
+			key := legacyEntity + "->" + entity
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			renames = append(renames, generatedEntityRename{
+				OldEntity: legacyEntity,
+				NewEntity: entity,
+			})
+		}
+	}
+	return renames
 }
 
 func legacyGeneratedFuncsFileName(entityName string) string {

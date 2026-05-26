@@ -62,8 +62,8 @@ func (obj EventGatewayVirtualClusterProducePolicyList) GetItems() []EventGateway
 	return obj.Items
 }
 
-// GetItems returns the list of IdentityProviderRequest items.
-func (obj IdentityProviderRequestList) GetItems() []IdentityProviderRequest {
+// GetItems returns the list of PortalIdentityProviderRequest items.
+func (obj PortalIdentityProviderRequestList) GetItems() []PortalIdentityProviderRequest {
 	return obj.Items
 }
 

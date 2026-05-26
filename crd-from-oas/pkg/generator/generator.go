@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"unicode"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -67,6 +68,7 @@ type Config struct {
 // Generator generates Go CRD types from parsed OpenAPI schemas.
 type Generator struct {
 	config            Config
+	parsed            *parser.ParsedSpec
 	opsCreateInfos    []*OpsCreateFileInfo
 	opsUpdateInfos    []*OpsUpdateFileInfo
 	opsDeleteInfos    []*OpsDeleteFileInfo
@@ -681,6 +683,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	var files []GeneratedFile
 	referencedSchemas := make(map[string]bool)
 	var reconcilerEntities []string
+	g.parsed = parsed
 	g.ensureInlineTypeNames(parsed)
 
 	// Pre-compute the set of schema names whose Go type is an anyOf union struct.
@@ -1041,19 +1044,30 @@ func (g *Generator) collectSchemaCursors(
 		case len(prop.OneOf) > 0:
 			// Property-level discriminated union: variants are accessed via their
 			// discriminator-value JSON tag under the property's own JSON tag.
-			for _, variant := range buildUnionVariants(prop) {
+			for _, variant := range buildUnionVariants(prop, generatedUnionTypeName(prop, entityName)) {
 				variantTag := jsonName(variant.discValue)
 				variantCursor := propCursor.Sub(variantTag)
 				variantPath := propPath + "." + variantTag
-				variantSchema := schemas[variant.refName]
-				if variantSchema == nil {
-					continue
-				}
 				variantCursor = childFieldConfig(variantCursor)
 				if variantCursor == nil {
 					continue
 				}
-				variantTypeName := fixInitialisms(variant.refName)
+				variantTypeName := variant.goTypeName
+				variantSchema := (*parser.Schema)(nil)
+				if variant.source != nil && variant.source.RefName == "" && isInlineObjectWithProperties(variant.source) {
+					variantSchema = &parser.Schema{Name: variantTypeName, Properties: variant.source.Properties}
+				} else {
+					for _, oneOfVariant := range prop.OneOf {
+						if oneOfVariant.RefName == "" || fixInitialisms(oneOfVariant.RefName) != variantTypeName {
+							continue
+						}
+						variantSchema = schemas[oneOfVariant.RefName]
+						break
+					}
+				}
+				if variantSchema == nil {
+					continue
+				}
 				if err := g.recordSchemaCursor(variantTypeName, entityName, variantPath, variantCursor, out, origins); err != nil {
 					return err
 				}
@@ -1068,19 +1082,30 @@ func (g *Generator) collectSchemaCursors(
 	// Variant fields are flattened directly under apiSpec (no intermediate key).
 	if len(schema.OneOf) > 0 {
 		rootProp := buildRootUnionProperty(schema)
-		for _, variant := range buildUnionVariants(rootProp) {
+		for _, variant := range buildUnionVariants(rootProp, generatedUnionTypeName(rootProp, "")) {
 			variantTag := jsonName(variant.discValue)
 			variantCursor := cursor.Sub(variantTag)
 			variantPath := path + "." + variantTag
-			variantSchema := schemas[variant.refName]
-			if variantSchema == nil {
-				continue
-			}
 			variantCursor = childFieldConfig(variantCursor)
 			if variantCursor == nil {
 				continue
 			}
-			variantTypeName := fixInitialisms(variant.refName)
+			variantTypeName := variant.goTypeName
+			variantSchema := (*parser.Schema)(nil)
+			if variant.source != nil && variant.source.RefName == "" && isInlineObjectWithProperties(variant.source) {
+				variantSchema = &parser.Schema{Name: variantTypeName, Properties: variant.source.Properties}
+			} else {
+				for _, oneOfVariant := range schema.OneOf {
+					if oneOfVariant.RefName == "" || fixInitialisms(oneOfVariant.RefName) != variantTypeName {
+						continue
+					}
+					variantSchema = schemas[oneOfVariant.RefName]
+					break
+				}
+			}
+			if variantSchema == nil {
+				continue
+			}
 			if err := g.recordSchemaCursor(variantTypeName, entityName, variantPath, variantCursor, out, origins); err != nil {
 				return err
 			}
@@ -1112,7 +1137,7 @@ func (g *Generator) validateCursorAtLevel(path string, cursor *config.FieldConfi
 	// Root-level oneOf: variant tags are valid directly at this level.
 	if len(schema.OneOf) > 0 {
 		rootProp := buildRootUnionProperty(schema)
-		for _, variant := range buildUnionVariants(rootProp) {
+		for _, variant := range buildUnionVariants(rootProp, generatedUnionTypeName(rootProp, "")) {
 			validTags[jsonName(variant.discValue)] = true
 		}
 	}
@@ -1509,8 +1534,6 @@ func shouldSkipUnionMemberDiscriminator(refName string, prop *parser.Property, u
 // at that schema's level, used to apply custom kubebuilder validation markers.
 func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec, schemaCursors map[string]*config.FieldConfig) string {
 	g.ensureInlineTypeNames(parsed)
-	var buf strings.Builder
-	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, g.config.APIVersion)
 	unionMemberDiscriminators := collectUnionMemberDiscriminators(parsed)
 
 	// Sort keys to ensure deterministic output order
@@ -1520,27 +1543,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 	}
 	sort.Strings(refNames)
 
-	if needsAPIExtJSON, needsIntStr, needsEncodingJSON, objectRefImport := g.schemaTypesImports(refNames, parsed); needsAPIExtJSON || needsIntStr || needsEncodingJSON || objectRefImport != nil {
-		buf.WriteString("import (\n")
-		if needsEncodingJSON {
-			buf.WriteString("\t\"encoding/json\"\n")
-			buf.WriteString("\t\"fmt\"\n")
-		}
-		if needsAPIExtJSON {
-			buf.WriteString("\tapiextensionsv1 \"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1\"\n")
-		}
-		if needsIntStr {
-			buf.WriteString("\tintstr \"k8s.io/apimachinery/pkg/util/intstr\"\n")
-		}
-		if objectRefImport != nil {
-			if objectRefImport.Alias != "" {
-				fmt.Fprintf(&buf, "\t%s %q\n", objectRefImport.Alias, objectRefImport.Path)
-			} else {
-				fmt.Fprintf(&buf, "\t%q\n", objectRefImport.Path)
-			}
-		}
-		buf.WriteString(")\n\n")
-	}
+	var body strings.Builder
 
 	// emittedNested tracks inline-object type names already emitted, so a field
 	// shape reused across multiple parent schemas only produces one definition.
@@ -1566,62 +1569,61 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 			switch {
 			case len(schema.Properties) > 0:
 				// It's an object type - generate a struct
-				buf.WriteString(comment)
-				fmt.Fprintf(&buf, "type %s struct {\n", goName)
+				body.WriteString(comment)
+				fmt.Fprintf(&body, "type %s struct {\n", goName)
 				for _, prop := range schema.Properties {
 					if skipProperty(prop) || shouldSkipUnionMemberDiscriminator(refName, prop, unionMemberDiscriminators) {
 						continue
 					}
-					g.writeSchemaTypeField(&buf, prop, goName, schemaCursor)
+					g.writeSchemaTypeField(&body, prop, goName, schemaCursor)
 				}
-				buf.WriteString("}\n\n")
-				g.writeNestedInlineTypes(&buf, schema.Properties, emittedNested, "", goName, schemaCursor)
+				body.WriteString("}\n\n")
+				g.writeNestedInlineTypes(&body, schema.Properties, emittedNested, "", goName, schemaCursor)
 				// Emit union type definitions for any property-level oneOf.
 				for _, prop := range schema.Properties {
 					if skipProperty(prop) || len(prop.OneOf) == 0 {
 						continue
 					}
-					unionTypeName := generatedUnionTypeName(prop, goName)
-					if emittedNested[unionTypeName] {
-						continue
+					var propCursor *config.FieldConfig
+					if schemaCursor != nil {
+						propCursor = schemaCursor.Sub(jsonTagForProperty(prop))
 					}
-					emittedNested[unionTypeName] = true
-					buf.WriteString(g.generateUnionType(prop, goName))
+					g.writeUnionTypeDefinition(&body, prop, goName, emittedNested, "", propCursor)
 				}
 				if wrapper := emitUnionWrapperUnmarshalJSON(goName, buildUnionFieldSpecs(schema.Properties, goName)); wrapper != "" {
-					buf.WriteString(wrapper)
+					body.WriteString(wrapper)
 				}
 			case schema.Type == "boolean":
 				// Per K8s API convention (nobools), boolean schemas become string
 				// types with Enabled/Disabled enum constants.
-				buf.WriteString(comment)
-				buf.WriteString("//\n// +kubebuilder:validation:Enum=Enabled;Disabled\n")
-				fmt.Fprintf(&buf, "type %s string\n\n", goName)
-				fmt.Fprintf(&buf, "const (\n")
-				fmt.Fprintf(&buf, "\t// %sEnabled sets %s as enabled.\n", goName, goName)
-				fmt.Fprintf(&buf, "\t%sEnabled  %s = \"Enabled\"\n", goName, goName)
-				fmt.Fprintf(&buf, "\t// %sDisabled sets %s as disabled.\n", goName, goName)
-				fmt.Fprintf(&buf, "\t%sDisabled %s = \"Disabled\"\n", goName, goName)
-				fmt.Fprintf(&buf, ")\n\n")
+				body.WriteString(comment)
+				body.WriteString("//\n// +kubebuilder:validation:Enum=Enabled;Disabled\n")
+				fmt.Fprintf(&body, "type %s string\n\n", goName)
+				fmt.Fprintf(&body, "const (\n")
+				fmt.Fprintf(&body, "\t// %sEnabled sets %s as enabled.\n", goName, goName)
+				fmt.Fprintf(&body, "\t%sEnabled  %s = \"Enabled\"\n", goName, goName)
+				fmt.Fprintf(&body, "\t// %sDisabled sets %s as disabled.\n", goName, goName)
+				fmt.Fprintf(&body, "\t%sDisabled %s = \"Disabled\"\n", goName, goName)
+				fmt.Fprintf(&body, ")\n\n")
 
 			case isScalarStringIntOneOf(schema.OneOf):
 				// Root-level oneOf of exactly {string, integer} — emit a Go type alias for
 				// intstr.IntOrString. Alias (not named type) ensures controller-gen recognises
 				// it as IntOrString and emits anyOf:[integer,string] in the CRD schema.
-				buf.WriteString(comment)
-				buf.WriteString("//\n// +kubebuilder:validation:XIntOrString\n")
-				fmt.Fprintf(&buf, "type %s = intstr.IntOrString\n\n", goName)
+				body.WriteString(comment)
+				body.WriteString("//\n// +kubebuilder:validation:XIntOrString\n")
+				fmt.Fprintf(&body, "type %s = intstr.IntOrString\n\n", goName)
 
 			case hasRefVariants(schema.OneOf) && schema.Discriminator != "":
 				// Root-level oneOf + OAS discriminator: emit a flat discriminated union
 				// wrapper struct with custom MarshalJSON/UnmarshalJSON so the wire JSON
 				// matches the SDK's expected flat shape.
-				buf.WriteString(g.emitDiscriminatedUnionType(goName, schema))
+				body.WriteString(g.emitDiscriminatedUnionType(goName, schema))
 
 			case hasRefVariants(schema.AnyOf):
 				// Root-level anyOf without discriminator: emit a wrapper struct with one
 				// optional pointer per variant, with MinProperties=1 / MaxProperties=1.
-				buf.WriteString(g.emitAnyOfUnionType(goName, schema))
+				body.WriteString(g.emitAnyOfUnionType(goName, schema))
 
 			case schema.AdditionalProperties != nil:
 				// Map type with value constraints: generate a dedicated value type
@@ -1629,27 +1631,61 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				valueTypeName := refName + "Value"
 				valueBaseType := propertyToGoBaseType(schema.AdditionalProperties)
 
-				fmt.Fprintf(&buf, "// %s is the value type for %s.\n", valueTypeName, refName)
+				fmt.Fprintf(&body, "// %s is the value type for %s.\n", valueTypeName, refName)
 				if markers := valueTypeMarkers(schema.AdditionalProperties); len(markers) > 0 {
-					buf.WriteString("//\n")
+					body.WriteString("//\n")
 					for _, marker := range markers {
-						fmt.Fprintf(&buf, "// %s\n", marker)
+						fmt.Fprintf(&body, "// %s\n", marker)
 					}
 				}
-				fmt.Fprintf(&buf, "type %s %s\n\n", valueTypeName, valueBaseType)
+				fmt.Fprintf(&body, "type %s %s\n\n", valueTypeName, valueBaseType)
 
-				buf.WriteString(comment)
-				fmt.Fprintf(&buf, "type %s map[string]%s\n\n", refName, valueTypeName)
+				body.WriteString(comment)
+				fmt.Fprintf(&body, "type %s map[string]%s\n\n", refName, valueTypeName)
 
 			default:
 				// Generate based on the schema's actual type
-				buf.WriteString(comment)
+				body.WriteString(comment)
 				goType := schemaToGoType(schema)
-				fmt.Fprintf(&buf, "type %s %s\n\n", goName, goType)
+				fmt.Fprintf(&body, "type %s %s\n\n", goName, goType)
 			}
 		} else {
 			panic("Schema not found for reference: " + refName)
 		}
+	}
+
+	bodyString := strings.TrimRight(body.String(), "\n")
+	needsAPIExtJSON, needsIntStr, needsEncodingJSON, objectRefImport := g.schemaTypesImports(refNames, parsed)
+	if !needsAPIExtJSON && strings.Contains(bodyString, "apiextensionsv1.") {
+		needsAPIExtJSON = true
+	}
+
+	var buf strings.Builder
+	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, g.config.APIVersion)
+	if needsAPIExtJSON || needsIntStr || needsEncodingJSON || objectRefImport != nil {
+		buf.WriteString("import (\n")
+		if needsEncodingJSON {
+			buf.WriteString("\t\"encoding/json\"\n")
+			buf.WriteString("\t\"fmt\"\n")
+		}
+		if needsAPIExtJSON {
+			buf.WriteString("\tapiextensionsv1 \"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1\"\n")
+		}
+		if needsIntStr {
+			buf.WriteString("\tintstr \"k8s.io/apimachinery/pkg/util/intstr\"\n")
+		}
+		if objectRefImport != nil {
+			if objectRefImport.Alias != "" {
+				fmt.Fprintf(&buf, "\t%s %q\n", objectRefImport.Alias, objectRefImport.Path)
+			} else {
+				fmt.Fprintf(&buf, "\t%q\n", objectRefImport.Path)
+			}
+		}
+		buf.WriteString(")\n\n")
+	}
+	if bodyString != "" {
+		buf.WriteString(bodyString)
+		buf.WriteByte('\n')
 	}
 
 	return strings.TrimRight(buf.String(), "\n") + "\n"
@@ -1662,7 +1698,7 @@ func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedS
 			continue
 		}
 
-		if !needsAPIExtJSON && schemaUsesJSON(g, schema) {
+		if !needsAPIExtJSON && schemaUsesJSON(g, schema, parsed) {
 			needsAPIExtJSON = true
 		}
 		if !needsIntStr && isScalarStringIntOneOf(schema.OneOf) {
@@ -1760,12 +1796,7 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 				if skipProperty(nested) || len(nested.OneOf) == 0 {
 					continue
 				}
-				unionTypeName := generatedUnionTypeName(nested, typeName)
-				if emitted[unionTypeName] {
-					continue
-				}
-				emitted[unionTypeName] = true
-				buf.WriteString(g.generateUnionType(nested, typeName))
+				g.writeUnionTypeDefinition(buf, nested, typeName, emitted, entityName, propCursor.Sub(jsonTagForProperty(nested)))
 			}
 			if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Items.Properties, typeName)); wrapper != "" {
 				buf.WriteString(wrapper)
@@ -1803,12 +1834,7 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 			if skipProperty(nested) || len(nested.OneOf) == 0 {
 				continue
 			}
-			unionTypeName := generatedUnionTypeName(nested, typeName)
-			if emitted[unionTypeName] {
-				continue
-			}
-			emitted[unionTypeName] = true
-			buf.WriteString(g.generateUnionType(nested, typeName))
+			g.writeUnionTypeDefinition(buf, nested, typeName, emitted, entityName, inlineCursor.Sub(jsonTagForProperty(nested)))
 		}
 		if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Properties, typeName)); wrapper != "" {
 			buf.WriteString(wrapper)
@@ -2060,7 +2086,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		Schema:                    schema,
 		APIGroup:                  g.config.APIGroup,
 		APIVersion:                g.config.APIVersion,
-		NeedsJSONImport:           schemaUsesJSON(g, schema),
+		NeedsJSONImport:           schemaUsesJSON(g, schema, g.parsed),
 		HasUnionTypes:             hasUnionTypes,
 		ObjectRefImport:           objectRefImport,
 		HasRootReconciler:         hasRootReconciler,
@@ -2080,15 +2106,17 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		return "", err
 	}
 
+	emittedInlineAndUnionTypes := make(map[string]bool)
+
 	var nestedInlineTypes strings.Builder
-	g.writeNestedInlineTypes(&nestedInlineTypes, schema.Properties, make(map[string]bool), entityName, entityName+"APISpec", apiSpecCursor)
+	g.writeNestedInlineTypes(&nestedInlineTypes, schema.Properties, emittedInlineAndUnionTypes, entityName, entityName+"APISpec", apiSpecCursor)
 	if nestedInlineTypes.Len() > 0 {
 		buf.WriteString("\n")
 		buf.WriteString(nestedInlineTypes.String())
 	}
 
 	// Generate union types for any oneOf properties
-	unionTypes := g.generateUnionTypes(schema, entityName)
+	unionTypes := g.generateUnionTypes(schema, entityName, emittedInlineAndUnionTypes, apiSpecCursor)
 	if unionTypes != "" {
 		buf.WriteString("\n")
 		buf.WriteString(unionTypes)
@@ -2457,12 +2485,12 @@ func (g *Generator) konnectLabelsValueType(prop *parser.Property) (string, bool)
 // Property-level union type names are prefixed with entityName to avoid
 // package-scoped collisions between entities that share a property name
 // (e.g. "config").
-func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string) string {
+func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string, emitted map[string]bool, parentCursor *config.FieldConfig) string {
 	var buf strings.Builder
 
 	// Handle root-level oneOf (the schema itself is a union type)
 	if len(schema.OneOf) > 0 {
-		buf.WriteString(g.generateRootUnionType(schema))
+		g.writeUnionTypeDefinition(&buf, buildRootUnionProperty(schema), "", emitted, entityName, parentCursor)
 	}
 
 	// Handle property-level oneOf
@@ -2471,37 +2499,44 @@ func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string)
 			continue
 		}
 		if len(prop.OneOf) > 0 {
-			buf.WriteString(g.generateUnionType(prop, entityName))
+			g.writeUnionTypeDefinition(&buf, prop, entityName, emitted, entityName, parentCursor.Sub(jsonTagForProperty(prop)))
 		}
 	}
 
 	return buf.String()
 }
 
-// generateRootUnionType generates a union type for a schema with root-level oneOf.
-func (g *Generator) generateRootUnionType(schema *parser.Schema) string {
-	return g.generateUnionType(buildRootUnionProperty(schema), "")
-}
-
-// unionVariant holds the discriminator value and ref name for one union variant.
+// unionVariant holds the generated names for one union variant.
 type unionVariant struct {
-	discValue string // OAS discriminator value, e.g. "sasl_plain" — used for JSON tag and enum const
-	refName   string // OAS component schema name, e.g. "BackendClusterAuthenticationSaslPlain"
+	discValue  string           // OAS discriminator value, e.g. "sasl_plain" — used for JSON tag and enum const.
+	fieldName  string           // Go field name used by the wrapper.
+	goTypeName string           // Go type name used by the wrapper field.
+	source     *parser.Property // Original property schema, used for anonymous inline members.
 }
 
 // buildUnionVariants builds the ordered list of variants for a property-level oneOf
 // union. Uses the OAS discriminator mapping when present (for correct snake_case
 // values); falls back to extractVariantNames when no discriminator is available.
-func buildUnionVariants(prop *parser.Property) []unionVariant {
+func buildUnionVariants(prop *parser.Property, unionTypeName string) []unionVariant {
 	if len(prop.DiscriminatorMapping) > 0 {
 		values := make([]string, 0, len(prop.DiscriminatorMapping))
 		for v := range prop.DiscriminatorMapping {
 			values = append(values, v)
 		}
 		sort.Strings(values)
-		variants := make([]unionVariant, 0, len(values))
+		rawRefNames := make([]string, 0, len(values))
 		for _, v := range values {
-			variants = append(variants, unionVariant{discValue: v, refName: prop.DiscriminatorMapping[v]})
+			rawRefNames = append(rawRefNames, prop.DiscriminatorMapping[v])
+		}
+		fieldNames := uniqueUnionFieldNames(rawRefNames)
+		variants := make([]unionVariant, 0, len(values))
+		for i, v := range values {
+			refName := prop.DiscriminatorMapping[v]
+			variants = append(variants, unionVariant{
+				discValue:  v,
+				fieldName:  fixInitialisms(goFieldName(fieldNames[i])),
+				goTypeName: fixInitialisms(refName),
+			})
 		}
 		return variants
 	}
@@ -2514,14 +2549,21 @@ func buildUnionVariants(prop *parser.Property) []unionVariant {
 		}
 		rawNames = append(rawNames, name)
 	}
-	cleanNames := extractVariantNames(rawNames)
+	discValues := uniqueUnionDiscriminatorValues(rawNames)
+	fieldNames := uniqueUnionFieldNames(rawNames)
 	variants := make([]unionVariant, 0, len(prop.OneOf))
 	for i, v := range prop.OneOf {
-		refName := v.Name
+		fieldName := fixInitialisms(goFieldName(fieldNames[i]))
+		goTypeName := anonymousUnionVariantTypeName(unionTypeName, fieldName)
 		if v.RefName != "" {
-			refName = v.RefName
+			goTypeName = fixInitialisms(v.RefName)
 		}
-		variants = append(variants, unionVariant{discValue: cleanNames[i], refName: refName})
+		variants = append(variants, unionVariant{
+			discValue:  discValues[i],
+			fieldName:  fieldName,
+			goTypeName: goTypeName,
+			source:     v,
+		})
 	}
 	return variants
 }
@@ -2531,14 +2573,119 @@ func buildUnionVariants(prop *parser.Property) []unionVariant {
 // package-scoped collisions for common property names like "config".
 func (g *Generator) generateUnionType(prop *parser.Property, typeNamePrefix string) string {
 	typeName := generatedUnionTypeName(prop, typeNamePrefix)
-	variants := buildUnionVariants(prop)
+	variants := buildUnionVariants(prop, typeName)
 	return emitDiscriminatedUnionCode(typeName, prop.Name, unionDiscriminatorJSONName(prop), variants)
 }
 
+func (g *Generator) writeUnionTypeDefinition(buf *strings.Builder, prop *parser.Property, typeNamePrefix string, emitted map[string]bool, entityName string, parentCursor *config.FieldConfig) {
+	if prop == nil || len(prop.OneOf) == 0 {
+		return
+	}
+
+	unionTypeName := generatedUnionTypeName(prop, typeNamePrefix)
+	g.writeAnonymousUnionVariantTypes(buf, prop, unionTypeName, emitted, entityName, parentCursor)
+
+	if emitted[unionTypeName] {
+		return
+	}
+	emitted[unionTypeName] = true
+	buf.WriteString(g.generateUnionType(prop, typeNamePrefix))
+}
+
+func (g *Generator) writeAnonymousUnionVariantTypes(buf *strings.Builder, prop *parser.Property, unionTypeName string, emitted map[string]bool, entityName string, parentCursor *config.FieldConfig) {
+	for _, variant := range buildUnionVariants(prop, unionTypeName) {
+		if variant.source == nil || variant.source.RefName != "" {
+			continue
+		}
+		g.writeAnonymousUnionVariantType(buf, variant, emitted, entityName, parentCursor.Sub(jsonName(variant.discValue)), prop.Discriminator)
+	}
+}
+
+func (g *Generator) writeAnonymousUnionVariantType(buf *strings.Builder, variant unionVariant, emitted map[string]bool, entityName string, parentCursor *config.FieldConfig, parentDiscriminator string) {
+	if variant.source == nil {
+		return
+	}
+	if emitted[variant.goTypeName] {
+		return
+	}
+	emitted[variant.goTypeName] = true
+
+	if !isInlineObjectWithProperties(variant.source) {
+		buf.WriteString(formatSchemaComment(variant.goTypeName, variant.source.Description))
+		fmt.Fprintf(buf, "type %s %s\n\n", variant.goTypeName, anonymousUnionVariantGoType(variant.source))
+		return
+	}
+
+	buf.WriteString(formatSchemaComment(variant.goTypeName, variant.source.Description))
+	fmt.Fprintf(buf, "type %s struct {\n", variant.goTypeName)
+	for _, nested := range variant.source.Properties {
+		if skipProperty(nested) || (parentDiscriminator != "" && nested.Name == parentDiscriminator) {
+			continue
+		}
+		g.writeSchemaTypeField(buf, nested, variant.goTypeName, parentCursor)
+	}
+	buf.WriteString("}\n\n")
+
+	g.writeNestedInlineTypes(buf, variant.source.Properties, emitted, entityName, variant.goTypeName, parentCursor)
+	for _, nested := range variant.source.Properties {
+		if skipProperty(nested) || len(nested.OneOf) == 0 {
+			continue
+		}
+		g.writeUnionTypeDefinition(buf, nested, variant.goTypeName, emitted, entityName, parentCursor.Sub(jsonTagForProperty(nested)))
+	}
+	if wrapper := emitUnionWrapperUnmarshalJSON(variant.goTypeName, buildUnionFieldSpecs(variant.source.Properties, variant.goTypeName)); wrapper != "" {
+		buf.WriteString(wrapper)
+	}
+}
+
+func anonymousUnionVariantGoType(prop *parser.Property) string {
+	if prop == nil {
+		return "any"
+	}
+
+	switch prop.Type {
+	case "string":
+		return "string"
+	case "integer":
+		switch prop.Format {
+		case "int32":
+			return "int32"
+		case "int64":
+			return "int64"
+		default:
+			return "int"
+		}
+	case "number":
+		switch prop.Format {
+		case "float":
+			return "float32"
+		case "double":
+			return "float64"
+		default:
+			return "float64"
+		}
+	case "boolean":
+		return "string"
+	case "array":
+		if prop.Items == nil {
+			return "[]any"
+		}
+		return "[]" + anonymousUnionVariantGoType(prop.Items)
+	case "object":
+		if prop.AdditionalProperties != nil {
+			return "map[string]" + anonymousUnionVariantGoType(prop.AdditionalProperties)
+		}
+		return "apiextensionsv1.JSON"
+	default:
+		return "any"
+	}
+}
+
 type unionFieldVariant struct {
-	DiscValue string
-	FieldName string
-	TypeConst string
+	DiscValue   string
+	FieldName   string
+	TypeConst   string
+	TestPayload string
 }
 
 type unionFieldSpec struct {
@@ -2580,23 +2727,36 @@ func generatedUnionTypeName(prop *parser.Property, typeNamePrefix string) string
 }
 
 func buildUnionFieldVariants(variants []unionVariant, typeName string) []unionFieldVariant {
-	rawRefNames := make([]string, 0, len(variants))
-	for _, v := range variants {
-		rawRefNames = append(rawRefNames, v.refName)
-	}
-	cleanFieldNames := extractVariantNames(rawRefNames)
-
 	result := make([]unionFieldVariant, 0, len(variants))
-	for i, v := range variants {
-		fieldName := fixInitialisms(cleanFieldNames[i])
+	for _, v := range variants {
 		result = append(result, unionFieldVariant{
-			DiscValue: v.discValue,
-			FieldName: fieldName,
-			TypeConst: typeName + "Type" + fieldName,
+			DiscValue:   v.discValue,
+			FieldName:   v.fieldName,
+			TypeConst:   typeName + "Type" + v.fieldName,
+			TestPayload: unionVariantTestPayload(v.source),
 		})
 	}
 
 	return result
+}
+
+func unionVariantTestPayload(prop *parser.Property) string {
+	if prop == nil || isInlineObjectWithProperties(prop) {
+		return "{}"
+	}
+
+	switch prop.Type {
+	case "array":
+		return "[]"
+	case "string", "boolean":
+		return `""`
+	case "integer", "number":
+		return "0"
+	case "object":
+		return "{}"
+	default:
+		return "{}"
+	}
 }
 
 func buildUnionFieldSpec(fieldName, typeName, jsonName string, prop *parser.Property) unionFieldSpec {
@@ -2608,7 +2768,7 @@ func buildUnionFieldSpec(fieldName, typeName, jsonName string, prop *parser.Prop
 		TypeName:               typeName,
 		DiscriminatorJSONName:  discriminatorJSONName,
 		DiscriminatorFieldName: fixInitialisms(goFieldName(discriminatorJSONName)),
-		Variants:               buildUnionFieldVariants(buildUnionVariants(prop), typeName),
+		Variants:               buildUnionFieldVariants(buildUnionVariants(prop, typeName), typeName),
 	}
 }
 
@@ -2757,7 +2917,7 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 		buf.WriteString("\t}{\n")
 		for _, variant := range unionSpec.Variants {
 			camelDiscValue := jsonName(variant.DiscValue)
-			payload := fmt.Sprintf(`{%q:%q,%q:{}}`, unionSpec.DiscriminatorJSONName, camelDiscValue, camelDiscValue)
+			payload := fmt.Sprintf(`{%q:%q,%q:%s}`, unionSpec.DiscriminatorJSONName, camelDiscValue, camelDiscValue, variant.TestPayload)
 			fmt.Fprintf(&buf, "\t\t{name: %q, payload: []byte(%q)},\n", variant.DiscValue, payload)
 		}
 		buf.WriteString("\t}\n\n")
@@ -2806,7 +2966,7 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 		for _, field := range wrapperSpec.Fields {
 			for _, variant := range field.Variants {
 				camelDiscValue := jsonName(variant.DiscValue)
-				variantPayload := fmt.Sprintf(`{%q:%q,%q:{}}`, field.DiscriminatorJSONName, camelDiscValue, camelDiscValue)
+				variantPayload := fmt.Sprintf(`{%q:%q,%q:%s}`, field.DiscriminatorJSONName, camelDiscValue, camelDiscValue, variant.TestPayload)
 				payload := variantPayload
 				if !field.Inline {
 					payload = fmt.Sprintf(`{%q:%s}`, jsonName(field.JSONName), variantPayload)
@@ -2855,13 +3015,6 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 //     K8s/etcd wire format.
 func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string, variants []unionVariant) string {
 	discriminatorFieldName := fixInitialisms(goFieldName(discriminatorJSONName))
-	// Compute short clean field names from all ref names together so the common
-	// prefix/suffix is stripped (e.g. "VirtualClusterAuthentication" prefix).
-	rawRefNames := make([]string, 0, len(variants))
-	for _, v := range variants {
-		rawRefNames = append(rawRefNames, v.refName)
-	}
-	cleanFieldNames := extractVariantNames(rawRefNames)
 
 	discValues := make([]string, 0, len(variants))
 	for _, v := range variants {
@@ -2888,13 +3041,11 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	fmt.Fprintf(&buf, "\t// +kubebuilder:validation:Enum=%s\n", strings.Join(discValues, ";"))
 	fmt.Fprintf(&buf, "\t%s %sType `json:\"%s,omitempty\"`\n\n", discriminatorFieldName, typeName, discriminatorJSONName)
 
-	for i, v := range variants {
-		fieldName := fixInitialisms(cleanFieldNames[i])
-		refTypeName := fixInitialisms(v.refName)
-		fmt.Fprintf(&buf, "\t// %s configuration.\n", fieldName)
+	for _, v := range variants {
+		fmt.Fprintf(&buf, "\t// %s configuration.\n", v.fieldName)
 		buf.WriteString("\t//\n")
 		buf.WriteString("\t// +optional\n")
-		fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", fieldName, refTypeName, jsonName(v.discValue))
+		fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", v.fieldName, v.goTypeName, jsonName(v.discValue))
 	}
 	buf.WriteString("}\n\n")
 
@@ -2903,9 +3054,8 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 
 	fmt.Fprintf(&buf, "// %sType values.\n", typeName)
 	buf.WriteString("const (\n")
-	for i, v := range variants {
-		fieldSuffix := fixInitialisms(cleanFieldNames[i])
-		fmt.Fprintf(&buf, "\t%sType%s %sType = \"%s\"\n", typeName, fieldSuffix, typeName, jsonName(v.discValue))
+	for _, v := range variants {
+		fmt.Fprintf(&buf, "\t%sType%s %sType = \"%s\"\n", typeName, v.fieldName, typeName, jsonName(v.discValue))
 	}
 	buf.WriteString(")\n\n")
 
@@ -2920,12 +3070,11 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	buf.WriteString("\t}\n")
 	fmt.Fprintf(&buf, "\tm[%q] = typeBytes\n", discriminatorJSONName)
 	fmt.Fprintf(&buf, "\tswitch u.%s {\n", discriminatorFieldName)
-	for i, v := range variants {
-		fieldName := fixInitialisms(cleanFieldNames[i])
+	for _, v := range variants {
 		camelDiscValue := jsonName(v.discValue)
-		fmt.Fprintf(&buf, "\tcase %sType%s:\n", typeName, fieldName)
-		fmt.Fprintf(&buf, "\t\tif u.%s != nil {\n", fieldName)
-		fmt.Fprintf(&buf, "\t\t\traw, err := json.Marshal(u.%s)\n", fieldName)
+		fmt.Fprintf(&buf, "\tcase %sType%s:\n", typeName, v.fieldName)
+		fmt.Fprintf(&buf, "\t\tif u.%s != nil {\n", v.fieldName)
+		fmt.Fprintf(&buf, "\t\t\traw, err := json.Marshal(u.%s)\n", v.fieldName)
 		buf.WriteString("\t\t\tif err != nil {\n")
 		fmt.Fprintf(&buf, "\t\t\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, v.discValue)
 		buf.WriteString("\t\t\t}\n")
@@ -2955,20 +3104,18 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	buf.WriteString("\t}\n")
 	fmt.Fprintf(&buf, "\tu.%s = %sType(probe.%s)\n", discriminatorFieldName, typeName, discriminatorFieldName)
 	fmt.Fprintf(&buf, "\tswitch probe.%s {\n", discriminatorFieldName)
-	for i, v := range variants {
-		fieldName := fixInitialisms(cleanFieldNames[i])
-		refTypeName := fixInitialisms(v.refName)
+	for _, v := range variants {
 		camelDiscValue := jsonName(v.discValue)
 		fmt.Fprintf(&buf, "\tcase \"%s\":\n", camelDiscValue)
 		fmt.Fprintf(&buf, "\t\tpayload, ok := raw[\"%s\"]\n", camelDiscValue)
 		buf.WriteString("\t\tif !ok || len(payload) == 0 {\n")
 		buf.WriteString("\t\t\treturn nil\n")
 		buf.WriteString("\t\t}\n")
-		fmt.Fprintf(&buf, "\t\tvar val %s\n", refTypeName)
+		fmt.Fprintf(&buf, "\t\tvar val %s\n", v.goTypeName)
 		buf.WriteString("\t\tif err := json.Unmarshal(payload, &val); err != nil {\n")
 		fmt.Fprintf(&buf, "\t\t\treturn fmt.Errorf(\"unmarshaling %s %s: %%w\", err)\n", typeName, v.discValue)
 		buf.WriteString("\t\t}\n")
-		fmt.Fprintf(&buf, "\t\tu.%s = &val\n", fieldName)
+		fmt.Fprintf(&buf, "\t\tu.%s = &val\n", v.fieldName)
 	}
 	buf.WriteString("\t}\n")
 	buf.WriteString("\treturn nil\n")
@@ -3066,19 +3213,66 @@ func cleanSingleVariantName(name string) string {
 	return result
 }
 
+func uniqueUnionDiscriminatorValues(names []string) []string {
+	return uniquifyUnionMemberNames(extractVariantNames(names), "Variant", jsonName)
+}
+
+func uniqueUnionFieldNames(names []string) []string {
+	return uniquifyUnionMemberNames(extractVariantNames(names), "Variant", func(name string) string {
+		return fixInitialisms(goFieldName(name))
+	})
+}
+
+func uniquifyUnionMemberNames(names []string, fallback string, key func(string) string) []string {
+	if len(names) == 0 {
+		return nil
+	}
+
+	result := make([]string, len(names))
+	counts := make(map[string]int, len(names))
+	for i, name := range names {
+		normalized := normalizeUnionMemberName(name, fallback)
+		result[i] = normalized
+		counts[key(normalized)]++
+	}
+
+	seen := make(map[string]int, len(counts))
+	for i, name := range result {
+		normalizedKey := key(name)
+		if counts[normalizedKey] == 1 {
+			continue
+		}
+		seen[normalizedKey]++
+		result[i] = fmt.Sprintf("%s%d", name, seen[normalizedKey])
+	}
+
+	return result
+}
+
+func normalizeUnionMemberName(name, fallback string) string {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" || !startsWithLetter(trimmed) {
+		return fallback
+	}
+	return trimmed
+}
+
+func startsWithLetter(name string) bool {
+	for _, r := range name {
+		return unicode.IsLetter(r)
+	}
+	return false
+}
+
+func anonymousUnionVariantTypeName(unionTypeName, fieldName string) string {
+	return unionTypeName + fieldName
+}
+
 // emitDiscriminatedUnionType emits Go source for a ROOT-LEVEL oneOf schema that has
 // an OAS discriminator.  It delegates to emitDiscriminatedUnionCode after building
 // the variant list from the schema's DiscriminatorMapping.
 func (g *Generator) emitDiscriminatedUnionType(goName string, schema *parser.Schema) string {
-	values := make([]string, 0, len(schema.DiscriminatorMapping))
-	for v := range schema.DiscriminatorMapping {
-		values = append(values, v)
-	}
-	sort.Strings(values)
-	variants := make([]unionVariant, 0, len(values))
-	for _, v := range values {
-		variants = append(variants, unionVariant{discValue: v, refName: schema.DiscriminatorMapping[v]})
-	}
+	variants := buildUnionVariants(buildRootUnionProperty(schema), goName)
 	return emitDiscriminatedUnionCode(goName, goName, unionDiscriminatorJSONName(buildRootUnionProperty(schema)), variants)
 }
 
@@ -4460,13 +4654,64 @@ func skipProperty(prop *parser.Property) bool {
 	return false
 }
 
-// schemaUsesJSON checks if any property in the schema will be generated as apiextensionsv1.JSON.
-func schemaUsesJSON(g *Generator, schema *parser.Schema) bool {
+// schemaUsesJSON checks if any property in the schema, including nested $refs,
+// will be generated as apiextensionsv1.JSON.
+func schemaUsesJSON(g *Generator, schema *parser.Schema, parsed *parser.ParsedSpec) bool {
+	return schemaUsesJSONRecursive(g, schema, parsed, make(map[string]bool))
+}
+
+func schemaUsesJSONRecursive(g *Generator, schema *parser.Schema, parsed *parser.ParsedSpec, seenRefs map[string]bool) bool {
 	for _, prop := range schema.Properties {
-		if skipProperty(prop) {
-			continue
+		if propertyUsesJSON(g, prop, parsed, seenRefs) {
+			return true
 		}
-		if g.goType(prop) == "apiextensionsv1.JSON" {
+	}
+	for _, variant := range schema.OneOf {
+		if propertyUsesJSON(g, variant, parsed, seenRefs) {
+			return true
+		}
+	}
+	for _, variant := range schema.AnyOf {
+		if propertyUsesJSON(g, variant, parsed, seenRefs) {
+			return true
+		}
+	}
+	return false
+}
+
+func propertyUsesJSON(g *Generator, prop *parser.Property, parsed *parser.ParsedSpec, seenRefs map[string]bool) bool {
+	if prop == nil || skipProperty(prop) {
+		return false
+	}
+	if prop.RefName != "" && parsed != nil && !seenRefs[prop.RefName] {
+		if refSchema, ok := parsed.Schemas[prop.RefName]; ok {
+			seenRefs[prop.RefName] = true
+			if schemaUsesJSONRecursive(g, refSchema, parsed, seenRefs) {
+				return true
+			}
+		}
+	}
+	if strings.Contains(g.goType(prop), "apiextensionsv1.JSON") {
+		return true
+	}
+	for _, variant := range prop.OneOf {
+		if propertyUsesJSON(g, variant, parsed, seenRefs) {
+			return true
+		}
+	}
+	for _, variant := range prop.AnyOf {
+		if propertyUsesJSON(g, variant, parsed, seenRefs) {
+			return true
+		}
+	}
+	if propertyUsesJSON(g, prop.Items, parsed, seenRefs) {
+		return true
+	}
+	if propertyUsesJSON(g, prop.AdditionalProperties, parsed, seenRefs) {
+		return true
+	}
+	for _, nested := range prop.Properties {
+		if propertyUsesJSON(g, nested, parsed, seenRefs) {
 			return true
 		}
 	}
