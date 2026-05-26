@@ -742,41 +742,51 @@ func TestNewKongCertificateName_Generated(t *testing.T) {
 		name         string
 		gatewayName  string
 		listenerPort string
+		listenerName string
 		expected     string
 	}{
 		{
 			name:         "short gateway and port",
 			gatewayName:  "my-gateway",
 			listenerPort: "443",
-			expected:     "cert.my-gateway.443",
+			listenerName: "https-1",
+			expected:     "cert.my-gateway.443.https-1",
 		},
 		{
 			name:         "gateway with namespace prefix",
 			gatewayName:  "prod-api-gateway",
 			listenerPort: "8443",
-			expected:     "cert.prod-api-gateway.8443",
+			listenerName: "tls-listener",
+			expected:     "cert.prod-api-gateway.8443.tls-listener",
 		},
 		{
 			name:         "different port",
 			gatewayName:  "test-gw",
 			listenerPort: "80",
-			expected:     "cert.test-gw.80",
+			listenerName: "http",
+			expected:     "cert.test-gw.80.http",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongCertificateName(tt.gatewayName, tt.listenerPort)
+			result := NewKongCertificateName(tt.gatewayName, tt.listenerPort, tt.listenerName)
 			require.NotEmpty(t, result)
 			require.Equal(t, tt.expected, result)
 		})
 	}
 
+	t.Run("same gateway and port with different listeners should differ", func(t *testing.T) {
+		first := NewKongCertificateName("gateway", "443", "https-1")
+		second := NewKongCertificateName("gateway", "443", "https-2")
+		require.NotEqual(t, first, second)
+	})
+
 	t.Run("very long gateway name should hash", func(t *testing.T) {
 		// Create a gateway name that when combined with "cert" and port exceeds 253 chars
 		// "cert." (5) + longName + "." (1) + "443" (3) = need longName > 244 chars
 		longGatewayName := strings.Repeat("very-long-gateway-name-segment-", 8) + "final-segment-to-exceed-limit"
-		result := NewKongCertificateName(longGatewayName, "443")
+		result := NewKongCertificateName(longGatewayName, "443", "https-listener")
 		require.NotEmpty(t, result)
 		require.True(t, strings.HasPrefix(result, namegenPrefix), "should hash when exceeding max length")
 		require.LessOrEqual(t, len(result), maxLen)

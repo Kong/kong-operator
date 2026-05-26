@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -186,6 +187,7 @@ func TestBuildKongCertificate(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotEmpty(t, cert.Name)
+			require.Contains(t, cert.Name, string(tt.listener.Name))
 			require.Equal(t, tt.gateway.Namespace, cert.Namespace)
 			require.Equal(t, string(tt.certRef.Name), cert.Spec.SecretRef.Name)
 			require.Equal(t, tt.secretNamespace, *cert.Spec.SecretRef.Namespace)
@@ -196,6 +198,38 @@ func TestBuildKongCertificate(t *testing.T) {
 			require.Equal(t, tt.gateway.Name, cert.OwnerReferences[0].Name)
 		})
 	}
+}
+
+func TestBuildKongCertificate_SamePortDifferentListenersDifferentNames(t *testing.T) {
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "default",
+		},
+	}
+
+	controlPlaneRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().Build()
+	converter := newGatewayConverter(gateway, fakeClient).(*gatewayConverter)
+	converter.controlPlaneRef = controlPlaneRef
+
+	certRef := gatewayv1.SecretObjectReference{Name: "tls-secret"}
+
+	listenerOne := &gwtypes.Listener{Name: "https-1", Port: 443}
+	listenerTwo := &gwtypes.Listener{Name: "https-2", Port: 443}
+
+	certOne, err := converter.buildKongCertificate(listenerOne, certRef, "default")
+	require.NoError(t, err)
+	certTwo, err := converter.buildKongCertificate(listenerTwo, certRef, "default")
+	require.NoError(t, err)
+
+	assert.NotEqual(t, certOne.Name, certTwo.Name)
 }
 
 func TestBuildKongSNI(t *testing.T) {
@@ -856,8 +890,8 @@ func TestTranslate(t *testing.T) {
 
 				require.NotNil(t, cert, "KongCertificate should be created")
 				require.NotNil(t, sni, "KongSNI should be created")
-				require.Equal(t, "cert.test-gateway.443", cert.Name)
-				require.Equal(t, "cert.test-gateway.443", sni.Spec.CertificateRef.Name)
+				require.Equal(t, "cert.test-gateway.443.https", cert.Name)
+				require.Equal(t, "cert.test-gateway.443.https", sni.Spec.CertificateRef.Name)
 			},
 		},
 		{

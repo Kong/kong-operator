@@ -162,11 +162,12 @@ func NewKongTargetName(upstreamID, endpointID string, port int, br *gwtypes.HTTP
 
 // NewKongCertificateName generates a KongCertificate name based on the Gateway name and listener port.
 // It uses the hybrid naming approach: readable names for short combinations, hashed names for long ones.
-func NewKongCertificateName(gatewayName, listenerPort string) string {
+func NewKongCertificateName(gatewayName, listenerPort, listenerName string) string {
 	return newName(
 		certPrefix,
 		gatewayName,
 		listenerPort,
+		listenerName,
 	)
 }
 
