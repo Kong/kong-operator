@@ -13,6 +13,7 @@ import (
 // entityOpsFileResult holds the outputs of generateEntityOpsFile.
 type entityOpsFileResult struct {
 	File           *GeneratedFile
+	TestFile       *GeneratedFile
 	CreateInfo     *OpsCreateFileInfo
 	UpdateInfo     *OpsUpdateFileInfo
 	DeleteInfo     *OpsDeleteFileInfo
@@ -152,6 +153,11 @@ func (g *Generator) generateEntityOpsFile(
 		}
 	}
 
+	testFile, err := g.generateEntityOpsTestFile(entityName, schema, opsConfig)
+	if err != nil {
+		return entityOpsFileResult{}, err
+	}
+
 	var createInfo *OpsCreateFileInfo
 	if createData != nil {
 		sdkGetter := "Get" + createData.SDKInterface
@@ -221,6 +227,7 @@ func (g *Generator) generateEntityOpsFile(
 
 	return entityOpsFileResult{
 		File:           file,
+		TestFile:       testFile,
 		CreateInfo:     createInfo,
 		UpdateInfo:     updateInfo,
 		DeleteInfo:     deleteInfo,
@@ -326,6 +333,8 @@ type parentInfo struct {
 	// IDGetter is the method name to fetch the parent's Konnect ID from the child object,
 	// e.g. "GetGatewayID". Derived from the raw dependency EntityName (before ParentEntityType override).
 	IDGetter string
+	// IDSetter is the companion mutator used in generated tests, e.g. "SetGatewayID".
+	IDSetter string
 	// VarName is the Go local variable name to use in generated code, e.g. "gatewayID".
 	VarName string
 	// SDKFieldName is the field name in the SDK operations request struct for this parent param,
@@ -365,6 +374,7 @@ func (g *Generator) resolveParents(entityName string, schema *parser.Schema) ([]
 		parents[i] = parentInfo{
 			EntityName:   name,
 			IDGetter:     "Get" + dep.EntityName + "ID",
+			IDSetter:     "Set" + dep.EntityName + "ID",
 			VarName:      varName,
 			SDKFieldName: sdkField,
 		}
