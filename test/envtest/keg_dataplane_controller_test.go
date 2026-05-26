@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
@@ -43,6 +44,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 	// controller's SetupWithManager calls initTypeConverter which fetches
 	// those schemas.
 	waitForOpenAPISchemas(t, cfg,
+		"apis/configuration.konghq.com/v1alpha1",
 		"apis/eventgateway.konghq.com/v1alpha1",
 		"apis/konnect.konghq.com/v1alpha1",
 	)
@@ -145,7 +147,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		require.Empty(t, deployList.Items)
 	})
 
-	t.Run("KEP programmed but cert not yet programmed: cert Secret + KonnectEventDataPlaneCertificate created, no Deployment", func(t *testing.T) {
+	t.Run("KEP programmed but cert not yet programmed: cert Secret + EventGatewayDataPlaneCertificate created, no Deployment", func(t *testing.T) {
 		t.Parallel()
 
 		kep := &konnectv1alpha1.KonnectEventGateway{
@@ -196,9 +198,9 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			assert.Equal(ct, 1, owned)
 		}, waitTime, tickTime)
 
-		// KonnectEventDataPlaneCertificate should be created.
+		// EventGatewayDataPlaneCertificate should be created.
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			cert := &konnectv1alpha1.KonnectEventDataPlaneCertificate{}
+			cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
 			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdp.Name, Namespace: ns.Name}, cert))
 		}, waitTime, tickTime)
 
@@ -252,13 +254,13 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}
 		require.NoError(t, cl.Create(ctx, egdp))
 
-		// Wait for KonnectEventDataPlaneCertificate to be created, then simulate Konnect programming it.
-		konnectCert := &konnectv1alpha1.KonnectEventDataPlaneCertificate{}
+		// Wait for EventGatewayDataPlaneCertificate to be created, then simulate Konnect programming it.
+		konnectCert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdp.Name, Namespace: ns.Name}, konnectCert))
 		}, waitTime, tickTime)
 
-		updateKonnectEventDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 		// Deployment should appear.
 		var deployList appsv1.DeploymentList
@@ -331,11 +333,11 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}
 		require.NoError(t, cl.Create(ctx, egdp))
 
-		konnectCert := &konnectv1alpha1.KonnectEventDataPlaneCertificate{}
+		konnectCert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdp.Name, Namespace: ns.Name}, konnectCert))
 		}, waitTime, tickTime)
-		updateKonnectEventDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 		// Wait for the happy state.
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -369,7 +371,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}, waitTime, tickTime)
 	})
 
-	t.Run("deletion: owned Deployment and KonnectEventDataPlaneCertificate are GC'd", func(t *testing.T) {
+	t.Run("deletion: owned Deployment and EventGatewayDataPlaneCertificate are GC'd", func(t *testing.T) {
 		t.Parallel()
 
 		kep := &konnectv1alpha1.KonnectEventGateway{
@@ -397,11 +399,11 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}
 		require.NoError(t, cl.Create(ctx, egdp))
 
-		konnectCert := &konnectv1alpha1.KonnectEventDataPlaneCertificate{}
+		konnectCert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdp.Name, Namespace: ns.Name}, konnectCert))
 		}, waitTime, tickTime)
-		updateKonnectEventDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 		// Wait for Deployment to exist.
 		var deployList appsv1.DeploymentList
@@ -420,7 +422,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}, waitTime, tickTime)
 
 		// KegDataPlane should be removed. Cascade GC of owned resources
-		// (Deployment, KonnectEventDataPlaneCertificate) is a built-in
+		// (Deployment, EventGatewayDataPlaneCertificate) is a built-in
 		// Kubernetes behaviour and is not exercised by envtest.
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			err := cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)
@@ -904,7 +906,7 @@ func triggerReconcile(t *testing.T, ctx context.Context, cl client.Client, obj c
 }
 
 // setupProgrammedKEGDP creates a KonnectEventGateway and a KegDataPlane,
-// programs the control plane and the resulting KonnectEventDataPlaneCertificate,
+// programs the control plane and the resulting EventGatewayDataPlaneCertificate,
 // and returns the KegDataPlane object. spec.ControlPlaneRef is populated by the
 // helper, so callers only need to set the fields they care about.
 func setupProgrammedKEGDP(
@@ -932,11 +934,11 @@ func setupProgrammedKEGDP(
 	}
 	require.NoError(t, cl.Create(ctx, egdp))
 
-	konnectCert := &konnectv1alpha1.KonnectEventDataPlaneCertificate{}
+	konnectCert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdpName, Namespace: ns}, konnectCert))
 	}, waitTime, tickTime)
-	updateKonnectEventDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+	updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 	return egdp
 }

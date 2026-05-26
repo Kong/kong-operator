@@ -2,11 +2,6 @@
 
 package v1alpha1
 
-// PersistsKonnectID reports whether KonnectEventDataPlaneCertificate persists a Konnect ID in status.
-func (*KonnectEventDataPlaneCertificate) PersistsKonnectID() bool {
-	return true
-}
-
 // PersistsKonnectID reports whether KonnectEventGateway persists a Konnect ID in status.
 func (*KonnectEventGateway) PersistsKonnectID() bool {
 	return true

@@ -19,9 +19,6 @@ apiGroupVersions:
     types:
       - path: /v1/event-gateways
         name: KonnectEventGateway
-      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
-        name: KonnectEventDataPlaneCertificate
-        optionalSecretReference: true
       - path: /v3/portals
         cel:
           name:
@@ -33,6 +30,11 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
       - path: /v3/portals/{portalId}/teams
+  configuration.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
+        name: EventGatewayDataPlaneCertificate
+        optionalSecretReference: true
 ```
 
 Generated ops infer that a controller-runtime client is needed when

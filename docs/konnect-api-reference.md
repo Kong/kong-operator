@@ -13,7 +13,6 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
-- [KonnectEventDataPlaneCertificate](#konnect-konghq-com-v1alpha1-konnecteventdataplanecertificate)
 - [KonnectEventGateway](#konnect-konghq-com-v1alpha1-konnecteventgateway)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
@@ -85,21 +84,6 @@ KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway 
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)_ | Spec defines the desired state of KonnectCloudGatewayTransitGateway. |
 | `status` _[KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)_ | Status defines the observed state of KonnectCloudGatewayTransitGateway. |
-
-### KonnectEventDataPlaneCertificate
-
-
-KonnectEventDataPlaneCertificate is the Schema for the konnecteventdataplanecertificates API.
-
-<!-- konnect_event_data_plane_certificate description placeholder -->
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
-| `kind` _string_ | `KonnectEventDataPlaneCertificate`
-| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KonnectEventDataPlaneCertificateSpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatespec)_ |  |
-| `status` _[KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)_ |  |
 
 ### KonnectEventGateway
 
@@ -843,7 +827,6 @@ KonnectEntityRef is a reference to a Konnect entity.
 
 _Appears in:_
 
-- [KonnectEventDataPlaneCertificateStatus](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatestatus)
 - [PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)
 - [PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)
 - [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
@@ -853,56 +836,6 @@ _Appears in:_
 - [PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)
 
 
-
-#### KonnectEventDataPlaneCertificateAPISpec
-
-
-KonnectEventDataPlaneCertificateAPISpec defines the API spec fields for KonnectEventDataPlaneCertificate.
-
-
-
-| Field | Description |
-| --- | --- |
-| `certificate` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | JSON escaped string of the certificate. |
-| `description` _string_ | A description of the certificate. |
-| `name` _string_ | The name to identify of the certificate. |
-
-_Appears in:_
-
-- [KonnectEventDataPlaneCertificateSpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificatespec)
-
-#### KonnectEventDataPlaneCertificateSpec
-
-
-KonnectEventDataPlaneCertificateSpec defines the desired state of KonnectEventDataPlaneCertificate.
-
-
-
-| Field | Description |
-| --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
-| `apiSpec` _[KonnectEventDataPlaneCertificateAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
-
-_Appears in:_
-
-- [KonnectEventDataPlaneCertificate](#konnect-konghq-com-v1alpha1-konnecteventdataplanecertificate)
-
-#### KonnectEventDataPlaneCertificateStatus
-
-
-KonnectEventDataPlaneCertificateStatus defines the observed state of KonnectEventDataPlaneCertificate.
-
-
-
-| Field | Description |
-| --- | --- |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
-| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
-| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
-
-_Appears in:_
-
-- [KonnectEventDataPlaneCertificate](#konnect-konghq-com-v1alpha1-konnecteventdataplanecertificate)
 
 #### KonnectEventGatewayAPISpec
 
@@ -2079,44 +2012,6 @@ _Appears in:_
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)
 
 
-
-#### SensitiveDataSource
-
-
-SensitiveDataSource holds a sensitive string value that can be provided
-either inline or sourced from a Kubernetes Secret.
-
-
-
-| Field | Description |
-| --- | --- |
-| `type` _[SensitiveDataSourceType](#konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data: 'inline' or 'secretRef'. |
-| `value` _*string_ | Value contains the sensitive data provided inline. Required when type is 'inline'. |
-| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
-
-_Appears in:_
-
-- [KonnectEventDataPlaneCertificateAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventdataplanecertificateapispec)
-
-#### SensitiveDataSourceType
-
-_Underlying type:_ `string`
-
-SensitiveDataSourceType is the type of source for the sensitive data.
-
-
-
-
-_Appears in:_
-
-- [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
-| `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
 
 #### SpecRenderer
 

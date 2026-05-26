@@ -15,12 +15,12 @@ func generatedIndexOptionsForKonnectEntities(
 ) []index.Option {
 	return slices.Concat(
 		index.OptionsForEventGatewayBackendCluster(),
+		index.OptionsForEventGatewayDataPlaneCertificate(),
 		index.OptionsForEventGatewayListener(),
 		index.OptionsForEventGatewayListenerPolicy(),
 		index.OptionsForEventGatewayVirtualCluster(),
 		index.OptionsForEventGatewayVirtualClusterConsumePolicy(),
 		index.OptionsForEventGatewayVirtualClusterProducePolicy(),
-		index.OptionsForKonnectEventDataPlaneCertificate(),
 		index.OptionsForKonnectEventGateway(),
 		index.OptionsForPortal(),
 		index.OptionsForPortalCustomDomain(),

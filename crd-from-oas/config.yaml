@@ -12,6 +12,34 @@ apiGroupVersions:
           alias: commonv1alpha1
     types:
       # Event Gateway APIs
+      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
+        name: EventGatewayDataPlaneCertificate
+        secretReferences:
+          - path: spec.apiSpec.certificate
+            type: Secret
+            key: tls.crt
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK
+            fieldName: EventGatewayDataPlaneCertificates
+          requireClient: true
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Certificate
+                responseField: Certificate
+              - objectField: Spec.APISpec.Name
+                responseField: Name
+              - objectField: Spec.APISpec.Description
+                responseField: Description
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -187,34 +215,6 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest
           delete: {}
         reconciler: {}
-      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
-        name: KonnectEventDataPlaneCertificate
-        secretReferences:
-          - path: spec.apiSpec.certificate
-            type: Secret
-            key: tls.crt
-        ops:
-          sdk:
-            interface: github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK
-            fieldName: EventGatewayDataPlaneCertificates
-          requireClient: true
-          getForUID:
-            matchFields:
-              - objectField: Spec.APISpec.Certificate
-                responseField: Certificate
-              - objectField: Spec.APISpec.Name
-                responseField: Name
-              - objectField: Spec.APISpec.Description
-                responseField: Description
-          create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
-          update:
-            path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest
-          delete: {}
-        reconciler:
-          parentEntityGVK:
-            kind: KonnectEventGateway
-            group: konnect.konghq.com
 
       # Portal APIs
       - path: /v3/portals

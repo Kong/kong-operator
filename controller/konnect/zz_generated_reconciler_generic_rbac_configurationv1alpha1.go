@@ -5,6 +5,9 @@ package konnect
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaydataplanecertificates,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaydataplanecertificates/status,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaydataplanecertificates/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaylisteners,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaylisteners/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaylisteners/finalizers,verbs=update;patch

@@ -150,11 +150,11 @@ func updateKonnectEventGatewayStatusWithProgrammed(
 	}, waitTime, tickTime)
 }
 
-func updateKonnectEventDataPlaneCertificateStatusWithProgrammed(
+func updateEventGatewayDataPlaneCertificateStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	obj *konnectv1alpha1.KonnectEventDataPlaneCertificate,
+	obj *configurationv1alpha1.EventGatewayDataPlaneCertificate,
 ) {
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {

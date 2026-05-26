@@ -11,6 +11,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
 		&EventGatewayBackendCluster{},
 		&EventGatewayBackendClusterList{},
+		&EventGatewayDataPlaneCertificate{},
+		&EventGatewayDataPlaneCertificateList{},
 		&EventGatewayListener{},
 		&EventGatewayListenerList{},
 		&EventGatewayListenerPolicy{},

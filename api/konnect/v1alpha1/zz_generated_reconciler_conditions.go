@@ -3,22 +3,6 @@
 package v1alpha1
 
 const (
-	// EventGatewayRefValidConditionType is the type of the condition that indicates
-	// whether the EventGateway reference is valid and points to an existing
-	// KonnectEventGateway.
-	EventGatewayRefValidConditionType = "EventGatewayRefValid"
-
-	// EventGatewayRefReasonValid is the reason used with the EventGatewayRefValid
-	// condition type indicating that the EventGateway reference is valid.
-	EventGatewayRefReasonValid = "Valid"
-	// EventGatewayRefReasonInvalid is the reason used with the EventGatewayRefValid
-	// condition type indicating that the EventGateway reference is invalid.
-	EventGatewayRefReasonInvalid = "Invalid"
-	// EventGatewayRefReasonNotProgrammed is the reason used with the EventGatewayRefValid
-	// condition type indicating that the referenced KonnectEventGateway exists but is not
-	// yet programmed in Konnect.
-	EventGatewayRefReasonNotProgrammed = "NotProgrammed"
-
 	// PortalRefValidConditionType is the type of the condition that indicates
 	// whether the Portal reference is valid and points to an existing
 	// Portal.

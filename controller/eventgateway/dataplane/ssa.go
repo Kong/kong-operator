@@ -33,7 +33,9 @@ var requiredSchemas = []schema.GroupVersion{
 	{Group: "apps", Version: "v1"},
 	// KegDataPlane (status apply)
 	{Group: "eventgateway.konghq.com", Version: "v1alpha1"},
-	// KonnectEventDataPlaneCertificate
+	// EventGatewayDataPlaneCertificate
+	{Group: "configuration.konghq.com", Version: "v1alpha1"},
+	// KonnectEventGateway
 	{Group: "konnect.konghq.com", Version: "v1alpha1"},
 }
 

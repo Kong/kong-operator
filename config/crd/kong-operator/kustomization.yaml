@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - configuration.konghq.com_eventgatewaybackendclusters.yaml
+  - configuration.konghq.com_eventgatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaylistenerpolicies.yaml
   - configuration.konghq.com_eventgatewaylisteners.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterconsumepolicies.yaml
@@ -47,7 +48,6 @@ resources:
   - konnect.konghq.com_konnectcloudgatewaydataplanegroupconfigurations.yaml
   - konnect.konghq.com_konnectcloudgatewaynetworks.yaml
   - konnect.konghq.com_konnectcloudgatewaytransitgateways.yaml
-  - konnect.konghq.com_konnecteventdataplanecertificates.yaml
   - konnect.konghq.com_konnecteventgateways.yaml
   - konnect.konghq.com_konnectextensions.yaml
   - konnect.konghq.com_konnectgatewaycontrolplanes.yaml

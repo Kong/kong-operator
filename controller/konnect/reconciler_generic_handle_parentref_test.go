@@ -87,7 +87,7 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				// use programmed gateway as-is
 			},
 			wantCondStatus:   metav1.ConditionTrue,
-			wantCondReason:   konnectv1alpha1.EventGatewayRefReasonValid,
+			wantCondReason:   configurationv1alpha1.EventGatewayRefReasonValid,
 			wantResultIsZero: true,
 			wantParentID:     parentID,
 		},
@@ -95,7 +95,7 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 			name:             "parent not found",
 			setupParent:      nil,
 			wantCondStatus:   metav1.ConditionFalse,
-			wantCondReason:   konnectv1alpha1.EventGatewayRefReasonInvalid,
+			wantCondReason:   configurationv1alpha1.EventGatewayRefReasonInvalid,
 			wantResultIsZero: true,
 		},
 		{
@@ -106,7 +106,7 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				o.SetFinalizers([]string{"test-finalizer"})
 			},
 			wantCondStatus:   metav1.ConditionFalse,
-			wantCondReason:   konnectv1alpha1.EventGatewayRefReasonInvalid,
+			wantCondReason:   configurationv1alpha1.EventGatewayRefReasonInvalid,
 			wantResultIsZero: true,
 		},
 		{
@@ -122,7 +122,7 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				gw.Status.KonnectEntityStatus = konnectv1alpha1.KonnectEntityStatus{ID: parentID}
 			},
 			wantCondStatus: metav1.ConditionFalse,
-			wantCondReason: konnectv1alpha1.EventGatewayRefReasonNotProgrammed,
+			wantCondReason: configurationv1alpha1.EventGatewayRefReasonNotProgrammed,
 			wantRequeue:    true,
 		},
 		{
@@ -138,7 +138,7 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				gw.Status.KonnectEntityStatus = konnectv1alpha1.KonnectEntityStatus{} // ID empty
 			},
 			wantCondStatus:   metav1.ConditionFalse,
-			wantCondReason:   konnectv1alpha1.EventGatewayRefReasonInvalid,
+			wantCondReason:   configurationv1alpha1.EventGatewayRefReasonInvalid,
 			wantResultIsZero: true,
 		},
 	}
@@ -155,13 +155,13 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 			},
 		},
 		{
-			name: "KonnectEventDataPlaneCertificate",
-			obj: &konnectv1alpha1.KonnectEventDataPlaneCertificate{
+			name: "EventGatewayDataPlaneCertificate",
+			obj: &configurationv1alpha1.EventGatewayDataPlaneCertificate{
 				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{GatewayRef: gatewayRef(parentName)},
+				Spec:       configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{GatewayRef: gatewayRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
-				return o.(*konnectv1alpha1.KonnectEventDataPlaneCertificate).GetGatewayID()
+				return o.(*configurationv1alpha1.EventGatewayDataPlaneCertificate).GetGatewayID()
 			},
 		},
 		{
