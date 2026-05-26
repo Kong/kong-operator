@@ -56,13 +56,9 @@ linux-x64 = { asset_pattern = "telepresence-linux-amd64" }
 linux-arm64 = { asset_pattern = "telepresence-linux-arm64" }
 macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
-[tools."http:helm"]
+[tools."aqua:helm/helm"]
 # renovate: datasource=github-releases depName=helm/helm
 version = "4.2.0"
-[tools."http:helm".platforms]
-linux-x64 = { url = "https://get.helm.sh/helm-v{{version}}-linux-amd64.tar.gz" }
-linux-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-linux-arm64.tar.gz" }
-macos-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-darwin-arm64.tar.gz" }
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
@@ -71,7 +67,6 @@ version = "3fa174937a6b9f0c1c2203efb312fff4ac8477c8"
 [tools."yq"]
 # renovate: datasource=github-releases depName=mikefarah/yq
 version = "v4.53.2"
-bin = "yq"
 
 ################################################################################
 # Tasks

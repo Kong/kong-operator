@@ -42,7 +42,7 @@ jobs:
 
     - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
       with:
-        install_args: github:Kong/kubernetes-testing-framework http:helm
+        install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm
 
     - name: Create k8s KinD Cluster with ktf
       env:
