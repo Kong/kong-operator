@@ -406,8 +406,15 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// and have an "Accepted" condition with status false.
 	// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.TLSRoute
 	filteredTLSRoute, err := filterHostnames(gateways, tlsroute.DeepCopy())
+	if err != nil {
+		// Should not be reachable here because filterHostnames should only return an error if there is no matched host in listeners for the tlsroute,
+		// which means the tlsroute should not be accepted and have an "Accepted" condition with status false.
+		// But we still want to log the error and requeue to make sure the status can be updated.
+		debug(log, tlsroute, "Failed to filter hostnames for TLSRoute, requeueing", "error", err)
+		return ctrl.Result{}, err
+	}
 	// perform operations on the kong store only if the route is in accepted status and there is hostname matching
-	if isRouteAccepted(gateways) && err == nil {
+	if isRouteAccepted(gateways) {
 		// if the gateways are ready, and the TLSRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
 		if err := r.DataplaneClient.UpdateObject(filteredTLSRoute); err != nil {
