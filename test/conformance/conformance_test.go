@@ -238,8 +238,8 @@ func createGatewayConfiguration(
 												corev1.ResourceMemory: resource.MustParse("128Mi"),
 											},
 											Limits: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("500m"),
-												corev1.ResourceMemory: resource.MustParse("1024Mi"),
+												corev1.ResourceCPU:    resource.MustParse("2000m"),
+												corev1.ResourceMemory: resource.MustParse("2048Mi"),
 											},
 										},
 										Env: []corev1.EnvVar{
