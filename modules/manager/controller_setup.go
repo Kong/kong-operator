@@ -301,9 +301,9 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Resource: "kegdataplanes",
 				},
 				{
-					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
-					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
-					Resource: "konnecteventdataplanecertificates",
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "eventgatewaydataplanecertificates",
 				},
 				{
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
