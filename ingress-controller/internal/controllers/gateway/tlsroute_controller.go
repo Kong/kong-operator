@@ -407,11 +407,21 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.TLSRoute
 	filteredTLSRoute, err := filterHostnames(gateways, tlsroute.DeepCopy())
 	if err != nil {
-		// Should not be reachable here because filterHostnames should only return an error if there is no matched host in listeners for the tlsroute,
-		// which means the tlsroute should not be accepted and have an "Accepted" condition with status false.
-		// But we still want to log the error and requeue to make sure the status can be updated.
-		debug(log, tlsroute, "Failed to filter hostnames for TLSRoute, requeueing", "error", err)
-		return ctrl.Result{}, err
+		// Should not be reachable because the filterHostnames function only returns error `ErrNoMatchingListenerHostname`
+		// when there is no matched hostname in listeners for the tlsroute.
+		if !errors.Is(err, ErrNoMatchingListenerHostname) {
+			debug(log, tlsroute, "Failed to filter hostnames for the TLSRoute, requeueing", "error", err)
+			return ctrl.Result{}, err
+		}
+		// If there is no matched hosts in listeners for the tlsroute,
+		// the tlsroute should not be accepted and have an "Accepted" condition with status false.
+		// Then we remove the tlsroute from data-plane configuration if it was previously added,
+		//  and continue the reconciliation to update the status to reflect the condition change.
+		debug(log, tlsroute, "No matching listener hostname for the TLSRoute, removing it from data-plane")
+		if err := r.DataplaneClient.DeleteObject(tlsroute); err != nil {
+			debug(log, tlsroute, "Failed to delete object from data-plane, requeuing")
+			return ctrl.Result{}, err
+		}
 	}
 	// perform operations on the kong store only if the route is in accepted status and there is hostname matching
 	if isRouteAccepted(gateways) {
