@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,9 +24,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	k8sobj "github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 )
@@ -44,6 +48,12 @@ type TCPRouteReconciler struct {
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 
+	// If enableReferenceGrant is true, we will check for ReferenceGrant if backend in another
+	// namespace is in backendRefs.
+	// If it is false, referencing backend in different namespace will be rejected.
+	// It's resolved on SetupWithManager call.
+	enableReferenceGrant bool
+
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
 	GatewayNN controllers.OptionalNamespacedName
@@ -51,6 +61,17 @@ type TCPRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// We're verifying whether ReferenceGrant CRD is installed at setup of the TCPRouteReconciler
+	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
+	// when reconciling TCPRoutes.
+	// Once the TCPRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
+	// ReferenceGrant handling again in this reconciler at runtime.
+	r.enableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
+		Resource: "referencegrants",
+	})
+
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("tcproute-controller").
 		WithOptions(controller.Options{
@@ -79,6 +100,13 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&gatewayapi.Gateway{},
 			handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
 		)
+
+	if r.enableReferenceGrant {
+		blder.Watches(&gatewayapi.ReferenceGrant{},
+			handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForReferenceGrant),
+			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasTCPRouteFrom)),
+		)
+	}
 
 	if r.StatusQueue != nil {
 		blder.WatchesRawSource(
@@ -249,6 +277,54 @@ func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, obj cl
 	}
 
 	return queue
+}
+
+// listTCPRoutesForReferenceGrant is a watch predicate which finds all TCPRoutes
+// mentioned in a From clause for a ReferenceGrant.
+func (r *TCPRouteReconciler) listTCPRoutesForReferenceGrant(ctx context.Context, obj client.Object) []reconcile.Request {
+	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	if !ok {
+		r.Log.Error(
+			errInvalidType,
+			"Referencegrant watch predicate received unexpected object type",
+			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	tcproutes := &gatewayapi.TCPRouteList{}
+	if err := r.List(ctx, tcproutes); err != nil {
+		r.Log.Error(err, "Failed to list tcproutes in watch", "referencegrant", grant.Name)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, tcproute := range tcproutes.Items {
+		for _, from := range grant.Spec.From {
+			if string(from.Namespace) == tcproute.Namespace &&
+				from.Kind == "TCPRoute" &&
+				from.Group == "gateway.networking.k8s.io" {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: k8stypes.NamespacedName{
+						Namespace: tcproute.Namespace,
+						Name:      tcproute.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
+}
+
+func referenceGrantHasTCPRouteFrom(obj client.Object) bool {
+	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	if !ok {
+		return false
+	}
+	for _, from := range grant.Spec.From {
+		if from.Kind == "TCPRoute" && from.Group == "gateway.networking.k8s.io" {
+			return true
+		}
+	}
+	return false
 }
 
 // -----------------------------------------------------------------------------
@@ -444,10 +520,15 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 		gateways...,
 	)
 
+	parentStatuses, resolvedRefsChanged, err := r.setRouteConditionResolvedRefsCondition(ctx, tcproute, parentStatuses)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+
 	programmedConditionChanged := initializeParentStatusesWithProgrammedCondition(tcproute, parentStatuses)
 
 	// if we didn't have to actually make any changes, no status update is needed
-	if !statusChangesWereMade && !programmedConditionChanged {
+	if !statusChangesWereMade && !resolvedRefsChanged && !programmedConditionChanged {
 		return false, ctrl.Result{}, nil
 	}
 
@@ -468,4 +549,124 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 
 	// the status needed an update and it was updated successfully
 	return true, ctrl.Result{}, nil
+}
+
+// SetLogger sets the logger.
+func (r *TCPRouteReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
+}
+
+// setRouteConditionResolvedRefsCondition sets a condition of type ResolvedRefs on the route status.
+func (r *TCPRouteReconciler) setRouteConditionResolvedRefsCondition(
+	ctx context.Context,
+	tcpRoute *gatewayapi.TCPRoute,
+	parentStatuses map[string]*gatewayapi.RouteParentStatus,
+) (map[string]*gatewayapi.RouteParentStatus, bool, error) {
+	var changed bool
+	resolvedRefsStatus := metav1.ConditionFalse
+	reason, msg, err := r.getTCPRouteRuleReason(ctx, *tcpRoute)
+	if err != nil {
+		return nil, false, err
+	}
+	if reason == gatewayapi.RouteReasonResolvedRefs {
+		resolvedRefsStatus = metav1.ConditionTrue
+	}
+
+	// iterate over all the parentStatuses conditions, and if no RouteConditionResolvedRefs is found,
+	// or if the condition is found but has to be changed, update the status and mark it to be updated
+	resolvedRefsCondition := metav1.Condition{
+		Type:               string(gatewayapi.RouteConditionResolvedRefs),
+		Status:             resolvedRefsStatus,
+		ObservedGeneration: tcpRoute.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(reason),
+		Message:            msg,
+	}
+	for _, parentStatus := range parentStatuses {
+		var conditionFound bool
+		for i, cond := range parentStatus.Conditions {
+			if cond.Type == string(gatewayapi.RouteConditionResolvedRefs) {
+				if cond.Status != resolvedRefsStatus ||
+					cond.Reason != string(reason) {
+					parentStatus.Conditions[i] = resolvedRefsCondition
+					changed = true
+				}
+				conditionFound = true
+				break
+			}
+		}
+		if !conditionFound {
+			parentStatus.Conditions = append(parentStatus.Conditions, resolvedRefsCondition)
+			changed = true
+		}
+	}
+
+	return parentStatuses, changed, nil
+}
+
+// getTCPRouteRuleReason validates the backendRefs of every rule in the TCPRoute
+// and returns the first failure encountered. When all backendRefs are valid it
+// returns gatewayapi.RouteReasonResolvedRefs.
+func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute gatewayapi.TCPRoute) (reason gatewayapi.RouteConditionReason, msg string, err error) {
+	for _, rule := range tcpRoute.Spec.Rules {
+		for _, backendRef := range rule.BackendRefs {
+			backendNamespace := tcpRoute.Namespace
+			if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+				backendNamespace = string(*backendRef.Namespace)
+			}
+
+			backendRefGK := string(*backendRef.Kind)
+			if gr := string(*backendRef.Group); gr != "" {
+				backendRefGK = gr + "/" + backendRefGK
+			}
+			targetNN := k8stypes.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}
+
+			// Check if the BackendRef GroupKind is supported.
+			if !util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) {
+				return gatewayapi.RouteReasonInvalidKind, fmt.Sprintf("target %s has unsupported type %s", targetNN, backendRefGK), nil
+			}
+
+			// Check if the referenced object actually exists.
+			// Only Services are currently supported as BackendRef objects.
+			service := &corev1.Service{}
+			if err := r.Get(ctx, targetNN, service); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return "", "", err
+				}
+				return gatewayapi.RouteReasonBackendNotFound, fmt.Sprintf("target %s of type %s does not exist", targetNN, backendRefGK), nil
+			}
+
+			// If the object referenced is in another namespace,
+			// verify that a ReferenceGrant permits the reference.
+			if tcpRoute.Namespace != backendNamespace {
+				differentNamespaceMsg := fmt.Sprintf("%s is in a different namespace than the TCPRoute (namespace %s)", targetNN, tcpRoute.Namespace)
+				if !r.enableReferenceGrant {
+					return gatewayapi.RouteReasonRefNotPermitted,
+						differentNamespaceMsg + " install ReferenceGrant CRD and configure a proper grant",
+						nil
+				}
+
+				referenceGrantList := &gatewayapi.ReferenceGrantList{}
+				if err := r.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
+					return "", "", err
+				}
+				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"
+				if len(referenceGrantList.Items) == 0 {
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
+				}
+				var isGranted bool
+				for _, grant := range referenceGrantList.Items {
+					if isTCPReferenceGranted(grant.Spec, backendRef, tcpRoute.Namespace) {
+						isGranted = true
+						break
+					}
+				}
+				if !isGranted {
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
+				}
+			}
+		}
+	}
+
+	return gatewayapi.RouteReasonResolvedRefs, "", nil
 }
