@@ -14,7 +14,6 @@ set -o pipefail
 #   MAX_RETRIES: (optional) Maximum number of retry attempts. Default: '180'.
 #   RETRY_DELAY: (optional) Delay in seconds between retries. Default: '1'.
 #   CALL_TIMEOUT: (optional) Per-RPC timeout in seconds. Default: '5'.
-#   DIAL_TIMEOUT: (optional) Dial timeout in seconds. Default: '5'.
 
 PROXY_IP="${PROXY_IP}"
 GRPC_HOST="${GRPC_HOST}"
@@ -25,12 +24,11 @@ INSECURE_TLS="${INSECURE_TLS:-true}"
 MAX_RETRIES="${MAX_RETRIES:-180}"
 RETRY_DELAY="${RETRY_DELAY:-1}"
 CALL_TIMEOUT="${CALL_TIMEOUT:-5}"
-DIAL_TIMEOUT="${DIAL_TIMEOUT:-5}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../../.." && pwd)"
 CLIENT_PKG="./test/e2e/chainsaw/common/scripts/grpc_echo_client"
-GO_RUN_CMD="cd \"${REPO_ROOT}\" && PROXY_IP=\"${PROXY_IP}\" GRPC_HOST=\"${GRPC_HOST}\" PROXY_PORT=\"${PROXY_PORT}\" REQUEST_MESSAGE=\"${REQUEST_MESSAGE}\" USE_TLS=\"${USE_TLS}\" INSECURE_TLS=\"${INSECURE_TLS}\" MAX_RETRIES=\"${MAX_RETRIES}\" RETRY_DELAY=\"${RETRY_DELAY}\" CALL_TIMEOUT=\"${CALL_TIMEOUT}\" DIAL_TIMEOUT=\"${DIAL_TIMEOUT}\" go run ${CLIENT_PKG}"
+GO_RUN_CMD="cd \"${REPO_ROOT}\" && PROXY_IP=\"${PROXY_IP}\" GRPC_HOST=\"${GRPC_HOST}\" PROXY_PORT=\"${PROXY_PORT}\" REQUEST_MESSAGE=\"${REQUEST_MESSAGE}\" USE_TLS=\"${USE_TLS}\" INSECURE_TLS=\"${INSECURE_TLS}\" MAX_RETRIES=\"${MAX_RETRIES}\" RETRY_DELAY=\"${RETRY_DELAY}\" CALL_TIMEOUT=\"${CALL_TIMEOUT}\" go run ${CLIENT_PKG}"
 STDERR_FILE="$(mktemp)"
 trap 'rm -f "$STDERR_FILE"' EXIT
 
@@ -44,7 +42,6 @@ if OUTPUT=$(cd "${REPO_ROOT}" && \
   MAX_RETRIES="${MAX_RETRIES}" \
   RETRY_DELAY="${RETRY_DELAY}" \
   CALL_TIMEOUT="${CALL_TIMEOUT}" \
-  DIAL_TIMEOUT="${DIAL_TIMEOUT}" \
   go run "${CLIENT_PKG}" 2>"${STDERR_FILE}"); then
   echo "$OUTPUT"
   if [[ -s "${STDERR_FILE}" ]]; then

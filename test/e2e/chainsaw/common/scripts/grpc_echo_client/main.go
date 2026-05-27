@@ -25,7 +25,6 @@ type config struct {
 	MaxRetries  int
 	RetryDelay  time.Duration
 	CallTimeout time.Duration
-	DialTimeout time.Duration
 }
 
 type output struct {
@@ -122,10 +121,6 @@ func loadConfig() (config, error) {
 	if err != nil {
 		return config{}, err
 	}
-	dialTimeoutSeconds, err := getenvInt("DIAL_TIMEOUT", 5)
-	if err != nil {
-		return config{}, err
-	}
 	useTLS, err := getenvBool("USE_TLS", true)
 	if err != nil {
 		return config{}, err
@@ -145,7 +140,6 @@ func loadConfig() (config, error) {
 		MaxRetries:  maxRetries,
 		RetryDelay:  time.Duration(retryDelaySeconds) * time.Second,
 		CallTimeout: time.Duration(callTimeoutSeconds) * time.Second,
-		DialTimeout: time.Duration(dialTimeoutSeconds) * time.Second,
 	}, nil
 }
 

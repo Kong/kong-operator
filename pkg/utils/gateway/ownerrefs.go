@@ -254,7 +254,7 @@ func ListTLSRoutesForGateway(
 }
 
 // ListGRPCRoutesForGateway is a helper function which returns a list of GRPCRoutes
-// that have the provided Gateway set as parent in their status.
+// that have the provided Gateway set as parent in their spec.parentRefs.
 func ListGRPCRoutesForGateway(
 	ctx context.Context,
 	c client.Client,
