@@ -769,7 +769,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
 				Controller: &konnect.KonnectExtensionReconciler{
 					ControllerOptions:        ctrlOpts,
-					SdkFactory:               sdkFactory,
 					LoggingMode:              c.LoggingMode,
 					Client:                   mgr.GetClient(),
 					SyncPeriod:               c.KonnectSyncPeriod,
