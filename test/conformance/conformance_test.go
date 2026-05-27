@@ -227,7 +227,8 @@ func createGatewayConfiguration(
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Name: consts.DataPlaneProxyContainerName,
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: test.DataPlaneImage(),
 										ReadinessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,
