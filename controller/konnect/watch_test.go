@@ -37,7 +37,7 @@ func TestWatchOptions(t *testing.T) {
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayVirtualCluster{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventDataPlaneCertificate{})
+	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayDataPlaneCertificate{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventGateway{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.Portal{})
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.PortalCustomization{})

@@ -172,7 +172,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				)
 				require.True(t, ok)
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, konnectv1alpha1.EventGatewayRefReasonValid, cond.Reason)
+				assert.Equal(t, configurationv1alpha1.EventGatewayRefReasonValid, cond.Reason)
 			},
 		},
 		{
@@ -231,7 +231,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				)
 				require.True(t, ok)
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, konnectv1alpha1.EventGatewayRefReasonNotProgrammed, cond.Reason)
+				assert.Equal(t, configurationv1alpha1.EventGatewayRefReasonNotProgrammed, cond.Reason)
 			},
 		},
 		{

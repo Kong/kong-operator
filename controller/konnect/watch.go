@@ -316,7 +316,7 @@ type WatchableEntityType interface {
 		configurationv1alpha1.EventGatewayVirtualCluster |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
-		konnectv1alpha1.KonnectEventDataPlaneCertificate |
+		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
 		configurationv1.KongConsumer |

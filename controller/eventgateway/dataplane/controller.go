@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -74,7 +75,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.Secret{}).
-		Owns(&konnectv1alpha1.KonnectEventDataPlaneCertificate{}).
+		Owns(&configurationv1alpha1.EventGatewayDataPlaneCertificate{}).
 		Watches(
 			&konnectv1alpha1.KonnectEventGateway{},
 			handler.EnqueueRequestsFromMapFunc(enqueueForKonnectEventGatewayRef(mgr.GetClient())),
@@ -114,7 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	// Ensure the KonnectEventDataPlaneCertificate is registered with Konnect.
+	// Ensure the EventGatewayDataPlaneCertificate is registered with Konnect.
 	// Return early if not yet programmed; the Owns() watch retriggeres once
 	// the Konnect controller flips Programmed to True.
 	certProgrammed, err := r.ensureKonnectCertificate(ctx, logger, egdp, keg, certSecret)

@@ -125,6 +125,7 @@ rules:
   - configuration.konghq.com
   resources:
   - eventgatewaybackendclusters
+  - eventgatewaydataplanecertificates
   - eventgatewaylistenerpolicies
   - eventgatewaylisteners
   - eventgatewayvirtualclusterconsumepolicies
@@ -148,6 +149,8 @@ rules:
   resources:
   - eventgatewaybackendclusters/finalizers
   - eventgatewaybackendclusters/status
+  - eventgatewaydataplanecertificates/finalizers
+  - eventgatewaydataplanecertificates/status
   - eventgatewaylistenerpolicies/finalizers
   - eventgatewaylistenerpolicies/status
   - eventgatewaylisteners/finalizers
@@ -469,8 +472,6 @@ rules:
   - konnectcloudgatewaynetworks/status
   - konnectcloudgatewaytransitgateways/finalizers
   - konnectcloudgatewaytransitgateways/status
-  - konnecteventdataplanecertificates/finalizers
-  - konnecteventdataplanecertificates/status
   - konnecteventgateways/finalizers
   - konnecteventgateways/status
   - konnectextensions/finalizers

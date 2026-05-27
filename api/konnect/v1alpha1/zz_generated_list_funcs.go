@@ -37,11 +37,6 @@ func (obj PortalIdentityProviderRequestList) GetItems() []PortalIdentityProvider
 	return obj.Items
 }
 
-// GetItems returns the list of KonnectEventDataPlaneCertificate items.
-func (obj KonnectEventDataPlaneCertificateList) GetItems() []KonnectEventDataPlaneCertificate {
-	return obj.Items
-}
-
 // GetItems returns the list of KonnectEventGateway items.
 func (obj KonnectEventGatewayList) GetItems() []KonnectEventGateway {
 	return obj.Items

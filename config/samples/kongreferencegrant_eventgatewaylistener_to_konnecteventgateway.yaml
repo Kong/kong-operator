@@ -42,7 +42,7 @@ spec:
       kind: KonnectAPIAuthConfiguration
 ---
 # Allow the Listener in event-listeners to reference the Event Gateway in
-# event-gateways. The same grant pattern applies to KonnectEventDataPlaneCertificate.
+# event-gateways. The same grant pattern applies to EventGatewayDataPlaneCertificate.
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongReferenceGrant
 metadata:

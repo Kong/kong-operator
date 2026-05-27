@@ -85,10 +85,9 @@ func TestHandWrittenGetForUIDHelperFileNamesIncludesLegacyKonnectName(t *testing
 	require.Equal(
 		t,
 		[]string{
-			"ops_konnect_eventdataplanecertificate_manual.go",
-			"ops_konnecteventdataplanecertificate_manual.go",
+			"ops_eventgatewaydataplanecertificate_manual.go",
 		},
-		handWrittenGetForUIDHelperFileNames("KonnectEventDataPlaneCertificate"),
+		handWrittenGetForUIDHelperFileNames("EventGatewayDataPlaneCertificate"),
 	)
 }
 

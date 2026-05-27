@@ -12,12 +12,12 @@ func generatedControllersForKonnectEntities(
 ) []ControllerDef {
 	return []ControllerDef{
 		newKonnectEntityController[configurationv1alpha1.EventGatewayBackendCluster](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayListener](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayListenerPolicy](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualCluster](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectEventGateway](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.PortalCustomDomain](controllerFactory),

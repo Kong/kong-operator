@@ -271,6 +271,7 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
 - [EventGatewayBackendCluster](#configuration-konghq-com-v1alpha1-eventgatewaybackendcluster)
+- [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
 - [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
@@ -312,6 +313,21 @@ EventGatewayBackendCluster is the Schema for the eventgatewaybackendclusters API
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayBackendClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterspec)_ |  |
 | `status` _[EventGatewayBackendClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)_ |  |
+
+### EventGatewayDataPlaneCertificate
+
+
+EventGatewayDataPlaneCertificate is the Schema for the eventgatewaydataplanecertificates API.
+
+<!-- event_gateway_data_plane_certificate description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayDataPlaneCertificate`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayDataPlaneCertificateSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatespec)_ |  |
+| `status` _[EventGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatestatus)_ |  |
 
 ### EventGatewayListener
 
@@ -1248,6 +1264,56 @@ Allowed values:
 | --- | --- |
 | `id` |  |
 | `name` |  |
+
+#### EventGatewayDataPlaneCertificateAPISpec
+
+
+EventGatewayDataPlaneCertificateAPISpec defines the API spec fields for EventGatewayDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `certificate` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | JSON escaped string of the certificate. |
+| `description` _string_ | A description of the certificate. |
+| `name` _string_ | The name to identify of the certificate. |
+
+_Appears in:_
+
+- [EventGatewayDataPlaneCertificateSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatespec)
+
+#### EventGatewayDataPlaneCertificateSpec
+
+
+EventGatewayDataPlaneCertificateSpec defines the desired state of EventGatewayDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `apiSpec` _[EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
+
+#### EventGatewayDataPlaneCertificateStatus
+
+
+EventGatewayDataPlaneCertificateStatus defines the observed state of EventGatewayDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
 
 #### EventGatewayDecryptPolicy
 
@@ -3838,6 +3904,7 @@ KonnectEntityRef is a reference to a Konnect entity.
 _Appears in:_
 
 - [EventGatewayBackendClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)
+- [EventGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatestatus)
 - [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
@@ -4129,6 +4196,7 @@ either inline or sourced from a Kubernetes Secret.
 _Appears in:_
 
 - [BackendClusterTLSClientIdentity](#configuration-konghq-com-v1alpha1-types-backendclustertlsclientidentity)
+- [EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)
 - [TLSCertificate](#configuration-konghq-com-v1alpha1-types-tlscertificate)
 
 #### SensitiveDataSourceType

@@ -23,6 +23,8 @@ func reconciliationWatchOptionsForEntity[
 	switch any(ent).(type) {
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return EventGatewayBackendClusterReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
+		return EventGatewayDataPlaneCertificateReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayListener:
 		return EventGatewayListenerReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayListenerPolicy:
@@ -33,8 +35,6 @@ func reconciliationWatchOptionsForEntity[
 		return EventGatewayVirtualClusterConsumePolicyReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
-		return KonnectEventDataPlaneCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return KonnectEventGatewayReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.Portal:

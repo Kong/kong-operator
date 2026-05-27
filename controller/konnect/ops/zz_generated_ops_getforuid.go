@@ -43,6 +43,8 @@ func getForUID[
 	switch ent := any(e).(type) {
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return getEventGatewayBackendClusterForUID(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
+	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
+		return getEventGatewayDataPlaneCertificateForUID(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayListener:
 		return getEventGatewayListenerForUID(ctx, sdk.GetEventGatewayListenersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayListenerPolicy:
@@ -53,8 +55,6 @@ func getForUID[
 		return getEventGatewayVirtualClusterConsumePolicyForUID(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return getEventGatewayVirtualClusterProducePolicyForUID(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
-	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
-		return getKonnectEventDataPlaneCertificateForUID(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return getKonnectEventGatewayForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:

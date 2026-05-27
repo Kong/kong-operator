@@ -7,6 +7,11 @@ func (*EventGatewayBackendCluster) PersistsKonnectID() bool {
 	return true
 }
 
+// PersistsKonnectID reports whether EventGatewayDataPlaneCertificate persists a Konnect ID in status.
+func (*EventGatewayDataPlaneCertificate) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether EventGatewayListener persists a Konnect ID in status.
 func (*EventGatewayListener) PersistsKonnectID() bool {
 	return true

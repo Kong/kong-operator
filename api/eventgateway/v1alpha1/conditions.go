@@ -107,7 +107,7 @@ const (
 
 const (
 	// KonnectCertificateRegisteredType indicates whether the
-	// KonnectEventDataPlaneCertificate resource has been ensured for the DataPlane.
+	// EventGatewayDataPlaneCertificate resource has been ensured for the DataPlane.
 	KonnectCertificateRegisteredType consts.ConditionType = "KonnectCertificateRegistered"
 
 	// KonnectCertificateRegisteredReason indicates the certificate resource was
@@ -117,7 +117,7 @@ const (
 	// could not be ensured.
 	KonnectCertificateRegistrationFailedReason consts.ConditionReason = "KonnectCertificateRegistrationFailed"
 	// KonnectCertificateNotProgrammedReason indicates the
-	// KonnectEventDataPlaneCertificate exists but has not yet been programmed
+	// EventGatewayDataPlaneCertificate exists but has not yet been programmed
 	// on Konnect by the Konnect controller.
 	KonnectCertificateNotProgrammedReason consts.ConditionReason = "KonnectCertificateNotProgrammed"
 )

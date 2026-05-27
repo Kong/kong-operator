@@ -15,8 +15,6 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 func TestObjectRefTypeName(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -107,7 +105,7 @@ func TestGenerateWatch_UsesStableAPIAuthImportAndNamespacedLookup(t *testing.T) 
 			EntityNameLowerCamel: "portal",
 			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 			APIGroupPackageAlias: "konnectv1alpha1",
-		}, &config.ReconcilerConfig{IsRoot: ptr(true)})
+		}, &config.ReconcilerConfig{IsRoot: new(true)})
 		require.NoError(t, err)
 
 		assert.Contains(t, content, `konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
@@ -126,7 +124,7 @@ func TestGenerateWatch_UsesStableAPIAuthImportAndNamespacedLookup(t *testing.T) 
 			EntityNameLowerCamel: "portal",
 			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
 			APIGroupPackageAlias: "xkonnectv1alpha1",
-		}, &config.ReconcilerConfig{IsRoot: ptr(true)})
+		}, &config.ReconcilerConfig{IsRoot: new(true)})
 		require.NoError(t, err)
 
 		assert.Contains(t, content, `konnectapiauthv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
@@ -149,7 +147,7 @@ func TestGenerateIndex_UsesNamespacedAPIAuthKey(t *testing.T) {
 		EntityNameLowerCamel: "portal",
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
 		APIGroupPackageAlias: "xkonnectv1alpha1",
-	}, &config.ReconcilerConfig{IsRoot: ptr(true)})
+	}, &config.ReconcilerConfig{IsRoot: new(true)})
 	require.NoError(t, err)
 
 	assert.Contains(t, content, `if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {`)
@@ -158,34 +156,34 @@ func TestGenerateIndex_UsesNamespacedAPIAuthKey(t *testing.T) {
 
 func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 	g := NewGenerator(Config{
-		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
-		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		APIGroupPackageAlias: "configurationv1alpha1",
 	})
 
 	metadata := reconcilerEntityMetadata{
-		EntityName:                 "KonnectEventDataPlaneCertificate",
-		EntityNameLowerCamel:       "konnectEventDataPlaneCertificate",
+		EntityName:                 "EventGatewayBackendCluster",
+		EntityNameLowerCamel:       "eventGatewayBackendCluster",
 		ParentEntityName:           "KonnectEventGateway",
 		ParentRefFieldName:         "GatewayRef",
-		APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
-		APIGroupPackageAlias:       "konnectv1alpha1",
+		APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		APIGroupPackageAlias:       "configurationv1alpha1",
 		ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		ParentAPIGroupPackageAlias: "konnectv1alpha1",
 	}
 
 	t.Run("watches parent entity", func(t *testing.T) {
 		content, err := g.generateWatch(metadata, &config.ReconcilerConfig{
-			IsRoot:           ptr(false),
+			IsRoot:           new(false),
 			ParentEntityType: "KonnectEventGateway",
 		})
 		require.NoError(t, err)
 
 		assert.Contains(t, content, `configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"`)
 		assert.Contains(t, content, `&konnectv1alpha1.KonnectEventGateway{}`)
-		assert.Contains(t, content, `enqueueKonnectEventDataPlaneCertificateForKonnectEventGateway(cl)`)
-		assert.Contains(t, content, `index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef: client.ObjectKeyFromObject(parent).String(),`)
+		assert.Contains(t, content, `enqueueEventGatewayBackendClusterForKonnectEventGateway(cl)`)
+		assert.Contains(t, content, `index.IndexFieldEventGatewayBackendClusterOnKonnectEventGatewayRef: client.ObjectKeyFromObject(parent).String(),`)
 		assert.Contains(t, content, `&configurationv1alpha1.KongReferenceGrant{}`)
-		assert.Contains(t, content, `enqueueObjectsForKongReferenceGrant[konnectv1alpha1.KonnectEventDataPlaneCertificateList](cl)`)
+		assert.Contains(t, content, `enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayBackendClusterList](cl)`)
 	})
 
 	t.Run("watches cross-group parent entity", func(t *testing.T) {
@@ -219,12 +217,12 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 
 	t.Run("indexes by dependency namespaced ref", func(t *testing.T) {
 		content, err := g.generateIndex(metadata, &config.ReconcilerConfig{
-			IsRoot:           ptr(false),
+			IsRoot:           new(false),
 			ParentEntityType: "KonnectEventGateway",
 		})
 		require.NoError(t, err)
 
-		assert.Contains(t, content, `IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef`)
+		assert.Contains(t, content, `IndexFieldEventGatewayBackendClusterOnKonnectEventGatewayRef`)
 		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef == nil {`)
 		assert.Contains(t, content, `refNamespace := ent.GetNamespace()`)
 		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.GatewayRef.NamespacedRef.Namespace != "" {`)
@@ -724,7 +722,7 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 			APIVersion: "v1alpha1",
 			ReconcilerConfig: map[string]*config.ReconcilerConfig{
 				"Portal": {
-					IsRoot: ptr(true),
+					IsRoot: new(true),
 				},
 			},
 		})
@@ -3482,9 +3480,9 @@ func TestGenerateKonnectControllerSetupDispatcher(t *testing.T) {
 			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		},
 		{
-			Entity:         "KonnectEventDataPlaneCertificate",
-			APIAlias:       "konnectv1alpha1",
-			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			Entity:         "EventGatewayDataPlaneCertificate",
+			APIAlias:       "configurationv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
 		},
 	}
 
@@ -3497,11 +3495,11 @@ func TestGenerateKonnectControllerSetupDispatcher(t *testing.T) {
 	assert.Contains(t, file.Content, "package manager")
 	assert.Contains(t, file.Content, "func generatedControllersForKonnectEntities(")
 	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.PortalIdentityProviderRequest](controllerFactory)")
-	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory)")
+	assert.Contains(t, file.Content, "newKonnectEntityController[configurationv1alpha1.EventGatewayDataPlaneCertificate](controllerFactory)")
 	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory)")
 
 	idxIdentity := strings.Index(file.Content, "PortalIdentityProviderRequest")
-	idxEventCert := strings.Index(file.Content, "KonnectEventDataPlaneCertificate")
+	idxEventCert := strings.Index(file.Content, "EventGatewayDataPlaneCertificate")
 	idxPortal := strings.Index(file.Content, "newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory)")
 	assert.Less(t, idxEventCert, idxPortal)
 	assert.Less(t, idxPortal, idxIdentity)
@@ -3871,7 +3869,7 @@ func TestGenerateReconcilerFiles_IncludesRBAC(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
 		APIGroupPackageAlias: "xkonnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -3900,7 +3898,7 @@ func TestGenerateOpsCreate_RootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -3940,7 +3938,7 @@ func TestGenerateOpsCreate_NonRootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"IdentityProviderRequest": {IsRoot: ptr(false)},
+			"IdentityProviderRequest": {IsRoot: new(false)},
 		},
 	})
 
@@ -3987,7 +3985,7 @@ func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
 			"KonnectEventDataPlaneCertificate": {
-				IsRoot:           ptr(false),
+				IsRoot:           new(false),
 				ParentEntityType: "KonnectEventGateway",
 			},
 		},
@@ -4033,7 +4031,7 @@ func TestGenerateOpsCreate_NonRootEntityMissingDependency_ReturnsError(t *testin
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Orphan": {IsRoot: ptr(false)},
+			"Orphan": {IsRoot: new(false)},
 		},
 	})
 
@@ -4090,7 +4088,7 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalPage": {IsRoot: ptr(false)},
+			"PortalPage": {IsRoot: new(false)},
 		},
 	})
 
@@ -4150,7 +4148,7 @@ func TestGenerateEntityOpsFile_ControllerOpsTestsUseSafeNamedRefLiterals(t *test
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalIdentityProviderRequest": {IsRoot: ptr(false), ParentEntityType: "Portal"},
+			"PortalIdentityProviderRequest": {IsRoot: new(false), ParentEntityType: "Portal"},
 		},
 	})
 
@@ -4209,7 +4207,7 @@ func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalPage": {IsRoot: ptr(false)},
+			"PortalPage": {IsRoot: new(false)},
 		},
 	})
 
@@ -4244,7 +4242,7 @@ func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter_Golden(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
 		APIGroupPackageAlias: "configurationv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"KongService": {IsRoot: ptr(false), ParentEntityType: "KonnectGatewayControlPlane"},
+			"KongService": {IsRoot: new(false), ParentEntityType: "KonnectGatewayControlPlane"},
 		},
 	})
 
@@ -4333,7 +4331,7 @@ func TestGenerateEntityOpsFile_GetForUIDUsesRootUnionCases(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"EventGatewayListenerPolicy": {IsRoot: ptr(false), ParentEntityType: "EventGatewayListener"},
+			"EventGatewayListenerPolicy": {IsRoot: new(false), ParentEntityType: "EventGatewayListener"},
 		},
 	})
 
@@ -4404,7 +4402,7 @@ func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testin
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"KonnectEventDataPlaneCertificate": {IsRoot: ptr(false), ParentEntityType: "KonnectEventGateway"},
+			"KonnectEventDataPlaneCertificate": {IsRoot: new(false), ParentEntityType: "KonnectEventGateway"},
 		},
 		ManualGetForUIDEntities: map[string]bool{
 			"KonnectEventDataPlaneCertificate": true,
@@ -4440,7 +4438,7 @@ func TestGenerateEntityOpsFile_GetForUIDWithNoMatchStrategy(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalEmailConfig": {IsRoot: ptr(false)},
+			"PortalEmailConfig": {IsRoot: new(false)},
 		},
 	})
 
@@ -4488,7 +4486,7 @@ func TestGenerateEntityOpsFile_GetForUIDSingletonNoIDWithoutMatchStrategy(t *tes
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalCustomization": {IsRoot: ptr(false)},
+			"PortalCustomization": {IsRoot: new(false)},
 		},
 	})
 
@@ -4541,7 +4539,7 @@ func TestGenerateEntityOpsFile_ParentScopedSingleton(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalEmailConfig": {IsRoot: ptr(false)},
+			"PortalEmailConfig": {IsRoot: new(false)},
 		},
 	})
 
@@ -4597,7 +4595,7 @@ func TestGenerateEntityOpsFile_ParentScopedSingletonWithIDGetForUID(t *testing.T
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalEmailConfig": {IsRoot: ptr(false)},
+			"PortalEmailConfig": {IsRoot: new(false)},
 		},
 	})
 
@@ -4739,7 +4737,7 @@ func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -4789,7 +4787,7 @@ func TestGenerateOpsUpdate_NonRootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"IdentityProviderRequest": {IsRoot: ptr(false)},
+			"IdentityProviderRequest": {IsRoot: new(false)},
 		},
 	})
 
@@ -4840,7 +4838,7 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
 			"KonnectEventDataPlaneCertificate": {
-				IsRoot:           ptr(false),
+				IsRoot:           new(false),
 				ParentEntityType: "KonnectEventGateway",
 			},
 		},
@@ -4940,7 +4938,7 @@ func TestGenerateOpsUpdate_PointerBody(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Foo": {IsRoot: ptr(true)},
+			"Foo": {IsRoot: new(true)},
 		},
 	})
 
@@ -4974,7 +4972,7 @@ func TestGenerateOpsUpdate_NoUpdateOp_Skipped(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -5035,7 +5033,7 @@ func TestGenerateOpsUpdateDispatcher(t *testing.T) {
 
 	// Alphabetical ordering of case labels.
 	idxIdentity := strings.Index(file.Content, "case *konnectv1alpha1.PortalIdentityProviderRequest:")
-	idxKonnectEvent := strings.Index(file.Content, "case *konnectv1alpha1.KonnectEventDataPlaneCertificate:")
+	idxKonnectEvent := strings.Index(file.Content, "case *configurationv1alpha1.EventGatewayDataPlaneCertificate:")
 	idxPortal := strings.Index(file.Content, "case *konnectv1alpha1.Portal:")
 	assert.Less(t, idxIdentity, idxPortal, "cases should be alphabetically sorted")
 	assert.Less(t, idxKonnectEvent, idxPortal, "cases should be alphabetically sorted")
@@ -5052,7 +5050,7 @@ func TestGenerateOpsDelete_RootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -5108,7 +5106,7 @@ func TestGenerateOpsDelete_NonRootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"IdentityProviderRequest": {IsRoot: ptr(false)},
+			"IdentityProviderRequest": {IsRoot: new(false)},
 		},
 	})
 
@@ -5160,7 +5158,7 @@ func TestGenerateOpsDelete_NonRootEntityWithParentTypeOverride(t *testing.T) {
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
 			"KonnectEventDataPlaneCertificate": {
-				IsRoot:           ptr(false),
+				IsRoot:           new(false),
 				ParentEntityType: "KonnectEventGateway",
 			},
 		},
@@ -5208,7 +5206,7 @@ func TestGenerateOpsDelete_AsPUTUsesUpdateMethod(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalCustomization": {IsRoot: ptr(false)},
+			"PortalCustomization": {IsRoot: new(false)},
 		},
 	})
 
@@ -5258,7 +5256,7 @@ func TestGenerateOpsDelete_NoDeleteOp_Skipped(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 

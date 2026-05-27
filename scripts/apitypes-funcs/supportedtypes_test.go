@@ -16,8 +16,7 @@ func TestSupportedKonnectPackageTypesWithListIncludesGeneratedOASTypes(t *testin
 	}
 
 	for _, want := range []string{
-		"IdentityProviderRequest",
-		"KonnectEventDataPlaneCertificate",
+		"PortalIdentityProviderRequest",
 		"KonnectEventGateway",
 	} {
 		if _, ok := got[want]; !ok {

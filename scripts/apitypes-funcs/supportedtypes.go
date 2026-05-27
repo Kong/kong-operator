@@ -316,6 +316,9 @@ var supportedConfigurationPackageTypesWithList = func() []supportedTypesT {
 		templateDataT{
 			Type: "EventGatewayVirtualClusterProducePolicy",
 		},
+		templateDataT{
+			Type: "EventGatewayDataPlaneCertificate",
+		},
 	)
 
 	return ret
@@ -331,9 +334,6 @@ var supportedKonnectV1Alpha1TypesGeneratedFromOAS = []supportedTypesT{
 		Types: []templateDataT{
 			{
 				Type: "PortalIdentityProviderRequest",
-			},
-			{
-				Type: "KonnectEventDataPlaneCertificate",
 			},
 			{
 				Type: "KonnectEventGateway",
