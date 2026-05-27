@@ -47599,7 +47599,6 @@ rules:
   - configuration.konghq.com
   resources:
   - eventgatewaybackendclusters
-  - eventgatewaydataplanecertificates
   - eventgatewaylistenerpolicies
   - eventgatewaylisteners
   - eventgatewayvirtualclusterconsumepolicies
@@ -47667,18 +47666,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - ingressclassparameterses
-  - kongclusterplugins
-  - kongcustomentities
-  - konglicenses
-  - kongupstreampolicies
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
+  - eventgatewaydataplanecertificates
   - kongcertificates
   - kongcredentialacls
   - kongcredentialapikeys
@@ -47701,6 +47689,18 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - ingressclassparameterses
+  - kongclusterplugins
+  - kongcustomentities
+  - konglicenses
+  - kongupstreampolicies
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - configuration.konghq.com
@@ -47975,7 +47975,6 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
-  - konnecteventdataplanecertificates
   - konnectextensions
   - konnectgatewaycontrolplanes
   - mcpservers

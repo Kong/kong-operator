@@ -35,6 +35,7 @@ func DefaultControllerConfigForTests(opts ...ControllerConfigOption) manager.Con
 	cfg.AIGatewayControllerEnabled = true
 	cfg.AnonymousReports = false
 	cfg.KonnectControllersEnabled = true
+	cfg.KEGDataPlaneControllerEnabled = true
 	cfg.GatewayAPIExperimentalEnabled = true
 	cfg.EnforceConfig = true
 	cfg.ServiceAccountToImpersonate = ServiceAccountToImpersonate

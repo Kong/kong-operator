@@ -23,6 +23,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -288,6 +289,26 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    configurationv1.SchemeGroupVersion.Group,
 					Version:  configurationv1.SchemeGroupVersion.Version,
 					Resource: "kongplugins",
+				},
+			},
+		},
+		{
+			condition: c.KEGDataPlaneControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				{
+					Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
+					Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kegdataplanes",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "eventgatewaydataplanecertificates",
+				},
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konnecteventgateways",
 				},
 			},
 		},
@@ -671,7 +692,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		},
 		// EventGateway DataPlane controller
 		{
-			Enabled: c.KonnectControllersEnabled,
+			Enabled: c.KEGDataPlaneControllerEnabled,
 			Controller: &egdataplane.Reconciler{
 				Client:                   mgr.GetClient(),
 				LoggingMode:              c.LoggingMode,

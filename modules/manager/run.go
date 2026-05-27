@@ -126,6 +126,9 @@ type Config struct {
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
 
+	// Controllers for Event Gateway APIs.
+	KEGDataPlaneControllerEnabled bool
+
 	// FeatureGates holds the set of feature gates enabled via the --feature-gates flag.
 	FeatureGates FeatureGates
 
