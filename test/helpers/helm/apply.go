@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"context"
 	"path"
 	"testing"
 
@@ -13,7 +14,7 @@ import (
 )
 
 // ApplyTemplate applies templated resources to the cluster using the given rest.Config.
-func ApplyTemplate(t *testing.T, cfg *rest.Config, chartPath string, templates []string) {
+func ApplyTemplate(ctx context.Context, t *testing.T, cfg *rest.Config, chartPath string, templates []string) {
 	t.Helper()
 
 	helmArgs := []string{
@@ -23,8 +24,8 @@ func ApplyTemplate(t *testing.T, cfg *rest.Config, chartPath string, templates [
 		"admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding",
 	}
 
-	data := renderTemplate(t, chartPath, templates, helmArgs...)
-	res, err := apply.Apply(t.Context(), cfg, []byte(data))
+	data := renderTemplate(ctx, t, chartPath, templates, helmArgs...)
+	res, err := apply.Apply(ctx, cfg, []byte(data))
 	require.NoError(t, err)
 	for _, r := range res {
 		t.Logf("Result: %s", r)
@@ -32,7 +33,7 @@ func ApplyTemplate(t *testing.T, cfg *rest.Config, chartPath string, templates [
 }
 
 // renderTemplate renders the selected templates in the chart and returns the result as a string.
-func renderTemplate(t *testing.T, chartPath string, templates []string, helmArgs ...string) string {
+func renderTemplate(ctx context.Context, t *testing.T, chartPath string, templates []string, helmArgs ...string) string {
 	t.Helper()
 	releaseName := "ko"
 	valuesFile := path.Join(chartPath, "values.yaml")
@@ -40,7 +41,7 @@ func renderTemplate(t *testing.T, chartPath string, templates []string, helmArgs
 	// Discard terratest stdout logging
 	terratestlog.Default = terratestlog.Discard
 
-	res := helm.RenderTemplate(t, &helm.Options{
+	res := helm.RenderTemplateContext(t, ctx, &helm.Options{
 		ValuesFiles: []string{valuesFile},
 	}, chartPath, releaseName, templates, helmArgs...)
 
