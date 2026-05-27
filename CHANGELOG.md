@@ -50,6 +50,9 @@
 
 ### Added
 
+- `KongReferenceGrant`: support `spec.from[].namespaceSelector` to allow
+  cross-namespace references from namespaces selected by labels.
+  [#4407](https://github.com/Kong/kong-operator/issues/4407)
 - DataPlane: extend Kong image validation to support sha256 digest
   [#4356](https://github.com/Kong/kong-operator/pull/4356)
 - Konnect: support `KongCertificate` ref in `KongUpstream`

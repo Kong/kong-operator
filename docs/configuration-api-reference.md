@@ -4037,6 +4037,7 @@ ReferenceGrantFrom describes trusted namespaces and kinds.
 | `group` _[Group](#configuration-konghq-com-v1alpha1-types-group)_ | Group is the group of the referent. |
 | `kind` _[Kind](#configuration-konghq-com-v1alpha1-types-kind)_ | Kind is the kind of the referent. |
 | `namespace` _[Namespace](#configuration-konghq-com-v1alpha1-types-namespace)_ | Namespace is the namespace of the referent. |
+| `namespaceSelector` _*k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector_ | NamespaceSelector selects namespaces of the referent. |
 
 _Appears in:_
 

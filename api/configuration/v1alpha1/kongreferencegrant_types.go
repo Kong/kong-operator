@@ -93,7 +93,9 @@ type KongReferenceGrantSpec struct {
 //
 // +kubebuilder:validation:XValidation:rule="self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding', 'KongSNI']",message="Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding and KongSNI kinds are supported for 'configuration.konghq.com' group"
 // +kubebuilder:validation:XValidation:rule="self.group != 'gateway-operator.konghq.com' || self.kind in [ 'GatewayConfiguration' ]",message="Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com' group"
-// +kubebuilder:validation:XValidation:rule="self.kind == 'KongVault' ? self.__namespace__ == \"\" : self.__namespace__ != \"\"",message="namespace must be empty for KongVault and non-empty for other kinds"
+// +kubebuilder:validation:XValidation:rule="self.kind == 'KongVault' ? (!has(self.__namespace__) || self.__namespace__ == \"\") && !has(self.namespaceSelector) : (has(self.__namespace__) && self.__namespace__ != \"\") || has(self.namespaceSelector)",message="namespace must be empty and namespaceSelector must be unset for KongVault; either namespace or namespaceSelector must be set for other kinds"
+// +kubebuilder:validation:XValidation:rule="!((has(self.__namespace__) && self.__namespace__ != \"\") && has(self.namespaceSelector))",message="namespace and namespaceSelector are mutually exclusive"
+// +kubebuilder:validation:XValidation:rule="!has(self.namespaceSelector) || (has(self.namespaceSelector.matchLabels) && size(self.namespaceSelector.matchLabels) > 0) || (has(self.namespaceSelector.matchExpressions) && size(self.namespaceSelector.matchExpressions) > 0)",message="namespaceSelector must contain at least one matchLabels or matchExpressions entry"
 type ReferenceGrantFrom struct {
 	// Group is the group of the referent.
 	//
@@ -109,8 +111,13 @@ type ReferenceGrantFrom struct {
 
 	// Namespace is the namespace of the referent.
 	//
-	// +required
-	Namespace Namespace `json:"namespace"`
+	// +optional
+	Namespace Namespace `json:"namespace,omitempty"`
+
+	// NamespaceSelector selects namespaces of the referent.
+	//
+	// +optional
+	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
 
 // ReferenceGrantTo describes what Kinds are allowed as targets of the
