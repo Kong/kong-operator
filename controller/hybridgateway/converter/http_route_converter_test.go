@@ -1634,6 +1634,26 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 			wantHosts: []string{},
 		},
 		{
+			name: "returns listener hostname when route hostnames are empty and section name matches without port",
+			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
+				route := newHTTPRouteWithHostnames()
+				gateway := newGatewayWithListenerHostnames("second-example.org")
+				gateway.UID = types.UID("gateway-uid")
+				objects := newKonnectGatewayStandardObjects(gateway)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				sectionName := gwtypes.SectionName("listener-0")
+				pRef := gwtypes.ParentReference{
+					Name:        "test-gateway",
+					SectionName: &sectionName,
+					Group:       new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:        new(gwtypes.Kind("Gateway")),
+				}
+				return converter, pRef
+			},
+			wantHosts: []string{"second-example.org"},
+		},
+		{
 			name: "returns error when listener lookup fails",
 			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
 				route := newHTTPRouteWithHostnames("api.example.com")
