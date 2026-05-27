@@ -568,33 +568,52 @@ func isListenerHostnameEffective(listener gatewayapi.Listener) bool {
 		listener.Protocol == gatewayapi.TLSProtocolType
 }
 
-// filterHostnames accepts a HTTPRoute and returns a version of the same object with only a subset of the
-// hostnames, the ones matching with the listeners' hostname.
-// it returns an error if the intersection of hostname match in httproute and listeners is empty.
-func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewayapi.HTTPRoute) (*gatewayapi.HTTPRoute, error) {
+// routeWithHostnames constrains filterHostnames to the route kinds that carry
+// a `Spec.Hostnames []gatewayapi.Hostname` field — currently HTTPRoute and TLSRoute.
+type routeWithHostnames interface {
+	*gatewayapi.HTTPRoute | *gatewayapi.TLSRoute
+}
+
+// filterHostnames accepts a route and returns the same object with only the subset
+// of hostnames that intersects with the listeners' hostnames.
+// It returns an error if the intersection of hostname match in the route and listeners is empty.
+func filterHostnames[T routeWithHostnames](gateways []supportedGatewayWithCondition, route T) (T, error) {
+	var (
+		specHostnames []gatewayapi.Hostname
+		setHostnames  func([]gatewayapi.Hostname)
+	)
+	switch r := any(route).(type) {
+	case *gatewayapi.HTTPRoute:
+		specHostnames = r.Spec.Hostnames
+		setHostnames = func(h []gatewayapi.Hostname) { r.Spec.Hostnames = h }
+	case *gatewayapi.TLSRoute:
+		specHostnames = r.Spec.Hostnames
+		setHostnames = func(h []gatewayapi.Hostname) { r.Spec.Hostnames = h }
+	}
+
 	filteredHostnames := make([]gatewayapi.Hostname, 0)
 	// if no hostnames are specified in the route spec, we use the UNION of all hostnames in supported gateways.
-	// if any of supported listener has not specified hostname, the hostnames of HTTPRoute remains empty
+	// if any of supported listener has not specified hostname, the route hostnames remain empty
 	// to match **ANY** hostname.
-	if len(httpRoute.Spec.Hostnames) == 0 {
+	if len(specHostnames) == 0 {
 		var matchAnyHost bool
 		filteredHostnames, matchAnyHost = getUnionOfGatewayHostnames(gateways)
 		if matchAnyHost {
-			return httpRoute, nil
+			return route, nil
 		}
 	} else {
-		for _, hostname := range httpRoute.Spec.Hostnames {
+		for _, hostname := range specHostnames {
 			if hostnameMatching := getMinimumHostnameIntersection(gateways, hostname); hostnameMatching != "" {
 				filteredHostnames = append(filteredHostnames, hostnameMatching)
 			}
 		}
 		if len(filteredHostnames) == 0 {
-			return httpRoute, ErrNoMatchingListenerHostname
+			return route, ErrNoMatchingListenerHostname
 		}
 	}
 
-	httpRoute.Spec.Hostnames = filteredHostnames
-	return httpRoute, nil
+	setHostnames(filteredHostnames)
+	return route, nil
 }
 
 // getUnionOfGatewayHostnames returns UNION of hostnames specified in supported gateways.
