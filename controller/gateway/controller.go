@@ -206,7 +206,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		return err
 	}
 	if tcpRouteExist {
-		b.Watches(
+		blder.Watches(
 			&gatewayv1alpha2.TCPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTCPRoute),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
