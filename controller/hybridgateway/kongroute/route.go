@@ -48,6 +48,7 @@ func RoutesForRule[
 	rule R,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
 	serviceName string,
 	hostnames []string,
 ) (kongRoutes []*configurationv1alpha1.KongRoute, err error) {
@@ -57,13 +58,13 @@ func RoutesForRule[
 		if !ok {
 			return nil, fmt.Errorf("failed to build KongRoute: unmatched route type and rule type: %T and %T", route, rule)
 		}
-		return RoutesForHTTPRouteRule(ctx, logger, cl, r, httpRule, pRef, cp, serviceName, hostnames)
+		return RoutesForHTTPRouteRule(ctx, logger, cl, r, httpRule, pRef, cp, namingParentRef, serviceName, hostnames)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
 			return nil, fmt.Errorf("failed to build KongRoute: unmatched route type and rule type: %T and %T", route, rule)
 		}
-		return routesForTLSRouteRule(ctx, logger, cl, r, tlsRule, pRef, cp, serviceName, hostnames)
+		return routesForTLSRouteRule(ctx, logger, cl, r, tlsRule, pRef, cp, namingParentRef, serviceName, hostnames)
 	}
 	return nil, fmt.Errorf("failed to build KongRoute: unsupported route type: %T", route)
 }
@@ -87,6 +88,7 @@ func RoutesForHTTPRouteRule(
 	rule gwtypes.HTTPRouteRule,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
 	serviceName string,
 	hostnames []string,
 ) ([]*configurationv1alpha1.KongRoute, error) {
@@ -124,7 +126,7 @@ func RoutesForHTTPRouteRule(
 	}
 
 	for i, match := range rule.Matches {
-		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, match, i)
+		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, namingParentRef, match, i)
 		mLog := logger.WithValues("kongroute", routeName, "matchIndex", i)
 		log.Debug(mLog, "Creating KongRoute for HTTPRoute match")
 
@@ -194,10 +196,11 @@ func routesForTLSRouteRule(
 	rule gwtypes.TLSRouteRule,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
 	serviceName string,
 	hostnames []string,
 ) ([]*configurationv1alpha1.KongRoute, error) {
-	routeName := namegen.NewKongRouteNameForTLSRouteRule(tlsRoute, cp, rule)
+	routeName := namegen.NewKongRouteNameForTLSRouteRule(tlsRoute, cp, namingParentRef, rule)
 	logger = logger.WithValues("kongroute", routeName)
 
 	var protocol sdkkonnectcomp.RouteJSONProtocols
