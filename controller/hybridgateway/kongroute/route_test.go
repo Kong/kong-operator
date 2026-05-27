@@ -198,7 +198,11 @@ func TestRoutesForRule(t *testing.T) {
 				if len(result.Spec.Paths) == 0 {
 					// header-only route
 					assert.Contains(t, result.Spec.Headers, "X-Foo")
+					assert.Nil(t, result.Spec.RegexPriority)
+					continue
 				}
+
+				assert.Equal(t, new(int64(1)), result.Spec.RegexPriority)
 			}
 		})
 	}
@@ -269,6 +273,7 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 	require.Len(t, results, 1)
 
 	assert.Equal(t, []string{"~/one$"}, results[0].Spec.Paths)
+	assert.Equal(t, new(int64(1)), results[0].Spec.RegexPriority)
 	assert.ElementsMatch(t,
 		[]sdkkonnectcomp.RouteJSONProtocols{
 			sdkkonnectcomp.RouteJSONProtocols("http"),
