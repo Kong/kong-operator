@@ -2,7 +2,7 @@ package managedfields
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/structured-merge-diff/v4/typed"
+	"sigs.k8s.io/structured-merge-diff/v6/typed"
 )
 
 // Compare calculates the difference between the current and desired objects.

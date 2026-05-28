@@ -430,6 +430,9 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 
 	// Skip setting programmed conditions for KongPlugins because they lack a status field.
 	expectedGVKs = FilterOutGVKByKind(expectedGVKs, "KongPlugin")
+	// Skip KongReferenceGrant: it is a passive local policy object (not synced to Konnect)
+	// and carries no Programmed condition. Its absence is surfaced indirectly via KongCertificate.ResolvedRefs=False.
+	expectedGVKs = FilterOutGVKByKind(expectedGVKs, "KongReferenceGrant")
 
 	// For each expected GVK, list resources owned by the route and gateway.
 	for _, gvk := range expectedGVKs {
@@ -971,8 +974,28 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 // The returned condition will have status "False" with reason "NoMatchingListenerHostname" if no listeners
 // have hostname intersection with the route. If matching listeners are found, the condition will be nil.
 func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener, hostnames []gwtypes.Hostname) ([]gwtypes.Listener, *metav1.Condition) {
+	if len(hostnames) == 0 {
+		if len(listeners) == 0 {
+			log.Debug(logger, "No listeners available for route hostnames")
+			return nil, &metav1.Condition{
+				Type:    string(gwtypes.RouteConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gwtypes.RouteReasonNoMatchingListenerHostname),
+				Message: "No Gateway Listener hostname matches this route",
+			}
+		}
+		log.Debug(logger, "Route has no hostnames; all listeners match", "listenerCount", len(listeners))
+		return listeners, nil
+	}
+
 	var matchingListeners []gwtypes.Listener
 	for _, listener := range listeners {
+		if len(hostnames) == 0 {
+			log.Debug(logger, "Route has no hostnames; listener matches all hostnames", "listener", listener.Name)
+			matchingListeners = append(matchingListeners, listener)
+			continue
+		}
+
 		// If the listener has no hostname, it matches all hostnames.
 		if listener.Hostname == nil || *listener.Hostname == "" {
 			log.Debug(logger, "Listener matches all hostnames (wildcard)", "listener", listener.Name)
@@ -983,7 +1006,7 @@ func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener
 		// Check if any of the route hostnames match the listener hostname.
 		for _, hostname := range hostnames {
 			routeHostname := string(hostname)
-			if intersection := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
+			if _, ok := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); ok {
 				log.Debug(logger, "Listener matches route hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname, "routeHostname", routeHostname)
 				matchingListeners = append(matchingListeners, listener)
 				break

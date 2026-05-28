@@ -50,7 +50,7 @@ var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
@@ -121,7 +121,7 @@ var testKongUpstreamControlPlaneRefNotFound = &configurationv1alpha1.KongUpstrea
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
@@ -153,7 +153,7 @@ var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUp
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
@@ -220,7 +220,7 @@ var testKongUpstreamOKInOtherNS = &configurationv1alpha1.KongUpstream{
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "99999",
 			},

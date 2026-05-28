@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -18,7 +19,7 @@ type getAPIAuthConfigurationRefFromParentTestCase struct {
 	name              string
 	parentRef         commonv1alpha1.ObjectRef
 	withParent        bool
-	withAPIAuth       bool
+	parentNamespace   string
 	wantNN            types.NamespacedName
 	wantErrorContains string
 }
@@ -68,12 +69,12 @@ func TestGetAPIAuthConfigurationRefFromParent_Portal(t *testing.T) {
 func TestGetAPIAuthConfigurationRefFromParent_EventGateway(t *testing.T) {
 	testGetAPIAuthConfigurationRefFromParent(t,
 		func(ref commonv1alpha1.ObjectRef) objectWithParentRef {
-			return &konnectv1alpha1.EventGatewayBackendCluster{
+			return &configurationv1alpha1.EventGatewayBackendCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "backend-cluster",
 					Namespace: "default",
 				},
-				Spec: konnectv1alpha1.EventGatewayBackendClusterSpec{
+				Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 					GatewayRef: ref,
 				},
 			}
@@ -121,10 +122,25 @@ func testGetAPIAuthConfigurationRefFromParent[
 					Name: parentName,
 				},
 			},
-			withParent:  true,
-			withAPIAuth: true,
+			withParent: true,
 			wantNN: types.NamespacedName{
 				Namespace: childNamespace,
+				Name:      apiAuthName,
+			},
+		},
+		{
+			name: "returns API auth configuration from parent in explicit reference namespace",
+			parentRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name:      parentName,
+					Namespace: new("other"),
+				},
+			},
+			withParent:      true,
+			parentNamespace: "other",
+			wantNN: types.NamespacedName{
+				Namespace: "other",
 				Name:      apiAuthName,
 			},
 		},
@@ -134,14 +150,14 @@ func testGetAPIAuthConfigurationRefFromParent[
 				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
 				KonnectID: new(string),
 			},
-			wantErrorContains: "invalid parent reference",
+			wantErrorContains: "unsupported ref type",
 		},
 		{
 			name: "returns error for missing namespaced ref",
 			parentRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 			},
-			wantErrorContains: "invalid parent reference",
+			wantErrorContains: "ref.namespacedRef is required",
 		},
 		{
 			name: "returns error when parent does not exist",
@@ -151,18 +167,21 @@ func testGetAPIAuthConfigurationRefFromParent[
 					Name: parentName,
 				},
 			},
-			wantErrorContains: "failed to get",
+			wantErrorContains: "referenced object",
 		},
 		{
-			name: "returns error when API auth configuration does not exist",
+			name: "returns API auth configuration name even when API auth object does not exist yet",
 			parentRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: parentName,
 				},
 			},
-			withParent:        true,
-			wantErrorContains: "failed to get APIAuthConfiguration",
+			withParent: true,
+			wantNN: types.NamespacedName{
+				Namespace: childNamespace,
+				Name:      apiAuthName,
+			},
 		},
 	}
 
@@ -175,20 +194,16 @@ func testGetAPIAuthConfigurationRefFromParent[
 				WithObjects(child)
 
 			if tc.withParent {
-				builder = builder.WithObjects(parentBuilder(childNamespace, apiAuthName))
-			}
-			if tc.withAPIAuth {
-				builder = builder.WithObjects(&konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      apiAuthName,
-						Namespace: childNamespace,
-					},
-				})
+				parentNamespace := childNamespace
+				if tc.parentNamespace != "" {
+					parentNamespace = tc.parentNamespace
+				}
+				builder = builder.WithObjects(parentBuilder(parentNamespace, apiAuthName))
 			}
 
 			cl := builder.Build()
 
-			nn, err := getAPIAuthConfigurationRefFromParent[ParentT, ParentTPtr](t.Context(), cl, child)
+			nn, err := getAPIAuthConfigurationRefFromParent[ParentT, ParentTPtr](t.Context(), cl, child, tc.parentRef)
 			if tc.wantErrorContains != "" {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tc.wantErrorContains)

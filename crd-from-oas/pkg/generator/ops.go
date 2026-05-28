@@ -13,11 +13,17 @@ import (
 // entityOpsFileResult holds the outputs of generateEntityOpsFile.
 type entityOpsFileResult struct {
 	File           *GeneratedFile
+	TestFile       *GeneratedFile
 	CreateInfo     *OpsCreateFileInfo
 	UpdateInfo     *OpsUpdateFileInfo
 	DeleteInfo     *OpsDeleteFileInfo
 	GetForUIDInfo  *OpsGetForUIDFileInfo
 	SDKFactoryInfo *SDKFactoryFileInfo
+}
+
+type opsFileImport struct {
+	Alias string
+	Path  string
 }
 
 // generateEntityOpsFile emits a zz_generated_ops_<entity>.go file containing
@@ -60,17 +66,33 @@ func (g *Generator) generateEntityOpsFile(
 		// referenced when:
 		//   - update uses a wrapped request struct (UpdateWrapped, not UpdateFullyWrapped)
 		//   - delete uses a fully-wrapped request struct (multi-parent entities)
+		//   - delete is implemented via update/PUT and the update call shape uses
+		//     operations request structs
 		//   - getForUID actually calls the list SDK method (i.e. has a viable
 		//     match strategy: labels, name, match fields, or UID tag filter).
 		//     The fallback else-branch emits no SDK call and therefore no import.
 		getForUIDNeedsOpsImport := getForUIDData != nil &&
-			!getForUIDData.SingletonNoID &&
+			!getForUIDData.SingletonByParent &&
 			(getForUIDData.UseUIDTagFilter || len(getForUIDData.MatchFields) > 0 || getForUIDData.RootUnion != nil ||
 				getForUIDData.HasLabels || getForUIDData.HasName)
+		deleteNeedsOpsImport := deleteData != nil &&
+			(deleteData.DeleteFullyWrapped ||
+				(deleteData.DeleteAsUpdate && (deleteData.DeletePutWrapped || deleteData.DeletePutFullyWrapped)))
 		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) ||
-			(deleteData != nil && deleteData.DeleteFullyWrapped) ||
+			deleteNeedsOpsImport ||
 			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
+
+		extraImportSet := make(map[string]string)
+		if deleteData != nil && deleteData.DeleteAsUpdate && deleteData.DeletePutReqImportPath != "" &&
+			!strings.HasSuffix(deleteData.DeletePutReqImportPath, "/operations") {
+			extraImportSet[deleteData.DeletePutReqImportPath] = sdkImportAlias(deleteData.DeletePutReqImportPath)
+		}
+		extraImports := make([]opsFileImport, 0, len(extraImportSet))
+		for path, alias := range extraImportSet {
+			extraImports = append(extraImports, opsFileImport{Alias: alias, Path: path})
+		}
+		sort.Slice(extraImports, func(i, j int) bool { return extraImports[i].Path < extraImports[j].Path })
 
 		// Render file header.
 		headerData := struct {
@@ -78,11 +100,13 @@ func (g *Generator) generateEntityOpsFile(
 			APIPackagePath    string
 			NeedsOpsImport    bool
 			NeedsClientImport bool
+			ExtraImports      []opsFileImport
 		}{
 			APIAlias:          g.config.APIGroupPackageAlias,
 			APIPackagePath:    g.config.APIGroupPackagePath,
 			NeedsOpsImport:    needsOpsImport,
 			NeedsClientImport: needsClientImport,
+			ExtraImports:      extraImports,
 		}
 		var content strings.Builder
 		headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
@@ -127,6 +151,11 @@ func (g *Generator) generateEntityOpsFile(
 			Content:     content.String(),
 			RelativeDir: "controller/konnect/ops",
 		}
+	}
+
+	testFile, err := g.generateEntityOpsTestFile(entityName, schema, opsConfig)
+	if err != nil {
+		return entityOpsFileResult{}, err
 	}
 
 	var createInfo *OpsCreateFileInfo
@@ -198,6 +227,7 @@ func (g *Generator) generateEntityOpsFile(
 
 	return entityOpsFileResult{
 		File:           file,
+		TestFile:       testFile,
 		CreateInfo:     createInfo,
 		UpdateInfo:     updateInfo,
 		DeleteInfo:     deleteInfo,
@@ -298,11 +328,13 @@ func buildDispatcherFile(
 // parentInfo holds per-parent metadata used by the op generator templates.
 type parentInfo struct {
 	// EntityName is the Go type name of the parent entity, e.g. "KonnectEventGateway".
-	// For the immediate (last) parent it may be overridden by ReconcilerConfig.ParentEntityType.
+	// For the immediate (last) parent it may be overridden by ReconcilerConfig.ParentEntityGVK.
 	EntityName string
 	// IDGetter is the method name to fetch the parent's Konnect ID from the child object,
-	// e.g. "GetGatewayID". Derived from the raw dependency EntityName (before ParentEntityType override).
+	// e.g. "GetGatewayID". Derived from the raw dependency EntityName (before parent kind override).
 	IDGetter string
+	// IDSetter is the companion mutator used in generated tests, e.g. "SetGatewayID".
+	IDSetter string
 	// VarName is the Go local variable name to use in generated code, e.g. "gatewayID".
 	VarName string
 	// SDKFieldName is the field name in the SDK operations request struct for this parent param,
@@ -325,9 +357,9 @@ func (g *Generator) resolveParents(entityName string, schema *parser.Schema) ([]
 	parents := make([]parentInfo, len(schema.Dependencies))
 	for i, dep := range schema.Dependencies {
 		name := dep.EntityName
-		// ParentEntityType overrides only the immediate (last) parent entity name.
-		if i == len(schema.Dependencies)-1 && rc.ParentEntityType != "" {
-			name = rc.ParentEntityType
+		// ParentEntityGVK overrides only the immediate (last) parent entity name.
+		if i == len(schema.Dependencies)-1 && rc.ParentEntityKind() != "" {
+			name = rc.ParentEntityKind()
 		}
 
 		sdkField := pathParamToFieldName(dep.ParamName)
@@ -342,6 +374,7 @@ func (g *Generator) resolveParents(entityName string, schema *parser.Schema) ([]
 		parents[i] = parentInfo{
 			EntityName:   name,
 			IDGetter:     "Get" + dep.EntityName + "ID",
+			IDSetter:     "Set" + dep.EntityName + "ID",
 			VarName:      varName,
 			SDKFieldName: sdkField,
 		}
@@ -398,32 +431,40 @@ func pascalFromKebab(s string) string {
 	return fixInitialisms(b.String())
 }
 
-// isSingletonNoID reports whether the entity is a singleton sub-resource whose
-// Konnect create/get response does not carry an "id" field. These are resources
-// at paths where the DELETE and UPDATE operations omit the per-resource ID
-// segment (i.e. keyed solely by parent ID) AND the 2xx create response has no
-// "id" property.
+// isParentScopedSingleton reports whether the entity is a singleton sub-resource
+// whose update/delete operations are keyed solely by parent ID, without a
+// dedicated per-entity path parameter.
 //
 // We require DeletePathParams to be non-empty so that schemas constructed
 // without parser output (e.g. in unit tests) are not erroneously treated as
 // singletons.
-func isSingletonNoID(schema *parser.Schema) bool {
+func isParentScopedSingleton(schema *parser.Schema) bool {
 	if len(schema.Dependencies) == 0 {
 		return false
 	}
-	// A non-empty DeletePathParams must not exceed the number of parent
-	// dependencies — if it does, there is a per-resource ID in the DELETE path,
-	// meaning this is a normal collection resource.
-	if len(schema.DeletePathParams) == 0 {
+	pathParams := schema.DeletePathParams
+	if len(pathParams) == 0 {
+		pathParams = schema.UpdatePathParams
+	}
+	// A non-empty singleton path must not exceed the number of parent
+	// dependencies — if it does, there is a per-resource ID segment, meaning this
+	// is a normal collection resource.
+	if len(pathParams) == 0 {
 		return false
 	}
-	if len(schema.DeletePathParams) > len(schema.Dependencies) {
+	if len(pathParams) > len(schema.Dependencies) {
 		return false
 	}
 	if len(schema.UpdatePathParams) > len(schema.Dependencies) {
 		return false
 	}
-	return !schema.RespHasID
+	return true
+}
+
+// isSingletonNoID reports whether the entity is a parent-scoped singleton whose
+// Konnect create/get response does not carry an "id" field.
+func isSingletonNoID(schema *parser.Schema) bool {
+	return isParentScopedSingleton(schema) && !schema.RespHasID
 }
 
 // metadataFields reports whether the request body schema declares a "tags"

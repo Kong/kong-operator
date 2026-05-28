@@ -66,26 +66,6 @@ func (g supportedGatewayWithCondition) GetSectionName() mo.Option[string] {
 // parentRefsForRoute provides a list of the parentRefs given a Gateway APIs route object
 // (e.g. HTTPRoute, TCPRoute, e.t.c.) which refer to the Gateway resource(s) which manage it.
 func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentReference, error) {
-	// Note: Ideally we wouldn't have to do this but it's hard to juggle around types
-	// and support ParentReference and gatewayapi.ParentReference
-	// at the same time so we just copy v1alpha2 refs to a new v1beta1 slice.
-	convertV1Alpha2ToV1Beta1ParentReference := func(
-		refsAlpha []gatewayapi.ParentReference,
-	) []gatewayapi.ParentReference {
-		ret := make([]gatewayapi.ParentReference, len(refsAlpha))
-		for i, v := range refsAlpha {
-			ret[i] = gatewayapi.ParentReference{
-				Group:       v.Group,
-				Kind:        v.Kind,
-				Namespace:   v.Namespace,
-				Name:        v.Name,
-				SectionName: v.SectionName,
-				Port:        v.Port,
-			}
-		}
-		return ret
-	}
-
 	var refs []gatewayapi.ParentReference
 	switch r := (any)(route).(type) {
 	case *gatewayapi.HTTPRoute:
@@ -115,20 +95,7 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 		}
 	}
 
-	switch r := (any)(route).(type) {
-	case *gatewayapi.HTTPRoute:
-		return r.Spec.ParentRefs, nil
-	case *gatewayapi.UDPRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	case *gatewayapi.TCPRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	case *gatewayapi.TLSRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	case *gatewayapi.GRPCRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	default:
-		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
-	}
+	return refs, nil
 }
 
 // getSupportedGatewayForRoute will retrieve the Gateway and GatewayClass object for any
@@ -162,11 +129,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 		// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 		// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 		if gatewayToReconcile, ok := specifiedGW.Get(); ok {
-			parentNamespace := route.GetNamespace()
-			if parentRef.Namespace != nil {
-				parentNamespace = string(*parentRef.Namespace)
-			}
-			if parentNamespace != gatewayToReconcile.Namespace || string(parentRef.Name) != gatewayToReconcile.Name {
+			if namespace != gatewayToReconcile.Namespace || name != gatewayToReconcile.Name {
 				continue
 			}
 		}
@@ -605,33 +568,52 @@ func isListenerHostnameEffective(listener gatewayapi.Listener) bool {
 		listener.Protocol == gatewayapi.TLSProtocolType
 }
 
-// filterHostnames accepts a HTTPRoute and returns a version of the same object with only a subset of the
-// hostnames, the ones matching with the listeners' hostname.
-// it returns an error if the intersection of hostname match in httproute and listeners is empty.
-func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewayapi.HTTPRoute) (*gatewayapi.HTTPRoute, error) {
+// routeWithHostnames constrains filterHostnames to the route kinds that carry
+// a `Spec.Hostnames []gatewayapi.Hostname` field — currently HTTPRoute and TLSRoute.
+type routeWithHostnames interface {
+	*gatewayapi.HTTPRoute | *gatewayapi.TLSRoute
+}
+
+// filterHostnames accepts a route and returns the same object with only the subset
+// of hostnames that intersects with the listeners' hostnames.
+// It returns an error if the intersection of hostname match in the route and listeners is empty.
+func filterHostnames[T routeWithHostnames](gateways []supportedGatewayWithCondition, route T) (T, error) {
+	var (
+		specHostnames []gatewayapi.Hostname
+		setHostnames  func([]gatewayapi.Hostname)
+	)
+	switch r := any(route).(type) {
+	case *gatewayapi.HTTPRoute:
+		specHostnames = r.Spec.Hostnames
+		setHostnames = func(h []gatewayapi.Hostname) { r.Spec.Hostnames = h }
+	case *gatewayapi.TLSRoute:
+		specHostnames = r.Spec.Hostnames
+		setHostnames = func(h []gatewayapi.Hostname) { r.Spec.Hostnames = h }
+	}
+
 	filteredHostnames := make([]gatewayapi.Hostname, 0)
 	// if no hostnames are specified in the route spec, we use the UNION of all hostnames in supported gateways.
-	// if any of supported listener has not specified hostname, the hostnames of HTTPRoute remains empty
+	// if any of supported listener has not specified hostname, the route hostnames remain empty
 	// to match **ANY** hostname.
-	if len(httpRoute.Spec.Hostnames) == 0 {
+	if len(specHostnames) == 0 {
 		var matchAnyHost bool
 		filteredHostnames, matchAnyHost = getUnionOfGatewayHostnames(gateways)
 		if matchAnyHost {
-			return httpRoute, nil
+			return route, nil
 		}
 	} else {
-		for _, hostname := range httpRoute.Spec.Hostnames {
+		for _, hostname := range specHostnames {
 			if hostnameMatching := getMinimumHostnameIntersection(gateways, hostname); hostnameMatching != "" {
 				filteredHostnames = append(filteredHostnames, hostnameMatching)
 			}
 		}
 		if len(filteredHostnames) == 0 {
-			return httpRoute, ErrNoMatchingListenerHostname
+			return route, ErrNoMatchingListenerHostname
 		}
 	}
 
-	httpRoute.Spec.Hostnames = filteredHostnames
-	return httpRoute, nil
+	setHostnames(filteredHostnames)
+	return route, nil
 }
 
 // getUnionOfGatewayHostnames returns UNION of hostnames specified in supported gateways.
@@ -718,6 +700,33 @@ func isHTTPReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef 
 	}
 	for _, from := range grantSpec.From {
 		if from.Group != gatewayv1.GroupName || from.Kind != "HTTPRoute" || fromNamespace != string(from.Namespace) {
+			continue
+		}
+
+		for _, to := range grantSpec.To {
+			if backendRefGroup == to.Group &&
+				backendRefKind == to.Kind &&
+				(to.Name == nil || *to.Name == backendRef.Name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// isTLSReferenceGranted checks that the backendRef referenced by the TLSRoute is granted by a ReferenceGrant.
+func isTLSReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef gatewayapi.BackendRef, fromNamespace string) bool {
+	var backendRefGroup gatewayapi.Group
+	var backendRefKind gatewayapi.Kind
+
+	if backendRef.Group != nil {
+		backendRefGroup = *backendRef.Group
+	}
+	if backendRef.Kind != nil {
+		backendRefKind = *backendRef.Kind
+	}
+	for _, from := range grantSpec.From {
+		if from.Group != gatewayv1.GroupName || from.Kind != "TLSRoute" || fromNamespace != string(from.Namespace) {
 			continue
 		}
 

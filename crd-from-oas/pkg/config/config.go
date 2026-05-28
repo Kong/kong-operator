@@ -65,6 +65,13 @@ type ImportConfig struct {
 	Alias string `yaml:"alias,omitempty"`
 }
 
+// EntityGVKConfig identifies a generated API type by Kind and optional API group.
+// When Group is omitted, the current API group-version being generated is used.
+type EntityGVKConfig struct {
+	Kind  string `yaml:"kind"`
+	Group string `yaml:"group,omitempty"`
+}
+
 // ReferenceConfig configures a single inter-CR reference field.
 type ReferenceConfig struct {
 	// Kind is the Go type name of the referenced CRD (e.g. "EventGatewayBackendCluster").
@@ -87,12 +94,6 @@ type SecretReferenceConfig struct {
 	Type string `yaml:"type"`
 	// Key is the data key inside the referenced resource (e.g. "tls.crt").
 	Key string `yaml:"key"`
-	// Base64Encoding indicates that the resolved sensitive value must be base64
-	// encoded before being sent to Konnect.
-	//
-	// TODO: Remove Base64 encoding when API starts accepting raw values.
-	// TODO: https://github.com/Kong/kong-operator/issues/4304
-	Base64Encoding bool `yaml:"base64Encoding,omitempty"`
 }
 
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
@@ -158,18 +159,27 @@ type ReconcilerConfig struct {
 	// no path parameters are present (e.g. /v1/gateways), false otherwise
 	// (e.g. /v1/gateways/{gatewayId}/listeners).
 	IsRoot *bool `yaml:"isRoot,omitempty"`
-	// ParentEntityType overrides the generated parent entity type name used for
-	// child reconciler watch/index generation. When unset, the immediate parent
-	// dependency name is inferred from the OpenAPI path parameter.
+	// ParentEntityGVK overrides the generated parent entity type used for child
+	// reconciler watch/index generation and parent GVK helpers. When unset, the
+	// immediate parent dependency name and current API group are inferred from the
+	// OpenAPI path parameter.
+	ParentEntityGVK *EntityGVKConfig `yaml:"parentEntityGVK,omitempty"`
+	// ParentEntityType is the deprecated kind-only predecessor of
+	// ParentEntityGVK. Prefer ParentEntityGVK for new config.
 	ParentEntityType string `yaml:"parentEntityType,omitempty"`
 	// ParentRef, when set, replaces the OpenAPI-derived parent spec field with a
 	// new top-level ObjectRef field and changes what GetParentRef / SetParentID
-	// operate on. Requires ParentEntityType to also be set.
+	// operate on. Requires a parent entity kind override when the immediate parent
+	// kind should differ from the OpenAPI-derived dependency name.
 	ParentRef *ParentRefConfig `yaml:"parentRef,omitempty"`
-	// AncestorEntityTypes lists the Konnect entity type names (GVK Kind strings)
+	// AncestorEntityGVKs lists the ancestor entity kinds and optional API groups
 	// for each OpenAPI-derived path-parameter dependency in URL order
-	// (outermost first). Only required when ParentRef is set, to provide the
-	// Kind keys used in SetAncestorID / GetAncestorIDs.
+	// (outermost first). Only the Kind values are used by current ancestor-ID
+	// helpers, which remain keyed by kind for compatibility.
+	AncestorEntityGVKs []EntityGVKConfig `yaml:"ancestorEntityGVKs,omitempty"`
+	// AncestorEntityTypes is the deprecated kind-only predecessor of
+	// AncestorEntityGVKs. Prefer AncestorEntityGVKs for new config.
+	//
 	// E.g. for a path /event-gateways/{gatewayId}/virtual-clusters with
 	// parentRef overriding the immediate parent to EventGatewayBackendCluster,
 	// set to ["KonnectEventGateway"] so the gateway ancestry is preserved.
@@ -189,11 +199,55 @@ func (rc *ReconcilerConfig) GetIsRoot() bool {
 	return rc.IsRoot != nil && *rc.IsRoot
 }
 
+// ParentEntityKind returns the configured parent Kind override, if any.
+func (rc *ReconcilerConfig) ParentEntityKind() string {
+	if rc == nil {
+		return ""
+	}
+	if rc.ParentEntityGVK != nil && rc.ParentEntityGVK.Kind != "" {
+		return rc.ParentEntityGVK.Kind
+	}
+	return rc.ParentEntityType
+}
+
+// ParentEntityGroup returns the configured parent API group override, or the
+// current API group when no override is provided.
+func (rc *ReconcilerConfig) ParentEntityGroup(currentGroup string) string {
+	if rc == nil || rc.ParentEntityGVK == nil || rc.ParentEntityGVK.Group == "" {
+		return currentGroup
+	}
+	return rc.ParentEntityGVK.Group
+}
+
+// AncestorEntityKinds returns the configured ancestor Kind values in URL order.
+func (rc *ReconcilerConfig) AncestorEntityKinds() []string {
+	if rc == nil {
+		return nil
+	}
+	if len(rc.AncestorEntityGVKs) > 0 {
+		kinds := make([]string, 0, len(rc.AncestorEntityGVKs))
+		for _, gvk := range rc.AncestorEntityGVKs {
+			if gvk.Kind == "" {
+				continue
+			}
+			kinds = append(kinds, gvk.Kind)
+		}
+		if len(kinds) > 0 {
+			return kinds
+		}
+	}
+	return rc.AncestorEntityTypes
+}
+
 // OpConfig holds configuration for a single SDK operation.
 type OpConfig struct {
 	// Path is the fully qualified Go type path in the form "importpath.TypeName",
 	// e.g. "github.com/Kong/sdk-konnect-go/models/components.CreatePortal".
-	Path string `yaml:"path"`
+	// Required for create/update ops.
+	Path string `yaml:"path,omitempty"`
+	// AsPUT makes generated delete ops call the configured update/PUT SDK method
+	// with an empty request body instead of requiring an OpenAPI DELETE operation.
+	AsPUT bool `yaml:"asPUT,omitempty"`
 }
 
 // OpSDKConfig identifies the SDK interface and factory field name used by
@@ -544,6 +598,12 @@ func (tc *TypeConfig) validate() error {
 			return fmt.Errorf("secretReferences[%d]: duplicate path %q", i, sr.Path)
 		}
 		seenSecretPaths[sr.Path] = true
+	}
+	if deleteOp, ok := tc.Ops["delete"]; ok && deleteOp != nil && deleteOp.AsPUT {
+		updateOp, ok := tc.Ops["update"]
+		if !ok || updateOp == nil || updateOp.Path == "" {
+			return fmt.Errorf("ops.delete.asPUT requires ops.update.path")
+		}
 	}
 	if tc.OpsSkipGetForUID && tc.OpsGetForUID != nil {
 		return fmt.Errorf("ops.skipGetForUID and ops.getForUID are mutually exclusive")

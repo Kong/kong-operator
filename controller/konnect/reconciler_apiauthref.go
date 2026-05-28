@@ -17,6 +17,37 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 )
 
+func getAPIAuthConfigurationRefNN(
+	ctx context.Context,
+	cl client.Client,
+	from client.Object,
+	name string,
+	namespace *string,
+) (types.NamespacedName, error) {
+	apiAuthNamespace := from.GetNamespace()
+	if namespace != nil && *namespace != "" {
+		apiAuthNamespace = *namespace
+	}
+	if apiAuthNamespace != from.GetNamespace() {
+		if err := crossnamespace.CheckKongReferenceGrantForResource(
+			ctx,
+			cl,
+			from.GetNamespace(),
+			apiAuthNamespace,
+			name,
+			metav1.GroupVersionKind(from.GetObjectKind().GroupVersionKind()),
+			metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectAPIAuthConfiguration")),
+		); err != nil {
+			return types.NamespacedName{}, err
+		}
+	}
+
+	return types.NamespacedName{
+		Name:      name,
+		Namespace: apiAuthNamespace,
+	}, nil
+}
+
 func getCPAuthRefForRef(
 	ctx context.Context,
 	cl client.Client,
@@ -28,27 +59,8 @@ func getCPAuthRefForRef(
 		return types.NamespacedName{}, err
 	}
 
-	cpNamespace := cp.GetNamespace()
-	apiAuthNamespace := cpNamespace
-	if cp.GetKonnectAPIAuthConfigurationRef().Namespace != nil && *cp.GetKonnectAPIAuthConfigurationRef().Namespace != cpNamespace {
-		apiAuthNamespace = *cp.GetKonnectAPIAuthConfigurationRef().Namespace
-		if err := crossnamespace.CheckKongReferenceGrantForResource(
-			ctx,
-			cl,
-			cpNamespace,
-			apiAuthNamespace,
-			cp.GetKonnectAPIAuthConfigurationRef().Name,
-			metav1.GroupVersionKind(cp.GetObjectKind().GroupVersionKind()),
-			metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectAPIAuthConfiguration")),
-		); err != nil {
-			return types.NamespacedName{}, err
-		}
-	}
-
-	return types.NamespacedName{
-		Name:      cp.GetKonnectAPIAuthConfigurationRef().Name,
-		Namespace: apiAuthNamespace,
-	}, nil
+	ref := cp.GetKonnectAPIAuthConfigurationRef()
+	return getAPIAuthConfigurationRefNN(ctx, cl, cp, ref.Name, ref.Namespace)
 }
 
 // GetAPIAuthRefNN returns the NamespacedName of the KonnectAPIAuthConfiguration referenced by the entity.
@@ -59,29 +71,8 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 ) (types.NamespacedName, error) {
 	// If the entity has a KonnectAPIAuthConfigurationRef, return it.
 	if ref, ok := any(ent).(constraints.EntityWithKonnectAPIAuthConfigurationRef); ok {
-		apiAuthNamespace := ent.GetNamespace()
-		if ref.GetKonnectAPIAuthConfigurationRef().Namespace != nil && *ref.GetKonnectAPIAuthConfigurationRef().Namespace != ent.GetNamespace() {
-			apiAuthNamespace = *ref.GetKonnectAPIAuthConfigurationRef().Namespace
-			if err := crossnamespace.CheckKongReferenceGrantForResource(
-				ctx,
-				cl,
-				ent.GetNamespace(),
-				apiAuthNamespace,
-				ref.GetKonnectAPIAuthConfigurationRef().Name,
-				metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
-				metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectAPIAuthConfiguration")),
-			); err != nil {
-				return types.NamespacedName{}, err
-			}
-		}
-		return types.NamespacedName{
-			Name: ref.GetKonnectAPIAuthConfigurationRef().Name,
-			// X-namespace refs supported for KonnectGatewayControlPlane entities only.
-			// This is ensured at the CRD level, as the namespace field is only
-			// defined for KonnectGatewayControlPlane entities. For other entities,
-			// the field is not defined, so it will always be nil.
-			Namespace: apiAuthNamespace,
-		}, nil
+		authRef := ref.GetKonnectAPIAuthConfigurationRef()
+		return getAPIAuthConfigurationRefNN(ctx, cl, ent, authRef.Name, authRef.Namespace)
 	}
 
 	// If the entity has a ControlPlaneRef, get the KonnectAPIAuthConfiguration
@@ -232,8 +223,8 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	nn, err := getAPIAuthRef(ctx, cl, ent)
 	if err != nil {
 		return types.NamespacedName{}, fmt.Errorf(
-			"cannot get KonnectAPIAuthConfiguration for entity type %T %s",
-			client.ObjectKeyFromObject(ent), ent,
+			"cannot get KonnectAPIAuthConfiguration for entity %T %s: %w",
+			ent, client.ObjectKeyFromObject(ent), err,
 		)
 	}
 

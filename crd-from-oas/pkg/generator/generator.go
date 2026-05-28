@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"encoding/base64"
 	"fmt"
 	"go/format"
 	"reflect"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"unicode"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -68,6 +68,7 @@ type Config struct {
 // Generator generates Go CRD types from parsed OpenAPI schemas.
 type Generator struct {
 	config            Config
+	parsed            *parser.ParsedSpec
 	opsCreateInfos    []*OpsCreateFileInfo
 	opsUpdateInfos    []*OpsUpdateFileInfo
 	opsDeleteInfos    []*OpsDeleteFileInfo
@@ -83,7 +84,20 @@ type Generator struct {
 	// entityDirectSensitiveLeaves maps entity name → JSON field name → secret reference config
 	// for leaf fields that are direct children of the entity's apiSpec (depth 1 paths).
 	entityDirectSensitiveLeaves map[string]map[string]config.SecretReferenceConfig
+	// sensitiveObjectFieldParents maps entity name → object field path prefix
+	// (e.g. Spec.APISpec.TLS.ClientIdentity) → generated Go type name for the
+	// parent struct that contains the sensitive leaf.
+	sensitiveObjectFieldParents map[string]map[string]string
+	// sensitiveLeafSelectors maps entity name → config path → pre-computed
+	// SecretReferenceForTemplate data (including slice/union-aware Go selectors).
+	sensitiveLeafSelectors map[string]map[string]SecretReferenceForTemplate
+	// ambiguousInlineTypeNames holds inline object type base names that would
+	// collide with another generated package type and therefore need a parent
+	// prefix when emitted.
+	ambiguousInlineTypeNames map[string]bool
 }
+
+const sensitiveDataSourceTypeName = "SensitiveDataSource"
 
 // NewGenerator creates a new generator.
 func NewGenerator(config Config) *Generator {
@@ -169,8 +183,10 @@ func (g *Generator) hasAnySecretRefs() bool {
 // leaf fields so writeSchemaTypeField and generateCRDType can substitute the
 // correct SensitiveDataSource type for the right fields.
 func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
+	g.ensureInlineTypeNames(parsed)
 	g.sensitiveSchemaLeaves = make(map[string]map[string]config.SecretReferenceConfig)
 	g.entityDirectSensitiveLeaves = make(map[string]map[string]config.SecretReferenceConfig)
+	g.sensitiveObjectFieldParents = make(map[string]map[string]string)
 
 	for entityName, refs := range g.config.SecretReferences {
 		for _, ref := range refs {
@@ -191,7 +207,7 @@ func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 			if entitySchema == nil {
 				return fmt.Errorf("entity %q: schema not found for secretReferences path %q", entityName, ref.Path)
 			}
-			if err := g.walkSensitiveLeafPath(entityName+"APISpec", entitySchema, segments, ref, parsed.Schemas); err != nil {
+			if err := g.walkSensitiveLeafPath(entityName, entityName+"APISpec", "Spec.APISpec", entitySchema, segments, ref, parsed.Schemas, selectorAccumulator{}); err != nil {
 				return fmt.Errorf("entity %q path %q: %w", entityName, ref.Path, err)
 			}
 		}
@@ -202,52 +218,153 @@ func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 // walkSensitiveLeafPath walks the OAS schema tree to find the schema type that
 // contains the leaf field, then records it in g.sensitiveSchemaLeaves.
 // schemaGoTypeName is the Go type name of the current schema level.
+// acc accumulates the Go selector parts encountered during descent.
 func (g *Generator) walkSensitiveLeafPath(
+	entityName string,
 	schemaGoTypeName string,
+	objectFieldPath string,
 	schema *parser.Schema,
 	segments []string,
 	ref config.SecretReferenceConfig,
 	schemas map[string]*parser.Schema,
+	acc selectorAccumulator,
 ) error {
 	targetJSON := segments[0]
 
-	// Find the property matching the first segment
+	// Handle root-level oneOf: entity schema is a discriminated union with no direct
+	// properties — variants are listed in OneOf with a discriminator mapping.
+	if len(schema.Properties) == 0 && len(schema.OneOf) > 0 {
+		// Discriminator mapping keys are OAS snake_case; path segments are camelCase.
+		// Match by converting each key via jsonName().
+		variantRef := ""
+		for k, v := range schema.DiscriminatorMapping {
+			if jsonName(k) == targetJSON || k == targetJSON {
+				variantRef = v
+				break
+			}
+		}
+		if variantRef == "" {
+			return fmt.Errorf("variant %q not found in discriminator mapping of schema %q", targetJSON, schemaGoTypeName)
+		}
+		variantSchema := schemas[variantRef]
+		if variantSchema == nil {
+			return fmt.Errorf("schema %q not found for variant %q", variantRef, targetJSON)
+		}
+		rawRefNames := make([]string, 0, len(schema.OneOf))
+		for _, v := range schema.OneOf {
+			if v.RefName != "" {
+				rawRefNames = append(rawRefNames, v.RefName)
+			}
+		}
+		cleanFieldNames := extractVariantNames(rawRefNames)
+		variantGoField := ""
+		for i, refName := range rawRefNames {
+			if refName == variantRef {
+				variantGoField = fixInitialisms(cleanFieldNames[i])
+				break
+			}
+		}
+		if variantGoField == "" {
+			return fmt.Errorf("Go field name not found for variant %q in schema %q", targetJSON, schemaGoTypeName)
+		}
+		containerGoName := entityName + "Config"
+		nextObjectFieldPath := objectFieldPath + "." + containerGoName + "." + variantGoField
+		newAcc := acc.withUnionContainer(containerGoName).withUnionVariant(variantGoField)
+		return g.walkSensitiveLeafPath(entityName, fixInitialisms(variantRef), nextObjectFieldPath, variantSchema, segments[1:], ref, schemas, newAcc)
+	}
+
+	// Strip optional array marker from the segment name.
+	lookupJSON := targetJSON
+	isArraySegment := strings.HasSuffix(targetJSON, "[]")
+	if isArraySegment {
+		lookupJSON = targetJSON[:len(targetJSON)-2]
+	}
+
+	// Find the property matching the first segment.
 	var targetProp *parser.Property
 	for i, prop := range schema.Properties {
-		if jsonName(prop.Name) == targetJSON || prop.Name == targetJSON {
+		if jsonName(prop.Name) == lookupJSON || prop.Name == lookupJSON {
 			targetProp = schema.Properties[i]
 			break
 		}
 	}
 	if targetProp == nil {
-		return fmt.Errorf("field %q not found in schema %q", targetJSON, schemaGoTypeName)
+		return fmt.Errorf("field %q not found in schema %q", lookupJSON, schemaGoTypeName)
+	}
+
+	// Array descent: step into array items before the remaining path segments.
+	if isArraySegment {
+		if targetProp.Type != "array" || targetProp.Items == nil {
+			return fmt.Errorf("field %q in schema %q is not an array type", lookupJSON, schemaGoTypeName)
+		}
+		if len(segments) == 1 {
+			return fmt.Errorf("array field %q cannot be a secret reference leaf", lookupJSON)
+		}
+		nextObjectFieldPath := objectFieldPath + "." + goFieldName(targetProp.Name)
+		newAcc := acc.withSlice(goFieldName(targetProp.Name))
+		if targetProp.Items.RefName != "" {
+			itemSchema := schemas[targetProp.Items.RefName]
+			if itemSchema == nil {
+				return fmt.Errorf("schema %q not found for array items of %q", targetProp.Items.RefName, lookupJSON)
+			}
+			return g.walkSensitiveLeafPath(entityName, fixInitialisms(targetProp.Items.RefName), nextObjectFieldPath, itemSchema, segments[1:], ref, schemas, newAcc)
+		}
+		if len(targetProp.Items.Properties) > 0 {
+			inlineSchema := &parser.Schema{Properties: targetProp.Items.Properties}
+			inlineTypeName := g.inlineTypeName(entityName, schemaGoTypeName, targetProp.Name)
+			return g.walkSensitiveLeafPath(entityName, inlineTypeName, nextObjectFieldPath, inlineSchema, segments[1:], ref, schemas, newAcc)
+		}
+		return fmt.Errorf("cannot navigate through array items of %q in schema %q", lookupJSON, schemaGoTypeName)
 	}
 
 	if len(segments) == 1 {
-		// Leaf — record against the containing schema
+		// Leaf — record against the containing schema.
 		if g.sensitiveSchemaLeaves[schemaGoTypeName] == nil {
 			g.sensitiveSchemaLeaves[schemaGoTypeName] = make(map[string]config.SecretReferenceConfig)
 		}
-		g.sensitiveSchemaLeaves[schemaGoTypeName][targetJSON] = ref
+		g.sensitiveSchemaLeaves[schemaGoTypeName][lookupJSON] = ref
+		if objectFieldPath != "Spec.APISpec" {
+			if g.sensitiveObjectFieldParents[entityName] == nil {
+				g.sensitiveObjectFieldParents[entityName] = make(map[string]string)
+			}
+			g.sensitiveObjectFieldParents[entityName][objectFieldPath] = schemaGoTypeName
+		}
+		// Record the structured selector for template generation.
+		leafGoField := goFieldName(targetProp.Name)
+		g.recordSensitiveLeafSelector(entityName, ref.Path, acc, leafGoField, ref.Key)
 		return nil
 	}
 
-	// Navigate deeper
+	nextObjectFieldPath := objectFieldPath + "." + goFieldName(targetProp.Name)
+	newAcc := acc.withField(goFieldName(targetProp.Name))
+
+	// Navigate deeper.
 	if targetProp.RefName != "" && !targetProp.IsReference {
 		refSchema := schemas[targetProp.RefName]
 		if refSchema == nil {
 			return fmt.Errorf("schema %q not found", targetProp.RefName)
 		}
-		return g.walkSensitiveLeafPath(fixInitialisms(targetProp.RefName), refSchema, segments[1:], ref, schemas)
+		return g.walkSensitiveLeafPath(entityName, fixInitialisms(targetProp.RefName), nextObjectFieldPath, refSchema, segments[1:], ref, schemas, newAcc)
 	}
 
 	if len(targetProp.Properties) > 0 {
-		// Inline object — type name is goFieldName of the property
+		// Inline object — type name follows the generated inline type naming rule.
 		inlineSchema := &parser.Schema{Properties: targetProp.Properties}
-		return g.walkSensitiveLeafPath(goFieldName(targetProp.Name), inlineSchema, segments[1:], ref, schemas)
+		inlineTypeName := g.inlineTypeName(entityName, schemaGoTypeName, targetProp.Name)
+		return g.walkSensitiveLeafPath(entityName, inlineTypeName, nextObjectFieldPath, inlineSchema, segments[1:], ref, schemas, newAcc)
 	}
 
-	return fmt.Errorf("cannot navigate through non-ref, non-inline field %q", targetJSON)
+	return fmt.Errorf("cannot navigate through non-ref, non-inline field %q", lookupJSON)
+}
+
+func (g *Generator) recordSensitiveLeafSelector(entityName, path string, acc selectorAccumulator, leafGoField, secretKey string) {
+	if g.sensitiveLeafSelectors == nil {
+		g.sensitiveLeafSelectors = make(map[string]map[string]SecretReferenceForTemplate)
+	}
+	if g.sensitiveLeafSelectors[entityName] == nil {
+		g.sensitiveLeafSelectors[entityName] = make(map[string]SecretReferenceForTemplate)
+	}
+	g.sensitiveLeafSelectors[entityName][path] = acc.buildTemplate(path, secretKey, leafGoField)
 }
 
 // findEntitySchema finds the request body schema for the given entity name.
@@ -274,8 +391,7 @@ func (g *Generator) isSchemaFieldSensitiveLeaf(schemaGoTypeName, jsonFieldName s
 // isEntityAPISpecFieldSensitiveLeaf returns true if the given JSON field name
 // is a direct apiSpec-level sensitive leaf for the given entity.
 func (g *Generator) isEntityAPISpecFieldSensitiveLeaf(entityName, jsonFieldName string) bool {
-	_, found := g.entityAPISpecSensitiveLeaf(entityName, jsonFieldName)
-	return found
+	return g.entityAPISpecSensitiveLeaf(entityName, jsonFieldName)
 }
 
 // isSensitiveMatchField returns true if the given getForUID objectField path
@@ -294,10 +410,122 @@ func (g *Generator) isSensitiveMatchField(entityName, objectField string) bool {
 		return g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(segments[0]))
 	}
 	// Nested: last segment is the leaf field; parent is a schema type.
-	// Use sensitiveSchemaLeaves keyed by the parent's Go type name.
-	parentGoType := goFieldName(segments[len(segments)-2])
+	// Prefer the parent type recorded while walking secret-reference paths so
+	// qualified inline type names resolve correctly.
+	parentPath := prefix + strings.Join(segments[:len(segments)-1], ".")
+	parentGoType := ""
+	if parents, ok := g.sensitiveObjectFieldParents[entityName]; ok {
+		parentGoType = parents[parentPath]
+	}
+	if parentGoType == "" {
+		parentGoType = goFieldName(segments[len(segments)-2])
+	}
 	leafJSON := jsonName(segments[len(segments)-1])
 	return g.isSchemaFieldSensitiveLeaf(parentGoType, leafJSON)
+}
+
+func (g *Generator) ensureInlineTypeNames(parsed *parser.ParsedSpec) {
+	if g.ambiguousInlineTypeNames != nil {
+		return
+	}
+
+	counts := make(map[string]int)
+	record := func(name string) {
+		if name == "" {
+			return
+		}
+		counts[name]++
+	}
+
+	for name := range parsed.RequestBodies {
+		record(parser.GetEntityNameFromType(name))
+	}
+	for name := range parsed.Schemas {
+		record(fixInitialisms(name))
+	}
+
+	var visitProperty func(*parser.Property)
+	visitProperty = func(prop *parser.Property) {
+		if prop == nil {
+			return
+		}
+
+		if isInlineObjectWithProperties(prop) {
+			record(goFieldName(prop.Name))
+			for _, nested := range prop.Properties {
+				visitProperty(nested)
+			}
+		} else {
+			for _, nested := range prop.Properties {
+				visitProperty(nested)
+			}
+		}
+
+		if prop.Type == "array" && prop.Items != nil {
+			if isInlineObjectWithProperties(prop.Items) {
+				record(goFieldName(prop.Name))
+				for _, nested := range prop.Items.Properties {
+					visitProperty(nested)
+				}
+			} else {
+				visitProperty(prop.Items)
+			}
+		}
+
+		visitProperty(prop.AdditionalProperties)
+		for _, variant := range prop.OneOf {
+			visitProperty(variant)
+		}
+		for _, variant := range prop.AnyOf {
+			visitProperty(variant)
+		}
+	}
+
+	visitSchema := func(schema *parser.Schema) {
+		if schema == nil {
+			return
+		}
+		for _, prop := range schema.Properties {
+			visitProperty(prop)
+		}
+		visitProperty(schema.Items)
+		visitProperty(schema.AdditionalProperties)
+		for _, variant := range schema.OneOf {
+			visitProperty(variant)
+		}
+		for _, variant := range schema.AnyOf {
+			visitProperty(variant)
+		}
+	}
+
+	for _, schema := range parsed.RequestBodies {
+		visitSchema(schema)
+	}
+	for _, schema := range parsed.Schemas {
+		visitSchema(schema)
+	}
+
+	g.ambiguousInlineTypeNames = make(map[string]bool)
+	for name, count := range counts {
+		if count > 1 {
+			g.ambiguousInlineTypeNames[name] = true
+		}
+	}
+}
+
+func inlineTypeParentName(entityName, schemaGoTypeName string) string {
+	if entityName != "" && schemaGoTypeName == entityName+"APISpec" {
+		return entityName
+	}
+	return schemaGoTypeName
+}
+
+func (g *Generator) inlineTypeName(entityName, schemaGoTypeName, propName string) string {
+	baseName := goFieldName(propName)
+	if g.ambiguousInlineTypeNames == nil || !g.ambiguousInlineTypeNames[baseName] {
+		return baseName
+	}
+	return inlineTypeParentName(entityName, schemaGoTypeName) + baseName
 }
 
 // pathToGoSelector converts a secretReference path (e.g. "spec.apiSpec.tls.clientIdentity.certificate")
@@ -312,24 +540,112 @@ func pathToGoSelector(path string) string {
 	return strings.Join(segments, ".")
 }
 
-func pathToJSONSegments(path string) []string {
-	remainder := strings.TrimPrefix(path, "spec.apiSpec.")
-	if remainder == "" {
-		return nil
-	}
-	return strings.Split(remainder, ".")
-}
-
 // SecretReferenceForTemplate holds per-path secret reference data rendered inside
 // the sdkOpsTemplate and sdkOpsRootUnionTemplate.
 type SecretReferenceForTemplate struct {
 	// GoFieldSelector is the Go selector string relative to obj.Spec.APISpec,
-	// e.g. "TLS.ClientIdentity.Certificate".
+	// e.g. "TLS.ClientIdentity.Certificate". Empty when IsSlice is true.
 	GoFieldSelector string
 	// SecretKey is the data key to read from the referenced Kubernetes Secret.
 	SecretKey string
 	// Path is the original dot-separated config path, e.g. "spec.apiSpec.tls.clientIdentity.certificate".
 	Path string
+	// IsSlice is true when the secret leaf lives inside a slice field and the
+	// generated code must use a for-range loop to resolve each element.
+	IsSlice bool
+	// PointerGuards is the list of Go selectors (relative to obj.Spec.APISpec)
+	// that must be nil-checked before accessing the slice. Used only when IsSlice is true.
+	PointerGuards []string
+	// SliceParentSelector is the Go selector of the slice field relative to obj.Spec.APISpec.
+	// Used only when IsSlice is true.
+	SliceParentSelector string
+	// SliceLeafField is the Go field name of the sensitive leaf inside each slice element.
+	// Used only when IsSlice is true.
+	SliceLeafField string
+}
+
+// selectorPart records one step in a Go field selector during sensitive-leaf path walking.
+type selectorPart struct {
+	goName           string
+	isUnionContainer bool // embedded union type pointer — needs nil guard
+	isUnionVariant   bool // union variant pointer field — needs nil guard
+	isSlice          bool // slice/array field — needs for-range loop
+}
+
+// selectorAccumulator accumulates selectorPart entries as walkSensitiveLeafPath descends.
+type selectorAccumulator struct {
+	parts []selectorPart
+}
+
+func (acc selectorAccumulator) with(p selectorPart) selectorAccumulator {
+	parts := make([]selectorPart, len(acc.parts)+1)
+	copy(parts, acc.parts)
+	parts[len(acc.parts)] = p
+	return selectorAccumulator{parts: parts}
+}
+
+func (acc selectorAccumulator) withField(goName string) selectorAccumulator {
+	return acc.with(selectorPart{goName: goName})
+}
+
+func (acc selectorAccumulator) withUnionContainer(goName string) selectorAccumulator {
+	return acc.with(selectorPart{goName: goName, isUnionContainer: true})
+}
+
+func (acc selectorAccumulator) withUnionVariant(goName string) selectorAccumulator {
+	return acc.with(selectorPart{goName: goName, isUnionVariant: true})
+}
+
+func (acc selectorAccumulator) withSlice(goName string) selectorAccumulator {
+	return acc.with(selectorPart{goName: goName, isSlice: true})
+}
+
+// buildTemplate constructs a SecretReferenceForTemplate from the accumulated path parts.
+func (acc selectorAccumulator) buildTemplate(path, secretKey, leafGoField string) SecretReferenceForTemplate {
+	sliceIdx := -1
+	for i, p := range acc.parts {
+		if p.isSlice {
+			sliceIdx = i
+			break
+		}
+	}
+
+	if sliceIdx < 0 {
+		names := make([]string, 0, len(acc.parts)+1)
+		for _, p := range acc.parts {
+			names = append(names, p.goName)
+		}
+		names = append(names, leafGoField)
+		return SecretReferenceForTemplate{
+			GoFieldSelector: strings.Join(names, "."),
+			SecretKey:       secretKey,
+			Path:            path,
+		}
+	}
+
+	var pointerGuards []string
+	var runningPath []string
+	for i := range sliceIdx {
+		p := acc.parts[i]
+		runningPath = append(runningPath, p.goName)
+		if p.isUnionContainer || p.isUnionVariant {
+			pointerGuards = append(pointerGuards, strings.Join(runningPath, "."))
+		}
+	}
+
+	parentParts := make([]string, sliceIdx+1)
+	for i := 0; i <= sliceIdx; i++ {
+		parentParts[i] = acc.parts[i].goName
+	}
+
+	return SecretReferenceForTemplate{
+		Path:                path,
+		SecretKey:           secretKey,
+		IsSlice:             true,
+		PointerGuards:       pointerGuards,
+		SliceParentSelector: strings.Join(parentParts, "."),
+		SliceLeafField:      leafGoField,
+	}
 }
 
 // templateSecretReferences returns the list of SecretReferenceForTemplate for the
@@ -338,6 +654,12 @@ func (g *Generator) templateSecretReferences(entityName string) []SecretReferenc
 	refs := g.config.SecretReferences[entityName]
 	result := make([]SecretReferenceForTemplate, 0, len(refs))
 	for _, ref := range refs {
+		if selectors, ok := g.sensitiveLeafSelectors[entityName]; ok {
+			if tmpl, ok := selectors[ref.Path]; ok {
+				result = append(result, tmpl)
+				continue
+			}
+		}
 		result = append(result, SecretReferenceForTemplate{
 			GoFieldSelector: pathToGoSelector(ref.Path),
 			SecretKey:       ref.Key,
@@ -347,31 +669,13 @@ func (g *Generator) templateSecretReferences(entityName string) []SecretReferenc
 	return result
 }
 
-// buildSDKOpsBase64Fields returns the list of sdkOpsBase64Field for the given entity.
-// TODO: Remove Base64 encoding when API starts accepting raw values.
-// TODO: https://github.com/Kong/kong-operator/issues/4304
-func (g *Generator) buildSDKOpsBase64Fields(entityName string) []sdkOpsBase64Field {
-	refs := g.config.SecretReferences[entityName]
-	result := make([]sdkOpsBase64Field, 0, len(refs))
-	for _, ref := range refs {
-		if !ref.Base64Encoding {
-			continue
-		}
-		result = append(result, sdkOpsBase64Field{
-			Label: ref.Path,
-			Path:  pathToJSONSegments(ref.Path),
-		})
-	}
-	return result
-}
-
-func (g *Generator) entityAPISpecSensitiveLeaf(entityName, jsonFieldName string) (config.SecretReferenceConfig, bool) {
+func (g *Generator) entityAPISpecSensitiveLeaf(entityName, jsonFieldName string) bool {
 	leaves, ok := g.entityDirectSensitiveLeaves[entityName]
 	if !ok {
-		return config.SecretReferenceConfig{}, false
+		return false
 	}
-	ref, found := leaves[jsonFieldName]
-	return ref, found
+	_, found := leaves[jsonFieldName]
+	return found
 }
 
 // Generate generates Go CRD types from parsed schemas.
@@ -379,6 +683,8 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	var files []GeneratedFile
 	referencedSchemas := make(map[string]bool)
 	var reconcilerEntities []string
+	g.parsed = parsed
+	g.ensureInlineTypeNames(parsed)
 
 	// Pre-compute the set of schema names whose Go type is an anyOf union struct.
 	// These need pointer treatment at field sites so omitempty omits zero values.
@@ -446,9 +752,9 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	}
 	files = append(files, reconcilerFiles...)
 
-	// Build per-schema cursors by walking each entity's CEL config against the
-	// parsed schema tree using JSON-tag paths, so generateSchemaTypes can apply
-	// user-provided markers to fields on referenced shared types.
+	// Build per-type cursors by walking each entity's CEL config against the
+	// parsed schema tree using JSON-tag paths, so shared generated types can
+	// apply user-provided markers to their nested fields.
 	schemaCursors, err := g.buildSchemaCursors(parsed)
 	if err != nil {
 		return nil, err
@@ -485,6 +791,7 @@ func (g *Generator) getAPISpecCursor(entityName string) *config.FieldConfig {
 // up per-field custom validations. Returns an error for any CEL path that does
 // not correspond to a valid JSON-tag field at the resolved schema level.
 func (g *Generator) buildSchemaCursors(parsed *parser.ParsedSpec) (map[string]*config.FieldConfig, error) {
+	g.ensureInlineTypeNames(parsed)
 	if g.config.FieldConfig == nil {
 		return nil, nil
 	}
@@ -496,16 +803,17 @@ func (g *Generator) buildSchemaCursors(parsed *parser.ParsedSpec) (map[string]*c
 		if cursor == nil {
 			continue
 		}
-		if err := g.collectSchemaCursors(entityName, "spec.apiSpec", schema, cursor, parsed.Schemas, cursors, origins); err != nil {
+		if err := g.collectSchemaCursors(entityName, entityName+"APISpec", "spec.apiSpec", schema, cursor, parsed.Schemas, cursors, origins); err != nil {
 			return nil, fmt.Errorf("entity %q: %w", entityName, err)
 		}
 	}
 	return cursors, nil
 }
 
-// recordSchemaCursor stores the cursor for a generated schema type name and
+// recordSchemaCursor stores the cursor for a generated shared type name and
 // rejects conflicting duplicate writes from different entity/path traversals.
-// Identical cursor trees are allowed so shared schemas can be reused safely.
+// Identical cursor trees are allowed so shared generated types can be reused
+// safely.
 func (g *Generator) recordSchemaCursor(
 	typeName string,
 	entityName string,
@@ -558,11 +866,83 @@ func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	return true
 }
 
+// childFieldConfig returns a deep copy of fc containing only descendant field
+// configuration. Direct validations on the current field are intentionally
+// dropped because they are applied at the field site, not on the nested shared
+// type reached through that field.
+func childFieldConfig(fc *config.FieldConfig) *config.FieldConfig {
+	if fc == nil || len(fc.Fields) == 0 {
+		return nil
+	}
+
+	fields := cloneFieldConfigMap(fc.Fields)
+	if len(fields) == 0 {
+		return nil
+	}
+
+	return &config.FieldConfig{Fields: fields}
+}
+
+func cloneFieldConfigMap(fields map[string]*config.FieldConfig) map[string]*config.FieldConfig {
+	if len(fields) == 0 {
+		return nil
+	}
+
+	cloned := make(map[string]*config.FieldConfig, len(fields))
+	for name, fc := range fields {
+		fcClone := cloneFieldConfig(fc)
+		if fcClone == nil {
+			continue
+		}
+		cloned[name] = fcClone
+	}
+	if len(cloned) == 0 {
+		return nil
+	}
+	return cloned
+}
+
+func cloneFieldConfig(fc *config.FieldConfig) *config.FieldConfig {
+	if fc == nil {
+		return nil
+	}
+
+	clone := &config.FieldConfig{}
+	if len(fc.Validations) > 0 {
+		clone.Validations = append([]string(nil), fc.Validations...)
+	}
+	if len(fc.Fields) > 0 {
+		clone.Fields = cloneFieldConfigMap(fc.Fields)
+	}
+	if isEmptyFieldConfig(clone) {
+		return nil
+	}
+	return clone
+}
+
+func sensitiveDataSourceSchema() *parser.Schema {
+	return &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "type", Type: "string"},
+			{Name: "value", Type: "string"},
+			{Name: "secret_ref", Type: "object"},
+		},
+	}
+}
+
+func (g *Generator) isSensitiveLeafAtLevel(entityName, schemaGoTypeName, jsonFieldName string) bool {
+	if schemaGoTypeName == entityName+"APISpec" {
+		return g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonFieldName)
+	}
+	return g.isSchemaFieldSensitiveLeaf(schemaGoTypeName, jsonFieldName)
+}
+
 // collectSchemaCursors recursively walks schema properties and union variants,
 // recording the cursor for each referenced or inline schema type. It also
 // validates that all config keys at each level correspond to real JSON-tag fields.
 func (g *Generator) collectSchemaCursors(
 	entityName string, //nolint:unparam
+	schemaGoTypeName string,
 	path string,
 	schema *parser.Schema,
 	cursor *config.FieldConfig,
@@ -583,31 +963,64 @@ func (g *Generator) collectSchemaCursors(
 		propCursor := cursor.Sub(jsonTag)
 		propPath := path + "." + jsonTag
 
+		if g.isSensitiveLeafAtLevel(entityName, schemaGoTypeName, jsonTag) {
+			sensitiveCursor := childFieldConfig(propCursor)
+			if sensitiveCursor == nil {
+				continue
+			}
+			if err := g.recordSchemaCursor(sensitiveDataSourceTypeName, entityName, propPath, sensitiveCursor, out, origins); err != nil {
+				return err
+			}
+			if err := g.collectSchemaCursors(entityName, sensitiveDataSourceTypeName, propPath, sensitiveDataSourceSchema(), sensitiveCursor, schemas, out, origins); err != nil {
+				return err
+			}
+			continue
+		}
+
 		switch {
 		case prop.RefName != "" && !prop.IsReference:
 			refSchema := schemas[prop.RefName]
 			if refSchema == nil {
 				continue
 			}
-			if err := g.recordSchemaCursor(fixInitialisms(prop.RefName), entityName, propPath, propCursor, out, origins); err != nil {
+			refCursor := childFieldConfig(propCursor)
+			if refCursor == nil {
+				continue
+			}
+			refTypeName := fixInitialisms(prop.RefName)
+			if err := g.recordSchemaCursor(refTypeName, entityName, propPath, refCursor, out, origins); err != nil {
 				return err
 			}
-			if propCursor != nil {
-				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out, origins); err != nil {
-					return err
-				}
+			if err := g.collectSchemaCursors(entityName, refTypeName, propPath, refSchema, refCursor, schemas, out, origins); err != nil {
+				return err
 			}
 
 		case isInlineObjectWithProperties(prop):
-			inlineTypeName := goFieldName(prop.Name)
-			if err := g.recordSchemaCursor(inlineTypeName, entityName, propPath, propCursor, out, origins); err != nil {
+			inlineTypeName := g.inlineTypeName(entityName, schemaGoTypeName, prop.Name)
+			inlineCursor := childFieldConfig(propCursor)
+			if inlineCursor == nil {
+				continue
+			}
+			if err := g.recordSchemaCursor(inlineTypeName, entityName, propPath, inlineCursor, out, origins); err != nil {
 				return err
 			}
 			inlineSchema := &parser.Schema{Properties: prop.Properties}
-			if propCursor != nil {
-				if err := g.collectSchemaCursors(entityName, propPath, inlineSchema, propCursor, schemas, out, origins); err != nil {
-					return err
-				}
+			if err := g.collectSchemaCursors(entityName, inlineTypeName, propPath, inlineSchema, inlineCursor, schemas, out, origins); err != nil {
+				return err
+			}
+
+		case prop.Type == "array" && prop.Items != nil && isInlineObjectWithProperties(prop.Items):
+			itemCursor := childFieldConfig(propCursor)
+			if itemCursor == nil {
+				continue
+			}
+			itemTypeName := g.inlineTypeName(entityName, schemaGoTypeName, prop.Name)
+			if err := g.recordSchemaCursor(itemTypeName, entityName, propPath, itemCursor, out, origins); err != nil {
+				return err
+			}
+			itemSchema := &parser.Schema{Properties: prop.Items.Properties}
+			if err := g.collectSchemaCursors(entityName, itemTypeName, propPath, itemSchema, itemCursor, schemas, out, origins); err != nil {
+				return err
 			}
 
 		case prop.Type == "array" && prop.Items != nil && prop.Items.RefName != "":
@@ -616,33 +1029,50 @@ func (g *Generator) collectSchemaCursors(
 			if refSchema == nil {
 				continue
 			}
-			if err := g.recordSchemaCursor(fixInitialisms(prop.Items.RefName), entityName, propPath, propCursor, out, origins); err != nil {
+			itemCursor := childFieldConfig(propCursor)
+			if itemCursor == nil {
+				continue
+			}
+			itemTypeName := fixInitialisms(prop.Items.RefName)
+			if err := g.recordSchemaCursor(itemTypeName, entityName, propPath, itemCursor, out, origins); err != nil {
 				return err
 			}
-			if propCursor != nil {
-				if err := g.collectSchemaCursors(entityName, propPath, refSchema, propCursor, schemas, out, origins); err != nil {
-					return err
-				}
+			if err := g.collectSchemaCursors(entityName, itemTypeName, propPath, refSchema, itemCursor, schemas, out, origins); err != nil {
+				return err
 			}
 
 		case len(prop.OneOf) > 0:
 			// Property-level discriminated union: variants are accessed via their
 			// discriminator-value JSON tag under the property's own JSON tag.
-			for _, variant := range buildUnionVariants(prop) {
+			for _, variant := range buildUnionVariants(prop, generatedUnionTypeName(prop, entityName)) {
 				variantTag := jsonName(variant.discValue)
 				variantCursor := propCursor.Sub(variantTag)
 				variantPath := propPath + "." + variantTag
-				variantSchema := schemas[variant.refName]
+				variantCursor = childFieldConfig(variantCursor)
+				if variantCursor == nil {
+					continue
+				}
+				variantTypeName := variant.goTypeName
+				variantSchema := (*parser.Schema)(nil)
+				if variant.source != nil && variant.source.RefName == "" && isInlineObjectWithProperties(variant.source) {
+					variantSchema = &parser.Schema{Name: variantTypeName, Properties: variant.source.Properties}
+				} else {
+					for _, oneOfVariant := range prop.OneOf {
+						if oneOfVariant.RefName == "" || fixInitialisms(oneOfVariant.RefName) != variantTypeName {
+							continue
+						}
+						variantSchema = schemas[oneOfVariant.RefName]
+						break
+					}
+				}
 				if variantSchema == nil {
 					continue
 				}
-				if err := g.recordSchemaCursor(fixInitialisms(variant.refName), entityName, variantPath, variantCursor, out, origins); err != nil {
+				if err := g.recordSchemaCursor(variantTypeName, entityName, variantPath, variantCursor, out, origins); err != nil {
 					return err
 				}
-				if variantCursor != nil {
-					if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
-						return err
-					}
+				if err := g.collectSchemaCursors(entityName, variantTypeName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
+					return err
 				}
 			}
 		}
@@ -652,21 +1082,35 @@ func (g *Generator) collectSchemaCursors(
 	// Variant fields are flattened directly under apiSpec (no intermediate key).
 	if len(schema.OneOf) > 0 {
 		rootProp := buildRootUnionProperty(schema)
-		for _, variant := range buildUnionVariants(rootProp) {
+		for _, variant := range buildUnionVariants(rootProp, generatedUnionTypeName(rootProp, "")) {
 			variantTag := jsonName(variant.discValue)
 			variantCursor := cursor.Sub(variantTag)
 			variantPath := path + "." + variantTag
-			variantSchema := schemas[variant.refName]
+			variantCursor = childFieldConfig(variantCursor)
+			if variantCursor == nil {
+				continue
+			}
+			variantTypeName := variant.goTypeName
+			variantSchema := (*parser.Schema)(nil)
+			if variant.source != nil && variant.source.RefName == "" && isInlineObjectWithProperties(variant.source) {
+				variantSchema = &parser.Schema{Name: variantTypeName, Properties: variant.source.Properties}
+			} else {
+				for _, oneOfVariant := range schema.OneOf {
+					if oneOfVariant.RefName == "" || fixInitialisms(oneOfVariant.RefName) != variantTypeName {
+						continue
+					}
+					variantSchema = schemas[oneOfVariant.RefName]
+					break
+				}
+			}
 			if variantSchema == nil {
 				continue
 			}
-			if err := g.recordSchemaCursor(fixInitialisms(variant.refName), entityName, variantPath, variantCursor, out, origins); err != nil {
+			if err := g.recordSchemaCursor(variantTypeName, entityName, variantPath, variantCursor, out, origins); err != nil {
 				return err
 			}
-			if variantCursor != nil {
-				if err := g.collectSchemaCursors(entityName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
-					return err
-				}
+			if err := g.collectSchemaCursors(entityName, variantTypeName, variantPath, variantSchema, variantCursor, schemas, out, origins); err != nil {
+				return err
 			}
 		}
 	}
@@ -693,7 +1137,7 @@ func (g *Generator) validateCursorAtLevel(path string, cursor *config.FieldConfi
 	// Root-level oneOf: variant tags are valid directly at this level.
 	if len(schema.OneOf) > 0 {
 		rootProp := buildRootUnionProperty(schema)
-		for _, variant := range buildUnionVariants(rootProp) {
+		for _, variant := range buildUnionVariants(rootProp, generatedUnionTypeName(rootProp, "")) {
 			validTags[jsonName(variant.discValue)] = true
 		}
 	}
@@ -742,12 +1186,15 @@ func (g *Generator) generateEntityFiles(name, entityName string, schema *parser.
 	}
 	files = append(files, sdkOpsFiles...)
 
-	opsFile, err := g.generateEntityOpsFileForEntity(entityName, schema)
+	opsFile, opsTestFile, err := g.generateEntityOpsFileForEntity(entityName, schema)
 	if err != nil {
 		return nil, err
 	}
 	if opsFile != nil {
 		files = append(files, *opsFile)
+	}
+	if opsTestFile != nil {
+		files = append(files, *opsTestFile)
 	}
 
 	return files, nil
@@ -781,27 +1228,24 @@ func (g *Generator) generateEntitySDKOpsFiles(entityName string, schema *parser.
 	}, nil
 }
 
-// generateEntityOpsFile generates the per-entity Konnect ops file containing
-// create and/or update functions. The cross-group dispatchers are emitted
-// separately by the Runner after all group-versions finish.
-func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *parser.Schema) (*GeneratedFile, error) {
+// generateEntityOpsFile generates the per-entity Konnect ops file and matching
+// controller ops tests. The cross-group dispatchers are emitted separately by
+// the Runner after all group-versions finish.
+func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *parser.Schema) (*GeneratedFile, *GeneratedFile, error) {
 	if g.config.ReconcilerConfig == nil || g.config.OpsConfig == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	if _, hasReconciler := g.config.ReconcilerConfig[entityName]; !hasReconciler {
-		return nil, nil
+		return nil, nil, nil
 	}
 	opsConfig, ok := g.config.OpsConfig[entityName]
 	if !ok || opsConfig == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	opsResult, err := g.generateEntityOpsFile(entityName, schema, opsConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate ops file for %s: %w", entityName, err)
-	}
-	if opsResult.File == nil {
-		return nil, nil
+		return nil, nil, fmt.Errorf("failed to generate ops file for %s: %w", entityName, err)
 	}
 	if opsResult.CreateInfo != nil {
 		g.opsCreateInfos = append(g.opsCreateInfos, opsResult.CreateInfo)
@@ -818,7 +1262,7 @@ func (g *Generator) generateEntityOpsFileForEntity(entityName string, schema *pa
 	if opsResult.SDKFactoryInfo != nil {
 		g.sdkFactoryInfos = append(g.sdkFactoryInfos, opsResult.SDKFactoryInfo)
 	}
-	return opsResult.File, nil
+	return opsResult.File, opsResult.TestFile, nil
 }
 
 // generateReconcilerEntityFiles generates reconciler wiring files for all
@@ -866,7 +1310,7 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 		})
 	}
 
-	commonContent, err := g.generateCommonTypes()
+	commonContent, err := g.generateCommonTypes(schemaCursors)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate common types: %w", err)
 	}
@@ -1089,8 +1533,7 @@ func shouldSkipUnionMemberDiscriminator(refName string, prop *parser.Property, u
 // schemaCursors maps each schema's Go type name to the *config.FieldConfig cursor
 // at that schema's level, used to apply custom kubebuilder validation markers.
 func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec, schemaCursors map[string]*config.FieldConfig) string {
-	var buf strings.Builder
-	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, g.config.APIVersion)
+	g.ensureInlineTypeNames(parsed)
 	unionMemberDiscriminators := collectUnionMemberDiscriminators(parsed)
 
 	// Sort keys to ensure deterministic output order
@@ -1100,27 +1543,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 	}
 	sort.Strings(refNames)
 
-	if needsAPIExtJSON, needsIntStr, needsEncodingJSON, objectRefImport := g.schemaTypesImports(refNames, parsed); needsAPIExtJSON || needsIntStr || needsEncodingJSON || objectRefImport != nil {
-		buf.WriteString("import (\n")
-		if needsEncodingJSON {
-			buf.WriteString("\t\"encoding/json\"\n")
-			buf.WriteString("\t\"fmt\"\n")
-		}
-		if needsAPIExtJSON {
-			buf.WriteString("\tapiextensionsv1 \"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1\"\n")
-		}
-		if needsIntStr {
-			buf.WriteString("\tintstr \"k8s.io/apimachinery/pkg/util/intstr\"\n")
-		}
-		if objectRefImport != nil {
-			if objectRefImport.Alias != "" {
-				fmt.Fprintf(&buf, "\t%s %q\n", objectRefImport.Alias, objectRefImport.Path)
-			} else {
-				fmt.Fprintf(&buf, "\t%q\n", objectRefImport.Path)
-			}
-		}
-		buf.WriteString(")\n\n")
-	}
+	var body strings.Builder
 
 	// emittedNested tracks inline-object type names already emitted, so a field
 	// shape reused across multiple parent schemas only produces one definition.
@@ -1146,57 +1569,61 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 			switch {
 			case len(schema.Properties) > 0:
 				// It's an object type - generate a struct
-				buf.WriteString(comment)
-				fmt.Fprintf(&buf, "type %s struct {\n", goName)
+				body.WriteString(comment)
+				fmt.Fprintf(&body, "type %s struct {\n", goName)
 				for _, prop := range schema.Properties {
 					if skipProperty(prop) || shouldSkipUnionMemberDiscriminator(refName, prop, unionMemberDiscriminators) {
 						continue
 					}
-					g.writeSchemaTypeField(&buf, prop, goName, schemaCursor)
+					g.writeSchemaTypeField(&body, prop, goName, schemaCursor)
 				}
-				buf.WriteString("}\n\n")
-				g.writeNestedInlineTypes(&buf, schema.Properties, emittedNested, schemaCursor)
+				body.WriteString("}\n\n")
+				g.writeNestedInlineTypes(&body, schema.Properties, emittedNested, "", goName, schemaCursor)
 				// Emit union type definitions for any property-level oneOf.
 				for _, prop := range schema.Properties {
 					if skipProperty(prop) || len(prop.OneOf) == 0 {
 						continue
 					}
-					buf.WriteString(g.generateUnionType(prop, goName))
+					var propCursor *config.FieldConfig
+					if schemaCursor != nil {
+						propCursor = schemaCursor.Sub(jsonTagForProperty(prop))
+					}
+					g.writeUnionTypeDefinition(&body, prop, goName, emittedNested, "", propCursor)
 				}
 				if wrapper := emitUnionWrapperUnmarshalJSON(goName, buildUnionFieldSpecs(schema.Properties, goName)); wrapper != "" {
-					buf.WriteString(wrapper)
+					body.WriteString(wrapper)
 				}
 			case schema.Type == "boolean":
 				// Per K8s API convention (nobools), boolean schemas become string
 				// types with Enabled/Disabled enum constants.
-				buf.WriteString(comment)
-				buf.WriteString("//\n// +kubebuilder:validation:Enum=Enabled;Disabled\n")
-				fmt.Fprintf(&buf, "type %s string\n\n", goName)
-				fmt.Fprintf(&buf, "const (\n")
-				fmt.Fprintf(&buf, "\t// %sEnabled sets %s as enabled.\n", goName, goName)
-				fmt.Fprintf(&buf, "\t%sEnabled  %s = \"Enabled\"\n", goName, goName)
-				fmt.Fprintf(&buf, "\t// %sDisabled sets %s as disabled.\n", goName, goName)
-				fmt.Fprintf(&buf, "\t%sDisabled %s = \"Disabled\"\n", goName, goName)
-				fmt.Fprintf(&buf, ")\n\n")
+				body.WriteString(comment)
+				body.WriteString("//\n// +kubebuilder:validation:Enum=Enabled;Disabled\n")
+				fmt.Fprintf(&body, "type %s string\n\n", goName)
+				fmt.Fprintf(&body, "const (\n")
+				fmt.Fprintf(&body, "\t// %sEnabled sets %s as enabled.\n", goName, goName)
+				fmt.Fprintf(&body, "\t%sEnabled  %s = \"Enabled\"\n", goName, goName)
+				fmt.Fprintf(&body, "\t// %sDisabled sets %s as disabled.\n", goName, goName)
+				fmt.Fprintf(&body, "\t%sDisabled %s = \"Disabled\"\n", goName, goName)
+				fmt.Fprintf(&body, ")\n\n")
 
 			case isScalarStringIntOneOf(schema.OneOf):
 				// Root-level oneOf of exactly {string, integer} — emit a Go type alias for
 				// intstr.IntOrString. Alias (not named type) ensures controller-gen recognises
 				// it as IntOrString and emits anyOf:[integer,string] in the CRD schema.
-				buf.WriteString(comment)
-				buf.WriteString("//\n// +kubebuilder:validation:XIntOrString\n")
-				fmt.Fprintf(&buf, "type %s = intstr.IntOrString\n\n", goName)
+				body.WriteString(comment)
+				body.WriteString("//\n// +kubebuilder:validation:XIntOrString\n")
+				fmt.Fprintf(&body, "type %s = intstr.IntOrString\n\n", goName)
 
 			case hasRefVariants(schema.OneOf) && schema.Discriminator != "":
 				// Root-level oneOf + OAS discriminator: emit a flat discriminated union
 				// wrapper struct with custom MarshalJSON/UnmarshalJSON so the wire JSON
 				// matches the SDK's expected flat shape.
-				buf.WriteString(g.emitDiscriminatedUnionType(goName, schema))
+				body.WriteString(g.emitDiscriminatedUnionType(goName, schema))
 
 			case hasRefVariants(schema.AnyOf):
 				// Root-level anyOf without discriminator: emit a wrapper struct with one
 				// optional pointer per variant, with MinProperties=1 / MaxProperties=1.
-				buf.WriteString(g.emitAnyOfUnionType(goName, schema))
+				body.WriteString(g.emitAnyOfUnionType(goName, schema))
 
 			case schema.AdditionalProperties != nil:
 				// Map type with value constraints: generate a dedicated value type
@@ -1204,53 +1631,87 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				valueTypeName := refName + "Value"
 				valueBaseType := propertyToGoBaseType(schema.AdditionalProperties)
 
-				fmt.Fprintf(&buf, "// %s is the value type for %s.\n", valueTypeName, refName)
+				fmt.Fprintf(&body, "// %s is the value type for %s.\n", valueTypeName, refName)
 				if markers := valueTypeMarkers(schema.AdditionalProperties); len(markers) > 0 {
-					buf.WriteString("//\n")
+					body.WriteString("//\n")
 					for _, marker := range markers {
-						fmt.Fprintf(&buf, "// %s\n", marker)
+						fmt.Fprintf(&body, "// %s\n", marker)
 					}
 				}
-				fmt.Fprintf(&buf, "type %s %s\n\n", valueTypeName, valueBaseType)
+				fmt.Fprintf(&body, "type %s %s\n\n", valueTypeName, valueBaseType)
 
-				buf.WriteString(comment)
-				fmt.Fprintf(&buf, "type %s map[string]%s\n\n", refName, valueTypeName)
+				body.WriteString(comment)
+				fmt.Fprintf(&body, "type %s map[string]%s\n\n", refName, valueTypeName)
 
 			default:
 				// Generate based on the schema's actual type
-				buf.WriteString(comment)
+				body.WriteString(comment)
 				goType := schemaToGoType(schema)
-				fmt.Fprintf(&buf, "type %s %s\n\n", goName, goType)
+				fmt.Fprintf(&body, "type %s %s\n\n", goName, goType)
 			}
 		} else {
 			panic("Schema not found for reference: " + refName)
 		}
 	}
 
+	bodyString := strings.TrimRight(body.String(), "\n")
+	needsAPIExtJSON, needsIntStr, objectRefImport := g.schemaTypesImports(refNames, parsed)
+	// encoding/json and fmt are only needed when the emitted schema body contains
+	// generated JSON helper methods.
+	needsEncodingJSON := strings.Contains(bodyString, "json.") || strings.Contains(bodyString, "fmt.")
+	if !needsAPIExtJSON && strings.Contains(bodyString, "apiextensionsv1.") {
+		needsAPIExtJSON = true
+	}
+
+	var buf strings.Builder
+	fmt.Fprintf(&buf, "%s\n\npackage %s\n\n", sharedGeneratedFilePreamble, g.config.APIVersion)
+	if needsAPIExtJSON || needsIntStr || needsEncodingJSON || objectRefImport != nil {
+		buf.WriteString("import (\n")
+		if needsEncodingJSON {
+			buf.WriteString("\t\"encoding/json\"\n")
+			buf.WriteString("\t\"fmt\"\n")
+		}
+		if needsAPIExtJSON {
+			buf.WriteString("\tapiextensionsv1 \"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1\"\n")
+		}
+		if needsIntStr {
+			buf.WriteString("\tintstr \"k8s.io/apimachinery/pkg/util/intstr\"\n")
+		}
+		if objectRefImport != nil {
+			if objectRefImport.Alias != "" {
+				fmt.Fprintf(&buf, "\t%s %q\n", objectRefImport.Alias, objectRefImport.Path)
+			} else {
+				fmt.Fprintf(&buf, "\t%q\n", objectRefImport.Path)
+			}
+		}
+		buf.WriteString(")\n\n")
+	}
+	if bodyString != "" {
+		buf.WriteString(bodyString)
+		buf.WriteByte('\n')
+	}
+
 	return strings.TrimRight(buf.String(), "\n") + "\n"
 }
 
-func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedSpec) (needsAPIExtJSON, needsIntStr, needsEncodingJSON bool, objectRefImport *config.ImportConfig) {
+func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedSpec) (needsAPIExtJSON, needsIntStr bool, objectRefImport *config.ImportConfig) {
 	for _, refName := range refNames {
 		schema, ok := parsed.Schemas[refName]
 		if !ok {
 			continue
 		}
 
-		if !needsAPIExtJSON && schemaUsesJSON(g, schema) {
+		if !needsAPIExtJSON && schemaUsesJSON(g, schema, parsed) {
 			needsAPIExtJSON = true
 		}
 		if !needsIntStr && isScalarStringIntOneOf(schema.OneOf) {
 			needsIntStr = true
 		}
-		if !needsEncodingJSON && (hasRefVariants(schema.OneOf) || hasRefVariants(schema.AnyOf)) {
-			needsEncodingJSON = true
-		}
 		if objectRefImport == nil {
 			objectRefImport = g.objectRefImportIfNeeded(schema)
 		}
 
-		if needsAPIExtJSON && needsIntStr && needsEncodingJSON && objectRefImport != nil {
+		if needsAPIExtJSON && needsIntStr && objectRefImport != nil {
 			break
 		}
 	}
@@ -1265,8 +1726,8 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	buf.WriteString("\n")
 	buf.WriteString("\t//\n")
 	if isSensitive {
-		// Sensitive leaf: emit only required/optional; string validation tags move
-		// to the SensitiveDataSource.Value sub-field via the common type definition.
+		// Sensitive leaf: emit only required/optional; SensitiveDataSource carries
+		// the shared validation for its inline value representation.
 		if prop.Required && !prop.Nullable {
 			fmt.Fprintf(buf, "\t// %s\n", markerRequired())
 		} else {
@@ -1286,7 +1747,11 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	case len(prop.OneOf) > 0:
 		// For schema types, oneOf properties use entity-prefixed type names to avoid
 		// package-scoped collisions (e.g. bare "Config" would clash across entities).
-		goType = "*" + typeName + goFieldName(prop.Name)
+		goType = "*" + generatedUnionTypeName(prop, typeName)
+	case prop.Type == "array" && prop.Items != nil && isInlineObjectWithProperties(prop.Items):
+		goType = "[]" + g.inlineTypeName("", typeName, prop.Name)
+	case isInlineObjectWithProperties(prop):
+		goType = g.inlineTypeName("", typeName, prop.Name)
 	}
 	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType))
 }
@@ -1299,24 +1764,57 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 // without ever defining it, producing uncompilable Go.
 //
 // emitted is a shared set used to dedupe across all parent schemas: a type
-// name is only emitted once per package. Recurses into nested objects so
+// name is generated at most once even when referenced repeatedly, while
 // arbitrarily deep inline shapes are handled.
-func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser.Property, emitted map[string]bool, parentCursor *config.FieldConfig) {
+func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser.Property, emitted map[string]bool, entityName, parentTypeName string, parentCursor *config.FieldConfig) {
 	for _, prop := range props {
 		if skipProperty(prop) || prop == nil {
 			continue
 		}
+		propCursor := parentCursor.Sub(jsonTagForProperty(prop))
+
+		if prop.Type == "array" && prop.Items != nil && isInlineObjectWithProperties(prop.Items) {
+			typeName := g.inlineTypeName(entityName, parentTypeName, prop.Name)
+			if emitted[typeName] {
+				g.writeNestedInlineTypes(buf, prop.Items.Properties, emitted, entityName, typeName, propCursor)
+				continue
+			}
+			emitted[typeName] = true
+
+			buf.WriteString(formatSchemaComment(typeName, prop.Description))
+			fmt.Fprintf(buf, "type %s struct {\n", typeName)
+			for _, nested := range prop.Items.Properties {
+				if skipProperty(nested) {
+					continue
+				}
+				g.writeSchemaTypeField(buf, nested, typeName, propCursor)
+			}
+			buf.WriteString("}\n\n")
+
+			g.writeNestedInlineTypes(buf, prop.Items.Properties, emitted, entityName, typeName, propCursor)
+			for _, nested := range prop.Items.Properties {
+				if skipProperty(nested) || len(nested.OneOf) == 0 {
+					continue
+				}
+				g.writeUnionTypeDefinition(buf, nested, typeName, emitted, entityName, propCursor.Sub(jsonTagForProperty(nested)))
+			}
+			if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Items.Properties, typeName)); wrapper != "" {
+				buf.WriteString(wrapper)
+			}
+			continue
+		}
+
 		if prop.Items != nil {
-			g.writeNestedInlineTypes(buf, []*parser.Property{prop.Items}, emitted, parentCursor)
+			g.writeNestedInlineTypes(buf, []*parser.Property{prop.Items}, emitted, entityName, parentTypeName, propCursor)
 		}
 		if !isInlineObjectWithProperties(prop) {
 			continue
 		}
-		typeName := goFieldName(prop.Name)
+		typeName := g.inlineTypeName(entityName, parentTypeName, prop.Name)
 		// Advance cursor to the inline struct level.
-		inlineCursor := parentCursor.Sub(jsonTagForProperty(prop))
+		inlineCursor := propCursor
 		if emitted[typeName] {
-			g.writeNestedInlineTypes(buf, prop.Properties, emitted, inlineCursor)
+			g.writeNestedInlineTypes(buf, prop.Properties, emitted, entityName, typeName, inlineCursor)
 			continue
 		}
 		emitted[typeName] = true
@@ -1331,7 +1829,16 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 		}
 		buf.WriteString("}\n\n")
 
-		g.writeNestedInlineTypes(buf, prop.Properties, emitted, inlineCursor)
+		g.writeNestedInlineTypes(buf, prop.Properties, emitted, entityName, typeName, inlineCursor)
+		for _, nested := range prop.Properties {
+			if skipProperty(nested) || len(nested.OneOf) == 0 {
+				continue
+			}
+			g.writeUnionTypeDefinition(buf, nested, typeName, emitted, entityName, inlineCursor.Sub(jsonTagForProperty(nested)))
+		}
+		if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Properties, typeName)); wrapper != "" {
+			buf.WriteString(wrapper)
+		}
 	}
 }
 
@@ -1456,22 +1963,33 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		if prop.RefName != "" && g.anyOfSchemaNames[prop.RefName] {
 			return "*" + fixInitialisms(prop.RefName)
 		}
+		if prop.Type == "array" && prop.Items != nil && isInlineObjectWithProperties(prop.Items) {
+			return "[]" + g.inlineTypeName(entityName, entityName+"APISpec", prop.Name)
+		}
+		if isInlineObjectWithProperties(prop) {
+			return g.inlineTypeName(entityName, entityName+"APISpec", prop.Name)
+		}
 		return g.goType(prop)
 	}
 
 	rc := g.config.ReconcilerConfig[entityName]
+	rootParentDep := rootRefDependency(schema)
 
 	var (
-		parentRef             *config.ParentRefConfig
-		parentRefGoFieldName  string
-		parentRefJSONName     string
-		setParentIDEntityName string
+		parentRef                *config.ParentRefConfig
+		parentRefGoFieldName     string
+		parentRefJSONName        string
+		setParentIDEntityName    string
+		parentStatusEntityName   string
+		emitParentRefStatusField bool
 	)
 	if rc != nil && rc.ParentRef != nil {
 		parentRef = rc.ParentRef
 		parentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
 		parentRefJSONName = rc.ParentRef.FieldName
-		setParentIDEntityName = rc.ParentEntityType
+		setParentIDEntityName = rc.ParentEntityKind()
+		parentStatusEntityName = parentRefStatusEntityName(rootParentDep, rc)
+		emitParentRefStatusField = shouldEmitParentRefStatusField(rootParentDep, rc)
 	}
 
 	isParentRefReplacedField := func(propName string) bool {
@@ -1492,6 +2010,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		"skipProperty":             skipProperty,
 		"lower":                    strings.ToLower,
 		"lowerCamel":               lowerCamelCase,
+		"statusIDJSONName":         func(entityName string) string { return toLowerCamel(entityName) + "ID" },
 		"formatComment":            formatComment,
 		"hasRootOneOf":             hasRootOneOf,
 		"objectRefTypeName":        func() string { return g.objectRefTypeName() },
@@ -1537,7 +2056,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// When ParentRef is configured, suppress the OpenAPI-derived spec ref field
 	// (e.g. GatewayRef) so only the configured field (e.g. EventGatewayBackendClusterRef)
 	// is emitted.
-	immediateParentDep := rootRefDependency(schema)
+	immediateParentDep := rootParentDep
 	if parentRef != nil {
 		immediateParentDep = nil
 	}
@@ -1560,12 +2079,14 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentRefGoFieldName      string
 		ParentRefJSONFieldName    string
 		SetParentIDEntityName     string
+		ParentStatusEntityName    string
+		EmitParentRefStatusField  bool
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
 		APIGroup:                  g.config.APIGroup,
 		APIVersion:                g.config.APIVersion,
-		NeedsJSONImport:           schemaUsesJSON(g, schema),
+		NeedsJSONImport:           schemaUsesJSON(g, schema, g.parsed),
 		HasUnionTypes:             hasUnionTypes,
 		ObjectRefImport:           objectRefImport,
 		HasRootReconciler:         hasRootReconciler,
@@ -1577,14 +2098,25 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentRefGoFieldName:      parentRefGoFieldName,
 		ParentRefJSONFieldName:    parentRefJSONName,
 		SetParentIDEntityName:     setParentIDEntityName,
+		ParentStatusEntityName:    parentStatusEntityName,
+		EmitParentRefStatusField:  emitParentRefStatusField,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 
+	emittedInlineAndUnionTypes := make(map[string]bool)
+
+	var nestedInlineTypes strings.Builder
+	g.writeNestedInlineTypes(&nestedInlineTypes, schema.Properties, emittedInlineAndUnionTypes, entityName, entityName+"APISpec", apiSpecCursor)
+	if nestedInlineTypes.Len() > 0 {
+		buf.WriteString("\n")
+		buf.WriteString(nestedInlineTypes.String())
+	}
+
 	// Generate union types for any oneOf properties
-	unionTypes := g.generateUnionTypes(schema, entityName)
+	unionTypes := g.generateUnionTypes(schema, entityName, emittedInlineAndUnionTypes, apiSpecCursor)
 	if unionTypes != "" {
 		buf.WriteString("\n")
 		buf.WriteString(unionTypes)
@@ -1679,14 +2211,18 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	rootRefDependency := rootRefDependency(schema)
 
 	var (
-		funcsParentRef             *config.ParentRefConfig
-		funcsParentRefGoFieldName  string
-		funcsSetParentIDEntityName string
+		funcsParentRef              *config.ParentRefConfig
+		funcsParentRefGoFieldName   string
+		funcsSetParentIDEntityName  string
+		funcsParentStatusEntityName string
+		emitParentRefStatusField    bool
 	)
 	if rc != nil && rc.ParentRef != nil {
 		funcsParentRef = rc.ParentRef
 		funcsParentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
-		funcsSetParentIDEntityName = rc.ParentEntityType
+		funcsSetParentIDEntityName = rc.ParentEntityKind()
+		funcsParentStatusEntityName = parentRefStatusEntityName(rootRefDependency, rc)
+		emitParentRefStatusField = shouldEmitParentRefStatusField(rootRefDependency, rc)
 	}
 
 	imports := make([]*config.ImportConfig, 0, 3)
@@ -1728,17 +2264,26 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		if rootRefDependency == nil {
 			return ""
 		}
-		if rc != nil && rc.ParentEntityType != "" {
-			return rc.ParentEntityType
+		if rc != nil && rc.ParentEntityKind() != "" {
+			return rc.ParentEntityKind()
 		}
 		return refConditionEntityName(rootRefDependency)
+	}()
+	parentGroupForFuncs := func() string {
+		if rootRefDependency == nil {
+			return ""
+		}
+		if rc == nil {
+			return g.config.APIGroup
+		}
+		return rc.ParentEntityGroup(g.config.APIGroup)
 	}()
 	ancestorEntityTypes := func() []string {
 		if len(schema.Dependencies) == 0 {
 			return nil
 		}
-		if rc != nil && len(rc.AncestorEntityTypes) > 0 {
-			return rc.AncestorEntityTypes
+		if rc != nil && len(rc.AncestorEntityKinds()) > 0 {
+			return rc.AncestorEntityKinds()
 		}
 		if len(schema.Dependencies) == 1 {
 			return []string{parentKindForFuncs}
@@ -1765,11 +2310,14 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		IsReconcilerRoot                   bool
 		KonnectAPIAuthConfigurationRefType string
 		ParentKind                         string
+		ParentGroup                        string
 		References                         []TemplateReferenceConfig
 		ObjectRefTypeName                  string
 		ParentRef                          *config.ParentRefConfig
 		ParentRefGoFieldName               string
 		SetParentIDEntityName              string
+		ParentStatusEntityName             string
+		EmitParentRefStatusField           bool
 		AncestorDependencies               []*parser.Dependency
 		AncestorEntityTypes                []string
 		SingletonNoID                      bool
@@ -1787,19 +2335,22 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 			if rootRefDependency == nil {
 				return ""
 			}
-			if funcsParentRef != nil && rc != nil && rc.ParentEntityType != "" {
-				return rc.ParentEntityType
+			if funcsParentRef != nil && rc != nil && rc.ParentEntityKind() != "" {
+				return rc.ParentEntityKind()
 			}
 			return refConditionEntityName(rootRefDependency)
 		}(),
 		IsReconcilerRoot:                   isReconcilerRoot,
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
 		ParentKind:                         parentKindForFuncs,
+		ParentGroup:                        parentGroupForFuncs,
 		References:                         g.templateReferences(entityName),
 		ObjectRefTypeName:                  g.objectRefTypeName(),
 		ParentRef:                          funcsParentRef,
 		ParentRefGoFieldName:               funcsParentRefGoFieldName,
 		SetParentIDEntityName:              funcsSetParentIDEntityName,
+		ParentStatusEntityName:             funcsParentStatusEntityName,
+		EmitParentRefStatusField:           emitParentRefStatusField,
 		AncestorDependencies:               ancestorDependencies,
 		AncestorEntityTypes:                ancestorEntityTypes,
 		SingletonNoID:                      isSingletonNoID(schema),
@@ -1848,6 +2399,24 @@ func refConditionEntityName(dep *parser.Dependency) string {
 		return dep.EntityName
 	}
 	return dep.AccessorEntityName
+}
+
+func parentRefStatusEntityName(dep *parser.Dependency, rc *config.ReconcilerConfig) string {
+	if rc == nil || rc.ParentRef == nil {
+		return ""
+	}
+	if rc.ParentRef.ReplacesAPISpecField != "" && rc.ParentEntityKind() != "" {
+		return rc.ParentEntityKind()
+	}
+	if dep != nil {
+		return dep.EntityName
+	}
+	return rc.ParentEntityKind()
+}
+
+func shouldEmitParentRefStatusField(dep *parser.Dependency, rc *config.ReconcilerConfig) bool {
+	fieldName := parentRefStatusEntityName(dep, rc)
+	return fieldName != "" && (dep == nil || fieldName != dep.EntityName)
 }
 
 // EntityFilePrefix converts a PascalCase entity name to a lowercase file name
@@ -1927,12 +2496,12 @@ func (g *Generator) konnectLabelsValueType(prop *parser.Property) (string, bool)
 // Property-level union type names are prefixed with entityName to avoid
 // package-scoped collisions between entities that share a property name
 // (e.g. "config").
-func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string) string {
+func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string, emitted map[string]bool, parentCursor *config.FieldConfig) string {
 	var buf strings.Builder
 
 	// Handle root-level oneOf (the schema itself is a union type)
 	if len(schema.OneOf) > 0 {
-		buf.WriteString(g.generateRootUnionType(schema))
+		g.writeUnionTypeDefinition(&buf, buildRootUnionProperty(schema), "", emitted, entityName, parentCursor)
 	}
 
 	// Handle property-level oneOf
@@ -1941,37 +2510,44 @@ func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string)
 			continue
 		}
 		if len(prop.OneOf) > 0 {
-			buf.WriteString(g.generateUnionType(prop, entityName))
+			g.writeUnionTypeDefinition(&buf, prop, entityName, emitted, entityName, parentCursor.Sub(jsonTagForProperty(prop)))
 		}
 	}
 
 	return buf.String()
 }
 
-// generateRootUnionType generates a union type for a schema with root-level oneOf.
-func (g *Generator) generateRootUnionType(schema *parser.Schema) string {
-	return g.generateUnionType(buildRootUnionProperty(schema), "")
-}
-
-// unionVariant holds the discriminator value and ref name for one union variant.
+// unionVariant holds the generated names for one union variant.
 type unionVariant struct {
-	discValue string // OAS discriminator value, e.g. "sasl_plain" — used for JSON tag and enum const
-	refName   string // OAS component schema name, e.g. "BackendClusterAuthenticationSaslPlain"
+	discValue  string           // OAS discriminator value, e.g. "sasl_plain" — used for JSON tag and enum const.
+	fieldName  string           // Go field name used by the wrapper.
+	goTypeName string           // Go type name used by the wrapper field.
+	source     *parser.Property // Original property schema, used for anonymous inline members.
 }
 
 // buildUnionVariants builds the ordered list of variants for a property-level oneOf
 // union. Uses the OAS discriminator mapping when present (for correct snake_case
 // values); falls back to extractVariantNames when no discriminator is available.
-func buildUnionVariants(prop *parser.Property) []unionVariant {
+func buildUnionVariants(prop *parser.Property, unionTypeName string) []unionVariant {
 	if len(prop.DiscriminatorMapping) > 0 {
 		values := make([]string, 0, len(prop.DiscriminatorMapping))
 		for v := range prop.DiscriminatorMapping {
 			values = append(values, v)
 		}
 		sort.Strings(values)
-		variants := make([]unionVariant, 0, len(values))
+		rawRefNames := make([]string, 0, len(values))
 		for _, v := range values {
-			variants = append(variants, unionVariant{discValue: v, refName: prop.DiscriminatorMapping[v]})
+			rawRefNames = append(rawRefNames, prop.DiscriminatorMapping[v])
+		}
+		fieldNames := uniqueUnionFieldNames(rawRefNames)
+		variants := make([]unionVariant, 0, len(values))
+		for i, v := range values {
+			refName := prop.DiscriminatorMapping[v]
+			variants = append(variants, unionVariant{
+				discValue:  v,
+				fieldName:  fixInitialisms(goFieldName(fieldNames[i])),
+				goTypeName: fixInitialisms(refName),
+			})
 		}
 		return variants
 	}
@@ -1984,14 +2560,21 @@ func buildUnionVariants(prop *parser.Property) []unionVariant {
 		}
 		rawNames = append(rawNames, name)
 	}
-	cleanNames := extractVariantNames(rawNames)
+	discValues := uniqueUnionDiscriminatorValues(rawNames)
+	fieldNames := uniqueUnionFieldNames(rawNames)
 	variants := make([]unionVariant, 0, len(prop.OneOf))
 	for i, v := range prop.OneOf {
-		refName := v.Name
+		fieldName := fixInitialisms(goFieldName(fieldNames[i]))
+		goTypeName := anonymousUnionVariantTypeName(unionTypeName, fieldName)
 		if v.RefName != "" {
-			refName = v.RefName
+			goTypeName = fixInitialisms(v.RefName)
 		}
-		variants = append(variants, unionVariant{discValue: cleanNames[i], refName: refName})
+		variants = append(variants, unionVariant{
+			discValue:  discValues[i],
+			fieldName:  fieldName,
+			goTypeName: goTypeName,
+			source:     v,
+		})
 	}
 	return variants
 }
@@ -2001,22 +2584,129 @@ func buildUnionVariants(prop *parser.Property) []unionVariant {
 // package-scoped collisions for common property names like "config".
 func (g *Generator) generateUnionType(prop *parser.Property, typeNamePrefix string) string {
 	typeName := generatedUnionTypeName(prop, typeNamePrefix)
-	variants := buildUnionVariants(prop)
-	return emitDiscriminatedUnionCode(typeName, prop.Name, variants)
+	variants := buildUnionVariants(prop, typeName)
+	return emitDiscriminatedUnionCode(typeName, prop.Name, unionDiscriminatorJSONName(prop), variants)
+}
+
+func (g *Generator) writeUnionTypeDefinition(buf *strings.Builder, prop *parser.Property, typeNamePrefix string, emitted map[string]bool, entityName string, parentCursor *config.FieldConfig) {
+	if prop == nil || len(prop.OneOf) == 0 {
+		return
+	}
+
+	unionTypeName := generatedUnionTypeName(prop, typeNamePrefix)
+	g.writeAnonymousUnionVariantTypes(buf, prop, unionTypeName, emitted, entityName, parentCursor)
+
+	if emitted[unionTypeName] {
+		return
+	}
+	emitted[unionTypeName] = true
+	buf.WriteString(g.generateUnionType(prop, typeNamePrefix))
+}
+
+func (g *Generator) writeAnonymousUnionVariantTypes(buf *strings.Builder, prop *parser.Property, unionTypeName string, emitted map[string]bool, entityName string, parentCursor *config.FieldConfig) {
+	for _, variant := range buildUnionVariants(prop, unionTypeName) {
+		if variant.source == nil || variant.source.RefName != "" {
+			continue
+		}
+		g.writeAnonymousUnionVariantType(buf, variant, emitted, entityName, parentCursor.Sub(jsonName(variant.discValue)), prop.Discriminator)
+	}
+}
+
+func (g *Generator) writeAnonymousUnionVariantType(buf *strings.Builder, variant unionVariant, emitted map[string]bool, entityName string, parentCursor *config.FieldConfig, parentDiscriminator string) {
+	if variant.source == nil {
+		return
+	}
+	if emitted[variant.goTypeName] {
+		return
+	}
+	emitted[variant.goTypeName] = true
+
+	if !isInlineObjectWithProperties(variant.source) {
+		buf.WriteString(formatSchemaComment(variant.goTypeName, variant.source.Description))
+		fmt.Fprintf(buf, "type %s %s\n\n", variant.goTypeName, anonymousUnionVariantGoType(variant.source))
+		return
+	}
+
+	buf.WriteString(formatSchemaComment(variant.goTypeName, variant.source.Description))
+	fmt.Fprintf(buf, "type %s struct {\n", variant.goTypeName)
+	for _, nested := range variant.source.Properties {
+		if skipProperty(nested) || (parentDiscriminator != "" && nested.Name == parentDiscriminator) {
+			continue
+		}
+		g.writeSchemaTypeField(buf, nested, variant.goTypeName, parentCursor)
+	}
+	buf.WriteString("}\n\n")
+
+	g.writeNestedInlineTypes(buf, variant.source.Properties, emitted, entityName, variant.goTypeName, parentCursor)
+	for _, nested := range variant.source.Properties {
+		if skipProperty(nested) || len(nested.OneOf) == 0 {
+			continue
+		}
+		g.writeUnionTypeDefinition(buf, nested, variant.goTypeName, emitted, entityName, parentCursor.Sub(jsonTagForProperty(nested)))
+	}
+	if wrapper := emitUnionWrapperUnmarshalJSON(variant.goTypeName, buildUnionFieldSpecs(variant.source.Properties, variant.goTypeName)); wrapper != "" {
+		buf.WriteString(wrapper)
+	}
+}
+
+func anonymousUnionVariantGoType(prop *parser.Property) string {
+	if prop == nil {
+		return "any"
+	}
+
+	switch prop.Type {
+	case "string":
+		return "string"
+	case "integer":
+		switch prop.Format {
+		case "int32":
+			return "int32"
+		case "int64":
+			return "int64"
+		default:
+			return "int"
+		}
+	case "number":
+		switch prop.Format {
+		case "float":
+			return "float32"
+		case "double":
+			return "float64"
+		default:
+			return "float64"
+		}
+	case "boolean":
+		return "string"
+	case "array":
+		if prop.Items == nil {
+			return "[]any"
+		}
+		return "[]" + anonymousUnionVariantGoType(prop.Items)
+	case "object":
+		if prop.AdditionalProperties != nil {
+			return "map[string]" + anonymousUnionVariantGoType(prop.AdditionalProperties)
+		}
+		return "apiextensionsv1.JSON"
+	default:
+		return "any"
+	}
 }
 
 type unionFieldVariant struct {
-	DiscValue string
-	FieldName string
-	TypeConst string
+	DiscValue   string
+	FieldName   string
+	TypeConst   string
+	TestPayload string
 }
 
 type unionFieldSpec struct {
-	FieldName string
-	JSONName  string
-	Inline    bool
-	TypeName  string
-	Variants  []unionFieldVariant
+	FieldName              string
+	JSONName               string
+	Inline                 bool
+	TypeName               string
+	DiscriminatorJSONName  string
+	DiscriminatorFieldName string
+	Variants               []unionFieldVariant
 }
 
 type unionWrapperTestSpec struct {
@@ -2048,33 +2738,56 @@ func generatedUnionTypeName(prop *parser.Property, typeNamePrefix string) string
 }
 
 func buildUnionFieldVariants(variants []unionVariant, typeName string) []unionFieldVariant {
-	rawRefNames := make([]string, 0, len(variants))
-	for _, v := range variants {
-		rawRefNames = append(rawRefNames, v.refName)
-	}
-	cleanFieldNames := extractVariantNames(rawRefNames)
-
 	result := make([]unionFieldVariant, 0, len(variants))
-	for i, v := range variants {
-		fieldName := fixInitialisms(cleanFieldNames[i])
+	for _, v := range variants {
 		result = append(result, unionFieldVariant{
-			DiscValue: v.discValue,
-			FieldName: fieldName,
-			TypeConst: typeName + "Type" + fieldName,
+			DiscValue:   v.discValue,
+			FieldName:   v.fieldName,
+			TypeConst:   typeName + "Type" + v.fieldName,
+			TestPayload: unionVariantTestPayload(v.source),
 		})
 	}
 
 	return result
 }
 
-func buildUnionFieldSpec(fieldName, typeName, jsonName string, prop *parser.Property) unionFieldSpec {
-	return unionFieldSpec{
-		FieldName: fieldName,
-		JSONName:  jsonName,
-		Inline:    jsonName == "",
-		TypeName:  typeName,
-		Variants:  buildUnionFieldVariants(buildUnionVariants(prop), typeName),
+func unionVariantTestPayload(prop *parser.Property) string {
+	if prop == nil || isInlineObjectWithProperties(prop) {
+		return "{}"
 	}
+
+	switch prop.Type {
+	case "array":
+		return "[]"
+	case "string", "boolean":
+		return `""`
+	case "integer", "number":
+		return "0"
+	case "object":
+		return "{}"
+	default:
+		return "{}"
+	}
+}
+
+func buildUnionFieldSpec(fieldName, typeName, jsonName string, prop *parser.Property) unionFieldSpec {
+	discriminatorJSONName := unionDiscriminatorJSONName(prop)
+	return unionFieldSpec{
+		FieldName:              fieldName,
+		JSONName:               jsonName,
+		Inline:                 jsonName == "",
+		TypeName:               typeName,
+		DiscriminatorJSONName:  discriminatorJSONName,
+		DiscriminatorFieldName: fixInitialisms(goFieldName(discriminatorJSONName)),
+		Variants:               buildUnionFieldVariants(buildUnionVariants(prop, typeName), typeName),
+	}
+}
+
+func unionDiscriminatorJSONName(prop *parser.Property) string {
+	if prop != nil && prop.Discriminator != "" {
+		return jsonName(prop.Discriminator)
+	}
+	return "type"
 }
 
 func buildUnionFieldSpecs(props []*parser.Property, typeNamePrefix string) []unionFieldSpec {
@@ -2163,7 +2876,7 @@ func emitUnionWrapperUnmarshalJSON(structTypeName string, fields []unionFieldSpe
 	fmt.Fprintf(&buf, "\t\treturn fmt.Errorf(\"unmarshaling %s: %%w\", err)\n", structTypeName)
 	buf.WriteString("\t}\n")
 	for _, field := range fields {
-		fmt.Fprintf(&buf, "\tif aux.%s != nil && aux.%s.Type == \"\"", field.FieldName, field.FieldName)
+		fmt.Fprintf(&buf, "\tif aux.%s != nil && aux.%s.%s == \"\"", field.FieldName, field.FieldName, field.DiscriminatorFieldName)
 		for _, variant := range field.Variants {
 			fmt.Fprintf(&buf, " && aux.%s.%s == nil", field.FieldName, variant.FieldName)
 		}
@@ -2215,7 +2928,7 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 		buf.WriteString("\t}{\n")
 		for _, variant := range unionSpec.Variants {
 			camelDiscValue := jsonName(variant.DiscValue)
-			payload := fmt.Sprintf(`{"type":%q,%q:{}}`, camelDiscValue, camelDiscValue)
+			payload := fmt.Sprintf(`{%q:%q,%q:%s}`, unionSpec.DiscriminatorJSONName, camelDiscValue, camelDiscValue, variant.TestPayload)
 			fmt.Fprintf(&buf, "\t\t{name: %q, payload: []byte(%q)},\n", variant.DiscValue, payload)
 		}
 		buf.WriteString("\t}\n\n")
@@ -2264,7 +2977,7 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 		for _, field := range wrapperSpec.Fields {
 			for _, variant := range field.Variants {
 				camelDiscValue := jsonName(variant.DiscValue)
-				variantPayload := fmt.Sprintf(`{"type":%q,%q:{}}`, camelDiscValue, camelDiscValue)
+				variantPayload := fmt.Sprintf(`{%q:%q,%q:%s}`, field.DiscriminatorJSONName, camelDiscValue, camelDiscValue, variant.TestPayload)
 				payload := variantPayload
 				if !field.Inline {
 					payload = fmt.Sprintf(`{%q:%s}`, jsonName(field.JSONName), variantPayload)
@@ -2277,7 +2990,7 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 				fmt.Fprintf(&buf, "\t\t\t\tif target.%s == nil {\n", field.FieldName)
 				fmt.Fprintf(&buf, "\t\t\t\t\tt.Fatalf(%q)\n", field.FieldName+" should be allocated")
 				buf.WriteString("\t\t\t\t}\n")
-				fmt.Fprintf(&buf, "\t\t\t\tif got, want := target.%s.Type, %s; got != want {\n", field.FieldName, variant.TypeConst)
+				fmt.Fprintf(&buf, "\t\t\t\tif got, want := target.%s.%s, %s; got != want {\n", field.FieldName, field.DiscriminatorFieldName, variant.TypeConst)
 				buf.WriteString("\t\t\t\t\tt.Fatalf(\"unexpected type: got %q want %q\", got, want)\n")
 				buf.WriteString("\t\t\t\t}\n")
 				fmt.Fprintf(&buf, "\t\t\t\tif target.%s.%s == nil {\n", field.FieldName, variant.FieldName)
@@ -2306,19 +3019,13 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 }
 
 // emitDiscriminatedUnionCode emits the Go source for a discriminated union wrapper:
-//   - A struct with a Type discriminator field and one optional pointer per variant.
+//   - A struct with a discriminator field and one optional pointer per variant.
 //   - A string type alias for the discriminator + constants.
 //   - Custom MarshalJSON/UnmarshalJSON that produce/consume a nested JSON object
-//     {"type":"<disc>","<disc>":{...variant fields...}} matching the CRD schema and
+//     {"<discriminator>":"<disc>","<disc>":{...variant fields...}} matching the CRD schema and
 //     K8s/etcd wire format.
-func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVariant) string {
-	// Compute short clean field names from all ref names together so the common
-	// prefix/suffix is stripped (e.g. "VirtualClusterAuthentication" prefix).
-	rawRefNames := make([]string, 0, len(variants))
-	for _, v := range variants {
-		rawRefNames = append(rawRefNames, v.refName)
-	}
-	cleanFieldNames := extractVariantNames(rawRefNames)
+func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string, variants []unionVariant) string {
+	discriminatorFieldName := fixInitialisms(goFieldName(discriminatorJSONName))
 
 	discValues := make([]string, 0, len(variants))
 	for _, v := range variants {
@@ -2327,24 +3034,29 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "// %s represents a union type for %s.\n", typeName, propName)
-	buf.WriteString("// Only one of the fields should be set based on the Type.\n")
+	fmt.Fprintf(&buf, "// Only one of the fields should be set based on the %s.\n", discriminatorFieldName)
 	buf.WriteString("//\n")
+	if shouldEmitTypeMatchCEL(typeName) {
+		for _, v := range variants {
+			camelDiscValue := jsonName(v.discValue)
+			fmt.Fprintf(&buf, "// +kubebuilder:validation:XValidation:rule=\"self.%s == '%s' ? has(self.%s) : !has(self.%s)\",message=\"%s must be set only when %s is %s\"\n",
+				discriminatorJSONName, camelDiscValue, camelDiscValue, camelDiscValue, camelDiscValue, discriminatorJSONName, camelDiscValue)
+		}
+	}
 	fmt.Fprintf(&buf, "type %s struct {\n", typeName)
 
-	buf.WriteString("\t// Type designates the type of configuration.\n")
+	fmt.Fprintf(&buf, "\t// %s designates the type of configuration.\n", discriminatorFieldName)
 	buf.WriteString("\t//\n")
 	buf.WriteString("\t// +required\n")
 	buf.WriteString("\t// +kubebuilder:validation:MinLength=1\n")
 	fmt.Fprintf(&buf, "\t// +kubebuilder:validation:Enum=%s\n", strings.Join(discValues, ";"))
-	fmt.Fprintf(&buf, "\tType %sType `json:\"type,omitempty\"`\n\n", typeName)
+	fmt.Fprintf(&buf, "\t%s %sType `json:\"%s,omitempty\"`\n\n", discriminatorFieldName, typeName, discriminatorJSONName)
 
-	for i, v := range variants {
-		fieldName := fixInitialisms(cleanFieldNames[i])
-		refTypeName := fixInitialisms(v.refName)
-		fmt.Fprintf(&buf, "\t// %s configuration.\n", fieldName)
+	for _, v := range variants {
+		fmt.Fprintf(&buf, "\t// %s configuration.\n", v.fieldName)
 		buf.WriteString("\t//\n")
 		buf.WriteString("\t// +optional\n")
-		fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", fieldName, refTypeName, jsonName(v.discValue))
+		fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", v.fieldName, v.goTypeName, jsonName(v.discValue))
 	}
 	buf.WriteString("}\n\n")
 
@@ -2353,26 +3065,27 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 
 	fmt.Fprintf(&buf, "// %sType values.\n", typeName)
 	buf.WriteString("const (\n")
-	for i, v := range variants {
-		fieldSuffix := fixInitialisms(cleanFieldNames[i])
-		fmt.Fprintf(&buf, "\t%sType%s %sType = \"%s\"\n", typeName, fieldSuffix, typeName, jsonName(v.discValue))
+	for _, v := range variants {
+		fmt.Fprintf(&buf, "\t%sType%s %sType = \"%s\"\n", typeName, v.fieldName, typeName, jsonName(v.discValue))
 	}
 	buf.WriteString(")\n\n")
 
 	// MarshalJSON: produce the nested shape that matches the CRD schema and
-	// K8s/etcd wire format: {"type":"<disc>","<disc>":{...variant fields...}}.
+	// K8s/etcd wire format: {"<discriminator>":"<disc>","<disc>":{...variant fields...}}.
 	fmt.Fprintf(&buf, "// MarshalJSON implements json.Marshaler.\n")
 	fmt.Fprintf(&buf, "func (u %s) MarshalJSON() ([]byte, error) {\n", typeName)
 	buf.WriteString("\tm := map[string]json.RawMessage{}\n")
-	buf.WriteString("\ttypeBytes, _ := json.Marshal(string(u.Type))\n")
-	buf.WriteString("\tm[\"type\"] = typeBytes\n")
-	buf.WriteString("\tswitch u.Type {\n")
-	for i, v := range variants {
-		fieldName := fixInitialisms(cleanFieldNames[i])
+	fmt.Fprintf(&buf, "\ttypeBytes, err := json.Marshal(string(u.%s))\n", discriminatorFieldName)
+	buf.WriteString("\tif err != nil {\n")
+	fmt.Fprintf(&buf, "\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, discriminatorJSONName)
+	buf.WriteString("\t}\n")
+	fmt.Fprintf(&buf, "\tm[%q] = typeBytes\n", discriminatorJSONName)
+	fmt.Fprintf(&buf, "\tswitch u.%s {\n", discriminatorFieldName)
+	for _, v := range variants {
 		camelDiscValue := jsonName(v.discValue)
-		fmt.Fprintf(&buf, "\tcase \"%s\":\n", camelDiscValue)
-		fmt.Fprintf(&buf, "\t\tif u.%s != nil {\n", fieldName)
-		fmt.Fprintf(&buf, "\t\t\traw, err := json.Marshal(u.%s)\n", fieldName)
+		fmt.Fprintf(&buf, "\tcase %sType%s:\n", typeName, v.fieldName)
+		fmt.Fprintf(&buf, "\t\tif u.%s != nil {\n", v.fieldName)
+		fmt.Fprintf(&buf, "\t\t\traw, err := json.Marshal(u.%s)\n", v.fieldName)
 		buf.WriteString("\t\t\tif err != nil {\n")
 		fmt.Fprintf(&buf, "\t\t\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, v.discValue)
 		buf.WriteString("\t\t\t}\n")
@@ -2383,7 +3096,7 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 	buf.WriteString("\treturn json.Marshal(m)\n")
 	buf.WriteString("}\n\n")
 
-	// UnmarshalJSON: read the "type" discriminator, then decode the variant
+	// UnmarshalJSON: read the discriminator, then decode the variant
 	// payload from raw["<discValue>"] to match the nested K8s wire shape.
 	fmt.Fprintf(&buf, "// UnmarshalJSON implements json.Unmarshaler.\n")
 	fmt.Fprintf(&buf, "func (u *%s) UnmarshalJSON(data []byte) error {\n", typeName)
@@ -2391,7 +3104,7 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 	fmt.Fprintf(&buf, "\t\treturn fmt.Errorf(\"unmarshaling %s: nil receiver\")\n", typeName)
 	buf.WriteString("\t}\n")
 	buf.WriteString("\tvar probe struct {\n")
-	buf.WriteString("\t\tType string `json:\"type\"`\n")
+	fmt.Fprintf(&buf, "\t\t%s string `json:\"%s\"`\n", discriminatorFieldName, discriminatorJSONName)
 	buf.WriteString("\t}\n")
 	buf.WriteString("\tif err := json.Unmarshal(data, &probe); err != nil {\n")
 	buf.WriteString("\t\treturn err\n")
@@ -2400,28 +3113,35 @@ func emitDiscriminatedUnionCode(typeName, propName string, variants []unionVaria
 	buf.WriteString("\tif err := json.Unmarshal(data, &raw); err != nil {\n")
 	buf.WriteString("\t\treturn err\n")
 	buf.WriteString("\t}\n")
-	fmt.Fprintf(&buf, "\tu.Type = %sType(probe.Type)\n", typeName)
-	buf.WriteString("\tswitch probe.Type {\n")
-	for i, v := range variants {
-		fieldName := fixInitialisms(cleanFieldNames[i])
-		refTypeName := fixInitialisms(v.refName)
+	fmt.Fprintf(&buf, "\tu.%s = %sType(probe.%s)\n", discriminatorFieldName, typeName, discriminatorFieldName)
+	fmt.Fprintf(&buf, "\tswitch probe.%s {\n", discriminatorFieldName)
+	for _, v := range variants {
 		camelDiscValue := jsonName(v.discValue)
 		fmt.Fprintf(&buf, "\tcase \"%s\":\n", camelDiscValue)
 		fmt.Fprintf(&buf, "\t\tpayload, ok := raw[\"%s\"]\n", camelDiscValue)
 		buf.WriteString("\t\tif !ok || len(payload) == 0 {\n")
 		buf.WriteString("\t\t\treturn nil\n")
 		buf.WriteString("\t\t}\n")
-		fmt.Fprintf(&buf, "\t\tvar val %s\n", refTypeName)
+		fmt.Fprintf(&buf, "\t\tvar val %s\n", v.goTypeName)
 		buf.WriteString("\t\tif err := json.Unmarshal(payload, &val); err != nil {\n")
 		fmt.Fprintf(&buf, "\t\t\treturn fmt.Errorf(\"unmarshaling %s %s: %%w\", err)\n", typeName, v.discValue)
 		buf.WriteString("\t\t}\n")
-		fmt.Fprintf(&buf, "\t\tu.%s = &val\n", fieldName)
+		fmt.Fprintf(&buf, "\t\tu.%s = &val\n", v.fieldName)
 	}
 	buf.WriteString("\t}\n")
 	buf.WriteString("\treturn nil\n")
 	buf.WriteString("}\n")
 
 	return buf.String()
+}
+
+func shouldEmitTypeMatchCEL(typeName string) bool {
+	switch typeName {
+	case "EncryptionKey", "EventGatewayEncryptConfigEncryptionKey":
+		return true
+	default:
+		return false
+	}
 }
 
 // extractVariantNames extracts clean field names from a list of variant names
@@ -2504,20 +3224,67 @@ func cleanSingleVariantName(name string) string {
 	return result
 }
 
+func uniqueUnionDiscriminatorValues(names []string) []string {
+	return uniquifyUnionMemberNames(extractVariantNames(names), "Variant", jsonName)
+}
+
+func uniqueUnionFieldNames(names []string) []string {
+	return uniquifyUnionMemberNames(extractVariantNames(names), "Variant", func(name string) string {
+		return fixInitialisms(goFieldName(name))
+	})
+}
+
+func uniquifyUnionMemberNames(names []string, fallback string, key func(string) string) []string {
+	if len(names) == 0 {
+		return nil
+	}
+
+	result := make([]string, len(names))
+	counts := make(map[string]int, len(names))
+	for i, name := range names {
+		normalized := normalizeUnionMemberName(name, fallback)
+		result[i] = normalized
+		counts[key(normalized)]++
+	}
+
+	seen := make(map[string]int, len(counts))
+	for i, name := range result {
+		normalizedKey := key(name)
+		if counts[normalizedKey] == 1 {
+			continue
+		}
+		seen[normalizedKey]++
+		result[i] = fmt.Sprintf("%s%d", name, seen[normalizedKey])
+	}
+
+	return result
+}
+
+func normalizeUnionMemberName(name, fallback string) string {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" || !startsWithLetter(trimmed) {
+		return fallback
+	}
+	return trimmed
+}
+
+func startsWithLetter(name string) bool {
+	for _, r := range name {
+		return unicode.IsLetter(r)
+	}
+	return false
+}
+
+func anonymousUnionVariantTypeName(unionTypeName, fieldName string) string {
+	return unionTypeName + fieldName
+}
+
 // emitDiscriminatedUnionType emits Go source for a ROOT-LEVEL oneOf schema that has
 // an OAS discriminator.  It delegates to emitDiscriminatedUnionCode after building
 // the variant list from the schema's DiscriminatorMapping.
 func (g *Generator) emitDiscriminatedUnionType(goName string, schema *parser.Schema) string {
-	values := make([]string, 0, len(schema.DiscriminatorMapping))
-	for v := range schema.DiscriminatorMapping {
-		values = append(values, v)
-	}
-	sort.Strings(values)
-	variants := make([]unionVariant, 0, len(values))
-	for _, v := range values {
-		variants = append(variants, unionVariant{discValue: v, refName: schema.DiscriminatorMapping[v]})
-	}
-	return emitDiscriminatedUnionCode(goName, goName, variants)
+	variants := buildUnionVariants(buildRootUnionProperty(schema), goName)
+	return emitDiscriminatedUnionCode(goName, goName, unionDiscriminatorJSONName(buildRootUnionProperty(schema)), variants)
 }
 
 // emitAnyOfUnionType emits Go source for a ROOT-LEVEL anyOf schema without a
@@ -2648,7 +3415,7 @@ package %s
 `, sharedGeneratedFilePreamble, year, g.config.APIVersion, g.config.APIGroup, g.config.APIVersion, g.config.APIGroup, g.config.APIVersion)
 }
 
-func (g *Generator) generateCommonTypes() (string, error) {
+func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConfig) (string, error) {
 	tmpl := template.Must(template.New("commonTypes").Parse(commonTypesTemplate))
 
 	var buf strings.Builder
@@ -2663,24 +3430,44 @@ func (g *Generator) generateCommonTypes() (string, error) {
 	if g.objectRefImported() && objectRefImport != nil {
 		namedRefTypeName = objectRefImport.Alias + ".NamespacedRef"
 	}
+	var sensitiveCursor *config.FieldConfig
+	if typeCursors != nil {
+		sensitiveCursor = typeCursors[sensitiveDataSourceTypeName]
+	}
+	fieldValidations := func(fc *config.FieldConfig, fieldName string) []string {
+		if fc == nil {
+			return nil
+		}
+		child := fc.Sub(fieldName)
+		if child == nil || len(child.Validations) == 0 {
+			return nil
+		}
+		return append([]string(nil), child.Validations...)
+	}
 	data := struct {
-		APIVersion            string
-		KonnectStatusImport   *config.ImportConfig
-		KonnectStatusType     string
-		ObjectRefImported     bool
-		ObjectRefImport       *config.ImportConfig
-		Namespaced            bool
-		HasSecretRefEntities  bool
-		NamespacedRefTypeName string
+		APIVersion                              string
+		KonnectStatusImport                     *config.ImportConfig
+		KonnectStatusType                       string
+		ObjectRefImported                       bool
+		ObjectRefImport                         *config.ImportConfig
+		Namespaced                              bool
+		HasSecretRefEntities                    bool
+		NamespacedRefTypeName                   string
+		SensitiveDataSourceValueMaxLength       int
+		SensitiveDataSourceTypeValidations      []string
+		SensitiveDataSourceSecretRefValidations []string
 	}{
-		APIVersion:            g.config.APIVersion,
-		KonnectStatusImport:   defaultKonnectStatusImport(),
-		KonnectStatusType:     defaultKonnectStatusQualifiedTypeName(),
-		ObjectRefImported:     g.objectRefImported(),
-		ObjectRefImport:       objectRefImport,
-		Namespaced:            g.objectRefNamespaced(),
-		HasSecretRefEntities:  hasSecretRefs,
-		NamespacedRefTypeName: namedRefTypeName,
+		APIVersion:                              g.config.APIVersion,
+		KonnectStatusImport:                     defaultKonnectStatusImport(),
+		KonnectStatusType:                       defaultKonnectStatusQualifiedTypeName(),
+		ObjectRefImported:                       g.objectRefImported(),
+		ObjectRefImport:                         objectRefImport,
+		Namespaced:                              g.objectRefNamespaced(),
+		HasSecretRefEntities:                    hasSecretRefs,
+		NamespacedRefTypeName:                   namedRefTypeName,
+		SensitiveDataSourceValueMaxLength:       sensitiveDataSourceValueMaxLength,
+		SensitiveDataSourceTypeValidations:      fieldValidations(sensitiveCursor, "type"),
+		SensitiveDataSourceSecretRefValidations: fieldValidations(sensitiveCursor, "secretRef"),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -2860,6 +3647,7 @@ type sdkOpsMethod struct {
 	MethodName  string
 	TypeName    string
 	ImportAlias string
+	ImportPath  string
 
 	NestedUnionFields []sdkOpsNestedUnionField
 }
@@ -2877,6 +3665,7 @@ type sdkOpsRootUnionMethod struct {
 	ComponentsImportAlias string
 	BodyTypeName          string // e.g. "EventGatewayListenerPolicyCreate" or "...Update"
 	BodyFieldName         string // field name on the request struct, same as BodyTypeName
+	BodyFieldPointer      bool
 }
 
 type sdkOpsTestMethod struct {
@@ -2889,16 +3678,6 @@ type sdkOpsTestMethod struct {
 // sdkOpsBoolField represents a boolean field path that needs normalization
 // from the CRD's Enabled/Disabled enum strings back to JSON booleans.
 type sdkOpsBoolField struct {
-	Label string
-	Path  []string
-}
-
-// sdkOpsBase64Field represents a sensitive field path that must be base64
-// encoded before the SDK request is unmarshaled into its target type.
-//
-// TODO: Remove Base64 encoding when API starts accepting raw values.
-// TODO: https://github.com/Kong/kong-operator/issues/4304
-type sdkOpsBase64Field struct {
 	Label string
 	Path  []string
 }
@@ -2968,10 +3747,10 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	var buf strings.Builder
 	rc := g.config.ReconcilerConfig[entityName]
 	hasParentRefReplacement := rc != nil && rc.ParentRef != nil && rc.ParentRef.ReplacesAPISpecField != ""
-	var parentRefReplacesField, sdkopsSetParentIDEntityName string
+	var parentRefReplacesField, parentStatusEntityName string
 	if hasParentRefReplacement {
 		parentRefReplacesField = rc.ParentRef.ReplacesAPISpecField
-		sdkopsSetParentIDEntityName = rc.ParentEntityType
+		parentStatusEntityName = parentRefStatusEntityName(rootRefDependency(schema), rc)
 	}
 
 	data := struct {
@@ -2979,7 +3758,6 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		EntityName              string
 		Imports                 []*sdkOpsImport
 		BoolFields              []sdkOpsBoolField
-		Base64Fields            []sdkOpsBase64Field
 		Methods                 []sdkOpsMethod
 		NeedsClient             bool
 		SecretReferences        []SecretReferenceForTemplate
@@ -2987,13 +3765,12 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		References              []TemplateReferenceConfig
 		HasParentRefReplacement bool
 		ParentRefReplacesField  string
-		SetParentIDEntityName   string
+		ParentStatusEntityName  string
 	}{
 		APIVersion:              g.config.APIVersion,
 		EntityName:              entityName,
 		Imports:                 imports,
 		BoolFields:              boolFields,
-		Base64Fields:            g.buildSDKOpsBase64Fields(entityName),
 		Methods:                 standardMethods,
 		NeedsClient:             opsConfig.RequireClient,
 		SecretReferences:        g.templateSecretReferences(entityName),
@@ -3001,7 +3778,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		References:              g.templateReferences(entityName),
 		HasParentRefReplacement: hasParentRefReplacement,
 		ParentRefReplacesField:  parentRefReplacesField,
-		SetParentIDEntityName:   sdkopsSetParentIDEntityName,
+		ParentStatusEntityName:  parentStatusEntityName,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -3115,14 +3892,23 @@ func (g *Generator) generateRootUnionSDKOps(
 			ComponentsImportAlias: componentsImportAlias,
 		}
 		if isOperationsWrapped {
-			if isCreate {
-				m.BodyTypeName = entityName + "Create"
-			} else {
-				m.BodyTypeName = entityName + "Update"
+			bodyInfo, err := ParseSDKRequestBodyInfo(method.ImportPath, method.TypeName)
+			if err != nil {
+				return "", fmt.Errorf("failed to inspect SDK request body for %s %s: %w", entityName, method.TypeName, err)
 			}
-			m.BodyFieldName = m.BodyTypeName
+			m.BodyTypeName = bodyInfo.TypeName
+			m.BodyFieldName = bodyInfo.FieldName
+			m.BodyFieldPointer = bodyInfo.Pointer
 		}
 		rootUnionMethods = append(rootUnionMethods, m)
+	}
+
+	wrappedCreateBodyTypeName := ""
+	for _, method := range rootUnionMethods {
+		if method.IsCreate && method.IsOperationsWrapped {
+			wrappedCreateBodyTypeName = method.BodyTypeName
+			break
+		}
 	}
 
 	var rawVariantNames []string
@@ -3165,9 +3951,9 @@ func (g *Generator) generateRootUnionSDKOps(
 
 		// For operations-wrapped: compute wrapped constructor names using disc value.
 		wrappedCreateConstructorName := ""
-		if isOperationsWrapped {
+		if wrappedCreateBodyTypeName != "" {
 			discPascal := fixInitialisms(pascalFromKebab(discValue))
-			wrappedCreateConstructorName = "Create" + entityName + "Create" + discPascal
+			wrappedCreateConstructorName = "Create" + wrappedCreateBodyTypeName + discPascal
 		}
 
 		fieldName := fixInitialisms(variantNames[i])
@@ -3193,7 +3979,6 @@ func (g *Generator) generateRootUnionSDKOps(
 		UnionTypeName    string
 		Imports          []*sdkOpsImport
 		BoolFields       []sdkOpsBoolField
-		Base64Fields     []sdkOpsBase64Field
 		Methods          []sdkOpsRootUnionMethod
 		Variants         []sdkOpsRootUnionVariant
 		NeedsClient      bool
@@ -3204,7 +3989,6 @@ func (g *Generator) generateRootUnionSDKOps(
 		UnionTypeName:    rootUnionTypeName,
 		Imports:          imports,
 		BoolFields:       boolFields,
-		Base64Fields:     g.buildSDKOpsBase64Fields(entityName),
 		Methods:          rootUnionMethods,
 		Variants:         variants,
 		NeedsClient:      opsConfig.RequireClient,
@@ -3267,18 +4051,14 @@ func (g *Generator) buildSDKOpsTestFields(entityName string, props []*parser.Pro
 		if skipProperty(prop) || prop.IsReference || shouldSkipSDKOpsTestField(prop, method) {
 			continue
 		}
-		if ref, ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
-			expectedValue := "test-value"
-			if ref.Base64Encoding {
-				expectedValue = base64.StdEncoding.EncodeToString([]byte(expectedValue))
-			}
+		if ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
 			// SensitiveDataSource field: emit an inline value; after flattenSensitiveData
 			// the JSON payload contains just the plain string.
 			testFields = append(testFields, sdkOpsTestField{
 				FieldName:     goFieldName(prop.Name),
 				JSONName:      jsonName(prop.Name),
 				TestValue:     `SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")}`,
-				ExpectedValue: fmt.Sprintf("%q", expectedValue),
+				ExpectedValue: fmt.Sprintf("%q", "test-value"),
 			})
 			continue
 		}
@@ -3301,10 +4081,74 @@ func shouldSkipSDKOpsTestField(prop *parser.Property, method sdkOpsMethod) bool 
 	return strings.HasPrefix(method.MethodName, "ToUpdate") && prop.Name == "type"
 }
 
+func buildSDKOpsMethodNames(opsConfig *config.EntityOpsConfig) (map[string]string, error) {
+	methodNames := make(map[string]string)
+	if opsConfig == nil {
+		return methodNames, nil
+	}
+
+	opPaths := make(map[string]string)
+	pathCounts := make(map[string]int)
+	opNames := make([]string, 0, len(opsConfig.Ops))
+	for opName := range opsConfig.Ops {
+		if opName == "delete" {
+			continue
+		}
+		opNames = append(opNames, opName)
+	}
+	sort.Strings(opNames)
+
+	for _, opName := range opNames {
+		opCfg := opsConfig.Ops[opName]
+		if opCfg == nil {
+			continue
+		}
+		if _, _, err := ParseSDKTypePath(opCfg.Path); err != nil {
+			return nil, fmt.Errorf("operation %q: %w", opName, err)
+		}
+		opPaths[opName] = opCfg.Path
+		pathCounts[opCfg.Path]++
+	}
+
+	for _, opName := range opNames {
+		path, ok := opPaths[opName]
+		if !ok {
+			continue
+		}
+		_, typeName, err := ParseSDKTypePath(path)
+		if err != nil {
+			return nil, fmt.Errorf("operation %q: %w", opName, err)
+		}
+		methodName := "To" + typeName
+		if pathCounts[path] > 1 {
+			methodName = "To" + pascalFromKebab(opName) + typeName
+		}
+		methodNames[opName] = methodName
+	}
+
+	return methodNames, nil
+}
+
+func sdkOpsMethodNameForOp(opsConfig *config.EntityOpsConfig, opName string) (string, error) {
+	methodNames, err := buildSDKOpsMethodNames(opsConfig)
+	if err != nil {
+		return "", err
+	}
+	methodName, ok := methodNames[opName]
+	if !ok {
+		return "", fmt.Errorf("operation %q has no SDK conversion method", opName)
+	}
+	return methodName, nil
+}
+
 // buildSDKOpsMethods parses the ops config and returns sorted imports and methods.
 func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sdkOpsImport, []sdkOpsMethod, error) {
 	imports := make(map[string]*sdkOpsImport)
 	var methods []sdkOpsMethod
+	methodNames, err := buildSDKOpsMethodNames(opsConfig)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	opNames := make([]string, 0, len(opsConfig.Ops))
 	for opName := range opsConfig.Ops {
@@ -3318,6 +4162,9 @@ func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sd
 			continue
 		}
 		opCfg := opsConfig.Ops[opName]
+		if opCfg == nil {
+			continue
+		}
 		importPath, typeName, err := ParseSDKTypePath(opCfg.Path)
 		if err != nil {
 			return nil, nil, fmt.Errorf("operation %q: %w", opName, err)
@@ -3330,9 +4177,10 @@ func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sd
 		}
 
 		methods = append(methods, sdkOpsMethod{
-			MethodName:  "To" + typeName,
+			MethodName:  methodNames[opName],
 			TypeName:    typeName,
 			ImportAlias: alias,
+			ImportPath:  importPath,
 		})
 	}
 
@@ -3817,13 +4665,64 @@ func skipProperty(prop *parser.Property) bool {
 	return false
 }
 
-// schemaUsesJSON checks if any property in the schema will be generated as apiextensionsv1.JSON.
-func schemaUsesJSON(g *Generator, schema *parser.Schema) bool {
+// schemaUsesJSON checks if any property in the schema, including nested $refs,
+// will be generated as apiextensionsv1.JSON.
+func schemaUsesJSON(g *Generator, schema *parser.Schema, parsed *parser.ParsedSpec) bool {
+	return schemaUsesJSONRecursive(g, schema, parsed, make(map[string]bool))
+}
+
+func schemaUsesJSONRecursive(g *Generator, schema *parser.Schema, parsed *parser.ParsedSpec, seenRefs map[string]bool) bool {
 	for _, prop := range schema.Properties {
-		if skipProperty(prop) {
-			continue
+		if propertyUsesJSON(g, prop, parsed, seenRefs) {
+			return true
 		}
-		if g.goType(prop) == "apiextensionsv1.JSON" {
+	}
+	for _, variant := range schema.OneOf {
+		if propertyUsesJSON(g, variant, parsed, seenRefs) {
+			return true
+		}
+	}
+	for _, variant := range schema.AnyOf {
+		if propertyUsesJSON(g, variant, parsed, seenRefs) {
+			return true
+		}
+	}
+	return false
+}
+
+func propertyUsesJSON(g *Generator, prop *parser.Property, parsed *parser.ParsedSpec, seenRefs map[string]bool) bool {
+	if prop == nil || skipProperty(prop) {
+		return false
+	}
+	if prop.RefName != "" && parsed != nil && !seenRefs[prop.RefName] {
+		if refSchema, ok := parsed.Schemas[prop.RefName]; ok {
+			seenRefs[prop.RefName] = true
+			if schemaUsesJSONRecursive(g, refSchema, parsed, seenRefs) {
+				return true
+			}
+		}
+	}
+	if strings.Contains(g.goType(prop), "apiextensionsv1.JSON") {
+		return true
+	}
+	for _, variant := range prop.OneOf {
+		if propertyUsesJSON(g, variant, parsed, seenRefs) {
+			return true
+		}
+	}
+	for _, variant := range prop.AnyOf {
+		if propertyUsesJSON(g, variant, parsed, seenRefs) {
+			return true
+		}
+	}
+	if propertyUsesJSON(g, prop.Items, parsed, seenRefs) {
+		return true
+	}
+	if propertyUsesJSON(g, prop.AdditionalProperties, parsed, seenRefs) {
+		return true
+	}
+	for _, nested := range prop.Properties {
+		if propertyUsesJSON(g, nested, parsed, seenRefs) {
 			return true
 		}
 	}

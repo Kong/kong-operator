@@ -180,11 +180,11 @@ MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
 	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
-HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(MISE_FILE))
+HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:helm/helm"].version' < $(MISE_FILE))
 HELM = helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	$(MAKE) mise-install-global DEP_VER=http:helm
+	$(MAKE) mise-install-global DEP_VER=aqua:helm/helm
 
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
@@ -865,7 +865,9 @@ test.samples: kustomize
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
-	@cd config/samples/ && find . -maxdepth 1 -name "*.yaml" -exec bash -c "echo; echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
+	@find config/samples/ -maxdepth 1 -name "*.yaml" -print0 | while IFS= read -r -d '' file; do \
+		echo && echo $$file && kubectl apply -f $$file && kubectl delete -f $$file; \
+	done
 
 .PHONY: test.charts.golden
 test.charts.golden:

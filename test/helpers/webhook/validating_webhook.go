@@ -1,20 +1,25 @@
 package webhook
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
+	"github.com/samber/lo"
+	admissionv1 "k8s.io/api/admission/v1"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -105,10 +110,49 @@ func EnsureValidatingWebhookRegistration(
 				},
 			},
 		}
+
+		webhookURL := fmt.Sprintf("https://%s.%s.svc:%d", webhookService.Name, webhookService.Namespace, consts.WebhookPort)
+		// A valid AdmissionReview object to send to the webhook to check connectivity.
+		admissionCheckBody := lo.Must(
+			json.Marshal(
+				admissionv1.AdmissionReview{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "admission.k8s.io/v1",
+						Kind:       "AdmissionReview",
+					},
+					Request: &admissionv1.AdmissionRequest{
+						Resource: metav1.GroupVersionResource{
+							Version:  "v1",
+							Resource: "services",
+						},
+						Operation: admissionv1.Create,
+						Object: runtime.RawExtension{
+							Raw: lo.Must(
+								json.Marshal(
+									&corev1.Service{
+										TypeMeta: metav1.TypeMeta{
+											APIVersion: "v1",
+											Kind:       "Service",
+										},
+										ObjectMeta: metav1.ObjectMeta{
+											Name:      "health-check",
+											Namespace: "default",
+										},
+									},
+								),
+							),
+						},
+					},
+				},
+			),
+		)
 		return retry.Do(
 			func() error {
-				// Body and response are not relevant here, the goal is to just check connectivity.
-				resp, err := cl.Get(fmt.Sprintf("https://%s.%s.svc:%d", webhookService.Name, webhookService.Namespace, consts.WebhookPort))
+				resp, err := cl.Post(
+					webhookURL,
+					"application/json",
+					bytes.NewReader(admissionCheckBody),
+				)
 				if err != nil {
 					return err
 				}

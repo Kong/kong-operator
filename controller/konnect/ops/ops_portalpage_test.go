@@ -72,15 +72,123 @@ func TestDeletePortalPage(t *testing.T) {
 }
 
 func TestGetPortalPageForUID(t *testing.T) {
-	ctx := t.Context()
-	sdk := sdkmocks.NewMockPortalPagesSDK(t)
-	page := testPortalPage()
+	t.Run("matches portal page by configured fields", func(t *testing.T) {
+		ctx := t.Context()
+		sdk := sdkmocks.NewMockPortalPagesSDK(t)
+		page := testPortalPage()
 
-	id, err := getPortalPageForUID(ctx, sdk, page)
-	require.Empty(t, id)
+		sdk.EXPECT().
+			ListPortalPages(mock.Anything, sdkkonnectops.ListPortalPagesRequest{
+				PortalID: "portal-1",
+			}).
+			Return(&sdkkonnectops.ListPortalPagesResponse{
+				ListPortalPagesResponse: &sdkkonnectcomp.ListPortalPagesResponse{
+					Data: []sdkkonnectcomp.PortalPageInfo{
+						{
+							ID:          "page-1",
+							Slug:        "docs",
+							Title:       "Documentation",
+							Visibility:  "public",
+							Status:      "published",
+							Description: new("Portal page description"),
+						},
+					},
+				},
+			}, nil).
+			Once()
 
-	var notFoundErr EntityWithMatchingUIDNotFoundError
-	require.ErrorAs(t, err, &notFoundErr)
+		id, err := getPortalPageForUID(ctx, sdk, page)
+		require.NoError(t, err)
+		require.Equal(t, "page-1", id)
+	})
+
+	t.Run("matches when defaulted optional fields are omitted", func(t *testing.T) {
+		ctx := t.Context()
+		sdk := sdkmocks.NewMockPortalPagesSDK(t)
+		page := testPortalPage()
+		page.Spec.APISpec.Status = ""
+		page.Spec.APISpec.Visibility = ""
+
+		sdk.EXPECT().
+			ListPortalPages(mock.Anything, sdkkonnectops.ListPortalPagesRequest{
+				PortalID: "portal-1",
+			}).
+			Return(&sdkkonnectops.ListPortalPagesResponse{
+				ListPortalPagesResponse: &sdkkonnectcomp.ListPortalPagesResponse{
+					Data: []sdkkonnectcomp.PortalPageInfo{
+						{
+							ID:          "page-1",
+							Slug:        "docs",
+							Title:       "Documentation",
+							Visibility:  "public",
+							Status:      "published",
+							Description: new("Portal page description"),
+						},
+					},
+				},
+			}, nil).
+			Once()
+
+		id, err := getPortalPageForUID(ctx, sdk, page)
+		require.NoError(t, err)
+		require.Equal(t, "page-1", id)
+	})
+
+	t.Run("does not match when slug differs", func(t *testing.T) {
+		ctx := t.Context()
+		sdk := sdkmocks.NewMockPortalPagesSDK(t)
+		page := testPortalPage()
+
+		sdk.EXPECT().
+			ListPortalPages(mock.Anything, sdkkonnectops.ListPortalPagesRequest{
+				PortalID: "portal-1",
+			}).
+			Return(&sdkkonnectops.ListPortalPagesResponse{
+				ListPortalPagesResponse: &sdkkonnectcomp.ListPortalPagesResponse{
+					Data: []sdkkonnectcomp.PortalPageInfo{
+						{
+							ID:   "page-1",
+							Slug: "guides",
+						},
+					},
+				},
+			}, nil).
+			Once()
+
+		id, err := getPortalPageForUID(ctx, sdk, page)
+		require.Empty(t, id)
+
+		var notFoundErr EntityWithMatchingUIDNotFoundError
+		require.ErrorAs(t, err, &notFoundErr)
+	})
+
+	t.Run("matches portal page regardless of title/description drift", func(t *testing.T) {
+		ctx := t.Context()
+		sdk := sdkmocks.NewMockPortalPagesSDK(t)
+		page := testPortalPage()
+
+		sdk.EXPECT().
+			ListPortalPages(mock.Anything, sdkkonnectops.ListPortalPagesRequest{
+				PortalID: "portal-1",
+			}).
+			Return(&sdkkonnectops.ListPortalPagesResponse{
+				ListPortalPagesResponse: &sdkkonnectcomp.ListPortalPagesResponse{
+					Data: []sdkkonnectcomp.PortalPageInfo{
+						{
+							ID:          "page-1",
+							Slug:        "docs",
+							Title:       "Drifted title",
+							Description: new("Drifted description"),
+						},
+					},
+				},
+			}, nil).
+			Once()
+
+		id, err := getPortalPageForUID(ctx, sdk, page)
+		require.NoError(t, err)
+		require.Equal(t, "page-1", id)
+	})
 }
 
 func testPortalPage() *konnectv1alpha1.PortalPage {

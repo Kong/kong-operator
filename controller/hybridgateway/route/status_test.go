@@ -669,6 +669,33 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 			wantReason: string(gwtypes.RouteReasonAccepted),
 		},
 		{
+			name: "accepted route without hostnames on hostname listener",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gatewayv1.Listener{
+						{Name: "listener1", Port: 443, Protocol: gatewayv1.HTTPSProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("second-example.org"), TLS: &gatewayv1.ListenerTLSConfig{Mode: func() *gatewayv1.TLSModeType { mode := gatewayv1.TLSModeTerminate; return &mode }()}},
+					},
+					GatewayClassName: "my-class",
+				},
+				Status: gatewayv1.GatewayStatus{
+					Listeners: []gatewayv1.ListenerStatus{
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionProgrammed), Status: metav1.ConditionTrue}}},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec:       gwtypes.HTTPRouteSpec{},
+			},
+			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("listener1")},
+			client:     cl,
+			wantType:   string(gwtypes.RouteConditionAccepted),
+			wantStatus: metav1.ConditionTrue,
+			wantReason: string(gwtypes.RouteReasonAccepted),
+		},
+		{
 			name: "missing namespace triggers error branch",
 			gateway: &gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
@@ -1495,6 +1522,13 @@ func Test_FilterListenersByHostnames(t *testing.T) {
 			wantCond:  false,
 		},
 		{
+			name:      "listener with explicit hostname matches route with no hostnames",
+			listeners: []gwtypes.Listener{listenerExact},
+			hostnames: nil,
+			wantLen:   1,
+			wantCond:  false,
+		},
+		{
 			name:      "no matching listener hostname",
 			listeners: []gwtypes.Listener{listenerMismatch},
 			hostnames: []gwtypes.Hostname{"foo.example.com"},
@@ -1506,6 +1540,13 @@ func Test_FilterListenersByHostnames(t *testing.T) {
 			listeners: []gwtypes.Listener{listenerMismatch, listenerExact},
 			hostnames: []gwtypes.Hostname{"foo.example.com"},
 			wantLen:   1,
+			wantCond:  false,
+		},
+		{
+			name:      "empty route hostnames match all listeners",
+			listeners: []gwtypes.Listener{listenerMismatch, listenerExact},
+			hostnames: []gwtypes.Hostname{},
+			wantLen:   2,
 			wantCond:  false,
 		},
 	}

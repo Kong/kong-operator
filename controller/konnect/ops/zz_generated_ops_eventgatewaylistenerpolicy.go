@@ -5,17 +5,19 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 func createEventGatewayListenerPolicy(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayListenerPolicy,
+	obj *configurationv1alpha1.EventGatewayListenerPolicy,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -25,7 +27,7 @@ func createEventGatewayListenerPolicy(
 	if eventGatewayListenerID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayListener", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreateEventGatewayListenerPolicyRequest()
+	req, err := obj.ToCreateEventGatewayListenerPolicyRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -46,8 +48,9 @@ func createEventGatewayListenerPolicy(
 
 func updateEventGatewayListenerPolicy(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayListenerPolicy,
+	obj *configurationv1alpha1.EventGatewayListenerPolicy,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -58,7 +61,7 @@ func updateEventGatewayListenerPolicy(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayListener", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToUpdateEventGatewayListenerPolicyRequest()
+	req, err := obj.ToUpdateEventGatewayListenerPolicyRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -69,7 +72,7 @@ func updateEventGatewayListenerPolicy(
 	_, err = sdk.UpdateEventGatewayListenerPolicy(ctx, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
-			return createEventGatewayListenerPolicy(ctx, sdk, obj)
+			return createEventGatewayListenerPolicy(ctx, cl, sdk, obj)
 		})
 	}
 	return nil
@@ -78,7 +81,7 @@ func updateEventGatewayListenerPolicy(
 func deleteEventGatewayListenerPolicy(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayListenerPolicy,
+	obj *configurationv1alpha1.EventGatewayListenerPolicy,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -104,7 +107,7 @@ func deleteEventGatewayListenerPolicy(
 func getEventGatewayListenerPolicyForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayListenerPoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayListenerPolicy,
+	obj *configurationv1alpha1.EventGatewayListenerPolicy,
 ) (string, error) {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -152,6 +155,8 @@ func getEventGatewayListenerPolicyForUID(
 				if id != nil && *id != "" {
 					return *id, nil
 				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
 		}
 	case "forwardToVirtualCluster":
@@ -175,6 +180,8 @@ func getEventGatewayListenerPolicyForUID(
 				if id != nil && *id != "" {
 					return *id, nil
 				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
 		}
 	default:

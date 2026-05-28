@@ -8,6 +8,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
@@ -40,22 +41,28 @@ func getForUID[
 	e TEnt,
 ) (string, error) {
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.EventGatewayBackendCluster:
+	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return getEventGatewayBackendClusterForUID(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
-	case *konnectv1alpha1.EventGatewayListener:
+	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
+		return getEventGatewayDataPlaneCertificateForUID(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayListener:
 		return getEventGatewayListenerForUID(ctx, sdk.GetEventGatewayListenersSDK(), ent)
-	case *konnectv1alpha1.EventGatewayListenerPolicy:
+	case *configurationv1alpha1.EventGatewayListenerPolicy:
 		return getEventGatewayListenerPolicyForUID(ctx, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
-	case *konnectv1alpha1.EventGatewayVirtualCluster:
+	case *configurationv1alpha1.EventGatewayVirtualCluster:
 		return getEventGatewayVirtualClusterForUID(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
-	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
-		return getKonnectEventDataPlaneCertificateForUID(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+		return getEventGatewayVirtualClusterConsumePolicyForUID(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
+		return getEventGatewayVirtualClusterProducePolicyForUID(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return getKonnectEventGatewayForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:
 		return getPortalForUID(ctx, sdk.GetPortalsSDK(), ent)
 	case *konnectv1alpha1.PortalCustomDomain:
 		return getPortalCustomDomainForUID(ctx, sdk.GetPortalCustomDomainsSDK(), ent)
+	case *konnectv1alpha1.PortalCustomization:
+		return getPortalCustomizationForUID(ctx, sdk.GetPortalCustomizationSDK(), ent)
 	case *konnectv1alpha1.PortalEmailConfig:
 		return getPortalEmailConfigForUID(ctx, sdk.GetPortalEmailsSDK(), ent)
 	case *konnectv1alpha1.PortalIPAllowList:

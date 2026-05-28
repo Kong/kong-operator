@@ -31,7 +31,12 @@ export CONFIG_FILE="config.yaml"
 go run .
 '''
 depends = [ "clean" ]
-depends_post = [ "generate-deepcopy" ]
+depends_post = [ "generate-list-funcs", "generate-deepcopy" ]
+
+[tasks.generate-list-funcs]
+description = "Generate list helper funcs for API list types"
+dir = ".."
+run = "go run ./scripts/apitypes-funcs"
 
 [tasks.generate-crds]
 description = "Generate CRDs using controller-gen"

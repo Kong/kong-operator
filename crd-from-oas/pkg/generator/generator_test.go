@@ -15,8 +15,6 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 func TestObjectRefTypeName(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -107,7 +105,7 @@ func TestGenerateWatch_UsesStableAPIAuthImportAndNamespacedLookup(t *testing.T) 
 			EntityNameLowerCamel: "portal",
 			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 			APIGroupPackageAlias: "konnectv1alpha1",
-		}, &config.ReconcilerConfig{IsRoot: ptr(true)})
+		}, &config.ReconcilerConfig{IsRoot: new(true)})
 		require.NoError(t, err)
 
 		assert.Contains(t, content, `konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
@@ -126,12 +124,15 @@ func TestGenerateWatch_UsesStableAPIAuthImportAndNamespacedLookup(t *testing.T) 
 			EntityNameLowerCamel: "portal",
 			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
 			APIGroupPackageAlias: "xkonnectv1alpha1",
-		}, &config.ReconcilerConfig{IsRoot: ptr(true)})
+		}, &config.ReconcilerConfig{IsRoot: new(true)})
 		require.NoError(t, err)
 
 		assert.Contains(t, content, `konnectapiauthv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
 		assert.Contains(t, content, `&konnectapiauthv1alpha1.KonnectAPIAuthConfiguration{}`)
+		assert.Contains(t, content, `&configurationv1alpha1.KongReferenceGrant{}`)
+		assert.Contains(t, content, `enqueueObjectsForKongReferenceGrant[xkonnectv1alpha1.PortalList](cl)`)
 		assert.Contains(t, content, `index.IndexFieldPortalOnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,`)
+		assert.NotContains(t, content, `client.InNamespace(auth.GetNamespace())`)
 	})
 }
 
@@ -146,7 +147,7 @@ func TestGenerateIndex_UsesNamespacedAPIAuthKey(t *testing.T) {
 		EntityNameLowerCamel: "portal",
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
 		APIGroupPackageAlias: "xkonnectv1alpha1",
-	}, &config.ReconcilerConfig{IsRoot: ptr(true)})
+	}, &config.ReconcilerConfig{IsRoot: new(true)})
 	require.NoError(t, err)
 
 	assert.Contains(t, content, `if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {`)
@@ -155,41 +156,77 @@ func TestGenerateIndex_UsesNamespacedAPIAuthKey(t *testing.T) {
 
 func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 	g := NewGenerator(Config{
-		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
-		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		APIGroupPackageAlias: "configurationv1alpha1",
 	})
 
 	metadata := reconcilerEntityMetadata{
-		EntityName:           "KonnectEventDataPlaneCertificate",
-		EntityNameLowerCamel: "konnectEventDataPlaneCertificate",
-		ParentEntityName:     "KonnectEventGateway",
-		ParentRefFieldName:   "GatewayRef",
-		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
-		APIGroupPackageAlias: "konnectv1alpha1",
+		EntityName:                 "EventGatewayBackendCluster",
+		EntityNameLowerCamel:       "eventGatewayBackendCluster",
+		ParentEntityName:           "KonnectEventGateway",
+		ParentRefFieldName:         "GatewayRef",
+		APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		APIGroupPackageAlias:       "configurationv1alpha1",
+		ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		ParentAPIGroupPackageAlias: "konnectv1alpha1",
 	}
 
 	t.Run("watches parent entity", func(t *testing.T) {
 		content, err := g.generateWatch(metadata, &config.ReconcilerConfig{
-			IsRoot:           ptr(false),
+			IsRoot:           new(false),
 			ParentEntityType: "KonnectEventGateway",
 		})
 		require.NoError(t, err)
 
+		assert.Contains(t, content, `configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"`)
 		assert.Contains(t, content, `&konnectv1alpha1.KonnectEventGateway{}`)
-		assert.Contains(t, content, `enqueueKonnectEventDataPlaneCertificateForKonnectEventGateway(cl)`)
-		assert.Contains(t, content, `index.IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef: parent.Name,`)
+		assert.Contains(t, content, `enqueueEventGatewayBackendClusterForKonnectEventGateway(cl)`)
+		assert.Contains(t, content, `index.IndexFieldEventGatewayBackendClusterOnKonnectEventGatewayRef: client.ObjectKeyFromObject(parent).String(),`)
+		assert.Contains(t, content, `&configurationv1alpha1.KongReferenceGrant{}`)
+		assert.Contains(t, content, `enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayBackendClusterList](cl)`)
+	})
+
+	t.Run("watches cross-group parent entity", func(t *testing.T) {
+		crossGroupMetadata := reconcilerEntityMetadata{
+			EntityName:                 "EventGatewayListener",
+			EntityNameLowerCamel:       "eventGatewayListener",
+			ParentEntityName:           "KonnectEventGateway",
+			ParentRefFieldName:         "GatewayRef",
+			APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+			APIGroupPackageAlias:       "configurationv1alpha1",
+			ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			ParentAPIGroupPackageAlias: "konnectv1alpha1",
+		}
+
+		content, err := g.generateWatch(crossGroupMetadata, &config.ReconcilerConfig{
+			IsRoot: new(false),
+			ParentEntityGVK: &config.EntityGVKConfig{
+				Kind:  "KonnectEventGateway",
+				Group: "konnect.konghq.com",
+			},
+		})
+		require.NoError(t, err)
+
+		assert.Contains(t, content, `configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"`)
+		assert.Contains(t, content, `konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"`)
+		assert.Contains(t, content, `return b.For(&configurationv1alpha1.EventGatewayListener{})`)
+		assert.Contains(t, content, `&konnectv1alpha1.KonnectEventGateway{}`)
+		assert.Contains(t, content, `parent, ok := obj.(*konnectv1alpha1.KonnectEventGateway)`)
+		assert.Contains(t, content, `var l configurationv1alpha1.EventGatewayListenerList`)
 	})
 
 	t.Run("indexes by dependency namespaced ref", func(t *testing.T) {
 		content, err := g.generateIndex(metadata, &config.ReconcilerConfig{
-			IsRoot:           ptr(false),
+			IsRoot:           new(false),
 			ParentEntityType: "KonnectEventGateway",
 		})
 		require.NoError(t, err)
 
-		assert.Contains(t, content, `IndexFieldKonnectEventDataPlaneCertificateOnKonnectEventGatewayRef`)
+		assert.Contains(t, content, `IndexFieldEventGatewayBackendClusterOnKonnectEventGatewayRef`)
 		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef == nil {`)
-		assert.Contains(t, content, `return []string{ent.Spec.GatewayRef.NamespacedRef.Name}`)
+		assert.Contains(t, content, `refNamespace := ent.GetNamespace()`)
+		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.GatewayRef.NamespacedRef.Namespace != "" {`)
+		assert.Contains(t, content, `return []string{refNamespace + "/" + ent.Spec.GatewayRef.NamespacedRef.Name}`)
 	})
 }
 
@@ -299,7 +336,7 @@ func TestGenerate_EmitsReconcilerConditionsFile(t *testing.T) {
 func TestGenerateCommonTypes(t *testing.T) {
 	t.Run("without import includes union ObjectRef types", func(t *testing.T) {
 		g := NewGenerator(Config{APIVersion: "v1alpha1"})
-		content, err := g.generateCommonTypes()
+		content, err := g.generateCommonTypes(nil)
 		require.NoError(t, err)
 		assert.Contains(t, content, "type ObjectRefType string")
 		assert.Contains(t, content, "type ObjectRef struct")
@@ -322,7 +359,7 @@ func TestGenerateCommonTypes(t *testing.T) {
 				},
 			},
 		})
-		content, err := g.generateCommonTypes()
+		content, err := g.generateCommonTypes(nil)
 		require.NoError(t, err)
 		assert.Contains(t, content, "type NamespacedRef struct")
 		assert.Contains(t, content, "Namespace *string")
@@ -340,7 +377,7 @@ func TestGenerateCommonTypes(t *testing.T) {
 				},
 			},
 		})
-		content, err := g.generateCommonTypes()
+		content, err := g.generateCommonTypes(nil)
 		require.NoError(t, err)
 		assert.NotContains(t, content, "type ObjectRef struct")
 		assert.NotContains(t, content, "type ObjectRefType string")
@@ -350,6 +387,20 @@ func TestGenerateCommonTypes(t *testing.T) {
 		assert.Contains(t, content, "type KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus")
 		assert.Contains(t, content, "type KonnectEntityRef struct")
 		assert.Contains(t, content, "Code generated by CRD generation pipeline. DO NOT EDIT.")
+	})
+
+	t.Run("with secret refs adds hardcoded SensitiveDataSource value max length marker", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIVersion: "v1alpha1",
+			SecretReferences: map[string][]config.SecretReferenceConfig{
+				"Entity": {{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"}},
+			},
+		})
+		content, err := g.generateCommonTypes(nil)
+		require.NoError(t, err)
+		assert.Contains(t, content, "type SensitiveDataSource struct")
+		assert.Contains(t, content, fmt.Sprintf("// +kubebuilder:validation:MaxLength=%d", sensitiveDataSourceValueMaxLength))
+		assert.Contains(t, content, "Value *string `json:\"value,omitempty\"`")
 	})
 
 }
@@ -486,6 +537,74 @@ func TestGenerateCRDType_DoesNotGenerateHelperMethods(t *testing.T) {
 	assert.NotContains(t, content, "konnectv1alpha2")
 }
 
+func TestGenerateCRDType_ParentRefWithoutReplacementReusesImmediateParentStatusField(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		CommonTypes: &config.CommonTypesConfig{
+			ObjectRef: &config.ObjectRefConfig{
+				Import: &config.ImportConfig{
+					Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+					Alias: "commonv1alpha1",
+				},
+			},
+		},
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"EventGatewayVirtualClusterConsumePolicy": {
+				ParentEntityType: "EventGatewayVirtualCluster",
+				ParentRef: &config.ParentRefConfig{
+					FieldName: "eventGatewayVirtualClusterRef",
+				},
+			},
+		},
+	})
+
+	schema := &parser.Schema{
+		Name: "CreateEventGatewayVirtualClusterConsumePolicy",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "Gateway", AccessorEntityName: "EventGateway", FieldName: "GatewayRef", JSONName: "gateway_ref"},
+			{ParamName: "virtualClusterId", EntityName: "VirtualCluster", AccessorEntityName: "EventGatewayVirtualCluster", FieldName: "VirtualClusterRef", JSONName: "virtual_cluster_ref"},
+		},
+	}
+
+	content, err := g.generateCRDType("CreateEventGatewayVirtualClusterConsumePolicy", schema)
+	require.NoError(t, err)
+	assert.Contains(t, content, "EventGatewayVirtualClusterRef commonv1alpha1.ObjectRef")
+	assert.Contains(t, content, "GatewayID *KonnectEntityRef")
+	assert.Contains(t, content, "VirtualClusterID *KonnectEntityRef")
+	assert.Contains(t, content, "VirtualClusterID *KonnectEntityRef `json:\"virtualClusterID,omitempty\"`")
+	assert.NotContains(t, content, "EventGatewayVirtualCluster *KonnectEntityRef")
+}
+
+func TestGenerateCRDType_EmitsInlineAPISpecTypes(t *testing.T) {
+	schema := &parser.Schema{
+		Name: "CreatePortalCustomization",
+		Properties: []*parser.Property{
+			{
+				Name: "menu",
+				Type: "object",
+				Properties: []*parser.Property{
+					{
+						Name: "title",
+						Type: "string",
+					},
+				},
+			},
+		},
+	}
+
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	content, err := g.generateCRDType("CreatePortalCustomization", schema)
+	require.NoError(t, err)
+	assert.Contains(t, content, "Menu Menu `json:\"menu,omitzero\"`") //nolint:dupword
+	assert.Contains(t, content, "type Menu struct {")
+	assert.Contains(t, content, "Title string `json:\"title,omitzero\"`")
+}
+
 func TestGenerateCRDFuncs_GeneratesKonnectLabelAccessors(t *testing.T) {
 	t.Run("referenced labels map type", func(t *testing.T) {
 		schema := &parser.Schema{
@@ -603,7 +722,7 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 			APIVersion: "v1alpha1",
 			ReconcilerConfig: map[string]*config.ReconcilerConfig{
 				"Portal": {
-					IsRoot: ptr(true),
+					IsRoot: new(true),
 				},
 			},
 		})
@@ -782,6 +901,115 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `return EventGatewayRefReasonInvalid`)
 		assert.Contains(t, content, `func (obj *EventGatewayDataPlaneCertificate) GetStatusConditionReasonParentRefNotProgrammed() string {`)
 		assert.Contains(t, content, `return EventGatewayRefReasonNotProgrammed`)
+	})
+
+	t.Run("parent ref without replacement reuses immediate parent status field", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CommonTypes: &config.CommonTypesConfig{
+				ObjectRef: &config.ObjectRefConfig{
+					Import: &config.ImportConfig{
+						Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+						Alias: "commonv1alpha1",
+					},
+				},
+			},
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"EventGatewayVirtualClusterConsumePolicy": {
+					ParentEntityType: "EventGatewayVirtualCluster",
+					ParentRef: &config.ParentRefConfig{
+						FieldName: "eventGatewayVirtualClusterRef",
+					},
+				},
+			},
+		})
+
+		schemaWithDependencies := &parser.Schema{
+			Name: "CreateEventGatewayVirtualClusterConsumePolicy",
+			Dependencies: []*parser.Dependency{
+				{EntityName: "Gateway", AccessorEntityName: "EventGateway", FieldName: "GatewayRef", JSONName: "gateway_ref"},
+				{EntityName: "VirtualCluster", AccessorEntityName: "EventGatewayVirtualCluster", FieldName: "VirtualClusterRef", JSONName: "virtual_cluster_ref"},
+			},
+		}
+
+		content, err := g.generateCRDFuncs("CreateEventGatewayVirtualClusterConsumePolicy", schemaWithDependencies)
+		require.NoError(t, err)
+		assert.Contains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) GetEventGatewayVirtualClusterRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.Spec.EventGatewayVirtualClusterRef`)
+		assert.Contains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) GetParentRef() commonv1alpha1.ObjectRef {`)
+		assert.Contains(t, content, `return obj.GetEventGatewayVirtualClusterRef()`)
+		assert.Contains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) SetParentID(id string) {`)
+		assert.Contains(t, content, `obj.SetVirtualClusterID(id)`)
+		assert.Contains(t, content, `return EventGatewayVirtualClusterRefValidConditionType`)
+		assert.NotContains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) GetEventGatewayVirtualClusterID() string {`)
+		assert.NotContains(t, content, `func (obj *EventGatewayVirtualClusterConsumePolicy) SetEventGatewayVirtualClusterID(id string) {`)
+	})
+
+	t.Run("multi-parent child without parent ref still gets ancestor setter", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CommonTypes: &config.CommonTypesConfig{
+				ObjectRef: &config.ObjectRefConfig{
+					Import: &config.ImportConfig{
+						Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+						Alias: "commonv1alpha1",
+					},
+				},
+			},
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"EventGatewayListenerPolicy": {
+					ParentEntityType:    "EventGatewayListener",
+					AncestorEntityTypes: []string{"KonnectEventGateway"},
+				},
+			},
+		})
+
+		schemaWithDependencies := &parser.Schema{
+			Name: "CreateEventGatewayListenerPolicy",
+			Dependencies: []*parser.Dependency{
+				{EntityName: "Gateway", AccessorEntityName: "EventGateway", FieldName: "GatewayRef", JSONName: "gateway_ref"},
+				{EntityName: "EventGatewayListener", AccessorEntityName: "EventGatewayListener", FieldName: "EventGatewayListenerRef", JSONName: "event_gateway_listener_ref"},
+			},
+		}
+
+		content, err := g.generateCRDFuncs("CreateEventGatewayListenerPolicy", schemaWithDependencies)
+		require.NoError(t, err)
+		assert.Contains(t, content, `func (obj *EventGatewayListenerPolicy) GetAncestorIDs() map[string]string {`)
+		assert.Contains(t, content, `m["KonnectEventGateway"] = obj.Status.GatewayID.ID`)
+		assert.Contains(t, content, `func (obj *EventGatewayListenerPolicy) SetAncestorID(kind, id string) {`)
+		assert.Contains(t, content, `case "KonnectEventGateway":`)
+		assert.Contains(t, content, `obj.SetGatewayID(id)`)
+	})
+
+	t.Run("cross-group parent gvk uses configured group", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "configuration.konghq.com",
+			APIVersion: "v1alpha1",
+			ReconcilerConfig: map[string]*config.ReconcilerConfig{
+				"EventGatewayListener": {
+					ParentEntityGVK: &config.EntityGVKConfig{
+						Kind:  "KonnectEventGateway",
+						Group: "konnect.konghq.com",
+					},
+				},
+			},
+		})
+
+		schemaWithDependencies := &parser.Schema{
+			Name: "CreateEventGatewayListener",
+			Dependencies: []*parser.Dependency{
+				{EntityName: "Gateway", AccessorEntityName: "EventGateway", FieldName: "GatewayRef", JSONName: "gateway_ref"},
+			},
+		}
+
+		content, err := g.generateCRDFuncs("CreateEventGatewayListener", schemaWithDependencies)
+		require.NoError(t, err)
+		assert.Contains(t, content, `return schema.GroupVersionKind{`)
+		assert.Contains(t, content, `Group:   "konnect.konghq.com",`)
+		assert.Contains(t, content, `Version: GroupVersion.Version,`)
+		assert.Contains(t, content, `Kind:    "KonnectEventGateway",`)
 	})
 
 	t.Run("root ref accessor uses last (immediate) dependency", func(t *testing.T) {
@@ -1006,6 +1234,38 @@ func TestGenerateSharedFiles_GeneratesSchemaUnionTests(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = format.Source([]byte(schemaTestFile.Content))
+	require.NoError(t, err)
+}
+
+func TestGenerateSchemaTypesTests_UsesMatchingJSONShapesForAnonymousUnionVariants(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayParsedRecordDecryptionSelector": {
+				Name: "EventGatewayParsedRecordDecryptionSelector",
+				Properties: []*parser.Property{
+					{
+						Name: "paths",
+						OneOf: []*parser.Property{
+							{Name: "Variant", Type: "array", Items: &parser.Property{Type: "object"}},
+							{Name: "Variant", Type: "string"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypesTests(map[string]bool{"EventGatewayParsedRecordDecryptionSelector": true}, parsed)
+
+	assert.Contains(t, content, `payload: []byte("{\"paths\":{\"type\":\"variant1\",\"variant1\":[]}}")`)
+	assert.Contains(t, content, `payload: []byte("{\"paths\":{\"type\":\"variant2\",\"variant2\":\"\"}}")`)
+
+	_, err := format.Source([]byte(content))
 	require.NoError(t, err)
 }
 
@@ -1364,6 +1624,236 @@ func TestGenerateSchemaTypes_AddsKubebuilderTags(t *testing.T) {
 	assert.Contains(t, content, "ProviderType string `json:\"providerType,omitzero\"`")
 }
 
+func TestGenerateSchemaTypes_QualifiesAmbiguousInlineTypesAndEmitsNestedUnionTypes(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayConsumeSchemaValidationPolicy": {
+				Name: "EventGatewayConsumeSchemaValidationPolicy",
+				Properties: []*parser.Property{
+					{
+						Name: "config",
+						Type: "object",
+						Properties: []*parser.Property{
+							{
+								Name: "schema_registry",
+								OneOf: []*parser.Property{
+									{RefName: "SchemaRegistryReferenceByID"},
+									{RefName: "SchemaRegistryReferenceByName"},
+								},
+							},
+						},
+					},
+				},
+			},
+			"EventGatewayModifyHeadersPolicyCreate": {
+				Name: "EventGatewayModifyHeadersPolicyCreate",
+				Properties: []*parser.Property{
+					{
+						Name: "config",
+						Type: "object",
+						Properties: []*parser.Property{
+							{Name: "headers", Type: "array", Items: &parser.Property{Type: "string"}},
+						},
+					},
+				},
+			},
+			"SchemaRegistryReferenceByID": {
+				Name:       "SchemaRegistryReferenceByID",
+				Properties: []*parser.Property{{Name: "id", Type: "string"}},
+			},
+			"SchemaRegistryReferenceByName": {
+				Name:       "SchemaRegistryReferenceByName",
+				Properties: []*parser.Property{{Name: "name", Type: "string"}},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"EventGatewayConsumeSchemaValidationPolicy": true,
+		"EventGatewayModifyHeadersPolicyCreate":     true,
+		"SchemaRegistryReferenceByID":               true,
+		"SchemaRegistryReferenceByName":             true,
+	}, parsed, nil)
+
+	assert.Contains(t, content, "Config EventGatewayConsumeSchemaValidationPolicyConfig `json:\"config,omitzero\"`")
+	assert.Contains(t, content, "Config EventGatewayModifyHeadersPolicyCreateConfig `json:\"config,omitzero\"`")
+	assert.Contains(t, content, "type EventGatewayConsumeSchemaValidationPolicyConfig struct {")
+	assert.Contains(t, content, "type EventGatewayModifyHeadersPolicyCreateConfig struct {")
+	assert.Contains(t, content, "SchemaRegistry *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry `json:\"schemaRegistry,omitempty\"`")
+	assert.Contains(t, content, "type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry struct {")
+}
+
+func TestGenerateSchemaTypes_EmitsAnonymousInlineUnionVariantTypes(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayParsedRecordDecryptionSelector": {
+				Name: "EventGatewayParsedRecordDecryptionSelector",
+				Properties: []*parser.Property{
+					{
+						Name: "paths",
+						OneOf: []*parser.Property{
+							{
+								Name:       "Variant",
+								Type:       "object",
+								Properties: []*parser.Property{{Name: "first_path", Type: "string"}},
+							},
+							{
+								Name:       "Variant",
+								Type:       "object",
+								Properties: []*parser.Property{{Name: "second_path", Type: "string"}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayParsedRecordDecryptionSelector": true}, parsed, nil)
+
+	assert.Contains(t, content, "Paths *EventGatewayParsedRecordDecryptionSelectorPaths `json:\"paths,omitempty\"`")
+	assert.Contains(t, content, "Variant1 *EventGatewayParsedRecordDecryptionSelectorPathsVariant1 `json:\"variant1,omitempty\"`")
+	assert.Contains(t, content, "Variant2 *EventGatewayParsedRecordDecryptionSelectorPathsVariant2 `json:\"variant2,omitempty\"`")
+	assert.Contains(t, content, "type EventGatewayParsedRecordDecryptionSelectorPathsVariant1 struct {")
+	assert.Contains(t, content, "FirstPath string `json:\"firstPath,omitzero\"`")
+	assert.Contains(t, content, "type EventGatewayParsedRecordDecryptionSelectorPathsVariant2 struct {")
+	assert.Contains(t, content, "SecondPath string `json:\"secondPath,omitzero\"`")
+	assert.NotContains(t, content, "Variant *Variant `json:\"variant,omitempty\"`")
+}
+
+func TestGenerateSchemaTypes_EmitsAnonymousArrayUnionVariantTypes(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayParsedRecordEncryptionSelector": {
+				Name: "EventGatewayParsedRecordEncryptionSelector",
+				Properties: []*parser.Property{
+					{
+						Name: "paths",
+						OneOf: []*parser.Property{
+							{Name: "Variant", Type: "array", Items: &parser.Property{Type: "string"}},
+							{Name: "Variant", Type: "array", Items: &parser.Property{Type: "integer"}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayParsedRecordEncryptionSelector": true}, parsed, nil)
+
+	assert.Contains(t, content, "Variant1 *EventGatewayParsedRecordEncryptionSelectorPathsVariant1 `json:\"variant1,omitempty\"`")
+	assert.Contains(t, content, "Variant2 *EventGatewayParsedRecordEncryptionSelectorPathsVariant2 `json:\"variant2,omitempty\"`")
+	assert.Contains(t, content, "type EventGatewayParsedRecordEncryptionSelectorPathsVariant1 []string")
+	assert.Contains(t, content, "type EventGatewayParsedRecordEncryptionSelectorPathsVariant2 []int")
+}
+
+func TestGenerateSchemaTypes_UsesAPIExtensionsJSONForAnonymousArrayObjectUnionVariants(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayParsedRecordDecryptionSelector": {
+				Name: "EventGatewayParsedRecordDecryptionSelector",
+				Properties: []*parser.Property{
+					{
+						Name: "paths",
+						OneOf: []*parser.Property{
+							{Name: "Variant", Type: "array", Items: &parser.Property{Type: "object"}},
+							{Name: "Variant", Type: "string"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayParsedRecordDecryptionSelector": true}, parsed, nil)
+
+	assert.Contains(t, content, `apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"`)
+	assert.Contains(t, content, "type EventGatewayParsedRecordDecryptionSelectorPathsVariant1 []apiextensionsv1.JSON")
+}
+
+func TestGenerateSchemaTypes_UsesActualDiscriminatorFieldName(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayModifyHeaderAction": {
+				Name:          "EventGatewayModifyHeaderAction",
+				Discriminator: "op",
+				OneOf: []*parser.Property{
+					{RefName: "EventGatewayModifyHeaderRemoveAction"},
+					{RefName: "EventGatewayModifyHeaderSetAction"},
+				},
+				DiscriminatorMapping: map[string]string{
+					"remove": "EventGatewayModifyHeaderRemoveAction",
+					"set":    "EventGatewayModifyHeaderSetAction",
+				},
+			},
+			"EventGatewayModifyHeaderRemoveAction": {
+				Name:       "EventGatewayModifyHeaderRemoveAction",
+				Properties: []*parser.Property{{Name: "key", Type: "string"}},
+			},
+			"EventGatewayModifyHeaderSetAction": {
+				Name:       "EventGatewayModifyHeaderSetAction",
+				Properties: []*parser.Property{{Name: "key", Type: "string"}, {Name: "value", Type: "string"}},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"EventGatewayModifyHeaderAction":       true,
+		"EventGatewayModifyHeaderRemoveAction": true,
+		"EventGatewayModifyHeaderSetAction":    true,
+	}, parsed, nil)
+
+	assert.Contains(t, content, `"encoding/json"`)
+	assert.Contains(t, content, `"fmt"`)
+	assert.Contains(t, content, "Op EventGatewayModifyHeaderActionType `json:\"op,omitempty\"`")
+	assert.Contains(t, content, "Op string `json:\"op\"`")
+	assert.NotContains(t, content, "Type EventGatewayModifyHeaderActionType `json:\"type,omitempty\"`")
+	assert.NotContains(t, content, `// +kubebuilder:validation:XValidation:rule="self.op == 'remove' ? has(self.remove) : !has(self.remove)",message="remove must be set only when op is remove"`)
+	assert.NotContains(t, content, `// +kubebuilder:validation:XValidation:rule="self.op == 'set' ? has(self.set) : !has(self.set)",message="set must be set only when op is set"`)
+}
+
+func TestGenerateSchemaTypes_EmitsTypeMatchCELForSelectedUnions(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EncryptionKey": {
+				Name:          "EncryptionKey",
+				Discriminator: "type",
+				OneOf: []*parser.Property{
+					{RefName: "EncryptionKeyAWS"},
+					{RefName: "EncryptionKeyStatic"},
+				},
+				DiscriminatorMapping: map[string]string{
+					"aws":    "EncryptionKeyAWS",
+					"static": "EncryptionKeyStatic",
+				},
+			},
+			"EncryptionKeyAWS": {
+				Name:       "EncryptionKeyAWS",
+				Properties: []*parser.Property{{Name: "arn", Type: "string"}},
+			},
+			"EncryptionKeyStatic": {
+				Name:       "EncryptionKeyStatic",
+				Properties: []*parser.Property{{Name: "key", Type: "string"}},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"EncryptionKey":       true,
+		"EncryptionKeyAWS":    true,
+		"EncryptionKeyStatic": true,
+	}, parsed, nil)
+
+	assert.Contains(t, content, `// +kubebuilder:validation:XValidation:rule="self.type == 'aws' ? has(self.aws) : !has(self.aws)",message="aws must be set only when type is aws"`)
+	assert.Contains(t, content, `// +kubebuilder:validation:XValidation:rule="self.type == 'static' ? has(self.static) : !has(self.static)",message="static must be set only when type is static"`)
+}
+
 func TestBuildSchemaCursors_NestedInlineObject(t *testing.T) {
 	// Cursor for an inline-object property nested inside a $ref schema.
 	// Config path uses JSON tags: spec.apiSpec.tls.clientIdentity.certificate
@@ -1692,6 +2182,60 @@ func TestBuildSchemaCursors_DuplicateSharedSchemaConflictReturnsError(t *testing
 	assert.Contains(t, err.Error(), "schema cursor conflict for \"SharedSchema\"")
 	assert.Contains(t, err.Error(), "entity \"FirstEntity\" path \"spec.apiSpec.shared\"")
 	assert.Contains(t, err.Error(), "entity \"SecondEntity\" path \"spec.apiSpec.shared\"")
+}
+
+func TestBuildSchemaCursors_SecretReferenceDoesNotRecordOriginalLeafTypeCursor(t *testing.T) {
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateListenerPolicy": {
+				Name: "CreateListenerPolicy",
+				Properties: []*parser.Property{{
+					Name:    "certificate",
+					Type:    "string",
+					RefName: "GatewaySecretReferenceOrLiteral",
+				}},
+			},
+			"CreateBackendCluster": {
+				Name: "CreateBackendCluster",
+				Properties: []*parser.Property{{
+					Name:    "certificate",
+					Type:    "string",
+					RefName: "GatewaySecretReferenceOrLiteral",
+				}},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"GatewaySecretReferenceOrLiteral": {
+				Name: "GatewaySecretReferenceOrLiteral",
+				Type: "string",
+			},
+		},
+	}
+
+	fieldCfg := &config.Config{
+		Entities: map[string]*config.EntityConfig{
+			"ListenerPolicy": {Fields: map[string]*config.FieldConfig{
+				"spec": {Fields: map[string]*config.FieldConfig{
+					"apiSpec": {Fields: map[string]*config.FieldConfig{
+						"certificate": {Validations: []string{"+kubebuilder:validation:MaxLength=4096"}},
+					}},
+				}},
+			}},
+		},
+	}
+
+	gen := NewGenerator(Config{
+		APIVersion:  "v1alpha1",
+		FieldConfig: fieldCfg,
+		SecretReferences: map[string][]config.SecretReferenceConfig{
+			"BackendCluster": {{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"}},
+		},
+	})
+	require.NoError(t, gen.buildSensitiveLeaves(parsed))
+
+	cursors, err := gen.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	assert.NotContains(t, cursors, "GatewaySecretReferenceOrLiteral")
 }
 
 func TestRecordSchemaCursor_ConflictDoesNotOverwriteExisting(t *testing.T) {
@@ -2328,6 +2872,34 @@ func TestGenerateSDKOps_OmitsDoubleBlankLineBeforeMarshalPayload(t *testing.T) {
 	assert.NotContains(t, content, ")\n\n\nfunc (s *EventGatewayListenerAPISpec) marshalSDKOpsPayload() ([]byte, error) {")
 }
 
+func TestGenerateSDKOps_DuplicateRequestTypeUsesOpSpecificMethods(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "title",
+				Type: "string",
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("PortalCustomization", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "func (s *PortalCustomizationAPISpec) ToCreatePortalCustomization()")
+	assert.Contains(t, content, "func (s *PortalCustomizationAPISpec) ToUpdatePortalCustomization()")
+	assert.NotContains(t, content, "func (s *PortalCustomizationAPISpec) ToPortalCustomization()")
+}
+
 func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{
@@ -2417,6 +2989,62 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	assert.Contains(t, content, "}\n\n// ToCreate")
 	assert.NotContains(t, content, `selected["dcr_config"]`)
 	assert.NotContains(t, content, "target.DcrConfig = &unionValue")
+}
+
+func TestGenerateSDKOps_RootUnionUsesWrappedOperationsBodyMetadata(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				Name:    "EventGatewayConsumeSchemaValidationPolicy",
+				RefName: "EventGatewayConsumeSchemaValidationPolicy",
+			},
+			{
+				Name:    "EventGatewayModifyHeadersPolicyCreate",
+				RefName: "EventGatewayModifyHeadersPolicyCreate",
+			},
+			{
+				Name:    "EventGatewayDecryptPolicy",
+				RefName: "EventGatewayDecryptPolicy",
+			},
+			{
+				Name:    "EventGatewaySkipRecordPolicyCreate",
+				RefName: "EventGatewaySkipRecordPolicyCreate",
+			},
+		},
+		Properties: []*parser.Property{
+			{Name: "schema_validation", Type: "object"},
+			{Name: "modify_headers", Type: "object"},
+			{Name: "decrypt", Type: "object"},
+			{Name: "skip_record", Type: "object"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"schema_validation": "EventGatewayConsumeSchemaValidationPolicy",
+			"modify_headers":    "EventGatewayModifyHeadersPolicyCreate",
+			"decrypt":           "EventGatewayDecryptPolicy",
+			"skip_record":       "EventGatewaySkipRecordPolicyCreate",
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterConsumePolicyRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterConsumePolicyRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("EventGatewayVirtualClusterConsumePolicy", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "body := sdkkonnectcomp.CreateEventGatewayConsumePolicyCreateSchemaValidation(member)")
+	assert.Contains(t, content, "EventGatewayConsumePolicyCreate: &body")
+	assert.Contains(t, content, "var body sdkkonnectcomp.EventGatewayConsumePolicyUpdate")
+	assert.Contains(t, content, "EventGatewayConsumePolicyUpdate: &body")
+	assert.NotContains(t, content, "CreateEventGatewayVirtualClusterConsumePolicyCreateSchemaValidation")
+	assert.NotContains(t, content, "EventGatewayVirtualClusterConsumePolicyCreate:")
+	assert.NotContains(t, content, "EventGatewayVirtualClusterConsumePolicyUpdate:")
 }
 
 func TestGenerateSDKOps_RootUnionOmitsDoubleBlankLineBeforeMarshalPayload(t *testing.T) {
@@ -2618,16 +3246,15 @@ func TestGenerateSDKOpsTest_AssertsNormalizedPayload(t *testing.T) {
 	assert.Contains(t, content, `require.Equal(t, "test-value", payload["name"])`)
 }
 
-func TestGenerateSDKOpsTest_Base64EncodesConfiguredSensitiveFields(t *testing.T) {
+func TestGenerateSDKOpsTest_UsesRawConfiguredSensitiveFields(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"EventGatewayBackendCluster": {
 				{
-					Path:           "spec.apiSpec.key",
-					Type:           "Secret",
-					Key:            "tls.key",
-					Base64Encoding: true,
+					Path: "spec.apiSpec.key",
+					Type: "Secret",
+					Key:  "tls.key",
 				},
 			},
 		},
@@ -2658,7 +3285,7 @@ func TestGenerateSDKOpsTest_Base64EncodesConfiguredSensitiveFields(t *testing.T)
 	content, err := g.generateSDKOpsTest("EventGatewayBackendCluster", schema, opsConfig)
 	require.NoError(t, err)
 	assert.Contains(t, content, `Key: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")}`)
-	assert.Contains(t, content, `require.Equal(t, "dGVzdC12YWx1ZQ==", payload["key"])`)
+	assert.Contains(t, content, `require.Equal(t, "test-value", payload["key"])`)
 }
 
 func TestGenerateSDKOpsTest_SupportsPointerAndNamedFields(t *testing.T) {
@@ -2802,6 +3429,44 @@ func TestParseSDKTypePath(t *testing.T) {
 	}
 }
 
+func TestParseSDKRequestBodyInfo(t *testing.T) {
+	tests := []struct {
+		name       string
+		importPath string
+		typeName   string
+		wantField  string
+		wantType   string
+		wantPtr    bool
+	}{
+		{
+			name:       "create consume policy request",
+			importPath: "github.com/Kong/sdk-konnect-go/models/operations",
+			typeName:   "CreateEventGatewayVirtualClusterConsumePolicyRequest",
+			wantField:  "EventGatewayConsumePolicyCreate",
+			wantType:   "EventGatewayConsumePolicyCreate",
+			wantPtr:    true,
+		},
+		{
+			name:       "update consume policy request",
+			importPath: "github.com/Kong/sdk-konnect-go/models/operations",
+			typeName:   "UpdateEventGatewayVirtualClusterConsumePolicyRequest",
+			wantField:  "EventGatewayConsumePolicyUpdate",
+			wantType:   "EventGatewayConsumePolicyUpdate",
+			wantPtr:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			info, err := ParseSDKRequestBodyInfo(tc.importPath, tc.typeName)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantField, info.FieldName)
+			assert.Equal(t, tc.wantType, info.TypeName)
+			assert.Equal(t, tc.wantPtr, info.Pointer)
+		})
+	}
+}
+
 func TestGenerateKonnectControllerSetupDispatcher(t *testing.T) {
 	infos := []*WatchFileInfo{
 		{
@@ -2810,14 +3475,14 @@ func TestGenerateKonnectControllerSetupDispatcher(t *testing.T) {
 			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		},
 		{
-			Entity:         "IdentityProviderRequest",
+			Entity:         "PortalIdentityProviderRequest",
 			APIAlias:       "konnectv1alpha1",
 			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		},
 		{
-			Entity:         "KonnectEventDataPlaneCertificate",
-			APIAlias:       "konnectv1alpha1",
-			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			Entity:         "EventGatewayDataPlaneCertificate",
+			APIAlias:       "configurationv1alpha1",
+			APIPackagePath: "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
 		},
 	}
 
@@ -2829,15 +3494,15 @@ func TestGenerateKonnectControllerSetupDispatcher(t *testing.T) {
 	assert.Equal(t, "modules/manager", file.RelativeDir)
 	assert.Contains(t, file.Content, "package manager")
 	assert.Contains(t, file.Content, "func generatedControllersForKonnectEntities(")
-	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.IdentityProviderRequest](controllerFactory)")
-	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.KonnectEventDataPlaneCertificate](controllerFactory)")
+	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.PortalIdentityProviderRequest](controllerFactory)")
+	assert.Contains(t, file.Content, "newKonnectEntityController[configurationv1alpha1.EventGatewayDataPlaneCertificate](controllerFactory)")
 	assert.Contains(t, file.Content, "newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory)")
 
-	idxIdentity := strings.Index(file.Content, "IdentityProviderRequest")
-	idxEventCert := strings.Index(file.Content, "KonnectEventDataPlaneCertificate")
-	idxPortal := strings.Index(file.Content, "Portal")
-	assert.Less(t, idxIdentity, idxEventCert)
+	idxIdentity := strings.Index(file.Content, "PortalIdentityProviderRequest")
+	idxEventCert := strings.Index(file.Content, "EventGatewayDataPlaneCertificate")
+	idxPortal := strings.Index(file.Content, "newKonnectEntityController[konnectv1alpha1.Portal](controllerFactory)")
 	assert.Less(t, idxEventCert, idxPortal)
+	assert.Less(t, idxPortal, idxIdentity)
 
 	formatted, err := format.Source([]byte(file.Content))
 	require.NoError(t, err)
@@ -2852,7 +3517,7 @@ func TestGenerateKonnectIndexOptionsDispatcher(t *testing.T) {
 			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		},
 		{
-			Entity:         "IdentityProviderRequest",
+			Entity:         "PortalIdentityProviderRequest",
 			APIAlias:       "konnectv1alpha1",
 			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		},
@@ -2871,15 +3536,15 @@ func TestGenerateKonnectIndexOptionsDispatcher(t *testing.T) {
 	assert.Equal(t, "modules/manager", file.RelativeDir)
 	assert.Contains(t, file.Content, "package manager")
 	assert.Contains(t, file.Content, "func generatedIndexOptionsForKonnectEntities(")
-	assert.Contains(t, file.Content, "index.OptionsForIdentityProviderRequest()")
+	assert.Contains(t, file.Content, "index.OptionsForPortalIdentityProviderRequest()")
 	assert.Contains(t, file.Content, "index.OptionsForKonnectEventDataPlaneCertificate()")
 	assert.Contains(t, file.Content, "index.OptionsForPortal()")
 
-	idxIdentity := strings.Index(file.Content, "OptionsForIdentityProviderRequest")
+	idxIdentity := strings.Index(file.Content, "OptionsForPortalIdentityProviderRequest")
 	idxEventCert := strings.Index(file.Content, "OptionsForKonnectEventDataPlaneCertificate")
-	idxPortal := strings.Index(file.Content, "OptionsForPortal")
-	assert.Less(t, idxIdentity, idxEventCert)
+	idxPortal := strings.Index(file.Content, "index.OptionsForPortal()")
 	assert.Less(t, idxEventCert, idxPortal)
+	assert.Less(t, idxPortal, idxIdentity)
 
 	formatted, err := format.Source([]byte(file.Content))
 	require.NoError(t, err)
@@ -2894,7 +3559,7 @@ func TestGenerateKonnectConstraintsDispatcher(t *testing.T) {
 			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		},
 		{
-			Entity:         "IdentityProviderRequest",
+			Entity:         "PortalIdentityProviderRequest",
 			APIAlias:       "konnectv1alpha1",
 			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		},
@@ -2908,7 +3573,7 @@ func TestGenerateKonnectConstraintsDispatcher(t *testing.T) {
 	assert.Equal(t, "controller/konnect/constraints", file.RelativeDir)
 	assert.Contains(t, file.Content, "package constraints")
 	assert.Contains(t, file.Content, "type SupportedGeneratedKonnectEntityType interface")
-	assert.Contains(t, file.Content, "konnectv1alpha1.IdentityProviderRequest")
+	assert.Contains(t, file.Content, "konnectv1alpha1.PortalIdentityProviderRequest")
 	assert.Contains(t, file.Content, "konnectv1alpha1.Portal")
 
 	formatted, err := format.Source([]byte(file.Content))
@@ -2925,7 +3590,7 @@ func TestGenerateKonnectAPIAuthWatchDispatcher(t *testing.T) {
 			IsRoot:         true,
 		},
 		{
-			Entity:         "IdentityProviderRequest",
+			Entity:         "PortalIdentityProviderRequest",
 			APIAlias:       "konnectv1alpha1",
 			APIPackagePath: "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		},
@@ -3204,7 +3869,7 @@ func TestGenerateReconcilerFiles_IncludesRBAC(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/x-konnect/v1alpha1",
 		APIGroupPackageAlias: "xkonnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -3233,7 +3898,7 @@ func TestGenerateOpsCreate_RootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -3273,7 +3938,7 @@ func TestGenerateOpsCreate_NonRootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"IdentityProviderRequest": {IsRoot: ptr(false)},
+			"IdentityProviderRequest": {IsRoot: new(false)},
 		},
 	})
 
@@ -3320,7 +3985,7 @@ func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
 			"KonnectEventDataPlaneCertificate": {
-				IsRoot:           ptr(false),
+				IsRoot:           new(false),
 				ParentEntityType: "KonnectEventGateway",
 			},
 		},
@@ -3366,7 +4031,7 @@ func TestGenerateOpsCreate_NonRootEntityMissingDependency_ReturnsError(t *testin
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Orphan": {IsRoot: ptr(false)},
+			"Orphan": {IsRoot: new(false)},
 		},
 	})
 
@@ -3423,7 +4088,7 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalPage": {IsRoot: ptr(false)},
+			"PortalPage": {IsRoot: new(false)},
 		},
 	})
 
@@ -3458,6 +4123,7 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 	res, err := g.generateEntityOpsFile("PortalPage", schema, opsConfig)
 	require.NoError(t, err)
 	require.NotNil(t, res.File)
+	require.NotNil(t, res.TestFile)
 	require.NotNil(t, res.CreateInfo)
 	require.NotNil(t, res.UpdateInfo)
 	require.NotNil(t, res.DeleteInfo)
@@ -3472,6 +4138,68 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 	assert.NotNil(t, res.SDKFactoryInfo)
 	assert.Equal(t, "PortalPagesSDK", res.SDKFactoryInfo.SDKInterfaceTypeName)
 	assert.Equal(t, "PortalPages", res.SDKFactoryInfo.SDKFieldName)
+	assert.Equal(t, "zz_generated_ops_portalpage_test.go", res.TestFile.Name)
+	assert.Contains(t, res.TestFile.Content, "mocks.NewMockPortalPagesSDK(t)")
+	assert.Contains(t, res.TestFile.Content, "obj.SetPortalID(parentID)")
+}
+
+func TestGenerateEntityOpsFile_ControllerOpsTestsUseSafeNamedRefLiterals(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalIdentityProviderRequest": {IsRoot: new(false), ParentEntityType: "Portal"},
+		},
+	})
+
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "enabled",
+				Type: "boolean",
+			},
+			{
+				Name:    "type",
+				Type:    "string",
+				RefName: "PortalIdentityProviderType",
+			},
+		},
+		OperationID:        "create-portal-identity-provider",
+		Tags:               []string{"PortalAuthSettings"},
+		SuccessResponseRef: "PortalIdentityProvider",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID: "update-portal-identity-provider",
+		UpdateTags:        []string{"PortalAuthSettings"},
+		UpdatePathParams:  []string{"portalId", "id"},
+		DeleteOperationID: "delete-portal-identity-provider",
+		DeleteTags:        []string{"PortalAuthSettings"},
+		DeletePathParams:  []string{"portalId", "id"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCreateIdentityProvider"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalUpdateIdentityProvider"},
+			"delete": {},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK",
+			FieldName: "PortalAuthSettings",
+		},
+		SkipGetForUID: true,
+	}
+
+	res, err := g.generateEntityOpsFile("PortalIdentityProviderRequest", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.TestFile)
+
+	assert.Contains(t, res.File.Content, "ToPortalCreateIdentityProvider")
+	assert.Contains(t, res.File.Content, "PortalUpdateIdentityProvider:")
+	assert.Contains(t, res.TestFile.Content, `Type: "test-value"`)
+	assert.NotContains(t, res.TestFile.Content, "PortalIdentityProviderType(")
+	assert.Contains(t, res.TestFile.Content, "PortalUpdateIdentityProvider:")
 }
 
 func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter(t *testing.T) {
@@ -3479,7 +4207,7 @@ func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalPage": {IsRoot: ptr(false)},
+			"PortalPage": {IsRoot: new(false)},
 		},
 	})
 
@@ -3514,7 +4242,7 @@ func TestGenerateEntityOpsFile_GetForUIDUsesUIDTagFilter_Golden(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
 		APIGroupPackageAlias: "configurationv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"KongService": {IsRoot: ptr(false), ParentEntityType: "KonnectGatewayControlPlane"},
+			"KongService": {IsRoot: new(false), ParentEntityType: "KonnectGatewayControlPlane"},
 		},
 	})
 
@@ -3603,7 +4331,7 @@ func TestGenerateEntityOpsFile_GetForUIDUsesRootUnionCases(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"EventGatewayListenerPolicy": {IsRoot: ptr(false), ParentEntityType: "EventGatewayListener"},
+			"EventGatewayListenerPolicy": {IsRoot: new(false), ParentEntityType: "EventGatewayListener"},
 		},
 	})
 
@@ -3674,7 +4402,7 @@ func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testin
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"KonnectEventDataPlaneCertificate": {IsRoot: ptr(false), ParentEntityType: "KonnectEventGateway"},
+			"KonnectEventDataPlaneCertificate": {IsRoot: new(false), ParentEntityType: "KonnectEventGateway"},
 		},
 		ManualGetForUIDEntities: map[string]bool{
 			"KonnectEventDataPlaneCertificate": true,
@@ -3710,7 +4438,7 @@ func TestGenerateEntityOpsFile_GetForUIDWithNoMatchStrategy(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalEmailConfig": {IsRoot: ptr(false)},
+			"PortalEmailConfig": {IsRoot: new(false)},
 		},
 	})
 
@@ -3753,6 +4481,55 @@ func TestGenerateEntityOpsFile_GetForUIDWithNoMatchStrategy(t *testing.T) {
 	assert.NotContains(t, res.File.Content, `sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"`)
 }
 
+func TestGenerateEntityOpsFile_GetForUIDSingletonNoIDWithoutMatchStrategy(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalCustomization": {IsRoot: new(false)},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-customization",
+		Tags:               []string{"Portal Customization"},
+		SuccessResponseRef: "PortalCustomization",
+		RespHasID:          false,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID:      "replace-portal-customization",
+		UpdateTags:             []string{"Portal Customization"},
+		UpdatePathParams:       []string{"portalId"},
+		ListOperationID:        "get-portal-customization",
+		ListTags:               []string{"Portal Customization"},
+		ListSuccessResponseRef: "PortalCustomization",
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"delete": {AsPUT: true},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalCustomizationSDK",
+			FieldName: "PortalCustomization",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalCustomization", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.TestFile)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	assert.Contains(t, res.File.Content, "singleton sub-resource without a persistent Konnect")
+	assert.Contains(t, res.File.Content, `return "", EntityWithMatchingUIDNotFoundError{Entity: obj}`)
+	assert.NotContains(t, res.File.Content, "sdk.GetPortalCustomization(ctx, parentID)")
+	assert.Contains(t, res.TestFile.Content, "expectedRequest := &sdkkonnectcomp.PortalCustomization{}")
+	assert.Contains(t, res.TestFile.Content, "DeletePortalCustomization")
+}
+
 // TestGenerateEntityOpsFile_ParentScopedSingleton verifies correct code
 // generation for resources like PortalEmailConfig whose PATCH and DELETE paths
 // contain only the parent ID (no entity-specific ID). The generated update call
@@ -3762,7 +4539,7 @@ func TestGenerateEntityOpsFile_ParentScopedSingleton(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"PortalEmailConfig": {IsRoot: ptr(false)},
+			"PortalEmailConfig": {IsRoot: new(false)},
 		},
 	})
 
@@ -3811,6 +4588,68 @@ func TestGenerateEntityOpsFile_ParentScopedSingleton(t *testing.T) {
 	// No entity ID variable in the generated delete or update functions.
 	// (id would be declared but unused, causing a compile error.)
 	assert.NotContains(t, content, "id := obj.GetKonnectStatus().GetKonnectID()")
+}
+
+func TestGenerateEntityOpsFile_ParentScopedSingletonWithIDGetForUID(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalEmailConfig": {IsRoot: new(false)},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-email-config",
+		Tags:               []string{"Portal Email Config"},
+		SuccessResponseRef: "PortalEmailConfig",
+		RespHasID:          true,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID:      "update-portal-email-config",
+		UpdateTags:             []string{"Portal Email Config"},
+		UpdatePathParams:       []string{"portalId"},
+		DeleteOperationID:      "delete-portal-email-config",
+		DeleteTags:             []string{"Portal Email Config"},
+		DeletePathParams:       []string{"portalId"},
+		ListOperationID:        "get-email-config",
+		ListTags:               []string{"Portal Email Config"},
+		ListSuccessResponseRef: "PortalEmailConfig",
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			MatchFields: []config.GetForUIDMatchField{
+				{
+					ObjectField:   "Spec.APISpec.DomainName",
+					ResponseField: "GetDomainName()",
+				},
+				{
+					ObjectField:   "Spec.APISpec.FromEmail",
+					ResponseField: "GetFromEmail()",
+				},
+			},
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PostPortalEmailConfig"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PatchPortalEmailConfig"},
+			"delete": {},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalEmailsSDK",
+			FieldName: "PortalEmails",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalEmailConfig", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	content := res.File.Content
+	assert.Contains(t, content, "sdk.GetEmailConfig(ctx, parentID)")
+	assert.Contains(t, content, "entry := resp.PortalEmailConfig")
+	assert.Contains(t, content, "switch id := any(entry.GetID()).(type)")
+	assert.NotContains(t, content, "resp.PortalEmailConfig.Data")
 }
 
 // TestGenerateEntityOpsFile_SingletonNoID verifies correct code generation for
@@ -3898,7 +4737,7 @@ func TestGenerateOpsUpdate_RootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -3948,7 +4787,7 @@ func TestGenerateOpsUpdate_NonRootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"IdentityProviderRequest": {IsRoot: ptr(false)},
+			"IdentityProviderRequest": {IsRoot: new(false)},
 		},
 	})
 
@@ -3999,7 +4838,7 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
 			"KonnectEventDataPlaneCertificate": {
-				IsRoot:           ptr(false),
+				IsRoot:           new(false),
 				ParentEntityType: "KonnectEventGateway",
 			},
 		},
@@ -4050,7 +4889,7 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"KonnectEventDataPlaneCertificate": {
 				{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"},
-				{Path: "spec.apiSpec.key", Type: "Secret", Key: "tls.key", Base64Encoding: true},
+				{Path: "spec.apiSpec.key", Type: "Secret", Key: "tls.key"},
 			},
 		},
 	})
@@ -4073,12 +4912,10 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	content, err := g.generateSDKOps("KonnectEventDataPlaneCertificate", schema, opsConfig)
 	require.NoError(t, err)
 	assert.Contains(t, content, `"context"`)
-	assert.Contains(t, content, `"encoding/base64"`)
+	assert.NotContains(t, content, `"encoding/base64"`)
 	assert.Contains(t, content, `corev1 "k8s.io/api/core/v1"`)
 	assert.Contains(t, content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
-	assert.Contains(t, content, "var KonnectEventDataPlaneCertificateSDKOpsBase64Fields = []KonnectEventDataPlaneCertificateSDKOpsBase64Field")
-	assert.Contains(t, content, `Label: "spec.apiSpec.key"`)
-	assert.Contains(t, content, `return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil`)
+	assert.NotContains(t, content, "SDKOpsBase64Field")
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, cl client.Client)")
 	assert.Contains(t, content, "src := apiSpec.Certificate")
 	assert.Contains(t, content, "src := apiSpec.Key")
@@ -4088,8 +4925,8 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	assert.Contains(t, content, "apiSpec.Certificate.Value = &resolved")
 	assert.Contains(t, content, "apiSpec.Key.Value = &resolved")
 	assert.Contains(t, content, "payload = flattenSensitiveData(payload)")
-	assert.Contains(t, content, "if err := encodeKonnectEventDataPlaneCertificateSDKOpsBase64Fields(pm); err != nil {")
-	assert.Contains(t, content, "failed to base64 encode KonnectEventDataPlaneCertificateAPISpec SDK payload")
+	assert.NotContains(t, content, "encodeKonnectEventDataPlaneCertificateSDKOpsBase64Fields")
+	assert.NotContains(t, content, "failed to base64 encode KonnectEventDataPlaneCertificateAPISpec SDK payload")
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToCreateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")
 	assert.Contains(t, content, "return spec.ToCreateEventGatewayDataPlaneCertificateRequest()")
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToUpdateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")
@@ -4101,7 +4938,7 @@ func TestGenerateOpsUpdate_PointerBody(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Foo": {IsRoot: ptr(true)},
+			"Foo": {IsRoot: new(true)},
 		},
 	})
 
@@ -4135,7 +4972,7 @@ func TestGenerateOpsUpdate_NoUpdateOp_Skipped(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -4195,8 +5032,8 @@ func TestGenerateOpsUpdateDispatcher(t *testing.T) {
 	assert.Contains(t, file.Content, "cl client.Client")
 
 	// Alphabetical ordering of case labels.
-	idxIdentity := strings.Index(file.Content, "case *konnectv1alpha1.IdentityProviderRequest:")
-	idxKonnectEvent := strings.Index(file.Content, "case *konnectv1alpha1.KonnectEventDataPlaneCertificate:")
+	idxIdentity := strings.Index(file.Content, "case *konnectv1alpha1.PortalIdentityProviderRequest:")
+	idxKonnectEvent := strings.Index(file.Content, "case *configurationv1alpha1.EventGatewayDataPlaneCertificate:")
 	idxPortal := strings.Index(file.Content, "case *konnectv1alpha1.Portal:")
 	assert.Less(t, idxIdentity, idxPortal, "cases should be alphabetically sorted")
 	assert.Less(t, idxKonnectEvent, idxPortal, "cases should be alphabetically sorted")
@@ -4213,7 +5050,7 @@ func TestGenerateOpsDelete_RootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -4269,7 +5106,7 @@ func TestGenerateOpsDelete_NonRootEntity(t *testing.T) {
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"IdentityProviderRequest": {IsRoot: ptr(false)},
+			"IdentityProviderRequest": {IsRoot: new(false)},
 		},
 	})
 
@@ -4321,7 +5158,7 @@ func TestGenerateOpsDelete_NonRootEntityWithParentTypeOverride(t *testing.T) {
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
 			"KonnectEventDataPlaneCertificate": {
-				IsRoot:           ptr(false),
+				IsRoot:           new(false),
 				ParentEntityType: "KonnectEventGateway",
 			},
 		},
@@ -4364,12 +5201,62 @@ func TestGenerateOpsDelete_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	assert.Contains(t, file.Content, "sdk.DeleteEventGatewayDataPlaneCertificate(ctx, parentID, id)")
 }
 
+func TestGenerateOpsDelete_AsPUTUsesUpdateMethod(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalCustomization": {IsRoot: new(false)},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-customization",
+		Tags:               []string{"Portal Customization"},
+		SuccessResponseRef: "PortalCustomization",
+		RespHasID:          false,
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		UpdateOperationID:    "replace-portal-customization",
+		UpdateTags:           []string{"Portal Customization"},
+		UpdatePathParams:     []string{"portalId"},
+		UpdateReqBodyPointer: false,
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"delete": {AsPUT: true},
+		},
+	}
+
+	file, info, err := g.generateOpsDelete("PortalCustomization", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Equal(t, "zz_generated_ops_portalcustomization.go", file.Name)
+	assert.Equal(t, "GetPortalCustomizationSDK", info.SDKGetter)
+	assert.Contains(t, file.Content, `sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"`)
+	assert.Contains(t, file.Content, "obj.Spec.APISpec.ToCreatePortalCustomization()")
+	assert.Contains(t, file.Content, "obj.Spec.APISpec.ToUpdatePortalCustomization()")
+	assert.Contains(t, file.Content, "func deletePortalCustomization(")
+	assert.Contains(t, file.Content, "parentID := obj.GetPortalID()")
+	assert.Contains(t, file.Content, `CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: DeleteOp}`)
+	assert.Contains(t, file.Content, "req := &sdkkonnectcomp.PortalCustomization{}")
+	assert.Contains(t, file.Content, "sdk.ReplacePortalCustomization(ctx, parentID, *req)")
+	assert.NotContains(t, file.Content, "SetKonnectID")
+	assert.NotContains(t, file.Content, "obj.GetKonnectStatus().GetKonnectID()")
+	assert.Contains(t, file.Content, "wrapErrIfKonnectOpFailed(err, DeleteOp, obj)")
+}
+
 func TestGenerateOpsDelete_NoDeleteOp_Skipped(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		APIGroupPackageAlias: "konnectv1alpha1",
 		ReconcilerConfig: map[string]*config.ReconcilerConfig{
-			"Portal": {IsRoot: ptr(true)},
+			"Portal": {IsRoot: new(true)},
 		},
 	})
 
@@ -4512,6 +5399,8 @@ func TestGenerateSchemaTypes_NonScalarOneOfFallsBack(t *testing.T) {
 
 	content := g.generateSchemaTypes(map[string]bool{"AuthMethod": true}, parsed, nil)
 
+	assert.NotContains(t, content, `"encoding/json"`)
+	assert.NotContains(t, content, `"fmt"`)
 	assert.NotContains(t, content, `intstr.IntOrString`)
 	assert.NotContains(t, content, `XIntOrString`)
 }

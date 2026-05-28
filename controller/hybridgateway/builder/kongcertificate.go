@@ -6,6 +6,7 @@ import (
 	"maps"
 	"strconv"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -88,6 +89,28 @@ func (b *KongCertificateBuilder) WithAnnotations(gateway *gwtypes.Gateway) *Kong
 		Name: gwtypes.ObjectName(gateway.Name),
 	}
 	annotations := metadata.BuildAnnotations(gateway, parentRef)
+	if b.certificate.Annotations == nil {
+		b.certificate.Annotations = make(map[string]string)
+	}
+	maps.Copy(b.certificate.Annotations, annotations)
+	return b
+}
+
+// WithLabelsForRoute sets labels on the KongCertificate derived from a route object and its parent reference.
+// This is the route-driven equivalent of WithLabels(gateway, listener) used for listener TLS certs.
+func (b *KongCertificateBuilder) WithLabelsForRoute(route client.Object, pRef *gwtypes.ParentReference) *KongCertificateBuilder {
+	labels := metadata.BuildLabels(route, pRef)
+	if b.certificate.Labels == nil {
+		b.certificate.Labels = make(map[string]string)
+	}
+	maps.Copy(b.certificate.Labels, labels)
+	return b
+}
+
+// WithAnnotationsForRoute sets annotations on the KongCertificate derived from a route object and its parent reference.
+// This is the route-driven equivalent of WithAnnotations(gateway) used for listener TLS certs.
+func (b *KongCertificateBuilder) WithAnnotationsForRoute(route client.Object, pRef *gwtypes.ParentReference) *KongCertificateBuilder {
+	annotations := metadata.BuildAnnotations(route, pRef)
 	if b.certificate.Annotations == nil {
 		b.certificate.Annotations = make(map[string]string)
 	}

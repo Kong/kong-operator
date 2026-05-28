@@ -9,16 +9,19 @@ import (
 // GeneratedSDK is the interface for generated SDKs.
 type GeneratedSDK interface {
 	GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewayBackendClustersSDK
+	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK
 	GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatewayListenerPoliciesSDK
 	GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewayVirtualClustersSDK
-	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
-	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
+	GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK
+	GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetPortalsSDK() sdkkonnectgo.PortalsSDK
 	GetPortalCustomDomainsSDK() sdkkonnectgo.PortalCustomDomainsSDK
+	GetPortalCustomizationSDK() sdkkonnectgo.PortalCustomizationSDK
 	GetPortalEmailsSDK() sdkkonnectgo.PortalEmailsSDK
 	GetPortalsIPAllowListSDK() sdkkonnectgo.PortalsIPAllowListSDK
+	GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK
 	GetPortalPagesSDK() sdkkonnectgo.PortalPagesSDK
 	GetPortalTeamsSDK() sdkkonnectgo.PortalTeamsSDK
 }
@@ -26,6 +29,11 @@ type GeneratedSDK interface {
 // GetEventGatewayBackendClustersSDK returns the SDK to operate EventGatewayBackendCluster.
 func (w sdkWrapper) GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewayBackendClustersSDK {
 	return w.sdk.EventGatewayBackendClusters
+}
+
+// GetEventGatewayDataPlaneCertificatesSDK returns the SDK to operate EventGatewayDataPlaneCertificate.
+func (w sdkWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
+	return w.sdk.EventGatewayDataPlaneCertificates
 }
 
 // GetEventGatewayListenersSDK returns the SDK to operate EventGatewayListener.
@@ -43,14 +51,14 @@ func (w sdkWrapper) GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewa
 	return w.sdk.EventGatewayVirtualClusters
 }
 
-// GetPortalAuthSettingsSDK returns the SDK to operate IdentityProviderRequest.
-func (w sdkWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK {
-	return w.sdk.PortalAuthSettings
+// GetEventGatewayVirtualClusterConsumePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterConsumePolicy.
+func (w sdkWrapper) GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK {
+	return w.sdk.EventGatewayVirtualClusterConsumePolicies
 }
 
-// GetEventGatewayDataPlaneCertificatesSDK returns the SDK to operate KonnectEventDataPlaneCertificate.
-func (w sdkWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
-	return w.sdk.EventGatewayDataPlaneCertificates
+// GetEventGatewayVirtualClusterProducePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterProducePolicy.
+func (w sdkWrapper) GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK {
+	return w.sdk.EventGatewayVirtualClusterProducePolicies
 }
 
 // GetEventGatewaysSDK returns the SDK to operate KonnectEventGateway.
@@ -68,6 +76,11 @@ func (w sdkWrapper) GetPortalCustomDomainsSDK() sdkkonnectgo.PortalCustomDomains
 	return w.sdk.PortalCustomDomains
 }
 
+// GetPortalCustomizationSDK returns the SDK to operate PortalCustomization.
+func (w sdkWrapper) GetPortalCustomizationSDK() sdkkonnectgo.PortalCustomizationSDK {
+	return w.sdk.PortalCustomization
+}
+
 // GetPortalEmailsSDK returns the SDK to operate PortalEmailConfig.
 func (w sdkWrapper) GetPortalEmailsSDK() sdkkonnectgo.PortalEmailsSDK {
 	return w.sdk.PortalEmails
@@ -76,6 +89,11 @@ func (w sdkWrapper) GetPortalEmailsSDK() sdkkonnectgo.PortalEmailsSDK {
 // GetPortalsIPAllowListSDK returns the SDK to operate PortalIPAllowList.
 func (w sdkWrapper) GetPortalsIPAllowListSDK() sdkkonnectgo.PortalsIPAllowListSDK {
 	return w.sdk.PortalsIPAllowList
+}
+
+// GetPortalAuthSettingsSDK returns the SDK to operate PortalIdentityProviderRequest.
+func (w sdkWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK {
+	return w.sdk.PortalAuthSettings
 }
 
 // GetPortalPagesSDK returns the SDK to operate PortalPage.

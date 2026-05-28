@@ -170,6 +170,16 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return res, err
 	}
 
+	// For KongPluginBinding, verify the pluginRef early: check plugin existence for all refs,
+	// and additionally check the KongReferenceGrant for cross-namespace refs. Running this
+	// before the Konnect SDK ops layer ensures that grant/plugin changes are reflected
+	// immediately via the watch-triggered enqueue rather than waiting for the sync period.
+	if res, stop, err := handlePluginRef(ctx, r.Client, ent); err != nil || !res.IsZero() {
+		return res, err
+	} else if stop {
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+	}
+
 	// If a type has a KongService ref, handle it.
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {
@@ -206,7 +216,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
 			}
-			return ctrl.Result{}, err
+			return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 
 		default:
 			log.Error(logger, err, "error handling KongService ref")
@@ -605,9 +615,21 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		if errURL, ok := errors.AsType[*url.Error](err); ok {
 			return r.handleOpsErr(ctx, ent, errURL)
 		}
-		return ctrl.Result{}, err
+		if errMatchingIDNotFound, ok := errors.AsType[ops.EntityWithMatchingIDNotFoundError](err); ok {
+			// If the error is that the entity with the matching ID was not found,
+			// in Konnect, it means that it was deleted from Konnect.
+			// We continue with the reconciliation which will recreate the entity on Konnect
+			// and update the status with the new Konnect ID.
+			logger.Info(
+				"Konnect entity with matching ID not found on Konnect, it might have been deleted. Continuing reconciliation to recreate it.",
+				"konnect_id", errMatchingIDNotFound.ID,
+			)
+			ent.SetKonnectID("")
+		} else {
+			return ctrl.Result{}, err
+		}
 	} else if !res.IsZero() || stop {
-		return res, err
+		return res, nil
 	}
 
 	// TODO: relying on status ID is OK but we need to rethink this because

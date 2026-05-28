@@ -159,6 +159,7 @@ func TestIngressEssentials(t *testing.T) {
 		map[string]string{
 			annotations.IngressClassKey: ingressClass,
 			"konghq.com/strip-path":     "true",
+			"konghq.com/protocols":      "http",
 		}, service)
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {

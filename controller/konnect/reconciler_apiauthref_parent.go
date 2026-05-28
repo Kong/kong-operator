@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 func getAPIAuthConfigurationRefFromParent[
@@ -21,46 +20,19 @@ func getAPIAuthConfigurationRefFromParent[
 ](
 	ctx context.Context,
 	cl client.Client,
-	obj objectWithParentRef,
+	obj client.Object,
+	parentRef commonv1alpha1.ObjectRef,
 ) (types.NamespacedName, error) {
-	parentRef := obj.GetParentRef()
-	if parentRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
-		parentRef.NamespacedRef == nil {
+	parent, nnParent, err := getParentForRef[ParentT, ParentTPtr](ctx, cl, parentRef, obj.GetNamespace())
+	if err != nil {
+		return types.NamespacedName{}, err
+	}
+
+	authRef := parent.GetKonnectAPIAuthConfigurationRef()
+	nnAPIAuth, err := getAPIAuthConfigurationRefNN(ctx, cl, parent, authRef.Name, authRef.Namespace)
+	if err != nil {
 		return types.NamespacedName{},
-			fmt.Errorf("invalid parent reference: must be a NamespacedRef with a non-nil NamespacedRef field")
-	}
-
-	if parentRef.NamespacedRef.Namespace != nil && *parentRef.NamespacedRef.Namespace != obj.GetNamespace() {
-		// TODO https://github.com/Kong/kong-operator/issues/4134
-		return types.NamespacedName{},
-			fmt.Errorf("invalid reference: cross-namespace reference is not supported")
-	}
-
-	nnParent := types.NamespacedName{
-		Name: parentRef.NamespacedRef.Name,
-		// TODO https://github.com/Kong/kong-operator/issues/4134
-		Namespace: obj.GetNamespace(),
-	}
-
-	var p ParentT
-	var parent ParentTPtr = &p
-	if err := cl.Get(ctx, nnParent, parent); err != nil {
-		return types.NamespacedName{}, fmt.Errorf("failed to get %T %s: %w", parent, nnParent, err)
-	}
-
-	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
-	nnAPIAuth := types.NamespacedName{
-		Name: parent.GetKonnectAPIAuthConfigurationRef().Name,
-		// TODO: handle cross namespace refs
-		Namespace: parent.GetNamespace(),
-	}
-
-	if err := cl.Get(ctx, nnAPIAuth, &apiAuth); err != nil {
-		return types.NamespacedName{},
-			fmt.Errorf(
-				"failed to get APIAuthConfiguration %s for %T %s: %w",
-				nnAPIAuth, parent, nnParent, err,
-			)
+			fmt.Errorf("failed to resolve APIAuthConfiguration for %T %s: %w", parent, nnParent, err)
 	}
 
 	return nnAPIAuth, nil

@@ -160,6 +160,8 @@ spec:
             - "GET"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -176,6 +178,8 @@ spec:
             - "POST"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -192,6 +196,8 @@ spec:
             - "PUT"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -208,6 +214,8 @@ spec:
             - "PATCH"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -224,6 +232,8 @@ spec:
             - "DELETE"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -238,6 +248,8 @@ spec:
             - "/status/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     
@@ -434,6 +446,8 @@ spec:
             - "GET"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     
@@ -677,6 +691,8 @@ spec:
             - "GET"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     

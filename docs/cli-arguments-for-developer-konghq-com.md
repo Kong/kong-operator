@@ -144,6 +144,10 @@ rows:
     type: '`bool`'
     description: "Enable the Gateway controller."
     default: '`true`'
+  - flag: '`--enable-controller-kegdataplane`'
+    type: '`bool`'
+    description: "Enable the KEG (Kong Event Gateway) DataPlane controller."
+    default: '`false`'
   - flag: '`--enable-controller-kongplugininstallation`'
     type: '`bool`'
     description: "Enable the KongPluginInstallation controller."

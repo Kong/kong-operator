@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -580,14 +581,14 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			"KongPlugin wasn't created using Konnect API or its KonnectID wasn't set",
 		)
 
-		t.Log("Waiting for KongPluginBinding to get ResolvedRefs condition with status=True")
+		t.Log("Waiting for KongPluginBinding to get PluginRefValid condition with status=True")
 		watchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongPluginBinding) bool {
 			if k.GetName() != kpb.GetName() || k.GetNamespace() != kpb.GetNamespace() {
 				return false
 			}
 
-			return k8sutils.HasConditionTrue(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, k)
-		}, "KongPluginBinding didn't get ResolvedRefs status condition set to True")
+			return k8sutils.HasConditionTrue(konnectv1alpha1.KongPluginRefValidConditionType, k)
+		}, "KongPluginBinding didn't get PluginRefValid status condition set to True")
 
 		deleteCall := sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), pluginID).
@@ -647,14 +648,14 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			client.ObjectKeyFromObject(kpb),
 		)
 
-		t.Log("Waiting for KongPluginBinding to get ResolvedRefs condition with status=False")
+		t.Log("Waiting for KongPluginBinding to get PluginRefValid condition with status=False")
 		watchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongPluginBinding) bool {
 			if k.GetName() != kpb.GetName() || k.GetNamespace() != kpb.GetNamespace() {
 				return false
 			}
 
-			return k8sutils.HasConditionFalse(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, k)
-		}, "KongPluginBinding didn't get ResolvedRefs status condition set to False")
+			return k8sutils.HasConditionFalse(konnectv1alpha1.KongPluginRefValidConditionType, k)
+		}, "KongPluginBinding didn't get PluginRefValid status condition set to False")
 
 		t.Logf("delete the unmanaged KongPluginBinding %s, then check it gets collected",
 			client.ObjectKeyFromObject(kpb),
@@ -670,6 +671,120 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			"delete the KongService %s and check it gets collected, as there should be no finalizer blocking its deletion",
 			client.ObjectKeyFromObject(kongService),
 		)
+		require.NoError(t, clientNamespaced.Delete(ctx, kongService))
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, apierrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService),
+			))
+		}, waitTime, tickTime)
+
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
+	})
+
+	t.Run("binding to KongService with same-namespace KongPlugin not found gets PluginRefValid=False/Invalid", func(t *testing.T) {
+		w := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		serviceID := uuid.NewString()
+
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
+
+		// Create a binding that references a KongPlugin that does not exist.
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
+			konnect.NewKongPluginBindingBuilder().
+				WithControlPlaneRefKonnectNamespaced(cp.Name).
+				WithPluginRefName("does-not-exist").
+				WithServiceTarget(kongService.Name).
+				Build(),
+		)
+		t.Logf(
+			"wait for the controller to set PluginRefValid=False/Invalid on %s (plugin does not exist)",
+			client.ObjectKeyFromObject(kpb),
+		)
+
+		t.Log("Waiting for KongPluginBinding to get PluginRefValid=False/Invalid condition")
+		watchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongPluginBinding) bool {
+			if k.GetName() != kpb.GetName() || k.GetNamespace() != kpb.GetNamespace() {
+				return false
+			}
+			cond, ok := k8sutils.GetCondition(konnectv1alpha1.KongPluginRefValidConditionType, k)
+			return ok && cond.Status == "False" && cond.Reason == konnectv1alpha1.KongPluginRefReasonInvalid
+		}, "KongPluginBinding didn't get PluginRefValid=False/Invalid condition")
+
+		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, apierrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
+
+		require.NoError(t, clientNamespaced.Delete(ctx, kongService))
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, apierrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService),
+			))
+		}, waitTime, tickTime)
+
+		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
+	})
+
+	t.Run("binding to KongService with cross-namespace KongPlugin not found (grant present) gets PluginRefValid=False/Invalid", func(t *testing.T) {
+		w := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		serviceID := uuid.NewString()
+
+		// Grant is present but no KongPlugin exists in ns2 with this name.
+		krg := deploy.KongReferenceGrant(t, ctx, clientNamespaced2,
+			deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "KongPluginBinding",
+				Namespace: configurationv1alpha1.Namespace(ns.Name),
+			}),
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:  "KongPlugin",
+			}),
+		)
+		t.Cleanup(func() {
+			require.NoError(t, clientNamespaced2.Delete(ctx, krg))
+		})
+
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
+
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
+			konnect.NewKongPluginBindingBuilder().
+				WithControlPlaneRefKonnectNamespaced(cp.Name).
+				WithPluginRefName("does-not-exist").
+				WithPluginRefNamespace(ns2.Name).
+				WithServiceTarget(kongService.Name).
+				Build(),
+		)
+		t.Logf(
+			"wait for the controller to set PluginRefValid=False/Invalid on %s (grant present, plugin absent)",
+			client.ObjectKeyFromObject(kpb),
+		)
+
+		t.Log("Waiting for KongPluginBinding to get PluginRefValid=False/Invalid condition")
+		watchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongPluginBinding) bool {
+			if k.GetName() != kpb.GetName() || k.GetNamespace() != kpb.GetNamespace() {
+				return false
+			}
+			cond, ok := k8sutils.GetCondition(konnectv1alpha1.KongPluginRefValidConditionType, k)
+			return ok && cond.Status == "False" && cond.Reason == konnectv1alpha1.KongPluginRefReasonInvalid
+		}, "KongPluginBinding didn't get PluginRefValid=False/Invalid condition")
+
+		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, apierrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, waitTime, tickTime, "KongPluginBinding did not get deleted but should have")
+
 		require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, apierrors.IsNotFound(

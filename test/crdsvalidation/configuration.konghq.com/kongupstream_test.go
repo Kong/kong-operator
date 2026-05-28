@@ -583,4 +583,71 @@ func TestKongUpstream(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("cert ref", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongUpstream]{
+			{
+				Name: "clientCertificateRef with name is accepted",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-cp",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							ClientCertificateRef: &commonv1alpha1.NamespacedRef{
+								Name: "my-cert",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "clientCertificateRef with cross-namespace ref is accepted",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-cp",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							ClientCertificateRef: &commonv1alpha1.NamespacedRef{
+								Name:      "my-cert",
+								Namespace: new("other-namespace"),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "setting both client_certificate and clientCertificateRef is not allowed",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-cp",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							ClientCertificate: &sdkkonnectcomp.UpstreamClientCertificate{
+								ID: new("some-konnect-id"),
+							},
+							ClientCertificateRef: &commonv1alpha1.NamespacedRef{
+								Name: "my-cert",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("client_certificate and clientCertificateRef are mutually exclusive"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
 }

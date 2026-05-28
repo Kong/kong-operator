@@ -1,7 +1,6 @@
 apiGroupVersions:
-  konnect.konghq.com/v1alpha1:
+  configuration.konghq.com/v1alpha1:
     categories:
-      - konnect
       - kong
     # Don't generate groupversion_info.go for this API group — it is hand-written.
     # zz_generated_groupversion_info.go (addKnownTypesGenerated) is still emitted.
@@ -13,20 +12,8 @@ apiGroupVersions:
           alias: commonv1alpha1
     types:
       # Event Gateway APIs
-      - path: /v1/event-gateways
-        name: KonnectEventGateway
-        ops:
-          sdk:
-            interface: github.com/Kong/sdk-konnect-go.EventGatewaysSDK
-            fieldName: EventGateways
-          create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest
-          update:
-            path: github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest
-          delete: {}
-        reconciler: {}
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
-        name: KonnectEventDataPlaneCertificate
+        name: EventGatewayDataPlaneCertificate
         secretReferences:
           - path: spec.apiSpec.certificate
             type: Secret
@@ -50,7 +37,9 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest
           delete: {}
         reconciler:
-          parentEntityType: KonnectEventGateway
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -63,21 +52,18 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayListenerRequest
           delete: {}
         reconciler:
-          parentEntityType: KonnectEventGateway
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
-        cel:
-          spec:
-            apiSpec:
-              tlsServer:
-                config:
-                  certificates:
-                    certificate:
-                       _validations:
-                        - "+kubebuilder:validation:MaxLength=4096"
-                    key:
-                       _validations:
-                        - "+kubebuilder:validation:MaxLength=4096"
+        secretReferences:
+          - path: spec.apiSpec.tlsServer.config.certificates[].certificate
+            type: Secret
+            key: tls.crt
+          - path: spec.apiSpec.tlsServer.config.certificates[].key
+            type: Secret
+            key: tls.key
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
@@ -105,7 +91,11 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayListenerPolicyRequest
           delete: {}
         reconciler:
-          parentEntityType: EventGatewayListener
+          parentEntityGVK:
+            kind: EventGatewayListener
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
           # Speakeasy SDK uses "ListenerID" (not "EventGatewayListenerID") for the
           # eventGatewayListenerId path param when it appears as a parent (not entity ID).
           parentSDKFields:
@@ -118,15 +108,8 @@ apiGroupVersions:
             apiSpec:
               tls:
                 caBundle:
-                   _validations:
+                  _validations:
                     - "+kubebuilder:validation:MaxLength=4096"
-                clientIdentity:
-                  certificate:
-                     _validations:
-                      - "+kubebuilder:validation:MaxLength=4096"
-                  key:
-                     _validations:
-                      - "+kubebuilder:validation:MaxLength=4096"
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayBackendClustersSDK
@@ -137,7 +120,9 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateBackendClusterRequest
           delete: {}
         reconciler:
-          parentEntityType: KonnectEventGateway
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
         secretReferences:
           - path: spec.apiSpec.tls.clientIdentity.certificate
             type: Secret
@@ -145,9 +130,6 @@ apiGroupVersions:
           - path: spec.apiSpec.tls.clientIdentity.key
             type: Secret
             key: tls.key
-            # TODO: Remove Base64 encoding when API starts accepting raw values.
-            # TODO: https://github.com/Kong/kong-operator/issues/4304
-            base64Encoding: true
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
         ops:
@@ -160,12 +142,79 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateVirtualClusterRequest
           delete: {}
         reconciler:
-          parentEntityType: EventGatewayBackendCluster
+          parentEntityGVK:
+            kind: EventGatewayBackendCluster
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
           parentRef:
             fieldName: eventGatewayBackendClusterRef
             replacesAPISpecField: destination
-          ancestorEntityTypes:
-            - KonnectEventGateway
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policies
+        name: EventGatewayVirtualClusterProducePolicy
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
+            fieldName: EventGatewayVirtualClusterProducePolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterProducePolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterProducePolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: EventGatewayVirtualCluster
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
+        name: EventGatewayVirtualClusterConsumePolicy
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK
+            fieldName: EventGatewayVirtualClusterConsumePolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterConsumePolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterConsumePolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind:  EventGatewayVirtualCluster
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
+
+  konnect.konghq.com/v1alpha1:
+    categories:
+      - konnect
+      - kong
+    # Don't generate groupversion_info.go for this API group — it is hand-written.
+    # zz_generated_groupversion_info.go (addKnownTypesGenerated) is still emitted.
+    generateGroupVersionInfo: false
+    commonTypes:
+      objectRef:
+        import:
+          path: github.com/kong/kong-operator/v2/api/common/v1alpha1
+          alias: commonv1alpha1
+    types:
+      # Event Gateway APIs
+      - path: /v1/event-gateways
+        name: KonnectEventGateway
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewaysSDK
+            fieldName: EventGateways
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest
+          delete: {}
+        reconciler: {}
 
       # Portal APIs
       - path: /v3/portals
@@ -191,16 +240,28 @@ apiGroupVersions:
             interface: github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK
             fieldName: PortalAuthSettings
           # The SDK list endpoint uses positional args and response items lack
-          # labels/tags, and there is no deterministic field-match strategy yet.
+          # labels/tags, and there is no deterministic field-match strategy for
+          # the nested identity-provider config union yet. See
+          # https://github.com/Kong/kong-operator/issues/3987.
           skipGetForUID: true
           create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreateIdentityProvider
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateIdentityProvider
           update:
-            path: github.com/Kong/sdk-konnect-go/models/components.UpdateIdentityProvider
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalUpdateIdentityProvider
           delete: {}
         reconciler: {}
       - path: /v3/portals/{portalId}/teams
         ops:
+          getForUID:
+            # Portal teams do not expose labels/tags in Konnect list responses,
+            # so recover conflicts by matching the stable spec fields that are
+            # echoed back by the API. Only the immutable identifier (name) is
+            # used here; user-mutable fields like description are left to the
+            # subsequent update reconciliation. This mitigates
+            # https://github.com/Kong/kong-operator/issues/3987.
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: GetName()
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalTeamsSDK
             fieldName: PortalTeams
@@ -219,6 +280,14 @@ apiGroupVersions:
                   # TODO: https://github.com/Kong/kong-operator/issues/4008
                   - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parentPageIDRef\""
         ops:
+          getForUID:
+            # Portal pages do not expose labels/tags in Konnect list responses;
+            # match on the immutable slug (unique within a portal) so user
+            # edits to title/description don't break conflict recovery. This
+            # mitigates https://github.com/Kong/kong-operator/issues/3987.
+            matchFields:
+              - objectField: Spec.APISpec.Slug
+                responseField: GetSlug()
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalPagesSDK
             fieldName: PortalPages
@@ -231,6 +300,10 @@ apiGroupVersions:
       - path: /v3/portals/{portalId}/email-config
         name: PortalEmailConfig
         ops:
+          # PortalEmailConfig is a singleton per portal; the generator emits a
+          # singular GET that returns the only entry, so no matchFields config
+          # is needed. Any spec drift is reconciled by the subsequent update.
+          # This mitigates https://github.com/Kong/kong-operator/issues/3987.
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalEmailsSDK
             fieldName: PortalEmails
@@ -284,4 +357,17 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortalCustomDomainRequest
           delete: {}
+        reconciler: {}
+      - path: /v3/portals/{portalId}/customization
+        name: PortalCustomization
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.PortalCustomizationSDK
+            fieldName: PortalCustomization
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          delete:
+            asPUT: true
         reconciler: {}

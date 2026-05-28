@@ -82,6 +82,7 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 
 	var err error
 	var hostnames []string
+	routeHostnames := routeHostNamesString(*route)
 
 	listeners, err := refs.GetListenersByParentRef(ctx, cl, route, pRef)
 	if err != nil {
@@ -99,7 +100,9 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 				// This listener doesn't match the section reference, skip it
 				continue
 			}
-			if pRef.Port != nil && listener.Port != *pRef.Port {
+		}
+		if pRef.Port != nil {
+			if listener.Port != lo.FromPtr(pRef.Port) {
 				// This listener doesn't match the port reference, skip it
 				continue
 			}
@@ -109,18 +112,31 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 		// No need to do further checks.
 		if listener.Hostname == nil || *listener.Hostname == "" {
 			log.Debug(logger, "Listener accepts all hostnames", "listener", listener.Name)
-			hostnames := routeHostNamesString(*route)
-			return hostnames, nil
+			return routeHostnames, nil
+		}
+
+		// If the route does not specify hostnames, it matches all listener hostnames.
+		if len(routeHostnames) == 0 {
+			hostnames = append(hostnames, string(*listener.Hostname))
+			continue
 		}
 
 		// Handle wildcard hostnames - get intersection
 		log.Debug(logger, "Processing listener with hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname)
-		for _, host := range routeHostNamesString(*route) {
-			if intersection := utils.HostnameIntersection(string(*listener.Hostname), host); intersection != "" {
+		for _, host := range routeHostnames {
+			if intersection, ok := utils.HostnameIntersection(string(*listener.Hostname), host); ok {
 				log.Trace(logger, "Found hostname intersection", "listenerHostname", *listener.Hostname, "routeHostname", host, "intersection", intersection)
 				hostnames = append(hostnames, intersection)
 			}
 		}
+	}
+
+	hostnames = lo.Uniq(hostnames)
+	if len(hostnames) == 0 {
+		// Returning nil tells the caller to skip this parent entirely. An empty slice
+		// would flow into WithHosts() and create a host-less KongRoute that matches any host.
+		log.Debug(logger, "No hostname intersection found for ParentRef")
+		return nil, nil
 	}
 
 	log.Debug(logger, "Finished processing hostnames", "finalHostnames", hostnames)

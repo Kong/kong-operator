@@ -69,6 +69,8 @@ spec:
       value: 3
     - name: http_method
       value: "GET"
+    - name: client_cert_secret_name
+      value: (join('-', [($namespace), 'client-cert-secret']))
 
   steps:
     # Step 1: Create TLS secret for Gateway TLS listener.
@@ -190,6 +192,8 @@ spec:
             - "/echo/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -237,6 +241,98 @@ spec:
                 namespace: ($namespace)
               spec:
                 host_header: "fake.com"
+
+    # Step 16: Create TLS Secret for
+    - name: Create-tls-secret-for-client-cert-annotation
+      description: Create TLS Secret for client-cert annotation.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+      bindings:
+        - name: cert_secret_name
+          value: ($client_cert_secret_name)
+
+    # Step 17: Patch Service with client cert annotation.
+    - name: Patch-service-with-client-cert-annotation
+      description: Patch Service with client cert annotation.
+      try:
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                namespace: ($namespace)
+                name: echo-with-annotations
+                annotations:
+                  konghq.com/client-cert: ($client_cert_secret_name)
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                namespace: ($namespace)
+                name: echo-with-annotations
+                annotations:
+                  konghq.com/client-cert: ($client_cert_secret_name)
+
+    # Step 18: Assert KongService has the correct client cert reference.
+    - name: Assert-kong-service-client-cert-ref`
+      description: Assert KongService client cert reference.
+      try:
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: NAMESPACE
+                value: ($gateway_namespace)
+              - name: RESOURCE_TYPE
+                value: kongservices.configuration.konghq.com
+            content: |
+              bash ../../common/scripts/kongResource_name.sh
+            outputs:
+              - name: kongservice_name
+                value: (json_parse($stdout).name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($kongservice_name)
+                namespace: ($namespace)
+              spec:
+                clientCertificateRef:
+                  name: ($kongservice_name)
+              status:
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'True'
+                    reason: Valid
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($kongservice_name)
+                namespace: ($namespace)
+              spec:
+                type: secretRef
+                secretRef:
+                  name: ($client_cert_secret_name)
+                  namespace: ($namespace)
+              status:
+                # Multi-condition status check.
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
 
   catch:
     # Capture debug snapshot on test failure.

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	gojson "github.com/goccy/go-json"
-	"github.com/google/uuid"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
@@ -92,8 +91,8 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 
 	es := discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewString(),
-			Namespace: ns.Name,
+			GenerateName: "endpointslice-",
+			Namespace:    ns.Name,
 			Labels: map[string]string{
 				"kubernetes.io/service-name": service.Name,
 			},

@@ -275,6 +275,25 @@ const (
 )
 
 const (
+	// KongPluginRefValidConditionType is the type of the condition that indicates
+	// whether the KongPlugin reference in KongPluginBinding.spec.pluginRef is valid,
+	// i.e. the KongPlugin exists and the cross-namespace access is permitted by a
+	// KongReferenceGrant (when applicable).
+	KongPluginRefValidConditionType = "PluginRefValid"
+
+	// KongPluginRefReasonValid is the reason used with the PluginRefValid condition type
+	// indicating that the pluginRef is valid (same-namespace, or cross-namespace with a grant).
+	KongPluginRefReasonValid = "Valid"
+	// KongPluginRefReasonRefNotPermitted is the reason used with the PluginRefValid
+	// condition type indicating that a KongReferenceGrant is missing or invalid for a
+	// cross-namespace pluginRef.
+	KongPluginRefReasonRefNotPermitted = "RefNotPermitted"
+	// KongPluginRefReasonInvalid is the reason used with the PluginRefValid condition type
+	// indicating that the referenced KongPlugin does not exist or cannot be fetched.
+	KongPluginRefReasonInvalid = "Invalid"
+)
+
+const (
 	// KongCACertificateRefsValidConditionType is the type of the condition that indicates
 	// whether the KongCACertificate references are valid and point to existing KongCACertificates.
 	KongCACertificateRefsValidConditionType = "KongCACertificateRefsValid"

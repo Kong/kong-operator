@@ -1,5 +1,11 @@
 package generator
 
+// sensitiveDataSourceValueMaxLength defines the maximum length for string values
+// in the SensitiveDataSource struct.
+// When needed this can be considered to be made configurable via config.yaml,
+// but for now it's a constant since it applies uniformly to all string fields in the SensitiveDataSource struct.
+const sensitiveDataSourceValueMaxLength = 4096
+
 const objectRefTypeEnum = `// ObjectRefType is the enum type for the ObjectRef.
 //
 // +kubebuilder:validation:Enum=namespacedRef
@@ -125,19 +131,22 @@ type SensitiveDataSource struct {
 	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
 	//
 	// +kubebuilder:validation:Enum=inline;secretRef
-	// +kubebuilder:default=inline
+	// +kubebuilder:default=inline{{range .SensitiveDataSourceTypeValidations}}
+	// {{ . }}{{end}}
 	Type SensitiveDataSourceType ` + "`" + `json:"type"` + "`" + `
 
 	// Value contains the sensitive data provided inline.
 	// Required when type is 'inline'.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength={{ .SensitiveDataSourceValueMaxLength }}
 	Value *string ` + "`" + `json:"value,omitempty"` + "`" + `
 
 	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
 	// Required when type is 'secretRef'.
 	//
-	// +optional
+	// +optional{{range .SensitiveDataSourceSecretRefValidations}}
+	// {{ . }}{{end}}
 	SecretRef *{{.NamespacedRefTypeName}} ` + "`" + `json:"secretRef,omitempty"` + "`" + `
 }`
 
@@ -203,25 +212,21 @@ func flattenSensitiveData(v any) any {
 // recursive so it also fixes unions buried inside arrays or under other
 // nested properties.
 const flattenSDKUnionsHelper = `// flattenSDKUnions recursively flattens nested discriminated-union shapes
-// {"type": "X", "X": {...}} into the flat shape {"type": "X", ...} expected
-// by the Konnect SDK request types.
+// {"<disc>": "X", "X": {...}} into the flat shape {"<disc>": "X", ...}
+// expected by the Konnect SDK request types.
 func flattenSDKUnions(v any) any {
 	switch x := v.(type) {
 	case map[string]any:
 		for k, val := range x {
 			x[k] = flattenSDKUnions(val)
 		}
-		t, ok := x["type"].(string)
-		if !ok || t == "" {
-			return x
-		}
-		inner, ok := x[t].(map[string]any)
+		_, discriminatorValue, inner, ok := nestedSDKUnionMember(x)
 		if !ok {
 			return x
 		}
-		delete(x, t)
+		delete(x, discriminatorValue)
 		for k, vv := range inner {
-			if k == "type" {
+			if _, isString := vv.(string); isString && x[k] == vv {
 				continue
 			}
 			x[k] = vv
@@ -234,6 +239,33 @@ func flattenSDKUnions(v any) any {
 		return x
 	}
 	return v
+}
+
+func nestedSDKUnionMember(object map[string]any) (string, string, map[string]any, bool) {
+	preferred := []string{"type", "op", "kind", "mode"}
+	for _, key := range preferred {
+		if value, inner, ok := nestedSDKUnionMemberForKey(object, key); ok {
+			return key, value, inner, true
+		}
+	}
+	for key := range object {
+		if value, inner, ok := nestedSDKUnionMemberForKey(object, key); ok {
+			return key, value, inner, true
+		}
+	}
+	return "", "", nil, false
+}
+
+func nestedSDKUnionMemberForKey(object map[string]any, key string) (string, map[string]any, bool) {
+	discriminatorValue, ok := object[key].(string)
+	if !ok || discriminatorValue == "" {
+		return "", nil, false
+	}
+	inner, ok := object[discriminatorValue].(map[string]any)
+	if !ok {
+		return "", nil, false
+	}
+	return discriminatorValue, inner, true
 }`
 
 // renameKeysToSDKHelper provides camelCase → snake_case key translation so
@@ -259,16 +291,25 @@ func camelToSnakeCase(s string) string {
 	return string(buf)
 }
 
-// renameKeysToSDK converts all map keys and discriminator "type" values from
+// renameKeysToSDK converts all map keys and common discriminator values from
 // camelCase (CRD K8s wire format) to snake_case (Konnect SDK wire format).
+func isSDKDiscriminatorKey(key string) bool {
+	switch key {
+	case "type", "op", "kind", "mode":
+		return true
+	default:
+		return false
+	}
+}
+
 func renameKeysToSDK(v any) any {
 	switch x := v.(type) {
 	case map[string]any:
 		result := make(map[string]any, len(x))
 		for k, val := range x {
 			newKey := camelToSnakeCase(k)
-			// Discriminator type string values must also be snake_case for the SDK.
-			if k == "type" {
+			// Discriminator string values must also be snake_case for the SDK.
+			if isSDKDiscriminatorKey(k) {
 				if s, ok := val.(string); ok {
 					val = camelToSnakeCase(s)
 				}

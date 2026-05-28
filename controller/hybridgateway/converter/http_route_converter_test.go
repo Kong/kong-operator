@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -753,6 +755,134 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 			},
 		},
 		{
+			name: "translates upstream header matching route end to end",
+			setup: func() *httpRouteConverter {
+				route := newHTTPRouteWithRules(
+					[]string{"api.example.com"},
+					[]gwtypes.HTTPRouteRule{
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Headers: []gatewayv1.HTTPHeaderMatch{{
+									Name:  "version",
+									Value: "one",
+								}},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Headers: []gatewayv1.HTTPHeaderMatch{{
+									Name:  "version",
+									Value: "two",
+								}},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Headers: []gatewayv1.HTTPHeaderMatch{
+									{
+										Name:  "version",
+										Value: "two",
+									},
+									{
+										Name:  "color",
+										Value: "orange",
+									},
+								},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "blue",
+									}},
+								},
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "green",
+									}},
+								},
+							},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "red",
+									}},
+								},
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "yellow",
+									}},
+								},
+							},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+					},
+				)
+				gateway := baseGateway()
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(baseObjects(gateway)...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount: 22,
+			wantOutputs: outputCount{
+				upstreams: 5,
+				services:  5,
+				routes:    7,
+				targets:   5,
+			},
+			wantStoreLen: 22,
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+
+				routeNames := map[string]struct{}{}
+				serviceNames := map[string]struct{}{}
+				headersByRoute := map[string]int{}
+
+				for _, obj := range store {
+					route, ok := obj.(*configurationv1alpha1.KongRoute)
+					if !ok {
+						continue
+					}
+
+					routeNames[route.Name] = struct{}{}
+					assert.Empty(t, route.Spec.Paths)
+					assert.Empty(t, route.Spec.Methods)
+					require.NotNil(t, route.Spec.ServiceRef)
+					require.NotNil(t, route.Spec.ServiceRef.NamespacedRef)
+
+					serviceName := route.Spec.ServiceRef.NamespacedRef.Name
+					serviceNames[serviceName] = struct{}{}
+
+					headersKey := canonicalHeaderMatchSet(route.Spec.Headers)
+					headersByRoute[headersKey]++
+				}
+
+				expectedHeaders := map[string]int{
+					"color=blue":               1,
+					"color=green":              1,
+					"color=orange&version=two": 1,
+					"color=red":                1,
+					"color=yellow":             1,
+					"version=one":              1,
+					"version=two":              1,
+				}
+
+				assert.Len(t, routeNames, 7)
+				assert.Len(t, serviceNames, 1)
+				assert.Equal(t, expectedHeaders, headersByRoute)
+			},
+		},
+		{
 			name: "returns error when filter translation fails",
 			setup: func() *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
@@ -1402,6 +1532,26 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 			wantHosts: []string{"api.example.com", "web.example.com"},
 		},
 		{
+			name: "returns nil when no hostname intersection",
+			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
+				route := newHTTPRouteWithHostnames("api.example.com")
+				gateway := newGatewayWithListenerHostnames("other.example.com")
+				gateway.UID = types.UID("gateway-uid")
+				objects := newKonnectGatewayStandardObjects(gateway)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				port := gwtypes.PortNumber(80)
+				pRef := gwtypes.ParentReference{
+					Name:  "test-gateway",
+					Port:  &port,
+					Group: new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:  new(gwtypes.Kind("Gateway")),
+				}
+				return converter, pRef
+			},
+			wantNil: true,
+		},
+		{
 			name: "returns nil when port mismatches",
 			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
 				route := newHTTPRouteWithHostnames("api.example.com")
@@ -1444,6 +1594,26 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 			wantHosts: []string{"api.example.com", "web.example.com"},
 		},
 		{
+			name: "route without hostnames uses listener hostnames",
+			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
+				route := newHTTPRouteWithHostnames()
+				gateway := newGatewayWithListenerHostnames("api.example.com", "web.example.com")
+				gateway.UID = types.UID("gateway-uid")
+				objects := newKonnectGatewayStandardObjects(gateway)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				port := gwtypes.PortNumber(80)
+				pRef := gwtypes.ParentReference{
+					Name:  "test-gateway",
+					Port:  &port,
+					Group: new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:  new(gwtypes.Kind("Gateway")),
+				}
+				return converter, pRef
+			},
+			wantHosts: []string{"api.example.com", "web.example.com"},
+		},
+		{
 			name: "listener accepts all hostnames with empty route hostnames",
 			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
 				route := newHTTPRouteWithHostnames()
@@ -1462,6 +1632,26 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				return converter, pRef
 			},
 			wantHosts: []string{},
+		},
+		{
+			name: "returns listener hostname when route hostnames are empty and section name matches without port",
+			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
+				route := newHTTPRouteWithHostnames()
+				gateway := newGatewayWithListenerHostnames("second-example.org")
+				gateway.UID = types.UID("gateway-uid")
+				objects := newKonnectGatewayStandardObjects(gateway)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				sectionName := gwtypes.SectionName("listener-0")
+				pRef := gwtypes.ParentReference{
+					Name:        "test-gateway",
+					SectionName: &sectionName,
+					Group:       new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:        new(gwtypes.Kind("Gateway")),
+				}
+				return converter, pRef
+			},
+			wantHosts: []string{"second-example.org"},
 		},
 		{
 			name: "returns error when listener lookup fails",
@@ -1559,6 +1749,27 @@ func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBa
 		BackendRefs: backendRefs,
 		Filters:     filters,
 	}})
+}
+
+func canonicalHeaderMatchSet(headers map[string][]string) string {
+	if len(headers) == 0 {
+		return ""
+	}
+
+	keys := make([]string, 0, len(headers))
+	for key := range headers {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		values := append([]string(nil), headers[key]...)
+		slices.Sort(values)
+		parts = append(parts, key+"="+strings.Join(values, "|"))
+	}
+
+	return strings.Join(parts, "&")
 }
 
 func newHTTPRouteWithRules(hostnames []string, rules []gwtypes.HTTPRouteRule) *gwtypes.HTTPRoute {

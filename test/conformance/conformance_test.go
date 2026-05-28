@@ -227,7 +227,8 @@ func createGatewayConfiguration(
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Name: consts.DataPlaneProxyContainerName,
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: test.DataPlaneImage(),
 										ReadinessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,
@@ -238,8 +239,8 @@ func createGatewayConfiguration(
 												corev1.ResourceMemory: resource.MustParse("128Mi"),
 											},
 											Limits: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("500m"),
-												corev1.ResourceMemory: resource.MustParse("1024Mi"),
+												corev1.ResourceCPU:    resource.MustParse("2000m"),
+												corev1.ResourceMemory: resource.MustParse("2048Mi"),
 											},
 										},
 										Env: []corev1.EnvVar{

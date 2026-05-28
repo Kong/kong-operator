@@ -43,6 +43,9 @@ var commonSupportedFeatures = sets.New(
 
 	// TLSRoute extended.
 	features.SupportTLSRouteModeTerminate,
+	// TODO: support multiple TLSRoute modes on the same port:
+	// https://github.com/Kong/kong-operator/issues/3511
+	// features.SupportTLSRouteModeMixed,
 )
 
 // GetSupportedFeatures returns the supported features for the given router type.

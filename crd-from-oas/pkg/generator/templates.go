@@ -139,17 +139,17 @@ type {{.EntityName}}Status struct {
 	// {{.EntityName}}ID is the Konnect ID of the parent {{.EntityName}}.
 	//
 	// +optional
-	{{.EntityName}}ID *KonnectEntityRef ` + "`" + `json:"{{.EntityName | lower}}ID,omitempty"` + "`" + `
+	{{.EntityName}}ID *KonnectEntityRef ` + "`" + `json:"{{statusIDJSONName .EntityName}},omitempty"` + "`" + `
 {{end}}{{range .References}}
 	// {{.Kind}} is the Konnect entity reference resolved from {{.Path}}.
 	//
 	// +optional
 	{{.Kind}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .Kind}},omitempty"` + "`" + `
-{{end}}{{- if .ParentRef}}
-	// {{.SetParentIDEntityName}} is the Konnect entity reference for the parent {{.SetParentIDEntityName}}.
+{{end}}{{- if .EmitParentRefStatusField}}
+	// {{.ParentStatusEntityName}} is the Konnect entity reference for the parent {{.ParentStatusEntityName}}.
 	//
 	// +optional
-	{{.SetParentIDEntityName}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .SetParentIDEntityName}},omitempty"` + "`" + `
+	{{.ParentStatusEntityName}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .ParentStatusEntityName}},omitempty"` + "`" + `
 {{end}}{{- else}}{{"\n"}}{{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
@@ -268,7 +268,7 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
-	obj.Set{{.SetParentIDEntityName}}ID(id)
+	obj.Set{{.ParentStatusEntityName}}ID(id)
 }
 {{- else}}
 
@@ -301,7 +301,11 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("{{.ParentKind}}")
+	return schema.GroupVersionKind{
+		Group:   "{{.ParentGroup}}",
+		Version: GroupVersion.Version,
+		Kind:    "{{.ParentKind}}",
+	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type
@@ -328,22 +332,22 @@ func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefInvalid() string {
 func (obj *{{.EntityName}}) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return {{.RefConditionPrefix}}RefReasonNotProgrammed
 }
-{{- if .ParentRef}}
+{{- if .EmitParentRefStatusField}}
 
-// Get{{.SetParentIDEntityName}}ID returns the Konnect ID resolved for the parent {{.SetParentIDEntityName}}.
-func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}ID() string {
-	if obj.Status.{{.SetParentIDEntityName}} == nil {
+// Get{{.ParentStatusEntityName}}ID returns the Konnect ID resolved for the parent {{.ParentStatusEntityName}}.
+func (obj *{{.EntityName}}) Get{{.ParentStatusEntityName}}ID() string {
+	if obj.Status.{{.ParentStatusEntityName}} == nil {
 		return ""
 	}
-	return obj.Status.{{.SetParentIDEntityName}}.ID
+	return obj.Status.{{.ParentStatusEntityName}}.ID
 }
 
-// Set{{.SetParentIDEntityName}}ID sets the resolved Konnect ID for the parent {{.SetParentIDEntityName}}.
-func (obj *{{.EntityName}}) Set{{.SetParentIDEntityName}}ID(id string) {
-	if obj.Status.{{.SetParentIDEntityName}} == nil {
-		obj.Status.{{.SetParentIDEntityName}} = &KonnectEntityRef{}
+// Set{{.ParentStatusEntityName}}ID sets the resolved Konnect ID for the parent {{.ParentStatusEntityName}}.
+func (obj *{{.EntityName}}) Set{{.ParentStatusEntityName}}ID(id string) {
+	if obj.Status.{{.ParentStatusEntityName}} == nil {
+		obj.Status.{{.ParentStatusEntityName}} = &KonnectEntityRef{}
 	}
-	obj.Status.{{.SetParentIDEntityName}}.ID = id
+	obj.Status.{{.ParentStatusEntityName}}.ID = id
 }
 {{- end}}
 {{- end}}
@@ -416,7 +420,7 @@ func (obj *{{.EntityName}}) GetAncestorIDs() map[string]string {
 	return m
 }
 {{- end}}
-{{- if and .ParentRef .AncestorDependencies}}
+{{- if and .AncestorDependencies (or .ParentRef (gt (len .Dependencies) 1))}}
 
 // SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
 func (obj *{{.EntityName}}) SetAncestorID(kind, id string) {
@@ -438,9 +442,6 @@ import (
 {{- if .NeedsClient}}
 	"context"
 {{- end}}
-	{{- if .Base64Fields}}
-	"encoding/base64"
-	{{- end}}
 	"encoding/json"
 	"fmt"
 {{- if .NeedsClient}}
@@ -452,11 +453,13 @@ import (
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
 {{end}}){{if .BoolFields}}
 
+// {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type {{$.EntityName}}SDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
+// {{$.EntityName}}SDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var {{$.EntityName}}SDKOpsBoolFields = []{{$.EntityName}}SDKOpsBoolField{
 {{- range .BoolFields}}
 	{
@@ -549,66 +552,6 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}{{if .Base64Fields}}
-
-type {{$.EntityName}}SDKOpsBase64Field struct {
-	Label string
-	Path  []string
-}
-
-var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
-{{- range .Base64Fields}}
-	{
-		Label: "{{.Label}}",
-		Path: []string{
-{{- range .Path}}
-			"{{.}}",
-{{- end}}
-		},
-	},
-{{- end}}
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Fields(payload map[string]any) error {
-	for _, field := range {{$.EntityName}}SDKOpsBase64Fields {
-		if _, err := encode{{$.EntityName}}SDKOpsBase64Field(payload, field.Path); err != nil {
-			return fmt.Errorf("%s: %w", field.Label, err)
-		}
-	}
-	return nil
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, error) {
-	if len(path) == 0 {
-		switch typed := value.(type) {
-		case nil:
-			return nil, nil
-		case string:
-			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
-		default:
-			return nil, fmt.Errorf("expected string, got %T", value)
-		}
-	}
-
-	if value == nil {
-		return nil, nil
-	}
-
-	object, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("expected object, got %T", value)
-	}
-	child, ok := object[path[0]]
-	if !ok {
-		return value, nil
-	}
-	encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(child, path[1:])
-	if err != nil {
-		return nil, err
-	}
-	object[path[0]] = encoded
-	return object, nil
-}
 {{end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
@@ -623,13 +566,6 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	payload = flattenSDKUnions(payload)
 	{{- if $.SecretReferences}}
 	payload = flattenSensitiveData(payload)
-	{{- end}}
-	{{- if $.Base64Fields}}
-	if pm, ok := payload.(map[string]any); ok {
-		if err := encode{{$.EntityName}}SDKOpsBase64Fields(pm); err != nil {
-			return nil, fmt.Errorf("failed to base64 encode {{$.EntityName}}APISpec SDK payload: %w", err)
-		}
-	}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -672,7 +608,38 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 
 	apiSpec := obj.Spec.APISpec
 {{- range .SecretReferences}}
+{{- $ref := .}}
 	// Resolve {{.Path}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if apiSpec.{{.}} != nil {
+{{- end}}
+	for i := range apiSpec.{{$ref.SliceParentSelector}} {
+		src := apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for {{$ref.Path}}")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["{{$ref.SecretKey}}"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key '{{$ref.SecretKey}}'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}.Value = &resolved
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
 	{
 		src := apiSpec.{{.GoFieldSelector}}
 		if src.Type == SensitiveDataSourceTypeSecretRef {
@@ -696,15 +663,34 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 		}
 	}
 {{- end}}
+{{- end}}
 	return &apiSpec, nil
 }
 
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
 func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
 	if obj == nil {
 		return nil
 	}
 	var refs []SensitiveDataSecretRef
 {{- range .SecretReferences}}
+{{- $ref := .}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
+	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
+		if item.{{$ref.SliceLeafField}}.Type == SensitiveDataSourceTypeSecretRef && item.{{$ref.SliceLeafField}}.SecretRef != nil {
+			refs = append(refs, SensitiveDataSecretRef{
+				Ref: *item.{{$ref.SliceLeafField}}.SecretRef,
+				Key: "{{$ref.SecretKey}}",
+			})
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
 	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
 		refs = append(refs, SensitiveDataSecretRef{
 			Ref: *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef,
@@ -712,9 +698,12 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 		})
 	}
 {{- end}}
+{{- end}}
 	return refs
 }
 {{range .Methods}}
+// {{.MethodName}} converts the {{$.EntityName}} to the SDK type
+// {{.ImportAlias}}.{{.TypeName}}, resolving referenced Secrets via the provided client.
 func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
@@ -773,7 +762,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}},
 	if payload == nil {
 		payload = map[string]any{}
 	}
-	if id := obj.Get{{$.SetParentIDEntityName}}ID(); id != "" {
+	if id := obj.Get{{$.ParentStatusEntityName}}ID(); id != "" {
 		payload["{{$.ParentRefReplacesField}}"] = map[string]any{"id": id}
 	}
 	data, err = json.Marshal(payload)
@@ -797,9 +786,6 @@ import (
 {{- if .NeedsClient}}
 	"context"
 {{- end}}
-	{{- if .Base64Fields}}
-	"encoding/base64"
-	{{- end}}
 	"encoding/json"
 	"fmt"
 {{- if .NeedsClient}}
@@ -811,11 +797,13 @@ import (
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
 {{end}}){{if .BoolFields}}
 
+// {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type {{$.EntityName}}SDKOpsBoolField struct {
 	Label string
 	Path  []string
 }
 
+// {{$.EntityName}}SDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var {{$.EntityName}}SDKOpsBoolFields = []{{$.EntityName}}SDKOpsBoolField{
 {{- range .BoolFields}}
 	{
@@ -908,65 +896,6 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}{{if .Base64Fields}}
-type {{$.EntityName}}SDKOpsBase64Field struct {
-	Label string
-	Path  []string
-}
-
-var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
-{{- range .Base64Fields}}
-	{
-		Label: "{{.Label}}",
-		Path: []string{
-{{- range .Path}}
-			"{{.}}",
-{{- end}}
-		},
-	},
-{{- end}}
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Fields(payload map[string]any) error {
-	for _, field := range {{$.EntityName}}SDKOpsBase64Fields {
-		if _, err := encode{{$.EntityName}}SDKOpsBase64Field(payload, field.Path); err != nil {
-			return fmt.Errorf("%s: %w", field.Label, err)
-		}
-	}
-	return nil
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, error) {
-	if len(path) == 0 {
-		switch typed := value.(type) {
-		case nil:
-			return nil, nil
-		case string:
-			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
-		default:
-			return nil, fmt.Errorf("expected string, got %T", value)
-		}
-	}
-
-	if value == nil {
-		return nil, nil
-	}
-
-	object, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("expected object, got %T", value)
-	}
-	child, ok := object[path[0]]
-	if !ok {
-		return value, nil
-	}
-	encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(child, path[1:])
-	if err != nil {
-		return nil, err
-	}
-	object[path[0]] = encoded
-	return object, nil
-}
 {{end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
@@ -981,13 +910,6 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	}
 	{{- if $.SecretReferences}}
 	rawPayload = flattenSensitiveData(rawPayload)
-	{{- end}}
-	{{- if $.Base64Fields}}
-	if pm, ok := rawPayload.(map[string]any); ok {
-		if err := encode{{$.EntityName}}SDKOpsBase64Fields(pm); err != nil {
-			return nil, fmt.Errorf("failed to base64 encode {{$.EntityName}}APISpec SDK payload: %w", err)
-		}
-	}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -1024,6 +946,7 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	if selected == nil {
 		return nil, "", fmt.Errorf("{{$.EntityName}} config payload missing for type %q", s.{{$.UnionTypeName}}.Type)
 	}
+	selected = flattenSDKUnions(selected)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
@@ -1059,7 +982,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		return nil, err
 	}
 {{- if .IsOperationsWrapped}}
-	{{$opsAlias := .ImportAlias}}{{$compAlias := .ComponentsImportAlias}}{{$bodyField := .BodyFieldName}}{{$typeName := .TypeName}}
+	{{$opsAlias := .ImportAlias}}{{$compAlias := .ComponentsImportAlias}}{{$bodyField := .BodyFieldName}}{{$typeName := .TypeName}}{{$bodyFieldPointer := .BodyFieldPointer}}
 	switch variant {
 {{- range $.Variants}}
 	case "{{.FieldName}}":
@@ -1069,7 +992,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		}
 		body := {{$compAlias}}.{{.WrappedCreateConstructorName}}(member)
 		return &{{$opsAlias}}.{{$typeName}}{
-			{{$bodyField}}: body,
+			{{$bodyField}}: {{if $bodyFieldPointer}}&body{{else}}body{{end}},
 		}, nil
 {{- end}}
 	default:
@@ -1097,14 +1020,14 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		return nil, err
 	}
 {{- if .IsOperationsWrapped}}
-	{{$compAlias := .ComponentsImportAlias}}{{$opsAlias := .ImportAlias}}{{$bodyField := .BodyFieldName}}{{$bodyType := .BodyTypeName}}{{$typeName := .TypeName}}
+	{{$compAlias := .ComponentsImportAlias}}{{$opsAlias := .ImportAlias}}{{$bodyField := .BodyFieldName}}{{$bodyType := .BodyTypeName}}{{$typeName := .TypeName}}{{$bodyFieldPointer := .BodyFieldPointer}}
 	_ = variant
 	var body {{$compAlias}}.{{$bodyType}}
 	if err := json.Unmarshal(data, &body); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into {{$bodyType}}: %w", err)
 	}
 	return &{{$opsAlias}}.{{$typeName}}{
-		{{$bodyField}}: body,
+		{{$bodyField}}: {{if $bodyFieldPointer}}&body{{else}}body{{end}},
 	}, nil
 {{- else}}
 	{{$importAlias := .ImportAlias}}
@@ -1151,7 +1074,38 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 
 	apiSpec := obj.Spec.APISpec
 {{- range .SecretReferences}}
+{{- $ref := .}}
 	// Resolve {{.Path}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if apiSpec.{{.}} != nil {
+{{- end}}
+	for i := range apiSpec.{{$ref.SliceParentSelector}} {
+		src := apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for {{$ref.Path}}")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data["{{$ref.SecretKey}}"]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key '{{$ref.SecretKey}}'", namespace, src.SecretRef.Name)
+			}
+			resolved := string(secretBytes)
+			apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}.Value = &resolved
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
 	{
 		src := apiSpec.{{.GoFieldSelector}}
 		if src.Type == SensitiveDataSourceTypeSecretRef {
@@ -1175,15 +1129,34 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 		}
 	}
 {{- end}}
+{{- end}}
 	return &apiSpec, nil
 }
 
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
 func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
 	if obj == nil {
 		return nil
 	}
 	var refs []SensitiveDataSecretRef
 {{- range .SecretReferences}}
+{{- $ref := .}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
+	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
+		if item.{{$ref.SliceLeafField}}.Type == SensitiveDataSourceTypeSecretRef && item.{{$ref.SliceLeafField}}.SecretRef != nil {
+			refs = append(refs, SensitiveDataSecretRef{
+				Ref: *item.{{$ref.SliceLeafField}}.SecretRef,
+				Key: "{{$ref.SecretKey}}",
+			})
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
 	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
 		refs = append(refs, SensitiveDataSecretRef{
 			Ref: *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef,
@@ -1191,10 +1164,13 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 		})
 	}
 {{- end}}
+{{- end}}
 	return refs
 }
 {{range .Methods}}
 
+// {{.MethodName}} converts the {{$.EntityName}} to the SDK type
+// {{.ImportAlias}}.{{.TypeName}}, resolving referenced Secrets via the provided client.
 func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
@@ -1244,6 +1220,464 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 {{- end}}
 }
 {{end}}`
+
+const opsControllerTestTemplate = sharedGeneratedFilePreamble + `
+
+package ops
+
+import (
+	"errors"
+	"testing"
+
+{{- if .NeedsComponentsImport}}
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+{{- end}}
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+{{- if .NeedsFakeClient}}
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+{{- end}}
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	{{.APIAlias}} "{{.APIPackagePath}}"
+)
+
+func testGenerated{{.Entity}}ForSDKOps() *{{.APIAlias}}.{{.Entity}} {
+	return &{{.APIAlias}}.{{.Entity}}{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: {{.APIAlias}}.GroupVersion.String(),
+			Kind:       "{{.Entity}}",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "{{.FixtureName}}",
+			Namespace:  "default",
+			UID:        "{{.FixtureName}}-uid",
+			Generation: 3,
+		},
+		Spec: {{.APIAlias}}.{{.Entity}}Spec{
+			APISpec: {{.APIAlias}}.{{.Entity}}APISpec{
+{{- range .FixtureFields}}
+				{{.FieldName}}: {{.TestValue}},
+{{- end}}
+{{- if .RootUnion}}
+				{{.RootUnion.UnionTypeName}}: &{{$.APIAlias}}.{{.RootUnion.UnionTypeName}}{
+					Type: {{$.APIAlias}}.{{.RootUnion.TypeConstName}},
+					{{.RootUnion.VariantField}}: {{.RootUnion.VariantValue}},
+				},
+{{- end}}
+			},
+		},
+	}
+}
+{{- if .Create}}
+
+func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Create.MockConstructorName}}(t)
+{{- if .Create.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Create.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if .Create.NeedsClient}}
+	expectedRequest, err := obj.{{.Create.CreateReqMethod}}(ctx, cl)
+{{- else if .Create.HasReferences}}
+	expectedRequest, err := obj.{{.Create.CreateReqMethod}}()
+{{- else}}
+	expectedRequest, err := obj.Spec.APISpec.{{.Create.CreateReqMethod}}()
+{{- end}}
+	require.NoError(t, err)
+{{- if .Create.HasTags}}
+	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+{{- else if .Create.HasLabels}}
+{{- if .Create.LabelsPointer}}
+	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+{{- else}}
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+{{- end}}
+{{- end}}
+{{- if .Create.CreateFullyWrapped}}
+{{- range .Create.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- end}}
+{{- if not .Create.SingletonNoID}}
+	expectedID := "{{$.FixtureName}}-id"
+{{- end}}
+
+	sdk.EXPECT().
+		{{.Create.SDKMethod}}(
+			mock.Anything,
+{{- if .Create.CreateFullyWrapped}}
+			*expectedRequest,
+{{- else if .Create.Parents}}
+			{{(index .Create.Parents 0).VarName}},
+			{{if .Create.CreateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			{{if .Create.CreateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+		).
+		Return(&sdkkonnectops.{{.Create.ResponseType}}{
+			{{.Create.RespField}}: &sdkkonnectcomp.{{.Create.RespField}}{
+{{- if not .Create.SingletonNoID}}
+				ID: {{if .Create.RespIDIsPointer}}&expectedID{{else}}expectedID{{end}},
+{{- end}}
+			},
+		}, nil).
+		Once()
+
+	require.NoError(t, create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj))
+{{- if not .Create.SingletonNoID}}
+	require.Equal(t, expectedID, obj.GetKonnectID())
+{{- end}}
+}
+
+func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Create.MockConstructorName}}(t)
+{{- if .Create.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Create.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if .Create.NeedsClient}}
+	expectedRequest, err := obj.{{.Create.CreateReqMethod}}(ctx, cl)
+{{- else if .Create.HasReferences}}
+	expectedRequest, err := obj.{{.Create.CreateReqMethod}}()
+{{- else}}
+	expectedRequest, err := obj.Spec.APISpec.{{.Create.CreateReqMethod}}()
+{{- end}}
+	require.NoError(t, err)
+{{- if .Create.HasTags}}
+	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+{{- else if .Create.HasLabels}}
+{{- if .Create.LabelsPointer}}
+	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+{{- else}}
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+{{- end}}
+{{- end}}
+{{- if .Create.CreateFullyWrapped}}
+{{- range .Create.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- end}}
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		{{.Create.SDKMethod}}(
+			mock.Anything,
+{{- if .Create.CreateFullyWrapped}}
+			*expectedRequest,
+{{- else if .Create.Parents}}
+			{{(index .Create.Parents 0).VarName}},
+			{{if .Create.CreateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			{{if .Create.CreateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+		).
+		Return(nil, sdkErr).
+		Once()
+
+	err = create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}
+{{- end}}
+{{- if .Update}}
+
+func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Update.MockConstructorName}}(t)
+{{- if .Update.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Update.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if not .Update.UpdateOmitsEntityID}}
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+{{- end}}
+{{- if .Update.NeedsClient}}
+	expectedRequest, err := obj.{{.Update.UpdateReqMethod}}(ctx, cl)
+{{- else if .Update.HasReferences}}
+	expectedRequest, err := obj.{{.Update.UpdateReqMethod}}()
+{{- else}}
+	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
+{{- end}}
+	require.NoError(t, err)
+{{- if .Update.HasTags}}
+	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+{{- else if .Update.HasLabels}}
+{{- if .Update.LabelsPointer}}
+	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+{{- else}}
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+{{- end}}
+{{- end}}
+{{- if .Update.UpdateFullyWrapped}}
+{{- range .Update.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .Update.UpdateOmitsEntityID}}
+	expectedRequest.{{.Update.EntityIDField}} = obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- end}}
+
+	sdk.EXPECT().
+		{{.Update.UpdateSDKMethod}}(
+			mock.Anything,
+{{- if .Update.UpdateFullyWrapped}}
+			*expectedRequest,
+{{- else if .Update.UpdateWrapped}}
+			sdkkonnectops.{{.Update.UpdateSDKMethod}}Request{
+				{{.Update.ParentIDField}}: {{(index .Update.Parents 0).VarName}},
+				{{.Update.EntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+				{{.Update.UpdateBodyField}}: {{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+			},
+{{- else if .Update.UpdateOmitsEntityID}}
+			{{(index .Update.Parents 0).VarName}},
+			{{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(),
+			{{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+		).
+		Return(&sdkkonnectops.{{.Update.ResponseType}}{}, nil).
+		Once()
+
+	require.NoError(t, update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj))
+}
+
+func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Update.MockConstructorName}}(t)
+{{- if .Update.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Update.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if not .Update.UpdateOmitsEntityID}}
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+{{- end}}
+{{- if .Update.NeedsClient}}
+	expectedRequest, err := obj.{{.Update.UpdateReqMethod}}(ctx, cl)
+{{- else if .Update.HasReferences}}
+	expectedRequest, err := obj.{{.Update.UpdateReqMethod}}()
+{{- else}}
+	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
+{{- end}}
+	require.NoError(t, err)
+{{- if .Update.HasTags}}
+	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+{{- else if .Update.HasLabels}}
+{{- if .Update.LabelsPointer}}
+	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+{{- else}}
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+{{- end}}
+{{- end}}
+{{- if .Update.UpdateFullyWrapped}}
+{{- range .Update.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .Update.UpdateOmitsEntityID}}
+	expectedRequest.{{.Update.EntityIDField}} = obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- end}}
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		{{.Update.UpdateSDKMethod}}(
+			mock.Anything,
+{{- if .Update.UpdateFullyWrapped}}
+			*expectedRequest,
+{{- else if .Update.UpdateWrapped}}
+			sdkkonnectops.{{.Update.UpdateSDKMethod}}Request{
+				{{.Update.ParentIDField}}: {{(index .Update.Parents 0).VarName}},
+				{{.Update.EntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+				{{.Update.UpdateBodyField}}: {{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+			},
+{{- else if .Update.UpdateOmitsEntityID}}
+			{{(index .Update.Parents 0).VarName}},
+			{{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(),
+			{{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+		).
+		Return(nil, sdkErr).
+		Once()
+
+	err = update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}
+{{- end}}
+{{- if .Delete}}
+
+func TestDelete{{.Entity}}_UsesGeneratedSDKOps(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Delete.MockConstructorName}}(t)
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Delete.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if or (not .Delete.DeleteOmitsEntityID) .Delete.DeleteAsUpdate}}
+{{- if not .Delete.DeletePutOmitsEntityID}}
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+{{- end}}
+{{- end}}
+{{- if .Delete.DeleteAsUpdate}}
+	expectedRequest := &{{.Delete.DeletePutReqQualifiedType}}{}
+{{- if .Delete.DeletePutFullyWrapped}}
+{{- range .Delete.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .Delete.DeletePutOmitsEntityID}}
+	expectedRequest.{{.Delete.DeletePutEntityIDField}} = obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- end}}
+{{- end}}
+
+	sdk.EXPECT().
+		{{.Delete.DeleteSDKMethod}}(
+			mock.Anything,
+{{- if .Delete.DeleteAsUpdate}}
+{{- if .Delete.DeletePutFullyWrapped}}
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else if .Delete.DeletePutWrapped}}
+			sdkkonnectops.{{.Delete.DeleteSDKMethod}}Request{
+				{{.Delete.DeletePutParentIDField}}: {{(index .Delete.Parents 0).VarName}},
+				{{- if not .Delete.DeletePutOmitsEntityID}}
+				{{.Delete.DeletePutEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+				{{- end}}
+				{{.Delete.DeletePutBodyField}}: {{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+			},
+{{- else if .Delete.DeletePutOmitsEntityID}}
+			{{(index .Delete.Parents 0).VarName}},
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(),
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+{{- else if .Delete.DeleteFullyWrapped}}
+			sdkkonnectops.{{.Delete.DeleteWrappedType}}{
+{{- range .Delete.Parents}}
+				{{.SDKFieldName}}: {{.VarName}},
+{{- end}}
+				{{.Delete.DeleteEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+			},
+{{- else if .Delete.DeleteOmitsEntityID}}
+			{{(index .Delete.Parents 0).VarName}}{{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- else if .Delete.Parents}}
+			{{(index .Delete.Parents 0).VarName}},
+			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- end}}
+		).
+		Return(&sdkkonnectops.{{.Delete.ResponseType}}{}, nil).
+		Once()
+
+	require.NoError(t, delete{{.Entity}}(ctx, sdk, obj))
+}
+
+func TestDelete{{.Entity}}_PropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Delete.MockConstructorName}}(t)
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Delete.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if or (not .Delete.DeleteOmitsEntityID) .Delete.DeleteAsUpdate}}
+{{- if not .Delete.DeletePutOmitsEntityID}}
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+{{- end}}
+{{- end}}
+{{- if .Delete.DeleteAsUpdate}}
+	expectedRequest := &{{.Delete.DeletePutReqQualifiedType}}{}
+{{- if .Delete.DeletePutFullyWrapped}}
+{{- range .Delete.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .Delete.DeletePutOmitsEntityID}}
+	expectedRequest.{{.Delete.DeletePutEntityIDField}} = obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- end}}
+{{- end}}
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		{{.Delete.DeleteSDKMethod}}(
+			mock.Anything,
+{{- if .Delete.DeleteAsUpdate}}
+{{- if .Delete.DeletePutFullyWrapped}}
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else if .Delete.DeletePutWrapped}}
+			sdkkonnectops.{{.Delete.DeleteSDKMethod}}Request{
+				{{.Delete.DeletePutParentIDField}}: {{(index .Delete.Parents 0).VarName}},
+				{{- if not .Delete.DeletePutOmitsEntityID}}
+				{{.Delete.DeletePutEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+				{{- end}}
+				{{.Delete.DeletePutBodyField}}: {{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+			},
+{{- else if .Delete.DeletePutOmitsEntityID}}
+			{{(index .Delete.Parents 0).VarName}},
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(),
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+{{- else if .Delete.DeleteFullyWrapped}}
+			sdkkonnectops.{{.Delete.DeleteWrappedType}}{
+{{- range .Delete.Parents}}
+				{{.SDKFieldName}}: {{.VarName}},
+{{- end}}
+				{{.Delete.DeleteEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+			},
+{{- else if .Delete.DeleteOmitsEntityID}}
+			{{(index .Delete.Parents 0).VarName}}{{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- else if .Delete.Parents}}
+			{{(index .Delete.Parents 0).VarName}},
+			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- end}}
+		).
+		Return(nil, sdkErr).
+		Once()
+
+	err := delete{{.Entity}}(ctx, sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}
+{{- end}}`
 
 const commonTypesTemplate = sharedGeneratedFilePreamble + `
 
@@ -1310,6 +1744,9 @@ import (
 {{- if .NeedsOpsImport}}
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 {{- end}}
+{{- range .ExtraImports}}
+	{{.Alias}} "{{.Path}}"
+{{- end}}
 
 	{{.APIAlias}} "{{.APIPackagePath}}"
 )
@@ -1333,11 +1770,11 @@ func create{{.Entity}}(
 	}
 {{- end}}
 	{{- if .NeedsClient}}
-	req, err := obj.To{{.CreateReqType}}(ctx, cl)
+	req, err := obj.{{.CreateReqMethod}}(ctx, cl)
 	{{- else if .HasReferences}}
-	req, err := obj.To{{.CreateReqType}}()
+	req, err := obj.{{.CreateReqMethod}}()
 	{{- else}}
-	req, err := obj.Spec.APISpec.To{{.CreateReqType}}()
+	req, err := obj.Spec.APISpec.{{.CreateReqMethod}}()
 	{{- end}}
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
@@ -1356,7 +1793,7 @@ func create{{.Entity}}(
 	req.{{.SDKFieldName}} = {{.VarName}}
 {{- end}}
 
-	resp, err := sdk.{{.SDKMethod}}(ctx, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
+	resp, err := sdk.{{.SDKMethod}}(ctx, *req)
 {{- else if .Parents}}
 
 	resp, err := sdk.{{.SDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .CreateReqBodyPointer}}req{{else}}*req{{end}})
@@ -1410,11 +1847,11 @@ func update{{.Entity}}(
 	id := obj.GetKonnectStatus().GetKonnectID()
 {{- end}}
 	{{- if .NeedsClient}}
-	req, err := obj.To{{.UpdateReqType}}(ctx, cl)
+	req, err := obj.{{.UpdateReqMethod}}(ctx, cl)
 	{{- else if .HasReferences}}
-	req, err := obj.To{{.UpdateReqType}}()
+	req, err := obj.{{.UpdateReqMethod}}()
 	{{- else}}
-	req, err := obj.Spec.APISpec.To{{.UpdateReqType}}()
+	req, err := obj.Spec.APISpec.{{.UpdateReqMethod}}()
 	{{- end}}
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
@@ -1434,7 +1871,7 @@ func update{{.Entity}}(
 {{- end}}
 	req.{{.EntityIDField}} = id
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+	_, err = sdk.{{.UpdateSDKMethod}}(ctx, *req)
 {{- else if .UpdateWrapped}}
 
 	_, err = sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
@@ -1476,10 +1913,40 @@ func delete{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: DeleteOp}
 	}
 {{- end}}
-{{- if not .DeleteOmitsEntityID}}
+{{- if .DeleteAsUpdate}}
+{{- if not .DeletePutOmitsEntityID}}
 	id := obj.GetKonnectStatus().GetKonnectID()
 {{- end}}
-{{- if .DeleteFullyWrapped}}
+	req := &{{.DeletePutReqQualifiedType}}{}
+{{- if .DeletePutFullyWrapped}}
+{{- range .Parents}}
+	req.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .DeletePutOmitsEntityID}}
+	req.{{.DeletePutEntityIDField}} = id
+{{- end}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{if .DeletePutReqBodyPointer}}req{{else}}*req{{end}})
+{{- else if .DeletePutWrapped}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, sdkkonnectops.{{.DeleteSDKMethod}}Request{
+		{{.DeletePutParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- if not .DeletePutOmitsEntityID}}
+		{{.DeletePutEntityIDField}}: id,
+		{{- end}}
+		{{.DeletePutBodyField}}: {{if .DeletePutReqBodyPointer}}req{{else}}*req{{end}},
+	})
+{{- else if .DeletePutOmitsEntityID}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .DeletePutReqBodyPointer}}req{{else}}*req{{end}})
+{{- else}}
+
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, id, {{if .DeletePutReqBodyPointer}}req{{else}}*req{{end}})
+{{- end}}
+{{- else if not .DeleteOmitsEntityID}}
+	id := obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- if and (not .DeleteAsUpdate) .DeleteFullyWrapped}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, sdkkonnectops.{{.DeleteWrappedType}}{
 		{{- range .Parents}}
@@ -1487,13 +1954,13 @@ func delete{{.Entity}}(
 		{{- end}}
 		{{.DeleteEntityIDField}}: id,
 	})
-{{- else if .DeleteOmitsEntityID}}
+{{- else if and (not .DeleteAsUpdate) .DeleteOmitsEntityID}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}{{range .DeleteNilArgs}}, nil{{end}})
-{{- else if .Parents}}
+{{- else if and (not .DeleteAsUpdate) .Parents}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, id{{range .DeleteNilArgs}}, nil{{end}})
-{{- else}}
+{{- else if not .DeleteAsUpdate}}
 
 	_, err := sdk.{{.DeleteSDKMethod}}(ctx, id{{range .DeleteNilArgs}}, nil{{end}})
 {{- end}}
@@ -1633,7 +2100,7 @@ func get{{.Entity}}ForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: GetOp}
 	}
 {{- end}}
-{{- if .SingletonNoID}}
+{{- if and .SingletonByParent (or (not .SingletonNoID) .MatchFields)}}
 
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}})
 	if err != nil {
@@ -1644,11 +2111,42 @@ func get{{.Entity}}ForUID(
 	}
 	entry := resp.{{.ListResponseField}}
 {{- range .MatchFields}}
-	if !{{if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+	if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- end}}
+{{- if .SingletonNoID}}
+{{- if .MatchFields}}
 	return entry.{{(index .MatchFields 0).ResponseField}}, nil
+{{- else}}
+
+	// TODO: {{.Entity}} is a singleton sub-resource without a persistent Konnect
+	// ID, but no getForUID match strategy is configured. This can be revisited
+	// once the API exposes a stable identity field for matching or a custom
+	// getForUID implementation is added.
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+{{- end}}
+{{- else}}
+	switch id := any(entry.GetID()).(type) {
+	case string:
+		if id != "" {
+			return id, nil
+		}
+	case *string:
+		if id != nil && *id != "" {
+			return *id, nil
+		}
+	default:
+		return "", fmt.Errorf("get %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+	}
+{{- end}}
+{{- else if .SingletonNoID}}
+
+	// TODO: {{.Entity}} is a singleton sub-resource without a persistent Konnect
+	// ID, but no getForUID match strategy is configured. This can be revisited
+	// once the API exposes a stable identity field for matching or a custom
+	// getForUID implementation is added.
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 {{- else if .UseUIDTagFilter}}
 
 {{- if .GetForUIDFullyWrapped}}
@@ -1685,6 +2183,8 @@ func get{{.Entity}}ForUID(
 			if id != nil && *id != "" {
 				return *id, nil
 			}
+		default:
+			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
 {{- else if .MatchFields}}
@@ -1709,6 +2209,10 @@ func get{{.Entity}}ForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+	// TODO: only the first page of results is scanned. When the parent has more
+	// entries than the SDK's default page size, a matching entry on a later
+	// page is missed and getForUID returns NotFound. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
 		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
@@ -1724,6 +2228,8 @@ func get{{.Entity}}ForUID(
 			if id != nil && *id != "" {
 				return *id, nil
 			}
+		default:
+			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
 {{- else if .RootUnion}}
@@ -1782,6 +2288,8 @@ func get{{.Entity}}ForUID(
 				if id != nil && *id != "" {
 					return *id, nil
 				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
 		}
 	{{- end}}

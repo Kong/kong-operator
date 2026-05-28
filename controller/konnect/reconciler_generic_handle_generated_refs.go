@@ -7,9 +7,11 @@ package konnect
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -38,7 +40,7 @@ type generatedParentRefHandler interface {
 }
 
 var (
-	_generatedHandlersPerKind map[string]generatedParentRefHandler
+	_generatedHandlersPerGVK map[schema.GroupVersionKind]generatedParentRefHandler
 )
 
 func init() {
@@ -48,24 +50,44 @@ func init() {
 	// - parentRefHandler[konnectv1alpha1.Portal, *konnectv1alpha1.Portal] for handling references to Portal parents.
 	// This list is manually maintained for now, but in the future we may want to
 	// generate this list based on the generated types and their reference configurations.
-	_generatedHandlers := []generatedParentRefHandler{
-		parentRefHandler[konnectv1alpha1.EventGatewayBackendCluster, *konnectv1alpha1.EventGatewayBackendCluster]{},
-		parentRefHandler[konnectv1alpha1.EventGatewayListener, *konnectv1alpha1.EventGatewayListener]{},
-		parentRefHandler[konnectv1alpha1.KonnectEventGateway, *konnectv1alpha1.KonnectEventGateway]{},
-		parentRefHandler[konnectv1alpha1.Portal, *konnectv1alpha1.Portal]{},
+	type generatedParentRefHandlerEntry struct {
+		gvk     schema.GroupVersionKind
+		handler generatedParentRefHandler
 	}
-	_generatedHandlersPerKind = make(map[string]generatedParentRefHandler)
-	for _, handler := range _generatedHandlers {
-		_generatedHandlersPerKind[handler.parentTypeName()] = handler
+
+	_generatedHandlers := []generatedParentRefHandlerEntry{
+		{
+			gvk:     configurationv1alpha1.GroupVersion.WithKind("EventGatewayVirtualCluster"),
+			handler: parentRefHandler[configurationv1alpha1.EventGatewayVirtualCluster, *configurationv1alpha1.EventGatewayVirtualCluster]{},
+		},
+		{
+			gvk:     configurationv1alpha1.GroupVersion.WithKind("EventGatewayBackendCluster"),
+			handler: parentRefHandler[configurationv1alpha1.EventGatewayBackendCluster, *configurationv1alpha1.EventGatewayBackendCluster]{},
+		},
+		{
+			gvk:     configurationv1alpha1.GroupVersion.WithKind("EventGatewayListener"),
+			handler: parentRefHandler[configurationv1alpha1.EventGatewayListener, *configurationv1alpha1.EventGatewayListener]{},
+		},
+		{
+			gvk:     konnectv1alpha1.GroupVersion.WithKind("KonnectEventGateway"),
+			handler: parentRefHandler[konnectv1alpha1.KonnectEventGateway, *konnectv1alpha1.KonnectEventGateway]{},
+		},
+		{
+			gvk:     konnectv1alpha1.GroupVersion.WithKind("Portal"),
+			handler: parentRefHandler[konnectv1alpha1.Portal, *konnectv1alpha1.Portal]{},
+		},
+	}
+	_generatedHandlersPerGVK = make(map[schema.GroupVersionKind]generatedParentRefHandler, len(_generatedHandlers))
+	for _, entry := range _generatedHandlers {
+		_generatedHandlersPerGVK[entry.gvk] = entry.handler
 	}
 
 }
 
 // _generatedTypeReferenceHandlers returns a map of generated reference handlers
-// keyed by the Kind of the parent type they handle, for example:
-// "Portal" for handlers that handle references to Portal parents.
-func _generatedTypeReferenceHandlers() map[string]generatedParentRefHandler {
-	return _generatedHandlersPerKind
+// keyed by the full GVK of the parent type they handle.
+func _generatedTypeReferenceHandlers() map[schema.GroupVersionKind]generatedParentRefHandler {
+	return _generatedHandlersPerGVK
 }
 
 // UnsupportedGeneratedReferenceTypeError is returned by generated reference handlers
@@ -90,11 +112,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedTypeParentReferences(
 		return false, ctrl.Result{}, nil
 	}
 
-	// TODO: This only compares the Kind and doesn't consider the Group or API Version.
-	handler, ok := _generatedTypeReferenceHandlers()[obj.GetParentGVK().Kind]
-	if !ok || handler.parentTypeName() != obj.GetParentGVK().Kind {
+	parentGVK := obj.GetParentGVK()
+	handler, ok := _generatedTypeReferenceHandlers()[parentGVK]
+	if !ok || handler.parentTypeName() != parentGVK.Kind {
 		return false, ctrl.Result{}, &UnsupportedGeneratedReferenceTypeError{
-			TypeName: obj.GetParentGVK().Kind,
+			TypeName: parentGVK.String(),
 		}
 	}
 

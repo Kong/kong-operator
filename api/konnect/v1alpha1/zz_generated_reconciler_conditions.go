@@ -3,54 +3,6 @@
 package v1alpha1
 
 const (
-	// EventGatewayRefValidConditionType is the type of the condition that indicates
-	// whether the EventGateway reference is valid and points to an existing
-	// KonnectEventGateway.
-	EventGatewayRefValidConditionType = "EventGatewayRefValid"
-
-	// EventGatewayRefReasonValid is the reason used with the EventGatewayRefValid
-	// condition type indicating that the EventGateway reference is valid.
-	EventGatewayRefReasonValid = "Valid"
-	// EventGatewayRefReasonInvalid is the reason used with the EventGatewayRefValid
-	// condition type indicating that the EventGateway reference is invalid.
-	EventGatewayRefReasonInvalid = "Invalid"
-	// EventGatewayRefReasonNotProgrammed is the reason used with the EventGatewayRefValid
-	// condition type indicating that the referenced KonnectEventGateway exists but is not
-	// yet programmed in Konnect.
-	EventGatewayRefReasonNotProgrammed = "NotProgrammed"
-
-	// EventGatewayBackendClusterRefValidConditionType is the type of the condition that indicates
-	// whether the EventGatewayBackendCluster reference is valid and points to an existing
-	// EventGatewayBackendCluster.
-	EventGatewayBackendClusterRefValidConditionType = "EventGatewayBackendClusterRefValid"
-
-	// EventGatewayBackendClusterRefReasonValid is the reason used with the EventGatewayBackendClusterRefValid
-	// condition type indicating that the EventGatewayBackendCluster reference is valid.
-	EventGatewayBackendClusterRefReasonValid = "Valid"
-	// EventGatewayBackendClusterRefReasonInvalid is the reason used with the EventGatewayBackendClusterRefValid
-	// condition type indicating that the EventGatewayBackendCluster reference is invalid.
-	EventGatewayBackendClusterRefReasonInvalid = "Invalid"
-	// EventGatewayBackendClusterRefReasonNotProgrammed is the reason used with the EventGatewayBackendClusterRefValid
-	// condition type indicating that the referenced EventGatewayBackendCluster exists but is not
-	// yet programmed in Konnect.
-	EventGatewayBackendClusterRefReasonNotProgrammed = "NotProgrammed"
-
-	// EventGatewayListenerRefValidConditionType is the type of the condition that indicates
-	// whether the EventGatewayListener reference is valid and points to an existing
-	// EventGatewayListener.
-	EventGatewayListenerRefValidConditionType = "EventGatewayListenerRefValid"
-
-	// EventGatewayListenerRefReasonValid is the reason used with the EventGatewayListenerRefValid
-	// condition type indicating that the EventGatewayListener reference is valid.
-	EventGatewayListenerRefReasonValid = "Valid"
-	// EventGatewayListenerRefReasonInvalid is the reason used with the EventGatewayListenerRefValid
-	// condition type indicating that the EventGatewayListener reference is invalid.
-	EventGatewayListenerRefReasonInvalid = "Invalid"
-	// EventGatewayListenerRefReasonNotProgrammed is the reason used with the EventGatewayListenerRefValid
-	// condition type indicating that the referenced EventGatewayListener exists but is not
-	// yet programmed in Konnect.
-	EventGatewayListenerRefReasonNotProgrammed = "NotProgrammed"
-
 	// PortalRefValidConditionType is the type of the condition that indicates
 	// whether the Portal reference is valid and points to an existing
 	// Portal.

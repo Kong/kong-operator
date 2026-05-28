@@ -99,6 +99,24 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// 404s during conformance and prevents noisy reconciliation errors like
 		// "can't create target without a Konnect Upstream ID".
 		switch desired.GetKind() {
+		case "KongService":
+			// KongService with a clientCertificateRef depends on the referenced KongCertificate being Programmed.
+			certName, _, _ := unstructured.NestedString(desired.Object, "spec", "clientCertificateRef", "name")
+			if certName != "" {
+				var cert configurationv1alpha1.KongCertificate
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: certName}, &cert); err != nil {
+					log.Debug(logger, "Certificate not found yet for service, waiting", "certificate", certName)
+					objectsSkipped++
+					stopAtKind = "KongCertificate"
+					continue
+				}
+				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &cert) {
+					log.Debug(logger, "Certificate not Programmed yet for service, waiting", "certificate", certName)
+					objectsSkipped++
+					stopAtKind = "KongCertificate"
+					continue
+				}
+			}
 		case "KongTarget":
 			// KongTarget depends on KongUpstream being Programmed.
 			upstreamName, _, _ := unstructured.NestedString(desired.Object, "spec", "upstreamRef", "name")

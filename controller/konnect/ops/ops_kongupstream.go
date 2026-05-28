@@ -143,7 +143,7 @@ func kongUpstreamToSDKUpstreamInput(
 ) sdkkonnectcomp.Upstream {
 	return sdkkonnectcomp.Upstream{
 		Algorithm:                upstream.Spec.Algorithm,
-		ClientCertificate:        upstream.Spec.ClientCertificate,
+		ClientCertificate:        resolveUpstreamClientCertificate(upstream),
 		HashFallback:             upstream.Spec.HashFallback,
 		HashFallbackHeader:       upstream.Spec.HashFallbackHeader,
 		HashFallbackQueryArg:     upstream.Spec.HashFallbackQueryArg,
@@ -163,6 +163,22 @@ func kongUpstreamToSDKUpstreamInput(
 		Tags:                     GenerateTagsForObject(upstream, upstream.Spec.Tags...),
 		UseSrvName:               upstream.Spec.UseSrvName,
 	}
+}
+
+// resolveUpstreamClientCertificate returns the client certificate for the upstream SDK payload.
+// Priority: if clientCertificateRef is set, use the resolved Konnect ID from status (or nil if
+// not yet resolved). Falls back to the deprecated spec.client_certificate only when no ref is set.
+func resolveUpstreamClientCertificate(u *configurationv1alpha1.KongUpstream) *sdkkonnectcomp.UpstreamClientCertificate {
+	if u.Spec.ClientCertificateRef != nil {
+		// Ref is set: use the resolved ID from status. Return nil if not yet resolved —
+		// the reconciler blocks the sync in this state via early return in handleKongCertificateRef.
+		if u.Status.Konnect == nil || u.Status.Konnect.CertificateID == "" {
+			return nil
+		}
+		id := u.Status.Konnect.CertificateID
+		return &sdkkonnectcomp.UpstreamClientCertificate{ID: &id}
+	}
+	return u.Spec.ClientCertificate //nolint:staticcheck
 }
 
 // getKongUpstreamForUID lists upstreams in Konnect with given k8s uid as its tag.

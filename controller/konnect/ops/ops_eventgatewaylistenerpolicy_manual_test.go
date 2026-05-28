@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 func TestCreateEventGatewayListenerPolicy(t *testing.T) {
@@ -36,7 +36,7 @@ func TestCreateEventGatewayListenerPolicy(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createEventGatewayListenerPolicy(ctx, sdk, policy))
+	require.NoError(t, createEventGatewayListenerPolicy(ctx, nil, sdk, policy))
 	assert.Equal(t, "listener-policy-1", policy.GetKonnectID())
 }
 
@@ -59,7 +59,7 @@ func TestUpdateEventGatewayListenerPolicy(t *testing.T) {
 		Return(&sdkkonnectops.UpdateEventGatewayListenerPolicyResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateEventGatewayListenerPolicy(ctx, sdk, policy))
+	require.NoError(t, updateEventGatewayListenerPolicy(ctx, nil, sdk, policy))
 }
 
 func TestDeleteEventGatewayListenerPolicy(t *testing.T) {
@@ -115,10 +115,10 @@ func TestGetEventGatewayListenerPolicyForUID(t *testing.T) {
 	assert.Equal(t, "listener-policy-1", id)
 }
 
-func testEventGatewayListenerPolicy() *konnectv1alpha1.EventGatewayListenerPolicy {
-	return &konnectv1alpha1.EventGatewayListenerPolicy{
+func testEventGatewayListenerPolicy() *configurationv1alpha1.EventGatewayListenerPolicy {
+	return &configurationv1alpha1.EventGatewayListenerPolicy{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayListenerPolicy",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -127,29 +127,29 @@ func testEventGatewayListenerPolicy() *konnectv1alpha1.EventGatewayListenerPolic
 			UID:        "listener-policy-uid",
 			Generation: 2,
 		},
-		Spec: konnectv1alpha1.EventGatewayListenerPolicySpec{
+		Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 			EventGatewayListenerRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "event-gateway-listener",
 				},
 			},
-			APISpec: konnectv1alpha1.EventGatewayListenerPolicyAPISpec{
-				EventGatewayListenerPolicyConfig: &konnectv1alpha1.EventGatewayListenerPolicyConfig{
-					Type: konnectv1alpha1.EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen,
-					EventGatewayTLSListen: &konnectv1alpha1.EventGatewayTLSListenerPolicy{
+			APISpec: configurationv1alpha1.EventGatewayListenerPolicyAPISpec{
+				EventGatewayListenerPolicyConfig: &configurationv1alpha1.EventGatewayListenerPolicyConfig{
+					Type: configurationv1alpha1.EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen,
+					EventGatewayTLSListen: &configurationv1alpha1.EventGatewayTLSListenerPolicy{
 						Name:        "tls-policy",
 						Description: "listener tls policy",
-						Config: konnectv1alpha1.EventGatewayTLSListenerPolicyConfig{
-							Certificates: []konnectv1alpha1.TLSCertificate{
+						Config: configurationv1alpha1.EventGatewayTLSListenerPolicyConfig{
+							Certificates: []configurationv1alpha1.TLSCertificate{
 								{
-									Certificate: "-----BEGIN CERTIFICATE-----test-----END CERTIFICATE-----",
-									Key:         "-----BEGIN PRIVATE KEY-----test-----END PRIVATE KEY-----",
+									Certificate: configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("-----BEGIN CERTIFICATE-----test-----END CERTIFICATE-----")},
+									Key:         configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("-----BEGIN PRIVATE KEY-----test-----END PRIVATE KEY-----")},
 								},
 							},
-							ClientAuthentication: konnectv1alpha1.ClientAuthentication{
+							ClientAuthentication: configurationv1alpha1.EventGatewayTLSListenerPolicyConfigClientAuthentication{
 								Mode: "requested",
-								TLSTrustBundles: []konnectv1alpha1.TLSTrustBundleReference{
+								TLSTrustBundles: []configurationv1alpha1.TLSTrustBundleReference{
 									{
 										ID: new("trust-bundle-1"),
 									},
@@ -160,11 +160,11 @@ func testEventGatewayListenerPolicy() *konnectv1alpha1.EventGatewayListenerPolic
 				},
 			},
 		},
-		Status: konnectv1alpha1.EventGatewayListenerPolicyStatus{
-			GatewayID: &konnectv1alpha1.KonnectEntityRef{
+		Status: configurationv1alpha1.EventGatewayListenerPolicyStatus{
+			GatewayID: &configurationv1alpha1.KonnectEntityRef{
 				ID: "gateway-1",
 			},
-			EventGatewayListenerID: &konnectv1alpha1.KonnectEntityRef{
+			EventGatewayListenerID: &configurationv1alpha1.KonnectEntityRef{
 				ID: "listener-1",
 			},
 		},

@@ -1,0 +1,81 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1
+    description: Test Event Gateway CP
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eventgatewaydataplanecert-cp-event-1
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: kubernetes.io/tls
+stringData:
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEAyiUO3sxXqhW+8aZp
+    pqczR9pyejKz3cMnrN3ujHJMf/ou1PyLk4bFtpxy4G8XERhntUUYNg1rhcmilSo7
+    +DAtcwIDAQABAkEAoi7LWHwwVZku4qi2mWwKm7qrIFmvr9wU6AADlZFayU2dpgnj
+    ymm/oHIo5aAvTfoMt0wZmqgXEkyoTRg/GvkXmQIhAPbkZkq50hqkoOJjETM+OLnJ
+    Sx8vvVSkcS1Yx2fNAlVHAiEA0ZoSn+KzT0e0aDFVCzwiAwKO67SEAqJnkoCyIPxR
+    LHUCIHBagDKBXZvCT3S2oJ0xM59Ye1c14nMiYl7Ah/40zVsBAiBVQ7v31pziz2SQ
+    TiEuZNPhLZU+RTy+ZZqEel38FShgUQIgOoMMEmMFT3k9uNXsOVHwJ9ZPyie4XPlW
+    NWzBf8ZCi+A=
+    -----END PRIVATE KEY-----
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIICZTCCAg+gAwIBAgIUVjjwPhhV6XmuWKabaWpfKtwrS3kwDQYJKoZIhvcNAQEL
+    BQAwgYYxCzAJBgNVBAYTAlhYMRIwEAYDVQQIDAlTdGF0ZU5hbWUxETAPBgNVBAcM
+    CENpdHlOYW1lMRQwEgYDVQQKDAtDb21wYW55TmFtZTEbMBkGA1UECwwSQ29tcGFu
+    eVNlY3Rpb25OYW1lMR0wGwYDVQQDDBRDb21tb25OYW1lT3JIb3N0bmFtZTAeFw0y
+    NjA1MTQxMjMxMDNaFw0zNjA1MTExMjMxMDNaMIGGMQswCQYDVQQGEwJYWDESMBAG
+    A1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5TmFtZTEUMBIGA1UECgwLQ29t
+    cGFueU5hbWUxGzAZBgNVBAsMEkNvbXBhbnlTZWN0aW9uTmFtZTEdMBsGA1UEAwwU
+    Q29tbW9uTmFtZU9ySG9zdG5hbWUwXDANBgkqhkiG9w0BAQEFAANLADBIAkEAyiUO
+    3sxXqhW+8aZppqczR9pyejKz3cMnrN3ujHJMf/ou1PyLk4bFtpxy4G8XERhntUUY
+    Ng1rhcmilSo7+DAtcwIDAQABo1MwUTAdBgNVHQ4EFgQUBHpMVvFVJXmx9pZ2YnmU
+    Fn7MngswHwYDVR0jBBgwFoAUBHpMVvFVJXmx9pZ2YnmUFn7MngswDwYDVR0TAQH/
+    BAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAMKT/Lb/3EqMOq/mMrr43arFL38stNku
+    toJJgydd1s7dp3bh2iVqSI3DECc8iyRX8/oExNitF2vNQpULUXj+q4U=
+    -----END CERTIFICATE-----
+---
+kind: EventGatewayDataPlaneCertificate
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-dataplane-cert
+  namespace: default
+spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1
+  apiSpec:
+    name: cp-event-1-dataplane-cert
+    description: Test Event Gateway CP Dataplane Certificate
+    certificate:
+      type: secretRef
+      secretRef:
+        name: eventgatewaydataplanecert-cp-event-1

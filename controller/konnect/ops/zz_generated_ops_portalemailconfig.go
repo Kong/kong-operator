@@ -87,13 +87,26 @@ func getPortalEmailConfigForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: GetOp}
 	}
 
-	// TODO: PortalEmailConfig's Konnect list response lacks labels/tags and no
-	// usable name field is available on the spec, so UID matching cannot be
-	// performed here. This can be revisited once Konnect exposes labels/tags
-	// on this type (tracked in
-	// https://github.com/Kong/kong-operator/issues/3987) or by customizing
-	// this function for a type-specific match strategy.
-	_ = obj
+	resp, err := sdk.GetEmailConfig(ctx, parentID)
+	if err != nil {
+		return "", fmt.Errorf("failed getting %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.PortalEmailConfig == nil {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+	entry := resp.PortalEmailConfig
+	switch id := any(entry.GetID()).(type) {
+	case string:
+		if id != "" {
+			return id, nil
+		}
+	case *string:
+		if id != nil && *id != "" {
+			return *id, nil
+		}
+	default:
+		return "", fmt.Errorf("get %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+	}
 
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,9 +24,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	k8sobj "github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 )
@@ -44,6 +48,12 @@ type TLSRouteReconciler struct {
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 
+	// If enableReferenceGrant is true, we will check for ReferenceGrant if backend in another
+	// namespace is in backendRefs.
+	// If it is false, referencing backend in different namespace will be rejected.
+	// It's resolved on SetupWithManager call.
+	enableReferenceGrant bool
+
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
 	GatewayNN controllers.OptionalNamespacedName
@@ -51,6 +61,17 @@ type TLSRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// We're verifying whether ReferenceGrant CRD is installed at setup of the TLSRouteReconciler
+	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
+	// when reconciling TLSRoutes.
+	// Once the TLSRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
+	// ReferenceGrant handling again in this reconciler at runtime.
+	r.enableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
+		Resource: "referencegrants",
+	})
+
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("tlsroute-controller").
 		WithOptions(controller.Options{
@@ -75,6 +96,13 @@ func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&gatewayapi.Gateway{},
 			handler.EnqueueRequestsFromMapFunc(r.listTLSRoutesForGateway),
 		)
+
+	if r.enableReferenceGrant {
+		blder.Watches(&gatewayapi.ReferenceGrant{},
+			handler.EnqueueRequestsFromMapFunc(r.listTLSRoutesForReferenceGrant),
+			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasTLSRouteFrom)),
+		)
+	}
 
 	if r.StatusQueue != nil {
 		blder.WatchesRawSource(
@@ -247,6 +275,54 @@ func (r *TLSRouteReconciler) listTLSRoutesForGateway(ctx context.Context, obj cl
 	return queue
 }
 
+// listTLSRoutesForReferenceGrant is a watch predicate which finds all TLSRoutes
+// mentioned in a From clause for a ReferenceGrant.
+func (r *TLSRouteReconciler) listTLSRoutesForReferenceGrant(ctx context.Context, obj client.Object) []reconcile.Request {
+	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	if !ok {
+		r.Log.Error(
+			errInvalidType,
+			"Referencegrant watch predicate received unexpected object type",
+			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	tlsroutes := &gatewayapi.TLSRouteList{}
+	if err := r.List(ctx, tlsroutes); err != nil {
+		r.Log.Error(err, "Failed to list tlsroutes in watch", "referencegrant", grant.Name)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, tlsroute := range tlsroutes.Items {
+		for _, from := range grant.Spec.From {
+			if string(from.Namespace) == tlsroute.Namespace &&
+				from.Kind == "TLSRoute" &&
+				from.Group == "gateway.networking.k8s.io" {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: k8stypes.NamespacedName{
+						Namespace: tlsroute.Namespace,
+						Name:      tlsroute.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
+}
+
+func referenceGrantHasTLSRouteFrom(obj client.Object) bool {
+	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	if !ok {
+		return false
+	}
+	for _, from := range grant.Spec.From {
+		if from.Kind == "TLSRoute" && from.Group == "gateway.networking.k8s.io" {
+			return true
+		}
+	}
+	return false
+}
+
 // -----------------------------------------------------------------------------
 // TLSRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
@@ -326,10 +402,32 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
+	// if there is no matched hosts in listeners for the tlsroute, the tlsroute should not be accepted
+	// and have an "Accepted" condition with status false.
+	// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.TLSRoute
+	filteredTLSRoute, err := filterHostnames(gateways, tlsroute.DeepCopy())
+	if err != nil {
+		// Should not be reachable because the filterHostnames function only returns error `ErrNoMatchingListenerHostname`
+		// when there is no matched hostname in listeners for the tlsroute.
+		if !errors.Is(err, ErrNoMatchingListenerHostname) {
+			debug(log, tlsroute, "Failed to filter hostnames for the TLSRoute, requeueing", "error", err)
+			return ctrl.Result{}, err
+		}
+		// If there is no matched hosts in listeners for the tlsroute,
+		// the tlsroute should not be accepted and have an "Accepted" condition with status false.
+		// Then we remove the tlsroute from data-plane configuration if it was previously added,
+		//  and continue the reconciliation to update the status to reflect the condition change.
+		debug(log, tlsroute, "No matching listener hostname for the TLSRoute, removing it from data-plane")
+		if err := r.DataplaneClient.DeleteObject(tlsroute); err != nil {
+			debug(log, tlsroute, "Failed to delete object from data-plane, requeuing")
+			return ctrl.Result{}, err
+		}
+	}
+	// perform operations on the kong store only if the route is in accepted status and there is hostname matching
 	if isRouteAccepted(gateways) {
 		// if the gateways are ready, and the TLSRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
-		if err := r.DataplaneClient.UpdateObject(tlsroute); err != nil {
+		if err := r.DataplaneClient.UpdateObject(filteredTLSRoute); err != nil {
 			debug(log, tlsroute, "Failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
@@ -428,10 +526,15 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(
 		gateways...,
 	)
 
+	parentStatuses, resolvedRefsChanged, err := r.setRouteConditionResolvedRefsCondition(ctx, tlsroute, parentStatuses)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+
 	programmedConditionChanged := initializeParentStatusesWithProgrammedCondition(tlsroute, parentStatuses)
 
 	// if we didn't have to actually make any changes, no status update is needed
-	if !statusChangesWereMade && !programmedConditionChanged {
+	if !statusChangesWereMade && !resolvedRefsChanged && !programmedConditionChanged {
 		return false, ctrl.Result{}, nil
 	}
 
@@ -457,4 +560,119 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(
 // SetLogger sets the logger.
 func (r *TLSRouteReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
+}
+
+// setRouteConditionResolvedRefsCondition sets a condition of type ResolvedRefs on the route status.
+func (r *TLSRouteReconciler) setRouteConditionResolvedRefsCondition(
+	ctx context.Context,
+	tlsRoute *gatewayapi.TLSRoute,
+	parentStatuses map[string]*gatewayapi.RouteParentStatus,
+) (map[string]*gatewayapi.RouteParentStatus, bool, error) {
+	var changed bool
+	resolvedRefsStatus := metav1.ConditionFalse
+	reason, msg, err := r.getTLSRouteRuleReason(ctx, *tlsRoute)
+	if err != nil {
+		return nil, false, err
+	}
+	if reason == gatewayapi.RouteReasonResolvedRefs {
+		resolvedRefsStatus = metav1.ConditionTrue
+	}
+
+	// iterate over all the parentStatuses conditions, and if no RouteConditionResolvedRefs is found,
+	// or if the condition is found but has to be changed, update the status and mark it to be updated
+	resolvedRefsCondition := metav1.Condition{
+		Type:               string(gatewayapi.RouteConditionResolvedRefs),
+		Status:             resolvedRefsStatus,
+		ObservedGeneration: tlsRoute.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(reason),
+		Message:            msg,
+	}
+	for _, parentStatus := range parentStatuses {
+		var conditionFound bool
+		for i, cond := range parentStatus.Conditions {
+			if cond.Type == string(gatewayapi.RouteConditionResolvedRefs) {
+				if cond.Status != resolvedRefsStatus ||
+					cond.Reason != string(reason) {
+					parentStatus.Conditions[i] = resolvedRefsCondition
+					changed = true
+				}
+				conditionFound = true
+				break
+			}
+		}
+		if !conditionFound {
+			parentStatus.Conditions = append(parentStatus.Conditions, resolvedRefsCondition)
+			changed = true
+		}
+	}
+
+	return parentStatuses, changed, nil
+}
+
+// getTLSRouteRuleReason validates the backendRefs of every rule in the TLSRoute
+// and returns the first failure encountered. When all backendRefs are valid it
+// returns gatewayapi.RouteReasonResolvedRefs.
+func (r *TLSRouteReconciler) getTLSRouteRuleReason(ctx context.Context, tlsRoute gatewayapi.TLSRoute) (reason gatewayapi.RouteConditionReason, msg string, err error) {
+	for _, rule := range tlsRoute.Spec.Rules {
+		for _, backendRef := range rule.BackendRefs {
+			backendNamespace := tlsRoute.Namespace
+			if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+				backendNamespace = string(*backendRef.Namespace)
+			}
+
+			backendRefGK := string(*backendRef.Kind)
+			if gr := string(*backendRef.Group); gr != "" {
+				backendRefGK = gr + "/" + backendRefGK
+			}
+			targetNN := k8stypes.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}
+
+			// Check if the BackendRef GroupKind is supported.
+			if !util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) {
+				return gatewayapi.RouteReasonInvalidKind, fmt.Sprintf("target %s has unsupported type %s", targetNN, backendRefGK), nil
+			}
+
+			// Check if the referenced object actually exists.
+			// Only Services are currently supported as BackendRef objects.
+			service := &corev1.Service{}
+			if err := r.Get(ctx, targetNN, service); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return "", "", err
+				}
+				return gatewayapi.RouteReasonBackendNotFound, fmt.Sprintf("target %s of type %s does not exist", targetNN, backendRefGK), nil
+			}
+
+			// If the object referenced is in another namespace,
+			// verify that a ReferenceGrant permits the reference.
+			if tlsRoute.Namespace != backendNamespace {
+				differentNamespaceMsg := fmt.Sprintf("%s is in a different namespace than the TLSRoute (namespace %s)", targetNN, tlsRoute.Namespace)
+				if !r.enableReferenceGrant {
+					return gatewayapi.RouteReasonRefNotPermitted,
+						differentNamespaceMsg + " install ReferenceGrant CRD and configure a proper grant",
+						nil
+				}
+
+				referenceGrantList := &gatewayapi.ReferenceGrantList{}
+				if err := r.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
+					return "", "", err
+				}
+				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"
+				if len(referenceGrantList.Items) == 0 {
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
+				}
+				var isGranted bool
+				for _, grant := range referenceGrantList.Items {
+					if isTLSReferenceGranted(grant.Spec, backendRef, tlsRoute.Namespace) {
+						isGranted = true
+						break
+					}
+				}
+				if !isGranted {
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
+				}
+			}
+		}
+	}
+
+	return gatewayapi.RouteReasonResolvedRefs, "", nil
 }

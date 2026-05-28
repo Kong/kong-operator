@@ -32,6 +32,10 @@ func GetProgrammedConditionForGVK(gvk schema.GroupVersionKind, programmed bool) 
 		condType = routeconst.ConditionTypeKongPluginBindingProgrammed
 		reasonProgrammed = routeconst.ConditionReasonKongPluginBindingProgrammed
 		reasonNotProgrammed = routeconst.ConditionReasonKongPluginBindingNotProgrammed
+	case "KongCertificate":
+		condType = routeconst.ConditionTypeKongCertificateProgrammed
+		reasonProgrammed = routeconst.ConditionReasonKongCertificateProgrammed
+		reasonNotProgrammed = routeconst.ConditionReasonKongCertificateNotProgrammed
 	default:
 		// Unknown kind, return empty condition
 		return metav1.Condition{}

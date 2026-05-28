@@ -186,6 +186,8 @@ spec:
           - /echo/
       - name: strip_path
         value: false
+      - name: preserve_host
+        value: true
     use:
       template: ../../common/_step_templates/assert-kongRoute.yaml
 
@@ -295,6 +297,8 @@ spec:
           - /echo/
       - name: strip_path
         value: false
+      - name: preserve_host
+        value: true
     use:
       template: ../../common/_step_templates/assert-kongRoute.yaml
 
@@ -364,6 +368,8 @@ spec:
           - /echo/
       - name: strip_path
         value: false
+      - name: preserve_host
+        value: true
     use:
       template: ../../common/_step_templates/assert-kongRoute.yaml
 
@@ -513,6 +519,8 @@ spec:
           - /echo/
       - name: strip_path
         value: false
+      - name: preserve_host
+        value: true
     use:
       template: ../../common/_step_templates/assert-kongRoute.yaml
 

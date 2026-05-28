@@ -1,0 +1,203 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: konnect
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: event-gateways
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: event-virtual-clusters
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: event-policies
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: konnect
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:
+  # https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: eu.api.konghq.com
+---
+# Allow the Event Gateway in event-gateways to use the Konnect auth
+# configuration in konnect.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-eventgateway-to-konnect-auth
+  namespace: konnect
+spec:
+  from:
+    - group: konnect.konghq.com
+      kind: KonnectEventGateway
+      namespace: event-gateways
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectAPIAuthConfiguration
+---
+# Allow the VirtualCluster in event-virtual-clusters to reference the
+# BackendCluster in event-gateways.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-virtualcluster-to-backendcluster
+  namespace: event-gateways
+spec:
+  from:
+    - group: konnect.konghq.com
+      kind: EventGatewayVirtualCluster
+      namespace: event-virtual-clusters
+  to:
+    - group: konnect.konghq.com
+      kind: EventGatewayBackendCluster
+---
+# Allow the ConsumePolicy in event-policies to reference the VirtualCluster in
+# event-virtual-clusters.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-consumepolicy-to-virtualcluster
+  namespace: event-virtual-clusters
+spec:
+  from:
+    - group: konnect.konghq.com
+      kind: EventGatewayVirtualClusterConsumePolicy
+      namespace: event-policies
+  to:
+    - group: konnect.konghq.com
+      kind: EventGatewayVirtualCluster
+---
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: shared-event-gateway
+  namespace: event-gateways
+spec:
+  apiSpec:
+    name: shared-event-gateway
+    description: Event Gateway shared across namespaces
+    labels:
+      app: sample
+      env: demo
+  konnect:
+    authRef:
+      name: konnect-api-auth
+      namespace: konnect
+---
+kind: EventGatewayBackendCluster
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: shared-backend-cluster
+  namespace: event-gateways
+spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: shared-event-gateway
+  apiSpec:
+    name: shared-backend-cluster
+    description: Backend Cluster shared across namespaces
+    authentication:
+      type: anonymous
+      anonymous: {}
+    bootstrapServers:
+      - "kafka1:9092"
+      - "kafka2:9092"
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    labels:
+      app: sample
+      env: demo
+    metadataUpdateIntervalSeconds: 60
+    tls:
+      enabled: Disabled
+      tlsVersions:
+        - tls13
+      caBundle: |
+        -----BEGIN CERTIFICATE-----
+        MIICwDCCAimgAwIBAgIUc4PDW5VuLWNsM+3Mcnk66T5E3P0wDQYJKoZIhvcNAQEL
+        BQAwajELMAkGA1UEBhMCWFgxEjAQBgNVBAgMCVN0YXRlTmFtZTERMA8GA1UEBwwI
+        Q2l0eU5hbWUxFDASBgNVBAoMC0NvbXBhbnlOYW1lMQswCQYDVQQLDAJDQTERMA8G
+        A1UEAwwITXlSb290Q0EwHhcNMjYwNDI5MTI0MDM4WhcNMzYwNDI2MTI0MDM4WjBq
+        MQswCQYDVQQGEwJYWDESMBAGA1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5
+        TmFtZTEUMBIGA1UECgwLQ29tcGFueU5hbWUxCzAJBgNVBAsMAkNBMREwDwYDVQQD
+        DAhNeVJvb3RDQTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAr7nmBaNFZ+ba
+        DccAKBAvm2BJLe4z4R3qnGEcdzwxOv5HAQfbSbNSzvl/yBtmRMcO6GShZYBWfJ8q
+        PsTSSpcbB9KoRxWSwIBtUr9s6NsGi1g2uH2sLtgygkKoOKZTlzlSTjKm2wTdF97h
+        w+tpfVAVPc2OAjkNM76H/3IZxYzcjt8CAwEAAaNjMGEwHQYDVR0OBBYEFAy8XNmU
+        tjb6+l3+dQ8tZl9lUuIvMB8GA1UdIwQYMBaAFAy8XNmUtjb6+l3+dQ8tZl9lUuIv
+        MA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMA0GCSqGSIb3DQEBCwUA
+        A4GBAFFy9F9JK/4ImxCnJDJOxyDl5IEny+4q8jbjaPCwjO2mUBpI9mBInUcSdU0V
+        MRyBAKUDlpA+5oOV/HzdOEC7LbRU04+pD95CkvQfu2u5wkOCUFIY3eVTXBhhUMMo
+        i9cMhVYP4Xeq7z1NGiu/VB36Pbr4hHDY/t9YAj0DtrYRW5sa
+        -----END CERTIFICATE-----
+---
+kind: EventGatewayVirtualCluster
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: shared-virtual-cluster
+  namespace: event-virtual-clusters
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: shared-backend-cluster
+      namespace: event-gateways
+  apiSpec:
+    name: shared-virtual-cluster
+    description: Virtual Cluster referencing a cross-namespace BackendCluster
+    labels:
+      app: sample
+      env: demo
+    aclMode: enforce_on_gateway
+    authentication:
+      - type: anonymous
+    dnsLabel: shared-virtual-cluster
+    namespace:
+      mode: enforce_prefix
+      prefix: sample
+      additional:
+        consumerGroups:
+          - type: glob
+            glob:
+              glob: group-*
+        topics:
+          - type: glob
+            glob:
+              glob: topic-*
+---
+kind: EventGatewayVirtualClusterConsumePolicy
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: shared-consume-policy
+  namespace: event-policies
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: shared-virtual-cluster
+      namespace: event-virtual-clusters
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: shared-consume-policy
+      labels:
+        app: sample
+        env: demo
+      description: ConsumePolicy referencing a cross-namespace VirtualCluster
+      config:
+        actions:
+          - op: set
+            set:
+              key: x-added-header
+              value: added-value

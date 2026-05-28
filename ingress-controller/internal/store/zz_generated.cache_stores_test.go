@@ -24,117 +24,94 @@ func TestCacheStores(t *testing.T) {
 		name          string
 		objectToStore client.Object
 	}{
-
 		{
 			name:          "Ingress",
 			objectToStore: &netv1.Ingress{},
 		},
-
 		{
 			name:          "IngressClass",
 			objectToStore: &netv1.IngressClass{},
 		},
-
 		{
 			name:          "Service",
 			objectToStore: &corev1.Service{},
 		},
-
 		{
 			name:          "Secret",
 			objectToStore: &corev1.Secret{},
 		},
-
 		{
 			name:          "ConfigMap",
 			objectToStore: &corev1.ConfigMap{},
 		},
-
 		{
 			name:          "EndpointSlice",
 			objectToStore: &discoveryv1.EndpointSlice{},
 		},
-
 		{
 			name:          "HTTPRoute",
 			objectToStore: &gatewayapi.HTTPRoute{},
 		},
-
 		{
 			name:          "UDPRoute",
 			objectToStore: &gatewayapi.UDPRoute{},
 		},
-
 		{
 			name:          "TCPRoute",
 			objectToStore: &gatewayapi.TCPRoute{},
 		},
-
 		{
 			name:          "TLSRoute",
 			objectToStore: &gatewayapi.TLSRoute{},
 		},
-
 		{
 			name:          "GRPCRoute",
 			objectToStore: &gatewayapi.GRPCRoute{},
 		},
-
 		{
 			name:          "ReferenceGrant",
 			objectToStore: &gatewayapi.ReferenceGrant{},
 		},
-
 		{
 			name:          "Gateway",
 			objectToStore: &gatewayapi.Gateway{},
 		},
-
 		{
 			name:          "BackendTLSPolicy",
 			objectToStore: &gatewayapi.BackendTLSPolicy{},
 		},
-
 		{
 			name:          "KongPlugin",
 			objectToStore: &kongv1.KongPlugin{},
 		},
-
 		{
 			name:          "KongClusterPlugin",
 			objectToStore: &kongv1.KongClusterPlugin{},
 		},
-
 		{
 			name:          "KongConsumer",
 			objectToStore: &kongv1.KongConsumer{},
 		},
-
 		{
 			name:          "KongConsumerGroup",
 			objectToStore: &kongv1beta1.KongConsumerGroup{},
 		},
-
 		{
 			name:          "KongUpstreamPolicy",
 			objectToStore: &kongv1beta1.KongUpstreamPolicy{},
 		},
-
 		{
 			name:          "IngressClassParameters",
 			objectToStore: &kongv1alpha1.IngressClassParameters{},
 		},
-
 		{
 			name:          "KongServiceFacade",
 			objectToStore: &incubatorv1alpha1.KongServiceFacade{},
 		},
-
 		{
 			name:          "KongVault",
 			objectToStore: &kongv1alpha1.KongVault{},
 		},
-
 		{
 			name:          "KongCustomEntity",
 			objectToStore: &kongv1alpha1.KongCustomEntity{},

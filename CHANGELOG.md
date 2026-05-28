@@ -50,6 +50,14 @@
 
 ### Added
 
+- Add `--enable-controller-kegdataplane` flag (env
+  `KONG_OPERATOR_ENABLE_CONTROLLER_KEGDATAPLANE`, default `false`) to enable
+  the KEG (Kong Event Gateway) DataPlane controller.
+  [#4391](https://github.com/Kong/kong-operator/pull/4391)
+- DataPlane: extend Kong image validation to support sha256 digest
+  [#4356](https://github.com/Kong/kong-operator/pull/4356)
+- Konnect: support `KongCertificate` ref in `KongUpstream`
+  [#4305](https://github.com/Kong/kong-operator/pull/4305)
 - `KongTarget`: support cross-namespace `spec.upstreamRef` to reference a
   `KongUpstream` in a different namespace. A `KongReferenceGrant` in the
   upstream's namespace is required to permit the reference. The `KongTarget`
@@ -78,6 +86,8 @@
   [#4104](https://github.com/Kong/kong-operator/pull/4104)
 - Hybridgateway: add support for `konghq.com/host-header` service annotation
   [#4108](https://github.com/Kong/kong-operator/pull/4108)
+- Hybridgateway: add support for `konghq.com/client-cert` service annotation.
+  [#4352](https://github.com/Kong/kong-operator/pull/4352)
 - Konnect: support `KongCertificate` and `KongCACertificate` refs in `KongService`
   [#4240](https://github.com/Kong/kong-operator/pull/4240)
 - Hybridgateway: add error logs when annotations are malformed
@@ -229,9 +239,44 @@
   new CRDs before the upgrade, see [UPGRADE](charts/kong-operator/UPGRADE.md).
   [#3596](https://github.com/Kong/kong-operator/pull/3596)
   [#3599](https://github.com/Kong/kong-operator/pull/3599)
+- Bump Kong Gateway to 3.14 and double the default CPU (now `2000m`) and memory limits (now `2000Mi`)
+  for the `DataPlane` deployment.
+  [#3995](https://github.com/Kong/kong-operator/pull/3995)
 
 ### Fixes
 
+- Hybridgateway: fix `KongCertificate` name collisions when a `Gateway` has
+  multiple listeners using the same port by including listener identity in
+  generated certificate names.
+  **Attention**: This will re-create CA certificates in Konnect,
+  as it changes the names of the generated `KongCertificate`s.
+  [#4382](https://github.com/Kong/kong-operator/pull/4382)
+- `Gateway`: Pick the intersection of spec's `hostnames` and parent listener's
+  `hostname` as the hostnames in `TLSRoute` for translation in on-prem gateways.
+  [#4369](https://github.com/Kong/kong-operator/pull/4369)
+- `Gateway`: conflicting listeners (port/protocol or hostname conflict) now have
+  `Accepted=False` with the conflict reason, per Gateway API spec rule that
+  "ALL indistinct Listeners must not be accepted for processing".
+  Additionally, TLS listeners that share a port with another listener are now
+  marked `Conflicted=True/ProtocolConflict` (and therefore not accepted).
+  [#4309](https://github.com/Kong/kong-operator/pull/4309)
+- Add `ResolvedRefs` condition update for `TLSRoute`s and enable `ReferenceGrant`
+  to control the cross-namespace reference from `TLSRoute`s to their backendRefs
+  in on-prem `TLSRoute` controller.
+  [#4292](https://github.com/Kong/kong-operator/pull/4292)
+- `KongRoute`: when a cross-namespace `serviceRef` has no `KongReferenceGrant`, the
+  `Programmed` condition now transitions to `False` in the same reconcile pass that sets
+  `ResolvedRefs=False/RefNotPermitted`. Previously `Programmed` remained `Unknown`
+  because the reconciler returned early before calling
+  `patchWithProgrammedStatusConditionBasedOnOtherConditions`.
+  [#4318](https://github.com/Kong/kong-operator/pull/4318)
+- `KongPluginBinding`: the `PluginRefValid` status condition is now set promptly
+  when the referenced `KongPlugin` does not exist (same-namespace or cross-namespace)
+  or when a cross-namespace `KongReferenceGrant` is deleted. Previously the binding
+  could take up to the full sync period (~60 s) to reflect these changes because the
+  check lived in the Konnect SDK ops layer. The check is now a pre-ops handler that
+  runs early in the reconcile loop and reacts immediately to watch-triggered enqueues.
+  [#4312](https://github.com/Kong/kong-operator/pull/4312)
 - Add `KongReferenceGrant` watch to `KongVault` and `KongConsumerGroup` reconcilers.
   Previously, creating or deleting a grant would not trigger re-reconciliation of these
   resources until the next full resync cycle. Grant changes now immediately re-queue
@@ -329,7 +374,14 @@
   [#3206](https://github.com/Kong/kong-operator/pull/3206) [#3836](https://github.com/Kong/kong-operator/pull/3836)
 - Fix incorrect Konnect API used for target lookup
   [#3910](https://github.com/Kong/kong-operator/pull/3910) [#3938](https://github.com/Kong/kong-operator/pull/3938)
-  [#3754](https://github.com/Kong/kong-operator/pull/3754)
+- HybridGateway: fix `HTTPRoute` hostname intersection with `Gateway`
+  listeners to follow Gateway API semantics. Routes that specify no
+  hostnames now inherit the matching listeners' hostnames instead of being
+  dropped, wildcard hostnames (`*` and `*.example.com`) are supported and
+  intersected with listener hostnames, and wildcards no longer match the
+  bare apex domain. This enables the `HTTPRouteHostnameIntersection`
+  Gateway API conformance test for Hybrid mode.
+  [#4077](https://github.com/Kong/kong-operator/pull/4077)
 
 ## [v2.1.3]
 

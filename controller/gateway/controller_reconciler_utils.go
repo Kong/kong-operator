@@ -885,7 +885,8 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 // It also sets the listeners Programmed condition by setting the underlying
 // Listener Programmed status to false.
 func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus() {
-	if !k8sutils.HasCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed), g) {
+	programmedCond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed), g)
+	if !ok || programmedCond.ObservedGeneration != g.Generation {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed),
@@ -919,7 +920,25 @@ func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(c
 			return err
 		}
 		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
-		lStatus.SupportedKinds = supportedKinds
+
+		// Only report SupportedKinds for listeners whose Accepted condition is True.
+		//
+		// NOTE: this behavior is required by the Gateway API conformance test helper
+		// `gatewayListenersMatch` (sigs.k8s.io/gateway-api conformance/utils/kubernetes),
+		// which treats an empty expected SupportedKinds as an exact-empty assertion.
+		// Tests like TLSRouteListenerMixedTerminationNotSupported omit SupportedKinds
+		// for listeners they expect to be rejected, so any non-empty value here fails
+		// the test. The Gateway API spec itself does NOT explicitly require
+		// SupportedKinds to be empty when a listener is not accepted; the expected
+		// value for an unaccepted listener is not clearly defined in the spec. We
+		// follow the conformance helper's convention to remain conformant.
+		// setAcceptedAndAttachedRoutes() always runs before this function, so the
+		// Accepted condition is guaranteed to be present.
+		accepted, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.ListenerConditionAccepted), lStatus)
+		if ok && accepted.Status == metav1.ConditionTrue {
+			lStatus.SupportedKinds = supportedKinds
+		}
+
 		k8sutils.SetCondition(resolvedRefsCondition, lStatus)
 	}
 	return nil
@@ -955,6 +974,16 @@ func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(ctx c
 			acceptedCondition.Reason = string(gatewayv1.ListenerReasonUnsupportedProtocol)
 		}
 		listenerConditionsAware := listenerConditionsAware(&g.Status.Listeners[i])
+		// Per Gateway API spec, conflicting listeners must not be accepted:
+		// "The implementation MUST NOT pick one conflicting Listener as the winner.
+		// ALL indistinct Listeners must not be accepted for processing."
+		// setConflicted() has already run, so the Conflicted condition is available here.
+		if conflicted, ok := k8sutils.GetCondition(
+			kcfgconsts.ConditionType(gatewayv1.ListenerConditionConflicted), listenerConditionsAware,
+		); ok && conflicted.Status == metav1.ConditionTrue {
+			acceptedCondition.Status = metav1.ConditionFalse
+			acceptedCondition.Reason = conflicted.Reason
+		}
 		listenerConditionsAware.SetConditions(append(listenerConditionsAware.Conditions, acceptedCondition))
 
 		// AttachedRoutes
@@ -1158,6 +1187,14 @@ func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
 			// If two listeners specify the same port and different protocols, they have a protocol conflict,
 			// and the conflicted condition must be updated accordingly.
 			if l.Port == l2.Port && l.Protocol != l2.Protocol {
+				conflictedCondition.Status = metav1.ConditionTrue
+				conflictedCondition.Reason = string(gatewayv1.ListenerReasonProtocolConflict)
+				break
+			}
+			// TODO: support multiple TLS listeners sharing the same port (e.g. via SNI).
+			// Tracked in https://github.com/Kong/kong-operator/issues/3511.
+			// Until then, a TLS listener that shares its port with any other listener is conflicted.
+			if l.Port == l2.Port && l.Protocol == gatewayv1.TLSProtocolType {
 				conflictedCondition.Status = metav1.ConditionTrue
 				conflictedCondition.Reason = string(gatewayv1.ListenerReasonProtocolConflict)
 				break

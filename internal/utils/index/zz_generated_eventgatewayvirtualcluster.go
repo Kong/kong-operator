@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 func OptionsForEventGatewayVirtualCluster() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.EventGatewayVirtualCluster{},
+			Object:         &configurationv1alpha1.EventGatewayVirtualCluster{},
 			Field:          IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef,
 			ExtractValueFn: eventGatewayVirtualClusterOnEventGatewayBackendClusterRef,
 		},
@@ -25,7 +25,7 @@ func OptionsForEventGatewayVirtualCluster() []Option {
 }
 
 func eventGatewayVirtualClusterOnEventGatewayBackendClusterRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.EventGatewayVirtualCluster)
+	ent, ok := object.(*configurationv1alpha1.EventGatewayVirtualCluster)
 	if !ok {
 		return nil
 	}
@@ -33,5 +33,10 @@ func eventGatewayVirtualClusterOnEventGatewayBackendClusterRef(object client.Obj
 		return nil
 	}
 
-	return []string{ent.Spec.EventGatewayBackendClusterRef.NamespacedRef.Name}
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.EventGatewayBackendClusterRef.NamespacedRef.Namespace != nil && *ent.Spec.EventGatewayBackendClusterRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.EventGatewayBackendClusterRef.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.EventGatewayBackendClusterRef.NamespacedRef.Name}
 }

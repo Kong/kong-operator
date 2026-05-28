@@ -61,8 +61,8 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 
 	httpRoute := gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gw.Namespace,
-			Name:      uuid.NewString(),
+			Namespace:    gw.Namespace,
+			GenerateName: "httproute-",
 		},
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
