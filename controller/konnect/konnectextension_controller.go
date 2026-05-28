@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -31,8 +30,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
-	"github.com/kong/kong-operator/v2/controller/konnect/server"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -52,7 +49,6 @@ type KonnectExtensionReconciler struct {
 
 	ControllerOptions        controller.Options
 	LoggingMode              logging.Mode
-	SdkFactory               sdkops.SDKFactory
 	SyncPeriod               time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
@@ -422,42 +418,6 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return res, retErr
 	}
 
-	apiAuthConfigValidCond := metav1.Condition{
-		Type:    konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
-		Status:  metav1.ConditionTrue,
-		Reason:  konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
-		Message: "APIAuthConfiguration is valid",
-	}
-
-	token, err := GetTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
-	if err != nil {
-		apiAuthConfigValidCond.Status = metav1.ConditionFalse
-		apiAuthConfigValidCond.Reason = konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid
-		apiAuthConfigValidCond.Message = err.Error()
-		if res, updated, errStatus := patch.StatusWithConditions(
-			ctx,
-			r.Client,
-			&ext,
-			readyCondition,
-			apiAuthConfigValidCond,
-		); errStatus != nil || updated || !res.IsZero() {
-			return res, errStatus
-		}
-		log.Debug(logger, "token retrieval failed")
-		return ctrl.Result{}, err
-	}
-
-	log.Debug(logger, "API token retrieved from KonnectAPIAuthConfiguration", "apiAuthRef", apiAuth.Name)
-
-	// NOTE: We need to create a new SDK instance for each reconciliation
-	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
-	// TODO: remove SDK usage in https://github.com/Kong/kong-operator/issues/2630
-	server, err := server.NewServer[*konnectv1alpha2.KonnectExtension](apiAuth.Spec.ServerURL)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
-	}
-	sdk := r.SdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
-
 	// Get the list of in cluster DataPlane client certificates.
 	var dpCertificates configurationv1alpha1.KongDataPlaneClientCertificateList
 	err = r.List(ctx, &dpCertificates,
@@ -519,50 +479,6 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		certSDK      sdkkonnectcomp.DataPlaneClientCertificate
 		certSDKFound bool
 	)
-
-	// If there are no mapped IDs from KongDataPlaneClientCertificates in cluster,
-	// then let's use the SDK to query Konnect directly to find any existing certificates.
-	// This is just to make sure that users migrating from older versions of the operator
-	// where the dataplane client certificates were not managed using
-	// KongDataPlaneClientCertificate CRs don't end up creating duplicate
-	// certificates in Konnect.
-	// TODO: https://github.com/Kong/kong-operator/issues/2630
-	// remove this block in future major release after several operator releases.
-	if len(mappedIDs) == 0 {
-		// Get the list of DataPlane client certificates in Konnect.
-		dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cpID)
-		if err != nil && !ops.ErrIsNotFound(err) {
-			certProvisionedCond.Status = metav1.ConditionFalse
-			certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
-			certProvisionedCond.Message = err.Error()
-			if res, updated, err := patch.StatusWithConditions(
-				ctx,
-				r.Client,
-				&ext,
-				readyCondition,
-				certProvisionedCond,
-			); err != nil || updated || !res.IsZero() {
-				return res, err
-			}
-
-			log.Debug(logger, "DataPlane client certificate list retrieval failed in Konnect")
-			return ctrl.Result{RequeueAfter: r.SyncPeriod}, nil
-		}
-
-		// retrieve all the konnect certificates bound to this secret
-		mappedIDs = lo.FilterMap(dpCertificates, func(c sdkkonnectcomp.DataPlaneClientCertificate, _ int) (k string, include bool) {
-			if c.Cert != nil && c.ID != nil {
-				certStr := sanitizeCert(*c.Cert)
-				certDataStr := sanitizeCert(string(certData))
-				if certStr == certDataStr {
-					certSDK = c
-					certSDKFound = true
-					return *c.ID, true
-				}
-			}
-			return "", false
-		})
-	}
 
 	switch {
 	case !cleanup:
@@ -700,56 +616,6 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
 	case cleanup:
-		// If there are no mapped IDs from KongDataPlaneClientCertificates in cluster,
-		// then let's use the SDK to query Konnect directly to find any existing certificates.
-		// This is just to make sure that users migrating from older versions of the operator
-		// where the dataplane client certificates were not managed using
-		// KongDataPlaneClientCertificate CRs don't end up creating duplicate
-		// certificates in Konnect.
-		// TODO: https://github.com/Kong/kong-operator/issues/2630
-		// remove this block in future major release after several operator releases.
-		if certSDKFound {
-			if certSDK.ID == nil {
-				return ctrl.Result{}, errors.New("cannot cleanup DataPlane certificate in Konnect without ID")
-			}
-
-			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
-				certificateSecret.Name,
-				certificateSecret.Namespace,
-				&ext.Spec.Konnect.ControlPlane.Ref,
-				string(certificateSecret.Data[consts.TLSCRT]),
-				&ext,
-				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
-					dpCert.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
-						// that expects the ControlPlaneID to be set in the status.
-						ControlPlaneID: cpID,
-						// setting the ID in the status as a workaround for the DeleteKongDataPlaneClientCertificate method,
-						// that expects the ID to be set in the status.
-						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-							ID: *certSDK.ID,
-						},
-					}
-				},
-			)
-			if err := ops.DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), &dpCert); err != nil {
-				certProvisionedCond.Status = metav1.ConditionFalse
-				certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
-				certProvisionedCond.Message = err.Error()
-				if res, updated, err := patch.StatusWithConditions(
-					ctx,
-					r.Client,
-					&ext,
-					readyCondition,
-					certProvisionedCond,
-				); err != nil || updated || !res.IsZero() {
-					return res, err
-				}
-				return ctrl.Result{RequeueAfter: r.SyncPeriod}, err
-			}
-
-		}
-
 		if certFound {
 			// This should never happen, but checking to make the dereference below bullet-proof
 			if cert.GetKonnectID() == "" {
