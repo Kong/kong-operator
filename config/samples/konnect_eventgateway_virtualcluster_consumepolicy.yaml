@@ -79,8 +79,6 @@ spec:
       enabled: Disabled
       tlsVersions:
       - tls13
-      # TODO: this needs to be a secret reference or a literal with certificate data.
-      # https://github.com/Kong/kong-operator/issues/4063
       caBundle: |
         -----BEGIN CERTIFICATE-----
         MIICwDCCAimgAwIBAgIUc4PDW5VuLWNsM+3Mcnk66T5E3P0wDQYJKoZIhvcNAQEL
