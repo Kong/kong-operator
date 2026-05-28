@@ -25,13 +25,16 @@ type Route struct {
 }
 
 var (
-	validMethods      = regexp.MustCompile(`\A[A-Z]+$`)
-	validPathHandling = regexp.MustCompile(`v\d`)
+	// ValidMethods is a regex to validate HTTP methods, which should be uppercase alpha strings.
+	ValidMethods = regexp.MustCompile(`\A[A-Z]+$`)
+	// ValidPathHandling is a regex to validate path handling modes, which should be "v0" or "v1" for now.
+	ValidPathHandling = regexp.MustCompile(`v\d`)
 
+	// ValidSNIs is a regex to validate SNIs, which should be valid hostnames without wildcard prefix.
 	// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
-	// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change.
-	validSNIs  = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
-	validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
+	ValidSNIs = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
+	// ValidHosts is a regex to validate hosts, which should be valid hostnames or wildcard hostnames.
+	ValidHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
 )
 
 // normalizeProtocols prevents users from mismatching grpc/http.
@@ -191,7 +194,7 @@ func (r *Route) overrideMethods(logger logr.Logger, anns map[string]string) {
 	}
 	var methods []*string
 	for _, method := range annMethods {
-		if validMethods.MatchString(method) {
+		if ValidMethods.MatchString(method) {
 			methods = append(methods, new(method))
 		} else {
 			// if any method is invalid (not an uppercase alpha string),
@@ -216,7 +219,7 @@ func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string, kongVer
 	var snis []*string
 	for _, sni := range annSNIs {
 		if kongVersion.LT(versions.KongWildcardSNICutoff) {
-			if validSNIs.MatchString(sni) {
+			if ValidSNIs.MatchString(sni) {
 				snis = append(snis, new(sni))
 			} else {
 				// SNI is not a valid hostname
@@ -225,7 +228,7 @@ func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string, kongVer
 			}
 		} else {
 			// for Kong versions that support wildcard SNIs, we can validate against the more permissive validHosts regex
-			if validHosts.MatchString(sni) {
+			if ValidHosts.MatchString(sni) {
 				snis = append(snis, new(sni))
 			} else {
 				// SNI is not a valid hostname or wildcard hostname
@@ -328,7 +331,7 @@ func (r *Route) overrideHosts(logger logr.Logger, anns map[string]string) {
 	// Merge hosts and host-aliases
 	hosts = append(hosts, r.Hosts...)
 	for _, hostAlias := range annHostAliases {
-		if validHosts.MatchString(hostAlias) {
+		if ValidHosts.MatchString(hostAlias) {
 			hosts = appendIfMissing(hosts, hostAlias)
 		} else {
 			// Host Alias is not a valid hostname
@@ -354,7 +357,7 @@ func (r *Route) overridePathHandling(logger logr.Logger, anns map[string]string)
 		return
 	}
 
-	if !validPathHandling.MatchString(val) {
+	if !ValidPathHandling.MatchString(val) {
 		logger.Error(nil, "Invalid path_handling", "value", val, "kongroute", r.Name)
 		return
 	}

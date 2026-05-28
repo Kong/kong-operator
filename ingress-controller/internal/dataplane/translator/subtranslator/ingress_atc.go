@@ -1,7 +1,6 @@
 package subtranslator
 
 import (
-	"regexp"
 	"sort"
 	"strings"
 
@@ -17,11 +16,6 @@ import (
 
 var (
 	headerAnnotationRegexPrefix = "~*"
-
-	validMethods = regexp.MustCompile(`\A[A-Z]+$`)
-
-	// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
-	validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
 )
 
 const IngressDefaultBackendPriority RoutePriorityType = 0
@@ -193,7 +187,7 @@ func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
 func methodMatcherFromMethods(methods []string) atc.Matcher {
 	matchers := make([]atc.Matcher, 0, len(methods))
 	for _, method := range methods {
-		if !validMethods.MatchString(method) {
+		if !kongstate.ValidMethods.MatchString(method) {
 			continue
 		}
 		matchers = append(matchers, atc.NewPredicateHTTPMethod(atc.OpEqual, method))

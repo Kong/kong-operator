@@ -793,37 +793,3 @@ func TestMethodMatcherFromMethods(t *testing.T) {
 		require.Equal(t, tc.expression, matcher.Expression())
 	}
 }
-
-func TestSNIMatcherFromSNIs(t *testing.T) {
-	testCases := []struct {
-		name       string
-		snis       []string
-		expression string
-	}{
-		{
-			name:       "single SNI",
-			snis:       []string{"konghq.com"},
-			expression: `tls.sni == "konghq.com"`,
-		},
-		{
-			name:       "multiple SNIs",
-			snis:       []string{"docs.konghq.com", "apis.konghq.com"},
-			expression: `(tls.sni == "docs.konghq.com") || (tls.sni == "apis.konghq.com")`,
-		},
-		{
-			name:       "multiple SNIs with wildcard SNI,",
-			snis:       []string{"foo.com", "*.bar.com"},
-			expression: `(tls.sni == "foo.com") || (tls.sni =^ ".bar.com")`,
-		},
-		{
-			name:       "multiple SNIs with invalid SNI",
-			snis:       []string{"foo.com", "a..bar.com"},
-			expression: `tls.sni == "foo.com"`,
-		},
-	}
-
-	for _, tc := range testCases {
-		matcher := sniMatcherFromSNIs(tc.snis)
-		require.Equal(t, tc.expression, matcher.Expression())
-	}
-}

@@ -33,6 +33,7 @@ func (t *Translator) ingressRulesFromTLSRoutes() ingressRules {
 	var errs []error
 	for _, tlsroute := range tlsRouteList {
 		if err := t.ingressRulesFromTLSRoute(&result, tlsroute); err != nil {
+			t.failuresCollector.PushResourceFailure(err.Error(), tlsroute)
 			err = fmt.Errorf("TLSRoute %s/%s can't be routed: %w", tlsroute.Namespace, tlsroute.Name, err)
 			errs = append(errs, err)
 		} else {
