@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kcfgcontrolplane "github.com/kong/kong-operator/v2/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
@@ -44,22 +43,15 @@ func TestReconciler_Reconcile(t *testing.T) {
 
 	testCases := []struct {
 		name                     string
-		controlplaneReq          reconcile.Request
 		controlplane             *ControlPlane
 		dataplane                *operatorv1beta1.DataPlane
 		controlplaneSubResources []client.Object
 		dataplaneSubResources    []client.Object
 		dataplanePods            []client.Object
-		testBody                 func(t *testing.T, reconciler Reconciler, controlplane reconcile.Request)
+		testBody                 func(t *testing.T, reconciler Reconciler, cp *ControlPlane)
 	}{
 		{
 			name: "base",
-			controlplaneReq: reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "test-namespace",
-					Name:      "test-controlplane",
-				},
-			},
 			controlplane: &ControlPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1beta1",
@@ -217,22 +209,16 @@ func TestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, controlplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, cp *ControlPlane) {
 				ctx := t.Context()
 
 				// first reconcile loop to allow the reconciler to set the controlplane defaults
-				_, err := reconciler.Reconcile(ctx, controlplaneReq)
+				_, err := reconciler.Reconcile(ctx, cp)
 				require.NoError(t, err)
 			},
 		},
 		{
 			name: "secret label selector conflict",
-			controlplaneReq: reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "test-namespace",
-					Name:      "test-controlplane",
-				},
-			},
 			controlplane: &ControlPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1beta1",
@@ -406,17 +392,20 @@ func TestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			testBody: func(t *testing.T, reconciler Reconciler, controlplaneReq reconcile.Request) {
+			testBody: func(t *testing.T, reconciler Reconciler, cp *ControlPlane) {
 				ctx := t.Context()
 
 				reconciler.SecretLabelSelector = "conflicting-key"
 				// Since the finalizer and `status.dataplane` is filled,
 				// the reconcliliation loop should reach the step of validating control plane options.
-				_, err := reconciler.Reconcile(ctx, controlplaneReq)
+				_, err := reconciler.Reconcile(ctx, cp)
 				require.NoError(t, err)
-				cp := &operatorv2beta1.ControlPlane{}
-				require.NoError(t, reconciler.Get(ctx, controlplaneReq.NamespacedName, cp))
-				require.Truef(t, lo.ContainsBy(cp.Status.Conditions, func(c metav1.Condition) bool {
+				cpGet := &operatorv2beta1.ControlPlane{}
+				require.NoError(t, reconciler.Get(ctx, types.NamespacedName{
+					Name:      "test-controlplane",
+					Namespace: "test-namespace",
+				}, cpGet))
+				require.Truef(t, lo.ContainsBy(cpGet.Status.Conditions, func(c metav1.Condition) bool {
 					return c.Type == string(kcfgcontrolplane.ConditionTypeOptionsValid) && c.Status == metav1.ConditionFalse
 				}), "OptionsValid condition should be False")
 			},
@@ -460,7 +449,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				InstancesManager:         multiinstance.NewManager(logr.Discard()),
 			}
 
-			tc.testBody(t, reconciler, tc.controlplaneReq)
+			tc.testBody(t, reconciler, tc.controlplane)
 		})
 	}
 }

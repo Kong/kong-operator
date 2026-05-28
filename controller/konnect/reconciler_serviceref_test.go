@@ -609,9 +609,7 @@ func TestReconcile_CrossNamespaceServiceRefWithoutGrant(t *testing.T) {
 		Client: fakeClient,
 	}
 
-	res, err := r.Reconcile(t.Context(), ctrl.Request{
-		NamespacedName: client.ObjectKeyFromObject(route),
-	})
+	res, err := r.Reconcile(t.Context(), route)
 	require.NoError(t, err)
 	require.Equal(t, ctrl.Result{}, res)
 

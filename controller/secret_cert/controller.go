@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -42,7 +43,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 				predicate.NewPredicateFuncs(secretMatchesFilter),
 			),
 		).
-		Complete(r)
+		Complete(reconcile.AsReconciler[*corev1.Secret](r.Client, r))
 }
 
 // secretMatchesFilter returns true if the Secret has the required labels and type.
@@ -64,11 +65,7 @@ func secretMatchesFilter(obj client.Object) bool {
 }
 
 // Reconcile handles certificate Secret reconciliation.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var cert corev1.Secret
-	if err := r.Get(ctx, req.NamespacedName, &cert); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+func (r *Reconciler) Reconcile(ctx context.Context, cert *corev1.Secret) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "secret_cert", r.LoggingMode).WithValues()
 
 	certExpirationAnnotation, ok := cert.Annotations[consts.CertExpiresAtAnnotation]
@@ -97,15 +94,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Info(logger, "cert is expiring soon, renewing")
 
 	// Remove the wait-for-owner finalizer if present so that the secret can be deleted.
-	if controllerutil.RemoveFinalizer(&cert, consts.DataPlaneOwnedWaitForOwnerFinalizer) {
-		if err := r.Update(ctx, &cert); err != nil {
+	if controllerutil.RemoveFinalizer(cert, consts.DataPlaneOwnedWaitForOwnerFinalizer) {
+		if err := r.Update(ctx, cert); err != nil {
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 		log.Debug(logger, "removed wait-for-owner finalizer from secret")
 	}
 	// Delete the expiring Secret, which will trigger the creation
 	// of a new secret with renewed certs by the respective owner controllers (CP/DP).
-	if err := r.Delete(ctx, &cert); err != nil {
+	if err := r.Delete(ctx, cert); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to delete secret %s/%s: %w", cert.Namespace, cert.Name, err)
 	}
 	log.Info(logger, "expiring cert secret has been deleted, new will be created immediately")
