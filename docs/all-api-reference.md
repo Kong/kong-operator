@@ -1699,7 +1699,6 @@ requests.
 | `enabled` _string_ | Whether the policy is enabled. |
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | A unique user-defined name of the policy. |
-| `parentPolicyID` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The unique identifier of the parent schema validation policy, if any. |
 
 _Appears in:_
 
@@ -1758,7 +1757,6 @@ Keys are therefore 256 bits long.<br /><br />Note this policy can only be used a
 | `enabled` _string_ | Whether the policy is enabled. |
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | A unique user-defined name of the policy. |
-| `parentPolicyID` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The unique identifier of the parent schema validation policy. |
 
 _Appears in:_
 
@@ -1881,7 +1879,6 @@ Keys are therefore 256 bits long.<br /><br />Note this policy can only be used a
 | `enabled` _string_ | Whether the policy is enabled. |
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | A unique user-defined name of the policy. |
-| `parentPolicyID` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The unique identifier of the parent schema validation policy. |
 
 _Appears in:_
 
@@ -2195,7 +2192,6 @@ record.
 | `enabled` _string_ | Whether the policy is enabled. |
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | A unique user-defined name of the policy. |
-| `parentPolicyID` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The unique identifier of the parent schema validation policy, if any. |
 
 _Appears in:_
 
