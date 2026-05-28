@@ -38,10 +38,6 @@ var skippedTestsForHybrid = []string{
 	// Extended profile.
 	tests.HTTPRouteRewriteHost.ShortName,
 	tests.HTTPRouteRewritePath.ShortName,
-
-	// This test is skipped because it proven to be flaky.
-	// TODO: https://github.com/Kong/kong-operator/issues/2793
-	tests.HTTPRouteReferenceGrant.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.
