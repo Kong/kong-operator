@@ -22,11 +22,7 @@ var skippedTestsShared = []string{
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 
-var skippedTestsForExpressionsRouter = []string{
-	// TODO: support wildcard SNI in TLSRoute and Gateway and remove this from the skipped tests list.
-	// https://github.com/Kong/kong-operator/issues/4350
-	tests.TLSRouteHostnameIntersection.ShortName,
-}
+var skippedTestsForExpressionsRouter = []string{}
 
 var skippedTestsForTraditionalCompatibleRouter = []string{
 	// HTTPRoute

@@ -54,6 +54,9 @@
   `KONG_OPERATOR_ENABLE_CONTROLLER_KEGDATAPLANE`, default `false`) to enable
   the KEG (Kong Event Gateway) DataPlane controller.
   [#4391](https://github.com/Kong/kong-operator/pull/4391)
+- Support wildcard TLS SNI matching in Kong routes for Kong 3.7.0 and above in
+  on-prem gateways.
+  [#4389](https://github.com/Kong/kong-operator/pull/4389)
 - DataPlane: extend Kong image validation to support sha256 digest
   [#4356](https://github.com/Kong/kong-operator/pull/4356)
 - Konnect: support `KongCertificate` ref in `KongUpstream`

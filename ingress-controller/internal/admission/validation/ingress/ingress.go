@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
@@ -24,6 +25,7 @@ type routeValidator interface {
 func ValidateIngress(
 	ctx context.Context,
 	routesValidator routeValidator,
+	kongVersion semver.Version,
 	translatorFeatures translator.FeatureFlags,
 	ingress *netv1.Ingress,
 	logger logr.Logger,
@@ -38,7 +40,7 @@ func ValidateIngress(
 		return false, fmt.Sprintf("Ingress has invalid Kong annotations: %s", err), nil
 	}
 
-	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector, logger, storer) {
+	for _, kg := range ingressToKongRoutesForValidation(kongVersion, translatorFeatures, ingress, failuresCollector, logger, storer) {
 		// Validate by using feature of Kong Gateway.
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
@@ -61,6 +63,7 @@ func ValidateIngress(
 // ingressToKongRoutesForValidation converts Ingress to Kong Routes that can be validated by Kong Gateway,
 // discards everything else that is not needed for validation.
 func ingressToKongRoutesForValidation(
+	kongVersion semver.Version,
 	translatorFeatures translator.FeatureFlags,
 	ingress *netv1.Ingress,
 	failuresCollector subtranslator.FailuresCollector,
@@ -82,7 +85,7 @@ func ingressToKongRoutesForValidation(
 	var kongRoutes []kong.Route
 	for _, svc := range kongServices {
 		for _, route := range svc.Routes {
-			route.Override(logger)
+			route.Override(logger, kongVersion)
 			kongRoutes = append(kongRoutes, route.Route)
 		}
 	}

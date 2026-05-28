@@ -2,6 +2,8 @@ package translator
 
 import (
 	"regexp"
+
+	"github.com/blang/semver/v4"
 )
 
 // -----------------------------------------------------------------------------
@@ -25,3 +27,7 @@ const (
 
 // LegacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is not a regex.
 var LegacyRegexPathExpression = regexp.MustCompile(`^[a-zA-Z0-9\.\-_~/%]*$`)
+
+var (
+	TLSWildcardSNIMinimumKongVersion = semver.MustParse("3.7.0")
+)

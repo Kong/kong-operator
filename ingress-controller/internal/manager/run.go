@@ -308,6 +308,7 @@ func New(
 		allNamespacesClient,
 		c.IngressClassName,
 		admission.NewDefaultAdminAPIServicesProvider(m.clientsManager),
+		kongSemVersion,
 		translatorFeatureFlags,
 		storer,
 		referenceIndexers,

@@ -18,9 +18,11 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 )
 
 func TestValidateIngress(t *testing.T) {
+	kongVersionSupportWildcardSNI := versions.KongWildcardSNICutoff
 	for _, tt := range []struct {
 		msg           string
 		ingress       *netv1.Ingress
@@ -91,6 +93,7 @@ func TestValidateIngress(t *testing.T) {
 			valid, validMsg, err := ValidateIngress(
 				t.Context(),
 				mockRoutesValidator{},
+				kongVersionSupportWildcardSNI,
 				translator.FeatureFlags{},
 				tt.ingress,
 				logger,
