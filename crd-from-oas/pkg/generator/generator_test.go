@@ -1684,6 +1684,51 @@ func TestGenerateSchemaTypes_QualifiesAmbiguousInlineTypesAndEmitsNestedUnionTyp
 	assert.Contains(t, content, "type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry struct {")
 }
 
+func TestGenerateSchemaTypes_OmitsConfiguredSchemaFields(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		CommonTypes: &config.CommonTypesConfig{
+			ObjectRef: &config.ObjectRefConfig{
+				Import: &config.ImportConfig{
+					Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+					Alias: "commonv1alpha1",
+				},
+			},
+		},
+		SchemaFieldOmissions: map[string]map[string]bool{
+			"EventGatewayModifyHeadersPolicyCreate": {
+				"parentPolicyID": true,
+			},
+		},
+	})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayModifyHeadersPolicyCreate": {
+				Name: "EventGatewayModifyHeadersPolicyCreate",
+				Properties: []*parser.Property{
+					{
+						Name:        "parentPolicyID",
+						Description: "The unique identifier of the parent schema validation policy, if any.",
+						IsReference: true,
+					},
+					{
+						Name:        "name",
+						Description: "A unique user-defined name of the policy.",
+						Type:        "string",
+					},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayModifyHeadersPolicyCreate": true}, parsed, nil)
+
+	assert.Contains(t, content, "type EventGatewayModifyHeadersPolicyCreate struct {")
+	assert.Contains(t, content, "Name string `json:\"name,omitzero\"`")
+	assert.NotContains(t, content, "ParentPolicyID")
+	assert.NotContains(t, content, "commonv1alpha1")
+}
+
 func TestGenerateSchemaTypes_EmitsAnonymousInlineUnionVariantTypes(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	parsed := &parser.ParsedSpec{

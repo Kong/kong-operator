@@ -7,7 +7,6 @@ import (
 	"fmt"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // BackendClusterAuthenticationAnonymous Anonymous authentication scheme for the
@@ -1202,10 +1201,6 @@ type EventGatewayModifyHeadersPolicyCreate struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
 	Name string `json:"name,omitzero"`
-	// The unique identifier of the parent schema validation policy, if any.
-	//
-	// +optional
-	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
 }
 
 // EventGatewayModifyHeadersPolicyCreateConfig The configuration of the modify
@@ -1296,10 +1291,6 @@ type EventGatewayParsedRecordDecryptFieldsPolicyCreate struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
 	Name string `json:"name,omitzero"`
-	// The unique identifier of the parent schema validation policy.
-	//
-	// +required
-	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
 }
 
 // EventGatewayParsedRecordDecryptionSelector Selects fields of a parsed record
@@ -1509,10 +1500,6 @@ type EventGatewayParsedRecordEncryptFieldsPolicyCreate struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
 	Name string `json:"name,omitzero"`
-	// The unique identifier of the parent schema validation policy.
-	//
-	// +required
-	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
 }
 
 // EventGatewayParsedRecordEncryptionSelector Selects fields of a parsed record
@@ -2255,10 +2242,6 @@ type EventGatewaySkipRecordPolicyCreate struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
 	Name string `json:"name,omitzero"`
-	// The unique identifier of the parent schema validation policy, if any.
-	//
-	// +optional
-	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
 }
 
 // EventGatewayStaticKeySource A key source that uses static symmetric keys.

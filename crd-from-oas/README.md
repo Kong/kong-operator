@@ -34,11 +34,20 @@ apiGroupVersions:
     types:
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: EventGatewayDataPlaneCertificate
-        optionalSecretReference: true
+        secretReferences:
+          - path: spec.apiSpec.certificate
+            type: Secret
+            key: tls.crt
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
+        name: EventGatewayVirtualClusterConsumePolicy
+        # Omit fields from generated nested schema types for this API only.
+        schemaFieldOmissions:
+          EventGatewayModifyHeadersPolicyCreate:
+            - parentPolicyID
 ```
 
 Generated ops infer that a controller-runtime client is needed when
-`optionalSecretReference: true` is enabled. For other entities that need to
+`secretReferences` are configured. For other entities that need to
 read cluster state while building SDK requests, set `ops.requireClient: true`
 under the type configuration.
 

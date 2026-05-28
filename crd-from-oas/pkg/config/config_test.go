@@ -55,6 +55,32 @@ func TestLoadProjectConfig(t *testing.T) {
 		assert.Equal(t, "/v3/gateways", gateway.Types[0].Path)
 	})
 
+	t.Run("valid config with per-type schema field omissions", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  configuration.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
+        schemaFieldOmissions:
+          EventGatewayModifyHeadersPolicyCreate:
+            - parentPolicyID
+          EventGatewaySkipRecordPolicyCreate:
+            - parentPolicyID
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		configuration := cfg.APIGroupVersions["configuration.konghq.com/v1alpha1"]
+		require.NotNil(t, configuration)
+		require.Len(t, configuration.Types, 1)
+		require.NotNil(t, configuration.Types[0].SchemaFieldOmissions)
+		assert.Equal(t, []string{"parentPolicyID"}, configuration.Types[0].SchemaFieldOmissions["EventGatewayModifyHeadersPolicyCreate"])
+		assert.Equal(t, []string{"parentPolicyID"}, configuration.Types[0].SchemaFieldOmissions["EventGatewaySkipRecordPolicyCreate"])
+	})
+
 	t.Run("valid config with ops requireClient", func(t *testing.T) {
 		content := `
 apiGroupVersions:
@@ -697,6 +723,32 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 		// Single-segment lookup returns nil for a non-leaf path segment without Validations.
 		assert.Nil(t, fc.GetFieldValidations("SubEntity", "tls"))
 	})
+}
+
+func TestAPIGroupVersionConfig_SchemaFieldOmissionsConfig(t *testing.T) {
+	agv := &APIGroupVersionConfig{
+		Types: []*TypeConfig{
+			{
+				Path: "/v1/consume-policies",
+				SchemaFieldOmissions: map[string][]string{
+					"EventGatewayModifyHeadersPolicyCreate": {"parentPolicyID"},
+				},
+			},
+			{
+				Path: "/v1/produce-policies",
+				SchemaFieldOmissions: map[string][]string{
+					"EventGatewayModifyHeadersPolicyCreate":             {"name"},
+					"EventGatewayParsedRecordEncryptFieldsPolicyCreate": {"parentPolicyID"},
+				},
+			},
+		},
+	}
+
+	omissions := agv.SchemaFieldOmissionsConfig()
+	require.Len(t, omissions, 2)
+	assert.True(t, omissions["EventGatewayModifyHeadersPolicyCreate"]["parentPolicyID"])
+	assert.True(t, omissions["EventGatewayModifyHeadersPolicyCreate"]["name"])
+	assert.True(t, omissions["EventGatewayParsedRecordEncryptFieldsPolicyCreate"]["parentPolicyID"])
 }
 
 func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
