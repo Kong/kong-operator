@@ -245,6 +245,11 @@
 
 ### Fixes
 
+- Hybridgateway: fix `KongRoute` name collisions when an `HTTPRoute` attaches
+  to multiple listener-scoped `ParentRef`s on the same `Gateway`, enabling the
+  `HTTPRouteListenerHostnameMatching` Gateway API conformance test for Hybrid
+  Gateway. Only affected multi-parent translated routes are renamed.
+  [#4423](https://github.com/Kong/kong-operator/pull/4423)
 - Hybridgateway: fix `KongCertificate` name collisions when a `Gateway` has
   multiple listeners using the same port by including listener identity in
   generated certificate names.
