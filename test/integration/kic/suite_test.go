@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/blang/semver/v4"
 	kongversion "github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -143,7 +143,17 @@ func TestMain(m *testing.M) {
 
 	helpers.ExitOnErr(
 		ctx,
-		retry.Do(
+		retry.New(
+			retry.OnRetry(
+				func(n uint, err error) {
+					fmt.Printf("WARNING: try to get Kong Gateway version attempt %d/10 - error: %s\n", n+1, err)
+				},
+			),
+			retry.LastErrorOnly(true), retry.RetryIf(func(err error) bool {
+				_, ok := errors.AsType[helpers.TooOldKongGatewayError](err)
+				return !ok
+			}),
+		).Do(
 			func() error {
 				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
 				defer cancel()
@@ -155,15 +165,6 @@ func TestMain(m *testing.M) {
 				fmt.Printf("INFO: using Kong instance (version: %q) reachable at %s\n", kongVersion, proxyAdminURL)
 				return nil
 			},
-			retry.OnRetry(
-				func(n uint, err error) {
-					fmt.Printf("WARNING: try to get Kong Gateway version attempt %d/10 - error: %s\n", n+1, err)
-				},
-			),
-			retry.LastErrorOnly(true), retry.RetryIf(func(err error) bool {
-				_, ok := errors.AsType[helpers.TooOldKongGatewayError](err)
-				return !ok
-			}),
 		))
 
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {

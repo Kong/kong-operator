@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 
@@ -40,7 +40,16 @@ func EnsureKonnectConnection(ctx context.Context, client *kong.Client, logger lo
 		delay   = time.Second
 	)
 
-	if err := retry.Do(
+	if err := retry.New(
+		retry.Attempts(retries),
+		retry.Context(ctx),
+		retry.Delay(delay),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+		retry.OnRetry(func(n uint, err error) {
+			logger.Info("Konnect Admin API client unhealthy, retrying", "retry", n, "error", err.Error())
+		}),
+	).Do(
 		func() error {
 			// Call an arbitrary endpoint that should return no error.
 			if _, _, err := client.Services.List(ctx, &kong.ListOpt{Size: 1}); err != nil {
@@ -51,14 +60,6 @@ func EnsureKonnectConnection(ctx context.Context, client *kong.Client, logger lo
 			}
 			return nil
 		},
-		retry.Attempts(retries),
-		retry.Context(ctx),
-		retry.Delay(delay),
-		retry.DelayType(retry.FixedDelay),
-		retry.LastErrorOnly(true),
-		retry.OnRetry(func(n uint, err error) {
-			logger.Info("Konnect Admin API client unhealthy, retrying", "retry", n, "error", err.Error())
-		}),
 	); err != nil {
 		return fmt.Errorf("konnect client unhealthy, no success after %d retries: %w", retries, err)
 	}

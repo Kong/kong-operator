@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/cloudflare/cfssl/config"
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
@@ -95,12 +95,7 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 		keyConfig secrets.KeyConfig
 	)
 
-	if err := retry.Do(
-		func() error {
-			var err error
-			caCert, caKey, keyConfig, err = msm.getCASecretAndKey(ctx)
-			return err
-		},
+	if err := retry.New(
 		retry.Context(ctx),
 		retry.Attempts(0),
 		retry.MaxDelay(3*time.Second),
@@ -112,6 +107,12 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 				"error", err,
 			)
 		}),
+	).Do(
+		func() error {
+			var err error
+			caCert, caKey, keyConfig, err = msm.getCASecretAndKey(ctx)
+			return err
+		},
 	); err != nil {
 		return err
 	}
