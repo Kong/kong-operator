@@ -93,7 +93,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
 				assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
-				assert.Equal(t, new(int64(1)), route.Spec.RegexPriority)
+				assert.Equal(t, new(int64(8)), route.Spec.RegexPriority)
 				assert.Empty(t, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
 			},
@@ -108,7 +108,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
 				assert.Equal(t, []string{"~/api$"}, route.Spec.Paths)
-				assert.Equal(t, new(int64(1)), route.Spec.RegexPriority)
+				assert.Equal(t, new(int64(9)), route.Spec.RegexPriority)
 				assert.Empty(t, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
 			},
@@ -239,7 +239,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
 				assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
-				assert.Equal(t, new(int64(1)), route.Spec.RegexPriority)
+				assert.Equal(t, new(int64(8)), route.Spec.RegexPriority)
 				assert.Equal(t, []string{"GET"}, route.Spec.Methods)
 				require.NotNil(t, route.Spec.Headers)
 				assert.Equal(t, []string{"Bearer token"}, route.Spec.Headers["Authorization"])
@@ -277,6 +277,40 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			tt.validate(t, route)
 		})
 	}
+}
+
+func TestGenerateKongRoutePathFromHTTPRouteMatch_RegexPriorityFollowsSpecificity(t *testing.T) {
+	shortPrefixPaths, shortPrefixPriority := GenerateKongRoutePathFromHTTPRouteMatch(
+		&gatewayv1.HTTPPathMatch{
+			Type:  new(gatewayv1.PathMatchPathPrefix),
+			Value: new("/match"),
+		},
+		false,
+	)
+	longPrefixPaths, longPrefixPriority := GenerateKongRoutePathFromHTTPRouteMatch(
+		&gatewayv1.HTTPPathMatch{
+			Type:  new(gatewayv1.PathMatchPathPrefix),
+			Value: new("/match/prefix/one"),
+		},
+		false,
+	)
+	exactPaths, exactPriority := GenerateKongRoutePathFromHTTPRouteMatch(
+		&gatewayv1.HTTPPathMatch{
+			Type:  new(gatewayv1.PathMatchExact),
+			Value: new("/match"),
+		},
+		false,
+	)
+
+	require.Equal(t, []string{"~/match$", "/match/"}, shortPrefixPaths)
+	require.Equal(t, []string{"~/match/prefix/one$", "/match/prefix/one/"}, longPrefixPaths)
+	require.Equal(t, []string{"~/match$"}, exactPaths)
+	require.NotNil(t, shortPrefixPriority)
+	require.NotNil(t, longPrefixPriority)
+	require.NotNil(t, exactPriority)
+
+	assert.Greater(t, *longPrefixPriority, *shortPrefixPriority)
+	assert.Greater(t, *exactPriority, *shortPrefixPriority)
 }
 
 func TestKongRouteBuilder_WithKongService(t *testing.T) {
