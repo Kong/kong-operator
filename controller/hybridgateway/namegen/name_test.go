@@ -32,6 +32,14 @@ func testControlPlaneRef(name string) *commonv1alpha1.ControlPlaneRef {
 	}
 }
 
+func testParentRef(sectionName *gatewayv1.SectionName) *gwtypes.ParentReference {
+	return &gwtypes.ParentReference{
+		Name:        gatewayv1.ObjectName("test-gateway"),
+		Namespace:   new(gatewayv1.Namespace("default")),
+		SectionName: sectionName,
+	}
+}
+
 func testPathMatch(path string) []gatewayv1.HTTPRouteMatch {
 	matchType := gatewayv1.PathMatchPathPrefix
 	return []gatewayv1.HTTPRouteMatch{
@@ -412,86 +420,88 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 	}
 }
 
-func TestNewKongRouteName(t *testing.T) {
-	tests := []struct {
-		name  string
-		route *gwtypes.HTTPRoute
-		cp    *commonv1alpha1.ControlPlaneRef
-		rule  gatewayv1.HTTPRouteRule
-	}{
-		{
-			name: "basic route name generation",
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
-			},
-			cp: &commonv1alpha1.ControlPlaneRef{
-				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-					Name: "test-cp",
-				},
-			},
-			rule: gatewayv1.HTTPRouteRule{
-				Matches: []gatewayv1.HTTPRouteMatch{
-					{
-						Path: &gatewayv1.HTTPPathMatch{
-							Type:  func() *gatewayv1.PathMatchType { t := gatewayv1.PathMatchPathPrefix; return &t }(),
-							Value: func() *string { s := "/api"; return &s }(),
-						},
-					},
-				},
-			},
+func TestNewKongRouteNameForMatch_DiffersByParentRef(t *testing.T) {
+	route := testRoute("default", "test-route")
+	cp := testControlPlaneRef("test-cp")
+	matchType := gatewayv1.PathMatchPathPrefix
+	match := gatewayv1.HTTPRouteMatch{
+		Path: &gatewayv1.HTTPPathMatch{
+			Type:  &matchType,
+			Value: new("/"),
 		},
-		{
-			name: "route with multiple matches",
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "complex-route",
-					Namespace: "test-ns",
-				},
-			},
-			cp: &commonv1alpha1.ControlPlaneRef{
-				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-					Name: "complex-cp",
-				},
-			},
-			rule: gatewayv1.HTTPRouteRule{
-				Matches: []gatewayv1.HTTPRouteMatch{
-					{
-						Path: &gatewayv1.HTTPPathMatch{
-							Type:  func() *gatewayv1.PathMatchType { t := gatewayv1.PathMatchPathPrefix; return &t }(),
-							Value: func() *string { s := "/api/v1"; return &s }(),
-						},
-						Headers: []gatewayv1.HTTPHeaderMatch{
-							{
-								Name:  "X-API-Version",
-								Value: "v1",
-							},
-						},
-					},
-					{
-						Path: &gatewayv1.HTTPPathMatch{
-							Type:  func() *gatewayv1.PathMatchType { t := gatewayv1.PathMatchExact; return &t }(),
-							Value: func() *string { s := "/health"; return &s }(),
-						},
-					},
-				},
-			},
+	}
+	listener1 := gatewayv1.SectionName("listener-1")
+	listener2 := gatewayv1.SectionName("listener-2")
+
+	name1 := NewKongRouteNameForMatch(route, cp, testParentRef(&listener1), match, 0)
+	name2 := NewKongRouteNameForMatch(route, cp, testParentRef(&listener2), match, 0)
+
+	assert.NotEqual(t, name1, name2)
+	assert.Equal(t, name1, NewKongRouteNameForMatch(route, cp, testParentRef(&listener1), match, 0))
+}
+
+func TestNewKongRouteNameForMatch_WithoutParentRefKeepsLegacyFormat(t *testing.T) {
+	route := testRoute("default", "test-route")
+	cp := testControlPlaneRef("test-cp")
+	matchType := gatewayv1.PathMatchPathPrefix
+	match := gatewayv1.HTTPRouteMatch{
+		Path: &gatewayv1.HTTPPathMatch{
+			Type:  &matchType,
+			Value: new("/"),
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongRouteName(tt.route, tt.cp, tt.rule)
-			cpHash := utils.Hash32(tt.cp)
-			matchesHash := utils.Hash32(tt.rule.Matches)
-			expected := "http." + tt.route.Namespace + "-" + tt.route.Name + ".cp" + cpHash + "." + matchesHash
-			assert.Equal(t, expected, result)
-		})
+	result := NewKongRouteNameForMatch(route, cp, nil, match, 0)
+	expected := "http.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(match) + ".m00"
+	assert.Equal(t, expected, result)
+}
+
+func TestNewKongRouteNameForTLSRouteRule_DiffersByParentRef(t *testing.T) {
+	route := &gwtypes.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "default",
+		},
 	}
+	cp := testControlPlaneRef("test-cp")
+	rule := gwtypes.TLSRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "backend",
+				Port: new(gatewayv1.PortNumber(443)),
+			},
+		}},
+	}
+	listener1 := gatewayv1.SectionName("listener-1")
+	listener2 := gatewayv1.SectionName("listener-2")
+
+	name1 := NewKongRouteNameForTLSRouteRule(route, cp, testParentRef(&listener1), rule)
+	name2 := NewKongRouteNameForTLSRouteRule(route, cp, testParentRef(&listener2), rule)
+
+	assert.NotEqual(t, name1, name2)
+	assert.Equal(t, name1, NewKongRouteNameForTLSRouteRule(route, cp, testParentRef(&listener1), rule))
+}
+
+func TestNewKongRouteNameForTLSRouteRule_WithoutParentRefKeepsLegacyFormat(t *testing.T) {
+	route := &gwtypes.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "default",
+		},
+	}
+	cp := testControlPlaneRef("test-cp")
+	rule := gwtypes.TLSRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "backend",
+				Port: new(gatewayv1.PortNumber(443)),
+			},
+		}},
+	}
+
+	result := NewKongRouteNameForTLSRouteRule(route, cp, nil, rule)
+	expected := "tls.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(rule)
+	assert.Equal(t, expected, result)
 }
 
 func TestNewKongPluginName(t *testing.T) {
@@ -701,22 +711,6 @@ func TestNameGenerationConsistency(t *testing.T) {
 	t.Run("service name consistency", func(t *testing.T) {
 		result1 := NewKongServiceNameForHTTPRouteRule(route, cp, rule)
 		result2 := NewKongServiceNameForHTTPRouteRule(route, cp, rule)
-		assert.Equal(t, result1, result2)
-	})
-
-	t.Run("route name consistency", func(t *testing.T) {
-		ruleWithMatches := gatewayv1.HTTPRouteRule{
-			Matches: []gatewayv1.HTTPRouteMatch{
-				{
-					Path: &gatewayv1.HTTPPathMatch{
-						Type:  func() *gatewayv1.PathMatchType { t := gatewayv1.PathMatchPathPrefix; return &t }(),
-						Value: func() *string { s := "/api"; return &s }(),
-					},
-				},
-			},
-		}
-		result1 := NewKongRouteName(route, cp, ruleWithMatches)
-		result2 := NewKongRouteName(route, cp, ruleWithMatches)
 		assert.Equal(t, result1, result2)
 	})
 
