@@ -59,7 +59,7 @@ require (
 	k8s.io/apimachinery v0.36.1
 	k8s.io/cli-runtime v0.36.1
 	k8s.io/client-go v0.36.1
-	k8s.io/kube-openapi v0.0.0-20260502001324-b7f5293f4787
+	k8s.io/kube-openapi v0.0.0-20260520065146-aa012df4f4af
 	k8s.io/kubectl v0.35.5
 	k8s.io/kubernetes v1.36.1
 	oras.land/oras-go/v2 v2.6.0
