@@ -122,6 +122,11 @@ func (obj EventGatewayVirtualClusterProducePolicyList) GetItems() []EventGateway
 	return obj.Items
 }
 
+// GetItems returns the list of EventGatewayVirtualClusterPolicy items.
+func (obj EventGatewayVirtualClusterPolicyList) GetItems() []EventGatewayVirtualClusterPolicy {
+	return obj.Items
+}
+
 // GetItems returns the list of EventGatewayDataPlaneCertificate items.
 func (obj EventGatewayDataPlaneCertificateList) GetItems() []EventGatewayDataPlaneCertificate {
 	return obj.Items

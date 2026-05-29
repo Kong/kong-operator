@@ -317,6 +317,9 @@ var supportedConfigurationPackageTypesWithList = func() []supportedTypesT {
 			Type: "EventGatewayVirtualClusterProducePolicy",
 		},
 		templateDataT{
+			Type: "EventGatewayVirtualClusterPolicy",
+		},
+		templateDataT{
 			Type: "EventGatewayDataPlaneCertificate",
 		},
 	)

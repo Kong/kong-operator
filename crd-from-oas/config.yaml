@@ -200,6 +200,25 @@ apiGroupVersions:
               group: konnect.konghq.com
           parentRef:
             fieldName: eventGatewayVirtualClusterRef
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policies
+        name: EventGatewayVirtualClusterPolicy
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterPoliciesSDK
+            fieldName: EventGatewayVirtualClusterPolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterClusterLevelPolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterClusterLevelPolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: EventGatewayVirtualCluster
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
 
   konnect.konghq.com/v1alpha1:
     categories:
