@@ -200,11 +200,11 @@ KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd
 download.kube-api-linter: mise yq ## Download kube-api-linter locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter@$(KUBE_API_LINTER_VERSION)
 
-CHAINSAW_VERSION = $(shell $(YQ) -r '.chainsaw' < $(TOOLS_VERSIONS_FILE))
-CHAINSAW = $(PROJECT_DIR)/bin/installs/github-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
+CHAINSAW_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:kyverno/chainsaw"].version' < $(MISE_FILE))
+CHAINSAW = $(PROJECT_DIR)/bin/installs/aqua-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
 .PHONY: chainsaw
 chainsaw: mise yq ## Download chainsaw locally if necessary.
-	$(MAKE) mise-install DEP_VER=github:kyverno/chainsaw@$(CHAINSAW_VERSION)
+	$(MAKE) mise-install DEP_VER=aqua:kyverno/chainsaw@$(CHAINSAW_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
