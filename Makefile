@@ -52,7 +52,7 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
+tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs grpcurl
 
 MISE := $(shell which mise)
 MISE_FILE := .mise.toml
@@ -197,6 +197,12 @@ CHAINSAW = $(PROJECT_DIR)/bin/installs/github-kyverno-chainsaw/$(CHAINSAW_VERSIO
 .PHONY: chainsaw
 chainsaw: mise yq ## Download chainsaw locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:kyverno/chainsaw@$(CHAINSAW_VERSION)
+
+GRPCURL_VERSION = $(shell $(YQ) -r '.grpcurl' < $(TOOLS_VERSIONS_FILE))
+GRPCURL = $(PROJECT_DIR)/bin/installs/github-fullstorydev-grpcurl/latest/grpcurl
+.PHONY: grpcurl
+grpcurl: mise yq ## Download grpcurl locally if necessary.
+	$(MAKE) mise-install DEP_VER=github:fullstorydev/grpcurl@$(GRPCURL_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -807,8 +813,8 @@ test.e2e:
 CHAINSAW_TEST_DIR ?= ./test/e2e/chainsaw
 CHAINSAW_CONFIG ?= ./test/e2e/chainsaw/.chainsaw.yaml
 .PHONY: test.e2e.chainsaw
-test.e2e.chainsaw: chainsaw ## Run chainsaw e2e tests.
-	$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
+test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
+	GRPCURL_BIN=$(GRPCURL) $(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
 GO_TEST_PARALLEL := $(if $(GO_TEST_PARALLEL),$(GO_TEST_PARALLEL),$(NCPU))

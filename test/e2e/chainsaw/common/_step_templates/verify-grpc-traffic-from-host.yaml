@@ -45,5 +45,5 @@ spec:
         content: |
           bash ../../common/scripts/host_connectivity_test_grpc.sh
         check:
-          (to_string(json_parse($stdout).success) == 'true'): true
+          (json_parse($stdout).success): true
 

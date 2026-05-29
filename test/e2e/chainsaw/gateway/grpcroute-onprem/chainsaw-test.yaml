@@ -63,27 +63,27 @@ spec:
 
     - name: Create-grpcbin-backend
       description: Create the grpcbin Deployment and Service backend.
-      try:
-        - apply:
-            file: 02-grpcbin.yaml
-        - assert:
-            file: 02-grpcbin.yaml
+      use:
+        template: ../../common/_step_templates/apply-assert-grpcbinService.yaml
+      bindings:
+        - name: grpcbin_namespace
+          value: ($gateway_namespace)
 
     - name: Create-gateway
       description: Create an operator-managed HTTPS Gateway and verify GRPCRoute is advertised as supported.
       try:
         - apply:
-            file: 03-gateway.yaml
+            file: 02-gateway.yaml
         - assert:
-            file: 03-assert-gateway-without-grpcroute.yaml
+            file: 02-assert-gateway-without-grpcroute.yaml
 
     - name: Create-grpcroute
       description: Create a GRPCRoute attached to the Gateway.
       try:
         - apply:
-            file: 04-grpcroute.yaml
+            file: 03-grpcroute.yaml
         - assert:
-            file: 04-assert-gateway-with-grpcroute.yaml
+            file: 03-assert-gateway-with-grpcroute.yaml
 
     - name: Verify-grpc-traffic
       description: Verify end-to-end gRPC traffic through the Gateway.
@@ -107,7 +107,7 @@ spec:
               namespace: ($gateway_namespace)
               name: ($grpc_route_name)
         - assert:
-            file: 03-assert-gateway-without-grpcroute.yaml
+            file: 02-assert-gateway-without-grpcroute.yaml
 
   catch:
     - description: Capture debug snapshot
