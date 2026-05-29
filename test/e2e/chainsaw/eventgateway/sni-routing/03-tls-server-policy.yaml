@@ -1,0 +1,32 @@
+# TLS server policy for the SNI routing test.
+#
+# Configures the listener to terminate TLS using a certificate sourced from
+# the Kubernetes Secret created by the gen_certs.sh script.
+# The operator reads tls.crt and tls.key from the referenced Secret.
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: ($tls_server_policy_name)
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($listener_name)
+  apiSpec:
+    type: tlsServer
+    tlsServer:
+      name: tls-server
+      enabled: Enabled
+      config:
+        certificates:
+          - certificate:
+              type: secretRef
+              secretRef:
+                name: ($tls_secret_name)
+                namespace: ($namespace)
+            key:
+              type: secretRef
+              secretRef:
+                name: ($tls_secret_name)
+                namespace: ($namespace)

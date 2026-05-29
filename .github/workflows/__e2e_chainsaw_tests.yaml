@@ -69,6 +69,7 @@ jobs:
           --set image.repository=${{ env.IMG }} \
           --set image.tag=${{ env.TAG }} \
           --set env.enable_controller_konnect=true \
+          --set env.enable_controller_kegdataplane=true \
           --wait
 
     - name: run chainsaw e2e tests

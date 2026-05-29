@@ -1,0 +1,138 @@
+# Event Gateway resources for the sni-routing test.
+#
+# Creates:
+#   - KonnectEventGateway (control plane)
+#   - KegDataPlane (single port 19092 — SNI routing uses one port for all VCs)
+#   - EventGatewayBackendCluster (in-namespace Kafka)
+#   - EventGatewayVirtualCluster "analytics" (namespace prefix analytics_)
+#   - EventGatewayVirtualCluster "payments"  (namespace prefix payments_)
+#   - EventGatewayListener (port 19092)
+#
+# Note: TLS server policy and SNI forward policy are applied in a later step,
+# after the LoadBalancer IP is known and the TLS certificate has been generated.
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectEventGateway
+metadata:
+  name: ($keg_cp_name)
+spec:
+  apiSpec:
+    name: ($keg_cp_name)
+    description: sni-routing chainsaw test control plane
+    labels:
+      test: sni-routing
+  konnect:
+    authRef:
+      name: ($konnect_auth_name)
+---
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($keg_cp_name)
+  network:
+    services:
+      kafka:
+        type: LoadBalancer
+        ports:
+          - name: kafka
+            port: 19092
+            targetPort: 19092
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: ($backend_cluster_name)
+spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($keg_cp_name)
+  apiSpec:
+    name: ($backend_cluster_name)
+    description: sni-routing backend (in-namespace Kafka)
+    bootstrapServers:
+      - (join('', ['kafka-bootstrap.', ($namespace), '.svc:9092']))
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: ($analytics_vc_name)
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($backend_cluster_name)
+  apiSpec:
+    name: ($analytics_vc_name)
+    description: analytics virtual cluster (SNI routing test)
+    dnsLabel: ($analytics_dns_label)
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+        anonymous: {}
+    namespace:
+      mode: hide_prefix
+      prefix: ($analytics_prefix)
+      additional:
+        topics:
+          - type: exactList
+            exactList:
+              conflict: warn
+              exactList:
+                - backend: user_actions
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: ($payments_vc_name)
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($backend_cluster_name)
+  apiSpec:
+    name: ($payments_vc_name)
+    description: payments virtual cluster (SNI routing test)
+    dnsLabel: ($payments_dns_label)
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+        anonymous: {}
+    namespace:
+      mode: hide_prefix
+      prefix: ($payments_prefix)
+      additional:
+        topics:
+          - type: exactList
+            exactList:
+              conflict: warn
+              exactList:
+                - backend: user_actions
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: ($listener_name)
+spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($keg_cp_name)
+  apiSpec:
+    name: ($listener_name)
+    description: sni-routing listener (single port, SNI differentiates VCs)
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - "19092"
