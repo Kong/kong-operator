@@ -27,7 +27,6 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
-	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
@@ -58,8 +57,9 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatalf("unsupported KongRouterFlavor: %s", kongRouterFlavor)
 	}
 
-	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(kongRouterFlavor)
-	require.NoError(t, err)
+	// Use the full upstream Gateway API feature catalog so the conformance suite
+	// exercises every Gateway-mode case and surfaces the current pass/fail state.
+	supportedFeatures := features.SetsToNamesSet(features.AllFeatures)
 
 	gwType := gatewayType(test.ConformanceGatewayType())
 	switch gwType {
@@ -71,7 +71,7 @@ func TestGatewayConformance(t *testing.T) {
 	// hybrid gateway does not support expressions router flavor since we do not support expression routes in KongRoute:
 	// https://github.com/Kong/kong-operator/issues/2673
 	if gwType == hybridGateway && kongRouterFlavor == consts.RouterFlavorExpressions {
-		t.Skipf("hybrid gateway does not support expressions router flavor yet, skipping: https://github.com/Kong/kong-operator/issues/2673")
+		t.Log("running hybrid gateway conformance with expressions router flavor even though this mode is not yet supported: https://github.com/Kong/kong-operator/issues/2673")
 	}
 
 	if gwType == hybridGateway && test.KonnectAccessToken() == "" {
@@ -145,6 +145,7 @@ func runConformance(
 	opts.Mode = mode
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
+		suite.GatewayTLSConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
 	)
