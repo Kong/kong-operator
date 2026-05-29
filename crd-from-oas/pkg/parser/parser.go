@@ -519,7 +519,8 @@ func deriveSchemaNameFromPath(path string, operationID string) string {
 		var result strings.Builder
 		for _, part := range parts {
 			if len(part) > 0 {
-				result.WriteString(strings.ToUpper(part[:1]) + part[1:])
+				result.WriteString(strings.ToUpper(part[:1]))
+				result.WriteString(part[1:])
 			}
 		}
 		return result.String()

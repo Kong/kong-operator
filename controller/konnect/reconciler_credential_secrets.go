@@ -137,7 +137,7 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 		Owns(&configurationv1alpha1.KongCredentialACL{}, builder.MatchEveryOwner).
 		Owns(&configurationv1alpha1.KongCredentialJWT{}, builder.MatchEveryOwner).
 		Owns(&configurationv1alpha1.KongCredentialHMAC{}, builder.MatchEveryOwner).
-		Complete(reconcile.AsReconciler[*corev1.Secret](r.client, r))
+		Complete(reconcile.AsReconciler(r.client, r))
 }
 
 func enqueueSecretsForKongConsumer(ctx context.Context, obj client.Object) []reconcile.Request {
