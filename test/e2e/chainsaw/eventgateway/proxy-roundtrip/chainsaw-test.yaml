@@ -52,6 +52,8 @@ spec:
       value: (join('-', [($test_name), 'forward']))
     - name: consume_policy_name
       value: (join('-', [($test_name), 'modify-headers']))
+    - name: acl_policy_name
+      value: (join('-', [($test_name), 'acls']))
 
     - name: injected_header_key
       value: My-New-Header
@@ -199,6 +201,38 @@ spec:
                 value: ($namespace)
             content: |
               bash scripts/kafkactl_direct_read.sh
+
+    # ACL enforcement test: create blocked-topic directly on Kafka, then try to
+    # produce through the gateway and assert the ACL policy denies the request.
+    - name: Test-acl-blocked-topic
+      description: |
+        Assert that the ACL policy denies write access to blocked-topic when
+        producing through the gateway (virtual cluster). The topic is first
+        created directly on Kafka so the produce attempt can reach the
+        authorization check, not a "topic not found" error.
+      try:
+        # Re-discover the LB address within this step.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP_NAME
+                value: ($keg_dp_name)
+            content: |
+              bash ../../common/scripts/get_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        - script:
+            env:
+              - name: GATEWAY_ADDR
+                value: (join(':', [($lb_address), '19092']))
+              - name: KAFKA_DIRECT
+                value: (join('', ['kafka-bootstrap.', ($namespace), '.svc:9092']))
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash scripts/kafkactl_acl_blocked.sh
 
   catch:
     - description: Capture debug snapshot on test failure.
