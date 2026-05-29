@@ -564,7 +564,9 @@ docker.run.openssf:
 
 GOTESTSUM_FORMAT ?= standard-verbose
 INTEGRATION_TEST_TIMEOUT ?= "30m"
-CONFORMANCE_TEST_TIMEOUT ?= "20m"
+# Full Gateway API conformance runs now exercise all upstream cases, which
+# exceeds the previous 20 minute go test timeout before the suite can finish.
+CONFORMANCE_TEST_TIMEOUT ?= "120m"
 E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
