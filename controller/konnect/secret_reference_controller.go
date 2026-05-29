@@ -49,7 +49,7 @@ func (r *KonnectSecretReferenceController) SetupWithManager(ctx context.Context,
 
 	setSecretReferenceWatches(b)
 
-	return b.Complete(reconcile.AsReconciler[*corev1.Secret](r.client, r))
+	return b.Complete(reconcile.AsReconciler(r.client, r))
 }
 
 // Reconcile reconciles a Secret object.

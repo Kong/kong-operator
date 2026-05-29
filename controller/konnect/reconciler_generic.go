@@ -127,7 +127,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context,
 	for _, dep := range ReconciliationWatchOptionsForEntity(r.Client, ent) {
 		b = dep(b)
 	}
-	return b.Complete(reconcile.AsReconciler[TEnt](r.Client, r))
+	return b.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // Reconcile reconciles the given Konnect entity.

@@ -431,7 +431,7 @@ func startControllerManager(
 	var featureGates strings.Builder
 	featureGates.WriteString(consts.DefaultControllerFeatureGates)
 	for gate, value := range setupCfg.controllerManagerFeatureGates {
-		featureGates.WriteString("," + fmt.Sprintf("%s=%s", gate, value))
+		fmt.Fprintf(&featureGates, ",%s=%s", gate, value)
 	}
 	t.Logf("feature gates enabled: %s", featureGates.String())
 
