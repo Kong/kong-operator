@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   conformance-tests:
-    timeout-minutes: 30
+    timeout-minutes: ${{ fromJSON(vars.GHA_CONFORMANCE_TIMEOUT_MINUTES || 180) }}
     runs-on: ubuntu-latest
     name: ${{ format('{0} {1}', matrix.gateway-type, matrix.router-flavor) }}
     strategy:
