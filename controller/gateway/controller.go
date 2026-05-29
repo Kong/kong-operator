@@ -83,7 +83,7 @@ const provisionDataPlaneFailRetryAfter = 5 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	builder := ctrl.NewControllerManagedBy(mgr).
+	blder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(r.ControllerOptions).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
@@ -145,7 +145,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by GatewayConfigurations used by Gateways objects.
 		// They may trigger reconciliation of DataPlane resources.
-		builder.WatchesRawSource(
+		blder.WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
 				&konnectv1alpha2.KonnectExtension{},
@@ -155,7 +155,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	}
 
 	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.
-	builder.WatchesRawSource(
+	blder.WatchesRawSource(
 		source.Kind(
 			mgr.GetCache(),
 			&corev1.Secret{},
@@ -163,7 +163,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		),
 	)
 
-	return builder.Complete(reconcile.AsReconciler[*gwtypes.Gateway](r.Client, r))
+	return blder.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // Reconcile moves the current state of an object to the intended state.
