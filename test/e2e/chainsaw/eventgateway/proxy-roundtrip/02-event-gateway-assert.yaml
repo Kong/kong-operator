@@ -1,0 +1,56 @@
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectEventGateway
+metadata:
+  name: ($keg_cp_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+---
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+status:
+  (conditions[?type == 'Ready']):
+    - status: "True"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: ($backend_cluster_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: ($virtual_cluster_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: ($listener_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: ($listener_policy_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: ($consume_policy_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
