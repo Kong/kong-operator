@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -83,7 +84,7 @@ const provisionDataPlaneFailRetryAfter = 5 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	builder := ctrl.NewControllerManagedBy(mgr).
+	blder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(r.ControllerOptions).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
@@ -131,10 +132,6 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			&gatewayv1.HTTPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(
-			&gatewayv1.TLSRoute{},
-			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
-		).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
 		// status in status.listeners.attachedRoutes
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
@@ -145,7 +142,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by GatewayConfigurations used by Gateways objects.
 		// They may trigger reconciliation of DataPlane resources.
-		builder.WatchesRawSource(
+		blder.WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
 				&konnectv1alpha2.KonnectExtension{},
@@ -154,8 +151,29 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	}
 
+	crdChecker := k8sutils.CRDChecker{Client: r.Client}
+	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster, to avoid watching for a resource that doesn't exist and that would trigger reconciliation for all the Gateways on every event in the cluster.
+	tlsRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "tlsroutes",
+	}
+	tlsRouteExist, err := crdChecker.CRDExists(tlsRouteGVR)
+	if err != nil {
+		return fmt.Errorf("failed to check if TLSRoute CRD exists: %w", err)
+	}
+	if tlsRouteExist {
+		blder.Watches(
+			&gatewayv1.TLSRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		)
+	} else {
+		log.Info(mgr.GetLogger(), "TLSRoute CRD not found in cluster, skipping watch for TLSRoute resources")
+	}
+
 	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.
-	builder.WatchesRawSource(
+	blder.WatchesRawSource(
 		source.Kind(
 			mgr.GetCache(),
 			&corev1.Secret{},
@@ -163,7 +181,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		),
 	)
 
-	return builder.Complete(reconcile.AsReconciler[*gwtypes.Gateway](r.Client, r))
+	return blder.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // Reconcile moves the current state of an object to the intended state.

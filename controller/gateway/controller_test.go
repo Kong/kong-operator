@@ -803,7 +803,7 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		_, err := reconcile.AsReconciler[*gwtypes.Gateway](reconciler.Client, &reconciler).Reconcile(b.Context(), gatewayReq)
+		_, err := reconcile.AsReconciler(reconciler.Client, &reconciler).Reconcile(b.Context(), gatewayReq)
 		if err != nil {
 			b.Error(err)
 		}
