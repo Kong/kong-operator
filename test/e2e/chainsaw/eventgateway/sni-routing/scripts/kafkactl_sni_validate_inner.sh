@@ -14,8 +14,8 @@
 #   EXPECTED_TOPICS      Space-separated list of topics that MUST be visible.
 #   UNEXPECTED_TOPICS    Space-separated list of topics that MUST NOT be visible.
 #   PRODUCE_TOPIC        Topic to produce+consume through (must be in EXPECTED_TOPICS).
-#   MAX_RETRIES          (optional) Default: 60.
-#   RETRY_DELAY          (optional) Default: 5.
+#   MAX_RETRIES          (optional) Default: 180.
+#   RETRY_DELAY          (optional) Default: 1.
 set -eu
 
 GATEWAY_BOOTSTRAP="${GATEWAY_BOOTSTRAP}"
@@ -23,8 +23,8 @@ CA_CERT_B64="${CA_CERT_B64}"
 EXPECTED_TOPICS="${EXPECTED_TOPICS}"
 UNEXPECTED_TOPICS="${UNEXPECTED_TOPICS:-}"
 PRODUCE_TOPIC="${PRODUCE_TOPIC}"
-MAX_RETRIES="${MAX_RETRIES:-60}"
-RETRY_DELAY="${RETRY_DELAY:-5}"
+MAX_RETRIES="${MAX_RETRIES:-180}"
+RETRY_DELAY="${RETRY_DELAY:-1}"
 
 # Write CA certificate so kafkactl can verify the gateway's TLS cert.
 printf '%s' "${CA_CERT_B64}" | base64 -d > /tmp/ca.crt

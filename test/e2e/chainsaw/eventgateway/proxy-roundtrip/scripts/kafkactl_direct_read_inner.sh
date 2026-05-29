@@ -7,15 +7,15 @@
 #   KAFKA_DIRECT    host:port of the Kafka bootstrap Service (bypasses gateway).
 #   TOPIC           Kafka topic to consume.
 #   HEADER_KEY      Header that must NOT appear on directly-consumed records.
-#   MAX_RETRIES     (optional) Maximum retry attempts. Default: 60.
-#   RETRY_DELAY     (optional) Seconds between retries. Default: 5.
+#   MAX_RETRIES     (optional) Maximum retry attempts. Default: 180.
+#   RETRY_DELAY     (optional) Seconds between retries. Default: 1.
 set -eu
 
 KAFKA_DIRECT="${KAFKA_DIRECT}"
 TOPIC="${TOPIC}"
 HEADER_KEY="${HEADER_KEY}"
-MAX_RETRIES="${MAX_RETRIES:-60}"
-RETRY_DELAY="${RETRY_DELAY:-5}"
+MAX_RETRIES="${MAX_RETRIES:-180}"
+RETRY_DELAY="${RETRY_DELAY:-1}"
 
 cat > /tmp/kafkactl.yml <<EOF
 contexts:
@@ -30,7 +30,7 @@ TOPIC_FOUND=0
 while [ "${ATTEMPT}" -lt "${MAX_RETRIES}" ]; do
   ATTEMPT=$((ATTEMPT + 1))
   if kafkactl -C /tmp/kafkactl.yml --context direct \
-       get topics 2>/dev/null | grep -q "^${TOPIC}[[:space:]]"; then
+       get topics 2>&1 | grep -q "^${TOPIC}[[:space:]]"; then
     TOPIC_FOUND=1
     break
   fi
@@ -52,7 +52,7 @@ fi
 
 # Consume directly from Kafka (bypassing keg).
 OUT=$(kafkactl -C /tmp/kafkactl.yml --context direct \
-  consume "${TOPIC}" --print-headers --from-beginning --exit 2>/dev/null || echo "")
+  consume "${TOPIC}" --print-headers --from-beginning --exit 2>&1 || echo "")
 
 if echo "${OUT}" | grep -q "${HEADER_KEY}:"; then
   cat <<EOF
@@ -62,7 +62,8 @@ if echo "${OUT}" | grep -q "${HEADER_KEY}:"; then
   "topic": "${TOPIC}",
   "kafka_direct": "${KAFKA_DIRECT}",
   "retry_attempt": ${ATTEMPT},
-  "max_retries": ${MAX_RETRIES}
+  "max_retries": ${MAX_RETRIES},
+  "consume_output": "${OUT}"
 }
 EOF
   exit 1

@@ -79,7 +79,7 @@ spec:
     name: ($virtual_cluster_name)
     description: proxy-roundtrip virtual cluster
     dnsLabel: vcluster-1
-    aclMode: passthrough
+    aclMode: enforce_on_gateway
     authentication:
       - type: anonymous
 ---
@@ -123,6 +123,46 @@ spec:
           advertisedHost: placeholder.invalid
           destination:
             name: ($virtual_cluster_name)
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: ($acl_policy_name)
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($virtual_cluster_name)
+  apiSpec:
+    type: acls
+    acls:
+      name: ($acl_policy_name)
+      config:
+        rules:
+          - action: allow
+            resourceType: topic
+            operations:
+              - name: all
+            resourceNames:
+              type: stat
+              stat:
+                - match: "*"
+          - action: deny
+            resourceType: topic
+            operations:
+              - name: write
+            resourceNames:
+              type: stat
+              stat:
+                - match: blocked-topic
+          - action: allow
+            resourceType: group
+            operations:
+              - name: all
+            resourceNames:
+              type: stat
+              stat:
+                - match: "*"
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: EventGatewayVirtualClusterConsumePolicy

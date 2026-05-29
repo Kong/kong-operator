@@ -7,16 +7,16 @@
 #   NAMESPACE     Namespace the resources live in.
 #   KEG_DP_NAME   Name of the KegDataPlane (its Service is <KEG_DP_NAME>-kafka).
 # Optional env:
-#   MAX_RETRIES   Maximum retry attempts. Default: 60.
-#   RETRY_DELAY   Seconds between retries. Default: 5.
+#   MAX_RETRIES   Maximum retry attempts. Default: 180.
+#   RETRY_DELAY   Seconds between retries. Default: 1.
 set -o errexit
 set -o nounset
 set -o pipefail
 
 NAMESPACE="${NAMESPACE}"
 KEG_DP_NAME="${KEG_DP_NAME}"
-MAX_RETRIES="${MAX_RETRIES:-60}"
-RETRY_DELAY="${RETRY_DELAY:-5}"
+MAX_RETRIES="${MAX_RETRIES:-180}"
+RETRY_DELAY="${RETRY_DELAY:-1}"
 
 SVC="${KEG_DP_NAME}-kafka"
 ADDR=""

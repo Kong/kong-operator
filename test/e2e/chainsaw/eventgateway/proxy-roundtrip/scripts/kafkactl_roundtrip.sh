@@ -20,6 +20,9 @@ set -euo pipefail
 : "${NAMESPACE:?must be set}"
 
 POD_NAME="kafkactl-roundtrip-$(date +%s)"
+_STDERR=$(mktemp /tmp/kubectl-roundtrip-stderr.XXXXXX)
+_on_exit() { [ $? -ne 0 ] && cat "${_STDERR}" >&2; rm -f "${_STDERR}"; }
+trap _on_exit EXIT
 
 cat scripts/kafkactl_roundtrip_inner.sh | kubectl run "${POD_NAME}" \
   --image=deviceinsight/kafkactl:latest \
@@ -30,4 +33,4 @@ cat scripts/kafkactl_roundtrip_inner.sh | kubectl run "${POD_NAME}" \
   --env="HEADER_VALUE=${HEADER_VALUE}" \
   --env="RECORD_VALUE=${RECORD_VALUE}" \
   -n "${NAMESPACE}" \
-  --command -- sh -s 2>/dev/null | grep -v '^pod "'
+  --command -- sh -s 2>"${_STDERR}"

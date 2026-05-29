@@ -10,13 +10,13 @@
 #
 # Env vars provided by kubectl run --env:
 #   KAFKA_BOOTSTRAP  Direct Kafka bootstrap server (e.g. kafka-bootstrap.<ns>.svc:9092).
-#   MAX_RETRIES      (optional) Default: 60.
-#   RETRY_DELAY      (optional) Default: 5.
+#   MAX_RETRIES      (optional) Default: 180.
+#   RETRY_DELAY      (optional) Default: 1.
 set -eu
 
 KAFKA_BOOTSTRAP="${KAFKA_BOOTSTRAP}"
-MAX_RETRIES="${MAX_RETRIES:-60}"
-RETRY_DELAY="${RETRY_DELAY:-5}"
+MAX_RETRIES="${MAX_RETRIES:-180}"
+RETRY_DELAY="${RETRY_DELAY:-1}"
 
 cat > /tmp/kafkactl.yml <<EOF
 contexts:
