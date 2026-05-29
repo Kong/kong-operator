@@ -338,16 +338,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 5,
+			wantCount: 4,
 			wantOutputs: outputCount{
-				upstreams: 1,
+				upstreams: 0,
 				services:  1,
 				routes:    1,
 				targets:   0,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 5,
+			wantStoreLen: 4,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -397,16 +397,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 5,
+			wantCount: 4,
 			wantOutputs: outputCount{
-				upstreams: 1,
+				upstreams: 0,
 				services:  1,
 				routes:    1,
 				targets:   0,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 5,
+			wantStoreLen: 4,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -545,16 +545,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 9,
+			wantCount: 8,
 			wantOutputs: outputCount{
-				upstreams: 2,
+				upstreams: 1,
 				services:  2,
 				routes:    2,
 				targets:   1,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 9,
+			wantStoreLen: 8,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -603,16 +603,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 5,
+			wantCount: 4,
 			wantOutputs: outputCount{
-				upstreams: 1,
+				upstreams: 0,
 				services:  1,
 				routes:    1,
 				targets:   0,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 5,
+			wantStoreLen: 4,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -980,12 +980,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantErr:    true,
-			wantErrSub: "failed to translate KongService for rule",
-			wantOutputs: outputCount{
-				upstreams: 1,
-			},
-			wantStoreLen: 1,
+			wantErr:      true,
+			wantErrSub:   "failed to translate KongService for rule",
+			wantStoreLen: 0,
 		},
 		{
 			name: "returns error when route translation fails",
@@ -1006,13 +1003,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantErr:    true,
-			wantErrSub: "failed to translate KongRoutes for rule",
-			wantOutputs: outputCount{
-				upstreams: 1,
-				services:  1,
-			},
-			wantStoreLen: 2,
+			wantErr:      true,
+			wantErrSub:   "failed to translate KongRoutes for rule",
+			wantStoreLen: 0,
 		},
 		{
 			name: "returns error when plugin binding fails",
@@ -1068,14 +1061,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantErr:    true,
-			wantErrSub: "failed to translate KongTarget resources for upstream",
-			wantOutputs: outputCount{
-				upstreams: 1,
-				services:  1,
-				routes:    1,
-			},
-			wantStoreLen: 3,
+			wantErr:      true,
+			wantErrSub:   "failed to translate KongTarget resources for upstream",
+			wantStoreLen: 0,
 		},
 	}
 

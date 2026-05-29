@@ -18,6 +18,7 @@ import (
 	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/kongroute"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/plugin"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/pluginbinding"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
@@ -405,18 +406,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"matchCount", len(rule.Matches),
 				"filterCount", len(rule.Filters))
 
-			// Build the KongUpstream resource.
-			upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
-			if err != nil {
-				log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
-					"controlPlane", cp.KonnectNamespacedRef)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongUpstream resource: %w", err))
-				continue
-			}
-			upstreamName := upstreamPtr.Name
-			c.outputStore = append(c.outputStore, upstreamPtr)
-			log.Debug(logger, "Successfully translated KongUpstream resource",
-				"upstream", upstreamName)
+			upstreamName := namegen.NewKongUpstreamNameForHTTPRouteRule(c.route, cp, rule)
 
 			// Build the KongService resource (and optionally a KongCertificate + KongReferenceGrant for client-cert).
 			servicePtr, certPtr, grantPtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
@@ -427,19 +417,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongService for rule: %w", err))
 				continue
 			}
-			// Append KongReferenceGrant before KongCertificate so the grant exists when the cert is applied.
-			if grantPtr != nil {
-				c.outputStore = append(c.outputStore, grantPtr)
-				log.Debug(logger, "Successfully translated KongReferenceGrant resource", "grant", grantPtr.Name)
-			}
-			if certPtr != nil {
-				c.outputStore = append(c.outputStore, certPtr)
-				log.Debug(logger, "Successfully translated KongCertificate resource", "cert", certPtr.Name)
-			}
 			serviceName := servicePtr.Name
-			c.outputStore = append(c.outputStore, servicePtr)
-			log.Debug(logger, "Successfully translated KongService resource",
-				"service", serviceName)
 
 			// Build one KongRoute per match in the rule.
 			// Gateway API semantics require OR across matches within a rule
@@ -454,16 +432,10 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongRoutes for rule %d: %w", ruleIndex, err))
 				continue
 			}
-			for _, r := range routes {
-				routeName := r.Name
-				c.outputStore = append(c.outputStore, r)
-				log.Debug(logger, "Successfully translated KongRoute resource",
-					"route", routeName)
-			}
-
 			// Build the KongPlugin and KongPluginBinding resources.
 			log.Debug(logger, "Processing filters for rule",
 				"filterCount", len(rule.Filters))
+			filterOutputs := make([]client.Object, 0)
 
 			for _, filter := range rule.Filters {
 				plugins, err := plugin.PluginsForFilter(ctx, logger, c.Client, c.route, rule, filter, &pRef)
@@ -474,9 +446,10 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					continue
 				}
 
-				for _, plugin := range plugins {
-					pluginName := plugin.Name
-					c.outputStore = append(c.outputStore, &plugin)
+				for i := range plugins {
+					pluginObj := &plugins[i]
+					pluginName := pluginObj.Name
+					filterOutputs = append(filterOutputs, pluginObj)
 					// Create a KongPluginBinding to bind the KongPlugin to each KongRoute generated for the rule.
 					for _, r := range routes {
 						bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
@@ -497,7 +470,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 							continue
 						}
 						bindingName := bindingPtr.Name
-						c.outputStore = append(c.outputStore, bindingPtr)
+						filterOutputs = append(filterOutputs, bindingPtr)
 
 						log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
 							"plugin", pluginName,
@@ -528,12 +501,42 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongTarget resources for upstream %s: %w", upstreamName, err))
 				continue
 			}
-			log.Debug(logger, "Successfully translated KongTarget resources",
-				"upstream", upstreamName,
-				"targetCount", len(targets))
-			for _, tgt := range targets {
-				c.outputStore = append(c.outputStore, &tgt)
+			log.Debug(logger, "Successfully translated KongTarget resources", "upstream", upstreamName, "targetCount", len(targets))
+
+			ruleOutputs := make([]client.Object, 0, 1+len(routes)+len(filterOutputs)+len(targets)+4)
+			if len(rule.BackendRefs) == 0 || len(targets) > 0 {
+				upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
+				if err != nil {
+					log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
+						"controlPlane", cp.KonnectNamespacedRef)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongUpstream resource: %w", err))
+					continue
+				}
+				ruleOutputs = append(ruleOutputs, upstreamPtr)
+				log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
+			} else {
+				log.Debug(logger, "Skipping KongUpstream translation because no valid backend targets were produced",
+					"upstream", upstreamName,
+					"backendRefCount", len(rule.BackendRefs))
 			}
+
+			// Append KongReferenceGrant before KongCertificate so the grant exists when the cert is applied.
+			if grantPtr != nil {
+				ruleOutputs = append(ruleOutputs, grantPtr)
+				log.Debug(logger, "Successfully translated KongReferenceGrant resource", "grant", grantPtr.Name)
+			}
+			if certPtr != nil {
+				ruleOutputs = append(ruleOutputs, certPtr)
+				log.Debug(logger, "Successfully translated KongCertificate resource", "cert", certPtr.Name)
+			}
+			ruleOutputs = append(ruleOutputs, servicePtr)
+			log.Debug(logger, "Successfully translated KongService resource", "service", serviceName)
+			for _, r := range routes {
+				routeName := r.Name
+				ruleOutputs = append(ruleOutputs, r)
+				log.Debug(logger, "Successfully translated KongRoute resource", "route", routeName)
+			}
+			ruleOutputs = append(ruleOutputs, filterOutputs...)
 
 			if len(rule.BackendRefs) > 0 && len(targets) == 0 {
 				terminationPlugin, err := plugin.RequestTerminationForBackendNotFound(
@@ -551,7 +554,6 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					translationErrors = append(translationErrors, fmt.Errorf("failed to translate request-termination plugin for service %s: %w", serviceName, err))
 					continue
 				}
-				c.outputStore = append(c.outputStore, terminationPlugin)
 
 				bindingPtr, err := pluginbinding.BindingForPluginAndService(
 					ctx,
@@ -570,8 +572,14 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					translationErrors = append(translationErrors, fmt.Errorf("failed to bind request-termination plugin %s to service %s: %w", terminationPlugin.Name, serviceName, err))
 					continue
 				}
-				c.outputStore = append(c.outputStore, bindingPtr)
+				ruleOutputs = append(ruleOutputs, terminationPlugin, bindingPtr)
 			}
+
+			for i := range targets {
+				ruleOutputs = append(ruleOutputs, &targets[i])
+			}
+
+			c.outputStore = append(c.outputStore, ruleOutputs...)
 		}
 	}
 
