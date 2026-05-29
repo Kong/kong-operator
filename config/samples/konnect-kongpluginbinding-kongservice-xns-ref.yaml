@@ -1,0 +1,90 @@
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha2
+metadata:
+  name: demo-cp
+  namespace: default
+spec:
+  createControlPlaneRequest:
+    name: demo-cp
+    labels:
+      app: demo-cp
+      key1: demo-cp
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: custom1
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-control-plane-to-custom1
+  namespace: default
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongService
+      namespace: custom1
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectGatewayControlPlane
+---
+kind: KongService
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: service-1
+  namespace: custom1
+spec:
+  name: service-1
+  host: example.com
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: demo-cp
+      namespace: default
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+ name: rate-limit-5-min
+ namespace: custom1
+config:
+ minute: 5
+ policy: local
+plugin: rate-limiting
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-kongplugin-to-control-plane
+  namespace: default
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongPluginBinding
+      namespace: custom1
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectGatewayControlPlane
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongPluginBinding
+metadata:
+  name: plugin-binding-kongservice
+  namespace: custom1
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: demo-cp
+      namespace: default
+  pluginRef:
+    name: rate-limit-5-min
+  targets:
+    serviceRef:
+      name: service-1
+      kind: KongService
+      group: configuration.konghq.com
