@@ -128,6 +128,7 @@ rules:
   - eventgatewaylistenerpolicies
   - eventgatewaylisteners
   - eventgatewayvirtualclusterconsumepolicies
+  - eventgatewayvirtualclusterpolicies
   - eventgatewayvirtualclusterproducepolicies
   - eventgatewayvirtualclusters
   - kongcacertificates
@@ -156,6 +157,8 @@ rules:
   - eventgatewaylisteners/status
   - eventgatewayvirtualclusterconsumepolicies/finalizers
   - eventgatewayvirtualclusterconsumepolicies/status
+  - eventgatewayvirtualclusterpolicies/finalizers
+  - eventgatewayvirtualclusterpolicies/status
   - eventgatewayvirtualclusterproducepolicies/finalizers
   - eventgatewayvirtualclusterproducepolicies/status
   - eventgatewayvirtualclusters/finalizers

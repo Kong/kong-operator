@@ -100,9 +100,10 @@ type SensitiveDataSource struct {
 	SecretRef *commonv1alpha1.NamespacedRef `json:"secretRef,omitempty"`
 }
 
-// flattenSDKUnions recursively flattens nested discriminated-union shapes
-// {"<disc>": "X", "X": {...}} into the flat shape {"<disc>": "X", ...}
-// expected by the Konnect SDK request types.
+// flattenSDKUnions recursively flattens nested discriminated-union shapes.
+// Object-valued members are rewritten from {"<disc>": "X", "X": {...}}
+// to {"<disc>": "X", ...}, while scalar and array members are rewritten to
+// the bare selected payload. Both forms match the Konnect SDK request types.
 func flattenSDKUnions(v any) any {
 	switch x := v.(type) {
 	case map[string]any:
@@ -113,8 +114,15 @@ func flattenSDKUnions(v any) any {
 		if !ok {
 			return x
 		}
+		innerMap, ok := inner.(map[string]any)
+		if !ok {
+			if len(x) == 2 {
+				return inner
+			}
+			return x
+		}
 		delete(x, discriminatorValue)
-		for k, vv := range inner {
+		for k, vv := range innerMap {
 			if _, isString := vv.(string); isString && x[k] == vv {
 				continue
 			}
@@ -130,7 +138,7 @@ func flattenSDKUnions(v any) any {
 	return v
 }
 
-func nestedSDKUnionMember(object map[string]any) (string, string, map[string]any, bool) {
+func nestedSDKUnionMember(object map[string]any) (string, string, any, bool) {
 	preferred := []string{"type", "op", "kind", "mode"}
 	for _, key := range preferred {
 		if value, inner, ok := nestedSDKUnionMemberForKey(object, key); ok {
@@ -145,13 +153,19 @@ func nestedSDKUnionMember(object map[string]any) (string, string, map[string]any
 	return "", "", nil, false
 }
 
-func nestedSDKUnionMemberForKey(object map[string]any, key string) (string, map[string]any, bool) {
+func nestedSDKUnionMemberForKey(object map[string]any, key string) (string, any, bool) {
 	discriminatorValue, ok := object[key].(string)
 	if !ok || discriminatorValue == "" {
 		return "", nil, false
 	}
-	inner, ok := object[discriminatorValue].(map[string]any)
-	if !ok {
+	// A discriminator must point at a *different* sibling member. A field whose
+	// value names itself (e.g. {"certificate":"certificate"}) is plain data, not
+	// a union wrapper.
+	if discriminatorValue == key {
+		return "", nil, false
+	}
+	inner, ok := object[discriminatorValue]
+	if !ok || inner == nil {
 		return "", nil, false
 	}
 	return discriminatorValue, inner, true

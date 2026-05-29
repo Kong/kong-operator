@@ -276,6 +276,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
+- [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
 - [IngressClassParameters](#configuration-konghq-com-v1alpha1-ingressclassparameters)
 - [KongCACertificate](#configuration-konghq-com-v1alpha1-kongcacertificate)
@@ -388,6 +389,21 @@ EventGatewayVirtualClusterConsumePolicy is the Schema for the eventgatewayvirtua
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)_ |  |
 | `status` _[EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)_ |  |
+
+### EventGatewayVirtualClusterPolicy
+
+
+EventGatewayVirtualClusterPolicy is the Schema for the eventgatewayvirtualclusterpolicys API.
+
+<!-- event_gateway_virtual_cluster_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterPolicy`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)_ |  |
+| `status` _[EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)_ |  |
 
 ### EventGatewayVirtualClusterProducePolicy
 
@@ -1073,6 +1089,162 @@ EncryptionRecordPart * key - encrypt the record key
 _Appears in:_
 
 - [EventGatewayEncryptConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfig)
+
+#### EventGatewayACLOperation
+
+
+EventGatewayACLOperation An Event Gateway operation to match against in an
+ACL rule.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [EventGatewayACLRule](#configuration-konghq-com-v1alpha1-types-eventgatewayaclrule)
+
+#### EventGatewayACLPolicyConfig
+
+
+EventGatewayACLPolicyConfig Apply ACLs to virtual cluster traffic.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[EventGatewayACLRule](#configuration-konghq-com-v1alpha1-types-eventgatewayaclrule)_ | Every ACL rule in this list applies independently. |
+
+_Appears in:_
+
+- [EventGatewayACLsPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayaclspolicy)
+
+#### EventGatewayACLResourceName
+
+
+EventGatewayACLResourceName An Event Gateway resource name to match against
+in an ACL rule.
+
+
+
+| Field | Description |
+| --- | --- |
+| `match` _string_ | Currently supported are exact matches and globs. All `*` characters are interpreted as globs, i.e. they match zero or more of any character. |
+
+_Appears in:_
+
+- [EventGatewayACLRuleResourceNamesStaticArray](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenamesstaticarray)
+
+#### EventGatewayACLRule
+
+
+EventGatewayACLRule A Kafka ACL rule to apply to virtual cluster traffic
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _string_ | How to handle the request if the rule matches |
+| `operations` _[EventGatewayACLOperation](#configuration-konghq-com-v1alpha1-types-eventgatewayacloperation)_ | Types of Kafka operations to match against. Note that not every operation can apply to every resource type. |
+| `resourceNames` _[EventGatewayACLRuleResourceNames](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenames)_ | If any of these entries match, the resource name matches for this rule. A maximum of 50 entries are allowed. |
+| `resourceType` _string_ | This rule applies to access only for type of resource |
+
+_Appears in:_
+
+- [EventGatewayACLPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayaclpolicyconfig)
+
+#### EventGatewayACLRuleResourceNames
+
+
+EventGatewayACLRuleResourceNames represents a union type for resource_names.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayACLRuleResourceNamesType](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenamestype)_ | Type designates the type of configuration. |
+| `stat` _[EventGatewayACLRuleResourceNamesStaticArray](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenamesstaticarray)_ | Stat configuration. |
+| `dynam` _[EventGatewayACLRuleResourceNamesDynamicArray](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenamesdynamicarray)_ | Dynam configuration. |
+
+_Appears in:_
+
+- [EventGatewayACLRule](#configuration-konghq-com-v1alpha1-types-eventgatewayaclrule)
+
+#### EventGatewayACLRuleResourceNamesDynamicArray
+
+_Underlying type:_ `string`
+
+EventGatewayACLRuleResourceNamesDynamicArray This expression should evaluate
+to an array of glob patterns,
+equivalent to the `match` values in the static array form of
+`resource_names`.<br /><br />**Requires a minimum runtime version of `1.1`**.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayACLRuleResourceNames](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenames)
+
+#### EventGatewayACLRuleResourceNamesStaticArray
+
+_Underlying type:_ `[EventGatewayACLResourceName](#eventgatewayaclresourcename)`
+
+EventGatewayACLRuleResourceNamesStaticArray A static list of resource name
+globs to match against resources when applying an ACL policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `match` _string_ | Currently supported are exact matches and globs. All `*` characters are interpreted as globs, i.e. they match zero or more of any character. |
+
+_Appears in:_
+
+- [EventGatewayACLRuleResourceNames](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenames)
+
+#### EventGatewayACLRuleResourceNamesType
+
+_Underlying type:_ `string`
+
+EventGatewayACLRuleResourceNamesType represents the type of resource_names.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayACLRuleResourceNames](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenames)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `stat` |  |
+| `dynam` |  |
+
+#### EventGatewayACLsPolicy
+
+
+EventGatewayACLsPolicy Apply Kafka ACLs to virtual cluster traffic.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
+| `config` _[EventGatewayACLPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayaclpolicyconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyconfig)
 
 #### EventGatewayAWSKeySource
 
@@ -2377,6 +2549,90 @@ EventGatewayVirtualClusterConsumePolicyStatus defines the observed state of Even
 _Appears in:_
 
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
+
+#### EventGatewayVirtualClusterPolicyAPISpec
+
+
+EventGatewayVirtualClusterPolicyAPISpec defines the API spec fields for EventGatewayVirtualClusterPolicy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)
+
+#### EventGatewayVirtualClusterPolicyConfig
+
+
+EventGatewayVirtualClusterPolicyConfig represents a union type for EventGatewayVirtualClusterPolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayVirtualClusterPolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyconfigtype)_ | Type designates the type of configuration. |
+| `acls` _[EventGatewayACLsPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayaclspolicy)_ | EventGatewayACLsPolicy configuration. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyapispec)
+
+#### EventGatewayVirtualClusterPolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayVirtualClusterPolicyConfigType represents the type of EventGatewayVirtualClusterPolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `acls` |  |
+
+
+
+#### EventGatewayVirtualClusterPolicySpec
+
+
+EventGatewayVirtualClusterPolicySpec defines the desired state of EventGatewayVirtualClusterPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterPolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
+
+#### EventGatewayVirtualClusterPolicyStatus
+
+
+EventGatewayVirtualClusterPolicyStatus defines the observed state of EventGatewayVirtualClusterPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
 
 #### EventGatewayVirtualClusterProducePolicyAPISpec
 
@@ -3904,6 +4160,7 @@ _Appears in:_
 - [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
+- [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
 - [EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
 - [EventGatewayVirtualClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
 
@@ -3924,6 +4181,7 @@ list or for searching across entity types.<br /><br />Keys must be of length 1-6
 
 _Appears in:_
 
+- [EventGatewayACLsPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayaclspolicy)
 - [EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
 - [EventGatewayConsumeSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicy)
 - [EventGatewayDecryptPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaydecryptpolicy)

@@ -475,6 +475,236 @@ type EncryptionKeyStaticReferenceByName struct {
 // * value - encrypt the record value
 type EncryptionRecordPart string
 
+// EventGatewayACLOperation An Event Gateway operation to match against in an
+// ACL rule.
+type EventGatewayACLOperation struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=all;alter;alter_configs;create;delete;describe;describe_configs;idempotent_write;read;write
+	Name string `json:"name,omitzero"`
+}
+
+// EventGatewayACLPolicyConfig Apply ACLs to virtual cluster traffic.
+type EventGatewayACLPolicyConfig struct {
+	// Every ACL rule in this list applies independently.
+	//
+	// +required
+	Rules []EventGatewayACLRule `json:"rules,omitempty"`
+}
+
+// EventGatewayACLResourceName An Event Gateway resource name to match against
+// in an ACL rule.
+type EventGatewayACLResourceName struct {
+	// Currently supported are exact matches and globs.
+	// All `*` characters are interpreted as globs, i.e.
+	// they match zero or more of any character.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Match string `json:"match,omitzero"`
+}
+
+// EventGatewayACLRule A Kafka ACL rule to apply to virtual cluster traffic
+type EventGatewayACLRule struct {
+	// How to handle the request if the rule matches
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=allow;deny
+	Action string `json:"action,omitzero"`
+	// Types of Kafka operations to match against.
+	// Note that not every operation can apply to every resource type.
+	//
+	// +required
+	Operations []EventGatewayACLOperation `json:"operations,omitempty"`
+	// If any of these entries match, the resource name matches for this rule.
+	// A maximum of 50 entries are allowed.
+	//
+	// +required
+	ResourceNames *EventGatewayACLRuleResourceNames `json:"resourceNames,omitempty"`
+	// This rule applies to access only for type of resource
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=topic;group;transactional_id;cluster
+	ResourceType string `json:"resourceType,omitzero"`
+}
+
+// EventGatewayACLRuleResourceNames represents a union type for resource_names.
+// Only one of the fields should be set based on the Type.
+//
+type EventGatewayACLRuleResourceNames struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=stat;dynam
+	Type EventGatewayACLRuleResourceNamesType `json:"type,omitempty"`
+
+	// Stat configuration.
+	//
+	// +optional
+	Stat *EventGatewayACLRuleResourceNamesStaticArray `json:"stat,omitempty"`
+	// Dynam configuration.
+	//
+	// +optional
+	Dynam *EventGatewayACLRuleResourceNamesDynamicArray `json:"dynam,omitempty"`
+}
+
+// EventGatewayACLRuleResourceNamesType represents the type of resource_names.
+type EventGatewayACLRuleResourceNamesType string
+
+// EventGatewayACLRuleResourceNamesType values.
+const (
+	EventGatewayACLRuleResourceNamesTypeStat EventGatewayACLRuleResourceNamesType = "stat"
+	EventGatewayACLRuleResourceNamesTypeDynam EventGatewayACLRuleResourceNamesType = "dynam"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayACLRuleResourceNames) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayACLRuleResourceNames type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayACLRuleResourceNamesTypeStat:
+		if u.Stat != nil {
+			raw, err := json.Marshal(u.Stat)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayACLRuleResourceNames Stat: %w", err)
+			}
+			m["stat"] = raw
+		}
+	case EventGatewayACLRuleResourceNamesTypeDynam:
+		if u.Dynam != nil {
+			raw, err := json.Marshal(u.Dynam)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayACLRuleResourceNames Dynam: %w", err)
+			}
+			m["dynam"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayACLRuleResourceNames) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayACLRuleResourceNames: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayACLRuleResourceNamesType(probe.Type)
+	switch probe.Type {
+	case "stat":
+		payload, ok := raw["stat"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayACLRuleResourceNamesStaticArray
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayACLRuleResourceNames Stat: %w", err)
+		}
+		u.Stat = &val
+	case "dynam":
+		payload, ok := raw["dynam"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayACLRuleResourceNamesDynamicArray
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayACLRuleResourceNames Dynam: %w", err)
+		}
+		u.Dynam = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayACLRule) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayACLRule: nil receiver")
+	}
+	type alias EventGatewayACLRule
+	aux := alias{}
+	aux.ResourceNames = &EventGatewayACLRuleResourceNames{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayACLRule: %w", err)
+	}
+	if aux.ResourceNames != nil && aux.ResourceNames.Type == "" && aux.ResourceNames.Stat == nil && aux.ResourceNames.Dynam == nil {
+		aux.ResourceNames = nil
+	}
+	*s = EventGatewayACLRule(aux)
+	return nil
+}
+
+// EventGatewayACLRuleResourceNamesDynamicArray This expression should evaluate
+// to an array of glob patterns,
+// equivalent to the `match` values in the static array form of
+// `resource_names`.
+//
+// **Requires a minimum runtime version of `1.1`**.
+type EventGatewayACLRuleResourceNamesDynamicArray string
+
+// EventGatewayACLRuleResourceNamesStaticArray A static list of resource name
+// globs to match against resources when applying an ACL policy.
+type EventGatewayACLRuleResourceNamesStaticArray []EventGatewayACLResourceName
+
+// EventGatewayACLsPolicy Apply Kafka ACLs to virtual cluster traffic.
+type EventGatewayACLsPolicy struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the policy.
+	//
+	// +required
+	Config EventGatewayACLPolicyConfig `json:"config,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+}
+
 // EventGatewayAWSKeySource A key source that uses an AWS KMS to find a
 // symmetric key.
 // Load KMS credentials from the environment.

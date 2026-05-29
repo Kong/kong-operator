@@ -14,6 +14,7 @@ type GeneratedSDK interface {
 	GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatewayListenerPoliciesSDK
 	GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewayVirtualClustersSDK
 	GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK
+	GetEventGatewayVirtualClusterPoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterPoliciesSDK
 	GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetPortalsSDK() sdkkonnectgo.PortalsSDK
@@ -54,6 +55,11 @@ func (w sdkWrapper) GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewa
 // GetEventGatewayVirtualClusterConsumePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterConsumePolicy.
 func (w sdkWrapper) GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK {
 	return w.sdk.EventGatewayVirtualClusterConsumePolicies
+}
+
+// GetEventGatewayVirtualClusterPoliciesSDK returns the SDK to operate EventGatewayVirtualClusterPolicy.
+func (w sdkWrapper) GetEventGatewayVirtualClusterPoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterPoliciesSDK {
+	return w.sdk.EventGatewayVirtualClusterPolicies
 }
 
 // GetEventGatewayVirtualClusterProducePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterProducePolicy.

@@ -314,6 +314,7 @@ type WatchableEntityType interface {
 		configurationv1alpha1.EventGatewayListener |
 		configurationv1alpha1.EventGatewayListenerPolicy |
 		configurationv1alpha1.EventGatewayVirtualCluster |
+		configurationv1alpha1.EventGatewayVirtualClusterPolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
