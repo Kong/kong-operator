@@ -33,6 +33,7 @@ import (
 {{- else}}
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
 {{- end}}
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -53,6 +54,14 @@ func {{.EntityName}}ReconciliationWatchOptions(
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+				),
+			)
+		},
 	}
 }
 
@@ -65,13 +74,9 @@ func enqueue{{.EntityName}}ForKonnectAPIAuthConfiguration(
 			return nil
 		}
 		var l {{.APIGroupPackageAlias}}.{{.EntityName}}List
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(auth.GetNamespace()),
-			client.MatchingFields{
-				index.IndexField{{.EntityName}}OnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,
-			},
-		); err != nil {
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexField{{.EntityName}}OnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,
+		}); err != nil {
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
@@ -182,6 +187,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
+	{{- if .NeedsSeparateParentImport}}
+	{{.ParentAPIGroupPackageAlias}} "{{.ParentAPIGroupPackagePath}}"
+	{{- end}}
+	{{- if ne .APIGroupPackagePath "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"}}
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	{{- end}}
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -196,7 +207,7 @@ func {{.EntityName}}ReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&{{.APIGroupPackageAlias}}.{{.ParentEntityName}}{},
+				&{{.ParentAPIGroupPackageAlias}}.{{.ParentEntityName}}{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueue{{.EntityName}}For{{.ParentEntityName}}(cl),
 				),
@@ -212,6 +223,14 @@ func {{.EntityName}}ReconciliationWatchOptions(
 			)
 		},
 		{{- end}}
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+				),
+			)
+		},
 	}
 }
 
@@ -219,18 +238,14 @@ func enqueue{{.EntityName}}For{{.ParentEntityName}}(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		parent, ok := obj.(*{{.APIGroupPackageAlias}}.{{.ParentEntityName}})
+		parent, ok := obj.(*{{.ParentAPIGroupPackageAlias}}.{{.ParentEntityName}})
 		if !ok {
 			return nil
 		}
 		var l {{.APIGroupPackageAlias}}.{{.EntityName}}List
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(parent.GetNamespace()),
-			client.MatchingFields{
-				index.IndexField{{.EntityName}}On{{.ParentEntityName}}Ref: parent.Name,
-			},
-		); err != nil {
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexField{{.EntityName}}On{{.ParentEntityName}}Ref: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
@@ -246,13 +261,9 @@ func enqueue{{$.EntityName}}For{{.RefKind}}(
 			return nil
 		}
 		var l {{$.APIGroupPackageAlias}}.{{$.EntityName}}List
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(ref.GetNamespace()),
-			client.MatchingFields{
-				index.IndexField{{$.EntityName}}On{{.RefKind}}Ref: ref.Name,
-			},
-		); err != nil {
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexField{{$.EntityName}}On{{.RefKind}}Ref: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
@@ -306,7 +317,12 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 		return nil
 	}
 
-	return []string{ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Name}
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace != nil && *ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Name}
 }
 {{range .CrossRefs}}
 func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string {
@@ -317,7 +333,11 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	if ent.{{.GoFieldPath}} == nil || ent.{{.GoFieldPath}}.NamespacedRef == nil {
 		return nil
 	}
-	return []string{ent.{{.GoFieldPath}}.NamespacedRef.Name}
+	refNamespace := ent.GetNamespace()
+	if ent.{{.GoFieldPath}}.NamespacedRef.Namespace != nil && *ent.{{.GoFieldPath}}.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.{{.GoFieldPath}}.NamespacedRef.Namespace
+	}
+	return []string{refNamespace + "/" + ent.{{.GoFieldPath}}.NamespacedRef.Name}
 }
 {{end}}`
 
@@ -355,12 +375,14 @@ type crossRefWatchData struct {
 }
 
 type reconcilerEntityMetadata struct {
-	EntityName           string
-	EntityNameLowerCamel string
-	ParentEntityName     string
-	ParentRefFieldName   string
-	APIGroupPackagePath  string
-	APIGroupPackageAlias string
+	EntityName                 string
+	EntityNameLowerCamel       string
+	ParentEntityName           string
+	ParentRefFieldName         string
+	APIGroupPackagePath        string
+	APIGroupPackageAlias       string
+	ParentAPIGroupPackagePath  string
+	ParentAPIGroupPackageAlias string
 }
 
 type reconcilerConditionGroup struct {
@@ -462,11 +484,11 @@ func (g *Generator) generateReconcilerConditions(parsed *parser.ParsedSpec) (*Ge
 		}
 		prefix := refConditionEntityName(parentDep)
 		// When parentRef overrides the immediate parent, use the configured
-		// ParentEntityType as the condition prefix so that condition constants
+		// parent entity kind as the condition prefix so that condition constants
 		// reflect the actual referenced type (e.g. EventGatewayBackendCluster)
 		// rather than the OpenAPI-derived ancestor (e.g. EventGateway).
-		if rc.ParentRef != nil && rc.ParentEntityType != "" {
-			prefix = rc.ParentEntityType
+		if rc.ParentRef != nil && rc.ParentEntityKind() != "" {
+			prefix = rc.ParentEntityKind()
 		}
 		if prefix == "" {
 			return nil, fmt.Errorf("failed to derive condition prefix for %s", entityName)
@@ -575,6 +597,9 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		NeedsSeparateAPIAuthImport bool
 		APIGroupPackagePath        string
 		APIGroupPackageAlias       string
+		NeedsSeparateParentImport  bool
+		ParentAPIGroupPackagePath  string
+		ParentAPIGroupPackageAlias string
 		CrossRefs                  []crossRefWatchData
 	}{
 		EntityName:                 metadata.EntityName,
@@ -585,6 +610,9 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		NeedsSeparateAPIAuthImport: needsSeparateAPIAuthImport,
 		APIGroupPackagePath:        metadata.APIGroupPackagePath,
 		APIGroupPackageAlias:       metadata.APIGroupPackageAlias,
+		NeedsSeparateParentImport:  metadata.ParentAPIGroupPackagePath != metadata.APIGroupPackagePath,
+		ParentAPIGroupPackagePath:  metadata.ParentAPIGroupPackagePath,
+		ParentAPIGroupPackageAlias: metadata.ParentAPIGroupPackageAlias,
 		CrossRefs:                  crossRefs,
 	}
 
@@ -656,10 +684,12 @@ func (g *Generator) reconcilerEntityMetadata(
 	rc *config.ReconcilerConfig,
 ) (reconcilerEntityMetadata, error) {
 	metadata := reconcilerEntityMetadata{
-		EntityName:           entityName,
-		EntityNameLowerCamel: toLowerCamel(entityName),
-		APIGroupPackagePath:  g.config.APIGroupPackagePath,
-		APIGroupPackageAlias: g.config.APIGroupPackageAlias,
+		EntityName:                 entityName,
+		EntityNameLowerCamel:       toLowerCamel(entityName),
+		APIGroupPackagePath:        g.config.APIGroupPackagePath,
+		APIGroupPackageAlias:       g.config.APIGroupPackageAlias,
+		ParentAPIGroupPackagePath:  g.config.APIGroupPackagePath,
+		ParentAPIGroupPackageAlias: g.config.APIGroupPackageAlias,
 	}
 
 	if rc.GetIsRoot() {
@@ -672,14 +702,24 @@ func (g *Generator) reconcilerEntityMetadata(
 	parentDep := schema.Dependencies[len(schema.Dependencies)-1]
 	metadata.ParentRefFieldName = parentDep.FieldName
 	metadata.ParentEntityName = parentDep.EntityName
-	if rc.ParentEntityType != "" {
-		metadata.ParentEntityName = rc.ParentEntityType
+	if rc.ParentEntityKind() != "" {
+		metadata.ParentEntityName = rc.ParentEntityKind()
+	}
+	parentGroup := rc.ParentEntityGroup(g.config.APIGroup)
+	if parentGroup != g.config.APIGroup {
+		metadata.ParentAPIGroupPackagePath, metadata.ParentAPIGroupPackageAlias = apiGroupPackagePathAndAlias(parentGroup, g.config.APIVersion)
 	}
 	if rc.ParentRef != nil {
 		metadata.ParentRefFieldName = goFieldName(rc.ParentRef.FieldName)
 	}
 
 	return metadata, nil
+}
+
+func apiGroupPackagePathAndAlias(apiGroup, apiVersion string) (string, string) {
+	groupPrefix := strings.Split(apiGroup, ".")[0]
+	return fmt.Sprintf("github.com/kong/kong-operator/v2/api/%s/%s", groupPrefix, apiVersion),
+		strings.ReplaceAll(groupPrefix, "-", "") + apiVersion
 }
 
 // toLowerCamel converts a PascalCase name to lowerCamelCase.

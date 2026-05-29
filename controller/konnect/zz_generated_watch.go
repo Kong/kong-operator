@@ -8,6 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 )
@@ -20,22 +21,20 @@ func reconciliationWatchOptionsForEntity[
 	ent TEnt,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	switch any(ent).(type) {
-	case *konnectv1alpha1.EventGatewayBackendCluster:
+	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return EventGatewayBackendClusterReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.EventGatewayListener:
+	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
+		return EventGatewayDataPlaneCertificateReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.EventGatewayListener:
 		return EventGatewayListenerReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.EventGatewayListenerPolicy:
+	case *configurationv1alpha1.EventGatewayListenerPolicy:
 		return EventGatewayListenerPolicyReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.EventGatewayVirtualCluster:
+	case *configurationv1alpha1.EventGatewayVirtualCluster:
 		return EventGatewayVirtualClusterReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
 		return EventGatewayVirtualClusterConsumePolicyReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.EventGatewayVirtualClusterProducePolicy:
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.IdentityProviderRequest:
-		return IdentityProviderRequestReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.KonnectEventDataPlaneCertificate:
-		return KonnectEventDataPlaneCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return KonnectEventGatewayReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.Portal:
@@ -48,6 +47,8 @@ func reconciliationWatchOptionsForEntity[
 		return PortalEmailConfigReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.PortalIPAllowList:
 		return PortalIPAllowListReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.PortalIdentityProviderRequest:
+		return PortalIdentityProviderRequestReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.PortalPage:
 		return PortalPageReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.PortalTeam:

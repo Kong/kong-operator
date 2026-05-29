@@ -2,30 +2,6 @@
 
 package konnect
 
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaybackendclusters,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaybackendclusters/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaybackendclusters/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaylisteners,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaylisteners/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaylisteners/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaylistenerpolicies,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaylistenerpolicies/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewaylistenerpolicies/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusters,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusters/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusters/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterconsumepolicies,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterconsumepolicies/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterconsumepolicies/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterproducepolicies,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterproducepolicies/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=eventgatewayvirtualclusterproducepolicies/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=identityproviderrequests/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventdataplanecertificates,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventdataplanecertificates/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventdataplanecertificates/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/finalizers,verbs=update;patch
@@ -44,6 +20,9 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalipallowlists,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalipallowlists/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalipallowlists/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalidentityproviderrequests,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalidentityproviderrequests/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalidentityproviderrequests/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalpages,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalpages/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=portalpages/finalizers,verbs=update;patch

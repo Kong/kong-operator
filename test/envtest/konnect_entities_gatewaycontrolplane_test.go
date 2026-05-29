@@ -987,14 +987,8 @@ func TestKonnectGatewayControlPlane_CrossNamespaceRefNotPermitted(t *testing.T) 
 	factory := sdkmocks.NewMockSDKFactory(t)
 
 	StartReconcilers(ctx, t, mgr, logs,
-		konnect.NewKonnectEntityReconciler[
-			konnectv1alpha2.KonnectGatewayControlPlane,
-			*konnectv1alpha2.KonnectGatewayControlPlane,
-		](factory, logging.DevelopmentMode, cl,
-			konnect.WithMetricRecorder[
-				konnectv1alpha2.KonnectGatewayControlPlane,
-				*konnectv1alpha2.KonnectGatewayControlPlane,
-			](&metricsmocks.MockRecorder{})))
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, cl,
+			konnect.WithMetricRecorder[konnectv1alpha2.KonnectGatewayControlPlane](&metricsmocks.MockRecorder{})))
 
 	// Create two namespaces: one for the CP, one for the auth config target.
 	cpNs := deploy.Namespace(t, ctx, cl)

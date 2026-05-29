@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 )
@@ -80,7 +81,7 @@ func getAPIAuthRefViaEventGatewayListener(
 	obj eventGatewayListenerRefAccessor,
 ) (types.NamespacedName, error) {
 	return getAPIAuthRefViaParent[
-		konnectv1alpha1.EventGatewayListener,
+		configurationv1alpha1.EventGatewayListener,
 		konnectv1alpha1.KonnectEventGateway,
 	](ctx, cl, obj)
 }
@@ -94,7 +95,7 @@ func getAPIAuthRefViaBackendCluster(
 	obj eventGatewayBackendClusterRefAccessor,
 ) (types.NamespacedName, error) {
 	return getAPIAuthRefViaParent[
-		konnectv1alpha1.EventGatewayBackendCluster,
+		configurationv1alpha1.EventGatewayBackendCluster,
 		konnectv1alpha1.KonnectEventGateway,
 	](ctx, cl, obj)
 }
@@ -107,27 +108,18 @@ func getAPIAuthRefViaVirtualCluster(
 	cl client.Client,
 	obj eventGatewayVirtualClusterRefAccessor,
 ) (types.NamespacedName, error) {
-	bcRef := obj.GetEventGatewayVirtualClusterRef()
-	if bcRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
-		bcRef.NamespacedRef == nil {
+	vcRef := obj.GetEventGatewayVirtualClusterRef()
+	if vcRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
+		vcRef.NamespacedRef == nil {
 		return types.NamespacedName{},
 			fmt.Errorf("invalid EventGatewayVirtualCluster reference: must be a NamespacedRef with a non-nil NamespacedRef field")
 	}
-	if bcRef.NamespacedRef.Namespace != nil && *bcRef.NamespacedRef.Namespace != obj.GetNamespace() {
-		// TODO https://github.com/Kong/kong-operator/issues/4134
-		return types.NamespacedName{},
-			fmt.Errorf("invalid EventGatewayVirtualCluster reference: cross-namespace reference is not supported")
-	}
-	nn := types.NamespacedName{
-		Name: bcRef.NamespacedRef.Name,
-		// TODO https://github.com/Kong/kong-operator/issues/4134
-		Namespace: obj.GetNamespace(),
-	}
-	var bc konnectv1alpha1.EventGatewayVirtualCluster
-	if err := cl.Get(ctx, nn, &bc); err != nil {
+
+	virtualCluster, nn, err := getParentForRef[configurationv1alpha1.EventGatewayVirtualCluster](ctx, cl, vcRef, obj.GetNamespace())
+	if err != nil {
 		return types.NamespacedName{}, fmt.Errorf("failed to get EventGatewayVirtualCluster %s: %w", nn, err)
 	}
-	return getAPIAuthRefViaBackendCluster(ctx, cl, &bc)
+	return getAPIAuthRefViaBackendCluster(ctx, cl, virtualCluster)
 }
 
 // getAPIAuthRefViaParent resolves the APIAuth for an entity whose immediate parent
@@ -148,34 +140,10 @@ func getAPIAuthRefViaParent[
 	cl client.Client,
 	obj objectWithParentRef,
 ) (types.NamespacedName, error) {
-	var (
-		parent         ParentT
-		parentPtr      ParentTPtr = &parent
-		parentRef                 = obj.GetParentRef()
-		parentTypeName            = constraints.EntityTypeName[ParentT]()
-	)
-
-	if parentRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
-		parentRef.NamespacedRef == nil {
-		return types.NamespacedName{},
-			fmt.Errorf("invalid %s reference: must be a NamespacedRef with a non-nil NamespacedRef field", parentTypeName)
-	}
-
-	if parentRef.NamespacedRef.Namespace != nil &&
-		*parentRef.NamespacedRef.Namespace != obj.GetNamespace() {
-		// TODO https://github.com/Kong/kong-operator/issues/4134
-		return types.NamespacedName{},
-			fmt.Errorf("invalid %s reference: cross-namespace reference is not supported", parentTypeName)
-	}
-
-	nn := types.NamespacedName{
-		Name: parentRef.NamespacedRef.Name,
-		// TODO https://github.com/Kong/kong-operator/issues/4134
-		Namespace: obj.GetNamespace(),
-	}
-
-	if err := cl.Get(ctx, nn, parentPtr); err != nil {
-		return types.NamespacedName{}, fmt.Errorf("failed to get %s %s: %w", parentTypeName, nn, err)
+	parentRef := obj.GetParentRef()
+	parentPtr, nn, err := getParentForRef[ParentT, ParentTPtr](ctx, cl, parentRef, obj.GetNamespace())
+	if err != nil {
+		return types.NamespacedName{}, fmt.Errorf("failed to get %s %s: %w", constraints.EntityTypeName[ParentT](), nn, err)
 	}
 	return getAPIAuthConfigurationRefFromParent[RootT, RootTPtr](ctx, cl, parentPtr, parentPtr.GetParentRef())
 }

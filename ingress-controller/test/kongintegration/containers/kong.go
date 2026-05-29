@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -80,13 +80,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	BindLocalPort(t, &req, kongAdminPort)
 	BindLocalPort(t, &req, kongProxyPort)
 
-	kongC, err := retry.DoWithData(
-		func() (testcontainers.Container, error) {
-			return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-				ContainerRequest: req,
-				Started:          true,
-			})
-		},
+	kongC, err := retry.NewWithData[testcontainers.Container](
 		retry.Context(ctx),
 		retry.Attempts(100),
 		retry.Delay(10*time.Millisecond),
@@ -95,6 +89,13 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 		retry.OnRetry(func(_ uint, err error) {
 			t.Logf("failed creating Kong container: %v", err)
 		}),
+	).Do(
+		func() (testcontainers.Container, error) {
+			return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+				ContainerRequest: req,
+				Started:          true,
+			})
+		},
 	)
 	require.NoError(t, err)
 
@@ -119,18 +120,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	defer cancel()
 
 	require.NoError(t,
-		retry.Do(
-			func() error {
-				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
-				defer cancel()
-				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
-				if err != nil {
-					return err
-				}
-
-				t.Logf("using Kong instance (version: %q) reachable at %s", kongVersion, adminURL)
-				return nil
-			},
+		retry.New(
 			retry.Context(versionCtx),
 			retry.Attempts(0),
 			retry.Delay(tickTime),
@@ -143,6 +133,18 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 				_, ok := errors.AsType[helpers.TooOldKongGatewayError](err)
 				return !ok
 			}),
+		).Do(
+			func() error {
+				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+				defer cancel()
+				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
+				if err != nil {
+					return err
+				}
+
+				t.Logf("using Kong instance (version: %q) reachable at %s", kongVersion, adminURL)
+				return nil
+			},
 		),
 	)
 

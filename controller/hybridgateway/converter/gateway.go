@@ -334,7 +334,7 @@ func (c *gatewayConverter) buildKongCertificate(
 ) (configurationv1alpha1.KongCertificate, error) {
 
 	// Generate a name for the KongCertificate resource.
-	certName := namegen.NewKongCertificateName(c.gateway.Name, strconv.Itoa(int(listener.Port)))
+	certName := namegen.NewKongCertificateName(c.gateway.Name, strconv.Itoa(int(listener.Port)), string(listener.Name))
 	cert, err := builder.NewKongCertificate().
 		WithName(certName).
 		WithNamespace(c.gateway.Namespace).

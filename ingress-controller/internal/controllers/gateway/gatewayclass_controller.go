@@ -63,7 +63,7 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&gatewayapi.GatewayClass{}).
 		// set the event filters
 		WithEventFilter(predicate.NewPredicateFuncs(r.GatewayClassIsUnmanaged)).
-		Complete(r)
+		Complete(reconcile.AsReconciler[*gatewayapi.GatewayClass](mgr.GetClient(), r))
 }
 
 // -----------------------------------------------------------------------------
@@ -95,17 +95,8 @@ func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("GatewayV1GatewayClass", req.NamespacedName)
-
-	gwc := new(gatewayapi.GatewayClass)
-	if err := r.Get(ctx, req.NamespacedName, gwc); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.V(logging.DebugLevel).Info("Object enqueued no longer exists, skipping", "name", req.Name)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
+func (r *GatewayClassReconciler) Reconcile(ctx context.Context, gwc *gatewayapi.GatewayClass) (ctrl.Result, error) {
+	log := r.Log.WithValues("GatewayV1GatewayClass", client.ObjectKeyFromObject(gwc))
 
 	log.V(logging.DebugLevel).Info("Processing gatewayclass")
 

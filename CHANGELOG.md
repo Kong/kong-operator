@@ -50,6 +50,13 @@
 
 ### Added
 
+- Add `--enable-controller-kegdataplane` flag (env
+  `KONG_OPERATOR_ENABLE_CONTROLLER_KEGDATAPLANE`, default `false`) to enable
+  the KEG (Kong Event Gateway) DataPlane controller.
+  [#4391](https://github.com/Kong/kong-operator/pull/4391)
+- Support wildcard TLS SNI matching in Kong routes for Kong 3.7.0 and above in
+  on-prem gateways.
+  [#4389](https://github.com/Kong/kong-operator/pull/4389)
 - DataPlane: extend Kong image validation to support sha256 digest
   [#4356](https://github.com/Kong/kong-operator/pull/4356)
 - Konnect: support `KongCertificate` ref in `KongUpstream`
@@ -235,9 +242,26 @@
   new CRDs before the upgrade, see [UPGRADE](charts/kong-operator/UPGRADE.md).
   [#3596](https://github.com/Kong/kong-operator/pull/3596)
   [#3599](https://github.com/Kong/kong-operator/pull/3599)
+- Bump Kong Gateway to 3.14 and double the default CPU (now `2000m`) and memory limits (now `2000Mi`)
+  for the `DataPlane` deployment.
+  [#3995](https://github.com/Kong/kong-operator/pull/3995)
 
 ### Fixes
 
+- Hybridgateway: fix `KongRoute` name collisions when an `HTTPRoute` attaches
+  to multiple listener-scoped `ParentRef`s on the same `Gateway`, enabling the
+  `HTTPRouteListenerHostnameMatching` Gateway API conformance test for Hybrid
+  Gateway. Only affected multi-parent translated routes are renamed.
+  [#4423](https://github.com/Kong/kong-operator/pull/4423)
+- Hybridgateway: fix `KongCertificate` name collisions when a `Gateway` has
+  multiple listeners using the same port by including listener identity in
+  generated certificate names.
+  **Attention**: This will re-create CA certificates in Konnect,
+  as it changes the names of the generated `KongCertificate`s.
+  [#4382](https://github.com/Kong/kong-operator/pull/4382)
+- `Gateway`: Pick the intersection of spec's `hostnames` and parent listener's
+  `hostname` as the hostnames in `TLSRoute` for translation in on-prem gateways.
+  [#4369](https://github.com/Kong/kong-operator/pull/4369)
 - `Gateway`: conflicting listeners (port/protocol or hostname conflict) now have
   `Accepted=False` with the conflict reason, per Gateway API spec rule that
   "ALL indistinct Listeners must not be accepted for processing".

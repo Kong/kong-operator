@@ -9,7 +9,7 @@ import (
 	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
@@ -26,7 +26,10 @@ func CreateTestSystemAccountToken(ctx context.Context, t *testing.T, systemAccou
 		systemAccountTokenID   string
 		systemAccountTokenName = fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixMilli())
 	)
-	err := retry.Do(func() error {
+	err := retry.New(
+		retry.Attempts(5),
+		retry.Delay(time.Second),
+	).Do(func() error {
 		createResp, err := s.SystemAccountsAccessTokens.
 			PostSystemAccountsIDAccessTokens(ctx,
 				systemAccountID,
@@ -63,20 +66,21 @@ func CreateTestSystemAccountToken(ctx context.Context, t *testing.T, systemAccou
 		systemAccountToken = *createResp.SystemAccountAccessTokenCreated.Token
 		systemAccountTokenID = *createResp.SystemAccountAccessTokenCreated.ID
 		return nil
-	}, retry.Attempts(5), retry.Delay(time.Second))
+	})
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		fmt.Printf("deleting test system account token: %q (ID: %q)\n", systemAccountTokenName, systemAccountTokenID)
-		err := retry.Do(
+		err := retry.New(
+			retry.Attempts(5),
+			retry.Delay(time.Second),
+		).Do(
 			func() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				_, err := s.SystemAccountsAccessTokens.DeleteSystemAccountsIDAccessTokensID(ctx, systemAccountID, systemAccountTokenID)
 				return err
 			},
-			retry.Attempts(5),
-			retry.Delay(time.Second),
 		)
 		if err != nil {
 			// Don't fail the test if cleanup fails, just log the error.

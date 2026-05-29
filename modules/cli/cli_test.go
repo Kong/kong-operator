@@ -389,6 +389,7 @@ func expectedDefaultCfg() manager.Config {
 		ControlPlaneConfigurationDumpAddr:        ":10256",
 		ControlPlaneExtensionsControllerEnabled:  true,
 		KonnectControllersEnabled:                false,
+		KEGDataPlaneControllerEnabled:            false,
 		FeatureGates:                             manager.FeatureGates{},
 		KonnectSyncPeriod:                        consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:                    consts.DefaultKonnectRequestTimeout,

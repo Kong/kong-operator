@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -108,20 +109,20 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 		wantErrContains string
 		wantCondStatus  metav1.ConditionStatus
 		wantCondReason  string
-		verifyCert      func(t *testing.T, cert konnectv1alpha1.KonnectEventDataPlaneCertificate)
+		verifyCert      func(t *testing.T, cert configurationv1alpha1.EventGatewayDataPlaneCertificate)
 	}{
 		{
 			name:           "creates cert when none exists",
 			wantProgrammed: false,
 			wantCondStatus: metav1.ConditionFalse,
 			wantCondReason: string(eventgatewayv1alpha1.KonnectCertificateNotProgrammedReason),
-			verifyCert: func(t *testing.T, cert konnectv1alpha1.KonnectEventDataPlaneCertificate) {
+			verifyCert: func(t *testing.T, cert configurationv1alpha1.EventGatewayDataPlaneCertificate) {
 				t.Helper()
 				assert.Equal(t, commonv1alpha1.ObjectRefTypeNamespacedRef, cert.Spec.GatewayRef.Type)
 				require.NotNil(t, cert.Spec.GatewayRef.NamespacedRef)
 				assert.Equal(t, "test-keg", cert.Spec.GatewayRef.NamespacedRef.Name)
 				assert.Nil(t, cert.Spec.GatewayRef.KonnectID)
-				assert.Equal(t, konnectv1alpha1.SensitiveDataSourceTypeSecretRef, cert.Spec.APISpec.Certificate.Type)
+				assert.Equal(t, configurationv1alpha1.SensitiveDataSourceTypeSecretRef, cert.Spec.APISpec.Certificate.Type)
 				require.NotNil(t, cert.Spec.APISpec.Certificate.SecretRef)
 				assert.Equal(t, testCertSecretName, cert.Spec.APISpec.Certificate.SecretRef.Name)
 				require.Len(t, cert.OwnerReferences, 1)
@@ -139,25 +140,25 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 		},
 		{
 			name: "cert already programmed by Konnect sets KonnectCertificateRegistered=True", extraObjs: []client.Object{
-				&konnectv1alpha1.KonnectEventDataPlaneCertificate{
+				&configurationv1alpha1.EventGatewayDataPlaneCertificate{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: konnectv1alpha1.GroupVersion.String(),
-						Kind:       "KonnectEventDataPlaneCertificate",
+						Kind:       "EventGatewayDataPlaneCertificate",
 					},
 					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
-					Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
+					Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-keg"},
 						},
-						APISpec: konnectv1alpha1.KonnectEventDataPlaneCertificateAPISpec{
-							Certificate: konnectv1alpha1.SensitiveDataSource{
-								Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+						APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
+							Certificate: configurationv1alpha1.SensitiveDataSource{
+								Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
 								SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
 							},
 						},
 					},
-					Status: konnectv1alpha1.KonnectEventDataPlaneCertificateStatus{
+					Status: configurationv1alpha1.EventGatewayDataPlaneCertificateStatus{
 						Conditions: []metav1.Condition{
 							{
 								Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -181,32 +182,32 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 				},
 			},
 			wantProgrammed:  false,
-			wantErrContains: "failed to apply KonnectEventDataPlaneCertificate",
+			wantErrContains: "failed to apply EventGatewayDataPlaneCertificate",
 			wantCondStatus:  metav1.ConditionFalse,
 			wantCondReason:  string(eventgatewayv1alpha1.KonnectCertificateRegistrationFailedReason),
 		},
 		{
 			name: "cert exists with Programmed=False: returns not-programmed condition",
 			extraObjs: []client.Object{
-				&konnectv1alpha1.KonnectEventDataPlaneCertificate{
+				&configurationv1alpha1.EventGatewayDataPlaneCertificate{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: konnectv1alpha1.GroupVersion.String(),
-						Kind:       "KonnectEventDataPlaneCertificate",
+						Kind:       "EventGatewayDataPlaneCertificate",
 					},
 					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
-					Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
+					Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-keg"},
 						},
-						APISpec: konnectv1alpha1.KonnectEventDataPlaneCertificateAPISpec{
-							Certificate: konnectv1alpha1.SensitiveDataSource{
-								Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+						APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
+							Certificate: configurationv1alpha1.SensitiveDataSource{
+								Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
 								SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
 							},
 						},
 					},
-					Status: konnectv1alpha1.KonnectEventDataPlaneCertificateStatus{
+					Status: configurationv1alpha1.EventGatewayDataPlaneCertificateStatus{
 						Conditions: []metav1.Condition{
 							{
 								Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -226,14 +227,14 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			name: "Get error after apply: sets RegistrationFailed condition and returns error",
 			interceptors: interceptor.Funcs{
 				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					if _, ok := obj.(*konnectv1alpha1.KonnectEventDataPlaneCertificate); ok {
+					if _, ok := obj.(*configurationv1alpha1.EventGatewayDataPlaneCertificate); ok {
 						return assert.AnError
 					}
 					return c.Get(ctx, key, obj, opts...)
 				},
 			},
 			wantProgrammed:  false,
-			wantErrContains: "failed to get KonnectEventDataPlaneCertificate",
+			wantErrContains: "failed to get EventGatewayDataPlaneCertificate",
 			wantCondStatus:  metav1.ConditionFalse,
 			wantCondReason:  string(eventgatewayv1alpha1.KonnectCertificateRegistrationFailedReason),
 		},
@@ -249,7 +250,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			objs := append([]client.Object{egdp}, tc.extraObjs...)
 			base := fake.NewClientBuilder().
 				WithScheme(managerscheme.Get()).
-				WithStatusSubresource(&konnectv1alpha1.KonnectEventDataPlaneCertificate{}).
+				WithStatusSubresource(&configurationv1alpha1.EventGatewayDataPlaneCertificate{}).
 				WithObjects(objs...).
 				Build()
 			cl := interceptor.NewClient(base, tc.interceptors)
@@ -281,7 +282,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			assert.Equal(t, tc.wantCondReason, cond.Reason)
 
 			if tc.verifyCert != nil {
-				var cert konnectv1alpha1.KonnectEventDataPlaneCertificate
+				var cert configurationv1alpha1.EventGatewayDataPlaneCertificate
 				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: egdp.Name, Namespace: egdp.Namespace}, &cert))
 				tc.verifyCert(t, cert)
 			}

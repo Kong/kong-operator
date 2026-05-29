@@ -27,7 +27,7 @@ jobs:
       CLUSTER_NAME: e2e-chainsaw
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -42,7 +42,7 @@ jobs:
 
     - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
       with:
-        install_args: github:Kong/kubernetes-testing-framework http:helm
+        install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm
 
     - name: Create k8s KinD Cluster with ktf
       env:

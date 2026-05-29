@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -31,6 +32,14 @@ func PortalEmailConfigReconciliationWatchOptions(
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.PortalEmailConfigList](cl),
+				),
+			)
+		},
 	}
 }
 
@@ -43,13 +52,9 @@ func enqueuePortalEmailConfigForPortal(
 			return nil
 		}
 		var l konnectv1alpha1.PortalEmailConfigList
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(parent.GetNamespace()),
-			client.MatchingFields{
-				index.IndexFieldPortalEmailConfigOnPortalRef: parent.Name,
-			},
-		); err != nil {
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldPortalEmailConfigOnPortalRef: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)

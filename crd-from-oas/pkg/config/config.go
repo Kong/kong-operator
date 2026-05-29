@@ -65,6 +65,13 @@ type ImportConfig struct {
 	Alias string `yaml:"alias,omitempty"`
 }
 
+// EntityGVKConfig identifies a generated API type by Kind and optional API group.
+// When Group is omitted, the current API group-version being generated is used.
+type EntityGVKConfig struct {
+	Kind  string `yaml:"kind"`
+	Group string `yaml:"group,omitempty"`
+}
+
 // ReferenceConfig configures a single inter-CR reference field.
 type ReferenceConfig struct {
 	// Kind is the Go type name of the referenced CRD (e.g. "EventGatewayBackendCluster").
@@ -87,12 +94,6 @@ type SecretReferenceConfig struct {
 	Type string `yaml:"type"`
 	// Key is the data key inside the referenced resource (e.g. "tls.crt").
 	Key string `yaml:"key"`
-	// Base64Encoding indicates that the resolved sensitive value must be base64
-	// encoded before being sent to Konnect.
-	//
-	// TODO: Remove Base64 encoding when API starts accepting raw values.
-	// TODO: https://github.com/Kong/kong-operator/issues/4304
-	Base64Encoding bool `yaml:"base64Encoding,omitempty"`
 }
 
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
@@ -103,6 +104,9 @@ type TypeConfig struct {
 	// derived from the OpenAPI path will be replaced with this value.
 	// All related types (Spec, Status, List) will use this name as their base.
 	Name string `yaml:"name,omitempty"`
+	// SchemaFieldOmissions maps generated schema type names to JSON field names
+	// that should be omitted when emitting schema_types.go for this API.
+	SchemaFieldOmissions map[string][]string `yaml:"schemaFieldOmissions,omitempty"`
 	// CEL maps field names to their configurations, allowing additional
 	// kubebuilder validation markers to be attached to specific fields.
 	CEL map[string]*FieldConfig `yaml:"cel,omitempty"`
@@ -158,18 +162,27 @@ type ReconcilerConfig struct {
 	// no path parameters are present (e.g. /v1/gateways), false otherwise
 	// (e.g. /v1/gateways/{gatewayId}/listeners).
 	IsRoot *bool `yaml:"isRoot,omitempty"`
-	// ParentEntityType overrides the generated parent entity type name used for
-	// child reconciler watch/index generation. When unset, the immediate parent
-	// dependency name is inferred from the OpenAPI path parameter.
+	// ParentEntityGVK overrides the generated parent entity type used for child
+	// reconciler watch/index generation and parent GVK helpers. When unset, the
+	// immediate parent dependency name and current API group are inferred from the
+	// OpenAPI path parameter.
+	ParentEntityGVK *EntityGVKConfig `yaml:"parentEntityGVK,omitempty"`
+	// ParentEntityType is the deprecated kind-only predecessor of
+	// ParentEntityGVK. Prefer ParentEntityGVK for new config.
 	ParentEntityType string `yaml:"parentEntityType,omitempty"`
 	// ParentRef, when set, replaces the OpenAPI-derived parent spec field with a
 	// new top-level ObjectRef field and changes what GetParentRef / SetParentID
-	// operate on. Requires ParentEntityType to also be set.
+	// operate on. Requires a parent entity kind override when the immediate parent
+	// kind should differ from the OpenAPI-derived dependency name.
 	ParentRef *ParentRefConfig `yaml:"parentRef,omitempty"`
-	// AncestorEntityTypes lists the Konnect entity type names (GVK Kind strings)
+	// AncestorEntityGVKs lists the ancestor entity kinds and optional API groups
 	// for each OpenAPI-derived path-parameter dependency in URL order
-	// (outermost first). Only required when ParentRef is set, to provide the
-	// Kind keys used in SetAncestorID / GetAncestorIDs.
+	// (outermost first). Only the Kind values are used by current ancestor-ID
+	// helpers, which remain keyed by kind for compatibility.
+	AncestorEntityGVKs []EntityGVKConfig `yaml:"ancestorEntityGVKs,omitempty"`
+	// AncestorEntityTypes is the deprecated kind-only predecessor of
+	// AncestorEntityGVKs. Prefer AncestorEntityGVKs for new config.
+	//
 	// E.g. for a path /event-gateways/{gatewayId}/virtual-clusters with
 	// parentRef overriding the immediate parent to EventGatewayBackendCluster,
 	// set to ["KonnectEventGateway"] so the gateway ancestry is preserved.
@@ -187,6 +200,46 @@ type ReconcilerConfig struct {
 // set and inference not yet applied) as false.
 func (rc *ReconcilerConfig) GetIsRoot() bool {
 	return rc.IsRoot != nil && *rc.IsRoot
+}
+
+// ParentEntityKind returns the configured parent Kind override, if any.
+func (rc *ReconcilerConfig) ParentEntityKind() string {
+	if rc == nil {
+		return ""
+	}
+	if rc.ParentEntityGVK != nil && rc.ParentEntityGVK.Kind != "" {
+		return rc.ParentEntityGVK.Kind
+	}
+	return rc.ParentEntityType
+}
+
+// ParentEntityGroup returns the configured parent API group override, or the
+// current API group when no override is provided.
+func (rc *ReconcilerConfig) ParentEntityGroup(currentGroup string) string {
+	if rc == nil || rc.ParentEntityGVK == nil || rc.ParentEntityGVK.Group == "" {
+		return currentGroup
+	}
+	return rc.ParentEntityGVK.Group
+}
+
+// AncestorEntityKinds returns the configured ancestor Kind values in URL order.
+func (rc *ReconcilerConfig) AncestorEntityKinds() []string {
+	if rc == nil {
+		return nil
+	}
+	if len(rc.AncestorEntityGVKs) > 0 {
+		kinds := make([]string, 0, len(rc.AncestorEntityGVKs))
+		for _, gvk := range rc.AncestorEntityGVKs {
+			if gvk.Kind == "" {
+				continue
+			}
+			kinds = append(kinds, gvk.Kind)
+		}
+		if len(kinds) > 0 {
+			return kinds
+		}
+	}
+	return rc.AncestorEntityTypes
 }
 
 // OpConfig holds configuration for a single SDK operation.
@@ -295,13 +348,14 @@ type typeOpsYAML struct {
 }
 
 type typeConfigYAML struct {
-	Path             string                  `yaml:"path"`
-	Name             string                  `yaml:"name,omitempty"`
-	CEL              map[string]*FieldConfig `yaml:"cel,omitempty"`
-	References       []ReferenceConfig       `yaml:"references,omitempty"`
-	SecretReferences []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
-	Ops              *typeOpsYAML            `yaml:"ops,omitempty"`
-	Reconciler       *ReconcilerConfig       `yaml:"reconciler,omitempty"`
+	Path                 string                  `yaml:"path"`
+	Name                 string                  `yaml:"name,omitempty"`
+	SchemaFieldOmissions map[string][]string     `yaml:"schemaFieldOmissions,omitempty"`
+	CEL                  map[string]*FieldConfig `yaml:"cel,omitempty"`
+	References           []ReferenceConfig       `yaml:"references,omitempty"`
+	SecretReferences     []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
+	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
+	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
 }
 
 // UnmarshalYAML preserves the in-memory Ops map shape while allowing
@@ -313,12 +367,13 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	*tc = TypeConfig{
-		Path:             raw.Path,
-		Name:             raw.Name,
-		CEL:              raw.CEL,
-		References:       raw.References,
-		SecretReferences: raw.SecretReferences,
-		Reconciler:       raw.Reconciler,
+		Path:                 raw.Path,
+		Name:                 raw.Name,
+		SchemaFieldOmissions: raw.SchemaFieldOmissions,
+		CEL:                  raw.CEL,
+		References:           raw.References,
+		SecretReferences:     raw.SecretReferences,
+		Reconciler:           raw.Reconciler,
 	}
 
 	if raw.Ops != nil {
@@ -480,6 +535,39 @@ func (c *APIGroupVersionConfig) ReferencesConfig(pathToEntityName map[string]str
 			continue
 		}
 		result[entityName] = tc.References
+	}
+	return result
+}
+
+// SchemaFieldOmissionsConfig returns a normalized schema-type field omission set.
+func (c *APIGroupVersionConfig) SchemaFieldOmissionsConfig() map[string]map[string]bool {
+	if c == nil || len(c.Types) == 0 {
+		return nil
+	}
+	result := make(map[string]map[string]bool)
+	for _, tc := range c.Types {
+		if tc == nil || len(tc.SchemaFieldOmissions) == 0 {
+			continue
+		}
+		for typeName, fields := range tc.SchemaFieldOmissions {
+			if typeName == "" || len(fields) == 0 {
+				continue
+			}
+			fieldSet := result[typeName]
+			if fieldSet == nil {
+				fieldSet = make(map[string]bool, len(fields))
+				result[typeName] = fieldSet
+			}
+			for _, fieldName := range fields {
+				if fieldName == "" {
+					continue
+				}
+				fieldSet[fieldName] = true
+			}
+		}
+	}
+	if len(result) == 0 {
+		return nil
 	}
 	return result
 }

@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 func TestCreateEventGatewayVirtualClusterConsumePolicy(t *testing.T) {
@@ -96,10 +96,10 @@ func TestGetEventGatewayVirtualClusterConsumePolicyForUID(t *testing.T) {
 	require.ErrorAs(t, err, &notFoundErr)
 }
 
-func testEventGatewayVirtualClusterConsumePolicy() *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy {
-	return &konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy{
+func testEventGatewayVirtualClusterConsumePolicy() *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy {
+	return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayVirtualClusterConsumePolicy",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -108,27 +108,27 @@ func testEventGatewayVirtualClusterConsumePolicy() *konnectv1alpha1.EventGateway
 			UID:        "consume-policy-uid",
 			Generation: 2,
 		},
-		Spec: konnectv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
 			EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "event-virtual-cluster",
 				},
 			},
-			APISpec: konnectv1alpha1.EventGatewayVirtualClusterConsumePolicyAPISpec{
-				EventGatewayVirtualClusterConsumePolicyConfig: &konnectv1alpha1.EventGatewayVirtualClusterConsumePolicyConfig{
-					Type: konnectv1alpha1.EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate,
-					ModifyHeadersPolicyCreate: &konnectv1alpha1.EventGatewayModifyHeadersPolicyCreate{
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyAPISpec{
+				EventGatewayVirtualClusterConsumePolicyConfig: &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyConfig{
+					Type: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate,
+					ModifyHeadersPolicyCreate: &configurationv1alpha1.EventGatewayModifyHeadersPolicyCreate{
 						Name:        "add-header-1",
 						Description: "consume policy description",
-						Labels: konnectv1alpha1.Labels{
+						Labels: configurationv1alpha1.Labels{
 							"team": "platform",
 						},
-						Config: konnectv1alpha1.EventGatewayModifyHeadersPolicyCreateConfig{
-							Actions: []konnectv1alpha1.EventGatewayModifyHeaderAction{
+						Config: configurationv1alpha1.EventGatewayModifyHeadersPolicyCreateConfig{
+							Actions: []configurationv1alpha1.EventGatewayModifyHeaderAction{
 								{
-									Op: konnectv1alpha1.EventGatewayModifyHeaderActionTypeSet,
-									Set: &konnectv1alpha1.EventGatewayModifyHeaderSetAction{
+									Op: configurationv1alpha1.EventGatewayModifyHeaderActionTypeSet,
+									Set: &configurationv1alpha1.EventGatewayModifyHeaderSetAction{
 										Key:   "x-added-header",
 										Value: "added-value",
 									},
@@ -139,11 +139,11 @@ func testEventGatewayVirtualClusterConsumePolicy() *konnectv1alpha1.EventGateway
 				},
 			},
 		},
-		Status: konnectv1alpha1.EventGatewayVirtualClusterConsumePolicyStatus{
-			GatewayID: &konnectv1alpha1.KonnectEntityRef{
+		Status: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyStatus{
+			GatewayID: &configurationv1alpha1.KonnectEntityRef{
 				ID: "gateway-1",
 			},
-			VirtualClusterID: &konnectv1alpha1.KonnectEntityRef{
+			VirtualClusterID: &configurationv1alpha1.KonnectEntityRef{
 				ID: "virtual-cluster-1",
 			},
 		},

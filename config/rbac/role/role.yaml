@@ -124,18 +124,12 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - ingressclassparameterses
-  - kongclusterplugins
-  - kongcustomentities
-  - konglicenses
-  - kongupstreampolicies
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - configuration.konghq.com
-  resources:
+  - eventgatewaybackendclusters
+  - eventgatewaylistenerpolicies
+  - eventgatewaylisteners
+  - eventgatewayvirtualclusterconsumepolicies
+  - eventgatewayvirtualclusterproducepolicies
+  - eventgatewayvirtualclusters
   - kongcacertificates
   - kongconsumergroups
   - kongconsumers
@@ -152,6 +146,20 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - eventgatewaybackendclusters/finalizers
+  - eventgatewaybackendclusters/status
+  - eventgatewaydataplanecertificates/finalizers
+  - eventgatewaydataplanecertificates/status
+  - eventgatewaylistenerpolicies/finalizers
+  - eventgatewaylistenerpolicies/status
+  - eventgatewaylisteners/finalizers
+  - eventgatewaylisteners/status
+  - eventgatewayvirtualclusterconsumepolicies/finalizers
+  - eventgatewayvirtualclusterconsumepolicies/status
+  - eventgatewayvirtualclusterproducepolicies/finalizers
+  - eventgatewayvirtualclusterproducepolicies/status
+  - eventgatewayvirtualclusters/finalizers
+  - eventgatewayvirtualclusters/status
   - kongcacertificates/finalizers
   - kongcacertificates/status
   - kongcertificates/finalizers
@@ -184,6 +192,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
+  - eventgatewaydataplanecertificates
   - kongcertificates
   - kongcredentialacls
   - kongcredentialapikeys
@@ -206,6 +215,18 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - ingressclassparameterses
+  - kongclusterplugins
+  - kongcustomentities
+  - konglicenses
+  - kongupstreampolicies
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - configuration.konghq.com
@@ -421,13 +442,6 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
-  - eventgatewaybackendclusters
-  - eventgatewaylistenerpolicies
-  - eventgatewaylisteners
-  - eventgatewayvirtualclusterconsumepolicies
-  - eventgatewayvirtualclusterproducepolicies
-  - eventgatewayvirtualclusters
-  - identityproviderrequests
   - konnectapiauthconfigurations
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
@@ -436,6 +450,7 @@ rules:
   - portalcustomdomains
   - portalcustomizations
   - portalemailconfigs
+  - portalidentityproviderrequests
   - portalipallowlists
   - portalpages
   - portals
@@ -449,20 +464,6 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
-  - eventgatewaybackendclusters/finalizers
-  - eventgatewaybackendclusters/status
-  - eventgatewaylistenerpolicies/finalizers
-  - eventgatewaylistenerpolicies/status
-  - eventgatewaylisteners/finalizers
-  - eventgatewaylisteners/status
-  - eventgatewayvirtualclusterconsumepolicies/finalizers
-  - eventgatewayvirtualclusterconsumepolicies/status
-  - eventgatewayvirtualclusterproducepolicies/finalizers
-  - eventgatewayvirtualclusterproducepolicies/status
-  - eventgatewayvirtualclusters/finalizers
-  - eventgatewayvirtualclusters/status
-  - identityproviderrequests/finalizers
-  - identityproviderrequests/status
   - konnectapiauthconfigurations/finalizers
   - konnectapiauthconfigurations/status
   - konnectcloudgatewaydataplanegroupconfigurations/finalizers
@@ -471,8 +472,6 @@ rules:
   - konnectcloudgatewaynetworks/status
   - konnectcloudgatewaytransitgateways/finalizers
   - konnectcloudgatewaytransitgateways/status
-  - konnecteventdataplanecertificates/finalizers
-  - konnecteventdataplanecertificates/status
   - konnecteventgateways/finalizers
   - konnecteventgateways/status
   - konnectextensions/finalizers
@@ -486,6 +485,8 @@ rules:
   - portalcustomizations/status
   - portalemailconfigs/finalizers
   - portalemailconfigs/status
+  - portalidentityproviderrequests/finalizers
+  - portalidentityproviderrequests/status
   - portalipallowlists/finalizers
   - portalipallowlists/status
   - portalpages/finalizers
@@ -500,7 +501,6 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
-  - konnecteventdataplanecertificates
   - konnectextensions
   - konnectgatewaycontrolplanes
   - mcpservers

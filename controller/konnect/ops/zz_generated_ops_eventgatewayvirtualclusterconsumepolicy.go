@@ -9,13 +9,13 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 func createEventGatewayVirtualClusterConsumePolicy(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy,
+	obj *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -47,7 +47,7 @@ func createEventGatewayVirtualClusterConsumePolicy(
 func updateEventGatewayVirtualClusterConsumePolicy(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy,
+	obj *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -78,7 +78,7 @@ func updateEventGatewayVirtualClusterConsumePolicy(
 func deleteEventGatewayVirtualClusterConsumePolicy(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy,
+	obj *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -104,7 +104,7 @@ func deleteEventGatewayVirtualClusterConsumePolicy(
 func getEventGatewayVirtualClusterConsumePolicyForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK,
-	obj *konnectv1alpha1.EventGatewayVirtualClusterConsumePolicy,
+	obj *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy,
 ) (string, error) {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {

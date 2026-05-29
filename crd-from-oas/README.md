@@ -19,9 +19,6 @@ apiGroupVersions:
     types:
       - path: /v1/event-gateways
         name: KonnectEventGateway
-      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
-        name: KonnectEventDataPlaneCertificate
-        optionalSecretReference: true
       - path: /v3/portals
         cel:
           name:
@@ -33,10 +30,24 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
       - path: /v3/portals/{portalId}/teams
+  configuration.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
+        name: EventGatewayDataPlaneCertificate
+        secretReferences:
+          - path: spec.apiSpec.certificate
+            type: Secret
+            key: tls.crt
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
+        name: EventGatewayVirtualClusterConsumePolicy
+        # Omit fields from generated nested schema types for this API only.
+        schemaFieldOmissions:
+          EventGatewayModifyHeadersPolicyCreate:
+            - parentPolicyID
 ```
 
 Generated ops infer that a controller-runtime client is needed when
-`optionalSecretReference: true` is enabled. For other entities that need to
+`secretReferences` are configured. For other entities that need to
 read cluster state while building SDK requests, set `ops.requireClient: true`
 under the type configuration.
 

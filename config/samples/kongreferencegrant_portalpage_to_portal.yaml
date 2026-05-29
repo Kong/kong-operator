@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: konnect
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: portal-admin
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: portal-content
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: konnect
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:
+  # https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: eu.api.konghq.com
+---
+# Allow the Portal in portal-admin to use the Konnect auth configuration in konnect.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-portal-to-konnect-auth
+  namespace: konnect
+spec:
+  from:
+    - group: konnect.konghq.com
+      kind: Portal
+      namespace: portal-admin
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectAPIAuthConfiguration
+---
+# Allow the PortalPage in portal-content to reference the Portal in portal-admin.
+# The same grant pattern applies to other Portal children such as PortalCustomization,
+# PortalEmailConfig, PortalIPAllowList, PortalTeam, PortalCustomDomain, and
+# IdentityProviderRequest.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-portalpage-to-portal
+  namespace: portal-admin
+spec:
+  from:
+    - group: konnect.konghq.com
+      kind: PortalPage
+      namespace: portal-content
+  to:
+    - group: konnect.konghq.com
+      kind: Portal
+---
+kind: Portal
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: shared-portal
+  namespace: portal-admin
+spec:
+  konnect:
+    authRef:
+      name: konnect-api-auth
+      namespace: konnect
+  apiSpec:
+    name: shared-portal
+    authenticationEnabled: Enabled
+---
+kind: PortalPage
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: shared-portal-getting-started
+  namespace: portal-content
+spec:
+  portalRef:
+    type: namespacedRef
+    namespacedRef:
+      name: shared-portal
+      namespace: portal-admin
+  apiSpec:
+    title: Getting Started
+    slug: getting-started
+    description: Getting started guide for the cross-namespace developer portal
+    content: |
+      # Getting Started
+
+      This page is managed from a namespace that is different from the Portal.
+      KongReferenceGrant allows this cross-namespace portalRef.
+    status: published
+    visibility: public

@@ -52,7 +52,7 @@ stringData:
     -----END CERTIFICATE-----
 ---
 kind: EventGatewayBackendCluster
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: cp-event-1-backend-cluster-2
   namespace: default
@@ -79,8 +79,6 @@ spec:
       enabled: Disabled
       tlsVersions:
       - tls13
-      # TODO: this needs to be a secret reference or a literal with certificate data.
-      # https://github.com/Kong/kong-operator/issues/4063
       caBundle: |
         -----BEGIN CERTIFICATE-----
         MIICwDCCAimgAwIBAgIUc4PDW5VuLWNsM+3Mcnk66T5E3P0wDQYJKoZIhvcNAQEL
@@ -120,7 +118,7 @@ spec:
             name: my-backend-cluster-tls
 ---
 kind: EventGatewayVirtualCluster
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: configuration.konghq.com/v1alpha1
 metadata:
   name: cp-event-1-virtual-cluster-1
   namespace: default

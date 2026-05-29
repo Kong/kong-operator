@@ -117,7 +117,7 @@ type ReferenceGrantFrom struct {
 // references.
 //
 // +kubebuilder:validation:XValidation:rule=".self.group != 'core' || .self.kind == 'Secret'",message="Only 'Secret' kind is supported for 'core' group"
-// +kubebuilder:validation:XValidation:rule=".self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration']",message="Only 'KonnectGatewayControlPlane' and 'KonnectAPIAuthConfiguration' kinds are supported for 'konnect.konghq.com' group"
+// +kubebuilder:validation:XValidation:rule=".self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster']",message="Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener' and 'EventGatewayVirtualCluster' kinds are supported for 'konnect.konghq.com' group"
 // +kubebuilder:validation:XValidation:rule=".self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream']",message="Only 'KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate' and 'KongUpstream' kinds are supported for 'configuration.konghq.com' group"
 type ReferenceGrantTo struct {
 	// Group is the group of the referent.

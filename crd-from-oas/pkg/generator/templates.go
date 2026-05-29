@@ -301,7 +301,11 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
-	return GroupVersion.WithKind("{{.ParentKind}}")
+	return schema.GroupVersionKind{
+		Group:   "{{.ParentGroup}}",
+		Version: GroupVersion.Version,
+		Kind:    "{{.ParentKind}}",
+	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type
@@ -438,9 +442,6 @@ import (
 {{- if .NeedsClient}}
 	"context"
 {{- end}}
-	{{- if .Base64Fields}}
-	"encoding/base64"
-	{{- end}}
 	"encoding/json"
 	"fmt"
 {{- if .NeedsClient}}
@@ -551,83 +552,6 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}{{if .Base64Fields}}
-
-// {{$.EntityName}}SDKOpsBase64Field describes a field that must be base64-encoded for SDK payloads.
-type {{$.EntityName}}SDKOpsBase64Field struct {
-	Label string
-	Path  []string
-}
-
-// {{$.EntityName}}SDKOpsBase64Fields lists all fields that must be base64-encoded for SDK payloads.
-var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
-{{- range .Base64Fields}}
-	{
-		Label: "{{.Label}}",
-		Path: []string{
-{{- range .Path}}
-			"{{.}}",
-{{- end}}
-		},
-	},
-{{- end}}
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Fields(payload map[string]any) error {
-	for _, field := range {{$.EntityName}}SDKOpsBase64Fields {
-		if _, err := encode{{$.EntityName}}SDKOpsBase64Field(payload, field.Path); err != nil {
-			return fmt.Errorf("%s: %w", field.Label, err)
-		}
-	}
-	return nil
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, error) {
-	if len(path) == 0 {
-		switch typed := value.(type) {
-		case nil:
-			return nil, nil
-		case string:
-			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
-		default:
-			return nil, fmt.Errorf("expected string, got %T", value)
-		}
-	}
-
-	if value == nil {
-		return nil, nil
-	}
-
-	if path[0] == "[]" {
-		items, ok := value.([]any)
-		if !ok {
-			return nil, fmt.Errorf("expected array, got %T", value)
-		}
-		for i, item := range items {
-			encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(item, path[1:])
-			if err != nil {
-				return nil, err
-			}
-			items[i] = encoded
-		}
-		return items, nil
-	}
-
-	object, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("expected object, got %T", value)
-	}
-	child, ok := object[path[0]]
-	if !ok {
-		return value, nil
-	}
-	encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(child, path[1:])
-	if err != nil {
-		return nil, err
-	}
-	object[path[0]] = encoded
-	return object, nil
-}
 {{end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
@@ -642,13 +566,6 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	payload = flattenSDKUnions(payload)
 	{{- if $.SecretReferences}}
 	payload = flattenSensitiveData(payload)
-	{{- end}}
-	{{- if $.Base64Fields}}
-	if pm, ok := payload.(map[string]any); ok {
-		if err := encode{{$.EntityName}}SDKOpsBase64Fields(pm); err != nil {
-			return nil, fmt.Errorf("failed to base64 encode {{$.EntityName}}APISpec SDK payload: %w", err)
-		}
-	}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -869,9 +786,6 @@ import (
 {{- if .NeedsClient}}
 	"context"
 {{- end}}
-	{{- if .Base64Fields}}
-	"encoding/base64"
-	{{- end}}
 	"encoding/json"
 	"fmt"
 {{- if .NeedsClient}}
@@ -982,82 +896,6 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}{{if .Base64Fields}}
-// {{$.EntityName}}SDKOpsBase64Field describes a field that must be base64-encoded for SDK payloads.
-type {{$.EntityName}}SDKOpsBase64Field struct {
-	Label string
-	Path  []string
-}
-
-// {{$.EntityName}}SDKOpsBase64Fields lists all fields that must be base64-encoded for SDK payloads.
-var {{$.EntityName}}SDKOpsBase64Fields = []{{$.EntityName}}SDKOpsBase64Field{
-{{- range .Base64Fields}}
-	{
-		Label: "{{.Label}}",
-		Path: []string{
-{{- range .Path}}
-			"{{.}}",
-{{- end}}
-		},
-	},
-{{- end}}
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Fields(payload map[string]any) error {
-	for _, field := range {{$.EntityName}}SDKOpsBase64Fields {
-		if _, err := encode{{$.EntityName}}SDKOpsBase64Field(payload, field.Path); err != nil {
-			return fmt.Errorf("%s: %w", field.Label, err)
-		}
-	}
-	return nil
-}
-
-func encode{{$.EntityName}}SDKOpsBase64Field(value any, path []string) (any, error) {
-	if len(path) == 0 {
-		switch typed := value.(type) {
-		case nil:
-			return nil, nil
-		case string:
-			return base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(typed)), nil
-		default:
-			return nil, fmt.Errorf("expected string, got %T", value)
-		}
-	}
-
-	if value == nil {
-		return nil, nil
-	}
-
-	if path[0] == "[]" {
-		items, ok := value.([]any)
-		if !ok {
-			return nil, fmt.Errorf("expected array, got %T", value)
-		}
-		for i, item := range items {
-			encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(item, path[1:])
-			if err != nil {
-				return nil, err
-			}
-			items[i] = encoded
-		}
-		return items, nil
-	}
-
-	object, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("expected object, got %T", value)
-	}
-	child, ok := object[path[0]]
-	if !ok {
-		return value, nil
-	}
-	encoded, err := encode{{$.EntityName}}SDKOpsBase64Field(child, path[1:])
-	if err != nil {
-		return nil, err
-	}
-	object[path[0]] = encoded
-	return object, nil
-}
 {{end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
@@ -1072,13 +910,6 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	}
 	{{- if $.SecretReferences}}
 	rawPayload = flattenSensitiveData(rawPayload)
-	{{- end}}
-	{{- if $.Base64Fields}}
-	if pm, ok := rawPayload.(map[string]any); ok {
-		if err := encode{{$.EntityName}}SDKOpsBase64Fields(pm); err != nil {
-			return nil, fmt.Errorf("failed to base64 encode {{$.EntityName}}APISpec SDK payload: %w", err)
-		}
-	}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -1389,6 +1220,464 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 {{- end}}
 }
 {{end}}`
+
+const opsControllerTestTemplate = sharedGeneratedFilePreamble + `
+
+package ops
+
+import (
+	"errors"
+	"testing"
+
+{{- if .NeedsComponentsImport}}
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+{{- end}}
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+{{- if .NeedsFakeClient}}
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+{{- end}}
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	{{.APIAlias}} "{{.APIPackagePath}}"
+)
+
+func testGenerated{{.Entity}}ForSDKOps() *{{.APIAlias}}.{{.Entity}} {
+	return &{{.APIAlias}}.{{.Entity}}{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: {{.APIAlias}}.GroupVersion.String(),
+			Kind:       "{{.Entity}}",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "{{.FixtureName}}",
+			Namespace:  "default",
+			UID:        "{{.FixtureName}}-uid",
+			Generation: 3,
+		},
+		Spec: {{.APIAlias}}.{{.Entity}}Spec{
+			APISpec: {{.APIAlias}}.{{.Entity}}APISpec{
+{{- range .FixtureFields}}
+				{{.FieldName}}: {{.TestValue}},
+{{- end}}
+{{- if .RootUnion}}
+				{{.RootUnion.UnionTypeName}}: &{{$.APIAlias}}.{{.RootUnion.UnionTypeName}}{
+					Type: {{$.APIAlias}}.{{.RootUnion.TypeConstName}},
+					{{.RootUnion.VariantField}}: {{.RootUnion.VariantValue}},
+				},
+{{- end}}
+			},
+		},
+	}
+}
+{{- if .Create}}
+
+func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Create.MockConstructorName}}(t)
+{{- if .Create.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Create.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if .Create.NeedsClient}}
+	expectedRequest, err := obj.{{.Create.CreateReqMethod}}(ctx, cl)
+{{- else if .Create.HasReferences}}
+	expectedRequest, err := obj.{{.Create.CreateReqMethod}}()
+{{- else}}
+	expectedRequest, err := obj.Spec.APISpec.{{.Create.CreateReqMethod}}()
+{{- end}}
+	require.NoError(t, err)
+{{- if .Create.HasTags}}
+	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+{{- else if .Create.HasLabels}}
+{{- if .Create.LabelsPointer}}
+	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+{{- else}}
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+{{- end}}
+{{- end}}
+{{- if .Create.CreateFullyWrapped}}
+{{- range .Create.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- end}}
+{{- if not .Create.SingletonNoID}}
+	expectedID := "{{$.FixtureName}}-id"
+{{- end}}
+
+	sdk.EXPECT().
+		{{.Create.SDKMethod}}(
+			mock.Anything,
+{{- if .Create.CreateFullyWrapped}}
+			*expectedRequest,
+{{- else if .Create.Parents}}
+			{{(index .Create.Parents 0).VarName}},
+			{{if .Create.CreateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			{{if .Create.CreateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+		).
+		Return(&sdkkonnectops.{{.Create.ResponseType}}{
+			{{.Create.RespField}}: &sdkkonnectcomp.{{.Create.RespField}}{
+{{- if not .Create.SingletonNoID}}
+				ID: {{if .Create.RespIDIsPointer}}&expectedID{{else}}expectedID{{end}},
+{{- end}}
+			},
+		}, nil).
+		Once()
+
+	require.NoError(t, create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj))
+{{- if not .Create.SingletonNoID}}
+	require.Equal(t, expectedID, obj.GetKonnectID())
+{{- end}}
+}
+
+func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Create.MockConstructorName}}(t)
+{{- if .Create.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Create.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if .Create.NeedsClient}}
+	expectedRequest, err := obj.{{.Create.CreateReqMethod}}(ctx, cl)
+{{- else if .Create.HasReferences}}
+	expectedRequest, err := obj.{{.Create.CreateReqMethod}}()
+{{- else}}
+	expectedRequest, err := obj.Spec.APISpec.{{.Create.CreateReqMethod}}()
+{{- end}}
+	require.NoError(t, err)
+{{- if .Create.HasTags}}
+	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+{{- else if .Create.HasLabels}}
+{{- if .Create.LabelsPointer}}
+	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+{{- else}}
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+{{- end}}
+{{- end}}
+{{- if .Create.CreateFullyWrapped}}
+{{- range .Create.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- end}}
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		{{.Create.SDKMethod}}(
+			mock.Anything,
+{{- if .Create.CreateFullyWrapped}}
+			*expectedRequest,
+{{- else if .Create.Parents}}
+			{{(index .Create.Parents 0).VarName}},
+			{{if .Create.CreateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			{{if .Create.CreateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+		).
+		Return(nil, sdkErr).
+		Once()
+
+	err = create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}
+{{- end}}
+{{- if .Update}}
+
+func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Update.MockConstructorName}}(t)
+{{- if .Update.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Update.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if not .Update.UpdateOmitsEntityID}}
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+{{- end}}
+{{- if .Update.NeedsClient}}
+	expectedRequest, err := obj.{{.Update.UpdateReqMethod}}(ctx, cl)
+{{- else if .Update.HasReferences}}
+	expectedRequest, err := obj.{{.Update.UpdateReqMethod}}()
+{{- else}}
+	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
+{{- end}}
+	require.NoError(t, err)
+{{- if .Update.HasTags}}
+	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+{{- else if .Update.HasLabels}}
+{{- if .Update.LabelsPointer}}
+	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+{{- else}}
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+{{- end}}
+{{- end}}
+{{- if .Update.UpdateFullyWrapped}}
+{{- range .Update.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .Update.UpdateOmitsEntityID}}
+	expectedRequest.{{.Update.EntityIDField}} = obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- end}}
+
+	sdk.EXPECT().
+		{{.Update.UpdateSDKMethod}}(
+			mock.Anything,
+{{- if .Update.UpdateFullyWrapped}}
+			*expectedRequest,
+{{- else if .Update.UpdateWrapped}}
+			sdkkonnectops.{{.Update.UpdateSDKMethod}}Request{
+				{{.Update.ParentIDField}}: {{(index .Update.Parents 0).VarName}},
+				{{.Update.EntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+				{{.Update.UpdateBodyField}}: {{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+			},
+{{- else if .Update.UpdateOmitsEntityID}}
+			{{(index .Update.Parents 0).VarName}},
+			{{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(),
+			{{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+		).
+		Return(&sdkkonnectops.{{.Update.ResponseType}}{}, nil).
+		Once()
+
+	require.NoError(t, update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj))
+}
+
+func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Update.MockConstructorName}}(t)
+{{- if .Update.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Update.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if not .Update.UpdateOmitsEntityID}}
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+{{- end}}
+{{- if .Update.NeedsClient}}
+	expectedRequest, err := obj.{{.Update.UpdateReqMethod}}(ctx, cl)
+{{- else if .Update.HasReferences}}
+	expectedRequest, err := obj.{{.Update.UpdateReqMethod}}()
+{{- else}}
+	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
+{{- end}}
+	require.NoError(t, err)
+{{- if .Update.HasTags}}
+	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+{{- else if .Update.HasLabels}}
+{{- if .Update.LabelsPointer}}
+	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+{{- else}}
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+{{- end}}
+{{- end}}
+{{- if .Update.UpdateFullyWrapped}}
+{{- range .Update.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .Update.UpdateOmitsEntityID}}
+	expectedRequest.{{.Update.EntityIDField}} = obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- end}}
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		{{.Update.UpdateSDKMethod}}(
+			mock.Anything,
+{{- if .Update.UpdateFullyWrapped}}
+			*expectedRequest,
+{{- else if .Update.UpdateWrapped}}
+			sdkkonnectops.{{.Update.UpdateSDKMethod}}Request{
+				{{.Update.ParentIDField}}: {{(index .Update.Parents 0).VarName}},
+				{{.Update.EntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+				{{.Update.UpdateBodyField}}: {{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+			},
+{{- else if .Update.UpdateOmitsEntityID}}
+			{{(index .Update.Parents 0).VarName}},
+			{{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(),
+			{{if .Update.UpdateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+		).
+		Return(nil, sdkErr).
+		Once()
+
+	err = update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}
+{{- end}}
+{{- if .Delete}}
+
+func TestDelete{{.Entity}}_UsesGeneratedSDKOps(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Delete.MockConstructorName}}(t)
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Delete.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if or (not .Delete.DeleteOmitsEntityID) .Delete.DeleteAsUpdate}}
+{{- if not .Delete.DeletePutOmitsEntityID}}
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+{{- end}}
+{{- end}}
+{{- if .Delete.DeleteAsUpdate}}
+	expectedRequest := &{{.Delete.DeletePutReqQualifiedType}}{}
+{{- if .Delete.DeletePutFullyWrapped}}
+{{- range .Delete.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .Delete.DeletePutOmitsEntityID}}
+	expectedRequest.{{.Delete.DeletePutEntityIDField}} = obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- end}}
+{{- end}}
+
+	sdk.EXPECT().
+		{{.Delete.DeleteSDKMethod}}(
+			mock.Anything,
+{{- if .Delete.DeleteAsUpdate}}
+{{- if .Delete.DeletePutFullyWrapped}}
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else if .Delete.DeletePutWrapped}}
+			sdkkonnectops.{{.Delete.DeleteSDKMethod}}Request{
+				{{.Delete.DeletePutParentIDField}}: {{(index .Delete.Parents 0).VarName}},
+				{{- if not .Delete.DeletePutOmitsEntityID}}
+				{{.Delete.DeletePutEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+				{{- end}}
+				{{.Delete.DeletePutBodyField}}: {{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+			},
+{{- else if .Delete.DeletePutOmitsEntityID}}
+			{{(index .Delete.Parents 0).VarName}},
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(),
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+{{- else if .Delete.DeleteFullyWrapped}}
+			sdkkonnectops.{{.Delete.DeleteWrappedType}}{
+{{- range .Delete.Parents}}
+				{{.SDKFieldName}}: {{.VarName}},
+{{- end}}
+				{{.Delete.DeleteEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+			},
+{{- else if .Delete.DeleteOmitsEntityID}}
+			{{(index .Delete.Parents 0).VarName}}{{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- else if .Delete.Parents}}
+			{{(index .Delete.Parents 0).VarName}},
+			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- end}}
+		).
+		Return(&sdkkonnectops.{{.Delete.ResponseType}}{}, nil).
+		Once()
+
+	require.NoError(t, delete{{.Entity}}(ctx, sdk, obj))
+}
+
+func TestDelete{{.Entity}}_PropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Delete.MockConstructorName}}(t)
+	obj := testGenerated{{.Entity}}ForSDKOps()
+{{- range .Delete.Parents}}
+	{{.VarName}} := "{{.VarName}}-1"
+	obj.{{.IDSetter}}({{.VarName}})
+{{- end}}
+{{- if or (not .Delete.DeleteOmitsEntityID) .Delete.DeleteAsUpdate}}
+{{- if not .Delete.DeletePutOmitsEntityID}}
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+{{- end}}
+{{- end}}
+{{- if .Delete.DeleteAsUpdate}}
+	expectedRequest := &{{.Delete.DeletePutReqQualifiedType}}{}
+{{- if .Delete.DeletePutFullyWrapped}}
+{{- range .Delete.Parents}}
+	expectedRequest.{{.SDKFieldName}} = {{.VarName}}
+{{- end}}
+{{- if not .Delete.DeletePutOmitsEntityID}}
+	expectedRequest.{{.Delete.DeletePutEntityIDField}} = obj.GetKonnectStatus().GetKonnectID()
+{{- end}}
+{{- end}}
+{{- end}}
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		{{.Delete.DeleteSDKMethod}}(
+			mock.Anything,
+{{- if .Delete.DeleteAsUpdate}}
+{{- if .Delete.DeletePutFullyWrapped}}
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else if .Delete.DeletePutWrapped}}
+			sdkkonnectops.{{.Delete.DeleteSDKMethod}}Request{
+				{{.Delete.DeletePutParentIDField}}: {{(index .Delete.Parents 0).VarName}},
+				{{- if not .Delete.DeletePutOmitsEntityID}}
+				{{.Delete.DeletePutEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+				{{- end}}
+				{{.Delete.DeletePutBodyField}}: {{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+			},
+{{- else if .Delete.DeletePutOmitsEntityID}}
+			{{(index .Delete.Parents 0).VarName}},
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(),
+			{{if .Delete.DeletePutReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
+{{- end}}
+{{- else if .Delete.DeleteFullyWrapped}}
+			sdkkonnectops.{{.Delete.DeleteWrappedType}}{
+{{- range .Delete.Parents}}
+				{{.SDKFieldName}}: {{.VarName}},
+{{- end}}
+				{{.Delete.DeleteEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+			},
+{{- else if .Delete.DeleteOmitsEntityID}}
+			{{(index .Delete.Parents 0).VarName}}{{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- else if .Delete.Parents}}
+			{{(index .Delete.Parents 0).VarName}},
+			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- else}}
+			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- end}}
+		).
+		Return(nil, sdkErr).
+		Once()
+
+	err := delete{{.Entity}}(ctx, sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}
+{{- end}}`
 
 const commonTypesTemplate = sharedGeneratedFilePreamble + `
 

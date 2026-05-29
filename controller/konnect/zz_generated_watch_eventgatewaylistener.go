@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -21,13 +22,21 @@ func EventGatewayListenerReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.EventGatewayListener{})
+			return b.For(&configurationv1alpha1.EventGatewayListener{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&konnectv1alpha1.KonnectEventGateway{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueEventGatewayListenerForKonnectEventGateway(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayListenerList](cl),
 				),
 			)
 		},
@@ -42,14 +51,10 @@ func enqueueEventGatewayListenerForKonnectEventGateway(
 		if !ok {
 			return nil
 		}
-		var l konnectv1alpha1.EventGatewayListenerList
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(parent.GetNamespace()),
-			client.MatchingFields{
-				index.IndexFieldEventGatewayListenerOnKonnectEventGatewayRef: parent.Name,
-			},
-		); err != nil {
+		var l configurationv1alpha1.EventGatewayListenerList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldEventGatewayListenerOnKonnectEventGatewayRef: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)

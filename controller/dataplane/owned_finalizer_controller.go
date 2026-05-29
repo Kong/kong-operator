@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -115,19 +116,11 @@ func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(
 			predicate.NewPredicateFuncs(objectIsOwnedByDataPlane),
 		)).
 		Watches(&operatorv1beta1.DataPlane{}, handler.EnqueueRequestsFromMapFunc(requestsForDataPlaneOwnedObjects[T](r.Client))).
-		Complete(r)
+		Complete(reconcile.AsReconciler[PT](r.Client, r))
 }
 
 // Reconcile reconciles the DataPlaneOwnedResource object.
-func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	obj := PT(new(T))
-	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to get %s %s/%s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName(), err)
-	}
-
+func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.Context, obj PT) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, obj.GetObjectKind().GroupVersionKind().Kind, r.LoggingMode)
 
 	// If the object is not being deleted, we don't need to do anything.

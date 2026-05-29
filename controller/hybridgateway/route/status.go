@@ -990,6 +990,12 @@ func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener
 
 	var matchingListeners []gwtypes.Listener
 	for _, listener := range listeners {
+		if len(hostnames) == 0 {
+			log.Debug(logger, "Route has no hostnames; listener matches all hostnames", "listener", listener.Name)
+			matchingListeners = append(matchingListeners, listener)
+			continue
+		}
+
 		// If the listener has no hostname, it matches all hostnames.
 		if listener.Hostname == nil || *listener.Hostname == "" {
 			log.Debug(logger, "Listener matches all hostnames (wildcard)", "listener", listener.Name)

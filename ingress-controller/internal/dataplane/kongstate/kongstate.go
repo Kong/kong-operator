@@ -292,7 +292,7 @@ func (ks *KongState) FillOverrides(
 			// down into the kongstate.Route copy looked a bit annoying. Protocol validation for routes instead lives in the
 			// HTTPRoute and Ingress translators (these may override to ws/wss, whereas the others are expected to derive
 			// their protocol from the resource type alone).
-			ks.Services[i].Routes[j].Override(logger)
+			ks.Services[i].Routes[j].Override(logger, kongVersion)
 		}
 	}
 

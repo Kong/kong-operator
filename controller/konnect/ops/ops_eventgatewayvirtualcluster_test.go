@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 func TestCreateEventGatewayVirtualCluster(t *testing.T) {
@@ -103,10 +103,10 @@ func TestGetEventGatewayVirtualClusterForUID(t *testing.T) {
 	assert.Equal(t, "virtual-cluster-1", id)
 }
 
-func testEventGatewayVirtualCluster() *konnectv1alpha1.EventGatewayVirtualCluster {
-	return &konnectv1alpha1.EventGatewayVirtualCluster{
+func testEventGatewayVirtualCluster() *configurationv1alpha1.EventGatewayVirtualCluster {
+	return &configurationv1alpha1.EventGatewayVirtualCluster{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			Kind:       "EventGatewayVirtualCluster",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -115,25 +115,25 @@ func testEventGatewayVirtualCluster() *konnectv1alpha1.EventGatewayVirtualCluste
 			UID:        "event-virtual-cluster-uid",
 			Generation: 2,
 		},
-		Spec: konnectv1alpha1.EventGatewayVirtualClusterSpec{
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "backend-cluster",
 				},
 			},
-			APISpec: konnectv1alpha1.EventGatewayVirtualClusterAPISpec{
-				AclMode:     konnectv1alpha1.VirtualClusterACLMode("enforce_on_gateway"),
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterAPISpec{
+				AclMode:     configurationv1alpha1.VirtualClusterACLMode("enforce_on_gateway"),
 				Description: "virtual cluster description",
-				DNSLabel:    konnectv1alpha1.VirtualClusterDNSLabel("event-vc"),
-				Labels: konnectv1alpha1.Labels{
+				DNSLabel:    configurationv1alpha1.VirtualClusterDNSLabel("event-vc"),
+				Labels: configurationv1alpha1.Labels{
 					"team": "platform",
 				},
-				Name: konnectv1alpha1.VirtualClusterName("event-virtual-cluster"),
+				Name: configurationv1alpha1.VirtualClusterName("event-virtual-cluster"),
 			},
 		},
-		Status: konnectv1alpha1.EventGatewayVirtualClusterStatus{
-			GatewayID: &konnectv1alpha1.KonnectEntityRef{
+		Status: configurationv1alpha1.EventGatewayVirtualClusterStatus{
+			GatewayID: &configurationv1alpha1.KonnectEntityRef{
 				ID: "gateway-1",
 			},
 		},

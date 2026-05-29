@@ -5118,6 +5118,13 @@ func TestNewFeatureFlags(t *testing.T) {
 				CombinedServicesFromDifferentHTTPRoutes: true,
 			},
 		},
+		{
+			name:                  "support redirect plugin enabled",
+			supportRedirectPlugin: true,
+			expectedFeatureFlags: FeatureFlags{
+				SupportRedirectPlugin: true,
+			},
+		},
 	}
 
 	for _, tc := range testCases {

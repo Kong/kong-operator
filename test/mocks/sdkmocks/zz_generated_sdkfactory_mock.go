@@ -11,19 +11,19 @@ import (
 
 type generatedMockSDKWrapper struct {
 	EventGatewayBackendClustersSDK               *mocks.MockEventGatewayBackendClustersSDK
+	EventGatewayDataPlaneCertificatesSDK         *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	EventGatewayListenersSDK                     *mocks.MockEventGatewayListenersSDK
 	EventGatewayListenerPoliciesSDK              *mocks.MockEventGatewayListenerPoliciesSDK
 	EventGatewayVirtualClustersSDK               *mocks.MockEventGatewayVirtualClustersSDK
 	EventGatewayVirtualClusterConsumePoliciesSDK *mocks.MockEventGatewayVirtualClusterConsumePoliciesSDK
 	EventGatewayVirtualClusterProducePoliciesSDK *mocks.MockEventGatewayVirtualClusterProducePoliciesSDK
-	PortalAuthSettingsSDK                        *mocks.MockPortalAuthSettingsSDK
-	EventGatewayDataPlaneCertificatesSDK         *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	EventGatewaysSDK                             *mocks.MockEventGatewaysSDK
 	PortalsSDK                                   *mocks.MockPortalsSDK
 	PortalCustomDomainsSDK                       *mocks.MockPortalCustomDomainsSDK
 	PortalCustomizationSDK                       *mocks.MockPortalCustomizationSDK
 	PortalEmailsSDK                              *mocks.MockPortalEmailsSDK
 	PortalsIPAllowListSDK                        *mocks.MockPortalsIPAllowListSDK
+	PortalAuthSettingsSDK                        *mocks.MockPortalAuthSettingsSDK
 	PortalPagesSDK                               *mocks.MockPortalPagesSDK
 	PortalTeamsSDK                               *mocks.MockPortalTeamsSDK
 }
@@ -31,19 +31,19 @@ type generatedMockSDKWrapper struct {
 func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 	return generatedMockSDKWrapper{
 		EventGatewayBackendClustersSDK:               mocks.NewMockEventGatewayBackendClustersSDK(t),
+		EventGatewayDataPlaneCertificatesSDK:         mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		EventGatewayListenersSDK:                     mocks.NewMockEventGatewayListenersSDK(t),
 		EventGatewayListenerPoliciesSDK:              mocks.NewMockEventGatewayListenerPoliciesSDK(t),
 		EventGatewayVirtualClustersSDK:               mocks.NewMockEventGatewayVirtualClustersSDK(t),
 		EventGatewayVirtualClusterConsumePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t),
 		EventGatewayVirtualClusterProducePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t),
-		PortalAuthSettingsSDK:                        mocks.NewMockPortalAuthSettingsSDK(t),
-		EventGatewayDataPlaneCertificatesSDK:         mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		EventGatewaysSDK:                             mocks.NewMockEventGatewaysSDK(t),
 		PortalsSDK:                                   mocks.NewMockPortalsSDK(t),
 		PortalCustomDomainsSDK:                       mocks.NewMockPortalCustomDomainsSDK(t),
 		PortalCustomizationSDK:                       mocks.NewMockPortalCustomizationSDK(t),
 		PortalEmailsSDK:                              mocks.NewMockPortalEmailsSDK(t),
 		PortalsIPAllowListSDK:                        mocks.NewMockPortalsIPAllowListSDK(t),
+		PortalAuthSettingsSDK:                        mocks.NewMockPortalAuthSettingsSDK(t),
 		PortalPagesSDK:                               mocks.NewMockPortalPagesSDK(t),
 		PortalTeamsSDK:                               mocks.NewMockPortalTeamsSDK(t),
 	}
@@ -52,6 +52,11 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 // GetEventGatewayBackendClustersSDK returns the SDK to operate EventGatewayBackendCluster.
 func (m generatedMockSDKWrapper) GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewayBackendClustersSDK {
 	return m.EventGatewayBackendClustersSDK
+}
+
+// GetEventGatewayDataPlaneCertificatesSDK returns the SDK to operate EventGatewayDataPlaneCertificate.
+func (m generatedMockSDKWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
+	return m.EventGatewayDataPlaneCertificatesSDK
 }
 
 // GetEventGatewayListenersSDK returns the SDK to operate EventGatewayListener.
@@ -77,16 +82,6 @@ func (m generatedMockSDKWrapper) GetEventGatewayVirtualClusterConsumePoliciesSDK
 // GetEventGatewayVirtualClusterProducePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterProducePolicy.
 func (m generatedMockSDKWrapper) GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK {
 	return m.EventGatewayVirtualClusterProducePoliciesSDK
-}
-
-// GetPortalAuthSettingsSDK returns the SDK to operate IdentityProviderRequest.
-func (m generatedMockSDKWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK {
-	return m.PortalAuthSettingsSDK
-}
-
-// GetEventGatewayDataPlaneCertificatesSDK returns the SDK to operate KonnectEventDataPlaneCertificate.
-func (m generatedMockSDKWrapper) GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK {
-	return m.EventGatewayDataPlaneCertificatesSDK
 }
 
 // GetEventGatewaysSDK returns the SDK to operate KonnectEventGateway.
@@ -117,6 +112,11 @@ func (m generatedMockSDKWrapper) GetPortalEmailsSDK() sdkkonnectgo.PortalEmailsS
 // GetPortalsIPAllowListSDK returns the SDK to operate PortalIPAllowList.
 func (m generatedMockSDKWrapper) GetPortalsIPAllowListSDK() sdkkonnectgo.PortalsIPAllowListSDK {
 	return m.PortalsIPAllowListSDK
+}
+
+// GetPortalAuthSettingsSDK returns the SDK to operate PortalIdentityProviderRequest.
+func (m generatedMockSDKWrapper) GetPortalAuthSettingsSDK() sdkkonnectgo.PortalAuthSettingsSDK {
+	return m.PortalAuthSettingsSDK
 }
 
 // GetPortalPagesSDK returns the SDK to operate PortalPage.

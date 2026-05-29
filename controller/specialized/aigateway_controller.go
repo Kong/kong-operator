@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
@@ -57,17 +58,12 @@ func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 		// TODO watch on Gateways, KongPlugins, e.t.c.
 		//
 		// See: https://github.com/kong/kong-operator/issues/137
-		Complete(r)
+		Complete(reconcile.AsReconciler[*operatorv1alpha1.AIGateway](r.Client, r))
 }
 
 // Reconcile reconciles the AIGateway resource.
-func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *AIGatewayReconciler) Reconcile(ctx context.Context, aigateway *operatorv1alpha1.AIGateway) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "aigateway", r.LoggingMode)
-
-	var aigateway operatorv1alpha1.AIGateway
-	if err := r.Get(ctx, req.NamespacedName, &aigateway); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	log.Trace(logger, "verifying gatewayclass for aigateway")
 	// we verify the GatewayClass in the watch predicates as well, but the watch
@@ -109,9 +105,9 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	log.Trace(logger, "marking aigateway as accepted")
 	oldAIGateway := aigateway.DeepCopy()
-	k8sutils.SetCondition(newAIGatewayAcceptedCondition(&aigateway), &aigateway)
-	if k8sutils.ConditionsNeedsUpdate(oldAIGateway, &aigateway) {
-		if err := r.Client.Status().Patch(ctx, &aigateway, client.MergeFrom(oldAIGateway)); err != nil {
+	k8sutils.SetCondition(newAIGatewayAcceptedCondition(aigateway), aigateway)
+	if k8sutils.ConditionsNeedsUpdate(oldAIGateway, aigateway) {
+		if err := r.Client.Status().Patch(ctx, aigateway, client.MergeFrom(oldAIGateway)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to patch status for aigateway: %w", err)
 		}
 		log.Info(logger, "aigateway marked as accepted")
@@ -119,7 +115,7 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	log.Info(logger, "managing gateway resources for aigateway")
-	gatewayResourcesChanged, err := r.manageGateway(ctx, logger, &aigateway)
+	gatewayResourcesChanged, err := r.manageGateway(ctx, logger, aigateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -128,7 +124,7 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	log.Info(logger, "configuring plugin and route resources for aigateway")
-	pluginResourcesChanged, err := r.configurePlugins(ctx, logger, &aigateway)
+	pluginResourcesChanged, err := r.configurePlugins(ctx, logger, aigateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/go-logr/logr"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
@@ -299,7 +299,10 @@ func adminAPIClients(
 	addresses := c.KongAdminURLs
 	clients := make([]*adminapi.Client, 0, len(addresses))
 	for _, address := range addresses {
-		err := retry.Do(
+		if err := retry.New(
+			retry.Attempts(c.KongAdminInitializationRetries),
+			retry.Delay(c.KongAdminInitializationRetryDelay),
+		).Do(
 			func() error {
 				cl, err := adminapi.NewKongClientForWorkspace(ctx, address, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
 				if err != nil {
@@ -308,10 +311,7 @@ func adminAPIClients(
 				clients = append(clients, cl)
 				return nil
 			},
-			retry.Attempts(c.KongAdminInitializationRetries),
-			retry.Delay(c.KongAdminInitializationRetryDelay),
-		)
-		if err != nil {
+		); err != nil {
 			return nil, fmt.Errorf("failed to create admin API client to %s: %w", address, err)
 		}
 	}
@@ -364,20 +364,21 @@ func AdminAPIClientFromServiceDiscovery(
 	}, retryOpts...)
 
 	var adminAPIs []adminapi.DiscoveredAdminAPI
-	err := retry.Do(func() error {
-		s, err := discoverer.GetAdminAPIsForService(ctx, kubeClient, kongAdminSvcNN)
-		if err != nil {
-			return retry.Unrecoverable(err)
-		}
-		if s.Len() == 0 {
-			return ingresserrors.NewNoAvailableEndpointsError(kongAdminSvcNN)
-		}
-		adminAPIs = s.UnsortedList()
-		return nil
-	},
+	if err := retry.New(
 		fetchEndpointsRetryOptions...,
-	)
-	if err != nil {
+	).Do(
+		func() error {
+			s, err := discoverer.GetAdminAPIsForService(ctx, kubeClient, kongAdminSvcNN)
+			if err != nil {
+				return retry.Unrecoverable(err)
+			}
+			if s.Len() == 0 {
+				return ingresserrors.NewNoAvailableEndpointsError(kongAdminSvcNN)
+			}
+			adminAPIs = s.UnsortedList()
+			return nil
+		},
+	); err != nil {
 		return nil, err
 	}
 
@@ -387,10 +388,13 @@ func AdminAPIClientFromServiceDiscovery(
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(delay),
 	}, retryOpts...)
+
 	clients := make([]*adminapi.Client, 0, len(adminAPIs))
 	for _, adminAPI := range adminAPIs {
 		var client *adminapi.Client
-		err := retry.Do(
+		if err := retry.New(
+			createAdminAPIClientRetryOptions...,
+		).Do(
 			func() error {
 				cl, err := factory.CreateAdminAPIClient(ctx, adminAPI)
 				if err != nil {
@@ -399,9 +403,7 @@ func AdminAPIClientFromServiceDiscovery(
 				client = cl
 				return nil
 			},
-			createAdminAPIClientRetryOptions...,
-		)
-		if err != nil {
+		); err != nil {
 			return nil, err
 		}
 

@@ -91,3 +91,38 @@ func (obj KongSNIList) GetItems() []KongSNI {
 func (obj KongDataPlaneClientCertificateList) GetItems() []KongDataPlaneClientCertificate {
 	return obj.Items
 }
+
+// GetItems returns the list of EventGatewayListener items.
+func (obj EventGatewayListenerList) GetItems() []EventGatewayListener {
+	return obj.Items
+}
+
+// GetItems returns the list of EventGatewayListenerPolicy items.
+func (obj EventGatewayListenerPolicyList) GetItems() []EventGatewayListenerPolicy {
+	return obj.Items
+}
+
+// GetItems returns the list of EventGatewayBackendCluster items.
+func (obj EventGatewayBackendClusterList) GetItems() []EventGatewayBackendCluster {
+	return obj.Items
+}
+
+// GetItems returns the list of EventGatewayVirtualCluster items.
+func (obj EventGatewayVirtualClusterList) GetItems() []EventGatewayVirtualCluster {
+	return obj.Items
+}
+
+// GetItems returns the list of EventGatewayVirtualClusterConsumePolicy items.
+func (obj EventGatewayVirtualClusterConsumePolicyList) GetItems() []EventGatewayVirtualClusterConsumePolicy {
+	return obj.Items
+}
+
+// GetItems returns the list of EventGatewayVirtualClusterProducePolicy items.
+func (obj EventGatewayVirtualClusterProducePolicyList) GetItems() []EventGatewayVirtualClusterProducePolicy {
+	return obj.Items
+}
+
+// GetItems returns the list of EventGatewayDataPlaneCertificate items.
+func (obj EventGatewayDataPlaneCertificateList) GetItems() []EventGatewayDataPlaneCertificate {
+	return obj.Items
+}

@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,10 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -170,24 +171,24 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 	}
 }
 
-// newProgrammedKonnectCert builds a KonnectEventDataPlaneCertificate with Programmed=True,
+// newProgrammedKonnectCert builds a EventGatewayDataPlaneCertificate with Programmed=True,
 // modelling the state after the Konnect controller has registered it.
-func newProgrammedKonnectCert() *konnectv1alpha1.KonnectEventDataPlaneCertificate {
-	return &konnectv1alpha1.KonnectEventDataPlaneCertificate{
+func newProgrammedKonnectCert() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
+	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
 		ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: reconcileTestDPName},
-		Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
+		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestKEGName},
 			},
-			APISpec: konnectv1alpha1.KonnectEventDataPlaneCertificateAPISpec{
-				Certificate: konnectv1alpha1.SensitiveDataSource{
-					Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
+				Certificate: configurationv1alpha1.SensitiveDataSource{
+					Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
 					SecretRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestDPName},
 				},
 			},
 		},
-		Status: konnectv1alpha1.KonnectEventDataPlaneCertificateStatus{
+		Status: configurationv1alpha1.EventGatewayDataPlaneCertificateStatus{
 			Conditions: []metav1.Condition{
 				{
 					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -310,7 +311,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				newProgrammedKonnectCert(),
 			},
 			// 1st reconcile: cert Secret created → returns early (owned Secret watch triggers next reconcile).
-			// 2nd reconcile: cert Secret + programmed KonnectEventDataPlaneCertificate present → Deployment + Service created.
+			// 2nd reconcile: cert Secret + programmed EventGatewayDataPlaneCertificate present → Deployment + Service created.
 			reconcileCount: 2,
 			wantResult:     ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, recorder *events.FakeRecorder) {
@@ -380,7 +381,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			base := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tc.objects...).
-				WithStatusSubresource(egdp, &konnectv1alpha1.KonnectEventDataPlaneCertificate{}).
+				WithStatusSubresource(egdp, &configurationv1alpha1.EventGatewayDataPlaneCertificate{}).
 				Build()
 
 			recorder := events.NewFakeRecorder(30)
@@ -394,9 +395,16 @@ func TestReconciler_Reconcile(t *testing.T) {
 			var result ctrl.Result
 			var err error
 			for i := range count {
-				result, err = r.Reconcile(t.Context(), reconcile.Request{
-					NamespacedName: types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName},
-				})
+				current := new(eventgatewayv1alpha1.KegDataPlane)
+				getErr := r.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, current)
+				switch {
+				case apierrors.IsNotFound(getErr):
+					result, err = ctrl.Result{}, nil
+				case getErr != nil:
+					result, err = ctrl.Result{}, getErr
+				default:
+					result, err = r.Reconcile(t.Context(), current)
+				}
 				// All intermediate reconciles must not error; drain their events
 				// so assertFn only sees events from the final reconcile.
 				if i < count-1 {

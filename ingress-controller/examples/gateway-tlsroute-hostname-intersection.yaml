@@ -1,0 +1,119 @@
+# NOTE The Gateway APIs are not yet available by default in Kubernetes.
+# Follow these instructions to install them before using this example:
+# https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
+#
+# This example demonstrates TLSRoute hostname intersection between a Gateway
+# Listener and a TLSRoute. The Listener constrains attached routes to the
+# wildcard "*.example.com" and the route's spec hostnames are "*.com". The
+# controller computes the intersection — the more specific "*.example.com" —
+# and only programs Kong to accept SNIs matching that wildcard (e.g.
+# "abc.example.com"). Connections with an SNI outside the intersection,
+# such as "abc.kong.example", are rejected.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tlsecho
+  labels:
+    app: tlsecho
+spec:
+  selector:
+    matchLabels:
+      app: tlsecho
+  template:
+    metadata:
+      labels:
+        app: tlsecho
+    spec:
+      containers:
+      - name: tlsecho
+        image: kong/go-echo:0.3.0
+        ports:
+        - containerPort: 1030
+        env:
+        - name: POD_NAME
+          value: example-tlsroute-hostname-intersection
+        - name: TLS_PORT
+          value: "1030"
+        - name: TLS_CERT_FILE
+          value: /var/run/certs/tls.crt
+        - name: TLS_KEY_FILE
+          value: /var/run/certs/tls.key
+        volumeMounts:
+        - mountPath: /var/run/certs
+          name: secret-test
+          readOnly: true
+      volumes:
+      - name: secret-test
+        secret:
+          defaultMode: 420
+          secretName: example-tlsroute-hostname-intersection
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tlsecho
+spec:
+  ports:
+  - port: 8899
+    protocol: TCP
+    targetPort: 1030
+  selector:
+    app: tlsecho
+  type: ClusterIP
+---
+# A wildcard certificate covering "*.example.com" — generate your own with:
+#   openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+#     -keyout tls.key -out tls.crt \
+#     -subj "/CN=*.example.com" \
+#     -addext "subjectAltName=DNS:*.example.com"
+apiVersion: v1
+kind: Secret
+metadata:
+  name: example-tlsroute-hostname-intersection
+type: kubernetes.io/tls
+data:
+  tls.crt: ""
+  tls.key: ""
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: example-tlsroute-hostname-intersection
+  annotations:
+    konghq.com/gatewayclass-unmanaged: "true"
+spec:
+  controllerName: konghq.com/kic-gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: example-tlsroute-hostname-intersection
+spec:
+  gatewayClassName: example-tlsroute-hostname-intersection
+  listeners:
+  - name: tls
+    protocol: TLS
+    port: 8899
+    # Listener restricts attached routes to "*.example.com".
+    hostname: "*.example.com"
+    tls:
+      mode: Passthrough
+      certificateRefs:
+      - name: example-tlsroute-hostname-intersection
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: tlsecho
+spec:
+  parentRefs:
+  - name: example-tlsroute-hostname-intersection
+  # Route spec asks for the broader "*.com". The controller intersects this
+  # with the Listener's "*.example.com" and programs Kong with "*.example.com".
+  hostnames:
+  - "*.com"
+  rules:
+  - backendRefs:
+    - name: tlsecho
+      port: 8899

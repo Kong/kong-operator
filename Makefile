@@ -180,11 +180,11 @@ MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
 	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
-HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(MISE_FILE))
+HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:helm/helm"].version' < $(MISE_FILE))
 HELM = helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	$(MAKE) mise-install-global DEP_VER=http:helm
+	$(MAKE) mise-install-global DEP_VER=aqua:helm/helm
 
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter

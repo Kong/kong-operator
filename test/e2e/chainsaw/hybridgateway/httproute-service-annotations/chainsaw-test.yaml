@@ -192,6 +192,8 @@ spec:
             - "/echo/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 

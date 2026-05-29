@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -24,7 +25,7 @@ import (
 
 func TestHandleRefResult(t *testing.T) {
 	t.Run("zero result and nil error continues reconciliation", func(t *testing.T) {
-		ent := testKonnectEventDataPlaneCertificateForEventGatewayRefResult()
+		ent := testEventGatewayDataPlaneCertificateForEventGatewayRefResult()
 
 		cl := fake.NewClientBuilder().Build()
 		stop, result, err := handleRefResult(t.Context(), cl, ent, ctrl.Result{}, nil)
@@ -35,7 +36,7 @@ func TestHandleRefResult(t *testing.T) {
 	})
 
 	t.Run("referenced object being deleted requeues until its deletion timestamp", func(t *testing.T) {
-		ent := testKonnectEventDataPlaneCertificateForEventGatewayRefResult()
+		ent := testEventGatewayDataPlaneCertificateForEventGatewayRefResult()
 
 		deletionTime := time.Now().Add(time.Minute)
 		stop, result, err := handleRefResult(
@@ -56,7 +57,7 @@ func TestHandleRefResult(t *testing.T) {
 	})
 
 	t.Run("missing referenced object removes cleanup finalizer", func(t *testing.T) {
-		ent := testKonnectEventDataPlaneCertificateForEventGatewayRefResult()
+		ent := testEventGatewayDataPlaneCertificateForEventGatewayRefResult()
 		ent.Finalizers = []string{KonnectCleanupFinalizer}
 
 		cl := fake.NewClientBuilder().
@@ -88,13 +89,13 @@ func TestHandleRefResult(t *testing.T) {
 		assert.True(t, stop)
 		assert.Equal(t, ctrl.Result{}, result)
 
-		var updated konnectv1alpha1.KonnectEventDataPlaneCertificate
+		var updated configurationv1alpha1.EventGatewayDataPlaneCertificate
 		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), &updated))
 		assert.Empty(t, updated.Finalizers)
 	})
 
 	t.Run("conflict while removing cleanup finalizer requeues without backoff", func(t *testing.T) {
-		ent := testKonnectEventDataPlaneCertificateForEventGatewayRefResult()
+		ent := testEventGatewayDataPlaneCertificateForEventGatewayRefResult()
 		ent.Finalizers = []string{KonnectCleanupFinalizer}
 
 		cl := fake.NewClientBuilder().
@@ -145,7 +146,7 @@ func TestHandleRefResult(t *testing.T) {
 	})
 
 	t.Run("requeue causes stop to be set to true", func(t *testing.T) {
-		ent := testKonnectEventDataPlaneCertificateForEventGatewayRefResult()
+		ent := testEventGatewayDataPlaneCertificateForEventGatewayRefResult()
 
 		stop, result, err := handleRefResult(
 			t.Context(),
@@ -162,17 +163,17 @@ func TestHandleRefResult(t *testing.T) {
 
 }
 
-func testKonnectEventDataPlaneCertificateForEventGatewayRefResult() *konnectv1alpha1.KonnectEventDataPlaneCertificate {
-	return &konnectv1alpha1.KonnectEventDataPlaneCertificate{
+func testEventGatewayDataPlaneCertificateForEventGatewayRefResult() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
+	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "KonnectEventDataPlaneCertificate",
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+			Kind:       "EventGatewayDataPlaneCertificate",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "event-dp-cert",
 			Namespace: "default",
 		},
-		Spec: konnectv1alpha1.KonnectEventDataPlaneCertificateSpec{
+		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{

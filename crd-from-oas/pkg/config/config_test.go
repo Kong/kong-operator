@@ -55,6 +55,32 @@ func TestLoadProjectConfig(t *testing.T) {
 		assert.Equal(t, "/v3/gateways", gateway.Types[0].Path)
 	})
 
+	t.Run("valid config with per-type schema field omissions", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  configuration.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
+        schemaFieldOmissions:
+          EventGatewayModifyHeadersPolicyCreate:
+            - parentPolicyID
+          EventGatewaySkipRecordPolicyCreate:
+            - parentPolicyID
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		configuration := cfg.APIGroupVersions["configuration.konghq.com/v1alpha1"]
+		require.NotNil(t, configuration)
+		require.Len(t, configuration.Types, 1)
+		require.NotNil(t, configuration.Types[0].SchemaFieldOmissions)
+		assert.Equal(t, []string{"parentPolicyID"}, configuration.Types[0].SchemaFieldOmissions["EventGatewayModifyHeadersPolicyCreate"])
+		assert.Equal(t, []string{"parentPolicyID"}, configuration.Types[0].SchemaFieldOmissions["EventGatewaySkipRecordPolicyCreate"])
+	})
+
 	t.Run("valid config with ops requireClient", func(t *testing.T) {
 		content := `
 apiGroupVersions:
@@ -83,44 +109,12 @@ apiGroupVersions:
 		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].SecretReferences[0].Path)
 		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
 		assert.Equal(t, "tls.crt", konnect.Types[0].SecretReferences[0].Key)
-		assert.False(t, konnect.Types[0].SecretReferences[0].Base64Encoding)
 		assert.True(t, konnect.Types[0].OpsRequireClient)
 		require.NotNil(t, konnect.Types[0].Ops)
 		assert.Equal(t,
 			"github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest",
 			konnect.Types[0].Ops["create"].Path,
 		)
-	})
-
-	t.Run("valid config with base64-encoded secret reference", func(t *testing.T) {
-		content := `
-apiGroupVersions:
-  konnect.konghq.com/v1alpha1:
-    types:
-      - path: /v1/event-gateways/{gatewayId}/backend-clusters
-        secretReferences:
-          - path: spec.apiSpec.tls.clientIdentity.key
-            type: Secret
-            key: tls.key
-            base64Encoding: true
-        ops:
-          create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreateBackendClusterRequest
-`
-		path := filepath.Join(t.TempDir(), "config.yaml")
-		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
-
-		cfg, err := LoadProjectConfig(path)
-		require.NoError(t, err)
-
-		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
-		require.NotNil(t, konnect)
-		require.Len(t, konnect.Types, 1)
-		require.Len(t, konnect.Types[0].SecretReferences, 1)
-		assert.Equal(t, "spec.apiSpec.tls.clientIdentity.key", konnect.Types[0].SecretReferences[0].Path)
-		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
-		assert.Equal(t, "tls.key", konnect.Types[0].SecretReferences[0].Key)
-		assert.True(t, konnect.Types[0].SecretReferences[0].Base64Encoding)
 	})
 
 	t.Run("valid config with delete asPUT", func(t *testing.T) {
@@ -731,6 +725,32 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 	})
 }
 
+func TestAPIGroupVersionConfig_SchemaFieldOmissionsConfig(t *testing.T) {
+	agv := &APIGroupVersionConfig{
+		Types: []*TypeConfig{
+			{
+				Path: "/v1/consume-policies",
+				SchemaFieldOmissions: map[string][]string{
+					"EventGatewayModifyHeadersPolicyCreate": {"parentPolicyID"},
+				},
+			},
+			{
+				Path: "/v1/produce-policies",
+				SchemaFieldOmissions: map[string][]string{
+					"EventGatewayModifyHeadersPolicyCreate":             {"name"},
+					"EventGatewayParsedRecordEncryptFieldsPolicyCreate": {"parentPolicyID"},
+				},
+			},
+		},
+	}
+
+	omissions := agv.SchemaFieldOmissionsConfig()
+	require.Len(t, omissions, 2)
+	assert.True(t, omissions["EventGatewayModifyHeadersPolicyCreate"]["parentPolicyID"])
+	assert.True(t, omissions["EventGatewayModifyHeadersPolicyCreate"]["name"])
+	assert.True(t, omissions["EventGatewayParsedRecordEncryptFieldsPolicyCreate"]["parentPolicyID"])
+}
+
 func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 	t.Run("with ops configured", func(t *testing.T) {
 		agv := &APIGroupVersionConfig{
@@ -1018,4 +1038,38 @@ apiGroupVersions:
 			assert.Equal(t, tc.wantIsRoot, *agv.Types[0].Reconciler.IsRoot)
 		})
 	}
+}
+
+func TestLoadProjectConfig_ReconcilerEntityGVKs(t *testing.T) {
+	yaml := `
+apiGroupVersions:
+  configuration.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
+        reconciler:
+          parentEntityGVK:
+            kind: EventGatewayListener
+            group: configuration.konghq.com
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+`
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(yaml), 0o600))
+
+	cfg, err := LoadProjectConfig(path)
+	require.NoError(t, err)
+
+	agv := cfg.APIGroupVersions["configuration.konghq.com/v1alpha1"]
+	require.NotNil(t, agv)
+	require.Len(t, agv.Types, 1)
+	require.NotNil(t, agv.Types[0].Reconciler)
+
+	rc := agv.Types[0].Reconciler
+	require.NotNil(t, rc.ParentEntityGVK)
+	assert.Equal(t, "EventGatewayListener", rc.ParentEntityKind())
+	assert.Equal(t, "configuration.konghq.com", rc.ParentEntityGroup("ignored.example.com"))
+	require.Len(t, rc.AncestorEntityGVKs, 1)
+	assert.Equal(t, []string{"KonnectEventGateway"}, rc.AncestorEntityKinds())
+	assert.Equal(t, "konnect.konghq.com", rc.AncestorEntityGVKs[0].Group)
 }

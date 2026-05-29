@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // IsCalicoCNIDisabled returns true if the Calico CNI plugin is disabled in the test environment.
@@ -48,6 +50,16 @@ func IsInstallingCRDsDisabled() bool {
 		fmt.Println("INFO: Installing CRDs is enabled")
 	}
 	return ret
+}
+
+// DataPlaneImage returns the data plane image to use in the test environment.
+// It reads the KONG_TEST_DATA_PLANE_IMAGE environment variable, and defaults to consts.DefaultDataPlaneImage if not set.
+func DataPlaneImage() string {
+	image := os.Getenv("KONG_TEST_DATA_PLANE_IMAGE")
+	if image == "" {
+		image = consts.DefaultDataPlaneImage
+	}
+	return image
 }
 
 // KonnectAccessToken returns the Konnect access token for the test environment.

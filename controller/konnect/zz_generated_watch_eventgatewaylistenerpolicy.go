@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -21,13 +21,21 @@ func EventGatewayListenerPolicyReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.EventGatewayListenerPolicy{})
+			return b.For(&configurationv1alpha1.EventGatewayListenerPolicy{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.EventGatewayListener{},
+				&configurationv1alpha1.EventGatewayListener{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueEventGatewayListenerPolicyForEventGatewayListener(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayListenerPolicyList](cl),
 				),
 			)
 		},
@@ -38,18 +46,14 @@ func enqueueEventGatewayListenerPolicyForEventGatewayListener(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		parent, ok := obj.(*konnectv1alpha1.EventGatewayListener)
+		parent, ok := obj.(*configurationv1alpha1.EventGatewayListener)
 		if !ok {
 			return nil
 		}
-		var l konnectv1alpha1.EventGatewayListenerPolicyList
-		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(parent.GetNamespace()),
-			client.MatchingFields{
-				index.IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef: parent.Name,
-			},
-		); err != nil {
+		var l configurationv1alpha1.EventGatewayListenerPolicyList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)

@@ -282,6 +282,10 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 		pRef := pRefData.parentRef
 		cp := pRefData.cpRef
 		hostnames := pRefData.hostnames
+		var namingParentRef *gwtypes.ParentReference
+		if len(supportedParentRefs) > 1 {
+			namingParentRef = &pRef
+		}
 
 		log.Debug(logger, "Processing parent reference",
 			"parentRef", pRef,
@@ -329,7 +333,7 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 			log.Debug(logger, "Successfully translated KongService resource", "service", serviceName)
 
 			// Build the KongRoute resource.
-			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
+			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, namingParentRef, serviceName, hostnames)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongRoute resource, skipping rule",
 					"service", serviceName,

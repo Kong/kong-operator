@@ -40,12 +40,12 @@ const (
 	// DefaultDataPlaneCPURequest is the default DataPlane CPU request.
 	DefaultDataPlaneCPURequest = "100m"
 	// DefaultDataPlaneCPULimit is the default DataPlane CPU limit.
-	DefaultDataPlaneCPULimit = "1000m"
+	DefaultDataPlaneCPULimit = "2000m"
 
 	// DefaultDataPlaneMemoryRequest is the default DataPlane memory request.
 	DefaultDataPlaneMemoryRequest = "20Mi"
 	// DefaultDataPlaneMemoryLimit is the default DataPlane memory limit.
-	DefaultDataPlaneMemoryLimit = "1000Mi"
+	DefaultDataPlaneMemoryLimit = "2000Mi"
 )
 
 // DeploymentOpt is an option for Deployment generators.

@@ -20,9 +20,6 @@ var skippedTestsShared = []string{
 	// When processing this scenario, the Kong's router requires `priority` to be specified for routes.
 	// We cannot provide that for routes that are part of the conformance suite.
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
-
-	// TLSRoute tests that cannot pass yet.
-	tests.TLSRouteHostnameIntersection.ShortName,
 }
 
 var skippedTestsForExpressionsRouter = []string{}
@@ -35,18 +32,10 @@ var skippedTestsForTraditionalCompatibleRouter = []string{
 var skippedTestsForHybrid = []string{
 
 	// Core profile.
-	tests.HTTPRouteHTTPSListener.ShortName,
 	tests.HTTPRouteInvalidNonExistentBackendRef.ShortName,
-	tests.HTTPRouteListenerHostnameMatching.ShortName,
-	tests.HTTPRouteHeaderMatching.ShortName,
 	tests.HTTPRouteMethodMatching.ShortName,
-	tests.HTTPRouteMatchingAcrossRoutes.ShortName,
 	tests.HTTPRoutePathMatchOrder.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
-	tests.GatewayModifyListeners.ShortName,
-	tests.GatewayObservedGenerationBump.ShortName,
-	tests.GatewaySecretReferenceGrantAllInNamespace.ShortName,
-	tests.GatewaySecretReferenceGrantSpecific.ShortName,
 	tests.GatewayWithAttachedRoutes.ShortName,
 
 	// Extended profile.
