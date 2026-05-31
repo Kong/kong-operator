@@ -61,6 +61,7 @@ func TestSupportedConfigurationPackageTypesWithListExcludesGeneratedOASTypes(t *
 		"EventGatewayListenerPolicy",
 		"EventGatewayBackendCluster",
 		"EventGatewayVirtualCluster",
+		"EventGatewayVirtualClusterPolicy",
 		"EventGatewayVirtualClusterConsumePolicy",
 		"EventGatewayVirtualClusterProducePolicy",
 		"EventGatewayDataPlaneCertificate",
