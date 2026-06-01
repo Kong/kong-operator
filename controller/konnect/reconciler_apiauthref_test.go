@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -135,7 +136,7 @@ func TestGetCPAuthRefForRef(t *testing.T) {
 		},
 		{
 			name:            "same-namespace authRef (Namespace explicitly equal to CP's) skips cross-namespace branch",
-			objects:         []client.Object{makeCP(new(cpNamespace))},
+			objects:         []client.Object{makeCP(lo.ToPtr(cpNamespace))},
 			callerNamespace: callerNs,
 			wantNN: types.NamespacedName{
 				Name:      authName,
@@ -144,14 +145,14 @@ func TestGetCPAuthRefForRef(t *testing.T) {
 		},
 		{
 			name:                "cross-namespace authRef without grant returns ReferenceNotGrantedError",
-			objects:             []client.Object{makeCP(new(authNamespace))},
+			objects:             []client.Object{makeCP(lo.ToPtr(authNamespace))},
 			callerNamespace:     callerNs,
 			wantErrorContains:   "is not granted",
 			wantNotGrantedError: true,
 		},
 		{
 			name:            "cross-namespace authRef with valid grant returns authRef's namespace",
-			objects:         []client.Object{makeCP(new(authNamespace)), grant},
+			objects:         []client.Object{makeCP(lo.ToPtr(authNamespace)), grant},
 			callerNamespace: callerNs,
 			wantNN: types.NamespacedName{
 				Name:      authName,
@@ -175,7 +176,7 @@ func TestGetCPAuthRefForRef(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tc.wantErrorContains)
 				if tc.wantNotGrantedError {
-					var notGranted *crossnamespace.ReferenceNotGrantedError
+					var notGranted *crossnamespace.ErrReferenceNotGranted
 					require.ErrorAs(t, err, &notGranted)
 				}
 				require.Equal(t, types.NamespacedName{}, nn)

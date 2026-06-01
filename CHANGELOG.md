@@ -73,6 +73,7 @@
   parent ref (`KongRoute` via `serviceRef`, `KongCredential*` via `consumerRef`) to
   silently fail when the parent's `controlPlaneRef` was cross-namespace.
   [#4210](https://github.com/Kong/kong-operator/pull/4210)
+  
 ## [v2.1.6]
 
 > Release date: 2026-05-12
