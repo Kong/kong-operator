@@ -300,6 +300,96 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 	}
 }
 
+func TestReconciler_listGatewaysAttachedByHTTPRoute(t *testing.T) {
+	makeGateway := func() *gwtypes.Gateway {
+		return &gwtypes.Gateway{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Gateway",
+				APIVersion: gatewayv1.GroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       types.UID(uuid.NewString()),
+			},
+		}
+	}
+
+	makeRoute := func(parentRef gatewayv1.ParentReference) *gatewayv1.HTTPRoute {
+		return &gatewayv1.HTTPRoute{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "HTTPRoute",
+				APIVersion: gatewayv1.GroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "default",
+			},
+			Spec: gatewayv1.HTTPRouteSpec{
+				CommonRouteSpec: gatewayv1.CommonRouteSpec{
+					ParentRefs: []gatewayv1.ParentReference{parentRef},
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name             string
+		parentRef        gatewayv1.ParentReference
+		expectedRequests []reconcile.Request
+	}{
+		{
+			name: "matches gateway when group is omitted",
+			parentRef: gatewayv1.ParentReference{
+				Name:      "test-gateway",
+				Namespace: new(gatewayv1.Namespace("default")),
+				Kind:      new(gatewayv1.Kind("Gateway")),
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "test-gateway"}},
+			},
+		},
+		{
+			name: "matches gateway when namespace is omitted and defaults to route namespace",
+			parentRef: gatewayv1.ParentReference{
+				Name: "test-gateway",
+				Kind: new(gatewayv1.Kind("Gateway")),
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "test-gateway"}},
+			},
+		},
+		{
+			name: "does not match non-gateway parent refs",
+			parentRef: gatewayv1.ParentReference{
+				Name:  "test-gateway",
+				Group: new(gatewayv1.Group(gatewayv1.GroupName)),
+				Kind:  new(gatewayv1.Kind("Service")),
+			},
+			expectedRequests: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := makeGateway()
+			route := makeRoute(tc.parentRef)
+
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(gateway, route).
+				Build()
+
+			reconciler := &Reconciler{
+				Client: fakeClient,
+			}
+
+			requests := reconciler.listGatewaysAttachedByHTTPRoute(t.Context(), route)
+			require.ElementsMatch(t, tc.expectedRequests, requests)
+		})
+	}
+}
+
 func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 	gatewayClassWithParamsRef := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{

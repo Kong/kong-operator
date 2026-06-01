@@ -407,16 +407,27 @@ func listGatewaysAttachedByRoute[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 	var recs []reconcile.Request
 	for _, gateway := range gateways.Items {
 		for _, parentRef := range gwtypes.GetSpecParentRefs(*route) {
-			if parentRef.Group != nil && string(*parentRef.Group) == gatewayv1.GroupName &&
-				parentRef.Kind != nil && string(*parentRef.Kind) == "Gateway" &&
-				string(parentRef.Name) == gateway.Name {
-				recs = append(recs, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: gateway.Namespace,
-						Name:      gateway.Name,
-					},
-				})
+			if parentRef.Group != nil && string(*parentRef.Group) != gatewayv1.GroupName {
+				continue
 			}
+			if parentRef.Kind != nil && string(*parentRef.Kind) != "Gateway" {
+				continue
+			}
+			parentRefNamespace := route.GetNamespace()
+			if parentRef.Namespace != nil {
+				parentRefNamespace = string(*parentRef.Namespace)
+			}
+			if parentRefNamespace != gateway.Namespace || string(parentRef.Name) != gateway.Name {
+				continue
+			}
+
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: gateway.Namespace,
+					Name:      gateway.Name,
+				},
+			})
+			break
 		}
 	}
 	return recs
