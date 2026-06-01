@@ -229,6 +229,9 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - name: bump inotify limits
+      uses: ./.github/actions/bump-inotify
+
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
       with:
@@ -277,6 +280,9 @@ jobs:
 
     - name: build docker image
       run: make docker.build
+
+    - name: bump inotify limits
+      uses: ./.github/actions/bump-inotify
 
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
@@ -497,6 +503,9 @@ jobs:
       with:
         install: false
 
+    - name: bump inotify limits
+      uses: ./.github/actions/bump-inotify
+
     - name: run conformance tests
       run: make test.conformance
       env:
@@ -560,6 +569,9 @@ jobs:
     - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
       with:
         install: false
+
+    - name: bump inotify limits
+      uses: ./.github/actions/bump-inotify
 
     - name: run integration tests
       run: make test.integration-${{ matrix.suite }}
@@ -625,6 +637,9 @@ jobs:
       with:
         install: false
 
+    - name: bump inotify limits
+      uses: ./.github/actions/bump-inotify
+
     - name: run integration tests
       run: make test.integration_validatingwebhook
       env:
@@ -679,6 +694,9 @@ jobs:
     - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
       with:
         install: false
+
+    - name: bump inotify limits
+      uses: ./.github/actions/bump-inotify
 
     - name: run integration tests
       run: make test.integration_bluegreen
@@ -742,6 +760,9 @@ jobs:
       with:
         install: false
 
+    - name: bump inotify limits
+      uses: ./.github/actions/bump-inotify
+
     - name: run e2e tests
       run: make test.e2e
       env:
@@ -766,8 +787,8 @@ jobs:
   e2e-tests-chainsaw:
     runs-on: ubuntu-latest
     needs:
-    - check-docs-only
-    - matrix_k8s_node_versions
+      - check-docs-only
+      - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     env:
       IMG: kong-operator
@@ -791,11 +812,13 @@ jobs:
 
     - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
       with:
-        install: false
+        install_args: github:Kong/kubernetes-testing-framework http:helm
+
+    - name: bump inotify limits
+      uses: ./.github/actions/bump-inotify
 
     - name: Create k8s KinD Cluster with ktf
       run: |
-        go install github.com/kong/kubernetes-testing-framework/cmd/ktf@latest
         ktf environments create --name ${{ env.CLUSTER_NAME }} --addon metallb --addon cert-manager
 
     - name: Load image to kind cluster

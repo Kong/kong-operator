@@ -1,0 +1,10 @@
+name: Bump inotify limits
+description: Raise fs.inotify limits on the runner host so kind pods don't hit "too many open files".
+runs:
+  using: composite
+  steps:
+    - name: Bump fs.inotify limits
+      shell: bash
+      run: |
+        sudo sysctl -w fs.inotify.max_user_instances=8192
+        sudo sysctl -w fs.inotify.max_user_watches=524288

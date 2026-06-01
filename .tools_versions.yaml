@@ -45,5 +45,3 @@ kube-linter: "0.8.1"
 markdownlint-cli2: "0.20.0"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
 cert-manager: "1.19.3"
-# renovate: datasource=github-releases depName=kyverno/chainsaw
-chainsaw: "v0.2.15-beta.1"
