@@ -97,7 +97,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 				predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroup]),
 			),
 		).
-		Complete(reconcile.AsReconciler[*configurationv1.KongPlugin](r.client, r))
+		Complete(reconcile.AsReconciler(r.client, r))
 }
 
 // Reconcile reconciles a KongPlugin object.

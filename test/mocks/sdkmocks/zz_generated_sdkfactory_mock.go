@@ -16,6 +16,7 @@ type generatedMockSDKWrapper struct {
 	EventGatewayListenerPoliciesSDK              *mocks.MockEventGatewayListenerPoliciesSDK
 	EventGatewayVirtualClustersSDK               *mocks.MockEventGatewayVirtualClustersSDK
 	EventGatewayVirtualClusterConsumePoliciesSDK *mocks.MockEventGatewayVirtualClusterConsumePoliciesSDK
+	EventGatewayVirtualClusterPoliciesSDK        *mocks.MockEventGatewayVirtualClusterPoliciesSDK
 	EventGatewayVirtualClusterProducePoliciesSDK *mocks.MockEventGatewayVirtualClusterProducePoliciesSDK
 	EventGatewaysSDK                             *mocks.MockEventGatewaysSDK
 	PortalsSDK                                   *mocks.MockPortalsSDK
@@ -36,6 +37,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		EventGatewayListenerPoliciesSDK:              mocks.NewMockEventGatewayListenerPoliciesSDK(t),
 		EventGatewayVirtualClustersSDK:               mocks.NewMockEventGatewayVirtualClustersSDK(t),
 		EventGatewayVirtualClusterConsumePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t),
+		EventGatewayVirtualClusterPoliciesSDK:        mocks.NewMockEventGatewayVirtualClusterPoliciesSDK(t),
 		EventGatewayVirtualClusterProducePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t),
 		EventGatewaysSDK:                             mocks.NewMockEventGatewaysSDK(t),
 		PortalsSDK:                                   mocks.NewMockPortalsSDK(t),
@@ -77,6 +79,11 @@ func (m generatedMockSDKWrapper) GetEventGatewayVirtualClustersSDK() sdkkonnectg
 // GetEventGatewayVirtualClusterConsumePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterConsumePolicy.
 func (m generatedMockSDKWrapper) GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK {
 	return m.EventGatewayVirtualClusterConsumePoliciesSDK
+}
+
+// GetEventGatewayVirtualClusterPoliciesSDK returns the SDK to operate EventGatewayVirtualClusterPolicy.
+func (m generatedMockSDKWrapper) GetEventGatewayVirtualClusterPoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterPoliciesSDK {
+	return m.EventGatewayVirtualClusterPoliciesSDK
 }
 
 // GetEventGatewayVirtualClusterProducePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterProducePolicy.

@@ -67,7 +67,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) SetupWithManage
 
 	r.setControllerBuilderOptionsForKongPluginBinding(b)
 
-	return b.Complete(reconcile.AsReconciler[TEnt](r.Client, r))
+	return b.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // enqueueObjectReferencedByKongPluginBinding watches for KongPluginBinding objects

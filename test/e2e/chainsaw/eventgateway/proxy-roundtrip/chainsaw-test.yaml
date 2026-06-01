@@ -1,0 +1,248 @@
+# Event Gateway proxy round-trip test.
+#
+# Provisions an in-namespace 3-broker Apache Kafka cluster (no Strimzi), wires
+# it up to a Konnect-managed Event Gateway via the operator's CRDs, then runs
+# kafkactl from inside the cluster (disposable kubectl-run pod) to assert that:
+#   - keg accepts client connections and proxies admin + produce + consume to
+#     the in-namespace Kafka cluster.
+#   - the EventGatewayVirtualClusterConsumePolicy (modifyHeaders) injects the
+#     expected header on the consume path.
+#   - a direct read from Kafka (bypassing keg) does NOT see the injected
+#     header, proving the policy is applied by keg and not the producer.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-proxy-roundtrip
+spec:
+  description: |
+    Validates the Event Gateway proxy round-trip end-to-end against a
+    3-broker Apache Kafka cluster deployed without Strimzi.
+
+  # Test cluster must provide a LoadBalancer implementation (MetalLB,
+  # cloud-provider-kind, real cloud LB, etc.) so the keg Kafka Service can
+  # be reached from inside the cluster at its external IP.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: keg_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: backend_cluster_name
+      value: (join('-', [($test_name), 'backend']))
+    - name: virtual_cluster_name
+      value: (join('-', [($test_name), 'vcluster']))
+    - name: listener_name
+      value: (join('-', [($test_name), 'listener']))
+    - name: listener_policy_name
+      value: (join('-', [($test_name), 'forward']))
+    - name: consume_policy_name
+      value: (join('-', [($test_name), 'modify-headers']))
+    - name: acl_policy_name
+      value: (join('-', [($test_name), 'acls']))
+
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+
+    - name: inside_topic
+      value: roundtrip-inside
+    - name: inside_record_value
+      value: hello-from-inside
+
+  steps:
+    # Konnect auth.
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration referencing the auth secret.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Kafka (3-broker KRaft, no Strimzi).
+    - name: Create-kafka-cluster
+      description: Deploy 3-broker Apache Kafka cluster (KRaft, combined mode).
+      use:
+        template: ../../common/_step_templates/apply-assert-kafka-cluster.yaml
+
+    # Event Gateway CRs (advertisedHost is a placeholder at this point).
+    - name: Create-event-gateway-resources
+      description: Create KonnectEventGateway, KegDataPlane, and Event Gateway config CRDs.
+      try:
+        - apply:
+            file: 02-event-gateway.yaml
+        - assert:
+            file: 02-event-gateway-assert.yaml
+
+    # Patch advertisedHost to the LB external address and confirm Konnect
+    # accepted the change. All three operations live in one step so that the
+    # lb_address output from the script is in scope for the patch: and assert:
+    # operations that follow (Chainsaw outputs only survive within the step).
+    - name: Patch-advertised-host
+      description: |
+        Discover the LoadBalancer address, patch advertisedHost via Chainsaw's
+        native patch: operation, then assert the policy is Programmed with the
+        updated value.
+      try:
+        # 1. Wait for the LB address; output JSON is parsed via json_parse($stdout).address.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP_NAME
+                value: ($keg_dp_name)
+            content: |
+              bash ../../common/scripts/get_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        # 2. Patch the policy with the discovered address.
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: ($listener_policy_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  forwardToVirtualCluster:
+                    config:
+                      portMapping:
+                        advertisedHost: ($lb_address)
+        # 3. Assert Konnect accepted the patch and is back to Programmed=True.
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: ($listener_policy_name)
+              spec:
+                apiSpec:
+                  forwardToVirtualCluster:
+                    config:
+                      portMapping:
+                        advertisedHost: ($lb_address)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+
+    # In-cluster validation: spin up a disposable kafkactl pod via kubectl run,
+    # produce a record through keg, consume it back and assert the
+    # modify-headers policy injected the expected header.
+    - name: Test-inside-cluster
+      description: Produce + consume through the gateway from inside the cluster.
+      try:
+        # Re-discover the LB address within this step (outputs don't cross steps).
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP_NAME
+                value: ($keg_dp_name)
+            content: |
+              bash ../../common/scripts/get_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        - script:
+            env:
+              - name: GATEWAY_ADDR
+                value: (join(':', [($lb_address), '19092']))
+              - name: TOPIC
+                value: ($inside_topic)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+              - name: RECORD_VALUE
+                value: ($inside_record_value)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash scripts/kafkactl_roundtrip.sh
+
+    # Negative test: spin up a disposable kafkactl pod that reads the topic
+    # directly from Kafka (bypassing keg). The modifyHeaders policy is
+    # gateway-only, so a direct read must NOT carry the injected header.
+    - name: Test-direct-read-no-injected-header
+      description: |
+        Consume the inside-cluster topic directly from Kafka (bypassing keg).
+        The modifyHeaders policy is gateway-only, so a direct read must NOT
+        carry the injected header.
+      try:
+        - script:
+            env:
+              - name: KAFKA_DIRECT
+                value: (join('', ['kafka-bootstrap.', ($namespace), '.svc:9092']))
+              - name: TOPIC
+                value: ($inside_topic)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash scripts/kafkactl_direct_read.sh
+
+    # ACL enforcement test: create blocked-topic directly on Kafka, then try to
+    # produce through the gateway and assert the ACL policy denies the request.
+    - name: Test-acl-blocked-topic
+      description: |
+        Assert that the ACL policy denies write access to blocked-topic when
+        producing through the gateway (virtual cluster). The topic is first
+        created directly on Kafka so the produce attempt can reach the
+        authorization check, not a "topic not found" error.
+      try:
+        # Re-discover the LB address within this step.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP_NAME
+                value: ($keg_dp_name)
+            content: |
+              bash ../../common/scripts/get_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        - script:
+            env:
+              - name: GATEWAY_ADDR
+                value: (join(':', [($lb_address), '19092']))
+              - name: KAFKA_DIRECT
+                value: (join('', ['kafka-bootstrap.', ($namespace), '.svc:9092']))
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash scripts/kafkactl_acl_blocked.sh
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: eventgateway-proxy-roundtrip
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

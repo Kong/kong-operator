@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -156,6 +157,27 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 				handler.TypedEnqueueRequestsFromMapFunc(r.listGatewaysForKonnectExtension),
 			),
 		)
+	}
+
+	crdChecker := k8sutils.CRDChecker{Client: r.Client}
+	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster, to avoid watching for a resource that doesn't exist and that would trigger reconciliation for all the Gateways on every event in the cluster.
+	tlsRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "tlsroutes",
+	}
+	tlsRouteExist, err := crdChecker.CRDExists(tlsRouteGVR)
+	if err != nil {
+		return fmt.Errorf("failed to check if TLSRoute CRD exists: %w", err)
+	}
+	if tlsRouteExist {
+		blder.Watches(
+			&gatewayv1.TLSRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		)
+	} else {
+		log.Info(mgr.GetLogger(), "TLSRoute CRD not found in cluster, skipping watch for TLSRoute resources")
 	}
 
 	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.

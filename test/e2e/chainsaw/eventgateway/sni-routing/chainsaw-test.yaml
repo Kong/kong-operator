@@ -1,0 +1,321 @@
+# Event Gateway SNI routing test.
+#
+# Mirrors the scenario from the official docs:
+# https://developer.konghq.com/event-gateway/configure-sni-routing/
+#
+# Provisions an in-namespace 3-broker Apache Kafka cluster (KRaft, no Strimzi),
+# configures two virtual clusters (analytics, payments) behind a single keg
+# listener port (19092), and validates SNI-based routing + namespace isolation by:
+#
+#   1. Pre-seeding Kafka topics directly (analytics_pageviews, analytics_clicks,
+#      analytics_orders, payments_transactions, payments_refunds, payments_orders,
+#      user_actions).
+#   2. Generating a self-signed wildcard TLS certificate for
+#      *.{LB-IP-dashes}.sslip.io (resolved via sslip.io).
+#   3. Applying a TLS server policy (terminates TLS on port 19092).
+#   4. Applying an SNI forward policy (routes to VCs by TLS hostname).
+#   5. Listing topics through the analytics VC and asserting:
+#        PRESENT:  clicks, orders, pageviews, user_actions
+#        ABSENT:   transactions, refunds  (payments namespace — must not leak)
+#   6. Listing topics through the payments VC and asserting:
+#        PRESENT:  orders, refunds, transactions, user_actions
+#        ABSENT:   pageviews, clicks  (analytics namespace — must not leak)
+#
+# Prerequisites:
+#   - A running Kubernetes cluster with LoadBalancer support.
+#   - Pods must be able to resolve *.{IP-dashes}.sslip.io (public DNS).
+#   - KONNECT_TOKEN env var set.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-sni-routing
+spec:
+  description: |
+    Validates Event Gateway SNI-based virtual cluster routing and namespace
+    isolation against a 3-broker Apache Kafka cluster deployed without Strimzi.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: keg_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: backend_cluster_name
+      value: (join('-', [($test_name), 'backend']))
+    - name: listener_name
+      value: (join('-', [($test_name), 'listener']))
+
+    # Virtual clusters.
+    - name: analytics_vc_name
+      value: (join('-', [($test_name), 'analytics']))
+    - name: analytics_dns_label
+      value: analytics
+    - name: analytics_prefix
+      value: analytics_
+
+    - name: payments_vc_name
+      value: (join('-', [($test_name), 'payments']))
+    - name: payments_dns_label
+      value: payments
+    - name: payments_prefix
+      value: payments_
+
+    # TLS / policies.
+    - name: tls_secret_name
+      value: (join('-', [($test_name), 'tls']))
+    - name: ca_cm_name
+      value: (join('-', [($test_name), 'tls-ca']))
+    - name: tls_server_policy_name
+      value: (join('-', [($test_name), 'tls-server']))
+    - name: sni_forward_policy_name
+      value: (join('-', [($test_name), 'sni-forward']))
+
+    # Expected topics per VC (namespace prefix hidden by hide_prefix mode).
+    # analytics VC: analytics_* topics stripped of prefix + shared user_actions.
+    - name: analytics_expected
+      value: clicks orders pageviews user_actions
+    # Topics that must NOT be visible in the analytics VC (payments namespace isolation).
+    - name: analytics_unexpected
+      value: transactions refunds
+
+    # payments VC: payments_* topics stripped of prefix + shared user_actions.
+    - name: payments_expected
+      value: orders refunds transactions user_actions
+    # Topics that must NOT be visible in the payments VC (analytics namespace isolation).
+    - name: payments_unexpected
+      value: pageviews clicks
+
+    # Topic used for produce+consume data-path validation per VC.
+    - name: analytics_produce_topic
+      value: pageviews
+    - name: payments_produce_topic
+      value: transactions
+
+  steps:
+    # Konnect auth.
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration referencing the auth secret.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Kafka (3-broker KRaft, no Strimzi).
+    - name: Create-kafka-cluster
+      description: Deploy 3-broker Apache Kafka cluster (KRaft, combined mode).
+      use:
+        template: ../../common/_step_templates/apply-assert-kafka-cluster.yaml
+
+    # Event Gateway control plane, data plane, backend cluster, virtual clusters,
+    # and listener. Both VCs have additional.topics for the shared user_actions topic.
+    - name: Create-event-gateway-resources
+      description: |
+        Create KonnectEventGateway, KegDataPlane, EventGatewayBackendCluster,
+        two EventGatewayVirtualClusters (analytics, payments) with namespace
+        prefixes and shared additional topic, and EventGatewayListener.
+      try:
+        - apply:
+            file: 02-event-gateway.yaml
+        - assert:
+            file: 02-event-gateway-assert.yaml
+
+    # Pre-seed all Kafka topics directly (no gateway, no TLS).
+    # This mirrors the docs step "Create Kafka topics" where topics are created
+    # via the backend context before validating the VC views.
+    - name: Seed-kafka-topics
+      description: |
+        Create all test topics directly in Kafka via the in-cluster bootstrap
+        Service (kafka-bootstrap.<ns>.svc:9092) before validating SNI routing.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash ../../common/scripts/seed_topics.sh
+
+    # Generate TLS certificate and apply policies.
+    # All three operations are in one step so that lb_address (from
+    # get_lb_address.sh) and sni_suffix (from gen_certs.sh) are in scope for
+    # the apply operations that follow (Chainsaw outputs only survive within
+    # the same step).
+    - name: Generate-certs-and-apply-tls-policies
+      description: |
+        Discover the LoadBalancer IP, generate a wildcard TLS certificate for
+        *.{IP-dashes}.sslip.io, create the TLS Secret and CA ConfigMap, then
+        apply the TLS server and SNI forward policies.
+      try:
+        # 1. Wait for the LB address.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP_NAME
+                value: ($keg_dp_name)
+            content: |
+              bash ../../common/scripts/get_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        # 2. Generate certs, create TLS Secret (labelled konghq.com/secret=true)
+        #    and CA ConfigMap.
+        - script:
+            env:
+              - name: LB_IP
+                value: ($lb_address)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: SECRET_NAME
+                value: ($tls_secret_name)
+            content: |
+              bash scripts/gen_certs.sh
+            outputs:
+              - name: sni_suffix
+                value: (json_parse($stdout).sni_suffix)
+        # 3. Apply the TLS server policy (references the Secret by name).
+        - apply:
+            file: 03-tls-server-policy.yaml
+        # 4. Apply the SNI forward policy (sni_suffix comes from step 2 above).
+        - apply:
+            file: 04-sni-forward-policy.yaml
+            bindings:
+              - name: sni_suffix
+                value: ($sni_suffix)
+        # 5. Assert both policies are accepted by Konnect.
+        - assert:
+            file: 03-tls-server-policy-assert.yaml
+        - assert:
+            file: 04-sni-forward-policy-assert.yaml
+
+    # Validate the analytics virtual cluster.
+    # Mirrors docs validation: kafkactl list topics via bootstrap-analytics.<IP>.sslip.io
+    # Expected topics: clicks, orders, pageviews, user_actions
+    # Must NOT see: transactions, refunds (payments namespace)
+    - name: Validate-analytics-virtual-cluster
+      description: |
+        Connect to the analytics VC via SNI routing and assert:
+          PRESENT  - clicks, orders, pageviews, user_actions
+          ABSENT   - transactions, refunds (payments namespace must not leak)
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP_NAME
+                value: ($keg_dp_name)
+            content: |
+              bash ../../common/scripts/get_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CA_CM_NAME
+                value: ($ca_cm_name)
+            content: |
+              bash ../../common/scripts/get_ca_cert.sh
+            outputs:
+              - name: ca_cert_b64
+                value: (json_parse($stdout).ca_cert_b64)
+        - script:
+            env:
+              - name: LB_IP
+                value: ($lb_address)
+              - name: DNS_LABEL
+                value: ($analytics_dns_label)
+              - name: CA_CERT_B64
+                value: ($ca_cert_b64)
+              - name: EXPECTED_TOPICS
+                value: ($analytics_expected)
+              - name: UNEXPECTED_TOPICS
+                value: ($analytics_unexpected)
+              - name: PRODUCE_TOPIC
+                value: ($analytics_produce_topic)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash scripts/kafkactl_sni_validate.sh
+
+    # Validate the payments virtual cluster.
+    # Mirrors docs validation: kafkactl list topics via bootstrap-payments.<IP>.sslip.io
+    # Expected topics: orders, refunds, transactions, user_actions
+    # Must NOT see: pageviews, clicks (analytics namespace)
+    - name: Validate-payments-virtual-cluster
+      description: |
+        Connect to the payments VC via SNI routing and assert:
+          PRESENT  - orders, refunds, transactions, user_actions
+          ABSENT   - pageviews, clicks (analytics namespace must not leak)
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP_NAME
+                value: ($keg_dp_name)
+            content: |
+              bash ../../common/scripts/get_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CA_CM_NAME
+                value: ($ca_cm_name)
+            content: |
+              bash ../../common/scripts/get_ca_cert.sh
+            outputs:
+              - name: ca_cert_b64
+                value: (json_parse($stdout).ca_cert_b64)
+        - script:
+            env:
+              - name: LB_IP
+                value: ($lb_address)
+              - name: DNS_LABEL
+                value: ($payments_dns_label)
+              - name: CA_CERT_B64
+                value: ($ca_cert_b64)
+              - name: EXPECTED_TOPICS
+                value: ($payments_expected)
+              - name: UNEXPECTED_TOPICS
+                value: ($payments_unexpected)
+              - name: PRODUCE_TOPIC
+                value: ($payments_produce_topic)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash scripts/kafkactl_sni_validate.sh
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: eventgateway-sni-routing
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
+

@@ -113,7 +113,7 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 			&configurationv1alpha1.KongDataPlaneClientCertificate{},
 			handler.EnqueueRequestForOwner(r.Scheme(), mgr.GetRESTMapper(), &konnectv1alpha2.KonnectExtension{}),
 		).
-		Complete(reconcile.AsReconciler[*konnectv1alpha2.KonnectExtension](r.Client, r))
+		Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // listExtendableReferencedExtensions returns a list of all the KonnectExtensions referenced by the Extendable object.

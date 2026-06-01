@@ -137,6 +137,71 @@ func TestEncryptionKeyStaticReferenceByName_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestEventGatewayACLOperation_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayACLOperation
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayACLPolicyConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayACLPolicyConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayACLResourceName_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayACLResourceName
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayACLRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayACLRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayACLsPolicy_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayACLsPolicy
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEventGatewayAWSKeySource_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -857,6 +922,34 @@ func TestEncryptionKeyUnmarshalJSON_NilReceiver(t *testing.T) {
 	}
 }
 
+func TestEventGatewayACLRuleResourceNamesUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Stat", payload: []byte("{\"type\":\"stat\",\"stat\":[]}")},
+		{name: "Dynam", payload: []byte("{\"type\":\"dynam\",\"dynam\":\"\"}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayACLRuleResourceNames
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayACLRuleResourceNames: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestEventGatewayEncryptConfigEncryptionKeyUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1220,6 +1313,62 @@ func TestVirtualClusterNamespaceTopicSelectorUnmarshalJSON_NilReceiver(t *testin
 			if got, want := err.Error(), "unmarshaling VirtualClusterNamespaceTopicSelector: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
+		})
+	}
+}
+
+func TestEventGatewayACLRuleUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		payload []byte
+		assert func(*testing.T, EventGatewayACLRule)
+	}{
+		{
+			name: "ResourceNames/Stat",
+			payload: []byte("{\"resourceNames\":{\"type\":\"stat\",\"stat\":[]}}"),
+			assert: func(t *testing.T, target EventGatewayACLRule) {
+				t.Helper()
+				if target.ResourceNames == nil {
+					t.Fatalf("ResourceNames should be allocated")
+				}
+				if got, want := target.ResourceNames.Type, EventGatewayACLRuleResourceNamesTypeStat; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.ResourceNames.Stat == nil {
+					t.Fatalf("ResourceNames.Stat should be allocated")
+				}
+			},
+		},
+		{
+			name: "ResourceNames/Dynam",
+			payload: []byte("{\"resourceNames\":{\"type\":\"dynam\",\"dynam\":\"\"}}"),
+			assert: func(t *testing.T, target EventGatewayACLRule) {
+				t.Helper()
+				if target.ResourceNames == nil {
+					t.Fatalf("ResourceNames should be allocated")
+				}
+				if got, want := target.ResourceNames.Type, EventGatewayACLRuleResourceNamesTypeDynam; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.ResourceNames.Dynam == nil {
+					t.Fatalf("ResourceNames.Dynam should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayACLRule
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
 		})
 	}
 }

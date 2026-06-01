@@ -105,7 +105,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) SetupWithManager(ctx context.Con
 
 	setKonnectAPIAuthConfigurationRefWatches(b)
 
-	return b.Complete(reconcile.AsReconciler[*konnectv1alpha1.KonnectAPIAuthConfiguration](r.client, r))
+	return b.Complete(reconcile.AsReconciler(r.client, r))
 }
 
 // Reconcile reconciles a KonnectAPIAuthConfiguration object.

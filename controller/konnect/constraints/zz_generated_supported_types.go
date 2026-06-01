@@ -16,6 +16,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		configurationv1alpha1.EventGatewayListenerPolicy |
 		configurationv1alpha1.EventGatewayVirtualCluster |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterPolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
 		konnectv1alpha1.KonnectEventGateway |
 		konnectv1alpha1.Portal |

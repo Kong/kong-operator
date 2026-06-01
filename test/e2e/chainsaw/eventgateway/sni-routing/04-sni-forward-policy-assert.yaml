@@ -1,0 +1,8 @@
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: ($sni_forward_policy_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
