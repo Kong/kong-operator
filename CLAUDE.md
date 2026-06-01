@@ -56,6 +56,21 @@ make test.integration_validatingwebhook  # Webhook tests
 make test.crds-validation             # CRD validation tests
 ```
 
+#### kind: "too many open files" / fsnotify watcher errors
+
+Tests that spin up a kind cluster (integration, conformance, e2e) can fail with
+`failed to create fsnotify watcher: too many open files`. kind nodes share the host
+kernel, so the `fs.inotify.max_user_instances` / `max_user_watches` limits must be raised
+on the **host running Docker** (see https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files).
+
+- **Linux host**: `make tune.inotify` (one-off; persist via `/etc/sysctl.d/99-kind-inotify.conf`).
+- **macOS** (Docker Desktop / colima): the limit lives in the Linux VM, not macOS.
+  - colima: `colima ssh -- sudo sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288`
+  - Docker Desktop: `docker run --rm --privileged alpine sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288`
+  - Note: not persistent across VM restarts.
+
+CI raises these limits automatically via the `.github/actions/bump-inotify` composite action.
+
 ### CRD Validation Tests
 
 ```bash

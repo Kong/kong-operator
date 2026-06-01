@@ -564,6 +564,11 @@ CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
 TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < ./test/test_dependencies.yaml)
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 
+.PHONY: tune.inotify
+tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in kind-based tests (Linux host / Docker VM).
+	sudo sysctl -w fs.inotify.max_user_instances=8192
+	sudo sysctl -w fs.inotify.max_user_watches=524288
+
 .PHONY: test
 test: test.unit
 
