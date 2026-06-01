@@ -764,6 +764,7 @@ jobs:
         path: e2e-tests.xml
 
   e2e-tests-chainsaw:
+    runs-on: ubuntu-latest
     needs:
       - check-docs-only
       - matrix_k8s_node_versions
