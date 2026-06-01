@@ -39,6 +39,13 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Fixed KonnectExtension changes won't trigger ControlPlane reconciliations.
+  [#4370](https://github.com/Kong/kong-operator/pull/4370)
+
 ## [v2.0.9]
 
 > Release date: 2026-04-23
