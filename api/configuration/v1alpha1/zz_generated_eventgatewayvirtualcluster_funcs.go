@@ -57,6 +57,11 @@ func (obj EventGatewayVirtualCluster) GetTypeName() string {
 	return "EventGatewayVirtualCluster"
 }
 
+// GetItems returns the list of EventGatewayVirtualCluster items.
+func (obj EventGatewayVirtualClusterList) GetItems() []EventGatewayVirtualCluster {
+	return obj.Items
+}
+
 // HasParent returns true if the EventGatewayVirtualCluster has a parent entity.
 func (obj EventGatewayVirtualCluster) HasParent() bool {
 	return true

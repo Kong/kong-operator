@@ -57,6 +57,11 @@ func (obj EventGatewayBackendCluster) GetTypeName() string {
 	return "EventGatewayBackendCluster"
 }
 
+// GetItems returns the list of EventGatewayBackendCluster items.
+func (obj EventGatewayBackendClusterList) GetItems() []EventGatewayBackendCluster {
+	return obj.Items
+}
+
 // HasParent returns true if the EventGatewayBackendCluster has a parent entity.
 func (obj EventGatewayBackendCluster) HasParent() bool {
 	return true
