@@ -314,6 +314,8 @@
 - Deletion of obsolete `KonnectControlPlane` in version `v1alpha1` (available only when conversion webhook is enabled)
   does not leave orphaned `KonnectGatewayControlPlane` in Konnect.
   [#4267](https://github.com/Kong/kong-operator/pull/4267)
+- Fixed KonnectExtension changes won't trigger ControlPlane reconciliations.
+  [#4361](https://github.com/Kong/kong-operator/pull/4361)
 
 ## [v2.1.6]
 
