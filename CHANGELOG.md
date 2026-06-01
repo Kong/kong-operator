@@ -44,7 +44,7 @@
 ### Fixes
 
 - Fixed KonnectExtension changes won't trigger ControlPlane reconciliations.
-  [#4370](https://github.com/Kong/kong-operator/pull/4370)
+  [#4361](https://github.com/Kong/kong-operator/pull/4361) [#4370](https://github.com/Kong/kong-operator/pull/4370)
 
 ## [v2.0.9]
 
