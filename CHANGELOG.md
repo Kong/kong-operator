@@ -59,7 +59,7 @@
   as it changes the names of the generated `KongCertificate`s.
   [#4382](https://github.com/Kong/kong-operator/pull/4382) [#4394](https://github.com/Kong/kong-operator/pull/4394)
 - Fixed KonnectExtension changes won't trigger ControlPlane reconciliations.
-  [#4371](https://github.com/Kong/kong-operator/pull/4371)
+  [#4361](https://github.com/Kong/kong-operator/pull/4361) [#4371](https://github.com/Kong/kong-operator/pull/4371)
 
 ## [v2.1.6]
 
