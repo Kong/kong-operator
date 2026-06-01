@@ -44,6 +44,8 @@ jobs:
       with:
         install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm
 
+    - uses: ./.github/actions/bump-inotify
+
     - name: Create k8s KinD Cluster with ktf
       env:
         # NOTE: add GITHUB_TOKEN to env to allow ktf to query GitHub API without
