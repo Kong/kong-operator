@@ -132,14 +132,6 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			&gatewayv1.HTTPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(
-			&gatewayv1.TLSRoute{},
-			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(
-			&gatewayv1.GRPCRoute{},
-			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByGRPCRoute),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
 		// status in status.listeners.attachedRoutes
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
@@ -178,6 +170,25 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	} else {
 		log.Info(mgr.GetLogger(), "TLSRoute CRD not found in cluster, skipping watch for TLSRoute resources")
+	}
+
+	grpcRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "grpcroutes",
+	}
+	grpcRouteExist, err := crdChecker.CRDExists(grpcRouteGVR)
+	if err != nil {
+		return fmt.Errorf("failed to check if GRPCRoute CRD exists: %w", err)
+	}
+	if grpcRouteExist {
+		blder.Watches(
+			&gatewayv1.GRPCRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByGRPCRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		)
+	} else {
+		log.Info(mgr.GetLogger(), "GRPCRoute CRD not found in cluster, skipping watch for GRPCRoute resources")
 	}
 
 	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.
