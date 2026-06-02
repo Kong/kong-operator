@@ -206,6 +206,8 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - uses: ./.github/actions/bump-inotify
+
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
       with:
@@ -254,6 +256,8 @@ jobs:
 
     - name: build docker image
       run: make docker.build
+
+    - uses: ./.github/actions/bump-inotify
 
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0

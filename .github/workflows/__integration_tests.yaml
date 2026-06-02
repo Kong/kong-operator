@@ -104,6 +104,8 @@ jobs:
         sudo tcpdump -i any 'dst port 443' -w /tmp/capture-${{ matrix.suite }}-${{ matrix.router_flavor }}.pcap &
         echo $! > /tmp/tcpdump.pid
 
+    - uses: ./.github/actions/bump-inotify
+
     - name: run integration tests
       run: make test.integration-${{ matrix.suite }}
       env:
