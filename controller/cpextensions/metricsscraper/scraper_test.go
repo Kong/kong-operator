@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	prometheus "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -64,27 +63,27 @@ func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 								Metric: []*prometheus.Metric{
 									{
 										Histogram: &prometheus.Histogram{
-											SampleCount: proto.Uint64(610),
-											SampleSum:   proto.Float64(12232),
+											SampleCount: new(uint64(610)),
+											SampleSum:   new(float64(12232)),
 											Bucket: []*prometheus.Bucket{
 												{
-													CumulativeCount: proto.Uint64(550),
-													UpperBound:      proto.Float64(25),
+													CumulativeCount: new(uint64(550)),
+													UpperBound:      new(float64(25)),
 												},
 												{
-													CumulativeCount: proto.Uint64(550),
-													UpperBound:      proto.Float64(50),
+													CumulativeCount: new(uint64(550)),
+													UpperBound:      new(float64(50)),
 												},
 												{
-													CumulativeCount: proto.Uint64(550),
-													UpperBound:      proto.Float64(80),
+													CumulativeCount: new(uint64(550)),
+													UpperBound:      new(float64(80)),
 												},
 												{
-													CumulativeCount: proto.Uint64(610),
-													UpperBound:      proto.Float64(60000),
+													CumulativeCount: new(uint64(610)),
+													UpperBound:      new(float64(60000)),
 												},
 												{
-													CumulativeCount: proto.Uint64(610),
+													CumulativeCount: new(uint64(610)),
 													UpperBound:      new(math.Inf(1)),
 												},
 											},

@@ -45,7 +45,6 @@ require (
 	github.com/testcontainers/testcontainers-go v0.42.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
 	github.com/tidwall/gjson v1.19.0
-	github.com/tidwall/pretty v1.2.1
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.28.0
@@ -53,7 +52,6 @@ require (
 	golang.org/x/sync v0.20.0
 	google.golang.org/api v0.283.0
 	google.golang.org/grpc v1.81.1
-	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	k8s.io/api v0.36.1
 	k8s.io/apiextensions-apiserver v0.36.1
 	k8s.io/apimachinery v0.36.1
@@ -257,6 +255,7 @@ require (
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/texttheater/golang-levenshtein v1.0.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
 	github.com/tklauser/numcpus v0.11.0 // indirect
 	github.com/urfave/cli v1.22.16 // indirect
@@ -298,6 +297,7 @@ require (
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260523011958-0a33c5d7ca68 // indirect
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
