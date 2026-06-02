@@ -31,6 +31,9 @@ type Config struct {
 	// When ObjectRef has an Import config, it will be imported from an external
 	// package instead of being generated locally.
 	CommonTypes *config.CommonTypesConfig
+	// SchemaFieldOmissions maps generated schema type names to JSON field names
+	// that should be omitted when emitting schema_types.go.
+	SchemaFieldOmissions map[string]map[string]bool
 	// SecretReferences maps entity names to their per-path secret reference configurations.
 	// When set, the designated OAS-derived string fields are replaced with SensitiveDataSource
 	// structs and per-entity resolvers are generated in the sdkops file.
@@ -1572,7 +1575,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				body.WriteString(comment)
 				fmt.Fprintf(&body, "type %s struct {\n", goName)
 				for _, prop := range schema.Properties {
-					if skipProperty(prop) || shouldSkipUnionMemberDiscriminator(refName, prop, unionMemberDiscriminators) {
+					if g.shouldSkipSchemaProperty(goName, prop) || shouldSkipUnionMemberDiscriminator(refName, prop, unionMemberDiscriminators) {
 						continue
 					}
 					g.writeSchemaTypeField(&body, prop, goName, schemaCursor)
@@ -1581,7 +1584,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				g.writeNestedInlineTypes(&body, schema.Properties, emittedNested, "", goName, schemaCursor)
 				// Emit union type definitions for any property-level oneOf.
 				for _, prop := range schema.Properties {
-					if skipProperty(prop) || len(prop.OneOf) == 0 {
+					if g.shouldSkipSchemaProperty(goName, prop) || len(prop.OneOf) == 0 {
 						continue
 					}
 					var propCursor *config.FieldConfig
@@ -1700,6 +1703,7 @@ func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedS
 		if !ok {
 			continue
 		}
+		goName := fixInitialisms(refName)
 
 		if !needsAPIExtJSON && schemaUsesJSON(g, schema, parsed) {
 			needsAPIExtJSON = true
@@ -1708,7 +1712,7 @@ func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedS
 			needsIntStr = true
 		}
 		if objectRefImport == nil {
-			objectRefImport = g.objectRefImportIfNeeded(schema)
+			objectRefImport = g.schemaTypeObjectRefImportIfNeeded(goName, schema)
 		}
 
 		if needsAPIExtJSON && needsIntStr && objectRefImport != nil {
@@ -1768,7 +1772,7 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 // arbitrarily deep inline shapes are handled.
 func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser.Property, emitted map[string]bool, entityName, parentTypeName string, parentCursor *config.FieldConfig) {
 	for _, prop := range props {
-		if skipProperty(prop) || prop == nil {
+		if g.shouldSkipSchemaProperty(parentTypeName, prop) {
 			continue
 		}
 		propCursor := parentCursor.Sub(jsonTagForProperty(prop))
@@ -1784,7 +1788,7 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 			buf.WriteString(formatSchemaComment(typeName, prop.Description))
 			fmt.Fprintf(buf, "type %s struct {\n", typeName)
 			for _, nested := range prop.Items.Properties {
-				if skipProperty(nested) {
+				if g.shouldSkipSchemaProperty(typeName, nested) {
 					continue
 				}
 				g.writeSchemaTypeField(buf, nested, typeName, propCursor)
@@ -1793,7 +1797,7 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 
 			g.writeNestedInlineTypes(buf, prop.Items.Properties, emitted, entityName, typeName, propCursor)
 			for _, nested := range prop.Items.Properties {
-				if skipProperty(nested) || len(nested.OneOf) == 0 {
+				if g.shouldSkipSchemaProperty(typeName, nested) || len(nested.OneOf) == 0 {
 					continue
 				}
 				g.writeUnionTypeDefinition(buf, nested, typeName, emitted, entityName, propCursor.Sub(jsonTagForProperty(nested)))
@@ -1822,7 +1826,7 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 		buf.WriteString(formatSchemaComment(typeName, prop.Description))
 		fmt.Fprintf(buf, "type %s struct {\n", typeName)
 		for _, nested := range prop.Properties {
-			if skipProperty(nested) {
+			if g.shouldSkipSchemaProperty(typeName, nested) {
 				continue
 			}
 			g.writeSchemaTypeField(buf, nested, typeName, inlineCursor)
@@ -1831,7 +1835,7 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 
 		g.writeNestedInlineTypes(buf, prop.Properties, emitted, entityName, typeName, inlineCursor)
 		for _, nested := range prop.Properties {
-			if skipProperty(nested) || len(nested.OneOf) == 0 {
+			if g.shouldSkipSchemaProperty(typeName, nested) || len(nested.OneOf) == 0 {
 				continue
 			}
 			g.writeUnionTypeDefinition(buf, nested, typeName, emitted, entityName, inlineCursor.Sub(jsonTagForProperty(nested)))
@@ -2630,7 +2634,7 @@ func (g *Generator) writeAnonymousUnionVariantType(buf *strings.Builder, variant
 	buf.WriteString(formatSchemaComment(variant.goTypeName, variant.source.Description))
 	fmt.Fprintf(buf, "type %s struct {\n", variant.goTypeName)
 	for _, nested := range variant.source.Properties {
-		if skipProperty(nested) || (parentDiscriminator != "" && nested.Name == parentDiscriminator) {
+		if g.shouldSkipSchemaProperty(variant.goTypeName, nested) || (parentDiscriminator != "" && nested.Name == parentDiscriminator) {
 			continue
 		}
 		g.writeSchemaTypeField(buf, nested, variant.goTypeName, parentCursor)
@@ -2639,7 +2643,7 @@ func (g *Generator) writeAnonymousUnionVariantType(buf *strings.Builder, variant
 
 	g.writeNestedInlineTypes(buf, variant.source.Properties, emitted, entityName, variant.goTypeName, parentCursor)
 	for _, nested := range variant.source.Properties {
-		if skipProperty(nested) || len(nested.OneOf) == 0 {
+		if g.shouldSkipSchemaProperty(variant.goTypeName, nested) || len(nested.OneOf) == 0 {
 			continue
 		}
 		g.writeUnionTypeDefinition(buf, nested, variant.goTypeName, emitted, entityName, parentCursor.Sub(jsonTagForProperty(nested)))
@@ -3516,6 +3520,16 @@ func (g *Generator) objectRefImportIfNeeded(schema *parser.Schema) *config.Impor
 	return nil
 }
 
+func (g *Generator) schemaTypeObjectRefImportIfNeeded(typeName string, schema *parser.Schema) *config.ImportConfig {
+	if !g.objectRefImported() {
+		return nil
+	}
+	if g.schemaTypeUsesObjectRef(typeName, schema) {
+		return g.config.CommonTypes.ObjectRef.Import
+	}
+	return nil
+}
+
 // TemplateReferenceConfig extends ReferenceConfig with Go-code computed fields
 // suitable for use in templates.
 type TemplateReferenceConfig struct {
@@ -3597,6 +3611,38 @@ func schemaUsesObjectRef(schema *parser.Schema) bool {
 		}
 	}
 	return false
+}
+
+func (g *Generator) schemaTypeUsesObjectRef(typeName string, schema *parser.Schema) bool {
+	if len(schema.Dependencies) > 0 {
+		return true
+	}
+	for _, prop := range schema.Properties {
+		if g.shouldSkipSchemaProperty(typeName, prop) {
+			continue
+		}
+		if prop.IsReference {
+			return true
+		}
+	}
+	return false
+}
+
+func (g *Generator) shouldSkipSchemaProperty(typeName string, prop *parser.Property) bool {
+	if prop == nil {
+		return true
+	}
+	if skipProperty(prop) {
+		return true
+	}
+	if len(g.config.SchemaFieldOmissions) == 0 {
+		return false
+	}
+	fields := g.config.SchemaFieldOmissions[typeName]
+	if len(fields) == 0 {
+		return false
+	}
+	return fields[jsonName(prop.Name)]
 }
 
 // objectRefTypeName returns the Go type name for ObjectRef, qualified with the

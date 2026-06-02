@@ -55,6 +55,11 @@ func (obj KonnectEventGateway) GetTypeName() string {
 	return "KonnectEventGateway"
 }
 
+// GetItems returns the list of KonnectEventGateway items.
+func (obj KonnectEventGatewayList) GetItems() []KonnectEventGateway {
+	return obj.Items
+}
+
 // HasParent returns true if the KonnectEventGateway has a parent entity.
 func (obj KonnectEventGateway) HasParent() bool {
 	return false

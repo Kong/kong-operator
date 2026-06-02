@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	apiconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -126,25 +127,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context,
 	for _, dep := range ReconciliationWatchOptionsForEntity(r.Client, ent) {
 		b = dep(b)
 	}
-	return b.Complete(r)
+	return b.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // Reconcile reconciles the given Konnect entity.
-func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
-	ctx context.Context, req ctrl.Request,
-) (ctrl.Result, error) {
+func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TEnt) (ctrl.Result, error) {
 	var (
 		entityTypeName = constraints.EntityTypeName[T]()
 		logger         = log.GetLogger(ctx, entityTypeName, r.LoggingMode)
 	)
-
-	var (
-		e   T
-		ent = TEnt(&e)
-	)
-	if err := r.Client.Get(ctx, req.NamespacedName, ent); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	if id := ent.GetKonnectStatus().GetKonnectID(); id != "" {
 		logger = logger.WithValues("konnect_id", id)

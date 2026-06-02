@@ -179,6 +179,17 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				apiAlias,
 			),
 		}
+	case "EventGatewayVirtualClusterPolicy":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "EventGatewayVirtualClusterPolicyConfig",
+			TypeConstName:   "EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy",
+			VariantField:    "EventGatewayACLsPolicy",
+			VariantTypeName: "EventGatewayACLsPolicy",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.EventGatewayACLsPolicy{Config: %[1]s.EventGatewayACLPolicyConfig{Rules: []%[1]s.EventGatewayACLRule{{Action: "allow", ResourceType: "topic", Operations: []%[1]s.EventGatewayACLOperation{{Name: "read"}}, ResourceNames: &%[1]s.EventGatewayACLRuleResourceNames{Type: %[1]s.EventGatewayACLRuleResourceNamesTypeStat, Stat: &%[1]s.EventGatewayACLRuleResourceNamesStaticArray{{Match: "orders.*"}}}}}}}`,
+				apiAlias,
+			),
+		}
 	case "EventGatewayVirtualClusterConsumePolicy":
 		return &opsControllerRootUnionFixture{
 			UnionTypeName:   "EventGatewayVirtualClusterConsumePolicyConfig",

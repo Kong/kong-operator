@@ -79,14 +79,7 @@ func (ks *KongState) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KongState 
 			})
 		}(),
 		CACertificates: ks.CACertificates,
-		Plugins: func() []Plugin {
-			if ks.Plugins == nil {
-				return nil
-			}
-			return lo.Map(ks.Plugins, func(p Plugin, _ int) Plugin {
-				return p.SanitizedCopy()
-			})
-		}(),
+		Plugins:        ks.Plugins,
 		Consumers: func() []Consumer {
 			if ks.Consumers == nil {
 				return nil
@@ -584,22 +577,26 @@ func buildPlugins(
 			if !rel.Service.IsEmpty() {
 				relSvc := rel.Service.Identifier
 				plugin.Service = &kong.Service{ID: new(relSvc)}
-				toHash.WriteString("_service-" + relSvc)
+				toHash.WriteString("_service-")
+				toHash.WriteString(relSvc)
 			}
 			if !rel.Route.IsEmpty() {
 				relRoute := rel.Route.Identifier
 				plugin.Route = &kong.Route{ID: new(relRoute)}
-				toHash.WriteString("_route-" + relRoute)
+				toHash.WriteString("_route-")
+				toHash.WriteString(relRoute)
 			}
 			if !rel.Consumer.IsEmpty() {
 				relConsumer := rel.Consumer.Identifier
 				plugin.Consumer = &kong.Consumer{ID: new(relConsumer)}
-				toHash.WriteString("_consumer-" + relConsumer)
+				toHash.WriteString("_consumer-")
+				toHash.WriteString(relConsumer)
 			}
 			if !rel.ConsumerGroup.IsEmpty() {
 				relConsumerGroup := rel.ConsumerGroup.Identifier
 				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: new(relConsumerGroup)}
-				toHash.WriteString("_group-" + relConsumerGroup)
+				toHash.WriteString("_group-")
+				toHash.WriteString(relConsumerGroup)
 			}
 
 			// instance_name must be unique. Using the same KongPlugin on multiple resources will result in duplicates

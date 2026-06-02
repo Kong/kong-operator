@@ -192,11 +192,11 @@ KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd
 download.kube-api-linter: mise yq ## Download kube-api-linter locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter@$(KUBE_API_LINTER_VERSION)
 
-CHAINSAW_VERSION = $(shell $(YQ) -r '.chainsaw' < $(TOOLS_VERSIONS_FILE))
-CHAINSAW = $(PROJECT_DIR)/bin/installs/github-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
+CHAINSAW_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:kyverno/chainsaw"].version' < $(MISE_FILE))
+CHAINSAW = $(PROJECT_DIR)/bin/installs/aqua-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
 .PHONY: chainsaw
 chainsaw: mise yq ## Download chainsaw locally if necessary.
-	$(MAKE) mise-install DEP_VER=github:kyverno/chainsaw@$(CHAINSAW_VERSION)
+	$(MAKE) mise-install DEP_VER=aqua:kyverno/chainsaw@$(CHAINSAW_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -560,6 +560,11 @@ _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
 TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < ./test/test_dependencies.yaml)
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
+
+.PHONY: tune.inotify
+tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in kind-based tests (Linux host / Docker VM).
+	sudo sysctl -w fs.inotify.max_user_instances=8192
+	sudo sysctl -w fs.inotify.max_user_watches=524288
 
 .PHONY: test
 test: test.unit

@@ -8,6 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -48,17 +49,11 @@ func (r *KonnectSecretReferenceController) SetupWithManager(ctx context.Context,
 
 	setSecretReferenceWatches(b)
 
-	return b.Complete(r)
+	return b.Complete(reconcile.AsReconciler(r.client, r))
 }
 
 // Reconcile reconciles a Secret object.
-func (r *KonnectSecretReferenceController) Reconcile(
-	ctx context.Context, req ctrl.Request,
-) (ctrl.Result, error) {
-	var secret corev1.Secret
-	if err := r.client.Get(ctx, req.NamespacedName, &secret); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+func (r *KonnectSecretReferenceController) Reconcile(ctx context.Context, secret *corev1.Secret) (ctrl.Result, error) {
 
 	logger := log.GetLogger(ctx, "KonnectSecretReference", r.loggingMode)
 
@@ -74,7 +69,7 @@ func (r *KonnectSecretReferenceController) Reconcile(
 		}
 
 		// Check if secret is still referenced by any Konnect resources.
-		isReferenced, err := r.isSecretReferencedByKonnectResources(ctx, &secret)
+		isReferenced, err := r.isSecretReferencedByKonnectResources(ctx, secret)
 		if err != nil {
 			log.Debug(logger, "failed to check if secret is referenced", "error", err)
 			return ctrl.Result{}, err
@@ -82,7 +77,7 @@ func (r *KonnectSecretReferenceController) Reconcile(
 
 		// Remove finalizer if not referenced.
 		if !isReferenced {
-			if removed, res, err := patch.WithoutFinalizer(ctx, r.client, &secret, consts.KonnectSecretInUseFinalizer); err != nil || !res.IsZero() {
+			if removed, res, err := patch.WithoutFinalizer(ctx, r.client, secret, consts.KonnectSecretInUseFinalizer); err != nil || !res.IsZero() {
 				return res, err
 			} else if removed {
 				log.Debug(logger, "removed finalizer from secret as it's no longer referenced")
@@ -92,7 +87,7 @@ func (r *KonnectSecretReferenceController) Reconcile(
 	}
 
 	// Check if secret is referenced by any Konnect resources.
-	isReferenced, err := r.isSecretReferencedByKonnectResources(ctx, &secret)
+	isReferenced, err := r.isSecretReferencedByKonnectResources(ctx, secret)
 	if err != nil {
 		log.Debug(logger, "failed to check if secret is referenced", "error", err)
 		return ctrl.Result{}, err
@@ -100,13 +95,13 @@ func (r *KonnectSecretReferenceController) Reconcile(
 
 	// Add finalizer if referenced, remove if not referenced.
 	if isReferenced {
-		if added, res, err := patch.WithFinalizer(ctx, r.client, &secret, consts.KonnectSecretInUseFinalizer); err != nil || !res.IsZero() {
+		if added, res, err := patch.WithFinalizer(ctx, r.client, secret, consts.KonnectSecretInUseFinalizer); err != nil || !res.IsZero() {
 			return res, err
 		} else if added {
 			log.Debug(logger, "added finalizer to secret as it's referenced by Konnect resources")
 		}
 	} else {
-		if removed, res, err := patch.WithoutFinalizer(ctx, r.client, &secret, consts.KonnectSecretInUseFinalizer); err != nil || !res.IsZero() {
+		if removed, res, err := patch.WithoutFinalizer(ctx, r.client, secret, consts.KonnectSecretInUseFinalizer); err != nil || !res.IsZero() {
 			return res, err
 		} else if removed {
 			log.Debug(logger, "removed finalizer from secret as it's not referenced")

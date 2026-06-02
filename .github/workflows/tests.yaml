@@ -206,6 +206,8 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - uses: ./.github/actions/bump-inotify
+
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
       with:
@@ -218,16 +220,16 @@ jobs:
       with:
         install: false
 
-    # We use install.all to install all CRDs and resources also the ones that are not bundled
+    # We use install.crds to install all CRDs and resources also the ones that are not bundled
     # in base kustomization (e.g. currently AIGateway) but which have samples defined.
     - name: Verify installing CRDs via kustomize works
-      run: make install.all
+      run: make install.gateway-api-crds install.crds
 
     - name: Install and delete each sample one by one
       run: make test.samples
 
     - name: Verify that uninstalling operator CRDs via kustomize works
-      run: make ignore-not-found=true uninstall.all
+      run: make ignore-not-found=true uninstall.gateway-api-crds uninstall.crds
 
   install-with-kustomize:
     runs-on: ubuntu-latest
@@ -254,6 +256,8 @@ jobs:
 
     - name: build docker image
       run: make docker.build
+
+    - uses: ./.github/actions/bump-inotify
 
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0

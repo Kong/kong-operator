@@ -161,7 +161,7 @@ func TestRoutesForRule(t *testing.T) {
 			}
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, tt.parentRef, cpRef, tt.serviceName, tt.hostnames)
+			results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, tt.parentRef, cpRef, nil, tt.serviceName, tt.hostnames)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -202,7 +202,7 @@ func TestRoutesForRule(t *testing.T) {
 					continue
 				}
 
-				assert.Equal(t, new(int64(1)), result.Spec.RegexPriority)
+				assert.Equal(t, new(int64(10)), result.Spec.RegexPriority)
 			}
 		})
 	}
@@ -268,12 +268,12 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
 
-	results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, "test-service", nil)
+	results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, nil, "test-service", nil)
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 
 	assert.Equal(t, []string{"~/one$"}, results[0].Spec.Paths)
-	assert.Equal(t, new(int64(1)), results[0].Spec.RegexPriority)
+	assert.Equal(t, new(int64(9)), results[0].Spec.RegexPriority)
 	assert.ElementsMatch(t,
 		[]sdkkonnectcomp.RouteJSONProtocols{
 			sdkkonnectcomp.RouteJSONProtocols("http"),

@@ -139,6 +139,71 @@ func TestHostnamesIntersection(t *testing.T) {
 	}
 }
 
+func TestTranslateHTTPRouteWithMultipleListenerParentRefs(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, gatewayv1.Install(scheme))
+	require.NoError(t, configurationv1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, konnectv1alpha2.AddToScheme(scheme))
+	require.NoError(t, gatewayoperatorv1alpha1.AddToScheme(scheme))
+	require.NoError(t, operatorv2beta1.AddToScheme(scheme))
+
+	route := newHTTPRouteWithHostnames()
+	listener0 := gwtypes.SectionName("listener-0")
+	listener1 := gwtypes.SectionName("listener-1")
+	route.Spec.ParentRefs = []gwtypes.ParentReference{
+		{
+			Name:        "test-gateway",
+			Namespace:   new(gatewayv1.Namespace("default")),
+			SectionName: &listener0,
+			Kind:        new(gwtypes.Kind("Gateway")),
+			Group:       new(gwtypes.Group(gwtypes.GroupName)),
+		},
+		{
+			Name:        "test-gateway",
+			Namespace:   new(gatewayv1.Namespace("default")),
+			SectionName: &listener1,
+			Kind:        new(gwtypes.Kind("Gateway")),
+			Group:       new(gwtypes.Group(gwtypes.GroupName)),
+		},
+	}
+
+	gateway := newGatewayWithListenerHostnames("*.bar.com", "*.foo.com")
+	objects := newKonnectGatewayStandardObjects(gateway)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+	converter := newHTTPRouteConverter(route, fakeClient, false, "")
+	_, err := converter.Translate(context.Background(), logr.Discard())
+	require.NoError(t, err)
+
+	output, err := converter.GetOutputStore(context.Background(), logr.Discard())
+	require.NoError(t, err)
+
+	var kongRoutes []*configurationv1alpha1.KongRoute
+	for _, obj := range output {
+		kongroute := &configurationv1alpha1.KongRoute{}
+		err := runtime.DefaultUnstructuredConverter.FromUnstructuredWithValidation(obj.Object, kongroute, true)
+		if err != nil || kongroute.Kind != "KongRoute" {
+			continue
+		}
+		kongRoutes = append(kongRoutes, kongroute)
+	}
+
+	require.Len(t, kongRoutes, 2)
+	assert.NotEqual(t, kongRoutes[0].Name, kongRoutes[1].Name)
+
+	hostnames := map[string]struct{}{}
+	for _, kongRoute := range kongRoutes {
+		require.Len(t, kongRoute.Spec.Hosts, 1)
+		hostnames[kongRoute.Spec.Hosts[0]] = struct{}{}
+	}
+
+	_, ok := hostnames["*.bar.com"]
+	assert.True(t, ok)
+	_, ok = hostnames["*.foo.com"]
+	assert.True(t, ok)
+}
+
 func newHTTPRouteWithHostnames(hostnames ...string) *gwtypes.HTTPRoute {
 	var gwHostnames []gatewayv1.Hostname
 	for _, h := range hostnames {

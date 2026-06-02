@@ -29,6 +29,11 @@ func (obj PortalCustomization) GetTypeName() string {
 	return "PortalCustomization"
 }
 
+// GetItems returns the list of PortalCustomization items.
+func (obj PortalCustomizationList) GetItems() []PortalCustomization {
+	return obj.Items
+}
+
 // HasParent returns true if the PortalCustomization has a parent entity.
 func (obj PortalCustomization) HasParent() bool {
 	return true

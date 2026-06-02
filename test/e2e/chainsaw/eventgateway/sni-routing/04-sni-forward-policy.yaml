@@ -1,0 +1,32 @@
+# SNI forward policy for the SNI routing test.
+#
+# Routes incoming TLS connections to virtual clusters based on SNI hostname.
+# The sniSuffix is derived at runtime from the LoadBalancer IP:
+#   bootstrap-{dns_label}.{LB-IP-dashes}.sslip.io:19092
+# resolves to the LoadBalancer IP via sslip.io wildcard DNS.
+#
+# brokerHostFormat: shared_suffix puts all brokers from every virtual cluster
+# at the same DNS level: broker-{node_id}-{dns_label}{sni_suffix}
+# making it easy to cover with one wildcard certificate.
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: ($sni_forward_policy_name)
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($listener_name)
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: sni-forward
+      enabled: Enabled
+      config:
+        type: sni
+        sni:
+          advertisedPort: 19092
+          sniSuffix: ($sni_suffix)
+          brokerHostFormat:
+            type: shared_suffix

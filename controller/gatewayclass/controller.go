@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
@@ -26,7 +27,7 @@ import (
 // GatewayClassReconciler
 // -----------------------------------------------------------------------------
 
-// Reconciler reconciles a Gateway object.
+// Reconciler reconciles a GatewayClass object.
 type Reconciler struct {
 	client.Client
 
@@ -46,19 +47,16 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Watches(
 			&operatorv2beta1.GatewayConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewayClassesForGatewayConfig)).
-		Complete(r)
+		Complete(reconcile.AsReconciler[*gatewayv1.GatewayClass](r.Client, r))
 }
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "gatewayclass", r.LoggingMode)
 
 	log.Trace(logger, "reconciling gatewayclass resource")
 
-	gwc := gatewayclass.NewDecorator()
-	if err := r.Get(ctx, req.NamespacedName, gwc.GatewayClass); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+	gwc := gatewayclass.DecorateGatewayClass(gatewayClass)
 	log.Debug(logger, "processing gatewayclass")
 
 	if !gwc.IsControlled() {

@@ -78,6 +78,8 @@ jobs:
           ${{ env.GO_CACHE_KEY }}
           ${{ env.GO_CACHE_KEY_2 }}
 
+    - uses: ./.github/actions/bump-inotify
+
     - name: run conformance tests
       run: make test.conformance
       env:

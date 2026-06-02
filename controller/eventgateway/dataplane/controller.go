@@ -29,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
@@ -80,19 +81,14 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			&konnectv1alpha1.KonnectEventGateway{},
 			handler.EnqueueRequestsFromMapFunc(enqueueForKonnectEventGatewayRef(mgr.GetClient())),
 		).
-		Complete(r)
+		Complete(reconcile.AsReconciler[*eventgatewayv1alpha1.KegDataPlane](r.Client, r))
 }
 
 // Reconcile moves the current state of a KegDataPlane toward the desired state.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
+func (r *Reconciler) Reconcile(ctx context.Context, egdp *eventgatewayv1alpha1.KegDataPlane) (res ctrl.Result, err error) {
 	logger := log.GetLogger(ctx, "keg-dataplane", r.LoggingMode)
 
 	log.Trace(logger, "reconciling KegDataPlane resource")
-
-	egdp := new(eventgatewayv1alpha1.KegDataPlane)
-	if err := r.Get(ctx, req.NamespacedName, egdp); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	defer func() { err = errors.Join(err, r.applyStatus(ctx, logger, egdp)) }()
 

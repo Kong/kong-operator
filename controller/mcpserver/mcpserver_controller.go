@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -83,28 +84,23 @@ func (r *MCPServerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 				&handler.EnqueueRequestForObject{},
 			),
 		).
-		Complete(r)
+		Complete(reconcile.AsReconciler[*konnectv1alpha1.MCPServer](r.Client, r))
 }
 
 // Reconcile reconciles the MCPServer resource.
-func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *MCPServerReconciler) Reconcile(ctx context.Context, mcpServer *konnectv1alpha1.MCPServer) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "mcpserver", r.LoggingMode)
-
-	var mcpServer konnectv1alpha1.MCPServer
-	if err := r.Get(ctx, req.NamespacedName, &mcpServer); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	// Handle pre-deletion: notify the signal manager to reset the polling offset
 	// so the next poll picks up any changes caused by the deletion, then remove
 	// the finalizer to allow Kubernetes to garbage-collect the object.
 	if !mcpServer.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(&mcpServer, mcpServerFinalizer) {
-			if cpName := ownerControlPlaneName(&mcpServer); cpName != "" {
+		if controllerutil.ContainsFinalizer(mcpServer, mcpServerFinalizer) {
+			if cpName := ownerControlPlaneName(mcpServer); cpName != "" {
 				r.SignalManager.NotifyMCPServerDeleted(mcpServer.Namespace, cpName)
 			}
-			controllerutil.RemoveFinalizer(&mcpServer, mcpServerFinalizer)
-			if err := r.Update(ctx, &mcpServer); err != nil {
+			controllerutil.RemoveFinalizer(mcpServer, mcpServerFinalizer)
+			if err := r.Update(ctx, mcpServer); err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer from MCPServer %s/%s: %w", mcpServer.Namespace, mcpServer.Name, err)
 			}
 		}
@@ -113,9 +109,9 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	log.Info(logger, "reconciling MCPServer", "namespace", mcpServer.Namespace, "name", mcpServer.Name)
 
-	if !controllerutil.ContainsFinalizer(&mcpServer, mcpServerFinalizer) {
-		controllerutil.AddFinalizer(&mcpServer, mcpServerFinalizer)
-		if err := r.Update(ctx, &mcpServer); err != nil {
+	if !controllerutil.ContainsFinalizer(mcpServer, mcpServerFinalizer) {
+		controllerutil.AddFinalizer(mcpServer, mcpServerFinalizer)
+		if err := r.Update(ctx, mcpServer); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to add finalizer to MCPServer %s/%s: %w", mcpServer.Namespace, mcpServer.Name, err)
 		}
 		return ctrl.Result{}, nil
@@ -134,13 +130,13 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Resolve the reference chain to KonnectAPIAuthConfiguration and build the SDK.
-	apiAuth, err := r.resolveAuth(ctx, &mcpServer)
+	apiAuth, err := r.resolveAuth(ctx, mcpServer)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to resolve auth for MCPServer %s/%s: %w",
 			mcpServer.Namespace, mcpServer.Name, err)
 	}
 
-	sdk, err := r.buildSDK(ctx, &mcpServer)
+	sdk, err := r.buildSDK(ctx, mcpServer)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to build SDK for MCPServer %s/%s: %w",
 			mcpServer.Namespace, mcpServer.Name, err)
@@ -158,19 +154,19 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	remoteMCPServer := resp.MCPServerCPInfo
 
 	// Ensure a Deployment exists for this MCPServer.
-	deployment, err := r.ensureDeployment(ctx, logger, &mcpServer, remoteMCPServer, apiAuth)
+	deployment, err := r.ensureDeployment(ctx, logger, mcpServer, remoteMCPServer, apiAuth)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Ensure a Service exists for this MCPServer.
-	if err := r.ensureService(ctx, logger, &mcpServer); err != nil {
+	if err := r.ensureService(ctx, logger, mcpServer); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Ensure Kong entities (KongService, KongRoute) are created in the cluster
 	// from the remote MCP server's entity definitions.
-	if err := r.ensureKongEntities(ctx, &mcpServer, sdk); err != nil {
+	if err := r.ensureKongEntities(ctx, mcpServer, sdk); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -197,7 +193,7 @@ func (r *MCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 	mcpServer.Status.KonnectSpec.Version = &version
 	mcpServer.Status.KonnectSpec.Name = &remoteMCPServer.Name
-	statusRes, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &mcpServer, old)
+	statusRes, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, mcpServer, old)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

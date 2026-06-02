@@ -33,6 +33,8 @@ func reconciliationWatchOptionsForEntity[
 		return EventGatewayVirtualClusterReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
 		return EventGatewayVirtualClusterConsumePolicyReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicy:
+		return EventGatewayVirtualClusterPolicyReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventGateway:

@@ -67,7 +67,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) SetupWithManage
 
 	r.setControllerBuilderOptionsForKongPluginBinding(b)
 
-	return b.Complete(r)
+	return b.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // enqueueObjectReferencedByKongPluginBinding watches for KongPluginBinding objects
@@ -150,20 +150,12 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) enqueueObjectRe
 //     removed upon deletion
 //   - remove the finalizer if all KongPluginBindings referencing it are removed.
 func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
-	ctx context.Context, req ctrl.Request,
+	ctx context.Context, ent TEnt,
 ) (ctrl.Result, error) {
 	var (
 		entityTypeName = constraints.EntityTypeName[T]()
 		logger         = log.GetLogger(ctx, entityTypeName, r.LoggingMode)
 	)
-
-	var (
-		e   T
-		ent = TEnt(&e)
-	)
-	if err := r.Client.Get(ctx, req.NamespacedName, ent); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling")

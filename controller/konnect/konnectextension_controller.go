@@ -113,7 +113,7 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 			&configurationv1alpha1.KongDataPlaneClientCertificate{},
 			handler.EnqueueRequestForOwner(r.Scheme(), mgr.GetRESTMapper(), &konnectv1alpha2.KonnectExtension{}),
 		).
-		Complete(r)
+		Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // listExtendableReferencedExtensions returns a list of all the KonnectExtensions referenced by the Extendable object.
@@ -146,12 +146,7 @@ func listExtendableReferencedExtensions[t extensions.ExtendableT](_ context.Cont
 }
 
 // Reconcile reconciles a KonnectExtension object.
-func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var ext konnectv1alpha2.KonnectExtension
-	if err := r.Get(ctx, req.NamespacedName, &ext); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
+func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, konnectv1alpha2.KonnectExtensionKind, r.LoggingMode)
 
 	ctx = ctrllog.IntoContext(ctx, logger)
@@ -162,12 +157,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		controlPlaneList gwtypes.ControlPlaneList
 	)
 	if err := r.List(ctx, &dataPlaneList, client.MatchingFields{
-		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
+		index.KonnectExtensionIndex: client.ObjectKeyFromObject(ext).String(),
 	}); err != nil {
 		return ctrl.Result{}, err
 	}
 	if err := r.List(ctx, &controlPlaneList, client.MatchingFields{
-		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
+		index.KonnectExtensionIndex: client.ObjectKeyFromObject(ext).String(),
 	}); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -184,13 +179,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	var isFinalizerToBeRemoved bool
 	switch {
 	case len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0:
-		updated = controllerutil.RemoveFinalizer(&ext, consts.ExtensionInUseFinalizer)
+		updated = controllerutil.RemoveFinalizer(ext, consts.ExtensionInUseFinalizer)
 		isFinalizerToBeRemoved = true
 	default:
-		updated = controllerutil.AddFinalizer(&ext, consts.ExtensionInUseFinalizer)
+		updated = controllerutil.AddFinalizer(ext, consts.ExtensionInUseFinalizer)
 	}
 	if updated {
-		if err := r.Update(ctx, &ext); err != nil {
+		if err := r.Update(ctx, ext); err != nil {
 			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -213,7 +208,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}, nil
 		}
 
-		res, certificateSecret, err := r.getCertificateSecret(ctx, ext, true)
+		res, certificateSecret, err := r.getCertificateSecret(ctx, *ext, true)
 		if client.IgnoreNotFound(err) != nil {
 			return ctrl.Result{}, err
 		}
@@ -233,9 +228,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		// if the certificate does not exist, or the cleanup in Konnect has been performed, we can remove the konnect-cleanup finalizer from the konnectExtension.
 		if !certExists || ext.Status.Konnect == nil || !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
 			// remove the konnect-cleanup finalizer from the KonnectExtension.
-			updated = controllerutil.RemoveFinalizer(&ext, KonnectCleanupFinalizer)
+			updated = controllerutil.RemoveFinalizer(ext, KonnectCleanupFinalizer)
 			if updated {
-				if err := r.Update(ctx, &ext); err != nil {
+				if err := r.Update(ctx, ext); err != nil {
 					if apierrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
@@ -260,13 +255,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// if the konnectExtension is marked as pending, set it to provisioning
-	if cond, present := k8sutils.GetCondition(konnectv1alpha2.KonnectExtensionReadyConditionType, &ext); !present ||
+	if cond, present := k8sutils.GetCondition(konnectv1alpha2.KonnectExtensionReadyConditionType, ext); !present ||
 		(cond.Status == metav1.ConditionFalse && cond.Reason == konnectv1alpha2.KonnectExtensionReadyReasonPending) ||
 		cond.ObservedGeneration != ext.GetGeneration() {
 		if res, updated, err := patch.StatusWithConditions(
 			ctx,
 			r.Client,
-			&ext,
+			ext,
 			readyCondition,
 		); err != nil || updated || !res.IsZero() {
 			return res, err
@@ -280,7 +275,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Message: "DataPlane client certificate is provisioning",
 	}
 	// get the Kubernetes secret holding the certificate.
-	opRes, certificateSecret, err := r.getCertificateSecret(ctx, ext, false)
+	opRes, certificateSecret, err := r.getCertificateSecret(ctx, *ext, false)
 	if client.IgnoreNotFound(err) != nil {
 		return ctrl.Result{}, err
 	}
@@ -294,7 +289,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if res, updated, err := patch.StatusWithConditions(
 			ctx,
 			r.Client,
-			&ext,
+			ext,
 			readyCondition,
 			certProvisionedCond,
 		); err != nil || updated || !res.IsZero() {
@@ -313,7 +308,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if res, updated, err := patch.StatusWithConditions(
 			ctx,
 			r.Client,
-			&ext,
+			ext,
 			readyCondition,
 			certProvisionedCond,
 		); err != nil || updated || !res.IsZero() {
@@ -329,7 +324,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// obtain valid ControlPlane ID or requeue. When KonnectExtension is during deletion,
 	// we proceed with the cleanup even if the ControlPlane is not found.
 	cpID := lo.FromPtr(ext.Status.Konnect).ControlPlaneID
-	cp, res, err := r.getGatewayKonnectControlPlane(ctx, ext)
+	cp, res, err := r.getGatewayKonnectControlPlane(ctx, *ext)
 	if err != nil || !res.IsZero() {
 		switch {
 		case !apierrors.IsNotFound(err) && !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed):
@@ -392,7 +387,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	log.Debug(logger, "controlPlane reference validity checked")
 
-	apiAuthRef, err := getKonnectAPIAuthRefNN(cp, &ext)
+	apiAuthRef, err := getKonnectAPIAuthRefNN(cp, ext)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, err
@@ -414,7 +409,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
 	err = r.Get(ctx, apiAuthRef, &apiAuth)
-	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, &ext, apiAuth, apiAuthRef, err, readyCondition); requeue {
+	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ext, apiAuth, apiAuthRef, err, readyCondition); requeue {
 		return res, retErr
 	}
 
@@ -433,7 +428,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if res, updated, err := patch.StatusWithConditions(
 			ctx,
 			r.Client,
-			&ext,
+			ext,
 			readyCondition,
 			certProvisionedCond,
 		); err != nil || updated || !res.IsZero() {
@@ -496,7 +491,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				certificateSecret.Namespace,
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
-				&ext,
+				ext,
 				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
 					dpCert.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
@@ -506,7 +501,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				},
 			)
 
-			err := controllerutil.SetOwnerReference(&ext, &dpCert, r.Scheme(), controllerutil.WithBlockOwnerDeletion(true))
+			err := controllerutil.SetOwnerReference(ext, &dpCert, r.Scheme(), controllerutil.WithBlockOwnerDeletion(true))
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -523,7 +518,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					if res, updated, err := patch.StatusWithConditions(
 						ctx,
 						r.Client,
-						&ext,
+						ext,
 						readyCondition,
 						certProvisionedCond,
 					); err != nil || updated || !res.IsZero() {
@@ -553,7 +548,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				certificateSecret.Namespace,
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
-				&ext,
+				ext,
 				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
 					dpCert.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
@@ -569,7 +564,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					}
 				},
 			)
-			err := controllerutil.SetOwnerReference(&ext, &dpCert, r.Scheme(), controllerutil.WithBlockOwnerDeletion(true))
+			err := controllerutil.SetOwnerReference(ext, &dpCert, r.Scheme(), controllerutil.WithBlockOwnerDeletion(true))
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -586,7 +581,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					if res, updated, err := patch.StatusWithConditions(
 						ctx,
 						r.Client,
-						&ext,
+						ext,
 						readyCondition,
 						certProvisionedCond,
 					); err != nil || updated || !res.IsZero() {
@@ -607,7 +602,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 		}
 
-		updated, res, err := patch.WithFinalizer(ctx, r.Client, &ext, KonnectCleanupFinalizer)
+		updated, res, err := patch.WithFinalizer(ctx, r.Client, ext, KonnectCleanupFinalizer)
 		if err != nil || !res.IsZero() {
 			return res, err
 		}
@@ -628,7 +623,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				if res, updated, err := patch.StatusWithConditions(
 					ctx,
 					r.Client,
-					&ext,
+					ext,
 					readyCondition,
 					certProvisionedCond,
 				); err != nil || updated || !res.IsZero() {
@@ -688,7 +683,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			if res, updated, err := patch.StatusWithConditions(
 				ctx,
 				r.Client,
-				&ext,
+				ext,
 				certProvisionedCond,
 			); err != nil || updated || !res.IsZero() {
 				return res, err
@@ -705,7 +700,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if res, updated, err := patch.StatusWithConditions(
 		ctx,
 		r.Client,
-		&ext,
+		ext,
 		certProvisionedCond,
 	); err != nil || updated || !res.IsZero() {
 		return res, err
@@ -715,9 +710,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Name:      apiAuth.Name,
 		Namespace: &apiAuth.Namespace,
 	}
-	if enforceKonnectExtensionStatus(cp, authRef, *certificateSecret, &ext) {
+	if enforceKonnectExtensionStatus(cp, authRef, *certificateSecret, ext) {
 		log.Debug(logger, "updating KonnectExtension status")
-		err := r.Client.Status().Update(ctx, &ext)
+		err := r.Client.Status().Update(ctx, ext)
 		if apierrors.IsConflict(err) {
 			// in case the err is of type conflict, don't return it and instead trigger
 			// another reconciliation.
@@ -737,13 +732,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if res, updated, err := patch.StatusWithConditions(
 		ctx,
 		r.Client,
-		&ext,
+		ext,
 		readyCondition,
 	); err != nil || updated || !res.IsZero() {
 		return res, err
 	}
 
-	if res, err := r.ensureExtendablesReferencesInStatus(ctx, &ext, dataPlaneList.Items, controlPlaneList.Items); err != nil || !res.IsZero() {
+	if res, err := r.ensureExtendablesReferencesInStatus(ctx, ext, dataPlaneList.Items, controlPlaneList.Items); err != nil || !res.IsZero() {
 		return res, err
 	}
 

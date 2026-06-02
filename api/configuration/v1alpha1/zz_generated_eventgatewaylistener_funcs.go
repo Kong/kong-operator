@@ -57,6 +57,11 @@ func (obj EventGatewayListener) GetTypeName() string {
 	return "EventGatewayListener"
 }
 
+// GetItems returns the list of EventGatewayListener items.
+func (obj EventGatewayListenerList) GetItems() []EventGatewayListener {
+	return obj.Items
+}
+
 // HasParent returns true if the EventGatewayListener has a parent entity.
 func (obj EventGatewayListener) HasParent() bool {
 	return true

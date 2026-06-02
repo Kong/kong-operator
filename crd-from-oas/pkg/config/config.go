@@ -104,6 +104,9 @@ type TypeConfig struct {
 	// derived from the OpenAPI path will be replaced with this value.
 	// All related types (Spec, Status, List) will use this name as their base.
 	Name string `yaml:"name,omitempty"`
+	// SchemaFieldOmissions maps generated schema type names to JSON field names
+	// that should be omitted when emitting schema_types.go for this API.
+	SchemaFieldOmissions map[string][]string `yaml:"schemaFieldOmissions,omitempty"`
 	// CEL maps field names to their configurations, allowing additional
 	// kubebuilder validation markers to be attached to specific fields.
 	CEL map[string]*FieldConfig `yaml:"cel,omitempty"`
@@ -345,13 +348,14 @@ type typeOpsYAML struct {
 }
 
 type typeConfigYAML struct {
-	Path             string                  `yaml:"path"`
-	Name             string                  `yaml:"name,omitempty"`
-	CEL              map[string]*FieldConfig `yaml:"cel,omitempty"`
-	References       []ReferenceConfig       `yaml:"references,omitempty"`
-	SecretReferences []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
-	Ops              *typeOpsYAML            `yaml:"ops,omitempty"`
-	Reconciler       *ReconcilerConfig       `yaml:"reconciler,omitempty"`
+	Path                 string                  `yaml:"path"`
+	Name                 string                  `yaml:"name,omitempty"`
+	SchemaFieldOmissions map[string][]string     `yaml:"schemaFieldOmissions,omitempty"`
+	CEL                  map[string]*FieldConfig `yaml:"cel,omitempty"`
+	References           []ReferenceConfig       `yaml:"references,omitempty"`
+	SecretReferences     []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
+	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
+	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
 }
 
 // UnmarshalYAML preserves the in-memory Ops map shape while allowing
@@ -363,12 +367,13 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	*tc = TypeConfig{
-		Path:             raw.Path,
-		Name:             raw.Name,
-		CEL:              raw.CEL,
-		References:       raw.References,
-		SecretReferences: raw.SecretReferences,
-		Reconciler:       raw.Reconciler,
+		Path:                 raw.Path,
+		Name:                 raw.Name,
+		SchemaFieldOmissions: raw.SchemaFieldOmissions,
+		CEL:                  raw.CEL,
+		References:           raw.References,
+		SecretReferences:     raw.SecretReferences,
+		Reconciler:           raw.Reconciler,
 	}
 
 	if raw.Ops != nil {
@@ -530,6 +535,39 @@ func (c *APIGroupVersionConfig) ReferencesConfig(pathToEntityName map[string]str
 			continue
 		}
 		result[entityName] = tc.References
+	}
+	return result
+}
+
+// SchemaFieldOmissionsConfig returns a normalized schema-type field omission set.
+func (c *APIGroupVersionConfig) SchemaFieldOmissionsConfig() map[string]map[string]bool {
+	if c == nil || len(c.Types) == 0 {
+		return nil
+	}
+	result := make(map[string]map[string]bool)
+	for _, tc := range c.Types {
+		if tc == nil || len(tc.SchemaFieldOmissions) == 0 {
+			continue
+		}
+		for typeName, fields := range tc.SchemaFieldOmissions {
+			if typeName == "" || len(fields) == 0 {
+				continue
+			}
+			fieldSet := result[typeName]
+			if fieldSet == nil {
+				fieldSet = make(map[string]bool, len(fields))
+				result[typeName] = fieldSet
+			}
+			for _, fieldName := range fields {
+				if fieldName == "" {
+					continue
+				}
+				fieldSet[fieldName] = true
+			}
+		}
+	}
+	if len(result) == 0 {
+		return nil
 	}
 	return result
 }

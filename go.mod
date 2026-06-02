@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/container v1.52.0
 	dario.cat/mergo v1.0.2
 	github.com/Kong/sdk-konnect-go v0.38.0
-	github.com/avast/retry-go/v4 v4.7.0
+	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.20.2
 	github.com/cloudflare/cfssl v1.6.5
@@ -26,10 +26,10 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.38.0
-	github.com/kong/go-kong v0.75.1
-	github.com/kong/kubernetes-telemetry v0.1.13
-	github.com/kong/kubernetes-testing-framework v0.49.0
+	github.com/kong/go-database-reconciler v1.39.0
+	github.com/kong/go-kong v0.76.0
+	github.com/kong/kubernetes-telemetry v0.1.14
+	github.com/kong/kubernetes-testing-framework v0.50.0
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.0
@@ -38,7 +38,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.67.5
+	github.com/prometheus/common v0.68.0
 	github.com/samber/lo v1.53.0
 	github.com/samber/mo v1.16.0
 	github.com/stretchr/testify v1.11.1
@@ -51,7 +51,7 @@ require (
 	go.uber.org/zap v1.28.0
 	golang.org/x/mod v0.36.0
 	golang.org/x/sync v0.20.0
-	google.golang.org/api v0.280.0
+	google.golang.org/api v0.282.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	k8s.io/api v0.36.1
@@ -59,8 +59,8 @@ require (
 	k8s.io/apimachinery v0.36.1
 	k8s.io/cli-runtime v0.36.1
 	k8s.io/client-go v0.36.1
-	k8s.io/kube-openapi v0.0.0-20260502001324-b7f5293f4787
-	k8s.io/kubectl v0.35.5
+	k8s.io/kube-openapi v0.0.0-20260520065146-aa012df4f4af
+	k8s.io/kubectl v0.36.1
 	k8s.io/kubernetes v1.36.1
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.24.1
@@ -182,7 +182,7 @@ require (
 	github.com/google/go-github/v48 v48.2.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.15 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.16 // indirect
 	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.7 // indirect
@@ -297,7 +297,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260511170946-3700d4141b60 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260523011958-0a33c5d7ca68 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

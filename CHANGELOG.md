@@ -248,6 +248,11 @@
 
 ### Fixes
 
+- Hybridgateway: fix `KongRoute` name collisions when an `HTTPRoute` attaches
+  to multiple listener-scoped `ParentRef`s on the same `Gateway`, enabling the
+  `HTTPRouteListenerHostnameMatching` Gateway API conformance test for Hybrid
+  Gateway. Only affected multi-parent translated routes are renamed.
+  [#4423](https://github.com/Kong/kong-operator/pull/4423)
 - Hybridgateway: fix `KongCertificate` name collisions when a `Gateway` has
   multiple listeners using the same port by including listener identity in
   generated certificate names.
@@ -309,6 +314,15 @@
 - Deletion of obsolete `KonnectControlPlane` in version `v1alpha1` (available only when conversion webhook is enabled)
   does not leave orphaned `KonnectGatewayControlPlane` in Konnect.
   [#4267](https://github.com/Kong/kong-operator/pull/4267)
+- Fixed KonnectExtension changes won't trigger ControlPlane reconciliations.
+  [#4361](https://github.com/Kong/kong-operator/pull/4361)
+- Revert plugin config sanitization when `ControlPlane`'s `configDump.dumpSensitive` isn't enabled.
+  Due to plugin configuration being dependent on plugin type controller is not
+  able to make an informed decision whether a field is sensitive or not and more
+  importantly whether it has a constrained set of allowed values like e.g. HTTP methods.
+  Users are suggested to block network access to debug endpoints (which are disabled
+  by default) if plugin configuration can contain sensitive information.
+  [#4467](https://github.com/Kong/kong-operator/pull/4467)
 
 ## [v2.1.6]
 

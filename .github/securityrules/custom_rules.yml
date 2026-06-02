@@ -1,0 +1,89 @@
+# Custom Falco rules for the kong-operator falco-analyzed-e2e workflow.
+#
+# These rules suppress known-benign events observed while running the operator's
+# e2e suite (kong-operator manager, embedded KIC, DataPlane Kong pods, plus
+# generic Linux container probes).
+
+- list: known_shell_spawn_cmdlines
+  items: [
+    '"sh -c uname -p 2> /dev/null"',
+    '"sh -c uname -s 2>&1"',
+    '"sh -c uname -r 2>&1"',
+    '"sh -c uname -v 2>&1"',
+    '"sh -c uname -a 2>&1"',
+    '"sh -c getconf CLK_TCK"',
+    '"sh -c getconf PAGESIZE"',
+    '"sh -c LC_ALL=C LANG=C /sbin/ldconfig -p 2>/dev/null"',
+    '"sh -c LANG=C /sbin/ldconfig -p 2>/dev/null"',
+    '"sh -c /sbin/ldconfig -p 2>/dev/null"',
+    '"sh -c stty -a 2>/dev/null"',
+    '"sh -c stty -a < /dev/tty"',
+    '"sh -c stty -g < /dev/tty"',
+    '"sh -c crontab -l 2"',
+    '"sh -c lsb_release -a"',
+    '"sh -c lsb_release -is 2>/dev/null"',
+    '"sh -c whoami"',
+    '"sh -c /bin/hostname -f 2> /dev/null"',
+    '"sh -c locale -a"',
+    '"sh -c -- locale -a"',
+    '"sh -c  -t -i"',
+    '"sh -c openssl version"',
+    '"sh -c /bin/sh -c ''date +%%s''"',
+
+    # kong DataPlane / nginx
+    '"sh -c -- kill -0 `cat /usr/local/kong/pids/nginx.pid 2>&1` >/dev/null 2>&1"',
+    '"sh -c exec /usr/local/bin/go-hello -kong-prefix /usr/local/kong/"',
+    '"sh -c exec /usr/local/bin/kong-js-pluginserver -v --plugins-directory /custom-plugins/js"'
+    ]
+
+# nginx inside DataPlane Kong pods spawning its workers / reloads.
+- macro: nginx_starting_nginx
+  condition: |
+    (proc.pname=nginx and proc.cmdline contains "/usr/sbin/nginx -c /etc/nginx/nginx.conf") or
+    (proc.pexepath="/usr/local/openresty/nginx/sbin/nginx" and proc.pcmdline="nginx -p /usr/local/kong -c nginx.conf") or
+    (proc.pexepath="/usr/local/openresty/nginx/sbin/nginx" and proc.pcmdline contains "nginx -g # /usr/local/bin/kong -p /tmp/resty_") or
+    (proc.pexepath="/usr/local/openresty/nginx/sbin/nginx" and proc.pcmdline contains "nginx -g # -e 'setmetatable(_G, nil)package.path = (os.getenv(\"KONG_LUA_PATH_OVERRIDE\") or \"\") .. \"./?.lua;./?/init.lua;\" .. package.pathrequire(\"kong.cmd.init\")") or
+    (proc.pexepath="/usr/local/openresty/nginx/sbin/nginx" and proc.pcmdline contains "nginx -p /tmp/" and proc.is_exe_upper_layer=false) or
+    (proc.pexepath="/usr/local/openresty/nginx/sbin/nginx" and proc.cmdline contains "sh -c -- /usr/local/bin/nginx -p /usr/local/kong -c nginx.conf -s reload >") or
+    (proc.pexepath="/usr/local/openresty/nginx/sbin/nginx" and proc.cmdline contains "sh -c -- chown -R nobody /usr/local/kong/profiling > /tmp") or
+    (proc.pexepath="/usr/local/openresty/nginx/sbin/nginx" and proc.cmdline contains "sh -c chown -R kong /usr/local/kong/profiling > /tmp") or
+    (proc.pexepath="/usr/local/openresty/nginx/sbin/nginx" and proc.cmdline contains "sh -c -- command -v nginx > /tmp/lua_")
+
+# Postgres readiness probes for DB-backed ControlPlane e2e scenarios.
+- macro: postgres_health_check
+  condition: (proc.name="pg_isready" and proc.cmdline = "pg_isready /usr/bin/pg_isready -U kong")
+
+# Add not-postgres_health_check to upstream rule.
+- rule: Read sensitive file untrusted
+  desc: >
+    An attempt to read any sensitive file (e.g. files containing user/password/authentication
+    information). Exceptions are made for known trusted programs. Can be customized as needed.
+  condition: >
+    open_read
+    and sensitive_files
+    and proc_name_exists
+    and not proc.name in (user_mgmt_binaries, userexec_binaries, package_mgmt_binaries,
+     cron_binaries, read_sensitive_file_binaries, shell_binaries, hids_binaries,
+     vpn_binaries, mail_config_binaries, nomachine_binaries, sshkit_script_binaries,
+     in.proftpd, mandb, salt-call, salt-minion, postgres_mgmt_binaries,
+     google_oslogin_
+     )
+    and not cmp_cp_by_passwd
+    and not ansible_running_python
+    and not run_by_qualys
+    and not run_by_chef
+    and not run_by_google_accounts_daemon
+    and not user_read_sensitive_file_conditions
+    and not mandb_postinst
+    and not perl_running_plesk
+    and not perl_running_updmap
+    and not veritas_driver_script
+    and not perl_running_centrifydc
+    and not runuser_reading_pam
+    and not linux_bench_reading_etc_shadow
+    and not user_known_read_sensitive_files_activities
+    and not user_read_sensitive_file_containers
+    and not postgres_health_check
+  output: Sensitive file opened for reading by non-trusted program | file=%fd.name gparent=%proc.aname[2] ggparent=%proc.aname[3] gggparent=%proc.aname[4] evt_type=%evt.type user=%user.name user_uid=%user.uid user_loginuid=%user.loginuid process=%proc.name proc_exepath=%proc.exepath parent=%proc.pname command=%proc.cmdline terminal=%proc.tty
+  priority: WARNING
+  tags: [maturity_stable, host, container, filesystem, mitre_credential_access, T1555]

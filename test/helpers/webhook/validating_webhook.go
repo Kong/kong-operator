@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
 	"github.com/samber/lo"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -146,7 +146,15 @@ func EnsureValidatingWebhookRegistration(
 				},
 			),
 		)
-		return retry.Do(
+		return retry.New(
+			retry.OnRetry(
+				func(n uint, err error) {
+					fmt.Printf("WARNING: try to connect to validating webhook Service attempt %d/10 - error: %s\n", n+1, err)
+				},
+			),
+			retry.LastErrorOnly(true),
+			retry.Attempts(10),
+		).Do(
 			func() error {
 				resp, err := cl.Post(
 					webhookURL,
@@ -159,13 +167,6 @@ func EnsureValidatingWebhookRegistration(
 				defer resp.Body.Close()
 				return nil
 			},
-			retry.OnRetry(
-				func(n uint, err error) {
-					fmt.Printf("WARNING: try to connect to validating webhook Service attempt %d/10 - error: %s\n", n+1, err)
-				},
-			),
-			retry.LastErrorOnly(true),
-			retry.Attempts(10),
 		)
 	}
 

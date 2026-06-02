@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -202,7 +202,19 @@ func GetRoots(
 
 	for _, client := range kongClients {
 		eg.Go(func() error {
-			return retry.Do(
+			return retry.New(
+				retry.Context(ctx),
+				retry.Attempts(retries),
+				retry.Delay(retryDelay),
+				retry.DelayType(retry.FixedDelay),
+				retry.LastErrorOnly(true),
+				retry.OnRetry(func(n uint, err error) {
+					setupLog.Info("Retrying kong admin api client call after error",
+						"retries", fmt.Sprintf("%d/%d", n, retries),
+						"error", err.Error(),
+					)
+				}),
+			).Do(
 				func() error {
 					root, err := client.AdminAPIClient().Root(ctx)
 					// Abort if the provided context has been cancelled.
@@ -218,17 +230,6 @@ func GetRoots(
 					lock.Unlock()
 					return nil
 				},
-				retry.Context(ctx),
-				retry.Attempts(retries),
-				retry.Delay(retryDelay),
-				retry.DelayType(retry.FixedDelay),
-				retry.LastErrorOnly(true),
-				retry.OnRetry(func(n uint, err error) {
-					setupLog.Info("Retrying kong admin api client call after error",
-						"retries", fmt.Sprintf("%d/%d", n, retries),
-						"error", err.Error(),
-					)
-				}),
 			)
 		})
 	}

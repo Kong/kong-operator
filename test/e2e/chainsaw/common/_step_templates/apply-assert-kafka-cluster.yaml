@@ -1,0 +1,158 @@
+# Template for deploying and asserting a 3-broker Apache Kafka cluster
+# (KRaft, combined controller+broker mode, no Strimzi).
+#
+# Deployed resources:
+#   - Service/kafka-headless  (ClusterIP None, for inter-broker + advertised listeners)
+#   - Service/kafka-bootstrap (ClusterIP, for in-cluster client bootstrap)
+#   - StatefulSet/kafka       (3 replicas, Parallel pod management, apache/kafka:4.2.0)
+#
+# No required bindings — all resource names are fixed.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kafka-cluster
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: kafka-headless
+          spec:
+            clusterIP: None
+            publishNotReadyAddresses: true
+            selector:
+              app: kafka
+            ports:
+              - name: client
+                port: 9092
+                targetPort: 9092
+              - name: controller
+                port: 9093
+                targetPort: 9093
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: kafka-bootstrap
+          spec:
+            type: ClusterIP
+            selector:
+              app: kafka
+            ports:
+              - name: client
+                port: 9092
+                targetPort: 9092
+    - apply:
+        resource:
+          apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: kafka
+          spec:
+            serviceName: kafka-headless
+            replicas: 3
+            # Parallel is required: with the default OrderedReady policy pod-1 and
+            # pod-2 are never created while pod-0 waits for a quorum it can never form
+            # alone, causing a permanent deadlock.
+            podManagementPolicy: Parallel
+            selector:
+              matchLabels:
+                app: kafka
+            template:
+              metadata:
+                labels:
+                  app: kafka
+              spec:
+                terminationGracePeriodSeconds: 10
+                containers:
+                  - name: kafka
+                    image: apache/kafka:4.2.0
+                    imagePullPolicy: IfNotPresent
+                    ports:
+                      - name: client
+                        containerPort: 9092
+                      - name: controller
+                        containerPort: 9093
+                    env:
+                      - name: POD_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      # Stable cluster ID: must be a 22-char base64url string (no padding).
+                      # Pre-computed so we don't depend on a runtime base64 utility.
+                      # Value decodes to the 16-byte ASCII sequence "abcdefghijklmnop".
+                      - name: CLUSTER_ID
+                        value: "YWJjZGVmZ2hpamtsbW5vcA"
+                    command:
+                      - /bin/bash
+                      - -c
+                      - |
+                        set -euo pipefail
+                        ORDINAL=${HOSTNAME##*-}
+                        SERVICE=kafka-headless
+                        cat <<EOF > /tmp/kraft.properties
+                        process.roles=broker,controller
+                        node.id=${ORDINAL}
+                        controller.quorum.voters=0@kafka-0.${SERVICE}.${POD_NAMESPACE}.svc:9093,1@kafka-1.${SERVICE}.${POD_NAMESPACE}.svc:9093,2@kafka-2.${SERVICE}.${POD_NAMESPACE}.svc:9093
+                        listeners=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+                        advertised.listeners=PLAINTEXT://${HOSTNAME}.${SERVICE}.${POD_NAMESPACE}.svc:9092
+                        listener.security.protocol.map=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+                        controller.listener.names=CONTROLLER
+                        inter.broker.listener.name=PLAINTEXT
+                        log.dirs=/var/lib/kafka/data
+                        offsets.topic.replication.factor=3
+                        transaction.state.log.replication.factor=3
+                        transaction.state.log.min.isr=2
+                        default.replication.factor=3
+                        min.insync.replicas=2
+                        num.partitions=3
+                        EOF
+                        if [ ! -f /var/lib/kafka/data/meta.properties ]; then
+                          /opt/kafka/bin/kafka-storage.sh format \
+                            -t "${CLUSTER_ID}" \
+                            -c /tmp/kraft.properties
+                        fi
+                        exec /opt/kafka/bin/kafka-server-start.sh /tmp/kraft.properties
+                    readinessProbe:
+                      tcpSocket:
+                        port: 9092
+                      initialDelaySeconds: 20
+                      periodSeconds: 5
+                      timeoutSeconds: 3
+                      # Allow ~2 min for all three pods to discover each other, elect a
+                      # KRaft controller leader, and open the client listener.
+                      failureThreshold: 24
+                    volumeMounts:
+                      - name: data
+                        mountPath: /var/lib/kafka/data
+                volumes:
+                  - name: data
+                    emptyDir: {}
+    - assert:
+        resource:
+          apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: kafka
+          status:
+            replicas: 3
+            readyReplicas: 3
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: kafka-bootstrap
+          spec:
+            type: ClusterIP
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: kafka-headless
+          spec:
+            clusterIP: None

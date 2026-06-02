@@ -29,6 +29,11 @@ func (obj EventGatewayVirtualClusterProducePolicy) GetTypeName() string {
 	return "EventGatewayVirtualClusterProducePolicy"
 }
 
+// GetItems returns the list of EventGatewayVirtualClusterProducePolicy items.
+func (obj EventGatewayVirtualClusterProducePolicyList) GetItems() []EventGatewayVirtualClusterProducePolicy {
+	return obj.Items
+}
+
 // HasParent returns true if the EventGatewayVirtualClusterProducePolicy has a parent entity.
 func (obj EventGatewayVirtualClusterProducePolicy) HasParent() bool {
 	return true

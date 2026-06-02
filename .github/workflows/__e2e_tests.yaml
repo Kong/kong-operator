@@ -71,6 +71,8 @@ jobs:
           ${{ env.GO_CACHE_KEY }}
           ${{ env.GO_CACHE_KEY_2 }}
 
+    - uses: ./.github/actions/bump-inotify
+
     - name: run e2e tests
       run: make test.e2e
       env:

@@ -221,6 +221,11 @@ func (obj {{.EntityName}}) GetTypeName() string {
 	return "{{.EntityName}}"
 }
 
+// GetItems returns the list of {{.EntityName}} items.
+func (obj {{.EntityName}}List) GetItems() []{{.EntityName}} {
+	return obj.Items
+}
+
 // HasParent returns true if the {{.EntityName}} has a parent entity.
 func (obj {{.EntityName}}) HasParent() bool {
 	return {{if .RootRefDependency}}true{{else}}false{{end}}
