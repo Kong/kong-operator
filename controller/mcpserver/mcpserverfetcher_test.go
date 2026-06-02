@@ -2,7 +2,10 @@ package mcpserver
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,13 +16,82 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
+
+func TestGenerateMCPServerName(t *testing.T) {
+	hashOf := func(id string) string {
+		h := sha256.Sum256([]byte(id))
+		return hex.EncodeToString(h[:])[:8]
+	}
+
+	tests := []struct {
+		name       string
+		cpName     string
+		serverName string
+		serverID   string
+	}{
+		{
+			name:       "short names stay under 63 chars",
+			cpName:     "my-cp",
+			serverName: "my-server",
+			serverID:   "abc123",
+		},
+		{
+			name:       "long prefix is truncated, hash preserved",
+			cpName:     strings.Repeat("a", 40),
+			serverName: strings.Repeat("b", 40),
+			serverID:   "some-long-id",
+		},
+		{
+			name:       "trailing hyphens from truncation are trimmed",
+			cpName:     strings.Repeat("x", 50) + "---",
+			serverName: strings.Repeat("y", 20),
+			serverID:   "id-1",
+		},
+		{
+			name:       "exact 63 chars without truncation",
+			cpName:     strings.Repeat("c", 27),
+			serverName: strings.Repeat("d", 26),
+			serverID:   "exact-fit",
+		},
+		{
+			name:       "deterministic: same inputs produce same output",
+			cpName:     "cp",
+			serverName: "srv",
+			serverID:   "deterministic-test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := generateMCPServerNN("test-ns", tt.cpName, tt.serverID)
+
+			assert.LessOrEqual(t, len(result.Name), 63, "name must not exceed 63 characters")
+			assert.NotEmpty(t, result.Name)
+			assert.Equal(t, "test-ns", result.Namespace)
+
+			// The last 8 characters must always be the hash of the server ID.
+			shortHash := hashOf(tt.serverID)
+			assert.True(t, strings.HasSuffix(result.Name, shortHash),
+				"name %q must end with hash %q", result.Name, shortHash)
+
+			// Must not end with a hyphen before the hash (i.e. no double hyphens at the join).
+			assert.NotContains(t, result.Name, "--",
+				"name %q must not contain double hyphens", result.Name)
+
+			// Determinism: calling again must produce the same result.
+			assert.Equal(t, result, generateMCPServerNN("test-ns", tt.cpName, tt.serverID))
+		})
+	}
+}
 
 func TestSyncMCPServers(t *testing.T) {
 	const (
@@ -29,37 +101,37 @@ func TestSyncMCPServers(t *testing.T) {
 	)
 
 	// controlPlane is the owner KonnectGatewayControlPlane used in all tests.
-	controlPlane := &konnectv1alpha1.KonnectGatewayControlPlane{
+	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cpName,
 			Namespace: namespace,
 		},
-		Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+		Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: cpID,
 			},
 		},
 	}
 
+	resourceID := "resource-id"
 	newServer := func(id, name string) sdkkonnectcomp.MCPServerCPInfo {
 		return sdkkonnectcomp.MCPServerCPInfo{
-			ID:        id,
-			Name:      name,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:         id,
+			Name:       name,
+			ResourceID: &resourceID,
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
 		}
 	}
 
 	// existingMCPServer returns an MCPServer that matches what syncMCPServers would
-	// check for (name = cpName-id, mirror ID = id).
+	// check for, using generateMCPServerNN for the name and the given mirror ID.
 	existingMCPServer := func(serverID string) *konnectv1alpha1.MCPServer {
+		nn := generateMCPServerNN(namespace, cpName, serverID)
 		return &konnectv1alpha1.MCPServer{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s", cpName, serverID),
-				Namespace: namespace,
-				Labels: map[string]string{
-					labelControlPlaneID: cpID,
-				},
+				Name:      nn.Name,
+				Namespace: nn.Namespace,
 			},
 			Spec: konnectv1alpha1.MCPServerSpec{
 				Mirror: konnectv1alpha1.MirrorSpec{
@@ -94,30 +166,30 @@ func TestSyncMCPServers(t *testing.T) {
 		{
 			name:          "new server is created",
 			servers:       []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name")},
-			expectCreated: []string{fmt.Sprintf("%s-%s", cpName, "srv-name")},
+			expectCreated: []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
 		},
 		{
 			name:            "existing server (by ID) is skipped without re-creating",
-			servers:         []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-id")},
+			servers:         []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name")},
 			existingObjects: []client.Object{existingMCPServer("srv-id")},
-			expectCreated:   []string{fmt.Sprintf("%s-%s", cpName, "srv-id")},
+			expectCreated:   []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
 		},
 		{
 			name: "stale MCPServer not in Konnect response is deleted",
 			servers: []sdkkonnectcomp.MCPServerCPInfo{
-				newServer("live-id", "live-id"),
+				newServer("live-id", "live-name"),
 			},
 			existingObjects: []client.Object{
 				existingMCPServer("live-id"),
 				existingMCPServer("stale-id"),
 			},
-			expectCreated: []string{fmt.Sprintf("%s-%s", cpName, "live-id")},
-			expectDeleted: []string{fmt.Sprintf("%s-%s", cpName, "stale-id")},
+			expectCreated: []string{generateMCPServerNN(namespace, cpName, "live-id").Name},
+			expectDeleted: []string{generateMCPServerNN(namespace, cpName, "stale-id").Name},
 		},
 		{
 			name: "mixed: creates new, keeps existing, deletes stale",
 			servers: []sdkkonnectcomp.MCPServerCPInfo{
-				newServer("existing-id", "existing-id"),
+				newServer("existing-id", "existing-name"),
 				newServer("new-id", "new-name"),
 			},
 			existingObjects: []client.Object{
@@ -125,10 +197,10 @@ func TestSyncMCPServers(t *testing.T) {
 				existingMCPServer("stale-id"),
 			},
 			expectCreated: []string{
-				fmt.Sprintf("%s-%s", cpName, "existing-id"),
-				fmt.Sprintf("%s-%s", cpName, "new-name"),
+				generateMCPServerNN(namespace, cpName, "existing-id").Name,
+				generateMCPServerNN(namespace, cpName, "new-id").Name,
 			},
-			expectDeleted: []string{fmt.Sprintf("%s-%s", cpName, "stale-id")},
+			expectDeleted: []string{generateMCPServerNN(namespace, cpName, "stale-id").Name},
 		},
 		{
 			name:    "list error is returned",
@@ -150,7 +222,21 @@ func TestSyncMCPServers(t *testing.T) {
 			s := scheme.Get()
 			builder := fake.NewClientBuilder().
 				WithScheme(s).
-				WithObjects(controlPlane)
+				WithObjects(controlPlane).
+				WithIndex(&konnectv1alpha1.MCPServer{},
+					index.IndexFieldMCPServerOnKonnectGatewayControlPlane,
+					func(obj client.Object) []string {
+						mcp, ok := obj.(*konnectv1alpha1.MCPServer)
+						if !ok {
+							return nil
+						}
+						ref := mcp.Spec.ControlPlaneRef
+						if ref.KonnectNamespacedRef == nil {
+							return nil
+						}
+						return []string{mcp.Namespace + "/" + ref.KonnectNamespacedRef.Name}
+					},
+				)
 
 			if len(tt.existingObjects) > 0 {
 				builder = builder.WithObjects(tt.existingObjects...)
@@ -160,7 +246,8 @@ func TestSyncMCPServers(t *testing.T) {
 			}
 			cl := builder.Build()
 
-			f := NewMCPServersFetcher(logging.DevelopmentMode, cl, nil, make(chan struct{}, 1), controlPlane, s)
+			reconcileEventCh := make(chan event.GenericEvent, TriggerChannelBufSize)
+			f := NewMCPServersFetcher(logging.DevelopmentMode, cl, nil, make(chan struct{}, 1), reconcileEventCh, controlPlane, s)
 
 			err := f.syncMCPServers(context.Background(), tt.servers)
 			if tt.expectError {
@@ -176,7 +263,6 @@ func TestSyncMCPServers(t *testing.T) {
 					cl.Get(context.Background(), client.ObjectKey{Name: expectedName, Namespace: namespace}, &mcp),
 					"expected MCPServer %q to exist", expectedName,
 				)
-				assert.Equal(t, cpID, mcp.Labels[labelControlPlaneID])
 			}
 
 			// Verify deleted objects are gone.

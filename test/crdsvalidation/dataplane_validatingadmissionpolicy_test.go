@@ -49,7 +49,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 		ValidationPolicyKonnect,
 	}
 
-	helm.ApplyTemplate(t, cfg, kcfg.ChartPath(), templates)
+	helm.ApplyTemplate(ctx, t, cfg, kcfg.ChartPath(), templates)
 
 	t.Run("static autoscale", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration]{
@@ -98,7 +98,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 		ValidationPolicyDataplane,
 	}
 
-	helm.ApplyTemplate(t, cfg, kcfg.ChartPath(), templates)
+	helm.ApplyTemplate(ctx, t, cfg, kcfg.ChartPath(), templates)
 
 	t.Run("ports", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
@@ -352,6 +352,215 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 					},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
+			},
+			{
+				Name: "env KONG_STREAM_LISTEN provided and all ports in proxy listen or stream listen",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+													Env: []corev1.EnvVar{
+														{
+															Name:  "KONG_PORT_MAPS",
+															Value: "80:8000,443:8443,8899:8899",
+														},
+														{
+															Name:  "KONG_PROXY_LISTEN",
+															Value: "0.0.0.0:8000,0.0.0.0:8443 ssl",
+														},
+														{
+															Name:  "KONG_STREAM_LISTEN",
+															Value: "0.0.0.0:8899 ssl",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name:       "http",
+												Port:       80,
+												TargetPort: intstr.FromInt(8000),
+											},
+											{
+												Name:       "tls",
+												Port:       8899,
+												TargetPort: intstr.FromInt(8899),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
+			},
+			{
+				Name: "env KONG_STREAM_LISTEN provided but some target ports not in proxy listen or stream listen",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+													Env: []corev1.EnvVar{
+														{
+															Name:  "KONG_PORT_MAPS",
+															Value: "80:8000,443:10443,8899:8899",
+														},
+														{
+															Name:  "KONG_PROXY_LISTEN",
+															Value: "0.0.0.0:8000,0.0.0.0:8443 ssl",
+														},
+														{
+															Name:  "KONG_STREAM_LISTEN",
+															Value: "0.0.0.0:8899 ssl",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name:       "http",
+												Port:       80,
+												TargetPort: intstr.FromInt(8000),
+											},
+											{
+												Name:       "tls",
+												Port:       8899,
+												TargetPort: intstr.FromInt(8899),
+											},
+											{
+												Name:       "https-invalid",
+												Port:       443,
+												TargetPort: intstr.FromInt(10443), // Not in either KONG_PROXY_LISTEN or KONG_STREAM_LISTEN
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
+				ExpectedErrorMessage:          new("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PROXY_LISTEN or KONG_STREAM_LISTEN env"),
+			},
+			{
+				Name: "not providing env KONG_PROXY_LISTEN and target ports in the default listen ports should pass",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+													Env: []corev1.EnvVar{
+														{
+															Name:  "KONG_PORT_MAPS",
+															Value: "80:8000,443:8443",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name:       "http",
+												Port:       80,
+												TargetPort: intstr.FromInt(8000),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
+			},
+			{
+				Name: "not providing env KONG_PROXY_LISTEN and target ports not the default listen ports should fail",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  "proxy",
+													Image: "kong:3.9",
+													Env: []corev1.EnvVar{
+														{
+															Name:  "KONG_PORT_MAPS",
+															Value: "80:8001,443:8443",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name:       "http",
+												Port:       80,
+												TargetPort: intstr.FromInt(8001),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
+				ExpectedErrorMessage:          new("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PROXY_LISTEN or KONG_STREAM_LISTEN env"),
 			},
 			{
 				Name: "providing network services ingress ports without matching envs does not fail (legacy webhook behavior)",

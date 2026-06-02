@@ -24,9 +24,11 @@ const (
 	// MinKonnectConfigUploadPeriod is the minimum period between operations to upload Kong configuration to Konnect.
 	MinKonnectConfigUploadPeriod = 10 * time.Second
 	// DefaultKonnectConfigUploadPeriod is the default period between operations to upload Kong configuration to Konnect.
-	DefaultKonnectConfigUploadPeriod = 30 * time.Second
+	DefaultKonnectConfigUploadPeriod = 3 * time.Minute
 	// DefaultKonnectNodeRefreshPeriod is the default period between operations to refresh node in Konnect.
-	DefaultKonnectNodeRefreshPeriod = 60 * time.Second
+	DefaultKonnectNodeRefreshPeriod = 3 * time.Minute
+	// DefaultKonnectConfigUploadConcurrency is the default concurrency of the client to upload Kong configuration to Konnect.
+	DefaultKonnectConfigUploadConcurrency = 4
 )
 
 const (

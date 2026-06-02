@@ -78,16 +78,10 @@ mise-install: mise
 mise-install-global: mise
 	@$(MISE) install -q $(DEP_VER)
 
-OS := $(shell uname | tr '[:upper:]' '[:lower:]')
-ARCH := $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
-
-# Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
-# renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION = 4.52.4
-YQ = $(PROJECT_DIR)/bin/installs/github-mikefarah-yq/$(YQ_VERSION)/yq_$(OS)_$(ARCH)
+YQ = yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
-	$(MAKE) mise-install DEP_VER=github:mikefarah/yq@$(YQ_VERSION)
+	$(MAKE) mise-install DEP_VER=yq
 
 CONTROLLER_GEN_VERSION = $(shell $(YQ) -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-controller-tools/$(CONTROLLER_GEN_VERSION)/controller-gen
@@ -186,11 +180,11 @@ MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
 	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
-HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(MISE_FILE))
+HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:helm/helm"].version' < $(MISE_FILE))
 HELM = helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	$(MAKE) mise-install-global DEP_VER=http:helm
+	$(MAKE) mise-install-global DEP_VER=aqua:helm/helm
 
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
@@ -198,11 +192,11 @@ KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd
 download.kube-api-linter: mise yq ## Download kube-api-linter locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter@$(KUBE_API_LINTER_VERSION)
 
-CHAINSAW_VERSION = $(shell $(YQ) -r '.chainsaw' < $(TOOLS_VERSIONS_FILE))
-CHAINSAW = $(PROJECT_DIR)/bin/installs/github-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
+CHAINSAW_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:kyverno/chainsaw"].version' < $(MISE_FILE))
+CHAINSAW = $(PROJECT_DIR)/bin/installs/aqua-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
 .PHONY: chainsaw
 chainsaw: mise yq ## Download chainsaw locally if necessary.
-	$(MAKE) mise-install DEP_VER=github:kyverno/chainsaw@$(CHAINSAW_VERSION)
+	$(MAKE) mise-install DEP_VER=aqua:kyverno/chainsaw@$(CHAINSAW_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -567,6 +561,11 @@ CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
 TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < ./test/test_dependencies.yaml)
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 
+.PHONY: tune.inotify
+tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in kind-based tests (Linux host / Docker VM).
+	sudo sysctl -w fs.inotify.max_user_instances=8192
+	sudo sysctl -w fs.inotify.max_user_watches=524288
+
 .PHONY: test
 test: test.unit
 
@@ -613,6 +612,7 @@ _test.envtest: gotestsum setup-envtest
 		-timeout $(ENVTEST_TIMEOUT) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
+		-parallel $(GO_TEST_PARALLEL) \
 		-coverprofile=coverage.envtest.out \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(ENVTEST_TEST_PATHS)
@@ -627,11 +627,15 @@ test.envtest.pretty:
 
 .PHONY: test.crds-validation
 test.crds-validation:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+	$(MAKE) _test.envtest \
+		GOTESTSUM_FORMAT=standard-verbose \
+		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
 .PHONY: test.crds-validation.pretty
 test.crds-validation.pretty:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+	$(MAKE) _test.envtest \
+		GOTESTSUM_FORMAT=testname \
+		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
 # Define a constant list of channels
 CHANNELS := ingress-controller-incubator gateway-operator kong-operator
@@ -812,7 +816,7 @@ test.e2e.chainsaw: chainsaw ## Run chainsaw e2e tests.
 	$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
-PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
+GO_TEST_PARALLEL := $(if $(GO_TEST_PARALLEL),$(GO_TEST_PARALLEL),$(NCPU))
 
 .PHONY: _test.conformance
 _test.conformance: gotestsum download.telepresence
@@ -823,7 +827,7 @@ _test.conformance: gotestsum download.telepresence
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
-		-parallel $(PARALLEL) \
+		-parallel $(GO_TEST_PARALLEL) \
 		$(TEST_SUITE_PATH)
 
 .PHONY: test.conformance
@@ -866,7 +870,9 @@ test.samples: kustomize
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
-	@cd config/samples/ && find . -maxdepth 1 -name "*.yaml" -exec bash -c "echo; echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
+	@find config/samples/ -maxdepth 1 -name "*.yaml" -print0 | while IFS= read -r -d '' file; do \
+		echo && echo $$file && kubectl apply -f $$file && kubectl delete -f $$file; \
+	done
 
 .PHONY: test.charts.golden
 test.charts.golden:
@@ -957,6 +963,19 @@ endif
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
 
+.PHONY: _ensure-kong-operator-ca
+_ensure-kong-operator-ca: _ensure-kong-system-namespace
+	@kubectl get secret kong-operator-ca -n kong-system >/dev/null 2>&1 || \
+	(openssl genrsa -out /tmp/ko-makefile-ca.key 4096 2>/dev/null && \
+	openssl req -x509 -new -key /tmp/ko-makefile-ca.key -days 3650 -out /tmp/ko-makefile-ca.crt -subj "/CN=Kong Operator CA" 2>/dev/null && \
+	kubectl create secret tls kong-operator-ca \
+		--cert=/tmp/ko-makefile-ca.crt \
+		--key=/tmp/ko-makefile-ca.key \
+		--namespace kong-system \
+		--dry-run=client -o yaml | \
+		kubectl label -f - konghq.com/secret=internal --overwrite --local -o yaml | \
+		kubectl apply -f -)
+
 # Run a controller from your host.
 # TODO: https://github.com/Kong/kong-operator/issues/1989
 .PHONY: run
@@ -991,9 +1010,10 @@ _run:
 		-enable-controller-controlplaneextensions \
 		-enable-conversion-webhook=false \
 		-enable-validating-webhook=false \
-		-zap-time-encoding iso8601 \
-		-zap-log-level 2 \
-		-zap-devel true \
+		-zap-time-encoding=iso8601 \
+		-zap-log-level=2 \
+		-zap-devel=true \
+		-feature-gates=mcp-server \
 	"
 
 # Run the operator locally with impersonation of controller-manager service account from kong-system namespace.
@@ -1007,7 +1027,7 @@ _run.with-impersonate:
 	@$(eval TMP_TOKEN := $(shell kubectl create token --namespace=kong-system controller-manager))
 	@$(eval CLUSTER := $(shell kubectl config get-contexts | grep '^\*' | tr -s ' ' | cut -d ' ' -f 3))
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials ko --token=$(TMP_TOKEN)
-	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context ko --cluster=$(CLUSTER) --user=kgo --namespace=kong-system
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context ko --cluster=$(CLUSTER) --user=ko --namespace=kong-system
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context ko
 	$(MAKE) _run TMP_KUBECONFIG=$(TMP_KUBECONFIG)
 
@@ -1139,5 +1159,5 @@ lint.api: download.kube-api-linter
 		./api/gateway-operator/v2beta1/... \
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
-		./api/common/v1alpha1/...  \
-		./api/x-konnect/...
+		./api/common/v1alpha1/... \
+		./api/eventgateway/v1alpha1/...

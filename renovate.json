@@ -3,17 +3,38 @@
   "extends": [
     "config:recommended"
   ],
+  "baseBranchPatterns": [
+    "$default",
+    "release/2.1.x"
+  ],
   "ignorePaths": [],
   "enabledManagers": [
     "custom.regex",
-    "kustomize"
+    "kustomize",
+    // Only for Go toolchain updates, not module updates. Modules are still update via dependabot.
+     "gomod",
+     "dockerfile"
   ],
+  "postUpdateOptions": [
+    // Run `go mod tidy` after updating Go modules to ensure go.sum is updated and tidy up any indirect dependencies.
+    // https://docs.renovatebot.com/modules/manager/gomod/#post-update-options
+    "gomodTidy"
+  ],
+  "dockerfile": {
+    "fileMatch": ["^Dockerfile$", "^debug\\.Dockerfile$"]
+  },
   "automerge": false,
   "separateMinorPatch": true,
   "labels": [
     "dependencies"
   ],
   "schedule": "before 5am every weekday",
+  "customDatasources": {
+    "gke-rapid": {
+      "defaultRegistryUrlTemplate": "https://raw.githubusercontent.com/kong/gke-renovate-datasource/main/static/rapid.json",
+      "format": "json"
+    }
+  },
   "customManagers": [
     {
       "description": "Match dependencies in config/samples/.*.yaml that are properly annotated with `# renovate: datasource={} versioning={}.`",
@@ -69,13 +90,14 @@
       "description": "Match versions in selected *.go files that are properly annotated with `// renovate: datasource={} depName={}.`",
       "customType": "regex",
       "datasourceTemplate": "docker",
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}docker{{/if}}",
       "fileMatch": [
         "^pkg/consts/dataplane\\.go$",
         "^internal/versions/controlplane\\.go$",
         "^test/e2e/helm_install_upgrade_test\\.go$"
       ],
       "matchStrings": [
-        ".+\\s?[=:]\\s+\"(?<currentValue>.+?)\",?\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?depName=(?<depName>.*)"
+        ".+\\s?[=:]\\s+\"(?<currentValue>.+?)\",?\\s+//\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+(packageName=(?<packageName>.*?)\\s+)?depName=(?<depName>.*?)(\\s+versioning=(?<versioning>.*?))?(?:\\r\\n|\\r|\\n|$)"
       ]
     },
     {
@@ -119,12 +141,28 @@
   ],
   "packageRules": [
     {
+      "description": "Group all k8s.io/* module updates into one PR",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["/^k8s\\.io\\/.*/"],
+      "excludePackageNames": [
+        "k8s.io/utils",
+        "k8s.io/kube-openapi"
+      ],
+      "excludePackagePatterns": [
+        "^k8s\\.io/klog/.*$"
+      ],
+      "groupName": "k8s.io modules",
+      "groupSlug": "k8s-io-modules"
+    },
+    {
       "description": "Strip kustomize/ version prefix",
+      "matchBaseBranches": ["$default"],
       "matchPackageNames": ["kubernetes-sigs/kustomize"],
       "extractVersion": "^kustomize/(?<version>.*)$"
     },
     {
       "description": "Ignore minor updates if depName has `@only-patch` suffix.",
+      "matchBaseBranches": ["$default"],
       "matchUpdateTypes": [
         "minor"
       ],
@@ -132,6 +170,74 @@
       "matchDepNames": [
         "/.*@only-patch/"
       ]
+    },
+
+    {
+      "description": "Disable updates of the root module in submodules (e.g. crd-from-oas/go.mod)",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["/^github\\.com\\/kong\\/kong-operator/"],
+      "enabled": false
+    },
+    {
+      "description": "Disable KO image bumps in kustomize (done at release time)",
+      "matchManagers": ["kustomize"],
+      "matchDepNames": ["docker.io/kong/kong-operator"],
+      "enabled": false
+    },
+
+    // Latest release branch specific rules for updating patch versions of Go toolchain and Dockerfiles.
+    {
+      "description": "Disable Go dependencies updates (still handled by dependabot)",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchBaseBranches": ["$default", "release/2.1.x"],
+      "enabled": false
+    },
+    {
+      "description": "Disable dependency updates on release/2.1.x by default",
+      "matchBaseBranches": ["release/2.1.x"],
+      "enabled": false
+    },
+    {
+      "description": "Go toolchain patch updates only on release/2.1.x",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "rangeStrategy": "bump",
+      "enabled": true
+    },
+    {
+      "description": "Disable Go toolchain major and minor updates on release/2.1.x",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
+    },
+    {
+      "description": "Go modules patch updates only on release/2.1.x",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["!go"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "matchUpdateTypes": ["patch"],
+      "enabled": true
+    },
+    {
+      "description": "Enable Dockerfile golang updates on release/2.1.x",
+      "matchManagers": ["dockerfile"],
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["golang"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "enabled": true
+    },
+    {
+      "description": "Disable Dockerfile golang major and minor updates on release/2.1.x",
+      "matchManagers": ["dockerfile"],
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["golang"],
+      "matchBaseBranches": ["release/2.1.x"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
     }
   ]
 }

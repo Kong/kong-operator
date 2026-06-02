@@ -1,10 +1,12 @@
 # AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI agents like Claude Code or Copilot when working with code in this repository.
 
 ## Project Overview
 
-Kong Operator is a Kubernetes Operator (Kubebuilder v4, multigroup layout) that manages Kong Gateway deployments and Kong Kubernetes Ingress Controllers. Domain: `gateway-operator.konghq.com`.
+Kong Operator is a Kubernetes Operator (Kubebuilder v4, multigroup layout) that manages Kong Gateway deployments, in process ingress controller instances and integrates with Konnect cloud.
+It provides a Kubernetes-native way to deploy and manage Kong Gateway and its configuration.
+Domain: `gateway-operator.konghq.com`.
 
 ## Build Commands
 
@@ -23,6 +25,7 @@ make lint               # Run Go linters (modules, golangci-lint)
 make lint.all           # Full lint: Go + charts + GitHub Actions + markdown
 make lint.api           # Lint Kubernetes API types
 make lint.golangci-lint # Run golangci-lint linter for Go code
+make lint.actions       # Lint github action files 
 make go-fix             # Run go-fix on the codebase to ensure you're not using old or deprecated Go constructs.
 ```
 
@@ -54,6 +57,21 @@ make test.integration-ko                 # Kong Operator integration tests
 make test.integration-bluegreen          # DataPlane upgrade/blue-green tests
 make test.integration-validatingwebhook  # Webhook tests
 ```
+
+#### kind: "too many open files" / fsnotify watcher errors
+
+Tests that spin up a kind cluster (integration, conformance, e2e) can fail with
+`failed to create fsnotify watcher: too many open files`. kind nodes share the host
+kernel, so the `fs.inotify.max_user_instances` / `max_user_watches` limits must be raised
+on the **host running Docker** (see https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files).
+
+- **Linux host**: `make tune.inotify` (one-off; persist via `/etc/sysctl.d/99-kind-inotify.conf`).
+- **macOS** (Docker Desktop / colima): the limit lives in the Linux VM, not macOS.
+  - colima: `colima ssh -- sudo sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288`
+  - Docker Desktop: `docker run --rm --privileged alpine sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288`
+  - Note: not persistent across VM restarts.
+
+CI raises these limits automatically via the `.github/actions/bump-inotify` composite action.
 
 ### CRD Validation Tests
 
@@ -147,6 +165,11 @@ Helm chart for deploying the operator.
 
 ## Code Conventions
 
+### Go Code Conventions
+
+- Follow standard Go conventions (gofmt, goimports)
+- Use `new()` for in place literal initialization, e.g. `new("dummy-string")` instead of `ptrTo("dummy-string")`, `new(true)` instead of `ptrTo(true)`, etc.
+
 ### Naming (Enforced by Linter)
 
 - Use `DataPlane` not `Dataplane`
@@ -176,6 +199,7 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
 3. Run `make generate` to regenerate CRDs, deepcopy, docs
 4. Run `make test.charts.golden.update` if chart templates change
 5. Add type specific CRD validation tests in `test/crdsvalidation/`
+6. Add sample YAML in `config/samples/` and test applying it in `test/crdsvalidation/`
 
 ## Development Workflow
 

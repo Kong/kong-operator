@@ -44,7 +44,7 @@ func TestCreateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -86,7 +86,7 @@ func TestCreateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -160,7 +160,7 @@ func TestCreateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -208,7 +208,7 @@ func TestCreateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -272,7 +272,7 @@ func TestDeleteKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -304,7 +304,7 @@ func TestDeleteKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -338,7 +338,7 @@ func TestDeleteKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -401,7 +401,7 @@ func TestUpdateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -450,7 +450,7 @@ func TestUpdateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
 							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
@@ -520,7 +520,7 @@ func TestCreateAndUpdateKongService_KubernetesMetadataConsistency(t *testing.T) 
 			},
 		},
 		Status: configurationv1alpha1.KongServiceStatus{
-			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 				ControlPlaneID: uuid.NewString(),
 			},
 		},
@@ -593,7 +593,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -634,7 +634,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -681,7 +681,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -707,6 +707,114 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 
 			if tc.assertions != nil {
 				tc.assertions(t, svc)
+			}
+		})
+	}
+}
+
+func TestKongServiceToSDKServiceInputCertificateMapping(t *testing.T) {
+	testCases := []struct {
+		name                    string
+		svc                     *configurationv1alpha1.KongService
+		expectClientCertificate *sdkkonnectcomp.ClientCertificate
+		expectCaCertificates    []string
+	}{
+		{
+			name: "no Konnect status — both nil",
+			svc: &configurationv1alpha1.KongService{
+				Spec: configurationv1alpha1.KongServiceSpec{
+					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+						Host: "example.com",
+					},
+				},
+			},
+			expectClientCertificate: nil,
+			expectCaCertificates:    nil,
+		},
+		{
+			name: "Konnect status with CertificateID only",
+			svc: &configurationv1alpha1.KongService{
+				Spec: configurationv1alpha1.KongServiceSpec{
+					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+						Host: "example.com",
+					},
+				},
+				Status: configurationv1alpha1.KongServiceStatus{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
+						CertificateID: "cert-abc",
+					},
+				},
+			},
+			expectClientCertificate: &sdkkonnectcomp.ClientCertificate{ID: new("cert-abc")},
+			expectCaCertificates:    nil,
+		},
+		{
+			name: "Konnect status with CACertificateIDs only",
+			svc: &configurationv1alpha1.KongService{
+				Spec: configurationv1alpha1.KongServiceSpec{
+					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+						Host: "example.com",
+					},
+				},
+				Status: configurationv1alpha1.KongServiceStatus{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
+						CACertificateIDs: []string{"ca-id-1", "ca-id-2"},
+					},
+				},
+			},
+			expectClientCertificate: nil,
+			expectCaCertificates:    []string{"ca-id-1", "ca-id-2"},
+		},
+		{
+			name: "both CertificateID and CACertificateIDs set",
+			svc: &configurationv1alpha1.KongService{
+				Spec: configurationv1alpha1.KongServiceSpec{
+					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+						Host: "example.com",
+					},
+				},
+				Status: configurationv1alpha1.KongServiceStatus{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
+						CertificateID:    "cert-xyz",
+						CACertificateIDs: []string{"ca-1"},
+					},
+				},
+			},
+			expectClientCertificate: &sdkkonnectcomp.ClientCertificate{ID: new("cert-xyz")},
+			expectCaCertificates:    []string{"ca-1"},
+		},
+		{
+			name: "CaCertificates is a defensive copy",
+			svc: &configurationv1alpha1.KongService{
+				Spec: configurationv1alpha1.KongServiceSpec{
+					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+						Host: "example.com",
+					},
+				},
+				Status: configurationv1alpha1.KongServiceStatus{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
+						CACertificateIDs: []string{"ca-original"},
+					},
+				},
+			},
+			expectClientCertificate: nil,
+			expectCaCertificates:    []string{"ca-original"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			output := kongServiceToSDKServiceInput(tc.svc)
+			assert.Equal(t, tc.expectClientCertificate, output.ClientCertificate)
+			assert.Equal(t, tc.expectCaCertificates, output.CaCertificates)
+
+			// For the defensive-copy test, mutate the original slice after calling the
+			// function and verify the returned slice is not affected.
+			if tc.name == "CaCertificates is a defensive copy" {
+				originalIDs := tc.svc.Status.Konnect.CACertificateIDs
+				originalIDs[0] = "mutated"
+				assert.Equal(t, []string{"ca-original"}, output.CaCertificates,
+					"mutating the source slice must not affect the returned CaCertificates")
 			}
 		})
 	}

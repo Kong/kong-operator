@@ -28,7 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -352,6 +352,11 @@ func (in *ControlPlaneKonnectOptions) DeepCopyInto(out *ControlPlaneKonnectOptio
 	if in.ConfigUploadPeriod != nil {
 		in, out := &in.ConfigUploadPeriod, &out.ConfigUploadPeriod
 		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.ConfigUploadConcurrency != nil {
+		in, out := &in.ConfigUploadConcurrency, &out.ConfigUploadConcurrency
+		*out = new(int32)
 		**out = **in
 	}
 }

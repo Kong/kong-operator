@@ -19,13 +19,9 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
-)
-
-const (
-	// FieldManager is the field manager name used for server-side apply operations.
-	FieldManager = "gateway-operator"
 )
 
 // translate performs the full translation process using the provided APIConverter.
@@ -103,6 +99,24 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// 404s during conformance and prevents noisy reconciliation errors like
 		// "can't create target without a Konnect Upstream ID".
 		switch desired.GetKind() {
+		case "KongService":
+			// KongService with a clientCertificateRef depends on the referenced KongCertificate being Programmed.
+			certName, _, _ := unstructured.NestedString(desired.Object, "spec", "clientCertificateRef", "name")
+			if certName != "" {
+				var cert configurationv1alpha1.KongCertificate
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: certName}, &cert); err != nil {
+					log.Debug(logger, "Certificate not found yet for service, waiting", "certificate", certName)
+					objectsSkipped++
+					stopAtKind = "KongCertificate"
+					continue
+				}
+				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &cert) {
+					log.Debug(logger, "Certificate not Programmed yet for service, waiting", "certificate", certName)
+					objectsSkipped++
+					stopAtKind = "KongCertificate"
+					continue
+				}
+			}
 		case "KongTarget":
 			// KongTarget depends on KongUpstream being Programmed.
 			upstreamName, _, _ := unstructured.NestedString(desired.Object, "spec", "upstreamRef", "name")
@@ -193,7 +207,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 				// Object doesn't exist, create it using server-side apply.
 				log.Debug(logger, "Creating new object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
 				// Set field manager for server-side apply
-				if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
+				if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(controllerpkgssa.FieldManager), client.ForceOwnership); err != nil {
 					if apierrors.IsConflict(err) {
 						return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 					}
@@ -218,14 +232,14 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		}
 
 		// Object exists, check if we need to update it.
-		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, FieldManager, "")
+		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, controllerpkgssa.FieldManager, "")
 		if err != nil {
 			return false, false, fmt.Errorf("failed to extract managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
 		}
 		if managedFieldsObj == nil {
 			// No managed fields for our field manager, we should update.
 			log.Debug(logger, "No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
-			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
+			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(controllerpkgssa.FieldManager), client.ForceOwnership); err != nil {
 				if apierrors.IsConflict(err) {
 					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
@@ -253,7 +267,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		} else {
 			log.Info(logger, "Changes detected for obj, applying desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting, "changes", compare.String())
 			// Changes detected, apply the desired state using server-side apply.
-			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
+			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(controllerpkgssa.FieldManager), client.ForceOwnership); err != nil {
 				if apierrors.IsConflict(err) {
 					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
@@ -556,6 +570,22 @@ func referencesSupportedGateway(ctx context.Context, cl client.Client, obj clien
 	switch o := obj.(type) {
 	case *gwtypes.HTTPRoute:
 		// Check if any of the ParentRefs reference a supported Gateway.
+		for _, pRef := range o.Spec.ParentRefs {
+			gw, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
+			if err != nil {
+				// Log the error but continue checking other ParentRefs.
+				log.Trace(logger, "Error checking ParentRef", "parentRef", pRef, "error", err)
+				continue
+			}
+			if found {
+				// Found at least one supported Gateway reference.
+				log.Trace(logger, "Found supported Gateway reference", "gateway", client.ObjectKeyFromObject(gw))
+				return true
+			}
+		}
+		return false
+
+	case *gwtypes.TLSRoute:
 		for _, pRef := range o.Spec.ParentRefs {
 			gw, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
 			if err != nil {

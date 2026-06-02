@@ -14,6 +14,8 @@ import (
 )
 
 type MockSDKWrapper struct {
+	generatedMockSDKWrapper
+
 	ControlPlaneSDK             *mocks.MockControlPlanesSDK
 	CloudGatewaysSDK            *mocks.MockCloudGatewaysSDK
 	ControlPlaneGroupSDK        *mocks.MockControlPlaneGroupsSDK
@@ -38,13 +40,16 @@ type MockSDKWrapper struct {
 	SNIsSDK                     *mocks.MockSNIsSDK
 	DataPlaneCertificatesSDK    *mocks.MockDPCertificatesSDK
 	MCPServersSDK               *sdkkonnectgo.MCPServers
-	server                      server.Server
+
+	server server.Server
 }
 
 var _ sdkops.SDKWrapper = MockSDKWrapper{}
 
 func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	return &MockSDKWrapper{
+		generatedMockSDKWrapper: newGeneratedMockSDKWrapper(t),
+
 		ControlPlaneSDK:             mocks.NewMockControlPlanesSDK(t),
 		ControlPlaneGroupSDK:        mocks.NewMockControlPlaneGroupsSDK(t),
 		CloudGatewaysSDK:            mocks.NewMockCloudGatewaysSDK(t),

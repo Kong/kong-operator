@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/cloudflare/cfssl/config"
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
@@ -30,9 +30,10 @@ import (
 )
 
 type certs struct {
-	Key  crypto.Signer
-	CA   *x509.Certificate
-	Cert *x509.Certificate
+	Key            crypto.Signer
+	CA             *x509.Certificate
+	Cert           *x509.Certificate
+	ExpirationDate time.Time
 }
 
 // MetricsScrapePipeline is a pipeline for scraping and enriching metrics.
@@ -50,9 +51,11 @@ type metricsPipeline struct {
 type Manager struct {
 	logger                   logr.Logger
 	scrapeInterval           time.Duration
+	certTTL                  time.Duration
+	certExpirationMargin     time.Duration
 	client                   client.Client
 	caSecretNN               types.NamespacedName
-	certs                    certs
+	certs                    *certs
 	pipelinesNotificationsCh chan scrapeUpdateNotification
 	pipelinesLock            sync.RWMutex
 	pipelines                map[types.UID]MetricsScrapePipeline
@@ -63,12 +66,16 @@ type Manager struct {
 func NewManager(
 	logger logr.Logger,
 	interval time.Duration,
+	certTTL time.Duration,
+	certExpirationMargin time.Duration,
 	cl client.Client,
 	caSecretNN types.NamespacedName,
 ) *Manager {
 	return &Manager{
 		logger:                   logger,
 		scrapeInterval:           interval,
+		certTTL:                  certTTL,
+		certExpirationMargin:     certExpirationMargin,
 		caSecretNN:               caSecretNN,
 		client:                   cl,
 		pipelinesNotificationsCh: make(chan scrapeUpdateNotification),
@@ -88,12 +95,7 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 		keyConfig secrets.KeyConfig
 	)
 
-	if err := retry.Do(
-		func() error {
-			var err error
-			caCert, caKey, keyConfig, err = msm.getCASecretAndKey(ctx)
-			return err
-		},
+	if err := retry.New(
 		retry.Context(ctx),
 		retry.Attempts(0),
 		retry.MaxDelay(3*time.Second),
@@ -105,6 +107,12 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 				"error", err,
 			)
 		}),
+	).Do(
+		func() error {
+			var err error
+			caCert, caKey, keyConfig, err = msm.getCASecretAndKey(ctx)
+			return err
+		},
 	); err != nil {
 		return err
 	}
@@ -129,8 +137,7 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Let's make this valid for 10 years.
-	expiration := int32(315400000)
+	expiration := int32(msm.certTTL.Seconds())
 	csr := certificatesv1.CertificateSigningRequestSpec{
 		Request: pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE REQUEST",
@@ -156,10 +163,11 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 		return err
 	}
 
-	msm.certs = certs{
-		CA:   caCert,
-		Cert: cert,
-		Key:  csrKey,
+	msm.certs = &certs{
+		CA:             caCert,
+		Cert:           cert,
+		Key:            csrKey,
+		ExpirationDate: cert.NotAfter,
 	}
 	return nil
 }
@@ -206,10 +214,6 @@ func (msm *Manager) getCASecretAndKey(ctx context.Context) (*x509.Certificate, c
 // It spawns a goroutine that periodically scrapes metrics from the enabled scrapers.
 // This satisfies the Manager interface and can be used with controller-runtime Manager.
 func (msm *Manager) Start(ctx context.Context) error {
-	if err := msm.initMTLSCerts(ctx); err != nil {
-		return fmt.Errorf("failed to create mTLS certs: %w", err)
-	}
-
 	go func(ctx context.Context) {
 		ticker := time.NewTicker(msm.scrapeInterval)
 		defer ticker.Stop()
@@ -385,9 +389,17 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 	}
 
 	adminAPIAddressProvider := NewAdminAPIAddressProvider(msm.client)
-	httpClient := httpClientWithCerts(msm.certs)
 
-	enricher, err := NewEnricher(msm.logger, &dp, msm.client, msm.certs, adminAPIAddressProvider)
+	if msm.certs == nil || msm.certs.ExpirationDate.Sub(time.Now().UTC()) < msm.certExpirationMargin {
+		if err := msm.initMTLSCerts(ctx); err != nil {
+			return fmt.Errorf("failed to rotate mTLS certs: %w", err)
+		}
+		log.Debug(msm.logger, "new certificate for metrics provided", "expirationDate", msm.certs.ExpirationDate)
+	}
+
+	httpClient := httpClientWithCerts(*msm.certs)
+
+	enricher, err := NewEnricher(msm.logger, &dp, msm.client, *msm.certs, adminAPIAddressProvider)
 	if err != nil {
 		return fmt.Errorf("failed to create metrics enricher: %w", err)
 	}

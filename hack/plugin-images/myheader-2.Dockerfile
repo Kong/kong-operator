@@ -1,4 +1,4 @@
-FROM busybox:1.31.1@sha256:999f1137906d82f896a70c18ed63d2797a1562cd7d4d2c1907f681b35c30459d AS builder
+FROM busybox:1.38.0@sha256:011bb4ad411421bd6af53c4af41ecb2c23887229b8df526328d1a8a1fff94dab AS builder
 
 COPY myheader /myheader/
 RUN sed -i 's/"myheader"/"newheader"/g' /myheader/**

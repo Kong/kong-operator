@@ -91,7 +91,7 @@ type KongReferenceGrantSpec struct {
 
 // ReferenceGrantFrom describes trusted namespaces and kinds.
 //
-// +kubebuilder:validation:XValidation:rule="self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding']",message="Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKey, KongKeySet, KongVault and KongPluginBinding kinds are supported for 'configuration.konghq.com' group"
+// +kubebuilder:validation:XValidation:rule="self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding', 'KongSNI']",message="Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding and KongSNI kinds are supported for 'configuration.konghq.com' group"
 // +kubebuilder:validation:XValidation:rule="self.group != 'gateway-operator.konghq.com' || self.kind in [ 'GatewayConfiguration' ]",message="Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com' group"
 // +kubebuilder:validation:XValidation:rule="self.kind == 'KongVault' ? self.__namespace__ == \"\" : self.__namespace__ != \"\"",message="namespace must be empty for KongVault and non-empty for other kinds"
 type ReferenceGrantFrom struct {
@@ -117,8 +117,8 @@ type ReferenceGrantFrom struct {
 // references.
 //
 // +kubebuilder:validation:XValidation:rule=".self.group != 'core' || .self.kind == 'Secret'",message="Only 'Secret' kind is supported for 'core' group"
-// +kubebuilder:validation:XValidation:rule=".self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration']",message="Only 'KonnectGatewayControlPlane' and 'KonnectAPIAuthConfiguration' kinds are supported for 'konnect.konghq.com' group"
-// +kubebuilder:validation:XValidation:rule=".self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService']",message="Only 'KongPlugin' and 'KongService' kinds are supported for 'configuration.konghq.com' group"
+// +kubebuilder:validation:XValidation:rule=".self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster']",message="Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener' and 'EventGatewayVirtualCluster' kinds are supported for 'konnect.konghq.com' group"
+// +kubebuilder:validation:XValidation:rule=".self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream']",message="Only 'KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate' and 'KongUpstream' kinds are supported for 'configuration.konghq.com' group"
 type ReferenceGrantTo struct {
 	// Group is the group of the referent.
 	//
@@ -138,8 +138,4 @@ type ReferenceGrantTo struct {
 	//
 	// +optional
 	Name *ObjectName `json:"name,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&KongReferenceGrant{}, &KongReferenceGrantList{})
 }

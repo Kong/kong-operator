@@ -1,0 +1,119 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1
+    description: Test Event Gateway CP
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: EventGatewayListener
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-listener-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1-listener-1
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - 8080
+      - 9090
+    description: Test Event Gateway Listener
+    labels:
+      app: test1
+      env: test
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cp-event-1-listener-1-tls
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: kubernetes.io/tls
+stringData:
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIICZTCCAg+gAwIBAgIUAeycZN0KBPaV1T6vC6tvVwh23OswDQYJKoZIhvcNAQEL
+    BQAwgYYxCzAJBgNVBAYTAlhYMRIwEAYDVQQIDAlTdGF0ZU5hbWUxETAPBgNVBAcM
+    CENpdHlOYW1lMRQwEgYDVQQKDAtDb21wYW55TmFtZTEbMBkGA1UECwwSQ29tcGFu
+    eVNlY3Rpb25OYW1lMR0wGwYDVQQDDBRDb21tb25OYW1lT3JIb3N0bmFtZTAeFw0y
+    NjA1MjExMTA2MjZaFw0zNjA1MTgxMTA2MjZaMIGGMQswCQYDVQQGEwJYWDESMBAG
+    A1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5TmFtZTEUMBIGA1UECgwLQ29t
+    cGFueU5hbWUxGzAZBgNVBAsMEkNvbXBhbnlTZWN0aW9uTmFtZTEdMBsGA1UEAwwU
+    Q29tbW9uTmFtZU9ySG9zdG5hbWUwXDANBgkqhkiG9w0BAQEFAANLADBIAkEAyAlr
+    VwkAPON1Q65b3euskPQZ+CK1KmkttKnIkuuFEl4CW9alzgEcutdwlQagCS1vjhYD
+    l325eusQMaKvbJw1NwIDAQABo1MwUTAdBgNVHQ4EFgQU4mDM/L+zh8HTa6xX3fpD
+    Lkp/MiMwHwYDVR0jBBgwFoAU4mDM/L+zh8HTa6xX3fpDLkp/MiMwDwYDVR0TAQH/
+    BAUwAwEB/zANBgkqhkiG9w0BAQsFAANBADza7gIm0T6kPXgByadm4E2B3JtOpXLP
+    oxauUevvvMTAn/URIZ8kp4s1WC0Lq05kN2GYUTKD8wew6PsBdZ2/X6g=
+    -----END CERTIFICATE-----
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEAyAlrVwkAPON1Q65b
+    3euskPQZ+CK1KmkttKnIkuuFEl4CW9alzgEcutdwlQagCS1vjhYDl325eusQMaKv
+    bJw1NwIDAQABAkAaV1MxNNg5LGKmtPEX+g7RT7OTv05H9W21Wp406pqtXkQoO0iG
+    LZ16fOZeQ1qjeKg2Rw9UdG1UOVOJimJSCaUhAiEA52R5gaynVLuL1rSx7vPTepCF
+    MQ8XY2mkV3Fy4oLpiSkCIQDdT03uRshRwO4xixW30oJ8w67pzcLk6OnwnKbQ/na3
+    XwIhALtvYRmQoM77SLA4GLYmHlV3Ad0Wi2yE45HNnTEsuD3ZAiBJ8zT8OOS5BLnT
+    DkGskggOPqkU8S99pCJ/xyiqz0zGCwIgB2EcOOUJqTjLmUvVueNn6uJwWhrZ5FOl
+    ekjT6oKUX80=
+    -----END PRIVATE KEY-----
+---
+kind: EventGatewayListenerPolicy
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-listener-1
+  namespace: default
+spec:
+  apiSpec:
+    type: tlsServer
+    tlsServer:
+      name: cp-event-1-listener-1-policy-1
+      description: Test Event Gateway Listener Policy from Kong Operator
+      enabled: Enabled
+      labels:
+        app: test1
+        env: test
+      config:
+        allowPlaintext: Enabled
+        versions:
+          min: TLSv1.2
+          max: TLSv1.3
+        certificates:
+          - certificate:
+              type: secretRef
+              secretRef:
+                name: cp-event-1-listener-1-tls
+            key:
+              type: secretRef
+              secretRef:
+                name: cp-event-1-listener-1-tls
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1-listener-1

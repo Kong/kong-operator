@@ -66,7 +66,7 @@ func SetStatusConditions[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePt
 			Conditions:     conditions,
 		})
 		// We are done, return.
-		setParentRefStatus[T](route, parentStatus)
+		setParentRefStatus(route, parentStatus)
 		return true
 	}
 
@@ -121,7 +121,7 @@ func SetStatusConditions[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePt
 	}
 
 	if updated {
-		setParentRefStatus[T](route, parentStatus)
+		setParentRefStatus(route, parentStatus)
 	}
 	return updated
 }
@@ -181,7 +181,7 @@ func CleanupOrphanedParentStatus[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 
 	// Update the route status if we removed any entries
 	if removed {
-		setParentRefStatus[T](route, filteredParents)
+		setParentRefStatus(route, filteredParents)
 	}
 
 	return removed
@@ -218,21 +218,30 @@ func RemoveStatusForParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 		filteredParents = append(filteredParents, parentStatus)
 	}
 	if removed {
-		setParentRefStatus[T](route, filteredParents)
+		setParentRefStatus(route, filteredParents)
 	}
 	return removed
 }
 
 func getParentStatus[T gwtypes.SupportedRoute](route T) []gwtypes.RouteParentStatus {
-	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
+	switch r := any(route).(type) {
+	case gwtypes.HTTPRoute:
+		return r.Status.Parents
+	case gwtypes.TLSRoute:
 		return r.Status.Parents
 	}
 	return nil
 }
 
 func setParentRefStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](route TPtr, parentStatus []gwtypes.RouteParentStatus) {
-	if r, ok := any(route).(*gwtypes.HTTPRoute); ok {
+	switch r := any(route).(type) {
+	case *gwtypes.HTTPRoute:
 		r.Status.Parents = parentStatus
+	case *gwtypes.TLSRoute:
+		r.Status.Parents = parentStatus
+	// Should be unreachable.
+	default:
+		panic(fmt.Sprintf("Not supported type: %T", route))
 	}
 }
 
@@ -321,7 +330,7 @@ func isConditionEqual(a, b metav1.Condition) bool {
 		a.ObservedGeneration == b.ObservedGeneration
 }
 
-// BuildAcceptedCondition builds the "Accepted" condition for a given HTTPRoute and ParentReference.
+// BuildAcceptedCondition builds the "Accepted" condition for a given route and ParentReference.
 // It validates whether the route can be accepted by the gateway by checking multiple criteria
 // in sequence, returning the first failure condition encountered or a success condition if all checks pass.
 //
@@ -335,7 +344,7 @@ func isConditionEqual(a, b metav1.Condition) bool {
 //   - logger: Logger for debugging information
 //   - cl: The Kubernetes client for API operations
 //   - gateway: The Gateway object associated with the ParentReference
-//   - route: The HTTPRoute to validate for acceptance
+//   - route: The route to validate for acceptance
 //   - pRef: The ParentReference being evaluated
 //
 // Returns:
@@ -349,11 +358,11 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 	ctx context.Context, logger logr.Logger, cl client.Client, gateway *gwtypes.Gateway,
 	route TPtr, pRef gwtypes.ParentReference) (*metav1.Condition, error) {
 	// Begin by excluding listeners that do not match the specified section name.
-	listeners, cond := FilterMatchingListeners(logger, gateway, pRef, gateway.Spec.Listeners)
+	listeners, cond := FilterMatchingListeners(logger, gateway, route.GetObjectKind().GroupVersionKind().Kind, pRef, gateway.Spec.Listeners)
 	if cond != nil {
 		log.Debug(logger, "No matching listeners for ParentReference", "parentRef", pRef, "gateway", gateway.Name)
 		// Return the condition indicating no matching listeners.
-		return SetConditionMeta[T](*cond, route), nil
+		return SetConditionMeta(*cond, route), nil
 	}
 
 	// If we have listeners that match, we check the allowed routes.
@@ -363,7 +372,7 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 		return nil, fmt.Errorf("failed to get namespace %s for route %s while building accepted condition for gateway %s: %w",
 			route.GetNamespace(), client.ObjectKeyFromObject(route), client.ObjectKeyFromObject(gateway), err)
 	}
-	// Prepare the RouteGroupKind for the HTTPRoute.
+	// Prepare the RouteGroupKind for the route.
 	rgk := GetRouteGroupKind(route)
 	// Filter listeners by allowed routes.
 	listeners, cond, err := FilterListenersByAllowedRoutes(logger, gateway, pRef, listeners, rgk, &routeNamespace)
@@ -372,14 +381,14 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 	}
 	if cond != nil {
 		log.Debug(logger, "Listeners do not allow route", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
-		return SetConditionMeta[T](*cond, route), nil
+		return SetConditionMeta(*cond, route), nil
 	}
 
 	// If we have listeners that allow the route, we check the hostnames.
-	_, cond = FilterListenersByHostnames(logger, listeners, getSpecHostnames(*route))
+	_, cond = FilterListenersByHostnames(logger, listeners, gwtypes.GetSpecHostnames(*route))
 	if cond != nil {
 		log.Debug(logger, "Listeners do not match hostnames", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
-		return SetConditionMeta[T](*cond, route), nil
+		return SetConditionMeta(*cond, route), nil
 	}
 
 	// If we have listeners that match the hostnames, we can accept the route.
@@ -390,15 +399,7 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 		Reason:  string(gwtypes.RouteReasonAccepted),
 		Message: "The route is accepted by the gateway",
 	}
-	return SetConditionMeta[T](*cond, route), nil
-}
-
-// getSpecHostnames returns the hostnames in the route spec.
-func getSpecHostnames[T gwtypes.SupportedRoute](route T) []gwtypes.Hostname {
-	if r, ok := any(route).(gwtypes.HTTPRoute); ok {
-		return r.Spec.Hostnames
-	}
-	return []gwtypes.Hostname{}
+	return SetConditionMeta(*cond, route), nil
 }
 
 // BuildProgrammedCondition evaluates the programmed status of all resources associated with a route and gateway.
@@ -429,6 +430,9 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 
 	// Skip setting programmed conditions for KongPlugins because they lack a status field.
 	expectedGVKs = FilterOutGVKByKind(expectedGVKs, "KongPlugin")
+	// Skip KongReferenceGrant: it is a passive local policy object (not synced to Konnect)
+	// and carries no Programmed condition. Its absence is surfaced indirectly via KongCertificate.ResolvedRefs=False.
+	expectedGVKs = FilterOutGVKByKind(expectedGVKs, "KongReferenceGrant")
 
 	// For each expected GVK, list resources owned by the route and gateway.
 	for _, gvk := range expectedGVKs {
@@ -453,7 +457,7 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 			// Check if the item is programmed.
 			prog := isProgrammed(&item)
 			log.Debug(logger, "Resource programmed status", "gvk", gvk.String(), "name", item.GetName(), "namespace", item.GetNamespace(), "programmed", prog)
-			conditions = append(conditions, *SetConditionMeta[T](GetProgrammedConditionForGVK(gvk, prog), route))
+			conditions = append(conditions, *SetConditionMeta(GetProgrammedConditionForGVK(gvk, prog), route))
 		}
 	}
 
@@ -551,6 +555,49 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 		}
 	}
 
+	return SetConditionMeta(*cond, route), nil
+}
+
+// BuildResolvedRefsConditionForTLSRoute evaluates all BackendRefs in an TLSRoute to determine if their
+// references are valid and permitted.
+// It checks that each BackendRef:
+//   - Has a supported group/kind
+//   - Exists in the target namespace
+//   - Is permitted by ReferenceGrant if referencing a different namespace
+//
+// Returns a condition indicating whether all references are resolved, or details about the first failure encountered.
+//
+// Parameters:
+//   - ctx: Context for API calls
+//   - logger: Logger for debugging information
+//   - cl: Kubernetes client for resource operations
+//   - route: The TLSRoute whose BackendRefs are being checked
+//
+// Returns:
+//   - *metav1.Condition: Condition indicating resolved refs status
+//   - error: Any error encountered during evaluation
+func BuildResolvedRefsConditionForTLSRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.TLSRoute) (*metav1.Condition, error) {
+	cond := &metav1.Condition{
+		Type:    string(gwtypes.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(gwtypes.RouteReasonResolvedRefs),
+		Message: "All references resolved",
+	}
+	for _, rule := range route.Spec.Rules {
+		for _, bRef := range rule.BackendRefs {
+			// BackendRef namespace.
+			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef)
+			if err != nil {
+				return nil, err
+			}
+			if bRefValidCond.Status != metav1.ConditionTrue {
+				cond.Status = bRefValidCond.Status
+				cond.Reason = bRefValidCond.Reason
+				cond.Message = bRefValidCond.Message
+				return SetConditionMeta(*cond, route), nil
+			}
+		}
+	}
 	return SetConditionMeta(*cond, route), nil
 }
 
@@ -695,11 +742,12 @@ func isProgrammed(obj *unstructured.Unstructured) bool {
 // The function performs the following checks for each listener:
 // 1. Matches the section name specified in the ParentReference (if any)
 // 2. Matches the port specified in the ParentReference (if any)
-// 3. Supports HTTP/HTTPS protocol with appropriate TLS termination mode
+// 3. Supports the protocol with appropriate TLS mode
 // 4. Is in a "Programmed" (ready) state according to the Gateway status
 //
 // Parameters:
 //   - gw: The Gateway object containing the listeners and their status
+//   - routeKind: The kind of the route
 //   - logger: Logger for debugging information
 //   - pRef: The ParentReference specifying matching criteria
 //   - listeners: The list of listeners from the Gateway spec to filter
@@ -710,7 +758,7 @@ func isProgrammed(obj *unstructured.Unstructured) bool {
 //
 // The returned condition will have status "False" with reason "NoMatchingParent" if no listeners
 // match the criteria. If listeners match but are not ready, the message will indicate this distinction.
-func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtypes.ParentReference, listeners []gwtypes.Listener) ([]gwtypes.Listener, *metav1.Condition) {
+func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind string, pRef gwtypes.ParentReference, listeners []gwtypes.Listener) ([]gwtypes.Listener, *metav1.Condition) {
 	var matchingListeners []gwtypes.Listener
 	var matchedNotReady bool
 	for _, listener := range listeners {
@@ -721,17 +769,6 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtyp
 
 		// Check if the parent reference port matches the listener port, if specified.
 		if pRef.Port != nil && *pRef.Port != listener.Port {
-			continue
-		}
-
-		// Check if the protocol matches.
-		// HTTPRoutes support Terminate only
-		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
-		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
-		if listener.Protocol != gwtypes.HTTPProtocolType && listener.Protocol != gwtypes.HTTPSProtocolType {
-			continue
-		}
-		if listener.TLS != nil && *listener.TLS.Mode != gwtypes.TLSModeTerminate {
 			continue
 		}
 
@@ -776,6 +813,28 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtyp
 	return matchingListeners, nil
 }
 
+// isListenerValidForKind filters listeners that is valid for the given route kind.
+func isListenerValidForKind(routeKind string, listener gwtypes.Listener) bool {
+	switch routeKind {
+	case "HTTPRoute":
+		// Check if the protocol matches.
+		// HTTPRoutes support Terminate only
+		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
+		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
+		if listener.Protocol != gwtypes.HTTPProtocolType && listener.Protocol != gwtypes.HTTPSProtocolType {
+			return false
+		}
+		if listener.TLS != nil && *listener.TLS.Mode != gwtypes.TLSModeTerminate {
+			return false
+		}
+		return true
+	case "TLSRoute":
+		return listener.Protocol == gwtypes.TLSProtocolType && listener.TLS != nil
+	}
+	// Not supported kinds. Should be unreachable.
+	return false
+}
+
 // FilterListenersByAllowedRoutes filters the provided listeners to find those that allow the given HTTPRoute based on its kind and namespace.
 // The function checks each listener's AllowedRoutes configuration to determine if the route is permitted.
 //
@@ -800,6 +859,13 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 	var matchingListeners []gwtypes.Listener
 
 	for _, listener := range listeners {
+		// Check if the listener is valid for the route kind. If not, skip this listener.
+		// We check the whether the listener is valid for the route here because the conformance tests requires
+		// the Accepted condition to have "NotAllowedByListeners" reason.
+		if !isListenerValidForKind(string(rgk.Kind), listener) {
+			continue
+		}
+
 		if listener.AllowedRoutes == nil {
 			// If AllowedRoutes is nil, all routes are allowed.
 			log.Debug(logger, "Listener allows all routes (AllowedRoutes is nil)", "listener", listener.Name)
@@ -908,8 +974,28 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 // The returned condition will have status "False" with reason "NoMatchingListenerHostname" if no listeners
 // have hostname intersection with the route. If matching listeners are found, the condition will be nil.
 func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener, hostnames []gwtypes.Hostname) ([]gwtypes.Listener, *metav1.Condition) {
+	if len(hostnames) == 0 {
+		if len(listeners) == 0 {
+			log.Debug(logger, "No listeners available for route hostnames")
+			return nil, &metav1.Condition{
+				Type:    string(gwtypes.RouteConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gwtypes.RouteReasonNoMatchingListenerHostname),
+				Message: "No Gateway Listener hostname matches this route",
+			}
+		}
+		log.Debug(logger, "Route has no hostnames; all listeners match", "listenerCount", len(listeners))
+		return listeners, nil
+	}
+
 	var matchingListeners []gwtypes.Listener
 	for _, listener := range listeners {
+		if len(hostnames) == 0 {
+			log.Debug(logger, "Route has no hostnames; listener matches all hostnames", "listener", listener.Name)
+			matchingListeners = append(matchingListeners, listener)
+			continue
+		}
+
 		// If the listener has no hostname, it matches all hostnames.
 		if listener.Hostname == nil || *listener.Hostname == "" {
 			log.Debug(logger, "Listener matches all hostnames (wildcard)", "listener", listener.Name)
@@ -920,7 +1006,7 @@ func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener
 		// Check if any of the route hostnames match the listener hostname.
 		for _, hostname := range hostnames {
 			routeHostname := string(hostname)
-			if intersection := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
+			if _, ok := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); ok {
 				log.Debug(logger, "Listener matches route hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname, "routeHostname", routeHostname)
 				matchingListeners = append(matchingListeners, listener)
 				break

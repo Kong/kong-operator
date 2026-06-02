@@ -126,12 +126,21 @@ type Config struct {
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
 
+	// Controllers for Event Gateway APIs.
+	KEGDataPlaneControllerEnabled bool
+
 	// FeatureGates holds the set of feature gates enabled via the --feature-gates flag.
 	FeatureGates FeatureGates
 
 	// Webhook options.
 	ConversionWebhookEnabled bool
 	ValidatingWebhookEnabled bool
+
+	// CertTTL is the time-to-live for certificates issued by the operator.
+	CertTTL time.Duration
+	// CertExpirationMargin is the duration before certificate expiration at which
+	// the secret_cert controller will trigger certificate renewal.
+	CertExpirationMargin time.Duration
 }
 
 const (
@@ -172,6 +181,8 @@ func DefaultConfig() Config {
 		ValidatingWebhookEnabled:      true,
 		KonnectSyncPeriod:             consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:         consts.DefaultKonnectRequestTimeout,
+		CertTTL:                       consts.DefaultCertTTL,
+		CertExpirationMargin:          consts.DefaultCertExpirationMargin,
 	}
 }
 

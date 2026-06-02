@@ -378,6 +378,16 @@ func TestSDKErrorIsConflict(t *testing.T) {
 			},
 			want: false,
 		},
+
+		{
+			name: "SDKError with conflict code",
+			err: &sdkkonnecterrs.SDKError{
+				Body:       "{\"status\":409,\"title\":\"Conflict\",\"instance\":\"kong:trace:3542252681634544464\",\"detail\":\"hostname: portal1.customdomain.com already in use\"}",
+				StatusCode: 409,
+				Message:    "API error occurred",
+			},
+			want: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -558,56 +568,6 @@ func TestErrorIsDataPlaneGroupBadRequestPreviousConfigNotFinishedProvisioning(t 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := errorIsDataPlaneGroupBadRequestPreviousConfigNotFinishedProvisioning(tt.err)
-			require.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestErrorIsConflictError(t *testing.T) {
-	tests := []struct {
-		name string
-		err  error
-		want bool
-	}{
-		{
-			name: "error is ConflictError with status 409",
-			err: &sdkkonnecterrs.ConflictError{
-				Status: 409.0,
-				Detail: "Key (org_id, name) already exists.",
-			},
-			want: true,
-		},
-		{
-			name: "error is ConflictError with non-409 status",
-			err: &sdkkonnecterrs.ConflictError{
-				Status: 400,
-				Detail: "Some other error",
-			},
-			want: false,
-		},
-		{
-			name: "error is not ConflictError",
-			err:  errors.New("some other error"),
-			want: false,
-		},
-		{
-			name: "error is SDKError",
-			err: &sdkkonnecterrs.SDKError{
-				StatusCode: 409,
-				Body:       "conflict error body",
-			},
-			want: false,
-		},
-		{
-			name: "error is nil",
-			err:  nil,
-			want: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ErrorIsConflictError(tt.err)
 			require.Equal(t, tt.want, got)
 		})
 	}

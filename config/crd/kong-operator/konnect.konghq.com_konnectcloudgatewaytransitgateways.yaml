@@ -424,6 +424,7 @@ spec:
                 description: |-
                   ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                   If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
                 type: string
               networkID:
                 description: NetworkID is the Konnect ID of the Konnect cloud gateway
@@ -432,10 +433,12 @@ spec:
               organizationID:
                 description: OrgID is ID of Konnect Org that this entity has been
                   created in.
+                maxLength: 256
                 type: string
               serverURL:
                 description: ServerURL is the URL of the Konnect server in which the
                   entity exists.
+                maxLength: 512
                 type: string
               state:
                 description: State is the state of the transit gateway on Konnect

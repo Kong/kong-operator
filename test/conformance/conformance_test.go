@@ -68,6 +68,12 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatalf("unsupported KONG_TEST_CONFORMANCE_GATEWAY_TYPE: %s", gwType)
 	}
 
+	// hybrid gateway does not support expressions router flavor since we do not support expression routes in KongRoute:
+	// https://github.com/Kong/kong-operator/issues/2673
+	if gwType == hybridGateway && kongRouterFlavor == consts.RouterFlavorExpressions {
+		t.Skipf("hybrid gateway does not support expressions router flavor yet, skipping: https://github.com/Kong/kong-operator/issues/2673")
+	}
+
 	if gwType == hybridGateway && test.KonnectAccessToken() == "" {
 		t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
 	}
@@ -221,7 +227,8 @@ func createGatewayConfiguration(
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Name: consts.DataPlaneProxyContainerName,
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: test.DataPlaneImage(),
 										ReadinessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,
@@ -232,8 +239,8 @@ func createGatewayConfiguration(
 												corev1.ResourceMemory: resource.MustParse("128Mi"),
 											},
 											Limits: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("500m"),
-												corev1.ResourceMemory: resource.MustParse("1024Mi"),
+												corev1.ResourceCPU:    resource.MustParse("2000m"),
+												corev1.ResourceMemory: resource.MustParse("2048Mi"),
 											},
 										},
 										Env: []corev1.EnvVar{

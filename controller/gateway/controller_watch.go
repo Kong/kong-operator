@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +16,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -394,28 +394,19 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 	return recs
 }
 
-// listGatewaysAttachedByHTTPRoute is a watch predicate which finds all Gateways mentioned
-// in HTTPRoutes' Parents field.
-func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := ctrllog.FromContext(ctx)
+// listGatewaysAttachedByRoute is the generic method to list gateways attached to the given route with supported type.
+func listGatewaysAttachedByRoute[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, logger logr.Logger, cl client.Client, route TPtr) []reconcile.Request {
 
-	httpRoute, ok := obj.(*gatewayv1beta1.HTTPRoute)
-	if !ok {
-		logger.Error(
-			fmt.Errorf("unexpected object type"),
-			"HTTPRoute watch predicate received unexpected object type",
-			"expected", "*gatewayapi.HTTPRoute", "found", reflect.TypeOf(obj),
-		)
-		return nil
-	}
 	gateways := &gatewayv1.GatewayList{}
-	if err := r.List(ctx, gateways); err != nil {
-		logger.Error(err, "Failed to list gateways in watch", "HTTPRoute", httpRoute.Name)
+	if err := cl.List(ctx, gateways); err != nil {
+		// Log kind and namespace/name of the object.
+		logger.Error(err, "Failed to list gateways in watch", route.GetObjectKind().GroupVersionKind().Kind, client.ObjectKeyFromObject(route))
 		return nil
 	}
 	var recs []reconcile.Request
 	for _, gateway := range gateways.Items {
-		for _, parentRef := range httpRoute.Spec.ParentRefs {
+		for _, parentRef := range gwtypes.GetSpecParentRefs(*route) {
 			if parentRef.Group != nil && string(*parentRef.Group) == gatewayv1.GroupName &&
 				parentRef.Kind != nil && string(*parentRef.Kind) == "Gateway" &&
 				string(parentRef.Name) == gateway.Name {
@@ -429,6 +420,38 @@ func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj cl
 		}
 	}
 	return recs
+}
+
+// listGatewaysAttachedByHTTPRoute is a watch predicate which finds all Gateways mentioned
+// in HTTPRoutes' Parents field.
+func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	httpRoute, ok := obj.(*gatewayv1.HTTPRoute)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"HTTPRoute watch predicate received unexpected object type",
+			"expected", "*gatewayapi.HTTPRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	return listGatewaysAttachedByRoute(ctx, logger, r.Client, httpRoute)
+}
+
+func (r *Reconciler) listGatewaysAttachedByTLSRoute(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	tlsRoute, ok := obj.(*gatewayv1.TLSRoute)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"TLSRoute watch predicate received unexpected object type",
+			"expected", "*gatewayapi.TLSRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	return listGatewaysAttachedByRoute(ctx, logger, r.Client, tlsRoute)
 }
 
 // -----------------------------------------------------------------------------

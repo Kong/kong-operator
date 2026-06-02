@@ -17,6 +17,37 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 )
 
+func getAPIAuthConfigurationRefNN(
+	ctx context.Context,
+	cl client.Client,
+	from client.Object,
+	name string,
+	namespace *string,
+) (types.NamespacedName, error) {
+	apiAuthNamespace := from.GetNamespace()
+	if namespace != nil && *namespace != "" {
+		apiAuthNamespace = *namespace
+	}
+	if apiAuthNamespace != from.GetNamespace() {
+		if err := crossnamespace.CheckKongReferenceGrantForResource(
+			ctx,
+			cl,
+			from.GetNamespace(),
+			apiAuthNamespace,
+			name,
+			metav1.GroupVersionKind(from.GetObjectKind().GroupVersionKind()),
+			metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectAPIAuthConfiguration")),
+		); err != nil {
+			return types.NamespacedName{}, err
+		}
+	}
+
+	return types.NamespacedName{
+		Name:      name,
+		Namespace: apiAuthNamespace,
+	}, nil
+}
+
 func getCPAuthRefForRef(
 	ctx context.Context,
 	cl client.Client,
@@ -28,58 +59,20 @@ func getCPAuthRefForRef(
 		return types.NamespacedName{}, err
 	}
 
-	apiAuthNamespace := namespace
-	if cp.GetKonnectAPIAuthConfigurationRef().Namespace != nil && *cp.GetKonnectAPIAuthConfigurationRef().Namespace != namespace {
-		apiAuthNamespace = *cp.GetKonnectAPIAuthConfigurationRef().Namespace
-		if err := crossnamespace.CheckKongReferenceGrantForResource(
-			ctx,
-			cl,
-			namespace,
-			apiAuthNamespace,
-			cp.GetKonnectAPIAuthConfigurationRef().Name,
-			metav1.GroupVersionKind(cp.GetObjectKind().GroupVersionKind()),
-			metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectAPIAuthConfiguration")),
-		); err != nil {
-			return types.NamespacedName{}, err
-		}
-	}
-
-	return types.NamespacedName{
-		Name:      cp.GetKonnectAPIAuthConfigurationRef().Name,
-		Namespace: apiAuthNamespace,
-	}, nil
+	ref := cp.GetKonnectAPIAuthConfigurationRef()
+	return getAPIAuthConfigurationRefNN(ctx, cl, cp, ref.Name, ref.Namespace)
 }
 
-func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+// GetAPIAuthRefNN returns the NamespacedName of the KonnectAPIAuthConfiguration referenced by the entity.
+func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	ctx context.Context,
 	cl client.Client,
 	ent TEnt,
 ) (types.NamespacedName, error) {
 	// If the entity has a KonnectAPIAuthConfigurationRef, return it.
 	if ref, ok := any(ent).(constraints.EntityWithKonnectAPIAuthConfigurationRef); ok {
-		apiAuthNamespace := ent.GetNamespace()
-		if ref.GetKonnectAPIAuthConfigurationRef().Namespace != nil && *ref.GetKonnectAPIAuthConfigurationRef().Namespace != ent.GetNamespace() {
-			apiAuthNamespace = *ref.GetKonnectAPIAuthConfigurationRef().Namespace
-			if err := crossnamespace.CheckKongReferenceGrantForResource(
-				ctx,
-				cl,
-				ent.GetNamespace(),
-				apiAuthNamespace,
-				ref.GetKonnectAPIAuthConfigurationRef().Name,
-				metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
-				metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectAPIAuthConfiguration")),
-			); err != nil {
-				return types.NamespacedName{}, err
-			}
-		}
-		return types.NamespacedName{
-			Name: ref.GetKonnectAPIAuthConfigurationRef().Name,
-			// X-namespace refs supported for KonnectGatewayControlPlane entities only.
-			// This is ensured at the CRD level, as the namespace field is only
-			// defined for KonnectGatewayControlPlane entities. For other entities,
-			// the field is not defined, so it will always be nil.
-			Namespace: apiAuthNamespace,
-		}, nil
+		authRef := ref.GetKonnectAPIAuthConfigurationRef()
+		return getAPIAuthConfigurationRefNN(ctx, cl, ent, authRef.Name, authRef.Namespace)
 	}
 
 	// If the entity has a ControlPlaneRef, get the KonnectAPIAuthConfiguration
@@ -101,10 +94,15 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		if svcRef.Type != configurationv1alpha1.ServiceRefNamespacedRef {
 			return types.NamespacedName{}, fmt.Errorf("unsupported KongService ref type %q", svcRef.Type)
 		}
-		// TODO(pmalek): handle cross namespace refs
+		// Cross-namespace grant validation for the serviceRef is performed by
+		// handleKongServiceRef before this function is reached; see reconciler_generic.go.
+		svcNamespace := ent.GetNamespace()
+		if svcRef.NamespacedRef.Namespace != nil {
+			svcNamespace = *svcRef.NamespacedRef.Namespace
+		}
 		nn := types.NamespacedName{
 			Name:      svcRef.NamespacedRef.Name,
-			Namespace: ent.GetNamespace(),
+			Namespace: svcNamespace,
 		}
 
 		var svc configurationv1alpha1.KongService
@@ -116,7 +114,7 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		if !ok {
 			return types.NamespacedName{}, fmt.Errorf("KongService %s does not have a ControlPlaneRef", nn)
 		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+		return getCPAuthRefForRef(ctx, cl, cpRef, svc.Namespace)
 	}
 
 	// If the entity has a KongConsumerRef, get the KonnectAPIAuthConfiguration
@@ -145,9 +143,13 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	// ref from the referenced KongUpstream.
 	upstreamRef, ok := getKongUpstreamRef(ent).Get()
 	if ok {
+		upstreamNamespace := ent.GetNamespace()
+		if upstreamRef.Namespace != nil && *upstreamRef.Namespace != "" {
+			upstreamNamespace = *upstreamRef.Namespace
+		}
 		nn := types.NamespacedName{
 			Name:      upstreamRef.Name,
-			Namespace: ent.GetNamespace(),
+			Namespace: upstreamNamespace,
 		}
 
 		var upstream configurationv1alpha1.KongUpstream
@@ -159,16 +161,20 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		if !ok {
 			return types.NamespacedName{}, fmt.Errorf("KongUpstream %s does not have a ControlPlaneRef", nn)
 		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+		return getCPAuthRefForRef(ctx, cl, cpRef, upstreamNamespace)
 	}
 
 	// If the entity has a KongCertificateRef, get the KonnectAPIAuthConfiguration
 	// ref from the referenced KongUpstream.
 	certificateRef, ok := getKongCertificateRef(ent).Get()
 	if ok {
+		certNamespace := ent.GetNamespace()
+		if certificateRef.Namespace != nil && *certificateRef.Namespace != "" {
+			certNamespace = *certificateRef.Namespace
+		}
 		nn := types.NamespacedName{
 			Name:      certificateRef.Name,
-			Namespace: ent.GetNamespace(),
+			Namespace: certNamespace,
 		}
 
 		var cert configurationv1alpha1.KongCertificate
@@ -180,7 +186,7 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		if !ok {
 			return types.NamespacedName{}, fmt.Errorf("KongCertificate %s does not have a ControlPlaneRef", nn)
 		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+		return getCPAuthRefForRef(ctx, cl, cpRef, certNamespace)
 	}
 
 	// If the entity has a NetworkRef, get the KonnectAPIAuthConfiguration
@@ -214,8 +220,13 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		}, nil
 	}
 
-	return types.NamespacedName{}, fmt.Errorf(
-		"cannot get KonnectAPIAuthConfiguration for entity type %T %s",
-		client.ObjectKeyFromObject(ent), ent,
-	)
+	nn, err := getAPIAuthRef(ctx, cl, ent)
+	if err != nil {
+		return types.NamespacedName{}, fmt.Errorf(
+			"cannot get KonnectAPIAuthConfiguration for entity %T %s: %w",
+			ent, client.ObjectKeyFromObject(ent), err,
+		)
+	}
+
+	return nn, nil
 }

@@ -259,3 +259,28 @@ func TestKongUpstreamBuilder_ErrorAccumulation(t *testing.T) {
 	assert.Equal(t, "test-upstream", builder.upstream.Name)
 	assert.Equal(t, "test-spec", builder.upstream.Spec.Name)
 }
+
+func TestKongUpstreamBuilder_WithHostHeader(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *string
+		expected *string
+	}{
+		{name: "nil leaves field unset", input: nil, expected: nil},
+		{name: "hostname sets field", input: new("my-service.example.com"), expected: new("my-service.example.com")},
+		{name: "IP sets field", input: new("10.0.0.1"), expected: new("10.0.0.1")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			upstream, err := NewKongUpstream().WithHostHeader(tt.input).Build()
+			require.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, upstream.Spec.HostHeader)
+			} else {
+				require.NotNil(t, upstream.Spec.HostHeader)
+				assert.Equal(t, *tt.expected, *upstream.Spec.HostHeader)
+			}
+		})
+	}
+}

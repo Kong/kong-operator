@@ -23,12 +23,19 @@ func TestSetupControllers(t *testing.T) {
 	controllerDefs, err := manager.SetupControllers(mgr, &cfg, nil)
 	require.NoError(t, err)
 
-	const expectedControllerCount = 45
+	const expectedControllerCount = 65
 	require.Len(t, controllerDefs, expectedControllerCount)
 
 	seenControllerTypes := make(map[string]int, expectedControllerCount)
 	for _, def := range controllerDefs {
-		seenControllerTypes[reflect.TypeOf(def.Controller).String()]++
+		// Use PkgPath + Name instead of reflect.Type.String() so that two
+		// controllers with the same struct name in different packages
+		// (e.g. controller/dataplane.Reconciler and
+		// controller/eventgateway/dataplane.Reconciler) are treated as
+		// distinct types rather than false duplicates.
+		elem := reflect.TypeOf(def.Controller).Elem()
+		key := elem.PkgPath() + "." + elem.Name()
+		seenControllerTypes[key]++
 	}
 	duplicates := make(map[string]int)
 	for typeName, count := range seenControllerTypes {

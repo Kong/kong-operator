@@ -204,6 +204,106 @@ func TestKongRoute(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("id immutability", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongRoute]{
+			{
+				Name: "creating with id is allowed",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc"},
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							ID:    new("my-id"),
+							Paths: []string{"/"},
+						},
+					},
+				},
+			},
+			{
+				Name: "keeping the same id on update is allowed",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc"},
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							ID:    new("my-id"),
+							Paths: []string{"/"},
+						},
+					},
+				},
+				Update: func(kr *configurationv1alpha1.KongRoute) {
+					kr.Spec.Paths = []string{"/updated"}
+				},
+			},
+			{
+				Name: "changing id on update is not allowed",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc"},
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							ID:    new("my-id"),
+							Paths: []string{"/"},
+						},
+					},
+				},
+				Update: func(kr *configurationv1alpha1.KongRoute) {
+					kr.Spec.ID = new("another-id")
+				},
+				ExpectedUpdateErrorMessage: new("spec.id is immutable"),
+			},
+			{
+				Name: "removing id on update is not allowed",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc"},
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							ID:    new("my-id"),
+							Paths: []string{"/"},
+						},
+					},
+				},
+				Update: func(kr *configurationv1alpha1.KongRoute) {
+					kr.Spec.ID = nil
+				},
+				ExpectedUpdateErrorMessage: new("spec.id is immutable"),
+			},
+			{
+				Name: "setting id after creation without one is not allowed",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc"},
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							Paths: []string{"/"},
+						},
+					},
+				},
+				Update: func(kr *configurationv1alpha1.KongRoute) {
+					kr.Spec.ID = new("new-id")
+				},
+				ExpectedUpdateErrorMessage: new("spec.id is immutable"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("tags validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongRoute]{
 			{

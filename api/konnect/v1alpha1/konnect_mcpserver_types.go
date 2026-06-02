@@ -20,10 +20,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
-func init() {
-	SchemeBuilder.Register(&MCPServer{}, &MCPServerList{})
-}
-
 // MCPServer is the Schema for the MCPServer API.
 //
 // +genclient
@@ -35,6 +31,8 @@ func init() {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
+// +kubebuilder:printcolumn:name="Konnect Name",description="Konnect Name",type=string,JSONPath=`.status.konnectSpec.name`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable."
 // +kong:channels=kong-operator
 type MCPServer struct {
@@ -90,6 +88,11 @@ type MCPServerStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"` //nolint:embeddedstructfieldcheck
+
+	// KonnectSpec holds MCPServer-specific status fields related to its state on Konnect, such as the remote name and version.
+	//
+	// +optional
+	KonnectSpec *MCPServerKonnectSpec `json:"konnectSpec,omitempty"`
 }
 
 // MCPServerList contains a list of MCPServer resources.
@@ -100,4 +103,16 @@ type MCPServerList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []MCPServer `json:"items"`
+}
+
+// MCPServerKonnectSpec defines the observed state of the MCPServer on Konnect.
+type MCPServerKonnectSpec struct {
+	// Name is the name of the MCPServer on Konnect.
+	//
+	// +optional
+	Name *string `json:"name,omitempty"`
+	// Version is the version of the MCPServer on Konnect.
+	//
+	// +optional
+	Version *string `json:"version,omitempty"`
 }

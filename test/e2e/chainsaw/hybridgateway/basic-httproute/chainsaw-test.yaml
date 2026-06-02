@@ -52,6 +52,8 @@ spec:
       value: (join('-', [($test_name), 'echo']))
     - name: echo_deployment_namespace
       value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
     - name: httpbin_deployment_name
       value: (join('-', [($test_name), 'httpbin']))
     - name: httpbin_deployment_namespace
@@ -149,6 +151,8 @@ spec:
             - "/echo/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     
@@ -179,6 +183,9 @@ spec:
       description: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
       use:
         template: ../../common/_step_templates/verify-gateway-tls-fingerprint.yaml
+      bindings:
+        - name: proxy_port
+          value: "443"
 
     # Step 16: Verify that the dataplane is configured, traffic can be routed, and TLS certificates are working.
     # The verification is done by sending an HTTPS request to the gateway and checking the response from the host.
@@ -291,6 +298,8 @@ spec:
             - "~/get$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -304,6 +313,8 @@ spec:
             - "~/post$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -317,6 +328,8 @@ spec:
             - "~/put$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -330,6 +343,8 @@ spec:
             - "~/patch$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -343,6 +358,8 @@ spec:
             - "~/delete$"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
@@ -357,6 +374,8 @@ spec:
             - "/status/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     - name: Assert-kong-upstream-httpbin

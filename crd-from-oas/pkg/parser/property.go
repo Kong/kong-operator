@@ -66,6 +66,9 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	}
 	if len(schemaValue.Enum) > 0 {
 		prop.Enum = schemaValue.Enum
+	} else if schemaValue.Const != nil {
+		// OAS 3.1 const: treat as a single-element enum for kubebuilder validation.
+		prop.Enum = []any{schemaValue.Const}
 	}
 	if schemaValue.Default != nil {
 		prop.Default = schemaValue.Default
@@ -88,6 +91,12 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 		})
 	}
 
+	// Handle maxProperties (map size constraint)
+	if schemaValue.MaxProps != nil {
+		maxProps := int64(*schemaValue.MaxProps)
+		prop.MaxProperties = &maxProps
+	}
+
 	// Handle additionalProperties (map types)
 	if schemaValue.AdditionalProperties.Schema != nil {
 		prop.AdditionalProperties = ParseProperty("value", schemaValue.AdditionalProperties.Schema, depth+1, visited)
@@ -103,6 +112,29 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 			}
 			variantProp := ParseProperty(variantName, oneOfRef, depth+1, visited)
 			prop.OneOf = append(prop.OneOf, variantProp)
+		}
+	}
+
+	// Handle anyOf (union types without discriminator).
+	if len(schemaValue.AnyOf) > 0 {
+		for _, anyOfRef := range schemaValue.AnyOf {
+			variantName := "Variant"
+			if anyOfRef.Ref != "" {
+				variantName = extractRefName(anyOfRef.Ref)
+			}
+			variantProp := ParseProperty(variantName, anyOfRef, depth+1, visited)
+			prop.AnyOf = append(prop.AnyOf, variantProp)
+		}
+	}
+
+	// Capture discriminator info.
+	if schemaValue.Discriminator != nil {
+		prop.Discriminator = schemaValue.Discriminator.PropertyName
+		if len(schemaValue.Discriminator.Mapping) > 0 {
+			prop.DiscriminatorMapping = make(map[string]string, len(schemaValue.Discriminator.Mapping))
+			for value, mappingRef := range schemaValue.Discriminator.Mapping {
+				prop.DiscriminatorMapping[value] = extractRefName(mappingRef.Ref)
+			}
 		}
 	}
 

@@ -11,7 +11,7 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkretry "github.com/Kong/sdk-konnect-go/retry"
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -71,17 +71,17 @@ func CreateClientCertificate(ctx context.Context, t *testing.T, cpID string, tok
 
 	t.Cleanup(func() {
 		fmt.Printf("deleting DP client certificate: %q", certID)
-		err := retry.Do(
+		if err := retry.New(
+			retry.Attempts(5),
+			retry.Delay(time.Second),
+		).Do(
 			func() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				_, err := s.DPCertificates.DeleteDataplaneCertificate(ctx, cpID, certID)
 				return err
 			},
-			retry.Attempts(5),
-			retry.Delay(time.Second),
-		)
-		if err != nil {
+		); err != nil {
 			// Don't fail the test if cleanup fails, just log the error.
 			// Cleanup job will eventually clean up konnect.
 			fmt.Printf("failed to delete DP client certificate %q: %v", certID, err)

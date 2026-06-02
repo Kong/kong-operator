@@ -18,7 +18,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
-	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -75,8 +74,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 	nsEnt := ent.GetNamespace()
 	kongSvc := configurationv1alpha1.KongService{}
 	nn := types.NamespacedName{
-		Name: kongServiceRef.NamespacedRef.Name,
-		// TODO: handle cross namespace refs
+		Name:      kongServiceRef.NamespacedRef.Name,
 		Namespace: nsEnt,
 	}
 	ref := kongServiceRef.NamespacedRef
@@ -157,16 +155,15 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			fmt.Sprintf("Referenced KongService %s is not programmed yet", nn),
 		)
 
-		res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
 			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err
 		}
-		if res == op.Updated {
-			return ctrl.Result{}, nil
-		}
+		// Don't requeue. The referenced entity's changes will trigger the reconciliation.
+		return ctrl.Result{}, nil
 	}
 
 	// TODO(pmalek): make this generic.
@@ -201,7 +198,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			client.ObjectKeyFromObject(&kongSvc),
 		)
 	}
-	cp, err := controlplane.GetCPForRef(ctx, cl, kongSvcCPRef, ent.GetNamespace())
+	cp, err := controlplane.GetCPForRef(ctx, cl, kongSvcCPRef, kongSvc.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,

@@ -16,11 +16,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 )
 
@@ -30,12 +33,16 @@ import (
 // ListMcpServersByControlPlane, paginating as needed, and creates a mirrored
 // MCPServer Kubernetes object for each one.
 type MCPServersFetcher struct {
-	loggingMode   logging.Mode
+	loggingMode logging.Mode
+
 	client        client.Client
-	konnectClient sdkops.SDKWrapper
-	wakeupCh      chan struct{}
-	controlPlane  *konnectv1alpha1.KonnectGatewayControlPlane
 	scheme        *runtime.Scheme
+	konnectClient sdkops.SDKWrapper
+
+	controlPlane *konnectv1alpha2.KonnectGatewayControlPlane
+
+	fetchEventCh     chan struct{}
+	reconcileEventCh chan<- event.GenericEvent
 }
 
 // NewMCPServersFetcher creates a new MCPServersFetcher.
@@ -43,17 +50,19 @@ func NewMCPServersFetcher(
 	loggingMode logging.Mode,
 	cl client.Client,
 	konnectClient sdkops.SDKWrapper,
-	wakeupCh chan struct{},
-	controlPlane *konnectv1alpha1.KonnectGatewayControlPlane,
+	fetchEventCh chan struct{},
+	reconcileEventCh chan<- event.GenericEvent,
+	controlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
 	scheme *runtime.Scheme,
 ) *MCPServersFetcher {
 	return &MCPServersFetcher{
-		loggingMode:   loggingMode,
-		client:        cl,
-		konnectClient: konnectClient,
-		wakeupCh:      wakeupCh,
-		controlPlane:  controlPlane,
-		scheme:        scheme,
+		loggingMode:      loggingMode,
+		client:           cl,
+		konnectClient:    konnectClient,
+		fetchEventCh:     fetchEventCh,
+		reconcileEventCh: reconcileEventCh,
+		controlPlane:     controlPlane,
+		scheme:           scheme,
 	}
 }
 
@@ -75,7 +84,7 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				return
-			case _, ok := <-f.wakeupCh:
+			case _, ok := <-f.fetchEventCh:
 				if !ok {
 					return
 				}
@@ -89,7 +98,7 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 					log.Error(logger, err, "failed to sync MCP servers", "controlPlaneID", cpID)
 					time.AfterFunc(b.Duration(), func() {
 						select {
-						case f.wakeupCh <- struct{}{}:
+						case f.fetchEventCh <- struct{}{}:
 						default:
 						}
 					})
@@ -102,11 +111,10 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 }
 
 const (
-	labelControlPlaneID = "konghq.com/control-plane-id"
 	// mcpServerFinalizer is added to every mirrored MCPServer so that the
 	// MCPServerReconciler can reset the signal-polling offset before the object
 	// is garbage-collected.
-	mcpServerFinalizer = "mcpserver.konghq.com/finalizer"
+	mcpServerFinalizer = "kong-operator.konghq.com/mcp-server-signal-cleanup"
 )
 
 // syncMCPServers creates a mirrored MCPServer Kubernetes object for each server
@@ -117,30 +125,49 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 	logger := log.GetLogger(ctx, "mcpserver-fetcher", f.loggingMode)
 	var errs []error
 
-	cpID := f.controlPlane.GetKonnectID()
 	cpName := f.controlPlane.Name
 	cpNamespace := f.controlPlane.Namespace
 
 	konnectIDs := make(map[string]struct{}, len(servers))
 	for _, server := range servers {
+		if server.ResourceID == nil || *server.ResourceID == "" {
+			// The server is not fully provisioned on the Konnect side.
+			// Delete the corresponding Kubernetes resource if it exists.
+			nn := generateMCPServerNN(cpNamespace, cpName, server.ID)
+			mcpServer := &konnectv1alpha1.MCPServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nn.Name,
+					Namespace: nn.Namespace,
+				},
+			}
+			if err := client.IgnoreNotFound(f.client.Delete(ctx, mcpServer)); err != nil {
+				errs = append(errs, fmt.Errorf("failed to delete MCPServer without resource ID %s: %w", nn, err))
+			}
+			continue
+		}
 		konnectIDs[server.ID] = struct{}{}
 
-		nn := types.NamespacedName{Name: fmt.Sprintf("%s-%s", cpName, server.ID), Namespace: cpNamespace}
+		nn := generateMCPServerNN(cpNamespace, cpName, server.ID)
 		var existing konnectv1alpha1.MCPServer
 		if err := f.client.Get(ctx, nn, &existing); err == nil {
+			// The MCPServer already exists on the API server: trigger a
+			// reconciliation so the controller can sync its state with the
+			// remote without waiting for a CRD change.
+			select {
+			case f.reconcileEventCh <- event.GenericEvent{Object: &existing}:
+			default:
+				errs = append(errs, fmt.Errorf("trigger channel is full, failed to enqueue reconciliation for MCPServer %s/%s", cpNamespace, existing.Name))
+			}
 			continue
 		} else if !apierrors.IsNotFound(err) {
-			errs = append(errs, fmt.Errorf("failed to check MCPServer existence %s/%s: %w", cpNamespace, server.ID, err))
+			errs = append(errs, fmt.Errorf("failed to check MCPServer existence %s: %w", nn, err))
 			continue
 		}
 
 		mcpServer := &konnectv1alpha1.MCPServer{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s", cpName, server.Name),
-				Namespace: cpNamespace,
-				Labels: map[string]string{
-					labelControlPlaneID: cpID,
-				},
+				Name:      nn.Name,
+				Namespace: nn.Namespace,
 			},
 			Spec: konnectv1alpha1.MCPServerSpec{
 				Source: new(commonv1alpha1.EntitySourceMirror),
@@ -159,26 +186,24 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 		}
 
 		if err := controllerutil.SetControllerReference(f.controlPlane, mcpServer, f.scheme); err != nil {
-			errs = append(errs, fmt.Errorf("failed to set owner reference on MCPServer %s/%s: %w", cpNamespace, server.ID, err))
+			errs = append(errs, fmt.Errorf("failed to set owner reference on MCPServer %s: %w", nn, err))
 			continue
 		}
 		err := f.client.Create(ctx, mcpServer)
-		if client.IgnoreAlreadyExists(err) != nil {
-			errs = append(errs, fmt.Errorf("failed to create MCPServer %s/%s: %w", cpNamespace, server.ID, err))
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to create MCPServer %s: %w", nn, err))
 			continue
 		}
-		if err == nil {
-			log.Debug(logger, "created MCPServer", "id", server.ID, "namespace", cpNamespace)
-		}
+		log.Debug(logger, "created MCPServer", "id", server.ID, "namespace", cpNamespace)
 	}
 
 	// Delete MCPServers that exist in Kubernetes but are no longer present in Konnect.
 	var existing konnectv1alpha1.MCPServerList
 	if err := f.client.List(ctx, &existing,
 		client.InNamespace(cpNamespace),
-		client.MatchingLabels{labelControlPlaneID: cpID},
+		client.MatchingFields{index.IndexFieldMCPServerOnKonnectGatewayControlPlane: cpNamespace + "/" + cpName},
 	); err != nil {
-		errs = append(errs, fmt.Errorf("failed to list MCPServers for control plane %s: %w", cpID, err))
+		errs = append(errs, fmt.Errorf("failed to list MCPServers for control plane %s/%s: %w", cpNamespace, cpName, err))
 		return errors.Join(errs...)
 	}
 
@@ -188,6 +213,10 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 		if _, ok := konnectIDs[id]; ok {
 			continue
 		}
+
+		// Delete MCPServers whose Konnect counterpart no longer exists or
+		// whose MCPServerCPInfo has no ResourceID (the server is not fully
+		// provisioned on the Konnect side).
 		err := f.client.Delete(ctx, mcpServer)
 		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, fmt.Errorf("failed to delete stale MCPServer %s/%s: %w", cpNamespace, mcpServer.Name, err))
@@ -257,4 +286,10 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 	}
 
 	return servers, nil
+}
+
+// generateMCPServerNN builds a Kubernetes-safe NamespacedName for a mirrored
+// MCPServer from the control plane name/namespace, server name, and Konnect server ID.
+func generateMCPServerNN(cpNamespace, cpName, serverID string) types.NamespacedName {
+	return generateHashedName(cpNamespace, cpName, serverID)
 }

@@ -11,25 +11,23 @@ import (
 
 func TestLoadProjectConfig(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
-		content := `
-apiGroupVersions:
-  konnect.konghq.com/v1alpha1:
-    types:
-      - path: /v3/portals
-        cel:
-          name:
-            _validations:
-              - "+kubebuilder:validation:MinLength=1"
-        ops:
-          create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal
-          update:
-            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal
-      - path: /v3/portals/{portalId}/teams
-  gateway.konghq.com/v1beta1:
-    types:
-      - path: /v3/gateways
-`
+		content := "apiGroupVersions:\n" +
+			"  konnect.konghq.com/v1alpha1:\n" +
+			"    types:\n" +
+			"      - path: /v3/portals\n" +
+			"        cel:\n" +
+			"          name:\n" +
+			"            _validations:\n" +
+			"              - \"+kubebuilder:validation:MinLength=1\"\n" +
+			"        ops:\n" +
+			"          create:\n" +
+			"            path: github.com/Kong/sdk-konnect-go/models/components.CreatePortal\n" +
+			"          update:\n" +
+			"            path: github.com/Kong/sdk-konnect-go/models/components.UpdatePortal\n" +
+			"      - path: /v3/portals/{portalId}/teams\n" +
+			"  gateway.konghq.com/v1beta1:\n" +
+			"    types:\n" +
+			"      - path: /v3/gateways\n"
 		path := filepath.Join(t.TempDir(), "config.yaml")
 		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
 
@@ -55,6 +53,214 @@ apiGroupVersions:
 		require.NotNil(t, gateway)
 		require.Len(t, gateway.Types, 1)
 		assert.Equal(t, "/v3/gateways", gateway.Types[0].Path)
+	})
+
+	t.Run("valid config with per-type schema field omissions", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  configuration.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
+        schemaFieldOmissions:
+          EventGatewayModifyHeadersPolicyCreate:
+            - parentPolicyID
+          EventGatewaySkipRecordPolicyCreate:
+            - parentPolicyID
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		configuration := cfg.APIGroupVersions["configuration.konghq.com/v1alpha1"]
+		require.NotNil(t, configuration)
+		require.Len(t, configuration.Types, 1)
+		require.NotNil(t, configuration.Types[0].SchemaFieldOmissions)
+		assert.Equal(t, []string{"parentPolicyID"}, configuration.Types[0].SchemaFieldOmissions["EventGatewayModifyHeadersPolicyCreate"])
+		assert.Equal(t, []string{"parentPolicyID"}, configuration.Types[0].SchemaFieldOmissions["EventGatewaySkipRecordPolicyCreate"])
+	})
+
+	t.Run("valid config with ops requireClient", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
+        secretReferences:
+          - path: spec.apiSpec.certificate
+            type: Secret
+            key: tls.crt
+        ops:
+          requireClient: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		require.Len(t, konnect.Types[0].SecretReferences, 1)
+		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].SecretReferences[0].Path)
+		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
+		assert.Equal(t, "tls.crt", konnect.Types[0].SecretReferences[0].Key)
+		assert.True(t, konnect.Types[0].OpsRequireClient)
+		require.NotNil(t, konnect.Types[0].Ops)
+		assert.Equal(t,
+			"github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest",
+			konnect.Types[0].Ops["create"].Path,
+		)
+	})
+
+	t.Run("valid config with delete asPUT", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals/{portalId}/customization
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          delete:
+            asPUT: true
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		require.NotNil(t, konnect.Types[0].Ops)
+		require.NotNil(t, konnect.Types[0].Ops["delete"])
+		assert.True(t, konnect.Types[0].Ops["delete"].AsPUT)
+	})
+
+	t.Run("invalid config with delete asPUT but no update path", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals/{portalId}/customization
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          delete:
+            asPUT: true
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.delete.asPUT requires ops.update.path")
+	})
+
+	t.Run("valid config with ops uid tag filter", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          useUIDTagFilter: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.ServiceInput
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		assert.True(t, konnect.Types[0].OpsUseUIDTagFilter)
+	})
+
+	t.Run("valid config with ops getForUID match fields", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
+        ops:
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Certificate
+                responseField: Certificate
+              - objectField: Spec.APISpec.Name
+                responseField: Name
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		require.NotNil(t, konnect.Types[0].OpsGetForUID)
+		require.Len(t, konnect.Types[0].OpsGetForUID.MatchFields, 2)
+		assert.Equal(t, "Spec.APISpec.Certificate", konnect.Types[0].OpsGetForUID.MatchFields[0].ObjectField)
+		assert.Equal(t, "Certificate", konnect.Types[0].OpsGetForUID.MatchFields[0].ResponseField)
+	})
+
+	t.Run("valid config with getForUID root union", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
+        ops:
+          getForUID:
+            listItemsSource: slice
+            rootUnion:
+              unionField: Spec.APISpec.EventGatewayListenerPolicyConfig
+              cases:
+                - typeValue: tlsServer
+                  variantField: EventGatewayTLSListen
+                  responseTypeValue: tls_server
+                  matchFields:
+                    - objectField: Name
+                      responseField: GetName()
+                - typeValue: forwardToVirtualCluster
+                  variantField: ForwardToVirtualClust
+                  responseTypeValue: forward_to_virtual_cluster
+                  matchFields:
+                    - objectField: Name
+                      responseField: GetName()
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		require.NotNil(t, konnect.Types[0].OpsGetForUID)
+		assert.Equal(t, GetForUIDListItemsSourceSlice, konnect.Types[0].OpsGetForUID.ListItemsSource)
+		require.NotNil(t, konnect.Types[0].OpsGetForUID.RootUnion)
+		assert.Equal(t, "Spec.APISpec.EventGatewayListenerPolicyConfig", konnect.Types[0].OpsGetForUID.RootUnion.UnionField)
+		require.Len(t, konnect.Types[0].OpsGetForUID.RootUnion.Cases, 2)
+		assert.Equal(t, "tlsServer", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].TypeValue)
+		assert.Equal(t, "EventGatewayTLSListen", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].VariantField)
+		assert.Equal(t, "tls_server", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].ResponseTypeValue)
+		assert.Equal(t, "Name", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].MatchFields[0].ObjectField)
+		assert.Equal(t, "GetName()", konnect.Types[0].OpsGetForUID.RootUnion.Cases[0].MatchFields[0].ResponseField)
 	})
 
 	t.Run("valid config with commonTypes import", func(t *testing.T) {
@@ -217,6 +423,96 @@ someOtherKey: value
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "failed to read config file")
 	})
+
+	t.Run("invalid ops skipGetForUID with getForUID config", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
+        ops:
+          skipGetForUID: true
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Certificate
+                responseField: Certificate
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.skipGetForUID and ops.getForUID are mutually exclusive")
+	})
+
+	t.Run("invalid getForUID listItemsSource", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          getForUID:
+            listItemsSource: banana
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: Name
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.getForUID.listItemsSource must be one of")
+	})
+
+	t.Run("invalid getForUID matchFields with rootUnion", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: Name
+            rootUnion:
+              unionField: Spec.APISpec.SomeUnion
+              cases:
+                - typeValue: foo
+                  variantField: Foo
+                  responseTypeValue: foo
+                  matchFields:
+                    - objectField: Name
+                      responseField: GetName()
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.getForUID.matchFields and ops.getForUID.rootUnion are mutually exclusive")
+	})
+
+	t.Run("invalid getForUID rootUnion without cases", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          getForUID:
+            rootUnion:
+              unionField: Spec.APISpec.SomeUnion
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.getForUID.rootUnion.cases is required")
+	})
 }
 
 func TestParseAPIGroupVersion(t *testing.T) {
@@ -281,7 +577,7 @@ apiGroupVersions:
   konnect.konghq.com/v1alpha1:
     types:
       - path: /v1/event-gateways
-        name: KonnectEventControlPlane
+        name: KonnectEventGateway
       - path: /v3/portals
 `
 	path := filepath.Join(t.TempDir(), "config.yaml")
@@ -292,7 +588,7 @@ apiGroupVersions:
 
 	konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
 	require.NotNil(t, konnect)
-	assert.Equal(t, "KonnectEventControlPlane", konnect.Types[0].Name)
+	assert.Equal(t, "KonnectEventGateway", konnect.Types[0].Name)
 	assert.Empty(t, konnect.Types[1].Name)
 }
 
@@ -300,13 +596,13 @@ func TestAPIGroupVersionConfig_NameOverrides(t *testing.T) {
 	t.Run("with overrides", func(t *testing.T) {
 		agv := &APIGroupVersionConfig{
 			Types: []*TypeConfig{
-				{Path: "/v1/event-gateways", Name: "KonnectEventControlPlane"},
+				{Path: "/v1/event-gateways", Name: "KonnectEventGateway"},
 				{Path: "/v3/portals"},
 			},
 		}
 		overrides := agv.NameOverrides()
 		assert.Equal(t, map[string]string{
-			"/v1/event-gateways": "KonnectEventControlPlane",
+			"/v1/event-gateways": "KonnectEventGateway",
 		}, overrides)
 	})
 
@@ -383,6 +679,76 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 		require.NotNil(t, fc)
 		assert.Empty(t, fc.Entities)
 	})
+
+	t.Run("nested cel validations parsed correctly", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v1/entities/{entityId}/sub",
+					CEL: map[string]*FieldConfig{
+						"tls": {
+							Fields: map[string]*FieldConfig{
+								"client_identity": {
+									Fields: map[string]*FieldConfig{
+										"certificate": {
+											Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		pathToEntity := map[string]string{
+			"/v1/entities/{entityId}/sub": "SubEntity",
+		}
+
+		fc := agv.FieldConfig(pathToEntity)
+		require.NotNil(t, fc)
+
+		// GetFieldConfig with single segment returns the tls FieldConfig with sub-fields.
+		tlsCfg := fc.GetFieldConfig("SubEntity", "tls")
+		require.NotNil(t, tlsCfg)
+		assert.Empty(t, tlsCfg.Validations, "tls has no direct validations")
+		require.NotNil(t, tlsCfg.Sub("client_identity"))
+
+		// Multi-segment path resolves to the leaf.
+		certCfg := fc.GetFieldConfig("SubEntity", "tls", "client_identity", "certificate")
+		require.NotNil(t, certCfg)
+		assert.Equal(t, []string{"+kubebuilder:validation:MaxLength=1024"}, certCfg.Validations)
+
+		// Single-segment lookup returns nil for a non-leaf path segment without Validations.
+		assert.Nil(t, fc.GetFieldValidations("SubEntity", "tls"))
+	})
+}
+
+func TestAPIGroupVersionConfig_SchemaFieldOmissionsConfig(t *testing.T) {
+	agv := &APIGroupVersionConfig{
+		Types: []*TypeConfig{
+			{
+				Path: "/v1/consume-policies",
+				SchemaFieldOmissions: map[string][]string{
+					"EventGatewayModifyHeadersPolicyCreate": {"parentPolicyID"},
+				},
+			},
+			{
+				Path: "/v1/produce-policies",
+				SchemaFieldOmissions: map[string][]string{
+					"EventGatewayModifyHeadersPolicyCreate":             {"name"},
+					"EventGatewayParsedRecordEncryptFieldsPolicyCreate": {"parentPolicyID"},
+				},
+			},
+		},
+	}
+
+	omissions := agv.SchemaFieldOmissionsConfig()
+	require.Len(t, omissions, 2)
+	assert.True(t, omissions["EventGatewayModifyHeadersPolicyCreate"]["parentPolicyID"])
+	assert.True(t, omissions["EventGatewayModifyHeadersPolicyCreate"]["name"])
+	assert.True(t, omissions["EventGatewayParsedRecordEncryptFieldsPolicyCreate"]["parentPolicyID"])
 }
 
 func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
@@ -411,9 +777,134 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 		require.Len(t, oc, 1)
 		require.Contains(t, oc, "Portal")
 		assert.Len(t, oc["Portal"].Ops, 2)
+		assert.False(t, oc["Portal"].RequireClient)
 		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.CreatePortal", oc["Portal"].Ops["create"].Path)
 		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.UpdatePortal", oc["Portal"].Ops["update"].Path)
 		assert.NotContains(t, oc, "PortalTeam")
+	})
+
+	t.Run("requireClient is explicit or inferred", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v1/event-gateways/{gatewayId}/data-plane-certificates",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
+					},
+					SecretReferences: []SecretReferenceConfig{
+						{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"},
+					},
+				},
+				{
+					Path: "/v3/portals",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"},
+					},
+					OpsRequireClient: true,
+				},
+			},
+		}
+
+		pathToEntity := map[string]string{
+			"/v1/event-gateways/{gatewayId}/data-plane-certificates": "KonnectEventDataPlaneCertificate",
+			"/v3/portals": "Portal",
+		}
+
+		oc := agv.OpsConfig(pathToEntity)
+		require.Len(t, oc, 2)
+		assert.True(t, oc["KonnectEventDataPlaneCertificate"].RequireClient)
+		assert.True(t, oc["Portal"].RequireClient)
+	})
+
+	t.Run("uid tag filter is propagated", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/services",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.ServiceInput"},
+					},
+					OpsUseUIDTagFilter: true,
+				},
+			},
+		}
+
+		oc := agv.OpsConfig(map[string]string{"/services": "KongService"})
+		require.Len(t, oc, 1)
+		assert.True(t, oc["KongService"].UseUIDTagFilter)
+	})
+
+	t.Run("getForUID config is propagated", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v1/event-gateways/{gatewayId}/data-plane-certificates",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
+					},
+					OpsGetForUID: &GetForUIDConfig{
+						MatchFields: []GetForUIDMatchField{
+							{
+								ObjectField:   "Spec.APISpec.Certificate",
+								ResponseField: "Certificate",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		oc := agv.OpsConfig(map[string]string{
+			"/v1/event-gateways/{gatewayId}/data-plane-certificates": "KonnectEventDataPlaneCertificate",
+		})
+		require.Len(t, oc, 1)
+		require.NotNil(t, oc["KonnectEventDataPlaneCertificate"].GetForUID)
+		require.Len(t, oc["KonnectEventDataPlaneCertificate"].GetForUID.MatchFields, 1)
+		assert.Equal(t, "Spec.APISpec.Certificate", oc["KonnectEventDataPlaneCertificate"].GetForUID.MatchFields[0].ObjectField)
+		assert.Equal(t, "Certificate", oc["KonnectEventDataPlaneCertificate"].GetForUID.MatchFields[0].ResponseField)
+	})
+
+	t.Run("getForUID rootUnion config is propagated", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies",
+					Ops: map[string]*OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayListenerPolicyRequest"},
+					},
+					OpsGetForUID: &GetForUIDConfig{
+						ListItemsSource: GetForUIDListItemsSourceSlice,
+						RootUnion: &GetForUIDRootUnionConfig{
+							UnionField: "Spec.APISpec.EventGatewayListenerPolicyConfig",
+							Cases: []GetForUIDRootUnionCase{
+								{
+									TypeValue:         "tlsServer",
+									VariantField:      "EventGatewayTLSListen",
+									ResponseTypeValue: "tls_server",
+									MatchFields: []GetForUIDMatchField{
+										{
+											ObjectField:   "Name",
+											ResponseField: "GetName()",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		oc := agv.OpsConfig(map[string]string{
+			"/v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies": "EventGatewayListenerPolicy",
+		})
+		require.Len(t, oc, 1)
+		require.NotNil(t, oc["EventGatewayListenerPolicy"].GetForUID)
+		assert.Equal(t, GetForUIDListItemsSourceSlice, oc["EventGatewayListenerPolicy"].GetForUID.ListItemsSource)
+		require.NotNil(t, oc["EventGatewayListenerPolicy"].GetForUID.RootUnion)
+		assert.Equal(t, "Spec.APISpec.EventGatewayListenerPolicyConfig", oc["EventGatewayListenerPolicy"].GetForUID.RootUnion.UnionField)
+		require.Len(t, oc["EventGatewayListenerPolicy"].GetForUID.RootUnion.Cases, 1)
+		assert.Equal(t, "tlsServer", oc["EventGatewayListenerPolicy"].GetForUID.RootUnion.Cases[0].TypeValue)
 	})
 
 	t.Run("no ops configured", func(t *testing.T) {
@@ -433,4 +924,152 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 		oc := agv.OpsConfig(nil)
 		assert.Empty(t, oc)
 	})
+}
+
+func TestAPIGroupVersionConfig_Categories(t *testing.T) {
+	t.Run("categories parsed from YAML", func(t *testing.T) {
+		yaml := `
+apiGroupVersions:
+  test/v1:
+    categories:
+      - konnect
+      - kong
+    types:
+      - path: /v1/gateways
+        reconciler: {}
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(yaml), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		agv := cfg.APIGroupVersions["test/v1"]
+		require.NotNil(t, agv)
+		assert.Equal(t, []string{"konnect", "kong"}, agv.Categories)
+	})
+
+	t.Run("categories absent when not set", func(t *testing.T) {
+		yaml := `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways
+        reconciler: {}
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(yaml), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		agv := cfg.APIGroupVersions["test/v1"]
+		require.NotNil(t, agv)
+		assert.Empty(t, agv.Categories)
+	})
+}
+
+func TestReconcilerConfig_IsRootInference(t *testing.T) {
+	tests := []struct {
+		name       string
+		yaml       string
+		wantIsRoot bool
+	}{
+		{
+			name: "root path without params infers isRoot true",
+			yaml: `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways
+        reconciler: {}
+`,
+			wantIsRoot: true,
+		},
+		{
+			name: "child path with params infers isRoot false",
+			yaml: `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways/{gatewayId}/listeners
+        reconciler: {}
+`,
+			wantIsRoot: false,
+		},
+		{
+			name: "explicit isRoot true overrides inferred false on child path",
+			yaml: `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways/{gatewayId}/listeners
+        reconciler:
+          isRoot: true
+`,
+			wantIsRoot: true,
+		},
+		{
+			name: "explicit isRoot false overrides inferred true on root path",
+			yaml: `
+apiGroupVersions:
+  test/v1:
+    types:
+      - path: /v1/gateways
+        reconciler:
+          isRoot: false
+`,
+			wantIsRoot: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.yaml")
+			require.NoError(t, os.WriteFile(path, []byte(tc.yaml), 0o600))
+
+			cfg, err := LoadProjectConfig(path)
+			require.NoError(t, err)
+
+			agv := cfg.APIGroupVersions["test/v1"]
+			require.NotNil(t, agv)
+			require.Len(t, agv.Types, 1)
+			require.NotNil(t, agv.Types[0].Reconciler)
+			require.NotNil(t, agv.Types[0].Reconciler.IsRoot)
+			assert.Equal(t, tc.wantIsRoot, *agv.Types[0].Reconciler.IsRoot)
+		})
+	}
+}
+
+func TestLoadProjectConfig_ReconcilerEntityGVKs(t *testing.T) {
+	yaml := `
+apiGroupVersions:
+  configuration.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
+        reconciler:
+          parentEntityGVK:
+            kind: EventGatewayListener
+            group: configuration.konghq.com
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+`
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(yaml), 0o600))
+
+	cfg, err := LoadProjectConfig(path)
+	require.NoError(t, err)
+
+	agv := cfg.APIGroupVersions["configuration.konghq.com/v1alpha1"]
+	require.NotNil(t, agv)
+	require.Len(t, agv.Types, 1)
+	require.NotNil(t, agv.Types[0].Reconciler)
+
+	rc := agv.Types[0].Reconciler
+	require.NotNil(t, rc.ParentEntityGVK)
+	assert.Equal(t, "EventGatewayListener", rc.ParentEntityKind())
+	assert.Equal(t, "configuration.konghq.com", rc.ParentEntityGroup("ignored.example.com"))
+	require.Len(t, rc.AncestorEntityGVKs, 1)
+	assert.Equal(t, []string{"KonnectEventGateway"}, rc.AncestorEntityKinds())
+	assert.Equal(t, "konnect.konghq.com", rc.AncestorEntityGVKs[0].Group)
 }

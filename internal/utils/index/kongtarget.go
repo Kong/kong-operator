@@ -28,5 +28,9 @@ func kongTargetReferencesKongUpstream(object client.Object) []string {
 		return nil
 	}
 
-	return []string{target.Spec.UpstreamRef.Name}
+	upstreamNamespace := target.Namespace
+	if target.Spec.UpstreamRef.Namespace != nil && *target.Spec.UpstreamRef.Namespace != "" {
+		upstreamNamespace = *target.Spec.UpstreamRef.Namespace
+	}
+	return []string{upstreamNamespace + "/" + target.Spec.UpstreamRef.Name}
 }

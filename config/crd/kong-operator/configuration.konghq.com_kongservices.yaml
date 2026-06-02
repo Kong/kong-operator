@@ -30,6 +30,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -117,6 +121,64 @@ spec:
                 - message: konnect.id is immutable
                   rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id)
                     : true'
+              caCertificateRefs:
+                description: |-
+                  CACertificateRefs is the list of references to KongCACertificates used
+                  to verify the upstream server's TLS certificate.
+                  Each referenced KongCACertificate MUST belong to the same Konnect
+                  ControlPlane as this KongService.
+                  Cross-namespace references require a KongReferenceGrant in the target
+                  namespace.
+                items:
+                  description: NamespacedRef is a reference to a namespaced resource.
+                  properties:
+                    name:
+                      description: Name is the name of the referred resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace is the namespace of the referred resource.
+
+                        For namespace-scoped resources if no Namespace is provided then the
+                        namespace of the parent object MUST be used.
+
+                        This field MUST not be set when referring to cluster-scoped resources.
+                      maxLength: 253
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
+              clientCertificateRef:
+                description: |-
+                  ClientCertificateRef is a reference to a KongCertificate used as the
+                  client certificate when proxying to the upstream over TLS.
+                  The referenced KongCertificate MUST belong to the same Konnect
+                  ControlPlane as this KongService.
+                  Cross-namespace references require a KongReferenceGrant in the target
+                  namespace.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
+                type: object
               connect_timeout:
                 description: The timeout in milliseconds for establishing a connection
                   to the upstream server.
@@ -129,7 +191,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -187,6 +250,11 @@ spec:
               host:
                 description: The host of the upstream server. Note that the host value
                   is case sensitive.
+                type: string
+              id:
+                description: ID is the unique identifier for the Service. Can be specified
+                  when creating a Service, but not updatable. If not specified, Kong
+                  will generate one.
                 type: string
               name:
                 description: The Service name.
@@ -328,22 +396,36 @@ spec:
               konnect:
                 description: Konnect contains the Konnect entity status.
                 properties:
+                  caCertificateIDs:
+                    description: CACertificateIDs lists the Konnect IDs of the CA
+                      Certificates referenced by this entity.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                  certificateID:
+                    description: CertificateID is the Konnect ID of the client Certificate
+                      referenced by this entity.
+                    type: string
                   controlPlaneID:
                     description: ControlPlaneID is the Konnect ID of the ControlPlane
-                      this Route is associated with.
+                      this entity is associated with.
                     type: string
                   id:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been
                       created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which
                       the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             type: object
@@ -357,6 +439,9 @@ spec:
           rule: '(!has(self.spec.controlPlaneRef)) ? true : (!has(self.status) ||
             !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef'
+        - message: spec.id is immutable
+          rule: (!has(self.spec.id) && !has(oldSelf.spec.id)) || (has(self.spec.id)
+            && has(oldSelf.spec.id) && self.spec.id == oldSelf.spec.id)
     served: true
     storage: true
     subresources:

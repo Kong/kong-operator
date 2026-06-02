@@ -1114,5 +1114,41 @@ func TestControlPlaneV2(t *testing.T) {
 			}.
 				RunWithConfig(t, cfg, scheme)
 		})
+
+		t.Run("concurrency", func(t *testing.T) {
+			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
+				{
+					Name: "configUploadConcurrency set",
+					TestObject: &operatorv2beta1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
+						Spec: operatorv2beta1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								IngressClass: new("kong"),
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									ConfigUploadConcurrency: new(int32(6)),
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: "configUploadConcurrency too large",
+					TestObject: &operatorv2beta1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
+						Spec: operatorv2beta1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								IngressClass: new("kong"),
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									ConfigUploadConcurrency: new(int32(66)),
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: new("spec.konnect.configUploadConcurrency in body should be less than or equal to 16"),
+				},
+			}.RunWithConfig(t, cfg, scheme)
+		})
 	})
 }

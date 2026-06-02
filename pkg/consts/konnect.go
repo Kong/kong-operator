@@ -7,6 +7,12 @@ package consts
 const (
 	// KonnectExtensionPrefix is used as a name prefix to generate KonnectExtension-owned objects' name.
 	KonnectExtensionPrefix = "konnect-extension"
+
+	// MCPServerPrefix is used as a name prefix to generate MCPServer-owned objects' name.
+	MCPServerPrefix = "mcpserver"
+
+	// MCPServerDefaultPort is the default port exposed by MCP server containers.
+	MCPServerDefaultPort = 8080
 )
 
 // -----------------------------------------------------------------------------
@@ -53,6 +59,9 @@ const (
 	// KonnectExtensionManagedByLabelValue indicates that an object's lifecycle is managed
 	// by the KonnectExtension controller.
 	KonnectExtensionManagedByLabelValue = "konnect-extension"
+	// MCPServerManagedByLabelValue indicates that an object's lifecycle is managed
+	// by the MCPServer controller.
+	MCPServerManagedByLabelValue = "mcpserver"
 )
 
 // -----------------------------------------------------------------------------

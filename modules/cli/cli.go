@@ -82,6 +82,9 @@ func New(m metadata.Info) *CLI {
 	// controllers for Konnect APIs
 	flagSet.BoolVar(&cfg.KonnectControllersEnabled, "enable-controller-konnect", false, "Enable the Konnect controllers.")
 
+	// controllers for Event Gateway APIs
+	flagSet.BoolVar(&cfg.KEGDataPlaneControllerEnabled, "enable-controller-kegdataplane", false, "Enable the KEG (Kong Event Gateway) DataPlane controller.")
+
 	// feature gates
 	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", "Comma-separated list of feature gates to enable. Valid values: mcp-server.")
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
@@ -91,6 +94,9 @@ func New(m metadata.Info) *CLI {
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesDataPlane, "max-concurrent-reconciles-dataplane-controller", consts.DefaultMaxConcurrentReconcilesDataPlane, "Maximum number of concurrent reconciles for DataPlane controllers.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesControlPlane, "max-concurrent-reconciles-controlplane-controller", consts.DefaultMaxConcurrentReconcilesControlPlane, "Maximum number of concurrent reconciles for ControlPlane controllers.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesGateway, "max-concurrent-reconciles-gateway-controller", consts.DefaultMaxConcurrentReconcilesGateway, "Maximum number of concurrent reconciles for Gateway controllers.")
+
+	flagSet.DurationVar(&cfg.CertTTL, "cert-ttl", consts.DefaultCertTTL, "Time-to-live for certificates issued by the operator (specify it in hours in a format like '87600h').")
+	flagSet.DurationVar(&cfg.CertExpirationMargin, "cert-expiration-margin", consts.DefaultCertExpirationMargin, "Duration before certificate expiration at which the operator will trigger certificate renewal (specify it in hours in a format like '168h'). Must be lower than cert-ttl.")
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
@@ -265,6 +271,11 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 
 		fmt.Println("WARN: --konnect-controller-max-concurrent-reconciles is deprecated, please use --max-concurrent-reconciles-konnect-controller instead")
 		c.cfg.MaxConcurrentReconcilesKonnect = c.cfg.KonnectControllerMaxConcurrentReconciles
+	}
+
+	if c.cfg.CertExpirationMargin >= c.cfg.CertTTL {
+		fmt.Printf("ERROR: --cert-expiration-margin (%s) must be lower than --cert-ttl (%s)\n", c.cfg.CertExpirationMargin, c.cfg.CertTTL)
+		os.Exit(1)
 	}
 
 	return *c.cfg

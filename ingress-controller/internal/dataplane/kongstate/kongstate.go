@@ -285,7 +285,7 @@ func (ks *KongState) FillOverrides(
 			// down into the kongstate.Route copy looked a bit annoying. Protocol validation for routes instead lives in the
 			// HTTPRoute and Ingress translators (these may override to ws/wss, whereas the others are expected to derive
 			// their protocol from the resource type alone).
-			ks.Services[i].Routes[j].Override(logger)
+			ks.Services[i].Routes[j].Override(logger, kongVersion)
 		}
 	}
 
@@ -577,22 +577,26 @@ func buildPlugins(
 			if !rel.Service.IsEmpty() {
 				relSvc := rel.Service.Identifier
 				plugin.Service = &kong.Service{ID: new(relSvc)}
-				toHash.WriteString("_service-" + relSvc)
+				toHash.WriteString("_service-")
+				toHash.WriteString(relSvc)
 			}
 			if !rel.Route.IsEmpty() {
 				relRoute := rel.Route.Identifier
 				plugin.Route = &kong.Route{ID: new(relRoute)}
-				toHash.WriteString("_route-" + relRoute)
+				toHash.WriteString("_route-")
+				toHash.WriteString(relRoute)
 			}
 			if !rel.Consumer.IsEmpty() {
 				relConsumer := rel.Consumer.Identifier
 				plugin.Consumer = &kong.Consumer{ID: new(relConsumer)}
-				toHash.WriteString("_consumer-" + relConsumer)
+				toHash.WriteString("_consumer-")
+				toHash.WriteString(relConsumer)
 			}
 			if !rel.ConsumerGroup.IsEmpty() {
 				relConsumerGroup := rel.ConsumerGroup.Identifier
 				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: new(relConsumerGroup)}
-				toHash.WriteString("_group-" + relConsumerGroup)
+				toHash.WriteString("_group-")
+				toHash.WriteString(relConsumerGroup)
 			}
 
 			// instance_name must be unique. Using the same KongPlugin on multiple resources will result in duplicates

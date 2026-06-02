@@ -1,10 +1,13 @@
 package metadata
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -13,11 +16,27 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
+// Annotation constants matching those in the ingress controller.
 const (
-	// Annotation constants matching those in the ingress controller.
-	annotationPrefix = "konghq.com"
-	stripPathKey     = "/strip-path"
-	preserveHostKey  = "/preserve-host"
+	annotationPrefix          = "konghq.com"
+	stripPathKey              = "/strip-path"
+	preserveHostKey           = "/preserve-host"
+	protocolKey               = "/protocol"
+	pathKey                   = "/path"
+	tlsVerifyKey              = "/tls-verify"
+	tlsVerifyDepthKey         = "/tls-verify-depth"
+	connectTimeoutKey         = "/connect-timeout"
+	readTimeoutKey            = "/read-timeout"
+	writeTimeoutKey           = "/write-timeout"
+	retriesKey                = "/retries"
+	hostHeaderKey             = "/host-header"
+	clientCertKey             = "/client-cert"
+	serviceUpstreamAnnotation = "ingress.kubernetes.io/service-upstream"
+)
+
+const (
+	kindHTTPRoute = "HTTPRoute"
+	kindTLSRoute  = "TLSRoute"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
@@ -29,46 +48,186 @@ const (
 	defaultPreserveHost = true
 )
 
-// ExtractStripPath extracts the strip-path annotation value and returns a boolean.
-// Returns false by default if the annotation is not present or cannot be parsed.
-func ExtractStripPath(anns map[string]string) bool {
-	parseStripPath, ok := parseAnnotationBool(anns, stripPathKey)
-	if !ok {
-		return defaultStripPath
+// ExtractStripPath extracts the strip-path annotation value and returns a boolean and an optional error.
+// Returns false by default if the annotation is not present or cannot be parsed
+// and non-nil error if the annotation cannot be parsed.
+func ExtractStripPath(anns map[string]string) (bool, error) {
+	stripPath, err := parseAnnotationBool(anns, stripPathKey)
+	if err != nil || stripPath == nil {
+		return defaultStripPath, err
 	}
-	return parseStripPath
+	return *stripPath, nil
 }
 
-// ExtractPreserveHost extracts the preserve-host annotation value and returns a boolean.
-// Returns true by default if the annotation is not present or cannot be parsed.
-func ExtractPreserveHost(anns map[string]string) bool {
-	parsePreserveHost, ok := parseAnnotationBool(anns, preserveHostKey)
-	if !ok {
-		return defaultPreserveHost
+// ExtractPreserveHost extracts the preserve-host annotation value and returns a boolean and an optional error.
+// Returns true by default if the annotation is not present or cannot be parsed
+// and non-nil error if the annotation cannot be parsed.
+func ExtractPreserveHost(anns map[string]string) (bool, error) {
+	preserveHost, err := parseAnnotationBool(anns, preserveHostKey)
+	if err != nil || preserveHost == nil {
+		return defaultPreserveHost, err
 	}
-	return parsePreserveHost
+	return *preserveHost, nil
 }
 
-func parseAnnotationBool(anns map[string]string, key string) (enabled bool, ok bool) {
+// ExtractProtocol extracts the protocol supplied in the konghq.com/protocol annotation.
+// Returns an empty string if the annotation is not present.
+// This mirrors ingress-controller/internal/annotations.ExtractProtocolName.
+func ExtractProtocol(anns map[string]string) string {
+	return anns[annotationPrefix+protocolKey]
+}
+
+// ExtractPath extracts the konghq.com/path annotation value.
+// Returns an empty string if the annotation is not present.
+// This mirrors ingress-controller/internal/annotations.ExtractPath.
+func ExtractPath(anns map[string]string) string {
+	return anns[annotationPrefix+pathKey]
+}
+
+// ExtractTLSVerify extracts the tls-verify annotation value.
+// Returns a *bool set to the parsed value when the annotation is present and parseable,
+// or nil when absent or unparseable,
+// and a non-nil error when the annotation cannot be parsed.
+// This mirrors ingress-controller/internal/annotations.ExtractTLSVerify.
+func ExtractTLSVerify(anns map[string]string) (*bool, error) {
+	v, err := parseAnnotationBool(anns, tlsVerifyKey)
+	if err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// ExtractTLSVerifyDepth extracts the tls-verify-depth annotation value.
+// Returns a *int64 set to the parsed value when the annotation is present and parseable as a
+// non-negative integer, or nil when absent or unparseable,
+// and a non-nil error when the annotation cannot be parsed.
+// This mirrors ingress-controller/internal/annotations.ExtractTLSVerifyDepth.
+func ExtractTLSVerifyDepth(anns map[string]string) (*int64, error) {
+	depth, err := parseAnnotationInt(anns, tlsVerifyDepthKey)
+	if err != nil {
+		return nil, err
+	}
+	return depth, nil
+}
+
+// ExtractConnectTimeout extracts the connect-timeout annotation value (milliseconds).
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer,
+// and a non-nil error when the annotation cannot be parsed.
+// This mirrors ingress-controller/internal/annotations.ExtractConnectTimeout.
+func ExtractConnectTimeout(anns map[string]string) (*int64, error) {
+	timeout, err := parseAnnotationInt(anns, connectTimeoutKey)
+	if err != nil {
+		return nil, err
+	}
+	return timeout, nil
+}
+
+// ExtractReadTimeout extracts the read-timeout annotation value (milliseconds).
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer,
+// and a non-nil error when the annotation cannot be parsed.
+// This mirrors ingress-controller/internal/annotations.ExtractReadTimeout.
+func ExtractReadTimeout(anns map[string]string) (*int64, error) {
+	timeout, err := parseAnnotationInt(anns, readTimeoutKey)
+	if err != nil {
+		return nil, err
+	}
+	return timeout, nil
+}
+
+// ExtractWriteTimeout extracts the write-timeout annotation value (milliseconds).
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer.
+// This mirrors ingress-controller/internal/annotations.ExtractWriteTimeout.
+func ExtractWriteTimeout(anns map[string]string) (*int64, error) {
+	timeout, err := parseAnnotationInt(anns, writeTimeoutKey)
+	if err != nil {
+		return nil, err
+	}
+	return timeout, nil
+}
+
+// ExtractRetries extracts the retries annotation value.
+// Returns a non-nil pointer when the annotation is present and parseable as a non-negative integer,
+// and a non-nil error when the annotation cannot be parsed.
+// This mirrors ingress-controller/internal/annotations.ExtractRetries.
+func ExtractRetries(anns map[string]string) (*int64, error) {
+	retries, err := parseAnnotationInt(anns, retriesKey)
+	if err != nil {
+		return nil, err
+	}
+	return retries, nil
+}
+
+// ExtractClientCertificate extracts the client-cert annotation value.
+// Returns the secret name when the annotation is present and non-empty, or an empty string otherwise.
+// This mirrors ingress-controller/internal/annotations.ExtractClientCertificate.
+func ExtractClientCertificate(anns map[string]string) string {
+	return anns[annotationPrefix+clientCertKey]
+}
+
+// ExtractHostHeader extracts the host-header annotation value.
+// Returns a non-nil pointer when the annotation is present and non-empty.
+// This mirrors ingress-controller/internal/annotations.ExtractHostHeader.
+func ExtractHostHeader(anns map[string]string) *string {
+	val := anns[annotationPrefix+hostHeaderKey]
+	if val == "" {
+		return nil
+	}
+	return &val
+}
+
+// IsValidProtocol returns true if the provided protocol is a valid Kong upstream protocol.
+// This mirrors ingress-controller/internal/util.ValidateProtocol.
+func IsValidProtocol(protocol string) bool {
+	switch protocol {
+	case "http", "https", "grpc", "grpcs", "ws", "wss", "tls", "tcp", "tls_passthrough":
+		return true
+	default:
+		return false
+	}
+}
+
+// parseAnnotationBool extracts the key from annotations.
+// Returns a *bool set to the parsed value when the annotation is present and parseable,
+// or nil when absent or unparseable,
+// and a non-nil error when the annotation cannot be parsed.
+func parseAnnotationBool(anns map[string]string, key string) (*bool, error) {
 	if anns == nil {
-		return false, false
+		return nil, nil
 	}
 
 	val := anns[annotationPrefix+key]
 	if val == "" {
-		return false, false // Annotation not present.
+		return nil, nil // Annotation not present.
 	}
 
 	parsedVal, err := strconv.ParseBool(val)
 	if err != nil {
-		return false, false // Invalid value.
+		return nil, err // Invalid value.
 	}
 
-	return parsedVal, true
+	return &parsedVal, nil
+}
+
+func parseAnnotationInt(anns map[string]string, key string) (*int64, error) {
+	if anns == nil {
+		return nil, nil
+	}
+	val, ok := anns[annotationPrefix+key]
+	if !ok || val == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	if parsed < 0 {
+		return nil, fmt.Errorf("annotation %s%s must be non-negative, got %d", annotationPrefix, key, parsed)
+	}
+	return &parsed, nil
 }
 
 // BuildAnnotations creates the standard annotations map for Kong resources managed by Gateway API objects.
-// For HTTPRoute, it includes both route and gateway annotations.
+// For supported routes (HTTPRoute, TLSRoute), it includes both route and gateway annotations.
 // For Gateway, it only includes the gateway annotation.
 func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map[string]string {
 	gwObjKey := client.ObjectKey{
@@ -84,9 +243,13 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 		consts.GatewayOperatorHybridGatewaysAnnotation: gwObjKey.String(),
 	}
 
-	// Add route annotation only for HTTPRoute objects
-	if _, ok := obj.(*gwtypes.HTTPRoute); ok {
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = client.ObjectKeyFromObject(obj).String()
+	// Add route annotation for TLSRoute and HTTPRoute objects.
+	// Use different annotation keys for each type to distinguish the routes with same namespace/name but different kinds.
+	switch obj.(type) {
+	case *gwtypes.HTTPRoute:
+		annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
+	case *gwtypes.TLSRoute:
+		annotations[consts.GatewayOperatorHybridRoutesTLSRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
 	}
 
 	return annotations
@@ -134,11 +297,12 @@ func NameStringToObjectKey(s string) client.ObjectKey {
 //   - bool: true if the hybrid-routes annotation was modified, false if the annotation was already
 //     there and no changes were made
 func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route client.Object) bool {
-	currentRouteKey := ObjectToNameString(route)
-	currentRouteAnnotation := currentRouteKey
+	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
+	currentRouteObjectKey := ObjectToNameString(route)
 
 	log.Debug(am.logger, "Processing route annotation",
-		"currentRoute", currentRouteAnnotation,
+		"routeKind", currentRouteKind,
+		"currentRoute", currentRouteObjectKey,
 		"objectName", obj.GetName(),
 		"objectNamespace", obj.GetNamespace())
 
@@ -148,31 +312,35 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 	}
 
 	// Get existing hybrid-routes annotation
-	hybridRouteAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(currentRouteKind)
+	if routeAnnotationKey == "" {
+		log.Debug(am.logger, "Unsupported route kind for setting annotation", "routeKind", currentRouteKind)
+		return false
+	}
+	hybridRouteAnnotation, exists := annotations[routeAnnotationKey]
 
 	if !exists || hybridRouteAnnotation == "" {
 		// No existing hybrid-routes annotation, set it to the current route
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = currentRouteAnnotation
+		annotations[routeAnnotationKey] = currentRouteObjectKey
 		obj.SetAnnotations(annotations)
 		log.Debug(am.logger, "Set new hybrid-routes annotation",
-			"annotation", currentRouteAnnotation,
+			"annotation", currentRouteObjectKey,
 			"objectName", obj.GetName())
 		return true
 	}
 
-	for route := range strings.SplitSeq(hybridRouteAnnotation, ",") {
-		route = strings.TrimSpace(route)
-		if route == currentRouteAnnotation {
+	for routeAnnotation := range strings.SplitSeq(hybridRouteAnnotation, ",") {
+		if RouteAnnotationMatch(routeAnnotation, route) {
 			log.Debug(am.logger, "Route already exists in annotation, no update needed",
-				"currentRoute", currentRouteAnnotation,
+				"currentRoute", currentRouteObjectKey,
 				"objectName", obj.GetName())
 			return false
 		}
 	}
 
 	// Append current route to existing list
-	updatedAnnotation := hybridRouteAnnotation + "," + currentRouteAnnotation
-	annotations[consts.GatewayOperatorHybridRoutesAnnotation] = updatedAnnotation
+	updatedAnnotation := hybridRouteAnnotation + "," + currentRouteObjectKey
+	annotations[routeAnnotationKey] = updatedAnnotation
 	obj.SetAnnotations(annotations)
 
 	log.Debug(am.logger, "Appended Route to existing annotation",
@@ -193,27 +361,34 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 // Returns:
 //   - bool: true if the annotation was modified, false if no changes were made
 func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route client.Object) bool {
-	currentRouteKey := client.ObjectKeyFromObject(route).String()
-	currentRouteAnnotation := currentRouteKey
+	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
+	currentRouteObjectKey := client.ObjectKeyFromObject(route).String()
 
 	log.Debug(am.logger, "Removing route from annotation",
-		"routeToRemove", currentRouteAnnotation,
+		"routeKind", currentRouteKind,
+		"routeToRemove", currentRouteObjectKey,
 		"objectName", obj.GetName())
 
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		log.Debug(am.logger, "No annotations present, nothing to remove",
-			"routeToRemove", currentRouteAnnotation,
+			"routeKind", currentRouteKind,
+			"routeToRemove", currentRouteObjectKey,
 			"objectName", obj.GetName())
 		return false
 	}
 
-	// Get existing hybrid-routes annotation
-	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	// Get existing hybrid-routes annotation fir the route kind.
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(currentRouteKind)
+	if routeAnnotationKey == "" {
+		return false
+	}
+	existingAnnotation, exists := annotations[routeAnnotationKey]
 
 	if !exists || existingAnnotation == "" {
 		log.Debug(am.logger, "No hybrid-routes annotation exists, nothing to remove",
-			"routeToRemove", currentRouteAnnotation,
+			"routeKind", currentRouteKind,
+			"routeToRemove", currentRouteObjectKey,
 			"objectName", obj.GetName())
 		return false
 	}
@@ -223,18 +398,18 @@ func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route 
 
 	// Filter out the route to remove
 	found := false
-	for _, route := range existingRoutes {
-		route = strings.TrimSpace(route)
-		if route != currentRouteAnnotation {
-			remainingRoutes = append(remainingRoutes, route)
-		} else {
+	for _, routeAnnotation := range existingRoutes {
+		if RouteAnnotationMatch(routeAnnotation, route) {
 			found = true
+			continue
 		}
+		remainingRoutes = append(remainingRoutes, routeAnnotation)
 	}
 
 	if !found {
 		log.Debug(am.logger, "Route not found in annotation, no changes made",
-			"routeToRemove", currentRouteAnnotation,
+			"routeKind", currentRouteKind,
+			"routeToRemove", currentRouteObjectKey,
 			"objectName", obj.GetName())
 		return false
 	}
@@ -242,13 +417,13 @@ func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route 
 	// Update annotation
 	if len(remainingRoutes) == 0 {
 		// No routes left, remove the annotation entirely
-		delete(annotations, consts.GatewayOperatorHybridRoutesAnnotation)
+		delete(annotations, routeAnnotationKey)
 		log.Debug(am.logger, "Removed hybrid-routes annotation completely as no routes remain",
 			"objectName", obj.GetName())
 	} else {
 		// Update with remaining routes
 		updatedAnnotation := strings.Join(remainingRoutes, ",")
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = updatedAnnotation
+		annotations[routeAnnotationKey] = updatedAnnotation
 		log.Debug(am.logger, "Updated hybrid-routes annotation",
 			"previousAnnotation", existingAnnotation,
 			"updatedAnnotation", updatedAnnotation,
@@ -273,39 +448,42 @@ func (am *AnnotationManager) ContainsRoute(obj metav1.Object, route client.Objec
 		return false
 	}
 
-	currentRouteKey := client.ObjectKeyFromObject(route).String()
-	currentRouteAnnotation := currentRouteKey
-
-	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	currentRouteKind := route.GetObjectKind().GroupVersionKind().Kind
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(currentRouteKind)
+	if routeAnnotationKey == "" {
+		return false
+	}
+	existingAnnotation, exists := annotations[routeAnnotationKey]
 	if !exists || existingAnnotation == "" {
 		return false
 	}
 
-	for route := range strings.SplitSeq(existingAnnotation, ",") {
-		route = strings.TrimSpace(route)
-		if route == currentRouteAnnotation {
-			return true
-		}
-	}
-
-	return false
+	return lo.ContainsBy(strings.Split(existingAnnotation, ","), func(routeAnnotation string) bool {
+		return RouteAnnotationMatch(routeAnnotation, route)
+	})
 }
 
-// GetRoutes returns all Route references from the hybrid-routes annotation
-// of the provided Kubernetes object.
+// GetRoutesWithKind returns all Route references having the given route kind
+// from the hybrid-routes annotation of the provided Kubernetes object.
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object
+//   - routeKind: The kind of the route reference
 //
 // Returns:
 //   - []string: List of route references in "namespace/name" format
-func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
+func (am *AnnotationManager) GetRoutesWithKind(obj metav1.Object, routeKind string) []string {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return []string{}
 	}
 
-	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(routeKind)
+	if routeAnnotationKey == "" {
+		return []string{}
+	}
+	existingAnnotation, exists := annotations[routeAnnotationKey]
+
 	if !exists || existingAnnotation == "" {
 		return []string{}
 	}
@@ -318,7 +496,6 @@ func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 		if route == "" {
 			continue
 		}
-
 		// Format is now just "namespace/name"
 		routes = append(routes, route)
 	}
@@ -326,58 +503,82 @@ func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 	return routes
 }
 
-// SetRoutes sets the hybrid-routes annotation to contain exactly the provided route references.
+// SetRoutesWithKind sets the hybrid-routes annotation to contain exactly the provided route references with given kind.
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object
-//   - routes: List of route references to set in the annotation
+//   - routeKind: The kind of the route references
+//   - routes: List of route references (namespace/name) to set in the annotation
 //
 // Returns:
 //   - bool: true if the annotation was modified, false if no changes were made
-func (am *AnnotationManager) SetRoutes(obj metav1.Object, routes []string) bool {
+func (am *AnnotationManager) SetRoutesWithKind(obj metav1.Object, routeKind string, routes []string) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string)
 		obj.SetAnnotations(annotations)
 	}
 
+	routeAnnotationKey := am.RouteAnnotationKeyForKind(routeKind)
+	if routeAnnotationKey == "" {
+		return false
+	}
+
 	newAnnotation := strings.Join(routes, ",")
 
 	// Check if annotation needs to be updated
-	existingAnnotation := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	existingAnnotation := annotations[routeAnnotationKey]
 	existingRoutes := strings.Split(existingAnnotation, ",")
-	if len(existingRoutes) == len(routes) {
-		same := true
-		for _, er := range existingRoutes {
-			er = strings.TrimSpace(er)
-			found := false
-			for _, r := range routes {
-				r = strings.TrimSpace(r)
-				if er == r {
-					found = true
-					break
-				}
-			}
-			if !found {
-				same = false
-				break
-			}
-		}
-		if same {
-			log.Debug(am.logger, "Hybrid-routes annotation already up to date",
-				"objectName", obj.GetName())
-			return false
-		}
+
+	same := lo.ElementsMatchBy(existingRoutes, routes, strings.TrimSpace)
+
+	if same {
+		log.Debug(am.logger, "Hybrid-routes annotation already up to date",
+			"objectName", obj.GetName())
+		return false
 	}
 
 	if newAnnotation == "" {
-		delete(annotations, consts.GatewayOperatorHybridRoutesAnnotation)
+		delete(annotations, routeAnnotationKey)
 	} else {
-		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = newAnnotation
+		annotations[routeAnnotationKey] = newAnnotation
 	}
 	obj.SetAnnotations(annotations)
 	log.Debug(am.logger, "Set hybrid-routes annotation",
-		consts.GatewayOperatorHybridRoutesAnnotation, newAnnotation,
+		routeAnnotationKey, newAnnotation,
 		"objectName", obj.GetName())
 	return true
+}
+
+// RouteAnnotationKeyForKind returns the annotation key for the route kind to
+// mark the namespace and name of the route with given kind that owns the object.
+func (am *AnnotationManager) RouteAnnotationKeyForKind(routeKind string) string {
+	switch routeKind {
+	case kindHTTPRoute:
+		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	case kindTLSRoute:
+		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation
+	}
+	// Not supported route kind. Should be unreachable.
+	return ""
+}
+
+// RouteAnnotationMatch returns true if the hybrid route annotation matches the given route by its namespace and name.
+func RouteAnnotationMatch(routeAnnotation string, route client.Object) bool {
+	routeObjectKey := client.ObjectKeyFromObject(route)
+	return strings.TrimSpace(routeAnnotation) == routeObjectKey.String()
+}
+
+// IsServiceUpstream returns true if the annotation
+// ingress.kubernetes.io/service-upstream is set to "true" in anns.
+func IsServiceUpstream[
+	T interface {
+		*corev1.Service
+		metav1.Object
+	},
+](obj T) bool {
+	if obj == nil {
+		return false
+	}
+	return obj.GetAnnotations()[serviceUpstreamAnnotation] == "true"
 }

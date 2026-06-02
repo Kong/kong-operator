@@ -1,7 +1,7 @@
 e2e:
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
-    - '1.33.1'
+    - '1.36.0'
 
 integration:
   helm:
@@ -12,17 +12,17 @@ integration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.13.0.2'
+  kong-ee: '3.14.0.4'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.13.0.2'
+  kong-ee: '3.14.0.4'
 
 envtests:
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.13.0.2'
+  kong-ee: '3.14.0.4'
   # This is a version of Kong Gateway that does not support sticky sessions,
   # all versions >= 3.11.0 support sticky sessions.
   kong-without-sticky-sessions: '3.9.1'

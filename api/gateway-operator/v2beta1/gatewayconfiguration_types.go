@@ -27,10 +27,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
-func init() {
-	SchemeBuilder.Register(&GatewayConfiguration{}, &GatewayConfigurationList{})
-}
-
 // GatewayConfiguration is the Schema for the gatewayconfigurations API.
 //
 // +genclient
@@ -57,7 +53,9 @@ type GatewayConfiguration struct {
 }
 
 // GatewayConfigurationSpec defines the desired state of GatewayConfiguration
+// Only one of 'konnect' or 'extensions' can be specified.
 //
+// +kubebuilder:validation:XValidation:message="Only one of 'konnect' or 'extensions' can be specified",rule="!(has(self.konnect) && has(self.extensions))"
 // +kubebuilder:validation:XValidation:message="Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer",rule="(has(self.dataPlaneOptions) && has(self.dataPlaneOptions.network) && has(self.dataPlaneOptions.network.services) &&  has(self.dataPlaneOptions.network.services.ingress) && (self.dataPlaneOptions.network.services.ingress.type == 'LoadBalancer' || self.dataPlaneOptions.network.services.ingress.type == 'NodePort')) ? true : (!has(self.listenersOptions) || self.listenersOptions.all(l,!has(l.nodePort)))"
 type GatewayConfigurationSpec struct {
 	// DataPlaneOptions is the specification for configuration

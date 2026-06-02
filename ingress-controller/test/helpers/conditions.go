@@ -104,3 +104,47 @@ func HTTPRouteEventuallyNotContainsConditions(ctx context.Context, t *testing.T,
 		})
 	}
 }
+
+// TLSRouteEventuallyContainsConditions returns a predicate function that can be
+// used with assert.Eventually or require.Eventually to check that the TLSRoute
+// identified by the provided NamespacedName contains the provided conditions
+// in any of its parent statuses.
+func TLSRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, client ctrlclient.Client, nn k8stypes.NamespacedName, conds ...metav1.Condition) func() bool {
+	return func() bool {
+		t.Helper()
+
+		var (
+			ns    = nn.Namespace
+			name  = nn.Name
+			route = gatewayapi.TLSRoute{}
+		)
+
+		err := client.Get(ctx, ctrlclient.ObjectKey{Namespace: ns, Name: name}, &route)
+		if err != nil {
+			// No point in continuing if connection is down.
+			if net.IsConnectionRefused(err) {
+				require.NoError(t, err)
+				return false
+			}
+			t.Logf("Failed to get TLSRoute: %v", err)
+			return false
+		}
+
+		return lo.ContainsBy(route.Status.Parents, func(p gatewayapi.RouteParentStatus) bool {
+			var count int
+			for _, cond := range conds {
+				contains := lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
+					return c.Type == cond.Type && c.Status == cond.Status && c.Reason == cond.Reason
+				})
+				if !contains {
+					t.Logf("condition Type:%s, Status:%s, Reason:%s missing from route:%s/%s status",
+						cond.Type, cond.Status, cond.Reason, ns, name,
+					)
+					return false
+				}
+				count++
+			}
+			return count == len(conds)
+		})
+	}
+}

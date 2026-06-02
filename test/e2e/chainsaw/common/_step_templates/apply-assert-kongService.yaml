@@ -1,0 +1,42 @@
+# Template for creating and asserting a KongService (no cert refs).
+#
+# Required bindings:
+#   - kong_service_name: Name of the KongService to create.
+#   - kong_service_namespace: Namespace where the KongService will be created.
+#   - cp_name: Name of the KonnectGatewayControlPlane to reference.
+#   - upstream_host: Host of the upstream server.
+#   - upstream_port: Port of the upstream server (number).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kong-service
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongService
+          metadata:
+            name: ($kong_service_name)
+            namespace: ($kong_service_namespace)
+          spec:
+            name: ($kong_service_name)
+            host: ($upstream_host)
+            port: ($upstream_port)
+            protocol: https
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($cp_name)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongService
+          metadata:
+            name: ($kong_service_name)
+            namespace: ($kong_service_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (konnect.id != null): true

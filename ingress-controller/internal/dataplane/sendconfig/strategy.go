@@ -107,7 +107,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(
 				KonnectControlPlane: client.KonnectControlPlane(),
 			},
 			r.config.Version,
-			r.config.Concurrency,
+			r.config.KonnectConcurrency,
 			r.logger,
 		)
 	}

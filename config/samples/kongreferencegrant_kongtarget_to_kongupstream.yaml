@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: upstream-ns
+---
+# KongReferenceGrant that allows KongTarget in default namespace
+# to reference a KongUpstream in upstream-ns namespace.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-kongtarget-to-kongupstream
+  namespace: upstream-ns
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongTarget
+      namespace: default
+  to:
+    - group: configuration.konghq.com
+      kind: KongUpstream
+      # Optionally restrict to a specific KongUpstream name
+      # name: upstream-1
+---
+kind: KongUpstream
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: upstream-1
+  namespace: upstream-ns
+spec:
+  name: upstream-1
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: my-control-plane
+      namespace: upstream-ns
+---
+kind: KongTarget
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: target-1
+  namespace: default
+spec:
+  upstreamRef:
+    name: upstream-1
+    namespace: upstream-ns
+  target: "10.0.0.1"
+  weight: 100

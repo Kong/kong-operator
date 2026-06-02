@@ -38,6 +38,10 @@ var ErrExpectedSemverVersion = errors.New(`expected "<image>:<tag>" format`)
 // forth segment on top the standard 3 segment supported by semver.
 // This also supports flavour suffixes which can be supplied after "-" character.
 func FromImage(image string) (semver.Version, error) {
+	if idx := strings.Index(image, "@sha256:"); idx != -1 {
+		image = image[:idx]
+	}
+
 	splitImage := strings.Split(image, ":")
 	if len(splitImage) != 2 {
 		return semver.Version{}, fmt.Errorf(`%w, got: %s`, ErrExpectedSemverVersion, image)

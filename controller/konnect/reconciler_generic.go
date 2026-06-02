@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	apiconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -126,25 +127,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context,
 	for _, dep := range ReconciliationWatchOptionsForEntity(r.Client, ent) {
 		b = dep(b)
 	}
-	return b.Complete(r)
+	return b.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // Reconcile reconciles the given Konnect entity.
-func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
-	ctx context.Context, req ctrl.Request,
-) (ctrl.Result, error) {
+func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TEnt) (ctrl.Result, error) {
 	var (
 		entityTypeName = constraints.EntityTypeName[T]()
 		logger         = log.GetLogger(ctx, entityTypeName, r.LoggingMode)
 	)
-
-	var (
-		e   T
-		ent = TEnt(&e)
-	)
-	if err := r.Client.Get(ctx, req.NamespacedName, ent); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	if id := ent.GetKonnectStatus().GetKonnectID(); id != "" {
 		logger = logger.WithValues("konnect_id", id)
@@ -172,6 +163,20 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				}
 			}
 		}
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+	}
+
+	if stop, res, err := r.handleGeneratedTypeParentReferences(ctx, ent); stop || err != nil {
+		return res, err
+	}
+
+	// For KongPluginBinding, verify the pluginRef early: check plugin existence for all refs,
+	// and additionally check the KongReferenceGrant for cross-namespace refs. Running this
+	// before the Konnect SDK ops layer ensures that grant/plugin changes are reflected
+	// immediately via the watch-triggered enqueue rather than waiting for the sync period.
+	if res, stop, err := handlePluginRef(ctx, r.Client, ent); err != nil || !res.IsZero() {
+		return res, err
+	} else if stop {
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
@@ -211,7 +216,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			); errStatus != nil || !res.IsZero() {
 				return res, errStatus
 			}
-			return ctrl.Result{}, err
+			return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 
 		default:
 			log.Error(logger, err, "error handling KongService ref")
@@ -355,6 +360,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 		}
 
+		if crossnamespace.IsReferenceNotGranted(err) {
+			if res, errStatus := patch.StatusWithCondition(
+				ctx, r.Client, ent,
+				apiconsts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+				metav1.ConditionFalse,
+				configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+				err.Error(),
+			); errStatus != nil || !res.IsZero() {
+				return res, errStatus
+			}
+			return ctrl.Result{}, err
+		}
+
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
 		// If the result is not zero (e.g., requeue), we still need to update the Programmed
@@ -401,6 +419,55 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
+	// If a type has KongCACertificate refs (KongService), handle them.
+	res, err = handleKongCACertificateRefs(ctx, r.Client, ent)
+	if err != nil {
+		if errDel, ok := errors.AsType[ReferencedObjectIsBeingDeletedError](err); ok &&
+			ent.GetDeletionTimestamp().IsZero() {
+			return ctrl.Result{
+				RequeueAfter: time.Until(errDel.DeletionTimestamp),
+			}, nil
+		}
+
+		_, referencedDoesNotExist := errors.AsType[ReferencedKongCACertificateDoesNotExistError](err)
+		if referencedDoesNotExist {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if apierrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
+					}
+					if apierrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
+					}
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+				}
+				log.Debug(logger, "finalizer removed as the owning KongCACertificate is being deleted or is already gone",
+					"finalizer", KonnectCleanupFinalizer,
+				)
+			}
+		}
+
+		if crossnamespace.IsReferenceNotGranted(err) {
+			if res, errStatus := patch.StatusWithCondition(
+				ctx, r.Client, ent,
+				apiconsts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+				metav1.ConditionFalse,
+				configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+				err.Error(),
+			); errStatus != nil || !res.IsZero() {
+				return res, errStatus
+			}
+			return ctrl.Result{}, err
+		}
+
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+	} else if !res.IsZero() {
+		if _, errStatus := patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent); errStatus != nil {
+			return ctrl.Result{}, errStatus
+		}
+		return res, nil
+	}
+
 	// If a type has a Secret ref, handle it.
 	res, stop, err := handleSecretRef(ctx, r.Client, ent)
 	if err != nil || !res.IsZero() {
@@ -417,7 +484,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		Message: "Some conditions have status set to False",
 	}
 
-	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
+	apiAuthRef, err := GetAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		if crossnamespace.IsReferenceNotGranted(err) {
 			log.Info(logger, "cross-namespace reference to KonnectAPIAuthConfiguration is not granted", "error", err.Error())
@@ -548,9 +615,21 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errURL, ok := errors.AsType[*url.Error](err); ok {
 			return r.handleOpsErr(ctx, ent, errURL)
 		}
-		return ctrl.Result{}, err
+		if errMatchingIDNotFound, ok := errors.AsType[ops.EntityWithMatchingIDNotFoundError](err); ok {
+			// If the error is that the entity with the matching ID was not found,
+			// in Konnect, it means that it was deleted from Konnect.
+			// We continue with the reconciliation which will recreate the entity on Konnect
+			// and update the status with the new Konnect ID.
+			logger.Info(
+				"Konnect entity with matching ID not found on Konnect, it might have been deleted. Continuing reconciliation to recreate it.",
+				"konnect_id", errMatchingIDNotFound.ID,
+			)
+			ent.SetKonnectID("")
+		} else {
+			return ctrl.Result{}, err
+		}
 	} else if !res.IsZero() || stop {
-		return res, err
+		return res, nil
 	}
 
 	// TODO: relying on status ID is OK but we need to rethink this because
@@ -559,7 +638,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	//
 	// We should look at the "expectations" for this:
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
-	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
+	if shouldCreateKonnectEntity(ent) {
 
 		// Check if the object is adopting an existing Konnect entity.
 		if adoptable, ok := any(ent).(constraints.KonnectEntityTypeSupportingAdoption); ok {
@@ -579,7 +658,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Regardless of the error reported from Create(), if the Konnect ID has been
 		// set then:
 		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
-		if status := ent.GetKonnectStatus(); status != nil && status.ID != "" {
+		if shouldAttachKonnectFinalizerAfterCreate(ent) {
 			if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
 				return res, err
 			}
@@ -680,6 +759,42 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	}, nil
 }
 
+func shouldCreateKonnectEntity[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	status := ent.GetKonnectStatus()
+	if status == nil {
+		return true
+	}
+	if status.GetKonnectID() != "" {
+		return false
+	}
+	if ops.EntityPersistsKonnectID(ent) {
+		return true
+	}
+	return !entityHasProgrammedStatusTrue(ent)
+}
+
+func shouldAttachKonnectFinalizerAfterCreate[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	status := ent.GetKonnectStatus()
+	if status != nil && status.GetKonnectID() != "" {
+		return true
+	}
+	return !ops.EntityPersistsKonnectID(ent) && entityHasProgrammedStatusTrue(ent)
+}
+
+func entityHasProgrammedStatusTrue[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+	return ok && cond.Status == metav1.ConditionTrue
+}
+
 // adoptFromExistingEntity adopts the existing entity from Konnect based on reconciled object
 // if it is not attached to the existing entity yet, and sets the status and finalizers.
 func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
@@ -760,10 +875,7 @@ func setStatusServerURLAndOrgID(
 }
 
 func patchWithProgrammedStatusConditionBasedOnOtherConditions[
-	T interface {
-		client.Object
-		k8sutils.ConditionsAware
-	},
+	T k8sutils.ConditionsAwareObject,
 ](
 	ctx context.Context,
 	cl client.Client,

@@ -1,0 +1,129 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1
+    description: Test Event Gateway CP
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-backend-cluster-tls
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: kubernetes.io/tls
+stringData:
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEAyiUO3sxXqhW+8aZp
+    pqczR9pyejKz3cMnrN3ujHJMf/ou1PyLk4bFtpxy4G8XERhntUUYNg1rhcmilSo7
+    +DAtcwIDAQABAkEAoi7LWHwwVZku4qi2mWwKm7qrIFmvr9wU6AADlZFayU2dpgnj
+    ymm/oHIo5aAvTfoMt0wZmqgXEkyoTRg/GvkXmQIhAPbkZkq50hqkoOJjETM+OLnJ
+    Sx8vvVSkcS1Yx2fNAlVHAiEA0ZoSn+KzT0e0aDFVCzwiAwKO67SEAqJnkoCyIPxR
+    LHUCIHBagDKBXZvCT3S2oJ0xM59Ye1c14nMiYl7Ah/40zVsBAiBVQ7v31pziz2SQ
+    TiEuZNPhLZU+RTy+ZZqEel38FShgUQIgOoMMEmMFT3k9uNXsOVHwJ9ZPyie4XPlW
+    NWzBf8ZCi+A=
+    -----END PRIVATE KEY-----
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIICZTCCAg+gAwIBAgIUVjjwPhhV6XmuWKabaWpfKtwrS3kwDQYJKoZIhvcNAQEL
+    BQAwgYYxCzAJBgNVBAYTAlhYMRIwEAYDVQQIDAlTdGF0ZU5hbWUxETAPBgNVBAcM
+    CENpdHlOYW1lMRQwEgYDVQQKDAtDb21wYW55TmFtZTEbMBkGA1UECwwSQ29tcGFu
+    eVNlY3Rpb25OYW1lMR0wGwYDVQQDDBRDb21tb25OYW1lT3JIb3N0bmFtZTAeFw0y
+    NjA1MTQxMjMxMDNaFw0zNjA1MTExMjMxMDNaMIGGMQswCQYDVQQGEwJYWDESMBAG
+    A1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5TmFtZTEUMBIGA1UECgwLQ29t
+    cGFueU5hbWUxGzAZBgNVBAsMEkNvbXBhbnlTZWN0aW9uTmFtZTEdMBsGA1UEAwwU
+    Q29tbW9uTmFtZU9ySG9zdG5hbWUwXDANBgkqhkiG9w0BAQEFAANLADBIAkEAyiUO
+    3sxXqhW+8aZppqczR9pyejKz3cMnrN3ujHJMf/ou1PyLk4bFtpxy4G8XERhntUUY
+    Ng1rhcmilSo7+DAtcwIDAQABo1MwUTAdBgNVHQ4EFgQUBHpMVvFVJXmx9pZ2YnmU
+    Fn7MngswHwYDVR0jBBgwFoAUBHpMVvFVJXmx9pZ2YnmUFn7MngswDwYDVR0TAQH/
+    BAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAMKT/Lb/3EqMOq/mMrr43arFL38stNku
+    toJJgydd1s7dp3bh2iVqSI3DECc8iyRX8/oExNitF2vNQpULUXj+q4U=
+    -----END CERTIFICATE-----
+---
+kind: EventGatewayBackendCluster
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-listener-1
+  namespace: default
+spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1
+  apiSpec:
+    name: cp-event-1-backend-cluster-1
+    description: Test Event Gateway Backend Cluster
+    authentication:
+      type: anonymous
+      anonymous: {}
+    bootstrapServers:
+      - "kafka1:9092"
+      - "kafka2:9092"
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    labels:
+      app: test1
+      env: test
+    metadataUpdateIntervalSeconds: 60
+    tls:
+      enabled: Enabled
+      tlsVersions:
+      - tls13
+      caBundle: |
+        -----BEGIN CERTIFICATE-----
+        MIICwDCCAimgAwIBAgIUc4PDW5VuLWNsM+3Mcnk66T5E3P0wDQYJKoZIhvcNAQEL
+        BQAwajELMAkGA1UEBhMCWFgxEjAQBgNVBAgMCVN0YXRlTmFtZTERMA8GA1UEBwwI
+        Q2l0eU5hbWUxFDASBgNVBAoMC0NvbXBhbnlOYW1lMQswCQYDVQQLDAJDQTERMA8G
+        A1UEAwwITXlSb290Q0EwHhcNMjYwNDI5MTI0MDM4WhcNMzYwNDI2MTI0MDM4WjBq
+        MQswCQYDVQQGEwJYWDESMBAGA1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5
+        TmFtZTEUMBIGA1UECgwLQ29tcGFueU5hbWUxCzAJBgNVBAsMAkNBMREwDwYDVQQD
+        DAhNeVJvb3RDQTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAr7nmBaNFZ+ba
+        DccAKBAvm2BJLe4z4R3qnGEcdzwxOv5HAQfbSbNSzvl/yBtmRMcO6GShZYBWfJ8q
+        PsTSSpcbB9KoRxWSwIBtUr9s6NsGi1g2uH2sLtgygkKoOKZTlzlSTjKm2wTdF97h
+        w+tpfVAVPc2OAjkNM76H/3IZxYzcjt8CAwEAAaNjMGEwHQYDVR0OBBYEFAy8XNmU
+        tjb6+l3+dQ8tZl9lUuIvMB8GA1UdIwQYMBaAFAy8XNmUtjb6+l3+dQ8tZl9lUuIv
+        MA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMA0GCSqGSIb3DQEBCwUA
+        A4GBAFFy9F9JK/4ImxCnJDJOxyDl5IEny+4q8jbjaPCwjO2mUBpI9mBInUcSdU0V
+        MRyBAKUDlpA+5oOV/HzdOEC7LbRU04+pD95CkvQfu2u5wkOCUFIY3eVTXBhhUMMo
+        i9cMhVYP4Xeq7z1NGiu/VB36Pbr4hHDY/t9YAj0DtrYRW5sa
+        -----END CERTIFICATE-----
+      clientIdentity:
+        certificate:
+        ## Sensitive data can also be provided inline:
+        #   type: inline
+        #   value: |
+        #     -----BEGIN CERTIFICATE-----
+        #     MIICxTCCAi6gAwIBAgIUaadvyb4GxCPmdtZeW0WcHnxZjbQwDQYJKoZIhvcNAQEL
+        #     BQAwajELMAkGA1UEBhMCWFgxEjAQBgNVBAgMCVN0YXRlTmFtZTERMA8GA1UEBwwI
+        #     Q2l0eU5hbWUxFDASBgNVBAoMC0NvbXBhbnlOYW1lMQswCQYDVQQLDAJDQTERMA8G
+        #     A1UEAwwITXlSb290Q0EwHhcNMjYwNDI5MTI0MDM4WhcNMjcwNDI5MTI0MDM4WjBg
+        #     -----END CERTIFICATE-----
+          type: secretRef
+          secretRef:
+            name: my-backend-cluster-tls
+        # Or source key from a Kubernetes Secret (key: tls.key from Secret my-backend-cluster-tls):
+        key:
+          type: secretRef
+          secretRef:
+            name: my-backend-cluster-tls

@@ -16,6 +16,9 @@ type EnvConfig struct {
 	InputFile  string `env:"INPUT_FILE" envDefault:"openapi.yaml"`
 	OutputDir  string `env:"OUTPUT_DIR" envDefault:"api/"`
 	ConfigFile string `env:"CONFIG_FILE,required"`
+	// ProjectRoot is used when generated reconciler artifacts need to be written
+	// outside the API output directory, e.g. into controller and index packages.
+	ProjectRoot string `env:"PROJECT_ROOT" envDefault:".."`
 }
 
 func main() {
@@ -34,7 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	runner, err := run.New(projectCfg, cfg.InputFile, cfg.OutputDir)
+	runner, err := run.New(projectCfg, cfg.InputFile, cfg.OutputDir, run.WithProjectRoot(cfg.ProjectRoot))
 	if err != nil {
 		logger.Error("failed to initialize runner", "error", err)
 		os.Exit(1)

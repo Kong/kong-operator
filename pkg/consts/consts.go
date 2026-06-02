@@ -86,16 +86,14 @@ const (
 	// CertPurposeLabel indicates the purpose of a certificate.
 	CertPurposeLabel = OperatorLabelPrefix + "cert-purpose"
 
-	// ControlPlaneKGOCleanupAnnotation indicates that the clean up KGO related resources
-	// has been performed for this ControlPlane.
-	// NOTE: This will be removed together with the logic that performs the cleanup
-	// as part of https://github.com/Kong/kong-operator/issues/2228.
-	ControlPlaneKGOCleanupAnnotation = OperatorAnnotationPrefix + "kgo-cleanup"
-
 	// GatewayStaticNamingAnnotation indicates that the gateway uses static naming for its resources.
 	// This means that the DataPlane, ControlPlane and KonnectGatewayControlPlane resources
 	// are named as the Gateway resource.
 	GatewayStaticNamingAnnotation = OperatorAnnotationPrefix + "static-naming"
+
+	// CertExpiresAtAnnotation is the annotation used to store the certificate expiration time
+	// in RFC3339 format as an annotation on the Secret containing the certificate.
+	CertExpiresAtAnnotation = "konghq.com/cert-expires-at"
 )
 
 // -----------------------------------------------------------------------------
@@ -186,6 +184,16 @@ const (
 	// DefaultMaxConcurrentReconcilesGateway is the default max concurrent
 	// reconciles for the Gateway controllers.
 	DefaultMaxConcurrentReconcilesGateway = uint(1)
+)
+
+const (
+	// DefaultCertTTL is the default time-to-live for certificates issued by the operator.
+	// Set to 10 years to be as it used to be in the past, but it can be overridden by user.
+	DefaultCertTTL = 10 * 365 * 24 * time.Hour
+	// DefaultCertExpirationMargin is the default duration before certificate
+	// expiration at which the operator will trigger certificate renewal.
+	// Set to 7 days to ensure certificates are renewed well before they expire.
+	DefaultCertExpirationMargin = 7 * 24 * time.Hour
 )
 
 const (

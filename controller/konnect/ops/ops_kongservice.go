@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -162,6 +163,7 @@ func kongServiceToSDKServiceInput(
 	svc *configurationv1alpha1.KongService,
 ) sdkkonnectcomp.Service {
 	s := sdkkonnectcomp.Service{
+		ID:             svc.Spec.ID,
 		URL:            svc.Spec.URL,
 		ConnectTimeout: svc.Spec.ConnectTimeout,
 		Enabled:        svc.Spec.Enabled,
@@ -180,6 +182,15 @@ func kongServiceToSDKServiceInput(
 	}
 	if svc.Spec.Protocol != "" {
 		s.Protocol = new(svc.Spec.Protocol)
+	}
+	if svc.Status.Konnect != nil {
+		if svc.Status.Konnect.CertificateID != "" {
+			certID := svc.Status.Konnect.CertificateID
+			s.ClientCertificate = &sdkkonnectcomp.ClientCertificate{ID: &certID}
+		}
+		if len(svc.Status.Konnect.CACertificateIDs) > 0 {
+			s.CaCertificates = slices.Clone(svc.Status.Konnect.CACertificateIDs)
+		}
 	}
 	return s
 }

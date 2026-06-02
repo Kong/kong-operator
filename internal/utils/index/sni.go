@@ -27,5 +27,9 @@ func kongSNIReferencesCertificate(object client.Object) []string {
 	if !ok {
 		return nil
 	}
-	return []string{sni.Spec.CertificateRef.Name}
+	certNamespace := sni.Namespace
+	if sni.Spec.CertificateRef.Namespace != nil && *sni.Spec.CertificateRef.Namespace != "" {
+		certNamespace = *sni.Spec.CertificateRef.Namespace
+	}
+	return []string{certNamespace + "/" + sni.Spec.CertificateRef.Name}
 }

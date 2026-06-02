@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -12,12 +13,14 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-// UpstreamForRule creates or updates a KongUpstream for the given HTTPRoute rule.
+// UpstreamForRule creates or updates a KongUpstream for the given route rule.
 //
 // The function performs the following operations:
 // 1. Generates the KongUpstream name using the namegen package
@@ -30,33 +33,68 @@ import (
 //   - ctx: The context for API calls and cancellation
 //   - logger: Logger for structured logging
 //   - cl: Kubernetes client for API operations
-//   - httpRoute: The HTTPRoute resource from which the KongUpstream is derived
-//   - rule: The specific rule within the HTTPRoute
-//   - pRef: The parent reference (Gateway) for the HTTPRoute
+//   - parentRoute: The route resource from which the KongUpstream is derived
+//   - rule: The specific rule within the route
+//   - pRef: The parent reference (Gateway) for the route
 //   - cp: The control plane reference for the KongUpstream
 //
 // Returns:
 //   - kongUpstream: The translated KongUpstream resource
 //   - err: Any error that occurred during the process
-func UpstreamForRule(
+func UpstreamForRule[
+	T gwtypes.SupportedRoute,
+	TPtr gwtypes.SupportedRoutePtr[T],
+	R gwtypes.SupportedRouteRule,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	rule gwtypes.HTTPRouteRule,
+	parentRoute TPtr,
+	rule R,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 ) (kongUpstream *configurationv1alpha1.KongUpstream, err error) {
-	upstreamName := namegen.NewKongUpstreamName(httpRoute, cp, rule)
+
+	var upstreamName string
+	var namespace string
+	var backendRefs []gwtypes.BackendRef
+
+	switch r := any(parentRoute).(type) {
+	case *gwtypes.HTTPRoute:
+		httpRule, ok := any(rule).(gwtypes.HTTPRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		upstreamName = namegen.NewKongUpstreamNameForHTTPRouteRule(r, cp, httpRule)
+		namespace = r.Namespace
+		backendRefs = utils.HTTPBackendRefsToBackendRefs(httpRule.BackendRefs)
+	case *gwtypes.TLSRoute:
+		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		upstreamName = namegen.NewKongUpstreamNameForTLSRouteRule(r, cp, tlsRule)
+		namespace = r.Namespace
+		backendRefs = tlsRule.BackendRefs
+	// TODO: add other types of rules when we support them.
+
+	// Should be unreachable.
+	default:
+		return nil, fmt.Errorf("failed to build KongUpstream: unsupported route type: %T", parentRoute)
+	}
+
+	policy := upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), rule)
+	hostHeader := resolveHostHeaderFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	logger = logger.WithValues("kongupstream", upstreamName)
-	log.Debug(logger, "Creating KongUpstream for HTTPRoute rule")
+	log.Debug(logger, fmt.Sprintf("Creating KongUpstream for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 
 	upstream, err := builder.NewKongUpstream().
 		WithName(upstreamName).
-		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-		WithLabels(httpRoute, pRef).
-		WithAnnotations(httpRoute, pRef).
+		WithNamespace(metadata.NamespaceFromParentRef(parentRoute, pRef)).
+		WithLabels(parentRoute, pRef).
+		WithAnnotations(parentRoute, pRef).
 		WithSpecName(upstreamName).
+		WithHostHeader(hostHeader).
 		WithControlPlaneRef(*cp).
 		Build()
 	if err != nil {
@@ -64,9 +102,64 @@ func UpstreamForRule(
 		return nil, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err)
 	}
 
-	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, httpRoute, false); err != nil {
+	applyPolicyToUpstream(&upstream, policy)
+
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, parentRoute, false); err != nil {
 		return nil, err
 	}
 
 	return &upstream, nil
+}
+
+// resolveHostHeaderFromBackendRefs returns the first host-header value found on any of the
+// provided backend Services. Works for HTTPRoute, TLSRoute, and any future route kind — callers
+// are responsible for converting their rule's BackendRefs to []gwtypes.BackendRef.
+func resolveHostHeaderFromBackendRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) *string {
+	for _, backendRef := range backendRefs {
+		if v := extractHostHeaderFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// extractHostHeaderFromBackendRef returns the konghq.com/host-header annotation value from the
+// backend Service referenced by backendRef.
+func extractHostHeaderFromBackendRef(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	namespace string,
+	backendRef gwtypes.BackendRef,
+) *string {
+	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil
+	}
+
+	bRefNamespace := namespace
+	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+		bRefNamespace = string(*backendRef.Namespace)
+	}
+
+	svc := &corev1.Service{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
+		log.Debug(logger, "Failed to fetch backend Service for host-header annotation check",
+			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
+		return nil
+	}
+
+	v := metadata.ExtractHostHeader(svc.GetAnnotations())
+	if v == nil {
+		return nil
+	}
+
+	log.Debug(logger, "Using host-header from backend Service annotation",
+		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "host-header", *v)
+	return v
 }

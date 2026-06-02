@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -41,7 +42,7 @@ func (b *KongUpstreamBuilder) WithNamespace(namespace string) *KongUpstreamBuild
 }
 
 // WithLabels sets the labels for the KongUpstream being built.
-func (b *KongUpstreamBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongUpstreamBuilder {
+func (b *KongUpstreamBuilder) WithLabels(route client.Object, parentRef *gwtypes.ParentReference) *KongUpstreamBuilder {
 	labels := metadata.BuildLabels(route, parentRef)
 	if b.upstream.Labels == nil {
 		b.upstream.Labels = make(map[string]string)
@@ -51,7 +52,7 @@ func (b *KongUpstreamBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gw
 }
 
 // WithAnnotations sets the annotations for the KongUpstream being built.
-func (b *KongUpstreamBuilder) WithAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongUpstreamBuilder {
+func (b *KongUpstreamBuilder) WithAnnotations(route client.Object, parentRef *gwtypes.ParentReference) *KongUpstreamBuilder {
 	annotations := metadata.BuildAnnotations(route, parentRef)
 	if b.upstream.Annotations == nil {
 		b.upstream.Annotations = make(map[string]string)
@@ -66,8 +67,8 @@ func (b *KongUpstreamBuilder) WithSpecName(name string) *KongUpstreamBuilder {
 	return b
 }
 
-// WithOwner sets the owner reference for the KongUpstream to the given HTTPRoute.
-func (b *KongUpstreamBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongUpstreamBuilder {
+// WithOwner sets the owner reference for the KongUpstream to the given route.
+func (b *KongUpstreamBuilder) WithOwner(owner client.Object) *KongUpstreamBuilder {
 	if owner == nil {
 		b.errors = append(b.errors, fmt.Errorf("owner cannot be nil"))
 		return b
@@ -81,6 +82,16 @@ func (b *KongUpstreamBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongUpstreamB
 // WithControlPlaneRef sets the control plane reference for the KongUpstream.
 func (b *KongUpstreamBuilder) WithControlPlaneRef(cpr commonv1alpha1.ControlPlaneRef) *KongUpstreamBuilder {
 	b.upstream.Spec.ControlPlaneRef = &cpr
+	return b
+}
+
+// WithHostHeader sets the host-header field in the KongUpstream spec.
+// A nil pointer leaves the field unset.
+func (b *KongUpstreamBuilder) WithHostHeader(v *string) *KongUpstreamBuilder {
+	if v == nil {
+		return b
+	}
+	b.upstream.Spec.HostHeader = v
 	return b
 }
 

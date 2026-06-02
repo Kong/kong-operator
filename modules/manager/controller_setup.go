@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -22,6 +23,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -30,6 +32,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
+	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
 	"github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/controller/gatewayclass"
 	hybridgateway "github.com/kong/kong-operator/v2/controller/hybridgateway"
@@ -39,6 +42,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/mcpserver"
+	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/internal/metrics"
@@ -86,6 +90,15 @@ func (c *ControllerDef) MaybeSetupWithManager(ctx context.Context, mgr ctrl.Mana
 func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 	var indexOptions []index.Option
 
+	crdChecker := k8sutils.CRDChecker{
+		Client: mgr.GetClient(),
+	}
+	tlsRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "tlsroutes",
+	}
+
 	if cfg.ControlPlaneControllerEnabled || cfg.GatewayControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForControlPlane(cfg.KonnectControllersEnabled),
@@ -103,6 +116,13 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForGateway(),
 			index.OptionsForHTTPRoute(),
 		)
+		hasTLSRoute, err := crdChecker.CRDExists(tlsRouteGVR)
+		if err != nil {
+			return fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
+		}
+		if hasTLSRoute {
+			indexOptions = slices.Concat(indexOptions, index.OptionsForTLSRoute())
+		}
 	}
 
 	if cfg.KonnectControllersEnabled {
@@ -131,9 +151,12 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectGatewayControlPlane(),
 			index.OptionsForKonnectAPIAuthConfiguration(),
 			index.OptionsForKonnectCloudGatewayNetwork(),
+			index.OptionsForKegDataPlane(),
 			index.OptionsForKonnectExtension(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
 		)
+
+		indexOptions = append(indexOptions, generatedIndexOptionsForKonnectEntities(cl)...)
 	}
 
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
@@ -270,6 +293,26 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 			},
 		},
 		{
+			condition: c.KEGDataPlaneControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				{
+					Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
+					Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kegdataplanes",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "eventgatewaydataplanecertificates",
+				},
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konnecteventgateways",
+				},
+			},
+		},
+		{
 			condition: c.KonnectControllersEnabled,
 			gvrs: []schema.GroupVersionResource{
 				gwtypes.GatewayConfigurationGVR(),
@@ -302,6 +345,11 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 					Resource: "konnectcloudgatewaytransitgateways",
+				},
+				{
+					Group:    konnectv1alpha1.GroupVersion.Group,
+					Version:  konnectv1alpha1.GroupVersion.Version,
+					Resource: "konnecteventgateways",
 				},
 				{
 					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
@@ -452,6 +500,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	scrapersMgr := metricsscraper.NewManager(
 		mgr.GetLogger(),
 		metricsScrapeInterval,
+		c.CertTTL,
+		c.CertExpirationMargin,
 		mgr.GetClient(),
 		k8stypes.NamespacedName{
 			Name:      c.ClusterCASecretName,
@@ -520,6 +570,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterDomain:            c.ClusterDomain,
 				EmitKubernetesEvents:     c.EmitKubernetesEvents,
 				WatchNamespaces:          c.WatchNamespaces,
+				CertTTL:                  c.CertTTL,
 			},
 		},
 		// DataPlane controller
@@ -537,6 +588,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				EnforceConfig:            c.EnforceConfig,
 				LoggingMode:              c.LoggingMode,
 				ValidateDataPlaneImage:   c.ValidateImages,
+				CertTTL:                  c.CertTTL,
 			},
 		},
 		// DataPlaneBlueGreen controller
@@ -561,12 +613,14 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					EnforceConfig:            c.EnforceConfig,
 					ValidateDataPlaneImage:   c.ValidateImages,
 					LoggingMode:              c.LoggingMode,
+					CertTTL:                  c.CertTTL,
 				},
 				DefaultImage:           consts.DefaultDataPlaneImage,
 				KonnectEnabled:         c.KonnectControllersEnabled,
 				EnforceConfig:          c.EnforceConfig,
 				ValidateDataPlaneImage: c.ValidateImages,
 				LoggingMode:            c.LoggingMode,
+				CertTTL:                c.CertTTL,
 			},
 		},
 		// DataPlaneOwnedServiceFinalizer controller
@@ -595,6 +649,16 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				c.LoggingMode,
 				ctrlOpts,
 			),
+		},
+		// SecretCert controller
+		{
+			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled || c.ControlPlaneControllerEnabled,
+			Controller: &secretcert.Reconciler{
+				ControllerOptions:    ctrlOpts,
+				Client:               mgr.GetClient(),
+				LoggingMode:          c.LoggingMode,
+				CertExpirationMargin: c.CertExpirationMargin,
+			},
 		},
 		// AIGateway Controller
 		{
@@ -626,6 +690,18 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				DataPlaneScraperManagerNotifier: scrapersMgr,
 			},
 		},
+		// EventGateway DataPlane controller
+		{
+			Enabled: c.KEGDataPlaneControllerEnabled,
+			Controller: &egdataplane.Reconciler{
+				Client:                   mgr.GetClient(),
+				LoggingMode:              c.LoggingMode,
+				ClusterCASecretName:      c.ClusterCASecretName,
+				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				SecretLabelSelector:      c.SecretLabelSelector,
+				CertTTL:                  c.CertTTL,
+			},
+		},
 	}
 
 	// MCPServer controllers
@@ -635,11 +711,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
-		httpClient, err := httpClientForKonnect(c)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create HTTP client for Konnect: %w", err)
-		}
-		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClient))
+		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)))
 		ctrlOpts := controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesKonnect)))
 
 		controllerFactory := konnectControllerFactory{
@@ -697,13 +769,13 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
 				Controller: &konnect.KonnectExtensionReconciler{
 					ControllerOptions:        ctrlOpts,
-					SdkFactory:               sdkFactory,
 					LoggingMode:              c.LoggingMode,
 					Client:                   mgr.GetClient(),
 					SyncPeriod:               c.KonnectSyncPeriod,
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					SecretLabelSelector:      c.SecretLabelSelector,
+					CertTTL:                  c.CertTTL,
 				},
 			},
 		)
@@ -745,11 +817,26 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectEntityController[configurationv1alpha1.KongSNI](controllerFactory),
 		)
 
-		if c.KonnectControllersEnabled {
-			controllers = append(controllers,
-				newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain),
-				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
-			)
+		controllers = append(
+			controllers,
+			generatedControllersForKonnectEntities(controllerFactory)...,
+		)
+
+		controllers = append(controllers,
+			newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain),
+			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
+		)
+		tlsRouteGVR := schema.GroupVersionResource{
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
+			Resource: "tlsroutes",
+		}
+		hasTLSRoute, err := checker.CRDExists(tlsRouteGVR)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
+		}
+		if hasTLSRoute {
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain))
 		}
 	}
 
@@ -804,7 +891,8 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 }
 
 func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options) []ControllerDef {
-	sm := mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme())
+	reconcileEventCh := make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
+	sm := mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
 	sdkFactory := sdkops.NewSDKFactory()
 	controllerFactory := konnectControllerFactory{
 		sdkFactory:        sdkFactory,
@@ -823,6 +911,8 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 				LoggingMode:       c.LoggingMode,
 				SignalManager:     sm,
 				SdkFactory:        sdkFactory,
+				ClusterDomain:     c.ClusterDomain,
+				ReconcileEventCh:  reconcileEventCh,
 			},
 		},
 		{

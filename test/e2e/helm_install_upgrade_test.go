@@ -60,7 +60,7 @@ func TestHelmUpgrade(t *testing.T) {
 	// This is the latest Chart available publicly (used by actual users) that we can upgrade from.
 	const (
 		lastReleasedChart        = "oci://docker.io/kong/kong-operator-chart"
-		lastReleasedChartVersion = "1.2.1" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
+		lastReleasedChartVersion = "1.2.4" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
 	)
 	// This is the Chart and image from current state of the repository that we want to upgrade to.
 	// Image has to be loaded into the cluster beforehand and specified via KONG_TEST_KONG_OPERATOR_IMAGE_LOAD
@@ -288,12 +288,12 @@ func TestHelmUpgrade(t *testing.T) {
 				"Installing Helm release %q with chart %q version %q",
 				releaseName, lastReleasedChart, lastReleasedChartVersion,
 			)
-			require.NoError(t, helm.InstallE(t, helmOpts, lastReleasedChart, releaseName))
-			out, err := helm.RunHelmCommandAndGetOutputE(t, helmOpts, "list")
+			require.NoError(t, helm.InstallContextE(t, ctx, helmOpts, lastReleasedChart, releaseName))
+			out, err := helm.RunHelmCommandAndGetOutputContextE(t, ctx, helmOpts, "list")
 			require.NoError(t, err)
 			t.Logf("Helm list output after install:\n  %s", out)
 			t.Cleanup(func() {
-				out, err := helm.RunHelmCommandAndGetOutputE(t, helmOpts, "uninstall", releaseName)
+				out, err := helm.RunHelmCommandAndGetOutputContextE(t, context.Background(), helmOpts, "uninstall", releaseName)
 				if !assert.NoError(t, err) {
 					t.Logf("output: %s", out)
 				}
@@ -343,9 +343,9 @@ func TestHelmUpgrade(t *testing.T) {
 			helmOpts.SetValues["image.repository"] = currentImageRepository
 			helmOpts.SetValues["image.tag"] = currentImageTag
 			helmOpts.Version = "" // For local charts, version must be empty.
-			require.NoError(t, helm.UpgradeE(t, helmOpts, currentChart, releaseName))
+			require.NoError(t, helm.UpgradeContextE(t, ctx, helmOpts, currentChart, releaseName))
 
-			out, err = helm.RunHelmCommandAndGetOutputE(t, helmOpts, "list")
+			out, err = helm.RunHelmCommandAndGetOutputContextE(t, ctx, helmOpts, "list")
 			require.NoError(t, err)
 			t.Logf("Helm list output after upgrade:\n  %s", out)
 			ensureBasicReadiness(t, ctx, e, releaseName)

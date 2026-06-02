@@ -10,8 +10,9 @@ import (
 	"github.com/jpillora/backoff"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
@@ -42,16 +43,17 @@ const (
 type CPEvent struct {
 	Type          EventType
 	KonnectClient sdkops.SDKWrapper
-	ControlPlane  *konnectv1alpha1.KonnectGatewayControlPlane
+	ControlPlane  *konnectv1alpha2.KonnectGatewayControlPlane
 }
 
 // SignalManager manages a set of per-UUID background goroutines that periodically
 // poll the Konnect MCP server signal API until stopped or the parent context is cancelled.
 // Events are delivered via a channel and consumed by the internal dispatch loop.
 type SignalManager struct {
-	loggingMode logging.Mode
-	client      client.Client
-	scheme      *runtime.Scheme
+	loggingMode      logging.Mode
+	client           client.Client
+	scheme           *runtime.Scheme
+	reconcileEventCh chan<- event.GenericEvent
 
 	mu       sync.Mutex
 	parent   context.Context //nolint:containedctx // intentionally stored to derive per-CP child contexts in setControlPlane
@@ -62,14 +64,15 @@ type SignalManager struct {
 }
 
 // NewSignalManager creates a new SignalManager.
-func NewSignalManager(loggingMode logging.Mode, client client.Client, scheme *runtime.Scheme) *SignalManager {
+func NewSignalManager(loggingMode logging.Mode, client client.Client, scheme *runtime.Scheme, reconcileEventCh chan<- event.GenericEvent) *SignalManager {
 	return &SignalManager{
-		loggingMode: loggingMode,
-		client:      client,
-		scheme:      scheme,
-		routines:    make(map[string]context.CancelFunc),
-		resetChs:    make(map[string]chan struct{}),
-		cpCh:        make(chan CPEvent, signalChannelBufSize),
+		loggingMode:      loggingMode,
+		client:           client,
+		scheme:           scheme,
+		reconcileEventCh: reconcileEventCh,
+		routines:         make(map[string]context.CancelFunc),
+		resetChs:         make(map[string]chan struct{}),
+		cpCh:             make(chan CPEvent, signalChannelBufSize),
 	}
 }
 
@@ -124,7 +127,7 @@ func (s *SignalManager) NotifyMCPServerDeleted(namespace, cpName string) {
 
 // registerControlPlane registers the control plane and starts a dedicated goroutine for it.
 // If the control plane is already registered, registerControlPlane is a no-op.
-func (s *SignalManager) registerControlPlane(konnectClient sdkops.SDKWrapper, cp *konnectv1alpha1.KonnectGatewayControlPlane) {
+func (s *SignalManager) registerControlPlane(konnectClient sdkops.SDKWrapper, cp *konnectv1alpha2.KonnectGatewayControlPlane) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -136,20 +139,20 @@ func (s *SignalManager) registerControlPlane(konnectClient sdkops.SDKWrapper, cp
 	ctx, cancel := context.WithCancel(s.parent)
 	s.routines[key] = cancel
 
-	// wakeupCh is buffered (size 1) so the signal routine never blocks: if a
+	// fetchEventCh is buffered (size 1) so the signal routine never blocks: if a
 	// fetch is already pending the extra notification is safely dropped.
-	wakeupCh := make(chan struct{}, 1)
+	fetchEventCh := make(chan struct{}, 1)
 	// resetCh is buffered (size 1): a pending reset notification is never lost
 	// but multiple rapid deletions collapse into a single reset.
 	resetCh := make(chan struct{}, 1)
 	s.resetChs[key] = resetCh
 
-	fetcher := NewMCPServersFetcher(s.loggingMode, s.client, konnectClient, wakeupCh, cp, s.scheme)
+	fetcher := NewMCPServersFetcher(s.loggingMode, s.client, konnectClient, fetchEventCh, s.reconcileEventCh, cp, s.scheme)
 	fetcher.run(ctx)
 
 	go func() {
 		defer cancel()
-		s.mcpCPSignalRoutine(ctx, cp, konnectClient, wakeupCh, resetCh)
+		s.mcpCPSignalRoutine(ctx, cp, konnectClient, fetchEventCh, resetCh)
 	}()
 }
 
@@ -161,7 +164,7 @@ func (s *SignalManager) CPEvents() <-chan CPEvent {
 
 // deregisterControlPlane cancels and unregisters the goroutine for the given control plane.
 // If the control plane is not registered, deregisterControlPlane is a no-op.
-func (s *SignalManager) deregisterControlPlane(cp *konnectv1alpha1.KonnectGatewayControlPlane) {
+func (s *SignalManager) deregisterControlPlane(cp *konnectv1alpha2.KonnectGatewayControlPlane) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -175,7 +178,7 @@ func (s *SignalManager) deregisterControlPlane(cp *konnectv1alpha1.KonnectGatewa
 	delete(s.resetChs, key)
 }
 
-func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alpha1.KonnectGatewayControlPlane, konnectClient sdkops.SDKWrapper, wakeupCh chan<- struct{}, resetCh <-chan struct{}) {
+func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alpha2.KonnectGatewayControlPlane, konnectClient sdkops.SDKWrapper, fetchEventCh chan<- struct{}, resetCh <-chan struct{}) {
 	logger := log.GetLogger(ctx, "mcpserver-signal", s.loggingMode)
 	offset := new(initialOffset)
 
@@ -229,7 +232,7 @@ func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alp
 			}
 			// Wake up the fetcher to refresh all MCP servers for this control plane.
 			select {
-			case wakeupCh <- struct{}{}:
+			case fetchEventCh <- struct{}{}:
 			default:
 			}
 		}

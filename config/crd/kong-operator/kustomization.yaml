@@ -2,6 +2,14 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
+  - configuration.konghq.com_eventgatewaybackendclusters.yaml
+  - configuration.konghq.com_eventgatewaydataplanecertificates.yaml
+  - configuration.konghq.com_eventgatewaylistenerpolicies.yaml
+  - configuration.konghq.com_eventgatewaylisteners.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusterconsumepolicies.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusterpolicies.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusterproducepolicies.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusters.yaml
   - configuration.konghq.com_ingressclassparameterses.yaml
   - configuration.konghq.com_kongcacertificates.yaml
   - configuration.konghq.com_kongcertificates.yaml
@@ -28,6 +36,7 @@ resources:
   - configuration.konghq.com_kongupstreampolicies.yaml
   - configuration.konghq.com_kongupstreams.yaml
   - configuration.konghq.com_kongvaults.yaml
+  - eventgateway.konghq.com_kegdataplanes.yaml
   - gateway-operator.konghq.com_aigateways.yaml
   - gateway-operator.konghq.com_controlplanes.yaml
   - gateway-operator.konghq.com_dataplanemetricsextensions.yaml
@@ -35,15 +44,20 @@ resources:
   - gateway-operator.konghq.com_gatewayconfigurations.yaml
   - gateway-operator.konghq.com_kongplugininstallations.yaml
   - gateway-operator.konghq.com_watchnamespacegrants.yaml
+  - konnect.konghq.com_identityproviderrequests.yaml
   - konnect.konghq.com_konnectapiauthconfigurations.yaml
   - konnect.konghq.com_konnectcloudgatewaydataplanegroupconfigurations.yaml
   - konnect.konghq.com_konnectcloudgatewaynetworks.yaml
   - konnect.konghq.com_konnectcloudgatewaytransitgateways.yaml
+  - konnect.konghq.com_konnecteventgateways.yaml
   - konnect.konghq.com_konnectextensions.yaml
   - konnect.konghq.com_konnectgatewaycontrolplanes.yaml
   - konnect.konghq.com_mcpservers.yaml
-  - x-konnect.konghq.com_dcrproviders.yaml
-  - x-konnect.konghq.com_konnecteventcontrolplanes.yaml
-  - x-konnect.konghq.com_konnecteventdataplanecertificates.yaml
-  - x-konnect.konghq.com_portals.yaml
-  - x-konnect.konghq.com_portalteams.yaml
+  - konnect.konghq.com_portalcustomdomains.yaml
+  - konnect.konghq.com_portalcustomizations.yaml
+  - konnect.konghq.com_portalemailconfigs.yaml
+  - konnect.konghq.com_portalidentityproviderrequests.yaml
+  - konnect.konghq.com_portalipallowlists.yaml
+  - konnect.konghq.com_portalpages.yaml
+  - konnect.konghq.com_portals.yaml
+  - konnect.konghq.com_portalteams.yaml

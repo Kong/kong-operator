@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -82,7 +84,7 @@ const provisionDataPlaneFailRetryAfter = 5 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	builder := ctrl.NewControllerManagedBy(mgr).
+	blder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(r.ControllerOptions).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
@@ -122,9 +124,14 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			&configurationv1alpha1.KongReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForKongReferenceGrant)).
 		// watch HTTPRoutes so that Gateway listener status can be updated.
+		// Use GenerationChangedPredicate to ignore status-only updates: the embedded
+		// KIC writes HTTPRoute parent statuses on every sync; without this predicate
+		// each such write would re-enqueue every attached Gateway and amplify the
+		// reconciliation rate significantly.
 		Watches(
-			&gatewayv1beta1.HTTPRoute{},
-			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute)).
+			&gatewayv1.HTTPRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
 		// status in status.listeners.attachedRoutes
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
@@ -135,7 +142,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by GatewayConfigurations used by Gateways objects.
 		// They may trigger reconciliation of DataPlane resources.
-		builder.WatchesRawSource(
+		blder.WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
 				&konnectv1alpha2.KonnectExtension{},
@@ -144,8 +151,29 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	}
 
+	crdChecker := k8sutils.CRDChecker{Client: r.Client}
+	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster, to avoid watching for a resource that doesn't exist and that would trigger reconciliation for all the Gateways on every event in the cluster.
+	tlsRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "tlsroutes",
+	}
+	tlsRouteExist, err := crdChecker.CRDExists(tlsRouteGVR)
+	if err != nil {
+		return fmt.Errorf("failed to check if TLSRoute CRD exists: %w", err)
+	}
+	if tlsRouteExist {
+		blder.Watches(
+			&gatewayv1.TLSRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		)
+	} else {
+		log.Info(mgr.GetLogger(), "TLSRoute CRD not found in cluster, skipping watch for TLSRoute resources")
+	}
+
 	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.
-	builder.WatchesRawSource(
+	blder.WatchesRawSource(
 		source.Kind(
 			mgr.GetCache(),
 			&corev1.Secret{},
@@ -153,21 +181,17 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		),
 	)
 
-	return builder.Complete(r)
+	return blder.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "gateway", r.LoggingMode)
 
 	log.Trace(logger, "reconciling gateway resource")
-	var gateway gwtypes.Gateway
-	if err := r.Get(ctx, req.NamespacedName, &gateway); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	log.Trace(logger, "managing cleanup for gateway resource")
-	if shouldReturnEarly, result, err := r.cleanup(ctx, logger, &gateway); err != nil || !result.IsZero() {
+	if shouldReturnEarly, result, err := r.cleanup(ctx, logger, gateway); err != nil || !result.IsZero() {
 		return result, err
 	} else if shouldReturnEarly {
 		return ctrl.Result{}, nil
@@ -197,12 +221,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "managing the gateway resource finalizers")
-	cpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupControlPlanes))
-	dpFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupDataPlanes))
-	npFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkPolicies))
+	cpFinalizerSet := controllerutil.AddFinalizer(gateway, string(GatewayFinalizerCleanupControlPlanes))
+	dpFinalizerSet := controllerutil.AddFinalizer(gateway, string(GatewayFinalizerCleanupDataPlanes))
+	npFinalizerSet := controllerutil.AddFinalizer(gateway, string(GatewayFinalizerCleanupNetworkPolicies))
 	if cpFinalizerSet || dpFinalizerSet || npFinalizerSet {
 		log.Trace(logger, "Setting finalizers")
-		if err := r.Update(ctx, &gateway); err != nil {
+		if err := r.Update(ctx, gateway); err != nil {
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 		return ctrl.Result{}, nil
@@ -214,7 +238,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	oldGateway := gateway.DeepCopy()
-	gwConditionAware := gatewayConditionsAndListenersAware(&gateway)
+	gwConditionAware := gatewayConditionsAndListenersAware(gateway)
 	oldGwConditionsAware := gatewayConditionsAndListenersAware(oldGateway)
 
 	log.Trace(logger, "resource is supported that it gets marked as accepted")
@@ -232,7 +256,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
 	if gatewayStatusNeedsUpdate(oldGwConditionsAware, gwConditionAware) {
 		// Requeue will be triggered by the update of the gateway status.
-		if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway); err != nil {
+		if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway); err != nil {
 			return ctrl.Result{}, err
 		}
 		if acceptedCondition.Status == metav1.ConditionTrue {
@@ -249,11 +273,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "determining configuration")
-	gatewayConfig, err := r.getOrCreateGatewayConfiguration(ctx, gwc.GatewayClass, &gateway)
+	gatewayConfig, err := r.getOrCreateGatewayConfiguration(ctx, gwc.GatewayClass, gateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.ensureKonnectAPIAuthReferenceGrant(ctx, &gateway, gatewayConfig); err != nil {
+	if err := r.ensureKonnectAPIAuthReferenceGrant(ctx, gateway, gatewayConfig); err != nil {
 		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -264,7 +288,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	isHybridGateway := gwconfigutils.IsGatewayHybrid(gatewayConfig)
 	if isHybridGateway {
 		log.Trace(logger, "Hybrid Gateway provisioning")
-		konnectControlPlane, cpReady := r.provisionKonnectGatewayControlPlane(ctx, logger, &gateway, gatewayConfig)
+		konnectControlPlane, cpReady := r.provisionKonnectGatewayControlPlane(ctx, logger, gateway, gatewayConfig)
 		if konnectControlPlane != nil {
 			patched, res, err := patch.WithFinalizer(ctx, r.Client, konnectControlPlane, KonnectGatewayControlPlaneFinalizer)
 			if patched || err != nil || !res.IsZero() {
@@ -284,7 +308,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			conditionOld, foundOld := k8sutils.GetCondition(kcfggateway.KonnectGatewayControlPlaneProgrammedType, oldGwConditionsAware)
 			if !foundOld || conditionOld.Status == metav1.ConditionTrue {
 				gwConditionAware.setProgrammed(metav1.ConditionFalse)
-				if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+				if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "KonnectGatewayControlplane not ready yet")
@@ -301,7 +325,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(logger, "KonnectGatewayControlplane is ready")
 		}
 
-		konnectExtension = r.provisionKonnectExtension(ctx, logger, &gateway, konnectControlPlane)
+		konnectExtension = r.provisionKonnectExtension(ctx, logger, gateway, konnectControlPlane)
 		// Set the KonnectExtensionReadyType Condition to False. This happens only if:
 		// * the new status is false and there was no KonnectExtensionReadyType condition in the gateway
 		// * the new status is false and the previous status was true
@@ -314,7 +338,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			conditionOld, foundOld := k8sutils.GetCondition(kcfggateway.KonnectExtensionReadyType, oldGwConditionsAware)
 			if !foundOld || conditionOld.Status == metav1.ConditionTrue {
 				gwConditionAware.setProgrammed(metav1.ConditionFalse)
-				if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+				if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "KonnectExtension not ready yet")
@@ -335,13 +359,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Provision dataplane creates a dataplane and adds the DataPlaneReady=True
 	// condition to the Gateway status if the dataplane is ready. If not ready
 	// the status DataPlaneReady=False will be set instead.
-	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, &gateway, gatewayConfig, konnectExtension)
+	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, gateway, gatewayConfig, konnectExtension)
 	if provisionErr == nil && k8sutils.RunningOnKubernetes() {
 		// DataPlane NetworkPolicies
 		// Only create network policies if KO is running inside k8s.
 		// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
 		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
-		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane)
+		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -367,7 +391,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		oldCondition, oldFound := k8sutils.GetCondition(kcfggateway.DataPlaneReadyType, oldGwConditionsAware)
 		if !oldFound || oldCondition.Status == metav1.ConditionTrue {
 			// requeue will be triggered by the update of the dataplane status
-			if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+			if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Debug(logger, "dataplane not ready yet")
@@ -475,14 +499,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// This solves the problem of intermittent failures due to incomplete configuration
 	// being sent to DataPlane.
 	gwConditionAware.setListenersStatus(metav1.ConditionTrue)
-	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if !isHybridGateway {
 		// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 		// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
-		controlplane := r.provisionControlPlane(ctx, logger, &gateway, gatewayConfig)
+		controlplane := r.provisionControlPlane(ctx, logger, gateway, gatewayConfig)
 		// Set the ControlPlaneReady Condition to False. This happens only if:
 		// * the new status is false and there was no ControlPlaneReady condition in the gateway
 		// * the new status is false and the previous status was true
@@ -495,7 +519,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			conditionOld, foundOld := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, oldGwConditionsAware)
 			if !foundOld || conditionOld.Status == metav1.ConditionTrue {
 				gwConditionAware.setProgrammed(metav1.ConditionFalse)
-				if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+				if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "controlplane not ready yet")
@@ -513,9 +537,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, errors.New("unexpected error, controlplane is nil. Returning to avoid panic")
 		}
 	}
-	// If the dataplane has not been marked as ready yet, return and wait for the next reconciliation loop.
+	// If the dataplane has not been marked as ready yet, clear any stale addresses
+	// and return to wait for the next reconciliation loop.
+	// Clearing addresses prevents the Gateway from advertising an IP for a service
+	// that may no longer exist (e.g. after DataPlane deletion and recreation).
 	if !k8sutils.HasConditionTrue(kcfggateway.DataPlaneReadyType, gwConditionAware) {
 		log.Debug(logger, "dataplane is not ready yet")
+		gateway.Status.Addresses = nil
+		if _, patchErr := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway); patchErr != nil {
+			return ctrl.Result{}, patchErr
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -523,14 +554,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	gateway.Status.Addresses, err = r.getGatewayAddresses(ctx, dataplane)
 	if err == nil {
 		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(kcfggateway.GatewayServiceType, metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, "", gateway.Generation),
-			gatewayConditionsAndListenersAware(&gateway))
+			gatewayConditionsAndListenersAware(gateway))
 	} else {
 		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(kcfggateway.GatewayServiceType, metav1.ConditionFalse, kcfggateway.GatewayReasonServiceError, err.Error(), gateway.Generation),
-			gatewayConditionsAndListenersAware(&gateway))
+			gatewayConditionsAndListenersAware(gateway))
 	}
 
 	gwConditionAware.setProgrammed(metav1.ConditionTrue)
-	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

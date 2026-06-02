@@ -3,6 +3,7 @@ package subtranslator
 import (
 	"strings"
 
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/atc"
 )
 
@@ -48,7 +49,7 @@ const (
 func hostMatcherFromHosts(hosts []string) atc.Matcher {
 	matchers := make([]atc.Matcher, 0, len(hosts))
 	for _, host := range hosts {
-		if !validHosts.MatchString(host) {
+		if !kongstate.ValidHosts.MatchString(host) {
 			continue
 		}
 
@@ -58,6 +59,28 @@ func hostMatcherFromHosts(hosts []string) atc.Matcher {
 		} else {
 			// exact match on hosts, generate an exact match.
 			matchers = append(matchers, atc.NewPrediacteHTTPHost(atc.OpEqual, host))
+		}
+	}
+	return atc.Or(matchers...)
+}
+
+// sniMatcherFromSNIs generates matchers to match TLS SNIs.
+// used in translating TLSRoute rules and `SNIs` annotations in ingresses.
+// the SNI format includes:
+// - wildcard SNIs, starting with exactly one *
+// - precise SNIs, otherwise.
+func sniMatcherFromSNIs(snis []string) atc.Matcher {
+	matchers := make([]atc.Matcher, 0, len(snis))
+	for _, sni := range snis {
+		if !kongstate.ValidHosts.MatchString(sni) {
+			continue
+		}
+		if suffix, ok := strings.CutPrefix(sni, "*"); ok {
+			// wildcard match on SNIs (like *.foo.com), genreate a suffix match.
+			matchers = append(matchers, atc.NewPredicateTLSSNI(atc.OpSuffixMatch, suffix))
+		} else {
+			// exact match on SNIs, generate an exact match.
+			matchers = append(matchers, atc.NewPredicateTLSSNI(atc.OpEqual, sni))
 		}
 	}
 	return atc.Or(matchers...)

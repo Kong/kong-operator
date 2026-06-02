@@ -124,10 +124,7 @@ func getKonnectTransitGatewayMatchingSpecName(
 		NetworkID: networkID,
 		Filter: &sdkkonnectcomp.TransitGatewaysFilterParameters{
 			Name: &sdkkonnectcomp.CloudGatewaysStringFieldFilterOverride{
-				CloudGatewaysStringFieldEqualsFilterOverride: &sdkkonnectcomp.CloudGatewaysStringFieldEqualsFilterOverride{
-					Str:  new(extractNameFromKonnectCloudGatewayTransitGatewaySpec(tg.Spec.KonnectTransitGatewayAPISpec)),
-					Type: sdkkonnectcomp.CloudGatewaysStringFieldEqualsFilterOverrideTypeStr,
-				},
+				Eq: new(extractNameFromKonnectCloudGatewayTransitGatewaySpec(tg.Spec.KonnectTransitGatewayAPISpec)),
 			},
 		},
 	})

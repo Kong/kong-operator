@@ -1,0 +1,413 @@
+# KongCACertificate cross-namespace SecretRef test.
+#
+# The cross-namespace axis under test is the secretRef: the CA Secret lives in a different
+# namespace from the KongCACertificate. The controlPlaneRef is same-namespace throughout
+# (that axis is covered by kongcacertificate_cross-namespace).
+#
+# Scenario A: All resources in the same namespace — baseline, no grants needed.
+#   ResolvedRefs condition is absent (same-namespace secretRef removes it).
+#
+# Scenario B: CA Secret in secret_namespace, KongCACertificate+CP+Auth in test namespace.
+#   One secretRef grant (in secret_namespace) is needed to allow the cross-namespace Secret reference.
+#   Includes an intermediate assertion that shows the binding fails when the grant is missing.
+#
+# Scenario D: starting from Scenario B (Programmed=True), deleting the
+#   KongReferenceGrant reverts the KongCACertificate to ResolvedRefs=False/RefNotPermitted.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongcacertificate-secretref-cross-namespace
+spec:
+  description: |
+    Tests cross-namespace secretRef behaviour for KongCACertificate.
+
+    The cross-namespace axis is spec.secretRef.namespace — a CA Secret in a different namespace
+    from the KongCACertificate. The controlPlaneRef is same-namespace throughout.
+
+    Scenario A: KongCACertificate, KonnectGatewayControlPlane, KonnectAPIAuthConfiguration, and
+    CA Secret all in the same namespace. No grants needed; baseline sanity check.
+
+    Scenario B: CA Secret in secret_namespace, KongCACertificate+CP+Auth all in test namespace.
+    Binding fails until a KongReferenceGrant in secret_namespace permits the cross-namespace
+    Secret reference.
+
+    Scenario D: starting from Scenario B (Programmed=True), deleting the
+    KongReferenceGrant reverts the KongCACertificate to
+    ResolvedRefs=False/RefNotPermitted immediately, validating that the
+    KongReferenceGrant watch is wired correctly. The grant is then
+    recreated to allow clean Konnect deprovisioning.
+
+  bindings:
+    # Common bindings.
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Namespace bindings.
+    - name: secret_namespace
+      value: (join('-', [$namespace, 'secret']))
+    # Scenario A resource names (all in test namespace).
+    - name: cp0_name
+      value: (join('-', [$namespace, 'cp0']))
+    - name: auth0_name
+      value: (join('-', [$namespace, 'auth0-konnect-api-auth']))
+    - name: cacert0_name
+      value: (join('-', [$namespace, 'cacert0']))
+    - name: casecret0_name
+      value: (join('-', [$namespace, 'casecret0']))
+    # Scenario B resource names (CA Secret in secret_namespace, everything else in test namespace).
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_name
+      value: (join('-', [$namespace, 'konnect-api-auth']))
+    - name: cacert_name
+      value: (join('-', [$namespace, 'cacert']))
+    - name: casecret_name
+      value: (join('-', [$namespace, 'casecret']))
+
+  steps:
+    # =========================================================================
+    # Scenario A: All resources in the same namespace. No grants needed.
+    # ResolvedRefs condition is absent for same-namespace secretRef.
+    # =========================================================================
+
+    - name: 1-create-auth-config-same-ns
+      description: Create KonnectAPIAuthConfiguration in the test namespace.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth0']))
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-control-plane-same-ns
+      description: Create KonnectGatewayControlPlane in the test namespace.
+      bindings:
+        - name: cp_name
+          value: ($cp0_name)
+        - name: cp_namespace
+          value: ($namespace)
+        - name: auth_name
+          value: ($auth0_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 3-create-ca-secret-same-ns
+      description: Create CA Secret in the test namespace (same as KongCACertificate).
+      bindings:
+        - name: ca_secret_name
+          value: ($casecret0_name)
+        - name: ca_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-caSecret.yaml
+
+    - name: 4-create-cacert-same-ns
+      description: Create KongCACertificate in the test namespace with same-namespace secretRef. No grants needed.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              metadata:
+                name: ($cacert0_name)
+                namespace: ($namespace)
+              spec:
+                type: secretRef
+                secretRef:
+                  name: ($casecret0_name)
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp0_name)
+
+    - name: 5-assert-cacert-programmed-same-ns
+      description: Assert KongCACertificate is Programmed. No ResolvedRefs condition for same-namespace secretRef.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              metadata:
+                name: ($cacert0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+
+    - name: 6-cleanup-scenario-a
+      description: Delete cacert0 and CP0 in order; wait for each to be gone before proceeding.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              name: ($cacert0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              metadata:
+                name: ($cacert0_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp0_name)
+                namespace: ($namespace)
+
+    # =========================================================================
+    # Scenario B: CA Secret in secret_namespace, KongCACertificate+CP+Auth in test namespace.
+    # A secretRef grant in secret_namespace is needed.
+    # =========================================================================
+
+    - name: 7-create-secret-namespace
+      description: Create separate namespace for the CA Secret.
+      bindings:
+        - name: namespace_name
+          value: ($secret_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 8-create-auth-config
+      description: Create KonnectAPIAuthConfiguration in the test namespace for scenario B.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 9-create-control-plane
+      description: Create KonnectGatewayControlPlane in the test namespace for scenario B.
+      bindings:
+        - name: cp_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 10-create-ca-secret-cross-ns
+      description: Create CA Secret in secret_namespace (different from KongCACertificate's namespace).
+      bindings:
+        - name: ca_secret_name
+          value: ($casecret_name)
+        - name: ca_secret_namespace
+          value: ($secret_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-caSecret.yaml
+
+    - name: 11-create-cacert-no-grant
+      description: Create KongCACertificate in test namespace referencing CA Secret in secret_namespace (no grant yet).
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              metadata:
+                name: ($cacert_name)
+                namespace: ($namespace)
+              spec:
+                type: secretRef
+                secretRef:
+                  name: ($casecret_name)
+                  namespace: ($secret_namespace)
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+
+    - name: 12-assert-cacert-grant-missing
+      description: Assert KongCACertificate has ResolvedRefs=False/RefNotPermitted because no grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              metadata:
+                name: ($cacert_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 13-create-cacert-to-secret-grant
+      description: Create KongReferenceGrant in secret_namespace allowing KongCACertificate from test namespace to reference Secret.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cacert-to-secret']))
+        - name: kong_reference_grant_namespace
+          value: ($secret_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongCACertificate
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: core
+              kind: Secret
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 14-assert-cacert-programmed
+      description: Assert KongCACertificate is Programmed after the secretRef grant is in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              metadata:
+                name: ($cacert_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+
+    # =========================================================================
+    # Scenario D: delete the cacert->Secret grant and verify the KongCACertificate
+    # reverts to ResolvedRefs=False/RefNotPermitted (validates grant watch).
+    # =========================================================================
+
+    - name: 15-delete-cacert-to-secret-grant
+      description: Delete the cacert->Secret grant to verify the KongCACertificate reverts to RefNotPermitted.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cacert-to-secret']))
+              namespace: ($secret_namespace)
+
+    - name: 16-assert-cacert-reverts-to-not-permitted
+      description: Assert KongCACertificate transitions back to ResolvedRefs=False/RefNotPermitted after grant deletion.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              metadata:
+                name: ($cacert_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 17-recreate-cacert-to-secret-grant
+      description: Recreate the cacert->Secret grant so the certificate can be deprovisioned cleanly during cleanup.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cacert-to-secret']))
+        - name: kong_reference_grant_namespace
+          value: ($secret_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongCACertificate
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: core
+              kind: Secret
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 18-cleanup-scenario-b
+      description: Delete cacert and CP in order; wait for each to be gone before proceeding.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              name: ($cacert_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCACertificate
+              metadata:
+                name: ($cacert_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cacert-to-secret']))
+              namespace: ($secret_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: kongcacertificate-secretref-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($secret_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

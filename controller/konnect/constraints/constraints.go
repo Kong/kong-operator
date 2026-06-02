@@ -33,9 +33,9 @@ type KongCredential[T SupportedCredentialType] interface {
 	SetConditions([]metav1.Condition)
 }
 
-// SupportedKonnectEntityType is an interface that all Konnect entity types
-// must implement.
-type SupportedKonnectEntityType interface {
+// SupportedHandwrittenKonnectEntityType is the handwritten subset of Konnect
+// entity types supported by the generic reconciler.
+type SupportedHandwrittenKonnectEntityType interface {
 	konnectv1alpha2.KonnectGatewayControlPlane |
 		konnectv1alpha1.KonnectCloudGatewayNetwork |
 		konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration |
@@ -60,8 +60,12 @@ type SupportedKonnectEntityType interface {
 		configurationv1alpha1.KongSNI |
 		configurationv1alpha1.KongDataPlaneClientCertificate |
 		konnectv1alpha1.MCPServer
-	// TODO: add other types
+}
 
+// SupportedKonnectEntityType is an interface that all Konnect entity types
+// must implement.
+type SupportedKonnectEntityType interface {
+	SupportedHandwrittenKonnectEntityType | SupportedGeneratedKonnectEntityType
 	GetTypeName() string
 }
 
@@ -98,6 +102,7 @@ type EntityType[T any] interface {
 
 	// Additional methods which are used in reconciling Konnect entities.
 
+	PersistsKonnectID() bool
 	SetKonnectID(string)
 	GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus
 }

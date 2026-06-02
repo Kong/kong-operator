@@ -10,7 +10,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -20,6 +19,13 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+)
+
+var (
+	httpRouteTypeMeta = metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
 )
 
 func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
@@ -36,6 +42,7 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 			name:                "no existing annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -47,9 +54,10 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 		{
 			name: "empty hybrid-routes annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -61,9 +69,10 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 		{
 			name: "existing different route in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "other-namespace/other-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -75,9 +84,10 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 		{
 			name: "route already exists in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -89,9 +99,10 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 		{
 			name: "multiple existing routes, adding new one",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1,ns2/route2",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route3",
 					Namespace: "ns3",
@@ -114,7 +125,7 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 
 			am := metadata.NewAnnotationManager(logger)
 			am.AppendRouteToAnnotation(plugin, tt.httpRoute)
-			actualAnnotation := plugin.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+			actualAnnotation := plugin.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 			assert.Equal(t, tt.expectedAnnotation, actualAnnotation)
 		})
 	}
@@ -148,7 +159,7 @@ func TestPluginForFilter(t *testing.T) {
 				Matches: []gatewayv1.HTTPRouteMatch{
 					{
 						Path: &gatewayv1.HTTPPathMatch{
-							Type:  ptr.To(gatewayv1.PathMatchPathPrefix),
+							Type:  new(gatewayv1.PathMatchPathPrefix),
 							Value: new("/test"),
 						},
 					},
@@ -156,6 +167,7 @@ func TestPluginForFilter(t *testing.T) {
 			},
 			existingPlugin: nil,
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -170,8 +182,8 @@ func TestPluginForFilter(t *testing.T) {
 				require.NotNil(t, plugin)
 				assert.Equal(t, "test-namespace", plugin.Namespace)
 				assert.Equal(t, "request-transformer", plugin.PluginName)
-				assert.Contains(t, plugin.Annotations, consts.GatewayOperatorHybridRoutesAnnotation)
-				assert.Equal(t, "test-namespace/test-route", plugin.Annotations[consts.GatewayOperatorHybridRoutesAnnotation])
+				assert.Contains(t, plugin.Annotations, consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation)
+				assert.Equal(t, "test-namespace/test-route", plugin.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
 			},
 		},
 	}

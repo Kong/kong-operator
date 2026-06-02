@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"context"
-	"crypto/x509"
 	"net/http"
 	"net/url"
 	"testing"
@@ -38,6 +37,8 @@ type KongVersion = kong.Version
 
 type TooOldKongGatewayError = ic.TooOldKongGatewayError
 
+type HTTPSOptions = ic.HTTPSOptions
+
 const DefaultGatewayName = ic.DefaultGatewayName
 
 // KongWithProxyEnvVar sets an env var on the kong builder.
@@ -55,6 +56,10 @@ func KongWithHelmChartVersion(builder *ktfkong.Builder, version string) {
 // Setup bridges to ingress-controller test helpers for namespace setup.
 func Setup(ctx context.Context, t *testing.T, env environments.Environment) (*corev1.Namespace, *clusters.Cleaner) {
 	return ic.Setup(ctx, t, env)
+}
+
+func WithInsecureSkipVerify() HTTPClientOption {
+	return ic.WithInsecureSkipVerify()
 }
 
 // DefaultHTTPClient bridges to ingress-controller test helpers.
@@ -78,7 +83,7 @@ func EventuallyGETPath(
 	proxyURL *url.URL,
 	host string,
 	path string,
-	certPool *x509.CertPool,
+	httpsOpts *HTTPSOptions,
 	statusCode int,
 	bodyContent string,
 	requestHeaders map[string]string,
@@ -86,7 +91,7 @@ func EventuallyGETPath(
 	waitTick time.Duration,
 	responseMatchers ...ResponseMatcher,
 ) {
-	ic.EventuallyGETPath(t, proxyURL, host, path, certPool, statusCode, bodyContent, requestHeaders, waitDuration, waitTick, responseMatchers...)
+	ic.EventuallyGETPath(t, proxyURL, host, path, httpsOpts, statusCode, bodyContent, requestHeaders, waitDuration, waitTick, responseMatchers...)
 }
 
 // EventuallyExpectHTTP404WithNoRoute bridges to ingress-controller test helpers.
@@ -95,11 +100,12 @@ func EventuallyExpectHTTP404WithNoRoute(
 	proxyURL *url.URL,
 	host string,
 	path string,
+	httpsOpts *HTTPSOptions,
 	waitDuration time.Duration,
 	waitTick time.Duration,
 	headers map[string]string,
 ) {
-	ic.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, host, path, waitDuration, waitTick, headers)
+	ic.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, host, path, httpsOpts, waitDuration, waitTick, headers)
 }
 
 // MatchRespByStatusAndContent bridges to ingress-controller test helpers.

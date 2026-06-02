@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
 func TestOwnerControlPlaneName(t *testing.T) {
@@ -21,7 +22,7 @@ func TestOwnerControlPlaneName(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					OwnerReferences: []metav1.OwnerReference{
 						{
-							APIVersion: konnectv1alpha1.GroupVersion.String(),
+							APIVersion: konnectv1alpha2.GroupVersion.String(),
 							Kind:       "KonnectGatewayControlPlane",
 							Name:       "my-cp",
 						},
@@ -41,7 +42,7 @@ func TestOwnerControlPlaneName(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					OwnerReferences: []metav1.OwnerReference{
 						{
-							APIVersion: konnectv1alpha1.GroupVersion.String(),
+							APIVersion: konnectv1alpha2.GroupVersion.String(),
 							Kind:       "SomethingElse",
 							Name:       "my-cp",
 						},
@@ -76,7 +77,7 @@ func TestOwnerControlPlaneName(t *testing.T) {
 							Name:       "other",
 						},
 						{
-							APIVersion: konnectv1alpha1.GroupVersion.String(),
+							APIVersion: konnectv1alpha2.GroupVersion.String(),
 							Kind:       "KonnectGatewayControlPlane",
 							Name:       "my-cp",
 						},

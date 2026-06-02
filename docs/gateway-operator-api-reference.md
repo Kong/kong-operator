@@ -1892,6 +1892,7 @@ ControlPlaneKonnectOptions defines the Konnect-related configuration options for
 | `licensing` _[ControlPlaneKonnectLicensing](#gateway-operator-konghq-com-v2beta1-types-controlplanekonnectlicensing)_ | Licensing defines the configuration for Konnect licensing. |
 | `nodeRefreshPeriod` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | NodeRefreshPeriod is the period for refreshing the node information in Konnect. |
 | `configUploadPeriod` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | ConfigUploadPeriod is the period for uploading configuration to Konnect. |
+| `configUploadConcurrency` _*int32_ | ConfigUploadConcurrency is the concurrency of the client for uploading configuration to Konnect. In case of large configuration with many entities, too high concurrency may trigger rate limiting on Konnect API service and fail with 429 responses on requests. |
 
 _Appears in:_
 
@@ -2245,6 +2246,7 @@ _Appears in:_
 
 
 GatewayConfigurationSpec defines the desired state of GatewayConfiguration
+Only one of 'konnect' or 'extensions' can be specified.
 
 
 

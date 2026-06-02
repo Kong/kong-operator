@@ -15,10 +15,11 @@ import (
 // It processes each API group-version defined in the project config, parses the OpenAPI spec,
 // and generates the corresponding Go types based on the parsed schemas and configurations.
 type Runner struct {
-	projectCfg *config.ProjectConfig
-	gvKeys     []string
-	openAPI    *openapi3.T
-	outputDir  string
+	projectCfg  *config.ProjectConfig
+	gvKeys      []string
+	openAPI     *openapi3.T
+	outputDir   string
+	projectRoot string
 }
 
 // New creates new runner with the given project config, OpenAPI spec file path, and output directory.
@@ -28,6 +29,7 @@ func New(
 	projectCfg *config.ProjectConfig,
 	openAPIFile string,
 	outputDir string,
+	opts ...Option,
 ) (*Runner, error) {
 	gvKeys := slices.Collect(maps.Keys(projectCfg.APIGroupVersions))
 	sort.Strings(gvKeys)
@@ -39,10 +41,25 @@ func New(
 		return nil, fmt.Errorf("failed to load OpenAPI spec: %w", err)
 	}
 
-	return &Runner{
+	r := &Runner{
 		projectCfg: projectCfg,
 		gvKeys:     gvKeys,
 		openAPI:    doc,
 		outputDir:  outputDir,
-	}, nil
+	}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r, nil
+}
+
+// Option is a functional option for Runner.
+type Option func(*Runner)
+
+// WithProjectRoot sets the project root directory used for writing reconciler
+// files to directories outside the API types output directory.
+func WithProjectRoot(root string) Option {
+	return func(r *Runner) {
+		r.projectRoot = root
+	}
 }

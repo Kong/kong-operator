@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -19,6 +18,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	dpreconciler "github.com/kong/kong-operator/v2/controller/dataplane"
 	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
+	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -152,8 +152,8 @@ func createHTTPRoutes(
 		pathMatchPrefix := gatewayapi.PathMatchPathPrefix
 		httpRoute := &gatewayapi.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      uuid.NewString(),
-				Namespace: gw.Namespace,
+				GenerateName: "httproute-",
+				Namespace:    gw.Namespace,
 			},
 			Spec: gatewayapi.HTTPRouteSpec{
 				CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -249,6 +249,11 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 			ClusterCASecretName:      caSecretName,
 			ClusterCASecretNamespace: ns.Name,
 			DefaultImage:             consts.DefaultDataPlaneImage,
+			CertTTL:                  consts.DefaultCertTTL,
+		},
+		&secretcert.Reconciler{
+			Client:               c,
+			CertExpirationMargin: consts.DefaultCertExpirationMargin,
 		},
 	)
 

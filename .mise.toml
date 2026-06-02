@@ -6,15 +6,15 @@ github_attestations = false
 
 [tools."github:kubernetes-sigs/controller-tools"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
-version = "0.20.1"
+version = "0.21.0"
 
 [tools."github:golangci/golangci-lint"]
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-version = "2.11.4"
+version = "2.12.2"
 
 [tools."github:kubernetes-sigs/controller-runtime"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-version = "0.23.3"
+version = "0.24.1"
 [tools."github:kubernetes-sigs/controller-runtime".platforms]
 darwin-arm64 = { asset_pattern = "setup-envtest-darwin-arm64" }
 linux-arm64 = { asset_pattern = "setup-envtest-linux-arm64" }
@@ -45,29 +45,32 @@ macos-arm64 = { asset_pattern = "kind-darwin-arm64" }
 
 [tools."github:Kong/kubernetes-testing-framework"]
 # renovate: datasource=github-releases depName=Kong/kubernetes-testing-framework
-version = "v0.48.0"
+version = "v0.50.0"
 bin = "ktf"
 
 [tools."github:telepresenceio/telepresence"]
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
-version = "2.27.2"
+version = "2.28.0"
 [tools."github:telepresenceio/telepresence".platforms]
 linux-x64 = { asset_pattern = "telepresence-linux-amd64" }
 linux-arm64 = { asset_pattern = "telepresence-linux-arm64" }
 macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
-[tools."http:helm"]
+[tools."aqua:helm/helm"]
 # renovate: datasource=github-releases depName=helm/helm
-version = "4.1.3"
-[tools."http:helm".platforms]
-linux-x64 = { url = "https://get.helm.sh/helm-v{{version}}-linux-amd64.tar.gz" }
-linux-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-linux-arm64.tar.gz" }
-macos-arm64 = { url = "https://get.helm.sh/helm-v{{version}}-darwin-arm64.tar.gz" }
+version = "4.2.0"
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
-version = "c9b9b51b278a39c2d09b149df45196275919c23b"
+version = "3fa174937a6b9f0c1c2203efb312fff4ac8477c8"
 
+[tools."yq"]
+# renovate: datasource=github-releases depName=mikefarah/yq
+version = "v4.53.2"
+
+[tools."aqua:kyverno/chainsaw"]
+# renovate: datasource=git-refs packageName=https://github.com/kyverno/chainsaw.git
+version = "v0.2.15"
 
 ################################################################################
 # Tasks
@@ -81,25 +84,23 @@ dir = "./{{env.DIR}}"
 run = "go build -o ../bin/{{env.DIR}} main.go"
 
 [tasks.clean]
-# TODO: This hardcodes the x-konnect API group. Removing this hardcode would cause
-# the removal of other non generated APIs to be removed.
-description = "Clean generated api/x-konnect directory"
-run = "rm -rf ./api/x-konnect/ ./config/crd/kong-operator/x-konnect.konghq.com_*"
+description = "Clean generated files"
+run = '''
+rm -rf \
+       ./api/konnect/v1alpha1/zz_generated_*_sdkops.go \
+       ./api/konnect/v1alpha1/zz_generated_*_sdkops_test.go \
+       ./api/konnect/v1alpha1/zz_generated_*_types.go \
+       ./api/konnect/v1alpha1/zz_generated_*_types_test.go \
+       ./api/konnect/v1alpha1/zz_generated_*_conditions.go \
+       ./controller/konnect/zz_generated_reconciler_generic_rbac_* \
+       ./modules/manager/zz_generated_* \
+       ./internal/utils/index/zz_generated_konnect_*
+'''
 
 [tasks.generate-api]
 description = "Generate Kubernetes Go API from OpenAPI spec"
 dir = "./{{env.DIR}}"
-# NOTE we get the openapi.yaml file from the sdk-konnect-go module which is expected
-# to be present in the local Go module cache.
-# This ensures that we use the same OpenAPI spec as the one used to generate the
-# SDK which should help avoid potential discrepancies between the API and the SDK.
-run = '''
-go mod download
-export INPUT_FILE="$(go list -m -f '{{`{{.Dir}}`}}' github.com/Kong/sdk-konnect-go)/openapi.yaml"
-export OUTPUT_DIR="../api/"
-export CONFIG_FILE="config.yaml"
-go run .
-'''
+run = "mise r generate-api"
 depends = [ "clean" ]
 depends_post = [ "generate-deepcopy" ]
 
@@ -110,11 +111,10 @@ run = "controller-gen object:headerFile='../hack/generators/boilerplate.go.txt' 
 
 [tasks.test-crdsvalidation]
 description = "Run CRD validation tests"
-dir = "./{{env.DIR}}"
 # Update test paths below if more API groups are added
 run = '''
 export KUBEBUILDER_ASSETS=$(setup-envtest use -p path)
-go test -v -count 1 ${GOTESTFLAGS} ./test/crdsvalidation/x-konnect.konghq.com/...
+go test -v -count 1 ${GOTESTFLAGS} ./test/crdsvalidation/konnect.konghq.com/...
 '''
 
 [tasks.all]

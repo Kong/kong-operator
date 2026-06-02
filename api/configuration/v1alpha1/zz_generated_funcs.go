@@ -37,6 +37,11 @@ func (obj *KongKey) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongKey persists a Konnect ID in status.
+func (*KongKey) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongKey status.
 func (obj *KongKey) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -106,6 +111,11 @@ func (obj *KongKeySet) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongKeySet persists a Konnect ID in status.
+func (*KongKeySet) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongKeySet status.
 func (obj *KongKeySet) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -173,6 +183,11 @@ func (obj *KongCredentialBasicAuth) SetKonnectID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ID = id
+}
+
+// PersistsKonnectID reports whether the KongCredentialBasicAuth persists a Konnect ID in status.
+func (*KongCredentialBasicAuth) PersistsKonnectID() bool {
+	return true
 }
 
 // GetControlPlaneID returns the ControlPlane ID in the KongCredentialBasicAuth status.
@@ -245,6 +260,11 @@ func (obj *KongCredentialAPIKey) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongCredentialAPIKey persists a Konnect ID in status.
+func (*KongCredentialAPIKey) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongCredentialAPIKey status.
 func (obj *KongCredentialAPIKey) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -313,6 +333,11 @@ func (obj *KongCredentialJWT) SetKonnectID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ID = id
+}
+
+// PersistsKonnectID reports whether the KongCredentialJWT persists a Konnect ID in status.
+func (*KongCredentialJWT) PersistsKonnectID() bool {
+	return true
 }
 
 // GetControlPlaneID returns the ControlPlane ID in the KongCredentialJWT status.
@@ -385,6 +410,11 @@ func (obj *KongCredentialACL) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongCredentialACL persists a Konnect ID in status.
+func (*KongCredentialACL) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongCredentialACL status.
 func (obj *KongCredentialACL) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -453,6 +483,11 @@ func (obj *KongCredentialHMAC) SetKonnectID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ID = id
+}
+
+// PersistsKonnectID reports whether the KongCredentialHMAC persists a Konnect ID in status.
+func (*KongCredentialHMAC) PersistsKonnectID() bool {
+	return true
 }
 
 // GetControlPlaneID returns the ControlPlane ID in the KongCredentialHMAC status.
@@ -525,6 +560,11 @@ func (obj *KongCACertificate) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongCACertificate persists a Konnect ID in status.
+func (*KongCACertificate) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongCACertificate status.
 func (obj *KongCACertificate) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -592,6 +632,11 @@ func (obj *KongCertificate) SetKonnectID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ID = id
+}
+
+// PersistsKonnectID reports whether the KongCertificate persists a Konnect ID in status.
+func (*KongCertificate) PersistsKonnectID() bool {
+	return true
 }
 
 // GetControlPlaneID returns the ControlPlane ID in the KongCertificate status.
@@ -663,6 +708,11 @@ func (obj *KongPluginBinding) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongPluginBinding persists a Konnect ID in status.
+func (*KongPluginBinding) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongPluginBinding status.
 func (obj *KongPluginBinding) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -709,7 +759,7 @@ func (obj *KongPluginBinding) GetControlPlaneRef() *commonv1alpha1.ControlPlaneR
 }
 
 func (obj *KongService) initKonnectStatus() {
-	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{}
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{}
 }
 
 // GetKonnectStatus returns the Konnect status contained in the KongService status.
@@ -734,6 +784,11 @@ func (obj *KongService) SetKonnectID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ID = id
+}
+
+// PersistsKonnectID reports whether the KongService persists a Konnect ID in status.
+func (*KongService) PersistsKonnectID() bool {
+	return true
 }
 
 // GetControlPlaneID returns the ControlPlane ID in the KongService status.
@@ -810,6 +865,11 @@ func (obj *KongRoute) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongRoute persists a Konnect ID in status.
+func (*KongRoute) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongRoute status.
 func (obj *KongRoute) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -862,7 +922,7 @@ func (obj *KongRoute) GetServiceRef() *ServiceRef {
 }
 
 func (obj *KongUpstream) initKonnectStatus() {
-	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{}
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
 }
 
 // GetKonnectStatus returns the Konnect status contained in the KongUpstream status.
@@ -887,6 +947,11 @@ func (obj *KongUpstream) SetKonnectID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ID = id
+}
+
+// PersistsKonnectID reports whether the KongUpstream persists a Konnect ID in status.
+func (*KongUpstream) PersistsKonnectID() bool {
+	return true
 }
 
 // GetControlPlaneID returns the ControlPlane ID in the KongUpstream status.
@@ -958,6 +1023,11 @@ func (obj *KongTarget) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongTarget persists a Konnect ID in status.
+func (*KongTarget) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongTarget status.
 func (obj *KongTarget) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -1015,6 +1085,11 @@ func (obj *KongVault) SetKonnectID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ID = id
+}
+
+// PersistsKonnectID reports whether the KongVault persists a Konnect ID in status.
+func (*KongVault) PersistsKonnectID() bool {
+	return true
 }
 
 // GetControlPlaneID returns the ControlPlane ID in the KongVault status.
@@ -1086,6 +1161,11 @@ func (obj *KongSNI) SetKonnectID(id string) {
 	obj.Status.Konnect.ID = id
 }
 
+// PersistsKonnectID reports whether the KongSNI persists a Konnect ID in status.
+func (*KongSNI) PersistsKonnectID() bool {
+	return true
+}
+
 // GetControlPlaneID returns the ControlPlane ID in the KongSNI status.
 func (obj *KongSNI) GetControlPlaneID() string {
 	if obj.Status.Konnect == nil {
@@ -1143,6 +1223,11 @@ func (obj *KongDataPlaneClientCertificate) SetKonnectID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ID = id
+}
+
+// PersistsKonnectID reports whether the KongDataPlaneClientCertificate persists a Konnect ID in status.
+func (*KongDataPlaneClientCertificate) PersistsKonnectID() bool {
+	return true
 }
 
 // GetControlPlaneID returns the ControlPlane ID in the KongDataPlaneClientCertificate status.

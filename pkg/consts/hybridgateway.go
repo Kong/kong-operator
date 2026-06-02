@@ -26,14 +26,23 @@ const (
 	// are associated with the resource.
 	GatewayOperatorHybridGatewaysAnnotation = OperatorAnnotationPrefix + HybridGatewaysAnnotation
 
-	// HybridRouteAnnotation is used to annotate resources created for hybrid gateways,
-	// indicating which route is associated with the resource.
-	HybridRouteAnnotation = "hybrid-routes"
+	// HybridRouteHTTPRouteAnnotation is used to annotate resources created for hybrid gateways,
+	// indicating which HTTPRoute is associated with the resource.
+	HybridRouteHTTPRouteAnnotation = "hybrid-routes"
 
-	// GatewayOperatorHybridRoutesAnnotation is the fully qualified annotation key
-	// used to annotate resources created for hybrid gateways, indicating which route
+	// HybridRouteTLSRouteAnnotation is used to annotate resources created for hybrid gateways,
+	// indicating which TLSRoutes are associated with the resource.
+	HybridRouteTLSRouteAnnotation = "hybrid-routes-TLSRoute"
+
+	// GatewayOperatorHybridRoutesHTTPRouteAnnotation is the fully qualified annotation key
+	// used to annotate resources created for hybrid gateways, indicating which HTTPRoute
 	// is associated with the resource.
-	GatewayOperatorHybridRoutesAnnotation = OperatorAnnotationPrefix + HybridRouteAnnotation
+	GatewayOperatorHybridRoutesHTTPRouteAnnotation = OperatorAnnotationPrefix + HybridRouteHTTPRouteAnnotation
+
+	// GatewayOperatorHybridRoutesTLSRouteAnnotation is the fully qualified annotation key
+	// used to annotate resources created for hybrid gateways, indicating which TLSRoute
+	// is associated with the resource.
+	GatewayOperatorHybridRoutesTLSRouteAnnotation = OperatorAnnotationPrefix + HybridRouteTLSRouteAnnotation
 
 	// GatewayOperatorHybridListenerPortLabel is the fully qualified label key
 	// used to label resources created for hybrid gateways, indicating the listener port

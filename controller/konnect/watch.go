@@ -2,7 +2,6 @@ package konnect
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -82,7 +81,9 @@ func ReconciliationWatchOptionsForEntity[
 	case *konnectv1alpha1.MCPServer:
 		return MCPServerReconciliationWatchOptions(cl)
 	default:
-		panic(fmt.Sprintf("unsupported entity type %T", ent))
+		// This handles watch options for generated entities.
+		// reconciliationWatchOptionsForEntity is generated via crd-from-oas.
+		return reconciliationWatchOptionsForEntity(cl, ent)
 	}
 }
 
@@ -300,6 +301,23 @@ type WatchableEntityType interface {
 		konnectv1alpha1.KonnectCloudGatewayNetwork |
 		konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration |
 		konnectv1alpha1.KonnectCloudGatewayTransitGateway |
+		konnectv1alpha1.Portal |
+		konnectv1alpha1.PortalPage |
+		konnectv1alpha1.PortalCustomDomain |
+		konnectv1alpha1.PortalCustomization |
+		konnectv1alpha1.PortalEmailConfig |
+		konnectv1alpha1.PortalIPAllowList |
+		konnectv1alpha1.PortalTeam |
+		konnectv1alpha1.PortalIdentityProviderRequest |
+		konnectv1alpha1.KonnectEventGateway |
+		configurationv1alpha1.EventGatewayBackendCluster |
+		configurationv1alpha1.EventGatewayListener |
+		configurationv1alpha1.EventGatewayListenerPolicy |
+		configurationv1alpha1.EventGatewayVirtualCluster |
+		configurationv1alpha1.EventGatewayVirtualClusterPolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
+		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
 		configurationv1.KongConsumer |
@@ -358,6 +376,7 @@ func enqueueObjectsForKongReferenceGrant[
 		var fromNamespaces []string
 		for _, from := range krg.Spec.From {
 			if string(from.Group) != configurationv1alpha1.GroupVersion.Group &&
+				string(from.Group) != konnectv1alpha1.GroupVersion.Group &&
 				string(from.Group) != konnectv1alpha2.GroupVersion.Group {
 				continue
 			}

@@ -1,0 +1,314 @@
+# Test: HTTPRoute-level Kong annotations.
+# Verifies that the hybrid gateway controller propagates HTTPRoute-level
+# konghq.com annotations (strip-path, preserve-host) to the generated
+# KongRoute spec, and re-reconciles when the annotations change.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-annotations
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly processes
+    annotations set directly on an HTTPRoute object.
+    Supported HTTPRoute-level annotations:
+    - konghq.com/strip-path:    <bool> (default: false) -> KongRoute.spec.strip_path
+    - konghq.com/preserve-host: <bool> (default: true)  -> KongRoute.spec.preserve_host
+    The test sets both annotations to the opposite of their defaults so a
+    regression in propagation surfaces as a failed assertion. It then patches
+    the HTTPRoute to flip them back and re-asserts the KongRoute spec to
+    verify that subsequent annotation changes are reconciled.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: sni_hostname
+      value: (join('.', ['*', ($namespace), 'example.com']))
+    - name: fqdn
+      value: (join('.', ['echo', ($namespace), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($namespace), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($namespace), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_name
+      value: (join('-', [($namespace), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: http_route_name
+      value: (join('-', [($namespace), 'echo-route']))
+    - name: http_route_namespace
+      value: ($namespace)
+    - name: echo_deployment_name
+      value: (join('-', [($namespace), 'echo']))
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: http_method
+      value: "GET"
+
+  steps:
+    # Step 1: Create TLS secret for Gateway TLS listener.
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 2: Create secret for Konnect authentication.
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    # Step 3: Create KonnectAPIAuthConfiguration.
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 4: Create GatewayConfiguration.
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for hybrid gateway.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 5: Create GatewayClass.
+    - name: Create-gateway-class
+      description: Create GatewayClass.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 6: Create Gateway with TLS listener.
+    - name: Create-gateway
+      description: Create Gateway.
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway.yaml
+
+    # Step 7: Assert KonnectGatewayControlPlane is created.
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert KonnectGatewayControlPlane.
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 8: Assert KongCertificate from TLS secret.
+    - name: Assert-kong-certificate
+      description: Assert KongCertificate.
+      use:
+        template: ../../common/_step_templates/assert-kongCertificate.yaml
+
+    # Step 9: Assert KongSNI for SNI hostname.
+    - name: Assert-kong-sni
+      description: Assert KongSNI.
+      use:
+        template: ../../common/_step_templates/assert-kongSNI.yaml
+      bindings:
+        - name: resource_type
+          value: "kongcertificates.configuration.konghq.com"
+
+    # Step 10: Create echo service for traffic.
+    - name: Create-echo-service
+      description: Create echo service for backend.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+      bindings:
+        - name: echo_deployment_replicas
+          value: ($echo_deployment_replicas)
+
+    # ---------------------------------------------------------------------------
+    # Phase 1: HTTPRoute created without any konghq.com annotations.
+    # Expect the generated KongRoute to carry Kong's defaults
+    # (strip_path=false, preserve_host=true).
+    # ---------------------------------------------------------------------------
+    - name: Create-httproute-without-annotations
+      description: Create HTTPRoute with no konghq.com annotations.
+      try:
+        - apply:
+            file: 01-httpRoute.yaml
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+
+    - name: Assert-kong-route-defaults
+      description: Assert KongRoute carries Kong defaults (strip_path=false, preserve_host=true).
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/echo$"
+            - "/echo/"
+        - name: strip_path
+          value: false
+        - name: preserve_host
+          value: true
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    # ---------------------------------------------------------------------------
+    # Phase 2: Add both annotations with non-default values.
+    # Expect the controller to re-reconcile the KongRoute with the new values.
+    # ---------------------------------------------------------------------------
+    - name: Patch-httproute-add-annotations
+      description: Patch HTTPRoute to add konghq.com/strip-path=true and konghq.com/preserve-host=false.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/strip-path: "true"
+                  konghq.com/preserve-host: "false"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/strip-path: "true"
+                  konghq.com/preserve-host: "false"
+
+    - name: Assert-kong-route-with-added-annotations
+      description: Assert KongRoute reflects the added annotations (strip_path=true, preserve_host=false).
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/echo$"
+            - "/echo/"
+        - name: strip_path
+          value: true
+        - name: preserve_host
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    # ---------------------------------------------------------------------------
+    # Phase 3: Patch annotations to a mixed state (strip-path=false, preserve-host=false).
+    # ---------------------------------------------------------------------------
+    - name: Patch-httproute-mixed-annotations
+      description: Patch HTTPRoute annotations to a mixed state.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/strip-path: "false"
+                  konghq.com/preserve-host: "false"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/strip-path: "false"
+                  konghq.com/preserve-host: "false"
+
+    - name: Assert-kong-route-with-mixed-annotations
+      description: Assert KongRoute reflects mixed annotations (strip_path=false, preserve_host=false).
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/echo$"
+            - "/echo/"
+        - name: strip_path
+          value: false
+        - name: preserve_host
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    # ---------------------------------------------------------------------------
+    # Phase 4: Remove both annotations from the HTTPRoute entirely.
+    # Expect the controller to re-reconcile the KongRoute back to Kong's defaults.
+    # `kubectl annotate <kind> <name> <key>-` is used.
+    # ---------------------------------------------------------------------------
+    - name: Remove-httproute-annotations
+      description: Strip both konghq.com annotations from the HTTPRoute via kubectl annotate -.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($http_route_name)
+            content: |
+              kubectl annotate -n "$NAMESPACE" httproute "$HTTP_ROUTE_NAME" \
+                konghq.com/strip-path- \
+                konghq.com/preserve-host- \
+                --overwrite
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                (annotations."konghq.com/strip-path" == null): true
+                (annotations."konghq.com/preserve-host" == null): true
+
+    - name: Assert-kong-route-defaults-after-removal
+      description: Assert KongRoute returns to Kong defaults after annotation removal.
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/echo$"
+            - "/echo/"
+        - name: strip_path
+          value: false
+        - name: preserve_host
+          value: true
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+  catch:
+    # Capture debug snapshot on test failure.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-httproute-annotations
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

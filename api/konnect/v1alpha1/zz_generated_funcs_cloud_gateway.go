@@ -23,6 +23,11 @@ func (obj *KonnectCloudGatewayTransitGateway) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
 
+// PersistsKonnectID reports whether the KonnectCloudGatewayTransitGateway persists a Konnect ID in status.
+func (*KonnectCloudGatewayTransitGateway) PersistsKonnectID() bool {
+	return true
+}
+
 // GetTypeName returns the KonnectCloudGatewayTransitGateway Kind name.
 func (obj KonnectCloudGatewayTransitGateway) GetTypeName() string {
 	return "KonnectCloudGatewayTransitGateway"

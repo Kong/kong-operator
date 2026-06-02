@@ -98,11 +98,11 @@ for ns in ${ALL_NAMESPACES}; do
 
   # Kong Configuration resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Kong Configuration Resources" \
-    "kongcertificates.configuration.konghq.com,kongsnis.configuration.konghq.com,kongroutes.configuration.konghq.com,kongservices.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com,kongreferencegrants.configuration.konghq.com,kongplugins.configuration.konghq.com,kongclusterplugins.configuration.konghq.com,kongconsumers.configuration.konghq.com,kongconsumergroups.configuration.konghq.com"
+    "kongcertificates.configuration.konghq.com,kongsnis.configuration.konghq.com,kongroutes.configuration.konghq.com,kongservices.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com,kongreferencegrants.configuration.konghq.com,kongplugins.configuration.konghq.com,kongclusterplugins.configuration.konghq.com,kongconsumers.configuration.konghq.com,kongconsumergroups.configuration.konghq.com,kongupstreampolicies.configuration.konghq.com"
 
   # Konnect resources (excluding KonnectAPIAuthConfiguration - captured separately with redaction)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Konnect Resources" \
-    "konnectgatewaycontrolplanes.konnect.konghq.com,konnectextensions.konnect.konghq.com"
+    "konnectgatewaycontrolplanes.konnect.konghq.com,konnectextensions.konnect.konghq.com,konnecteventgateways.konnect.konghq.com"
 
   # KonnectAPIAuthConfiguration with token redaction
   {
@@ -125,6 +125,10 @@ for ns in ${ALL_NAMESPACES}; do
   # Gateway Operator resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Gateway Operator Resources" \
     "gatewayconfigurations.gateway-operator.konghq.com,controlplanes.gateway-operator.konghq.com,dataplanes.gateway-operator.konghq.com,aigateways.gateway-operator.konghq.com,dataplanemetricsextensions.gateway-operator.konghq.com"
+
+  # Event Gateway resources
+  capture_resource_group "${RESOURCES_FILE}" "${ns}" "Event Gateway Resources" \
+    "kegdataplanes.eventgateway.konghq.com,eventgatewaybackendclusters.configuration.konghq.com,eventgatewayvirtualclusters.configuration.konghq.com,eventgatewaylisteners.configuration.konghq.com,eventgatewaylistenerpolicies.configuration.konghq.com,eventgatewayvirtualclusterconsumepolicies.configuration.konghq.com"
 
   # Core Kubernetes resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Core Kubernetes Resources" \
@@ -161,7 +165,7 @@ for ns in ${ALL_NAMESPACES}; do
     echo ""
   } >> "${DESCRIBED_FILE}"
 
-  safe_kubectl "${DESCRIBED_FILE}" describe gateways,gatewayclasses,httproutes,referencegrants -n "${ns}"
+  safe_kubectl "${DESCRIBED_FILE}" describe gateways,gatewayclasses,tlsroutes,httproutes,referencegrants -n "${ns}"
 
   {
     echo ""
@@ -177,7 +181,7 @@ for ns in ${ALL_NAMESPACES}; do
     echo ""
   } >> "${DESCRIBED_FILE}"
 
-  safe_kubectl "${DESCRIBED_FILE}" describe konnectgatewaycontrolplanes,konnectextensions -n "${ns}"
+  safe_kubectl "${DESCRIBED_FILE}" describe konnectgatewaycontrolplanes,konnectextensions,konnecteventgateways -n "${ns}"
 
   # Describe KonnectAPIAuthConfigurations with token redaction
   {
@@ -201,6 +205,14 @@ for ns in ${ALL_NAMESPACES}; do
   } >> "${DESCRIBED_FILE}"
 
   safe_kubectl "${DESCRIBED_FILE}" describe gatewayconfigurations -n "${ns}"
+
+  {
+    echo ""
+    echo "=== Event Gateway Resources in ${ns} ==="
+    echo ""
+  } >> "${DESCRIBED_FILE}"
+
+  safe_kubectl "${DESCRIBED_FILE}" describe kegdataplanes.eventgateway.konghq.com,eventgatewaybackendclusters,eventgatewayvirtualclusters,eventgatewaylisteners,eventgatewaylistenerpolicies,eventgatewayvirtualclusterconsumepolicies -n "${ns}"
 done
 
 # 3. Capture events in test namespaces

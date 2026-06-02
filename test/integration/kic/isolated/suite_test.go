@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
@@ -367,7 +367,15 @@ func deployKongAddon(
 	}
 	ctx = SetHTTPSURLInCtx(ctx, proxyHTTPSURL)
 
-	if !assert.NoError(t, retry.Do(
+	if !assert.NoError(t, retry.New(
+		retry.OnRetry(
+			func(n uint, err error) {
+				t.Logf("WARNING: try to get Kong Gateway version attempt %d/10 - error: %s\n", n+1, err)
+			},
+		),
+		retry.LastErrorOnly(true),
+		retry.Attempts(10),
+	).Do(
 		func() error {
 			version, err := helpers.GetKongVersion(ctx, proxyAdminURL, consts.KongTestPassword)
 			if err != nil {
@@ -376,13 +384,6 @@ func deployKongAddon(
 			t.Logf("using Kong instance (version: %s) reachable at %s\n", version, proxyAdminURL)
 			return nil
 		},
-		retry.OnRetry(
-			func(n uint, err error) {
-				t.Logf("WARNING: try to get Kong Gateway version attempt %d/10 - error: %s\n", n+1, err)
-			},
-		),
-		retry.LastErrorOnly(true),
-		retry.Attempts(10),
 	), "failed getting Kong's version") {
 		return ctx
 	}
@@ -430,7 +431,7 @@ func startControllerManager(
 	var featureGates strings.Builder
 	featureGates.WriteString(consts.DefaultControllerFeatureGates)
 	for gate, value := range setupCfg.controllerManagerFeatureGates {
-		featureGates.WriteString("," + fmt.Sprintf("%s=%s", gate, value))
+		fmt.Fprintf(&featureGates, ",%s=%s", gate, value)
 	}
 	t.Logf("feature gates enabled: %s", featureGates.String())
 

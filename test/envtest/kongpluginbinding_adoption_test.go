@@ -166,22 +166,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 	})
 
 	t.Run("Adopting without KongPlugin reference should fail", func(t *testing.T) {
-		pluginID := uuid.NewString()
 		w := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
-
-		t.Log("Setting up SDK expectations for getting plugins")
-		sdk.PluginSDK.EXPECT().GetPlugin(
-			mock.Anything,
-			sdkkonnectops.GetPluginRequest{
-				PluginID:       pluginID,
-				ControlPlaneID: cp.GetKonnectID(),
-			}).Return(
-			&sdkkonnectops.GetPluginResponse{
-				Plugin: &sdkkonnectcomp.Plugin{
-					ID:   new(pluginID),
-					Name: "proxy-cache",
-				},
-			}, nil)
 
 		t.Log("Creating a KongPluginBinding without the KongPlugin to adopt the plugin")
 		kpbGlobal := deploy.KongPluginBinding(t, ctx, clientNamespaced, konnect.NewKongPluginBindingBuilder().
@@ -189,18 +174,18 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			WithPluginRefName("non-exist-plugin").
 			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
 			Build(),
-			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, pluginID),
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, uuid.NewString()),
 		)
 
-		t.Logf("Waiting for the KongPluginBinding %s/%s to be marked as not programmed and not adopted", ns.Name, kpbGlobal.Name)
+		t.Logf("Waiting for the KongPluginBinding %s/%s to be marked as not programmed with PluginRefValid=False", ns.Name, kpbGlobal.Name)
 		watchFor(t, ctx, w,
 			apiwatch.Modified,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				return kpb.Name == kpbGlobal.Name &&
 					conditionsContainProgrammedFalse(kpb.GetConditions()) &&
-					k8sutils.HasConditionFalse(konnectv1alpha1.KonnectEntityAdoptedConditionType, kpb)
+					k8sutils.HasConditionFalse(konnectv1alpha1.KongPluginRefValidConditionType, kpb)
 			},
-			"Did not see KongPluginBinding marked as not programmed and not adopted in its conditions.",
+			"Did not see KongPluginBinding marked as not programmed with PluginRefValid=False in its conditions.",
 		)
 	})
 }

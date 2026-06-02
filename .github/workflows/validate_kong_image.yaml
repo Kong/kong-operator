@@ -1,0 +1,131 @@
+name: "validate Kong image (targeted)"
+run-name: "validate Kong ${{ format('{0}:{1}',
+  github.event.inputs.kong-image-repo, github.event.inputs.kong-image-tag) }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      kong-image-repo:
+        description: Kong Gateway Docker image to test with (repository). Must be an EE
+          variant.
+        type: string
+        required: true
+        default: "kong/kong-gateway"
+      kong-image-tag:
+        description: Kong Gateway Docker image to test with (tag).
+        type: string
+        required: true
+        default: "latest"
+      kong-effective-version:
+        description: Effective semantic version of Kong Gateway Docker image. If not
+          given, the semantic version will be parsed from the image tag.
+        type: string
+        required: false
+      issue-number:
+        description: Issue number to comment in, and close in case of success. Can be none.
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  startup-issue-comment:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    if: ${{ github.event.inputs.issue-number != '' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+      # URL is the current workflow's run URL.
+      # Sadly this is not readily available in github's context.
+      URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+        github.run_id }}
+      ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - run: |
+          gh issue comment ${ISSUE_NUMBER} --body \
+            'Kong Gateway validation tests were started at ${{ env.URL }} with the following parameters:
+            ```json
+            ${{ toJSON(github.event.inputs) }}
+            ```
+            '
+
+  resolve-k8s-version:
+    runs-on: ubuntu-latest
+    outputs:
+      latest: ${{ steps.set-latest.outputs.latest }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: set-latest
+        run: |
+          (
+            echo 'latest<<EOF'
+            yq eval -r -o=json '. | sort | reverse | .[0]' .github/supported_k8s_node_versions.yaml
+            echo 'EOF'
+          ) >> "${GITHUB_OUTPUT}"
+
+  run-kongintegration-tests:
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/__kongintegration_tests.yaml
+    secrets: inherit
+    with:
+      kong-image-repo: ${{ github.event.inputs.kong-image-repo }}
+      kong-image-tag: ${{ github.event.inputs.kong-image-tag }}
+      kong-effective-version: ${{ github.event.inputs.kong-effective-version }}
+
+  run-integration-tests:
+    if: ${{ !cancelled() }}
+    needs: [ resolve-k8s-version ]
+    uses: ./.github/workflows/__integration_tests.yaml
+    secrets: inherit
+    with:
+      cluster_version: ${{ needs.resolve-k8s-version.outputs.latest }}
+      kong-image-repo: ${{ github.event.inputs.kong-image-repo }}
+      kong-image-tag: ${{ github.event.inputs.kong-image-tag }}
+      kong-effective-version: ${{ github.event.inputs.kong-effective-version }}
+
+  on-finish-comment-or-close-issue:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    needs:
+      - startup-issue-comment
+      - run-kongintegration-tests
+      - run-integration-tests
+    if: ${{ always() && github.event.inputs.issue-number != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+      URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+        github.run_id }}
+      ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result,
+          'cancelled') }}
+        run: |
+          gh issue close ${ISSUE_NUMBER} --comment \
+            'Kong Gateway validation tests **PASSED** ✅ at ${{ env.URL }} with the following parameters:
+            ```json
+            ${{ toJSON(github.event.inputs) }}
+            ```
+            '
+      - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result,
+          'cancelled') }}
+        run: |
+          gh issue comment ${ISSUE_NUMBER} --body \
+            'Kong Gateway validation tests **FAILED** ❌ at ${{ env.URL }} with the following parameters:
+            ```json
+            ${{ toJSON(github.event.inputs) }}
+            ```
+            '

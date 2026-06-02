@@ -7,6 +7,20 @@ on:
         description: "The Kubernetes cluster version to use for envtest"
         type: string
         required: true
+      kong-image-repo:
+        description: "Kong Gateway Docker image repository override. If not set,
+          defaults are used."
+        type: string
+        required: false
+      kong-image-tag:
+        description: "Kong Gateway Docker image tag override."
+        type: string
+        required: false
+      kong-effective-version:
+        description: "Effective semantic version of Kong Gateway. If not given, parsed
+          from the image tag."
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -33,7 +47,7 @@ jobs:
             router_flavor: expressions
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -61,7 +75,7 @@ jobs:
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -74,7 +88,7 @@ jobs:
 
     - name: Go cache (restore only for non-main branches)
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -90,6 +104,8 @@ jobs:
         sudo tcpdump -i any 'dst port 443' -w /tmp/capture-${{ matrix.suite }}-${{ matrix.router_flavor }}.pcap &
         echo $! > /tmp/tcpdump.pid
 
+    - uses: ./.github/actions/bump-inotify
+
     - name: run integration tests
       run: make test.integration-${{ matrix.suite }}
       env:
@@ -99,6 +115,9 @@ jobs:
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
         KONG_CLUSTER_VERSION: ${{ inputs.cluster_version }}
+        TEST_KONG_IMAGE: ${{ inputs.kong-image-repo }}
+        TEST_KONG_TAG: ${{ inputs.kong-image-tag }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
         # This is needed for ktf to find latest releases of addons.
         # This could be changed so that ktf addons have their versions pinned
         # in the test Makefile instead.
@@ -113,7 +132,7 @@ jobs:
 
     - name: upload pcap capture
       if: failure()
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: pcap-integration-${{ matrix.suite }}-${{ matrix.router_flavor }}
         path: /tmp/capture-${{ matrix.suite }}-${{ matrix.router_flavor }}.pcap
@@ -121,21 +140,21 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: diagnostics-integration-${{ matrix.suite }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ matrix.suite }}-coverage-integration
         path: coverage.integration.${{ matrix.suite }}-${{ matrix.router_flavor }}.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ matrix.suite }}-tests-report-integration
         path: integration-tests-${{ matrix.suite }}-${{ matrix.router_flavor }}.xml

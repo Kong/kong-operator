@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,7 +71,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 			ControllerName: gateway.GetControllerName(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
+			GenerateName: "gwc-",
 			Annotations: map[string]string{
 				"konghq.com/gatewayclass-unmanaged": "placeholder",
 			},
@@ -98,8 +97,8 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      uuid.NewString(),
+			Namespace:    ns.Name,
+			GenerateName: "gw-",
 		},
 	}
 	require.NoError(t, client.Create(ctx, &gw))
@@ -162,8 +161,8 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 			APIVersion: "v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nsRoute.Name,
-			Name:      uuid.NewString(),
+			Namespace:    nsRoute.Name,
+			GenerateName: "httproute-",
 		},
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -201,8 +200,8 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 
 	rg := gatewayapi.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      uuid.NewString(),
+			Namespace:    ns.Name,
+			GenerateName: "referencegrant-",
 		},
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{

@@ -24,7 +24,7 @@ jobs:
           - router-flavor: expressions
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
 
@@ -58,7 +58,7 @@ jobs:
       # in future automate creating PR (add to release workflow).
       # TODO: https://github.com/Kong/kong-operator/issues/131
       - name: Collect conformance report
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: conformance-report-${{ matrix.router-flavor }}
           path: "*report.yaml"

@@ -276,6 +276,14 @@ _Appears in:_
 
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
+- [EventGatewayBackendCluster](#configuration-konghq-com-v1alpha1-eventgatewaybackendcluster)
+- [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
+- [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
+- [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
+- [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
+- [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
+- [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
+- [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
 - [IngressClassParameters](#configuration-konghq-com-v1alpha1-ingressclassparameters)
 - [KongCACertificate](#configuration-konghq-com-v1alpha1-kongcacertificate)
 - [KongCertificate](#configuration-konghq-com-v1alpha1-kongcertificate)
@@ -297,6 +305,126 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [KongTarget](#configuration-konghq-com-v1alpha1-kongtarget)
 - [KongUpstream](#configuration-konghq-com-v1alpha1-kongupstream)
 - [KongVault](#configuration-konghq-com-v1alpha1-kongvault)
+
+### EventGatewayBackendCluster
+
+
+EventGatewayBackendCluster is the Schema for the eventgatewaybackendclusters API.
+
+<!-- event_gateway_backend_cluster description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayBackendCluster`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayBackendClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterspec)_ |  |
+| `status` _[EventGatewayBackendClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)_ |  |
+
+### EventGatewayDataPlaneCertificate
+
+
+EventGatewayDataPlaneCertificate is the Schema for the eventgatewaydataplanecertificates API.
+
+<!-- event_gateway_data_plane_certificate description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayDataPlaneCertificate`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayDataPlaneCertificateSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatespec)_ |  |
+| `status` _[EventGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatestatus)_ |  |
+
+### EventGatewayListener
+
+
+EventGatewayListener is the Schema for the eventgatewaylisteners API.
+
+<!-- event_gateway_listener description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayListener`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayListenerSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerspec)_ |  |
+| `status` _[EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)_ |  |
+
+### EventGatewayListenerPolicy
+
+
+EventGatewayListenerPolicy is the Schema for the eventgatewaylistenerpolicys API.
+
+<!-- event_gateway_listener_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayListenerPolicy`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)_ |  |
+| `status` _[EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)_ |  |
+
+### EventGatewayVirtualCluster
+
+
+EventGatewayVirtualCluster is the Schema for the eventgatewayvirtualclusters API.
+
+<!-- event_gateway_virtual_cluster description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualCluster`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterspec)_ |  |
+| `status` _[EventGatewayVirtualClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)_ |  |
+
+### EventGatewayVirtualClusterConsumePolicy
+
+
+EventGatewayVirtualClusterConsumePolicy is the Schema for the eventgatewayvirtualclusterconsumepolicys API.
+
+<!-- event_gateway_virtual_cluster_consume_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterConsumePolicy`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)_ |  |
+| `status` _[EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)_ |  |
+
+### EventGatewayVirtualClusterPolicy
+
+
+EventGatewayVirtualClusterPolicy is the Schema for the eventgatewayvirtualclusterpolicys API.
+
+<!-- event_gateway_virtual_cluster_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterPolicy`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)_ |  |
+| `status` _[EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)_ |  |
+
+### EventGatewayVirtualClusterProducePolicy
+
+
+EventGatewayVirtualClusterProducePolicy is the Schema for the eventgatewayvirtualclusterproducepolicys API.
+
+<!-- event_gateway_virtual_cluster_produce_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterProducePolicy`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)_ |  |
+| `status` _[EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)_ |  |
 
 ### IngressClassParameters
 
@@ -623,6 +751,208 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 ### Types
 
 In this section you will find types that the CRDs rely on.
+#### BackendClusterAuthenticationAnonymous
+
+
+BackendClusterAuthenticationAnonymous Anonymous authentication scheme for the
+backend cluster.
+
+
+
+
+_Appears in:_
+
+- [BackendClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
+- [EventGatewayBackendClusterAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)
+
+#### BackendClusterAuthenticationSaslPlain
+
+
+BackendClusterAuthenticationSaslPlain SASL/PLAIN authentication scheme for
+the backend cluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `password` _[GatewaySecret](#configuration-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+| `username` _[GatewaySecretReferenceOrLiteral](#configuration-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+
+_Appears in:_
+
+- [BackendClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
+- [EventGatewayBackendClusterAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)
+
+#### BackendClusterAuthenticationSaslScram
+
+
+BackendClusterAuthenticationSaslScram SASL/SCRAM authentication scheme for
+the backend cluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
+| `password` _[GatewaySecret](#configuration-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+| `username` _[GatewaySecretReferenceOrLiteral](#configuration-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+
+_Appears in:_
+
+- [BackendClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
+- [EventGatewayBackendClusterAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)
+
+
+
+#### BackendClusterAuthenticationSchemeType
+
+_Underlying type:_ `string`
+
+BackendClusterAuthenticationSchemeType represents the type of BackendClusterAuthenticationScheme.
+
+
+
+
+_Appears in:_
+
+- [BackendClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `anonymous` |  |
+| `saslPlain` |  |
+| `saslScram` |  |
+
+#### BackendClusterName
+
+_Underlying type:_ `string`
+
+BackendClusterName The unique name of the backend cluster.
+
+
+
+
+_Appears in:_
+
+- [BackendClusterReferenceByName](#configuration-konghq-com-v1alpha1-types-backendclusterreferencebyname)
+- [BackendClusterReferenceModify](#configuration-konghq-com-v1alpha1-types-backendclusterreferencemodify)
+- [EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
+
+
+
+
+
+
+
+#### BackendClusterTLS
+
+
+BackendClusterTLS is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `caBundle` _[GatewaySecretReferenceOrLiteral](#configuration-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+| `clientIdentity` _[BackendClusterTLSClientIdentity](#configuration-konghq-com-v1alpha1-types-backendclustertlsclientidentity)_ | Client mTLS configuration.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `enabled` _string_ | If true, TLS is enabled for connections to this backend cluster. If false, TLS is explicitly disabled. |
+| `insecureSkipVerify` _string_ | If true, skip certificate verification. It's not secure to use for production. |
+| `tlsVersions` _[]string_ | List of supported TLS versions. |
+
+_Appears in:_
+
+- [EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
+
+#### BackendClusterTLSClientIdentity
+
+
+BackendClusterTLSClientIdentity Client mTLS configuration.<br /><br />**Requires a minimum runtime version of `1.1`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `certificate` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+| `key` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+
+_Appears in:_
+
+- [BackendClusterTLS](#configuration-konghq-com-v1alpha1-types-backendclustertls)
+
+#### BackendMetadataUpdateIntervalSeconds
+
+_Underlying type:_ `integer`
+
+BackendMetadataUpdateIntervalSeconds The interval at which metadata is
+updated in seconds.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
+
+
+
+#### ConsumeFailureMode
+
+_Underlying type:_ `string`
+
+ConsumeFailureMode Describes how to handle a failure in a policy applied to
+consumed records.
+* `error` - the batch is not delivered to the client.
+Use sparingly: erroring on a batch causes clients to get stuck on the
+problematic offset and requires manual intervention to skip it.
+* `skip` - the record is not delivered to the client.
+* `passthrough` - passes the record to the client even though policy
+execution failed.
+* `mark` - passes the record to the client but marks it with a
+`kong/policy-failure-<id>` header whose value is the reason for the policy
+failure (truncated to 512 characters).
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordDecryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldsconfig)
+
+#### ConsumeKeyValidationAction
+
+_Underlying type:_ `string`
+
+ConsumeKeyValidationAction Defines a behavior when record key is not valid.
+* mark - marks a record with kong/server header and client ID value
+to help to identify the clients violating schema.
+* skip - skips delivering a record.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+
+#### ConsumeValueValidationAction
+
+_Underlying type:_ `string`
+
+ConsumeValueValidationAction Defines a behavior when record value is not
+valid.
+* mark - marks a record with kong/server header and client ID value
+to help to identify the clients violating schema.
+* skip - skips delivering a record.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+
 
 
 #### ControllerReference
@@ -642,6 +972,1974 @@ ControllerReference is a reference to a controller that reconciles the KongLicen
 _Appears in:_
 
 - [KongLicenseControllerStatus](#configuration-konghq-com-v1alpha1-types-konglicensecontrollerstatus)
+
+#### DecryptionRecordPart
+
+_Underlying type:_ `string`
+
+DecryptionRecordPart * key - decrypt the record key
+* value - decrypt the record value
+
+
+
+
+_Appears in:_
+
+- [EventGatewayDecryptPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaydecryptpolicyconfig)
+
+#### EncryptionFailureMode
+
+_Underlying type:_ `string`
+
+EncryptionFailureMode Describes how to handle failing encryption or
+decryption.
+Use `error` if the record should be rejected if encryption or decryption
+fails.
+Use `passthrough` to ignore encryption or decryption failure and continue
+proxying the record.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayDecryptPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaydecryptpolicyconfig)
+- [EventGatewayEncryptConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfig)
+
+
+
+#### EncryptionKeyAWS
+
+
+EncryptionKeyAWS The AWS KMS key to use for encryption.
+
+
+
+| Field | Description |
+| --- | --- |
+| `arn` _string_ | The AWS KMS key ARN. |
+
+_Appears in:_
+
+- [EncryptionKey](#configuration-konghq-com-v1alpha1-types-encryptionkey)
+- [EventGatewayEncryptConfigEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)
+- [EventGatewayParsedRecordEncryptionSelectorEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorencryptionkey)
+
+#### EncryptionKeyStatic
+
+
+EncryptionKeyStatic A static encryption key.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _[EncryptionKeyStaticReference](#configuration-konghq-com-v1alpha1-types-encryptionkeystaticreference)_ | A static encryption key reference, either by ID or by value. |
+
+_Appears in:_
+
+- [EncryptionKey](#configuration-konghq-com-v1alpha1-types-encryptionkey)
+- [EventGatewayEncryptConfigEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)
+- [EventGatewayParsedRecordEncryptionSelectorEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorencryptionkey)
+
+#### EncryptionKeyStaticReference
+
+
+EncryptionKeyStaticReference is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _*string_ |  |
+| `name` _*string_ |  |
+
+_Appears in:_
+
+- [EncryptionKeyStatic](#configuration-konghq-com-v1alpha1-types-encryptionkeystatic)
+
+
+
+
+
+#### EncryptionKeyType
+
+_Underlying type:_ `string`
+
+EncryptionKeyType represents the type of EncryptionKey.
+
+
+
+
+_Appears in:_
+
+- [EncryptionKey](#configuration-konghq-com-v1alpha1-types-encryptionkey)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `static` |  |
+
+#### EncryptionRecordPart
+
+_Underlying type:_ `string`
+
+EncryptionRecordPart * key - encrypt the record key
+* value - encrypt the record value
+
+
+
+
+_Appears in:_
+
+- [EventGatewayEncryptConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfig)
+
+#### EventGatewayACLOperation
+
+
+EventGatewayACLOperation An Event Gateway operation to match against in an
+ACL rule.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [EventGatewayACLRule](#configuration-konghq-com-v1alpha1-types-eventgatewayaclrule)
+
+#### EventGatewayACLPolicyConfig
+
+
+EventGatewayACLPolicyConfig Apply ACLs to virtual cluster traffic.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[EventGatewayACLRule](#configuration-konghq-com-v1alpha1-types-eventgatewayaclrule)_ | Every ACL rule in this list applies independently. |
+
+_Appears in:_
+
+- [EventGatewayACLsPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayaclspolicy)
+
+#### EventGatewayACLResourceName
+
+
+EventGatewayACLResourceName An Event Gateway resource name to match against
+in an ACL rule.
+
+
+
+| Field | Description |
+| --- | --- |
+| `match` _string_ | Currently supported are exact matches and globs. All `*` characters are interpreted as globs, i.e. they match zero or more of any character. |
+
+_Appears in:_
+
+- [EventGatewayACLRuleResourceNamesStaticArray](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenamesstaticarray)
+
+#### EventGatewayACLRule
+
+
+EventGatewayACLRule A Kafka ACL rule to apply to virtual cluster traffic
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _string_ | How to handle the request if the rule matches |
+| `operations` _[EventGatewayACLOperation](#configuration-konghq-com-v1alpha1-types-eventgatewayacloperation)_ | Types of Kafka operations to match against. Note that not every operation can apply to every resource type. |
+| `resourceNames` _[EventGatewayACLRuleResourceNames](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenames)_ | If any of these entries match, the resource name matches for this rule. A maximum of 50 entries are allowed. |
+| `resourceType` _string_ | This rule applies to access only for type of resource |
+
+_Appears in:_
+
+- [EventGatewayACLPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayaclpolicyconfig)
+
+#### EventGatewayACLRuleResourceNames
+
+
+EventGatewayACLRuleResourceNames represents a union type for resource_names.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayACLRuleResourceNamesType](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenamestype)_ | Type designates the type of configuration. |
+| `stat` _[EventGatewayACLRuleResourceNamesStaticArray](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenamesstaticarray)_ | Stat configuration. |
+| `dynam` _[EventGatewayACLRuleResourceNamesDynamicArray](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenamesdynamicarray)_ | Dynam configuration. |
+
+_Appears in:_
+
+- [EventGatewayACLRule](#configuration-konghq-com-v1alpha1-types-eventgatewayaclrule)
+
+#### EventGatewayACLRuleResourceNamesDynamicArray
+
+_Underlying type:_ `string`
+
+EventGatewayACLRuleResourceNamesDynamicArray This expression should evaluate
+to an array of glob patterns,
+equivalent to the `match` values in the static array form of
+`resource_names`.<br /><br />**Requires a minimum runtime version of `1.1`**.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayACLRuleResourceNames](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenames)
+
+#### EventGatewayACLRuleResourceNamesStaticArray
+
+_Underlying type:_ `[EventGatewayACLResourceName](#eventgatewayaclresourcename)`
+
+EventGatewayACLRuleResourceNamesStaticArray A static list of resource name
+globs to match against resources when applying an ACL policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `match` _string_ | Currently supported are exact matches and globs. All `*` characters are interpreted as globs, i.e. they match zero or more of any character. |
+
+_Appears in:_
+
+- [EventGatewayACLRuleResourceNames](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenames)
+
+#### EventGatewayACLRuleResourceNamesType
+
+_Underlying type:_ `string`
+
+EventGatewayACLRuleResourceNamesType represents the type of resource_names.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayACLRuleResourceNames](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenames)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `stat` |  |
+| `dynam` |  |
+
+#### EventGatewayACLsPolicy
+
+
+EventGatewayACLsPolicy Apply Kafka ACLs to virtual cluster traffic.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
+| `config` _[EventGatewayACLPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayaclpolicyconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyconfig)
+
+#### EventGatewayAWSKeySource
+
+
+EventGatewayAWSKeySource A key source that uses an AWS KMS to find a
+symmetric key.
+Load KMS credentials from the environment.<br /><br />See [aws
+docs](https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credproviders.html#credproviders-default-credentials-provider-chain)
+for more information about how credential retrieval.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)
+
+#### EventGatewayBackendClusterAPISpec
+
+
+EventGatewayBackendClusterAPISpec defines the API spec fields for EventGatewayBackendCluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authentication` _[EventGatewayBackendClusterAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)_ |  |
+| `bootstrapServers` _[]string_ | A list of cluster bootstrap servers in the format address:port. |
+| `description` _string_ | A human-readable description of the backend cluster. |
+| `insecureAllowAnonymousVirtualClusterAuth` _string_ | If true, virtual clusters can have allow anonymous authentication and use this backend cluster. This setting is not recommended for production use as it may create privilege escalation vulnerabilities. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `metadataUpdateIntervalSeconds` _[BackendMetadataUpdateIntervalSeconds](#configuration-konghq-com-v1alpha1-types-backendmetadataupdateintervalseconds)_ | The interval at which metadata is updated in seconds. |
+| `name` _[BackendClusterName](#configuration-konghq-com-v1alpha1-types-backendclustername)_ | The unique name of the backend cluster. |
+| `tls` _[BackendClusterTLS](#configuration-konghq-com-v1alpha1-types-backendclustertls)_ |  |
+
+_Appears in:_
+
+- [EventGatewayBackendClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterspec)
+
+#### EventGatewayBackendClusterAuthentication
+
+
+EventGatewayBackendClusterAuthentication represents a union type for authentication.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayBackendClusterAuthenticationType](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthenticationtype)_ | Type designates the type of configuration. |
+| `anonymous` _[BackendClusterAuthenticationAnonymous](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationanonymous)_ | Anonymous configuration. |
+| `saslPlain` _[BackendClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)_ | SaslPlain configuration. |
+| `saslScram` _[BackendClusterAuthenticationSaslScram](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)_ | SaslScram configuration. |
+
+_Appears in:_
+
+- [EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
+
+#### EventGatewayBackendClusterAuthenticationType
+
+_Underlying type:_ `string`
+
+EventGatewayBackendClusterAuthenticationType represents the type of authentication.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayBackendClusterAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `anonymous` |  |
+| `saslPlain` |  |
+| `saslScram` |  |
+
+
+
+#### EventGatewayBackendClusterSpec
+
+
+EventGatewayBackendClusterSpec defines the desired state of EventGatewayBackendCluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `apiSpec` _[EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayBackendCluster](#configuration-konghq-com-v1alpha1-eventgatewaybackendcluster)
+
+#### EventGatewayBackendClusterStatus
+
+
+EventGatewayBackendClusterStatus defines the observed state of EventGatewayBackendCluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayBackendCluster](#configuration-konghq-com-v1alpha1-eventgatewaybackendcluster)
+
+#### EventGatewayConsumeSchemaValidationPolicy
+
+
+EventGatewayConsumeSchemaValidationPolicy A policy that validates consume
+messages against a schema registry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
+| `config` _[EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)_ | The configuration of the schema validation policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
+
+#### EventGatewayConsumeSchemaValidationPolicyConfig
+
+
+EventGatewayConsumeSchemaValidationPolicyConfig The configuration of the
+schema validation policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+| `schemaRegistry` _[EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)_ | A reference to a schema Registry. |
+| `type` _[SchemaValidationType](#configuration-konghq-com-v1alpha1-types-schemavalidationtype)_ | How to validate the schema and parse the record. * confluent_schema_registry - validates against confluent schema registry. * json - simple JSON parsing without the schema. |
+| `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicy)
+
+#### EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry
+
+
+EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry represents a union type for schema_registry.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistrytype)_ | Type designates the type of configuration. |
+| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
+| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+
+#### EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType
+
+_Underlying type:_ `string`
+
+EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType represents the type of schema_registry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `id` |  |
+| `name` |  |
+
+#### EventGatewayDataPlaneCertificateAPISpec
+
+
+EventGatewayDataPlaneCertificateAPISpec defines the API spec fields for EventGatewayDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `certificate` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | JSON escaped string of the certificate. |
+| `description` _string_ | A description of the certificate. |
+| `name` _string_ | The name to identify of the certificate. |
+
+_Appears in:_
+
+- [EventGatewayDataPlaneCertificateSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatespec)
+
+#### EventGatewayDataPlaneCertificateSpec
+
+
+EventGatewayDataPlaneCertificateSpec defines the desired state of EventGatewayDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `apiSpec` _[EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
+
+#### EventGatewayDataPlaneCertificateStatus
+
+
+EventGatewayDataPlaneCertificateStatus defines the observed state of EventGatewayDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
+
+#### EventGatewayDecryptPolicy
+
+
+EventGatewayDecryptPolicy Decrypts Kafka records or keys using AES_256_GCM.
+Keys are therefore 256 bits long.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
+| `config` _[EventGatewayDecryptPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaydecryptpolicyconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
+
+#### EventGatewayDecryptPolicyConfig
+
+
+EventGatewayDecryptPolicyConfig The configuration of the decrypt policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `failureMode` _[EncryptionFailureMode](#configuration-konghq-com-v1alpha1-types-encryptionfailuremode)_ | Describes how to handle failing encryption or decryption. Use `error` if the record should be rejected if encryption or decryption fails. Use `passthrough` to ignore encryption or decryption failure and continue proxying the record. |
+| `keySources` _[EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
+| `partOfRecord` _[DecryptionRecordPart](#configuration-konghq-com-v1alpha1-types-decryptionrecordpart)_ | Describes the parts of a record to decrypt. |
+
+_Appears in:_
+
+- [EventGatewayDecryptPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaydecryptpolicy)
+
+#### EventGatewayEncryptConfig
+
+
+EventGatewayEncryptConfig The configuration of the encrypt policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `encryptionKey` _[EventGatewayEncryptConfigEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)_ | The key to use for encryption. |
+| `failureMode` _[EncryptionFailureMode](#configuration-konghq-com-v1alpha1-types-encryptionfailuremode)_ | Describes how to handle failing encryption or decryption. Use `error` if the record should be rejected if encryption or decryption fails. Use `passthrough` to ignore encryption or decryption failure and continue proxying the record. |
+| `partOfRecord` _[EncryptionRecordPart](#configuration-konghq-com-v1alpha1-types-encryptionrecordpart)_ | Describes the parts of a record to encrypt. |
+
+_Appears in:_
+
+- [EventGatewayEncryptPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptpolicy)
+
+#### EventGatewayEncryptConfigEncryptionKey
+
+
+EventGatewayEncryptConfigEncryptionKey represents a union type for encryption_key.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayEncryptConfigEncryptionKeyType](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkeytype)_ | Type designates the type of configuration. |
+| `aws` _[EncryptionKeyAWS](#configuration-konghq-com-v1alpha1-types-encryptionkeyaws)_ | AWS configuration. |
+| `static` _[EncryptionKeyStatic](#configuration-konghq-com-v1alpha1-types-encryptionkeystatic)_ | Static configuration. |
+
+_Appears in:_
+
+- [EventGatewayEncryptConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfig)
+
+#### EventGatewayEncryptConfigEncryptionKeyType
+
+_Underlying type:_ `string`
+
+EventGatewayEncryptConfigEncryptionKeyType represents the type of encryption_key.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayEncryptConfigEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `static` |  |
+
+#### EventGatewayEncryptPolicy
+
+
+EventGatewayEncryptPolicy Encrypts Kafka records or keys using AES_256_GCM.
+Keys are therefore 256 bits long.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
+| `config` _[EventGatewayEncryptConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+#### EventGatewayKeySource
+
+
+EventGatewayKeySource represents a union type for EventGatewayKeySource.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayKeySourceType](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysourcetype)_ | Type designates the type of configuration. |
+| `aws` _[EventGatewayAWSKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewayawskeysource)_ | AWS configuration. |
+| `static` _[EventGatewayStaticKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeysource)_ | Static configuration. |
+
+_Appears in:_
+
+- [EventGatewayDecryptPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaydecryptpolicyconfig)
+- [EventGatewayParsedRecordDecryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldsconfig)
+
+#### EventGatewayKeySourceType
+
+_Underlying type:_ `string`
+
+EventGatewayKeySourceType represents the type of EventGatewayKeySource.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `static` |  |
+
+#### EventGatewayListenerAPISpec
+
+
+EventGatewayListenerAPISpec defines the API spec fields for EventGatewayListener.
+
+
+
+| Field | Description |
+| --- | --- |
+| `addresses` _[]string_ | Which address or addresses to listen on. `0.0.0.0` means all addresses on the host. `::` means all addresses on the host in IPv6.<br /><br />If `0.0.0.0` or `::` is used, there can't be other extra addresses defined. WARNING: there are use cases where listening on all addresses is insecure. So use this with caution.<br /><br />`localhost` means only the localhost ipv4 address. |
+| `description` _string_ | A human-readable description of the listener. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | The unique name of the listener. |
+| `ports` _[EventGatewayListenerPort](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerport)_ | Which port or ports to listen on. There can be multiple ways to define ports: - as a single port, e.g. 9092 - as a range of ports, e.g. 9092-9094<br /><br />It's possible to combine both, e.g. [9092, "9093-9095", 9096]. |
+
+_Appears in:_
+
+- [EventGatewayListenerSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerspec)
+
+#### EventGatewayListenerPolicyAPISpec
+
+
+EventGatewayListenerPolicyAPISpec defines the API spec fields for EventGatewayListenerPolicy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)
+
+#### EventGatewayListenerPolicyConfig
+
+
+EventGatewayListenerPolicyConfig represents a union type for EventGatewayListenerPolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayListenerPolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyconfigtype)_ | Type designates the type of configuration. |
+| `forwardToVirtualCluster` _[ForwardToVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)_ | ForwardToVirtualClust configuration. |
+| `tlsServer` _[EventGatewayTLSListenerPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)_ | EventGatewayTLSListen configuration. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyapispec)
+
+#### EventGatewayListenerPolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayListenerPolicyConfigType represents the type of EventGatewayListenerPolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `forwardToVirtualCluster` |  |
+| `tlsServer` |  |
+
+
+
+#### EventGatewayListenerPolicySpec
+
+
+EventGatewayListenerPolicySpec defines the desired state of EventGatewayListenerPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayListenerRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayListenerRef is the reference to the parent EventGatewayListener object. |
+| `apiSpec` _[EventGatewayListenerPolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
+
+#### EventGatewayListenerPolicyStatus
+
+
+EventGatewayListenerPolicyStatus defines the observed state of EventGatewayListenerPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `eventGatewayListenerID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | EventGatewayListenerID is the Konnect ID of the parent EventGatewayListener. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
+
+
+
+#### EventGatewayListenerSpec
+
+
+EventGatewayListenerSpec defines the desired state of EventGatewayListener.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `apiSpec` _[EventGatewayListenerAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
+
+#### EventGatewayListenerStatus
+
+
+EventGatewayListenerStatus defines the observed state of EventGatewayListener.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
+
+#### EventGatewayModifyHeaderAction
+
+
+EventGatewayModifyHeaderAction represents a union type for EventGatewayModifyHeaderAction.
+Only one of the fields should be set based on the Op.
+
+
+
+| Field | Description |
+| --- | --- |
+| `op` _[EventGatewayModifyHeaderActionType](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderactiontype)_ | Op designates the type of configuration. |
+| `remove` _[EventGatewayModifyHeaderRemoveAction](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderremoveaction)_ | Remove configuration. |
+| `set` _[EventGatewayModifyHeaderSetAction](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheadersetaction)_ | Set configuration. |
+
+_Appears in:_
+
+- [EventGatewayModifyHeadersPolicyCreateConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreateconfig)
+
+#### EventGatewayModifyHeaderActionType
+
+_Underlying type:_ `string`
+
+EventGatewayModifyHeaderActionType represents the type of EventGatewayModifyHeaderAction.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayModifyHeaderAction](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderaction)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `remove` |  |
+| `set` |  |
+
+#### EventGatewayModifyHeaderRemoveAction
+
+
+EventGatewayModifyHeaderRemoveAction An action that removes a header by key.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _string_ | The key of the header to remove. |
+
+_Appears in:_
+
+- [EventGatewayModifyHeaderAction](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderaction)
+
+#### EventGatewayModifyHeaderSetAction
+
+
+EventGatewayModifyHeaderSetAction An action that sets a header key and value.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _string_ | The key of the header to set. |
+| `value` _string_ | The value of the header to set. |
+
+_Appears in:_
+
+- [EventGatewayModifyHeaderAction](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderaction)
+
+#### EventGatewayModifyHeadersPolicyCreate
+
+
+EventGatewayModifyHeadersPolicyCreate A policy that modifies headers for
+requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied.<br /><br />When the policy is applied as a child policy of schema_validation, the expression can also reference `record.value` fields. |
+| `config` _[EventGatewayModifyHeadersPolicyCreateConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreateconfig)_ | The configuration of the modify headers policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
+- [EventGatewayVirtualClusterProducePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+#### EventGatewayModifyHeadersPolicyCreateConfig
+
+
+EventGatewayModifyHeadersPolicyCreateConfig The configuration of the modify
+headers policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `actions` _[EventGatewayModifyHeaderAction](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderaction)_ | Actions are run in sequential order and act on individual headers. |
+
+_Appears in:_
+
+- [EventGatewayModifyHeadersPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)
+
+#### EventGatewayParsedRecordDecryptFieldsConfig
+
+
+EventGatewayParsedRecordDecryptFieldsConfig The configuration of the decrypt
+parsed record fields policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `decryptFields` _[EventGatewayParsedRecordDecryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselector)_ | Selects which fields to decrypt. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). |
+| `keySources` _[EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordDecryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldspolicycreate)
+
+#### EventGatewayParsedRecordDecryptFieldsPolicyCreate
+
+
+EventGatewayParsedRecordDecryptFieldsPolicyCreate Decrypts fields of parsed
+Kafka records using AES_256_GCM.
+Keys are therefore 256 bits long.<br /><br />Note this policy can only be used as a child of a
+`EventGatewayConsumeSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied.<br /><br />When the policy is applied as a child policy of schema_validation, the expression can also reference `record.value` fields. |
+| `config` _[EventGatewayParsedRecordDecryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldsconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
+
+#### EventGatewayParsedRecordDecryptionSelector
+
+
+EventGatewayParsedRecordDecryptionSelector Selects fields of a parsed record
+for decryption.
+
+
+
+| Field | Description |
+| --- | --- |
+| `paths` _[EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)_ | Selects which fields of the parsed record to decrypt. A maximum of 50 path entries are allowed. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordDecryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldsconfig)
+
+#### EventGatewayParsedRecordDecryptionSelectorPaths
+
+
+EventGatewayParsedRecordDecryptionSelectorPaths represents a union type for paths.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordDecryptionSelectorPathsType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpathstype)_ | Type designates the type of configuration. |
+| `variant1` _[EventGatewayParsedRecordDecryptionSelectorPathsVariant1](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpathsvariant1)_ | Variant1 configuration. |
+| `variant2` _[EventGatewayParsedRecordDecryptionSelectorPathsVariant2](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpathsvariant2)_ | Variant2 configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordDecryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselector)
+
+#### EventGatewayParsedRecordDecryptionSelectorPathsType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordDecryptionSelectorPathsType represents the type of paths.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `variant1` |  |
+| `variant2` |  |
+
+#### EventGatewayParsedRecordDecryptionSelectorPathsVariant1
+
+_Underlying type:_ `[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)`
+
+EventGatewayParsedRecordDecryptionSelectorPathsVariant1 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
+
+#### EventGatewayParsedRecordDecryptionSelectorPathsVariant2
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordDecryptionSelectorPathsVariant2 This expression
+should evaluate to an array of exact field paths,
+equivalent to the `match` values in the array variant.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
+
+#### EventGatewayParsedRecordEncryptFieldsConfig
+
+
+EventGatewayParsedRecordEncryptFieldsConfig The configuration of the encrypt
+parsed record policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `encryptFields` _[EventGatewayParsedRecordEncryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselector)_ | Selects which fields to encrypt and with what keys. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordEncryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldspolicycreate)
+
+#### EventGatewayParsedRecordEncryptFieldsPolicyCreate
+
+
+EventGatewayParsedRecordEncryptFieldsPolicyCreate Encrypts fields of parsed
+Kafka records using AES_256_GCM.
+Keys are therefore 256 bits long.<br /><br />Note this policy can only be used as a child of a
+`EventGatewayProduceSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied.<br /><br />When the policy is applied as a child policy of schema_validation, the expression can also reference `record.value` fields. |
+| `config` _[EventGatewayParsedRecordEncryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldsconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+#### EventGatewayParsedRecordEncryptionSelector
+
+
+EventGatewayParsedRecordEncryptionSelector Selects fields of a parsed record
+for encryption and defines what key to encrypt them with.
+
+
+
+| Field | Description |
+| --- | --- |
+| `encryptionKey` _[EventGatewayParsedRecordEncryptionSelectorEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorencryptionkey)_ | The key to use for encryption. |
+| `paths` _[EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)_ | Selects which fields of the parsed record to encrypt. A maximum of 50 path entries are allowed. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordEncryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldsconfig)
+
+#### EventGatewayParsedRecordEncryptionSelectorEncryptionKey
+
+
+EventGatewayParsedRecordEncryptionSelectorEncryptionKey represents a union type for encryption_key.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorencryptionkeytype)_ | Type designates the type of configuration. |
+| `aws` _[EncryptionKeyAWS](#configuration-konghq-com-v1alpha1-types-encryptionkeyaws)_ | AWS configuration. |
+| `static` _[EncryptionKeyStatic](#configuration-konghq-com-v1alpha1-types-encryptionkeystatic)_ | Static configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordEncryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselector)
+
+#### EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType represents the type of encryption_key.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordEncryptionSelectorEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorencryptionkey)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `static` |  |
+
+#### EventGatewayParsedRecordEncryptionSelectorPaths
+
+
+EventGatewayParsedRecordEncryptionSelectorPaths represents a union type for paths.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordEncryptionSelectorPathsType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpathstype)_ | Type designates the type of configuration. |
+| `variant1` _[EventGatewayParsedRecordEncryptionSelectorPathsVariant1](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpathsvariant1)_ | Variant1 configuration. |
+| `variant2` _[EventGatewayParsedRecordEncryptionSelectorPathsVariant2](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpathsvariant2)_ | Variant2 configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordEncryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselector)
+
+#### EventGatewayParsedRecordEncryptionSelectorPathsType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordEncryptionSelectorPathsType represents the type of paths.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `variant1` |  |
+| `variant2` |  |
+
+#### EventGatewayParsedRecordEncryptionSelectorPathsVariant1
+
+_Underlying type:_ `[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)`
+
+EventGatewayParsedRecordEncryptionSelectorPathsVariant1 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
+
+#### EventGatewayParsedRecordEncryptionSelectorPathsVariant2
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordEncryptionSelectorPathsVariant2 This expression
+should evaluate to an array of exact field paths,
+equivalent to the `match` values in the array variant.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
+
+#### EventGatewayProduceSchemaValidationPolicy
+
+
+EventGatewayProduceSchemaValidationPolicy A policy that validates produce
+messages against a schema registry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
+| `config` _[EventGatewayProduceSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+#### EventGatewayProduceSchemaValidationPolicyConfig
+
+
+EventGatewayProduceSchemaValidationPolicyConfig represents a union type for EventGatewayProduceSchemaValidationPolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayProduceSchemaValidationPolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfigtype)_ | Type designates the type of configuration. |
+| `confluentSchemaRegistry` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)_ | SchemaRegistry configuration. |
+| `json` _[EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)_ | JSON configuration. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)
+
+#### EventGatewayProduceSchemaValidationPolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayProduceSchemaValidationPolicyConfigType represents the type of EventGatewayProduceSchemaValidationPolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `confluentSchemaRegistry` |  |
+| `json` |  |
+
+#### EventGatewayProduceSchemaValidationPolicyJSONConfig
+
+
+EventGatewayProduceSchemaValidationPolicyJSONConfig The configuration of the
+produce schema validation policy when using JSON parsing without schema.
+
+
+
+| Field | Description |
+| --- | --- |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)_ | A reference to a schema Registry. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
+
+#### EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry
+
+
+EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistrytype)_ | Type designates the type of configuration. |
+| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
+| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
+
+#### EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType
+
+_Underlying type:_ `string`
+
+EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType represents the type of schema_registry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `id` |  |
+| `name` |  |
+
+#### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig
+
+
+EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig The
+configuration of the produce schema validation policy when using a schema
+registry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)_ | A reference to a schema Registry. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
+
+#### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry
+
+
+EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistrytype)_ | Type designates the type of configuration. |
+| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
+| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
+
+#### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType
+
+_Underlying type:_ `string`
+
+EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType represents the type of schema_registry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `id` |  |
+| `name` |  |
+
+#### EventGatewaySkipRecordPolicyCreate
+
+
+EventGatewaySkipRecordPolicyCreate A policy that skips processing of a
+record.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied.<br /><br />When the policy is applied as a child policy of schema_validation, the expression can also reference `record.value` fields. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
+
+#### EventGatewayStaticKeySource
+
+
+EventGatewayStaticKeySource A key source that uses static symmetric keys.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)
+
+#### EventGatewayTLSListenerPolicy
+
+
+EventGatewayTLSListenerPolicy The TLS Server policy defines the certificates
+and keys used by the gateway server when the client connects
+to the gateway over TLS.<br /><br />While it is possible to have multiple TLS policies on a listener, only one
+can be active at a time.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[EventGatewayTLSListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyconfig)
+
+#### EventGatewayTLSListenerPolicyConfig
+
+
+EventGatewayTLSListenerPolicyConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowPlaintext` _string_ | If false, only TLS connections are allowed. If true, both TLS and plaintext connections are allowed. |
+| `certificates` _[TLSCertificate](#configuration-konghq-com-v1alpha1-types-tlscertificate)_ |  |
+| `clientAuthentication` _[EventGatewayTLSListenerPolicyConfigClientAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfigclientauthentication)_ | Configures mutual TLS (mTLS) client certificate verification. When set, the gateway requests or requires clients to present a certificate during the TLS handshake.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `versions` _[TLSVersionRange](#configuration-konghq-com-v1alpha1-types-tlsversionrange)_ | A range of TLS versions. |
+
+_Appears in:_
+
+- [EventGatewayTLSListenerPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)
+
+#### EventGatewayTLSListenerPolicyConfigClientAuthentication
+
+
+EventGatewayTLSListenerPolicyConfigClientAuthentication Configures mutual TLS
+(mTLS) client certificate verification.
+When set, the gateway
+requests or requires clients to present a certificate during the TLS
+handshake.<br /><br />**Requires a minimum runtime version of `1.1`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `mode` _string_ | * required - Reject TLS connections without a valid client certificate. * requested - Request a client certificate during the TLS handshake, but allow connections without one (falls back to other configured authentication methods). If a certificate is presented but cannot be verified, the connection is closed. |
+| `principalMapping` _string_ | An expression that extracts a principal identifier from a verified client certificate. This expression must evaluate to a string.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `tlsTrustBundles` _[TLSTrustBundleReference](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereference)_ | TLS trust bundles contain CA certificate bundles used to verify client certificates. All bundles are merged into a single trust store; a client certificate is accepted if it chains to any trusted CA across all bundles. |
+
+_Appears in:_
+
+- [EventGatewayTLSListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
+
+#### EventGatewayVirtualClusterAPISpec
+
+
+EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVirtualCluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aclMode` _[VirtualClusterACLMode](#configuration-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
+| `authentication` _[VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)_ | How to handle authentication from clients.<br /><br />It tries to authenticate with every rule sequentially one by one. It succeeds on the first match, and fails if no rule matches. |
+| `description` _string_ | A human-readable description of the virtual cluster. |
+| `dnsLabel` _[VirtualClusterDNSLabel](#configuration-konghq-com-v1alpha1-types-virtualclusterdnslabel)_ | The DNS label used in the bootstrap server URL to identify the virtual cluster when using SNI routing. The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-', must start and end with an alphanumeric character. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ | The name of the virtual cluster. |
+| `namespace` _[VirtualClusterNamespace](#configuration-konghq-com-v1alpha1-types-virtualclusternamespace)_ | Namespace allows to implement multitenancy using a single backend cluster. It allows to either hide or enforce a static prefix on resources (topics, consumer group IDs, transaction IDs). |
+| `topicAliases` _[VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterspec)
+
+#### EventGatewayVirtualClusterConsumePolicyAPISpec
+
+
+EventGatewayVirtualClusterConsumePolicyAPISpec defines the API spec fields for EventGatewayVirtualClusterConsumePolicy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)
+
+#### EventGatewayVirtualClusterConsumePolicyConfig
+
+
+EventGatewayVirtualClusterConsumePolicyConfig represents a union type for EventGatewayVirtualClusterConsumePolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayVirtualClusterConsumePolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfigtype)_ | Type designates the type of configuration. |
+| `decrypt` _[EventGatewayDecryptPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaydecryptpolicy)_ | DecryptPolicy configuration. |
+| `decryptFields` _[EventGatewayParsedRecordDecryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldspolicycreate)_ | ParsedRecordDecryptFieldsPolicyCreate configuration. |
+| `modifyHeaders` _[EventGatewayModifyHeadersPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)_ | ModifyHeadersPolicyCreate configuration. |
+| `schemaValidation` _[EventGatewayConsumeSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicy)_ | ConsumeSchemaValidationPolicy configuration. |
+| `skipRecord` _[EventGatewaySkipRecordPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayskiprecordpolicycreate)_ | SkipRecordPolicyCreate configuration. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyapispec)
+
+#### EventGatewayVirtualClusterConsumePolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayVirtualClusterConsumePolicyConfigType represents the type of EventGatewayVirtualClusterConsumePolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `decrypt` |  |
+| `decryptFields` |  |
+| `modifyHeaders` |  |
+| `schemaValidation` |  |
+| `skipRecord` |  |
+
+
+
+#### EventGatewayVirtualClusterConsumePolicySpec
+
+
+EventGatewayVirtualClusterConsumePolicySpec defines the desired state of EventGatewayVirtualClusterConsumePolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterConsumePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
+
+#### EventGatewayVirtualClusterConsumePolicyStatus
+
+
+EventGatewayVirtualClusterConsumePolicyStatus defines the observed state of EventGatewayVirtualClusterConsumePolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
+
+#### EventGatewayVirtualClusterPolicyAPISpec
+
+
+EventGatewayVirtualClusterPolicyAPISpec defines the API spec fields for EventGatewayVirtualClusterPolicy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)
+
+#### EventGatewayVirtualClusterPolicyConfig
+
+
+EventGatewayVirtualClusterPolicyConfig represents a union type for EventGatewayVirtualClusterPolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayVirtualClusterPolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyconfigtype)_ | Type designates the type of configuration. |
+| `acls` _[EventGatewayACLsPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayaclspolicy)_ | EventGatewayACLsPolicy configuration. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyapispec)
+
+#### EventGatewayVirtualClusterPolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayVirtualClusterPolicyConfigType represents the type of EventGatewayVirtualClusterPolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `acls` |  |
+
+
+
+#### EventGatewayVirtualClusterPolicySpec
+
+
+EventGatewayVirtualClusterPolicySpec defines the desired state of EventGatewayVirtualClusterPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterPolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
+
+#### EventGatewayVirtualClusterPolicyStatus
+
+
+EventGatewayVirtualClusterPolicyStatus defines the observed state of EventGatewayVirtualClusterPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
+
+#### EventGatewayVirtualClusterProducePolicyAPISpec
+
+
+EventGatewayVirtualClusterProducePolicyAPISpec defines the API spec fields for EventGatewayVirtualClusterProducePolicy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)
+
+#### EventGatewayVirtualClusterProducePolicyConfig
+
+
+EventGatewayVirtualClusterProducePolicyConfig represents a union type for EventGatewayVirtualClusterProducePolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayVirtualClusterProducePolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfigtype)_ | Type designates the type of configuration. |
+| `encrypt` _[EventGatewayEncryptPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptpolicy)_ | EncryptPolicy configuration. |
+| `encryptFields` _[EventGatewayParsedRecordEncryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldspolicycreate)_ | ParsedRecordEncryptFieldsPolicyCreate configuration. |
+| `modifyHeaders` _[EventGatewayModifyHeadersPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)_ | ModifyHeadersPolicyCreate configuration. |
+| `schemaValidation` _[EventGatewayProduceSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)_ | ProduceSchemaValidationPolicy configuration. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyapispec)
+
+#### EventGatewayVirtualClusterProducePolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayVirtualClusterProducePolicyConfigType represents the type of EventGatewayVirtualClusterProducePolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `encrypt` |  |
+| `encryptFields` |  |
+| `modifyHeaders` |  |
+| `schemaValidation` |  |
+
+
+
+#### EventGatewayVirtualClusterProducePolicySpec
+
+
+EventGatewayVirtualClusterProducePolicySpec defines the desired state of EventGatewayVirtualClusterProducePolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterProducePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
+
+#### EventGatewayVirtualClusterProducePolicyStatus
+
+
+EventGatewayVirtualClusterProducePolicyStatus defines the observed state of EventGatewayVirtualClusterProducePolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
+
+#### EventGatewayVirtualClusterSpec
+
+
+EventGatewayVirtualClusterSpec defines the desired state of EventGatewayVirtualCluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayBackendClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayBackendClusterRef is the reference to the parent EventGatewayBackendCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
+
+#### EventGatewayVirtualClusterStatus
+
+
+EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtualCluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `eventGatewayBackendCluster` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | EventGatewayBackendCluster is the Konnect entity reference for the parent EventGatewayBackendCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
+
+#### ForwardToClusterByPortMappingConfig
+
+
+ForwardToClusterByPortMappingConfig The configuration to forward request to
+`destination` and rewrite ports accordingly.
+All broker ids must fit in the range of ports defined in the listener, if it
+doesn't the metadata request will
+return an error.<br /><br />For example with ports: [9000, "9092-9094", "9100"] and `bootstrap_port:
+at_start` and brokers with ids
+1, 2, 3, 4 we will map: bootstrap to 9000 broker 1 to 9001, broker 2 to 9002,
+broker 3 to 9003, and broker 4
+to 9004 and fail the metadata request as these ports are not open.<br /><br />However, with the same configuration but with brokers with ids: 92,93,94,100
+we will map: bootstrap to 9000,
+broker 92 to 9092, broker 93 to 9093, broker 94 to 9094, and broker 100 to
+9100.<br /><br />In most cases users should use a single range `["9090-9094"] ` and
+`bootstrap_port: at_start` and connect with
+`<host>:9090` as bootstrap server.
+Being able to use multiple ranges is only useful when when dealing with
+gaps in broker ids.<br /><br />It is strongly discouraged to use port mapping in production.
+
+
+
+| Field | Description |
+| --- | --- |
+| `advertisedHost` _string_ | Virtual brokers are advertised to clients using this host. Any kind of host supported by kafka can be used. If not defined, it's listen_address. If listen_address is `0.0.0.0` it's the destination IP of the TCP connection. |
+| `bootstrapPort` _string_ | If set to `at_start`, the first port will be used as a bootstrap port. It provides a stable endpoint to use as the bootstrap server for clients, regardless of broker IDs in the cluster.<br /><br />Additionally, it offsets all ports by one, so for example, if there are 3 brokers (id=1, id=2, id=3) then we will use 4 ports: 9092 (bootstrap), 9093 (id=1), 9094 (id=2), 9095 (id=3) With `none` we will use 3 ports: 9092 (id=1), 9093 (id=2), 9094 (id=3). |
+| `destination` _[VirtualClusterReference](#configuration-konghq-com-v1alpha1-types-virtualclusterreference)_ | A reference to a virtual cluster. |
+| `minBrokerID` _int_ | The lowest broker node ID in the cluster. |
+
+_Appears in:_
+
+- [ForwardToVirtualClusterPolicyConfig](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfig)
+
+#### ForwardToClusterBySNIConfig
+
+
+ForwardToClusterBySNIConfig The configuration to forward requests to virtual
+clusters configured with SNI routing.
+
+
+
+| Field | Description |
+| --- | --- |
+| `advertisedPort` _int_ | Virtual brokers are advertised to clients with this port instead of listen_port. Useful when proxy is behind loadbalancer listening on different port. |
+| `brokerHostFormat` _[ForwardToClusterBySNIConfigBrokerHostFormat](#configuration-konghq-com-v1alpha1-types-forwardtoclusterbysniconfigbrokerhostformat)_ | Configures DNS names assigned to brokers in virtual clusters.<br /><br />- `per_cluster_suffix` is the default and allocates one level in the hierarchy for virtual clusters: `broker-{node_id}.{virtual_cluster}.{sni_suffix}` - `shared_suffix` puts all brokers from every virtual clusters into the same level: `broker-{node_id}-{virtual_cluster}.{sni_suffix}`. This makes it easier to manage certificates for this listener.<br /><br />**Requires a minimum runtime version of `1.1`**. |
+| `sniSuffix` _string_ | Optional suffix for TLS SNI validation.<br /><br />This suffix is concatenated with the virtual cluster "dns.label" label to form the base name for the SNI. If not provided, the virtual cluster "dns.label" label alone is used as the base name for the SNI. For example with sni_suffix: `.example.com` and virtual cluster "dns.label" label: `my-cluster`, the SNI suffix for it is `my-cluster.example.com`. If "dns.label" label is absent on the virtual cluster, the traffic won't be routed there.<br /><br />The bootstrap host is `bootstrap.my-cluster.example.com` and then each broker is addressable at `broker-0.my-cluster.example.com`, `broker-1.my-cluster.example.com`, etc. This means that your deployment needs to have a wildcard certificate for the domain and a DNS resolver that routes `*.my-cluster.example.com` to the proxy.<br /><br />The accepted format is a DNS subdomain starting with either `.` or `-`. For example, `-keg.example.com`, `.keg.example.com`, `.namespace.svc.cluster.local`, and `.localhost` are all valid, while `keg.example.com` is not. |
+
+_Appears in:_
+
+- [ForwardToVirtualClusterPolicyConfig](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfig)
+
+#### ForwardToClusterBySNIConfigBrokerHostFormat
+
+
+ForwardToClusterBySNIConfigBrokerHostFormat Configures DNS names assigned to
+brokers in virtual clusters.<br /><br />- `per_cluster_suffix` is the default and allocates one level in the
+hierarchy for virtual clusters:
+`broker-{node_id}.{virtual_cluster}.{sni_suffix}`
+- `shared_suffix` puts all brokers from every virtual clusters into the same
+level: `broker-{node_id}-{virtual_cluster}.{sni_suffix}`.
+This makes it easier to manage certificates for this listener.<br /><br />**Requires a minimum runtime version of `1.1`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ |  |
+
+_Appears in:_
+
+- [ForwardToClusterBySNIConfig](#configuration-konghq-com-v1alpha1-types-forwardtoclusterbysniconfig)
+
+#### ForwardToVirtualClusterPolicy
+
+
+ForwardToVirtualClusterPolicy Forwards requests to virtual clusters
+configured with port routing or SNI routing.
+While there can be multiple of these policies configured on a listener, there
+can only be one instance of
+`port_mapping`.
+When multiple policies are configured, the first one that matches the
+connection is used.
+If no policy matches, the connection is rejected.<br /><br />When using `port_mapping`, there must be a mapping port for each broker on
+the backend cluster see
+`ForwardToClusterBySNIConfig` for more details.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[ForwardToVirtualClusterPolicyConfig](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyconfig)
+
+#### ForwardToVirtualClusterPolicyConfig
+
+
+ForwardToVirtualClusterPolicyConfig represents a union type for config.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ForwardToVirtualClusterPolicyConfigType](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfigtype)_ | Type designates the type of configuration. |
+| `portMapping` _[ForwardToClusterByPortMappingConfig](#configuration-konghq-com-v1alpha1-types-forwardtoclusterbyportmappingconfig)_ | PortMapping configuration. |
+| `sni` _[ForwardToClusterBySNIConfig](#configuration-konghq-com-v1alpha1-types-forwardtoclusterbysniconfig)_ | SNI configuration. |
+
+_Appears in:_
+
+- [ForwardToVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)
+
+#### ForwardToVirtualClusterPolicyConfigType
+
+_Underlying type:_ `string`
+
+ForwardToVirtualClusterPolicyConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [ForwardToVirtualClusterPolicyConfig](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `portMapping` |  |
+| `sni` |  |
+
+#### GatewaySecret
+
+_Underlying type:_ `string`
+
+GatewaySecret A sensitive value containing the secret or a reference to a
+secret as a template string expression.
+If the value is provided as plain text, it is encrypted at rest and omitted
+from API responses.
+If provided as an expression, the expression itself is stored and returned by
+the API.
+
+
+
+
+_Appears in:_
+
+- [BackendClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)
+- [BackendClusterAuthenticationSaslScram](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
+- [VirtualClusterAuthenticationPrincipal](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
+
+#### GatewaySecretReferenceOrLiteral
+
+_Underlying type:_ `string`
+
+GatewaySecretReferenceOrLiteral A literal value or a reference to an existing
+secret as a template string expression.
+The value is stored and returned by the API as-is, not treated as sensitive
+information.
+
+
+
+
+_Appears in:_
+
+- [BackendClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)
+- [BackendClusterAuthenticationSaslScram](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
+- [BackendClusterTLS](#configuration-konghq-com-v1alpha1-types-backendclustertls)
+- [VirtualClusterAuthenticationPrincipal](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
 #### Group
 
@@ -1469,6 +3767,7 @@ Currently, this only supports the JSON route fields.
 
 | Field | Description |
 | --- | --- |
+| `id` _*string_ | ID is the unique identifier for the Route. Can be specified when creating a Route, but not updatable. If not specified, Kong will generate one. |
 | `destinations` _[]github.com/Kong/sdk-konnect-go/models/components.Destinations_ | A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
 | `headers` _map[string][]string_ | One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
 | `hosts` _[]string_ | A list of domain names that match this Route. Note that the hosts value is case sensitive. |
@@ -1500,6 +3799,7 @@ KongRouteSpec defines spec of a Kong Route.
 
 | Field | Description |
 | --- | --- |
+| `id` _*string_ | ID is the unique identifier for the Route. Can be specified when creating a Route, but not updatable. If not specified, Kong will generate one. |
 | `destinations` _[]github.com/Kong/sdk-konnect-go/models/components.Destinations_ | A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
 | `headers` _map[string][]string_ | One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
 | `hosts` _[]string_ | A list of domain names that match this Route. Note that the hosts value is case sensitive. |
@@ -1568,7 +3868,7 @@ KongSNISpec defines specification of a Kong SNI.
 | --- | --- |
 | `name` _string_ | Name is the name of the SNI. Required and must be a host or wildcard host. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the SNI for grouping and filtering. |
-| `certificateRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | CertificateRef is the reference to the certificate to which the KongSNI is attached. |
+| `certificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CertificateRef is the reference to the certificate to which the KongSNI is attached. |
 | `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an SNI from an existing SNI in Konnect. |
 
 _Appears in:_
@@ -1600,6 +3900,9 @@ KongServiceAPISpec defines the specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate when proxying to the upstream over TLS. The referenced KongCertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `caCertificateRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
 | `enabled` _*bool_ | Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`. |
@@ -1628,6 +3931,9 @@ KongServiceSpec defines specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate when proxying to the upstream over TLS. The referenced KongCertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `caCertificateRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
 | `enabled` _*bool_ | Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`. |
@@ -1658,7 +3964,7 @@ KongServiceStatus represents the current status of the Kong Service resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificateandcacertificatesrefs)_ | Konnect contains the Konnect entity status. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -1694,7 +4000,7 @@ KongTargetSpec defines the spec of KongTarget.
 | `target` _string_ | Target is the target address of the upstream. |
 | `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
-| `upstreamRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
+| `upstreamRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
 | `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a target from an existing target in Konnect. |
 
 _Appears in:_
@@ -1727,7 +4033,8 @@ KongUpstreamAPISpec defines specification of a Kong Upstream.
 | Field | Description |
 | --- | --- |
 | `algorithm` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamAlgorithm_ | Which load balancing algorithm to use. |
-| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | Deprecated: use clientCertificateRef instead. If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate during TLS handshaking to the upstream server. Mutually exclusive with the deprecated client_certificate field. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `hash_fallback` _*github.com/Kong/sdk-konnect-go/models/components.HashFallback_ | What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`. |
 | `hash_fallback_header` _*string_ | The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`. |
 | `hash_fallback_query_arg` _*string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`. |
@@ -1761,7 +4068,8 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 | Field | Description |
 | --- | --- |
 | `algorithm` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamAlgorithm_ | Which load balancing algorithm to use. |
-| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | Deprecated: use clientCertificateRef instead. If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate during TLS handshaking to the upstream server. Mutually exclusive with the deprecated client_certificate field. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `hash_fallback` _*github.com/Kong/sdk-konnect-go/models/components.HashFallback_ | What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`. |
 | `hash_fallback_header` _*string_ | The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`. |
 | `hash_fallback_query_arg` _*string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`. |
@@ -1796,7 +4104,7 @@ KongUpstreamStatus represents the current status of the Kong Upstream resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -1840,7 +4148,72 @@ _Appears in:_
 
 - [KongVault](#configuration-konghq-com-v1alpha1-kongvault)
 
+#### KonnectEntityRef
 
+
+KonnectEntityRef is a reference to a Konnect entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. |
+
+_Appears in:_
+
+- [EventGatewayBackendClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)
+- [EventGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatestatus)
+- [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
+- [EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
+- [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
+- [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
+- [EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
+- [EventGatewayVirtualClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
+
+
+
+
+
+#### Labels
+
+_Underlying type:_ `[map[string]LabelsValue](#map[string]labelsvalue)`
+
+Labels store metadata of an entity that can be used for filtering an entity
+list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [EventGatewayACLsPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayaclspolicy)
+- [EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
+- [EventGatewayConsumeSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicy)
+- [EventGatewayDecryptPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaydecryptpolicy)
+- [EventGatewayEncryptPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptpolicy)
+- [EventGatewayListenerAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)
+- [EventGatewayModifyHeadersPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)
+- [EventGatewayParsedRecordDecryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldspolicycreate)
+- [EventGatewayParsedRecordEncryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldspolicycreate)
+- [EventGatewayProduceSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)
+- [EventGatewaySkipRecordPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayskiprecordpolicycreate)
+- [EventGatewayTLSListenerPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)
+- [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+- [ForwardToVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)
+
+#### LabelsValue
+
+_Underlying type:_ `string`
+
+LabelsValue is the value type for Labels.
+
+
+
+
+_Appears in:_
+
+- [Labels](#configuration-konghq-com-v1alpha1-types-labels)
 
 #### Namespace
 
@@ -1855,6 +4228,8 @@ _Appears in:_
 
 - [ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)
 - [ReferenceGrantFrom](#configuration-konghq-com-v1alpha1-types-referencegrantfrom)
+
+
 
 #### ObjectName
 
@@ -1924,6 +4299,59 @@ _Appears in:_
 
 - [KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)
 
+#### ProduceFailureMode
+
+_Underlying type:_ `string`
+
+ProduceFailureMode Describes how to handle a failure in a policy applied to
+produced records.
+* `reject` - rejects the record batch.
+* `passthrough` - passes the record silently to the backend cluster even
+though policy execution failed.
+* `mark` - passes the record to the backend cluster but marks it with a
+`kong/policy-failure-<id>` header whose value is the reason for the policy
+failure (truncated to 512 characters).
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordEncryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldsconfig)
+
+#### ProduceKeyValidationAction
+
+_Underlying type:_ `string`
+
+ProduceKeyValidationAction Defines a behavior when record key is not valid.
+* reject - rejects a batch for topic partition. Only available for produce.
+* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
+
+#### ProduceValueValidationAction
+
+_Underlying type:_ `string`
+
+ProduceValueValidationAction Defines a behavior when record value is not
+valid.
+* reject - rejects a batch for topic partition. Only available for produce.
+* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
+
 #### ReferenceGrantFrom
 
 
@@ -1959,6 +4387,98 @@ _Appears in:_
 
 - [KongReferenceGrantSpec](#configuration-konghq-com-v1alpha1-types-kongreferencegrantspec)
 
+
+
+#### SchemaRegistryReferenceByID
+
+
+SchemaRegistryReferenceByID is a type alias.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
+
+#### SchemaRegistryReferenceByName
+
+
+SchemaRegistryReferenceByName Reference a schema registry by its unique name.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | The unique name of the schema registry. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
+
+#### SchemaValidationType
+
+_Underlying type:_ `string`
+
+SchemaValidationType How to validate the schema and parse the record.
+* confluent_schema_registry - validates against confluent schema registry.
+* json - simple JSON parsing without the schema.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+
+
+
+
+
+#### SensitiveDataSource
+
+
+SensitiveDataSource holds a sensitive string value that can be provided
+either inline or sourced from a Kubernetes Secret.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[SensitiveDataSourceType](#configuration-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data: 'inline' or 'secretRef'. |
+| `value` _*string_ | Value contains the sensitive data provided inline. Required when type is 'inline'. |
+| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
+
+_Appears in:_
+
+- [BackendClusterTLSClientIdentity](#configuration-konghq-com-v1alpha1-types-backendclustertlsclientidentity)
+- [EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)
+- [TLSCertificate](#configuration-konghq-com-v1alpha1-types-tlscertificate)
+
+#### SensitiveDataSourceType
+
+_Underlying type:_ `string`
+
+SensitiveDataSourceType is the type of source for the sensitive data.
+
+
+
+
+_Appears in:_
+
+- [SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
+| `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
+
 #### ServiceRef
 
 
@@ -1974,6 +4494,72 @@ ServiceRef is a reference to a KongService.
 _Appears in:_
 
 - [KongRouteSpec](#configuration-konghq-com-v1alpha1-types-kongroutespec)
+
+#### TLSCertificate
+
+
+TLSCertificate A TLS certificate and its associated private key.
+
+
+
+| Field | Description |
+| --- | --- |
+| `certificate` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+| `key` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+
+_Appears in:_
+
+- [EventGatewayTLSListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
+
+#### TLSTrustBundleName
+
+_Underlying type:_ `string`
+
+TLSTrustBundleName The unique name of the TLS trust bundle.
+
+
+
+
+_Appears in:_
+
+- [TLSTrustBundleReference](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereference)
+- [TLSTrustBundleReferenceByName](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereferencebyname)
+
+#### TLSTrustBundleReference
+
+
+TLSTrustBundleReference is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _*string_ |  |
+| `name` _[TLSTrustBundleName](#configuration-konghq-com-v1alpha1-types-tlstrustbundlename)_ |  |
+
+_Appears in:_
+
+- [EventGatewayTLSListenerPolicyConfigClientAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfigclientauthentication)
+
+
+
+
+
+#### TLSVersionRange
+
+
+TLSVersionRange A range of TLS versions.
+
+
+
+| Field | Description |
+| --- | --- |
+| `max` _string_ | Maximum TLS version to use. |
+| `min` _string_ | Minimum TLS version to use. |
+
+_Appears in:_
+
+- [EventGatewayTLSListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
 
 #### TargetRef
 
@@ -2006,6 +4592,459 @@ TargetRefWithGroupKind is a reference based on the object's group, kind, and nam
 _Appears in:_
 
 - [KongPluginBindingTargets](#configuration-konghq-com-v1alpha1-types-kongpluginbindingtargets)
+
+#### VirtualClusterACLMode
+
+_Underlying type:_ `string`
+
+VirtualClusterACLMode Configures whether or not ACL policies are enforced on
+the gateway.
+- `enforce_on_gateway` means the gateway enforces its own ACL policies for
+this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster.
+Note that if there are no ACL policies configured, all access is denied.
+- `passthrough` tells the gateway to forward all ACL-related commands.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterAuthenticationAnonymous
+
+
+VirtualClusterAuthenticationAnonymous is a type alias.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationAudience
+
+
+VirtualClusterAuthenticationAudience is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationValidate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)
+
+#### VirtualClusterAuthenticationClaimsMapping
+
+
+VirtualClusterAuthenticationClaimsMapping Maps JWT claims in the case when
+sub and scope are presented as different claims in your JWT token.
+
+
+
+| Field | Description |
+| --- | --- |
+| `scope` _string_ | Maps the scope claim. |
+| `sub` _string_ | Maps the subject claim. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationOauthBearer](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)
+
+#### VirtualClusterAuthenticationClientCertificate
+
+
+VirtualClusterAuthenticationClientCertificate Client certificate (mTLS)
+authentication scheme for the virtual cluster.<br /><br />**Requires a minimum runtime version of `1.1`**.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationJWKS
+
+
+VirtualClusterAuthenticationJWKS JSON Web Key Set configuration for verifying
+token signatures.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cacheExpiration` _string_ | Duration after which the gateway will fetch and cache JWKS. |
+| `endpoint` _string_ | URL for JWKS endpoint. |
+| `timeout` _string_ | Total time from establishing connection to receive a response from JWKS endpoint. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationOauthBearer](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)
+
+#### VirtualClusterAuthenticationOauthBearer
+
+
+VirtualClusterAuthenticationOauthBearer Oauth Bearer authentication scheme
+for the virtual cluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `claimsMapping` _[VirtualClusterAuthenticationClaimsMapping](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
+| `jwks` _[VirtualClusterAuthenticationJWKS](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationjwks)_ | JSON Web Key Set configuration for verifying token signatures. |
+| `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of<br /><br />validation * validate_forward - pass authentication from the client through proxy to the backend cluster.<br /><br />Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster<br /><br />using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
+| `validate` _[VirtualClusterAuthenticationValidate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)_ | Validation rules. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationPrincipal
+
+
+VirtualClusterAuthenticationPrincipal A principal for authentication
+containing username and password.
+
+
+
+| Field | Description |
+| --- | --- |
+| `password` _[GatewaySecret](#configuration-konghq-com-v1alpha1-types-gatewaysecret)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+| `username` _[GatewaySecretReferenceOrLiteral](#configuration-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslplain)
+
+#### VirtualClusterAuthenticationSaslPlain
+
+
+VirtualClusterAuthenticationSaslPlain SASL/PLAIN authentication scheme for
+the virtual cluster containing principals with username and password.
+
+
+
+| Field | Description |
+| --- | --- |
+| `mediation` _string_ | The mediation type for SASL/PLAIN authentication. |
+| `principals` _[VirtualClusterAuthenticationPrincipal](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)_ | List of principals to be able to authenticate with, used with `terminate` mediation. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationSaslScram
+
+
+VirtualClusterAuthenticationSaslScram SASL/SCRAM authentication scheme for
+the virtual cluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+#### VirtualClusterAuthenticationScheme
+
+
+VirtualClusterAuthenticationScheme represents a union type for VirtualClusterAuthenticationScheme.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[VirtualClusterAuthenticationSchemeType](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationschemetype)_ | Type designates the type of configuration. |
+| `anonymous` _[VirtualClusterAuthenticationAnonymous](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationanonymous)_ | Anonymous configuration. |
+| `clientCertificate` _[VirtualClusterAuthenticationClientCertificate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclientcertificate)_ | ClientCertificate configuration. |
+| `oauthBearer` _[VirtualClusterAuthenticationOauthBearer](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)_ | OauthBearer configuration. |
+| `saslPlain` _[VirtualClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslplain)_ | SaslPlain configuration. |
+| `saslScram` _[VirtualClusterAuthenticationSaslScram](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslscram)_ | SaslScram configuration. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterAuthenticationSchemeType
+
+_Underlying type:_ `string`
+
+VirtualClusterAuthenticationSchemeType represents the type of VirtualClusterAuthenticationScheme.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `anonymous` |  |
+| `clientCertificate` |  |
+| `oauthBearer` |  |
+| `saslPlain` |  |
+| `saslScram` |  |
+
+#### VirtualClusterAuthenticationValidate
+
+
+VirtualClusterAuthenticationValidate Validation rules.
+
+
+
+| Field | Description |
+| --- | --- |
+| `audiences` _[VirtualClusterAuthenticationAudience](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationaudience)_ | List of expected audience values. One of them has to match the audience claim in the token. |
+| `issuer` _string_ | Expected token issuer in the token. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationOauthBearer](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)
+
+#### VirtualClusterDNSLabel
+
+_Underlying type:_ `string`
+
+VirtualClusterDNSLabel The DNS label used in the bootstrap server URL to
+identify the virtual cluster when using SNI routing.
+The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-',
+must start and end with an alphanumeric character.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterName
+
+_Underlying type:_ `string`
+
+VirtualClusterName The name of the virtual cluster.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+- [VirtualClusterReference](#configuration-konghq-com-v1alpha1-types-virtualclusterreference)
+- [VirtualClusterReferenceByName](#configuration-konghq-com-v1alpha1-types-virtualclusterreferencebyname)
+
+#### VirtualClusterNamespace
+
+
+VirtualClusterNamespace Namespace allows to implement multitenancy using a
+single backend cluster.
+It allows to either hide or enforce a static prefix on resources (topics,
+consumer group IDs, transaction IDs).
+
+
+
+| Field | Description |
+| --- | --- |
+| `additional` _[VirtualClusterNamespaceAdditionalProperties](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)_ |  |
+| `mode` _string_ | * hide_prefix - the configured prefix is hidden from clients for topics and IDs when reading.<br /><br />Created resources are written with the prefix on the backend cluster. * enforce_prefix - the configured prefix remains visible to clients.<br /><br />Created resources must include the prefix or the request will fail. |
+| `prefix` _string_ | The namespace is differentiated by this chosen prefix. For example, if the prefix is set to "analytics_" the topic named "analytics_user_clicks" is available to the clients of the virtual cluster. Topics without the prefix will be ignored unless added via `additional.topics`. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterNamespaceAdditionalProperties
+
+
+VirtualClusterNamespaceAdditionalProperties is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `consumerGroups` _[VirtualClusterNamespaceIDSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)_ | Consumer group IDs to expose even if they don't start with the namespace prefix. |
+| `topics` _[VirtualClusterNamespaceTopicSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespacetopicselector)_ | Additional backend topics to expose even if they don't match the namespace prefix. The topics are not affected by the hide/enforce prefix mode. If the client tries to create a topic that matches this list, the request is rejected. |
+
+_Appears in:_
+
+- [VirtualClusterNamespace](#configuration-konghq-com-v1alpha1-types-virtualclusternamespace)
+
+#### VirtualClusterNamespaceIDSelector
+
+
+VirtualClusterNamespaceIDSelector represents a union type for VirtualClusterNamespaceIDSelector.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[VirtualClusterNamespaceIDSelectorType](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceidselectortype)_ | Type designates the type of configuration. |
+| `glob` _[VirtualClusterNamespaceIDSelectorGlob](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceidselectorglob)_ | Glob configuration. |
+
+_Appears in:_
+
+- [VirtualClusterNamespaceAdditionalProperties](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)
+
+#### VirtualClusterNamespaceIDSelectorGlob
+
+
+VirtualClusterNamespaceIDSelectorGlob is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `glob` _string_ | Expose any id that matches this glob pattern (e.g., `my_id_*`). |
+
+_Appears in:_
+
+- [VirtualClusterNamespaceIDSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)
+
+#### VirtualClusterNamespaceIDSelectorType
+
+_Underlying type:_ `string`
+
+VirtualClusterNamespaceIDSelectorType represents the type of VirtualClusterNamespaceIDSelector.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterNamespaceIDSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `exactList` |  |
+| `glob` |  |
+
+#### VirtualClusterNamespaceTopicSelector
+
+
+VirtualClusterNamespaceTopicSelector represents a union type for VirtualClusterNamespaceTopicSelector.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[VirtualClusterNamespaceTopicSelectorType](#configuration-konghq-com-v1alpha1-types-virtualclusternamespacetopicselectortype)_ | Type designates the type of configuration. |
+| `glob` _[VirtualClusterNamespaceTopicSelectorGlob](#configuration-konghq-com-v1alpha1-types-virtualclusternamespacetopicselectorglob)_ | Glob configuration. |
+
+_Appears in:_
+
+- [VirtualClusterNamespaceAdditionalProperties](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)
+
+#### VirtualClusterNamespaceTopicSelectorGlob
+
+
+VirtualClusterNamespaceTopicSelectorGlob is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conflict` _string_ | How to inform the user about conflicts where multiple backend topics would map to the same virtual topic name. * warn - log in the Event Gateway logs. Additionally, it sets knep_namespace_topic_conflict to 1. * ignore - do not do anything. It does not cause knep_namespace_topic_conflict metric to be set to 1. |
+| `glob` _string_ | Expose any backend topic that matches this glob pattern (e.g., `operations_data_*`). |
+
+_Appears in:_
+
+- [VirtualClusterNamespaceTopicSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespacetopicselector)
+
+#### VirtualClusterNamespaceTopicSelectorType
+
+_Underlying type:_ `string`
+
+VirtualClusterNamespaceTopicSelectorType represents the type of VirtualClusterNamespaceTopicSelector.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterNamespaceTopicSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespacetopicselector)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `exactList` |  |
+| `glob` |  |
+
+#### VirtualClusterReference
+
+
+VirtualClusterReference is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _*string_ |  |
+| `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ |  |
+
+_Appears in:_
+
+- [ForwardToClusterByPortMappingConfig](#configuration-konghq-com-v1alpha1-types-forwardtoclusterbyportmappingconfig)
+
+
+
+
+
+#### VirtualClusterTopicAlias
+
+
+VirtualClusterTopicAlias **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />A topic alias maps an alias name to a namespace-visible topic name.
+Clients can produce to, consume from, and discover the topic under the alias
+name.
+The original topic name remains accessible.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `alias` _string_ | The client-visible topic name. |
+| `conflict` _[VirtualClusterTopicAliasConflict](#configuration-konghq-com-v1alpha1-types-virtualclustertopicaliasconflict)_ | How to handle conflicts where an alias shadows a physical topic. * warn - activate the alias but log a warning and set the conflict metric to 1. * ignore - activate the alias silently. |
+| `match` _string_ | CEL expression evaluated against the connection's auth context. If omitted or empty, the alias is active for all connections. |
+| `topic` _string_ | The namespace-visible topic name this alias resolves to. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
+
+#### VirtualClusterTopicAliasConflict
+
+_Underlying type:_ `string`
+
+VirtualClusterTopicAliasConflict How to handle conflicts where an alias
+shadows a physical topic.
+* warn - activate the alias but log a warning and set the conflict metric to
+1.
+* ignore - activate the alias silently.
+
+
+
+
+_Appears in:_
+
+- [VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)
 
 ## configuration.konghq.com/v1beta1
 
@@ -4157,6 +7196,7 @@ ControlPlaneKonnectOptions defines the Konnect-related configuration options for
 | `licensing` _[ControlPlaneKonnectLicensing](#gateway-operator-konghq-com-v2beta1-types-controlplanekonnectlicensing)_ | Licensing defines the configuration for Konnect licensing. |
 | `nodeRefreshPeriod` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | NodeRefreshPeriod is the period for refreshing the node information in Konnect. |
 | `configUploadPeriod` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | ConfigUploadPeriod is the period for uploading configuration to Konnect. |
+| `configUploadConcurrency` _*int32_ | ConfigUploadConcurrency is the concurrency of the client for uploading configuration to Konnect. In case of large configuration with many entities, too high concurrency may trigger rate limiting on Konnect API service and fail with 429 responses on requests. |
 
 _Appears in:_
 
@@ -4510,6 +7550,7 @@ _Appears in:_
 
 
 GatewayConfigurationSpec defines the desired state of GatewayConfiguration
+Only one of 'konnect' or 'extensions' can be specified.
 
 
 
@@ -4941,9 +7982,17 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
+- [KonnectEventGateway](#konnect-konghq-com-v1alpha1-konnecteventgateway)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+- [Portal](#konnect-konghq-com-v1alpha1-portal)
+- [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
+- [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
+- [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
+- [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
+- [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
 
 ### KonnectAPIAuthConfiguration
 
@@ -5005,6 +8054,21 @@ KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway 
 | `spec` _[KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)_ | Spec defines the desired state of KonnectCloudGatewayTransitGateway. |
 | `status` _[KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)_ | Status defines the observed state of KonnectCloudGatewayTransitGateway. |
 
+### KonnectEventGateway
+
+
+KonnectEventGateway is the Schema for the konnecteventgateways API.
+
+<!-- konnect_event_gateway description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectEventGateway`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)_ |  |
+| `status` _[KonnectEventGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnecteventgatewaystatus)_ |  |
+
 ### KonnectExtension
 
 
@@ -5052,6 +8116,111 @@ MCPServer is the Schema for the MCPServer API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)_ |  |
 | `status` _[MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)_ |  |
+
+### Portal
+
+
+Portal is the Schema for the portals API.
+
+<!-- portal description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `Portal`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)_ |  |
+| `status` _[PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)_ |  |
+
+### PortalCustomDomain
+
+
+PortalCustomDomain is the Schema for the portalcustomdomains API.
+
+<!-- portal_custom_domain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalCustomDomain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalCustomDomainSpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainspec)_ |  |
+| `status` _[PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)_ |  |
+
+### PortalCustomization
+
+
+PortalCustomization is the Schema for the portalcustomizations API.
+
+<!-- portal_customization description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalCustomization`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalCustomizationSpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationspec)_ |  |
+| `status` _[PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)_ |  |
+
+### PortalEmailConfig
+
+
+PortalEmailConfig is the Schema for the portalemailconfigs API.
+
+<!-- portal_email_config description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalEmailConfig`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalEmailConfigSpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigspec)_ |  |
+| `status` _[PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)_ |  |
+
+### PortalIdentityProviderRequest
+
+
+PortalIdentityProviderRequest is the Schema for the portalidentityproviderrequests API.
+
+<!-- portal_identity_provider_request description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalIdentityProviderRequest`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalIdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestspec)_ |  |
+| `status` _[PortalIdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequeststatus)_ |  |
+
+### PortalPage
+
+
+PortalPage is the Schema for the portalpages API.
+
+<!-- portal_page description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalPage`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalPageSpec](#konnect-konghq-com-v1alpha1-types-portalpagespec)_ |  |
+| `status` _[PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)_ |  |
+
+### PortalTeam
+
+
+PortalTeam is the Schema for the portalteams API.
+
+<!-- portal_team description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalTeam`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalTeamSpec](#konnect-konghq-com-v1alpha1-types-portalteamspec)_ |  |
+| `status` _[PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)_ |  |
 
 ### Types
 
@@ -5144,6 +8313,23 @@ CertificateSecret contains the information to access the client certificate.
 _Appears in:_
 
 - [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha1-types-konnectextensionclientauth)
+
+#### Colors
+
+
+Colors is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `primary` _string_ |  |
+
+_Appears in:_
+
+- [Theme](#konnect-konghq-com-v1alpha1-types-theme)
+
+
 
 #### ConfigurationDataPlaneGroupAutoscale
 
@@ -5251,6 +8437,41 @@ _Appears in:_
 
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 
+
+
+#### CreatePortalCustomDomainSSLStandard
+
+
+CreatePortalCustomDomainSSLStandard is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `domainVerificationMethod` _string_ |  |
+
+_Appears in:_
+
+- [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
+#### CreatePortalCustomDomainSSLWithCustomCertificate
+
+
+CreatePortalCustomDomainSSLWithCustomCertificate is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `customCertificate` _string_ | Custom certificate to be used for the SSL termination. |
+| `customPrivateKey` _string_ | Custom certificate private key to be used for the SSL termination. |
+| `domainVerificationMethod` _string_ |  |
+| `skipCaCheck` _string_ | Advanced option. If true, the custom certificate is served exactly as provided, without attempting to bundle against a public trust store. Required for certificates issued by an internal/private CA. |
+
+_Appears in:_
+
+- [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
 #### DataPlaneClientAuthStatus
 
 
@@ -5278,6 +8499,58 @@ DataPlaneLabelValue is the type that defines the value of a label that will be a
 _Appears in:_
 
 - [KonnectExtensionDataPlane](#konnect-konghq-com-v1alpha1-types-konnectextensiondataplane)
+
+#### Description
+
+_Underlying type:_ `string`
+
+Description is a type alias.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### GatewayDescription
+
+_Underlying type:_ `string`
+
+GatewayDescription A human-readable description of the Gateway.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
+
+#### GatewayName
+
+_Underlying type:_ `string`
+
+GatewayName The name of the Gateway.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
+
+#### IdentityProviderType
+
+_Underlying type:_ `string`
+
+IdentityProviderType Specifies the type of identity provider.
+
+
+
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -5510,6 +8783,82 @@ _Appears in:_
 - [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 
+#### KonnectEntityRef
+
+
+KonnectEntityRef is a reference to a Konnect entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. |
+
+_Appears in:_
+
+- [PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)
+- [PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)
+- [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
+- [PortalIPAllowListStatus](#konnect-konghq-com-v1alpha1-types-portalipallowliststatus)
+- [PortalIdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequeststatus)
+- [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
+- [PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)
+
+
+
+#### KonnectEventGatewayAPISpec
+
+
+KonnectEventGatewayAPISpec defines the API spec fields for KonnectEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `description` _[GatewayDescription](#konnect-konghq-com-v1alpha1-types-gatewaydescription)_ | A human-readable description of the Gateway. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `minRuntimeVersion` _[MinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-minruntimeversion)_ | The minimum runtime version supported by the API. This is the lowest version of the data plane release that can be used with the entity model. When not specified, the minimum runtime version will be pinned to the latest available release. |
+| `name` _[GatewayName](#konnect-konghq-com-v1alpha1-types-gatewayname)_ | The name of the Gateway. |
+
+_Appears in:_
+
+- [KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)
+
+#### KonnectEventGatewaySpec
+
+
+KonnectEventGatewaySpec defines the desired state of KonnectEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [KonnectEventGateway](#konnect-konghq-com-v1alpha1-konnecteventgateway)
+
+#### KonnectEventGatewayStatus
+
+
+KonnectEventGatewayStatus defines the observed state of KonnectEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [KonnectEventGateway](#konnect-konghq-com-v1alpha1-konnecteventgateway)
+
 #### KonnectExtensionClientAuth
 
 
@@ -5708,6 +9057,78 @@ _Appears in:_
 
 - [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
 
+#### Labels
+
+_Underlying type:_ `[map[string]LabelsValue](#map[string]labelsvalue)`
+
+Labels store metadata of an entity that can be used for filtering an entity
+list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
+
+#### LabelsUpdate
+
+_Underlying type:_ `[map[string]LabelsUpdateValue](#map[string]labelsupdatevalue)`
+
+LabelsUpdate Labels store metadata of an entity that can be used for
+filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
+
+#### LabelsUpdateValue
+
+_Underlying type:_ `string`
+
+LabelsUpdateValue is the value type for LabelsUpdate.
+
+
+
+
+_Appears in:_
+
+- [LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)
+
+#### LabelsValue
+
+_Underlying type:_ `string`
+
+LabelsValue is the value type for Labels.
+
+
+
+
+_Appears in:_
+
+- [Labels](#konnect-konghq-com-v1alpha1-types-labels)
+
+#### MCPServerKonnectSpec
+
+
+MCPServerKonnectSpec defines the observed state of the MCPServer on Konnect.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _*string_ | Name is the name of the MCPServer on Konnect. |
+| `version` _*string_ | Version is the version of the MCPServer on Konnect. |
+
+_Appears in:_
+
+- [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
+
 #### MCPServerSpec
 
 
@@ -5739,10 +9160,45 @@ MCPServerStatus defines the observed state of MCPServer.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `konnectSpec` _[MCPServerKonnectSpec](#konnect-konghq-com-v1alpha1-types-mcpserverkonnectspec)_ | KonnectSpec holds MCPServer-specific status fields related to its state on Konnect, such as the remote name and version. |
 
 _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+
+#### Menu
+
+
+Menu is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `footerBottom` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+| `footerSections` _[PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)_ |  |
+| `main` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
+
+#### MinRuntimeVersion
+
+_Underlying type:_ `string`
+
+MinRuntimeVersion The minimum runtime version supported by the API.
+This is the lowest version of the data plane
+release that can be used with the entity model.
+When not specified, the minimum runtime version will be pinned to the latest
+available release.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
 
 #### MirrorKonnect
 
@@ -5776,6 +9232,674 @@ _Appears in:_
 - [KonnectOptions](#gateway-operator-konghq-com-v2beta1-types-konnectoptions)
 - [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
 
+#### OIDCIdentityProviderClaimMappings
+
+
+OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
+(OIDC) claims and local claims used by your application for
+authentication.
+
+
+
+| Field | Description |
+| --- | --- |
+| `email` _string_ | The claim mapping for the user's email address. |
+| `groups` _string_ | The claim mapping for the user's group membership information. |
+| `name` _string_ | The claim mapping for the user's name. |
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderClientID
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderClientID The client ID assigned to your application by
+the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderClientSecret
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderClientSecret The Client Secret assigned to your
+application by the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderConfig
+
+
+OIDCIdentityProviderConfig The identity provider that contains configuration
+data for the OIDC authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
+| `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
+| `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
+| `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
+| `scopes` _[]string_ | The scopes requested by your application when authenticating with the identity provider. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
+
+#### OIDCIdentityProviderIssuer
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderIssuer The issuer URI of the identity provider.
+This is the URL where the provider's metadata can be obtained.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### PageContent
+
+_Underlying type:_ `string`
+
+PageContent The renderable markdown content of a page in a portal.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PageSlug
+
+_Underlying type:_ `string`
+
+PageSlug The slug of a page in a portal, used to compute its full URL path
+within the portal hierarchy.
+When a page has a `parent_page_id`, its full path is built by joining the
+parent’s slug with its own.
+For example, if a parent page has the slug `slug1` and this page’s slug is
+`slug2`, the resulting path will be `/slug1/slug2`.
+This enables nested page structures like `/slug1/slug2/slug3`.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PageTitle
+
+_Underlying type:_ `string`
+
+PageTitle The title of a page in a portal.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PageVisibilityStatus
+
+_Underlying type:_ `string`
+
+PageVisibilityStatus Whether a page is publicly accessible to
+non-authenticated users.
+If not provided, the default_page_visibility value of the portal will be
+used.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PortalAPISpec
+
+
+PortalAPISpec defines the API spec fields for Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
+| `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `defaultAPIVisibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
+| `defaultApplicationAuthStrategyIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
+| `defaultPageVisibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
+| `description` _*string_ | A description of the portal. |
+| `displayName` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
+| `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
+| `rbacEnabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
+| `siprEnabled` _string_ | Whether ip allow list is enabled for the portal. |
+
+_Appears in:_
+
+- [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+#### PortalCustomDomainAPISpec
+
+
+PortalCustomDomainAPISpec defines the API spec fields for PortalCustomDomain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ |  |
+| `hostname` _string_ |  |
+| `ssl` _[PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)_ |  |
+
+_Appears in:_
+
+- [PortalCustomDomainSpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainspec)
+
+
+
+#### PortalCustomDomainSSL
+
+
+PortalCustomDomainSSL represents a union type for ssl.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[PortalCustomDomainSSLType](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssltype)_ | Type designates the type of configuration. |
+| `withCustomCertificate` _[CreatePortalCustomDomainSSLWithCustomCertificate](#konnect-konghq-com-v1alpha1-types-createportalcustomdomainsslwithcustomcertificate)_ | WithCustomCertificate configuration. |
+| `standard` _[CreatePortalCustomDomainSSLStandard](#konnect-konghq-com-v1alpha1-types-createportalcustomdomainsslstandard)_ | Standard configuration. |
+
+_Appears in:_
+
+- [PortalCustomDomainAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainapispec)
+
+#### PortalCustomDomainSSLType
+
+_Underlying type:_ `string`
+
+PortalCustomDomainSSLType represents the type of ssl.
+
+
+
+
+_Appears in:_
+
+- [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `withCustomCertificate` |  |
+| `standard` |  |
+
+#### PortalCustomDomainSpec
+
+
+PortalCustomDomainSpec defines the desired state of PortalCustomDomain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalCustomDomainAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
+
+#### PortalCustomDomainStatus
+
+
+PortalCustomDomainStatus defines the observed state of PortalCustomDomain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
+
+#### PortalCustomizationAPISpec
+
+
+PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
+
+
+
+| Field | Description |
+| --- | --- |
+| `css` _*string_ |  |
+| `layout` _string_ |  |
+| `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
+| `robots` _*string_ |  |
+| `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ |  |
+| `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationSpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationspec)
+
+
+
+#### PortalCustomizationSpec
+
+
+PortalCustomizationSpec defines the desired state of PortalCustomization.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
+
+#### PortalCustomizationStatus
+
+
+PortalCustomizationStatus defines the observed state of PortalCustomization.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
+
+#### PortalEmailConfigAPISpec
+
+
+PortalEmailConfigAPISpec defines the API spec fields for PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `domainName` _*string_ | The domain name to use for sending emails. Null means default. |
+| `fromEmail` _*string_ | The email address to use in the 'From' field. |
+| `fromName` _*string_ | The name to display in the 'From' field of emails. |
+| `replyToEmail` _*string_ | The email address to use in the 'Reply-To' field. 'Reply-To' header is omitted if omitted or null. |
+
+_Appears in:_
+
+- [PortalEmailConfigSpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigspec)
+
+#### PortalEmailConfigSpec
+
+
+PortalEmailConfigSpec defines the desired state of PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalEmailConfigAPISpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
+
+#### PortalEmailConfigStatus
+
+
+PortalEmailConfigStatus defines the observed state of PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
+
+#### PortalFooterMenuSection
+
+
+PortalFooterMenuSection is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `items` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+| `title` _string_ | The footer menu section title |
+
+_Appears in:_
+
+- [Menu](#konnect-konghq-com-v1alpha1-types-menu)
+
+#### PortalIPAllowListAPISpec
+
+
+PortalIPAllowListAPISpec defines the API spec fields for PortalIPAllowList.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowedIps` _[]string_ | The list of allowed ips for the portal. |
+
+_Appears in:_
+
+- [PortalIPAllowListSpec](#konnect-konghq-com-v1alpha1-types-portalipallowlistspec)
+
+
+
+
+
+#### PortalIdentityProviderRequestAPISpec
+
+
+PortalIdentityProviderRequestAPISpec defines the API spec fields for PortalIdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)_ |  |
+| `enabled` _string_ | Indicates whether the identity provider is enabled. Only one identity provider can be active at a time, such as SAML or OIDC. |
+| `type` _[IdentityProviderType](#konnect-konghq-com-v1alpha1-types-identityprovidertype)_ | Specifies the type of identity provider. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestspec)
+
+#### PortalIdentityProviderRequestConfig
+
+
+PortalIdentityProviderRequestConfig represents a union type for config.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[PortalIdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfigtype)_ | Type designates the type of configuration. |
+| `oIDC` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
+| `portalSAML` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | PortalSAML configuration. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)
+
+#### PortalIdentityProviderRequestConfigType
+
+_Underlying type:_ `string`
+
+PortalIdentityProviderRequestConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `oIDC` |  |
+| `portalSAML` |  |
+
+
+
+#### PortalIdentityProviderRequestSpec
+
+
+PortalIdentityProviderRequestSpec defines the desired state of PortalIdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
+
+#### PortalIdentityProviderRequestStatus
+
+
+PortalIdentityProviderRequestStatus defines the observed state of PortalIdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
+
+#### PortalMenuItem
+
+
+PortalMenuItem is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `external` _string_ | When clicked, open the link in a new window |
+| `path` _string_ | The absolute path of a page in a portal with a leading slash. |
+| `title` _string_ | The link display text |
+| `visibility` _string_ | Whether a menu item is public or private. Private menu items are only accessible to authenticated users. |
+
+_Appears in:_
+
+- [Menu](#konnect-konghq-com-v1alpha1-types-menu)
+- [PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)
+
+#### PortalPageAPISpec
+
+
+PortalPageAPISpec defines the API spec fields for PortalPage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `content` _[PageContent](#konnect-konghq-com-v1alpha1-types-pagecontent)_ | The renderable markdown content of a page in a portal. |
+| `description` _[Description](#konnect-konghq-com-v1alpha1-types-description)_ |  |
+| `parentPageIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | Pages may be rendered as a tree of files.<br /><br />Specify the `id` of another page as the `parent_page_id` to add some hierarchy to your pages. |
+| `slug` _[PageSlug](#konnect-konghq-com-v1alpha1-types-pageslug)_ | The slug of a page in a portal, used to compute its full URL path within the portal hierarchy. When a page has a `parent_page_id`, its full path is built by joining the parent’s slug with its own. For example, if a parent page has the slug `slug1` and this page’s slug is `slug2`, the resulting path will be `/slug1/slug2`. This enables nested page structures like `/slug1/slug2/slug3`. |
+| `status` _[PublishedStatus](#konnect-konghq-com-v1alpha1-types-publishedstatus)_ | Whether the resource is visible on a given portal. Defaults to unpublished. |
+| `title` _[PageTitle](#konnect-konghq-com-v1alpha1-types-pagetitle)_ | The title of a page in a portal. |
+| `visibility` _[PageVisibilityStatus](#konnect-konghq-com-v1alpha1-types-pagevisibilitystatus)_ | Whether a page is publicly accessible to non-authenticated users. If not provided, the default_page_visibility value of the portal will be used. |
+
+_Appears in:_
+
+- [PortalPageSpec](#konnect-konghq-com-v1alpha1-types-portalpagespec)
+
+#### PortalPageSpec
+
+
+PortalPageSpec defines the desired state of PortalPage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
+
+#### PortalPageStatus
+
+
+PortalPageStatus defines the observed state of PortalPage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
+
+#### PortalSAMLIdentityProviderConfig
+
+
+PortalSAMLIdentityProviderConfig The identity provider that contains
+configuration data for the SAML authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `idpMetadataURL` _[SAMLIdentityProviderMetadataURL](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadataurl)_ | The identity provider's metadata URL where the identity provider's metadata can be obtained. |
+| `idpMetadataXML` _[SAMLIdentityProviderMetadata](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadata)_ | The identity provider's SAML metadata. If the identity provider supports a metadata URL, you can use the `idp_metadata_url` field instead. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
+
+
+
+#### PortalSpec
+
+
+PortalSpec defines the desired state of Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [Portal](#konnect-konghq-com-v1alpha1-portal)
+
+#### PortalStatus
+
+
+PortalStatus defines the observed state of Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [Portal](#konnect-konghq-com-v1alpha1-portal)
+
+#### PortalTeamAPISpec
+
+
+PortalTeamAPISpec defines the API spec fields for PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `canOwnApplications` _string_ | Whether the team is allowed to own applications |
+| `description` _string_ |  |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [PortalTeamSpec](#konnect-konghq-com-v1alpha1-types-portalteamspec)
+
+
+
+#### PortalTeamSpec
+
+
+PortalTeamSpec defines the desired state of PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalTeamAPISpec](#konnect-konghq-com-v1alpha1-types-portalteamapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
+
+#### PortalTeamStatus
+
+
+PortalTeamStatus defines the observed state of PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
+
 #### ProvisioningMethod
 
 _Underlying type:_ `string`
@@ -5796,6 +9920,51 @@ Allowed values:
 | `Manual` | ManualSecretProvisioning is the method used to provision the certificate manually.<br /> |
 | `Automatic` | AutomaticSecretProvisioning is the method used to provision the certificate automatically.<br /> |
 
+#### PublishedStatus
+
+_Underlying type:_ `string`
+
+PublishedStatus Whether the resource is visible on a given portal.
+Defaults to unpublished.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### SAMLIdentityProviderMetadata
+
+_Underlying type:_ `string`
+
+SAMLIdentityProviderMetadata The identity provider's SAML metadata.
+If the identity provider supports a metadata URL, you can use the
+`idp_metadata_url` field instead.
+
+
+
+
+_Appears in:_
+
+- [PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)
+
+#### SAMLIdentityProviderMetadataURL
+
+_Underlying type:_ `string`
+
+SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
+the identity provider's metadata can be obtained.
+
+
+
+
+_Appears in:_
+
+- [PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)
+
+
+
 #### SecretRef
 
 
@@ -5811,6 +9980,46 @@ _Appears in:_
 
 - [CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)
+
+
+
+#### SpecRenderer
+
+
+SpecRenderer is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowCustomServerUrls` _string_ | Let users define a custom server URL for endpoints. This will be used to generate code snippets and to test the API. The URL is client-side only and is not saved. |
+| `hideDeprecated` _string_ | Manage visibility of deprecated endpoints and models. |
+| `hideInternal` _string_ | Manage visibility of internal endpoints and models. |
+| `infiniteScroll` _string_ | Display the full spec on a single, scrollable page. If disabled, documentation, endpoints, and schemas appear on separate pages. |
+| `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
+| `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
+| `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
+
+#### Theme
+
+
+Theme is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
+| `mode` _string_ |  |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
 
 #### TransitGatewayDNSConfig
 
@@ -5999,8 +10208,10 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 _Appears in:_
 
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
+- [KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+- [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
 
 #### KonnectEndpoints
 
@@ -6037,6 +10248,7 @@ _Appears in:_
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
+- [KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificateandcacertificatesrefs)
 - [KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)
 - [KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)
 - [KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandkeysetref)
@@ -6044,9 +10256,32 @@ _Appears in:_
 - [KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandupstreamrefs)
 - [KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)
 - [KonnectEntityStatusWithNetworkRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithnetworkref)
+- [KonnectEventGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnecteventgatewaystatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
+- [PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)
+
+#### KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs
+
+
+KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs represents the status of a Konnect entity
+with references to a ControlPlane, a (client) Certificate, and a list of CA Certificates.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with. |
+| `certificateID` _string_ | CertificateID is the Konnect ID of the client Certificate referenced by this entity. |
+| `caCertificateIDs` _[]string_ | CACertificateIDs lists the Konnect IDs of the CA Certificates referenced by this entity. |
+
+_Appears in:_
+
+- [KongServiceStatus](#configuration-konghq-com-v1alpha1-types-kongservicestatus)
 
 #### KonnectEntityStatusWithControlPlaneAndCertificateRefs
 
@@ -6067,6 +10302,7 @@ of a Konnect entity with references to a ControlPlane and a Certificate.
 _Appears in:_
 
 - [KongSNIStatus](#configuration-konghq-com-v1alpha1-types-kongsnistatus)
+- [KongUpstreamStatus](#configuration-konghq-com-v1alpha1-types-kongupstreamstatus)
 
 #### KonnectEntityStatusWithControlPlaneAndConsumerRefs
 
@@ -6176,8 +10412,6 @@ _Appears in:_
 - [KongDataPlaneClientCertificateStatus](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificatestatus)
 - [KongKeySetStatus](#configuration-konghq-com-v1alpha1-types-kongkeysetstatus)
 - [KongPluginBindingStatus](#configuration-konghq-com-v1alpha1-types-kongpluginbindingstatus)
-- [KongServiceStatus](#configuration-konghq-com-v1alpha1-types-kongservicestatus)
-- [KongUpstreamStatus](#configuration-konghq-com-v1alpha1-types-kongupstreamstatus)
 - [KongVaultStatus](#configuration-konghq-com-v1alpha1-types-kongvaultstatus)
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
@@ -6237,6 +10471,7 @@ Allowed values:
 | --- | --- |
 | `ControlPlane` | ClusterTypeControlPlane is the type of the Konnect Control Plane.<br /> |
 | `K8SIngressController` | ClusterTypeK8sIngressController is the type of the Kubernetes Control Plane.<br /> |
+| `ControlPlaneGroup` | ClusterTypeControlPlaneGroup is the type of the Control Plane Group.<br /> |
 
 #### KonnectExtensionControlPlane
 

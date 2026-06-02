@@ -76,6 +76,14 @@ rows:
     type: '`string`'
     description: "Sets the time limit for syncing controller caches. Defaults to the controller-runtime value if set to `0`."
     default: '`0s`'
+  - flag: '`--cert-expiration-margin`'
+    type: '`duration`'
+    description: "Duration before certificate expiration at which the operator will trigger certificate renewal (specify it in hours in a format like '168h'). Must be lower than cert-ttl."
+    default: '`168h (7 days)`'
+  - flag: '`--cert-ttl`'
+    type: '`duration`'
+    description: "Time-to-live for certificates issued by the operator (specify it in hours in a format like '87600h')."
+    default: '`87600h (10 years)`'
   - flag: '`--cluster-ca-key-size`'
     type: '`int`'
     description: "WARN: DEPRECATED (it has no effect): Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys."
@@ -136,6 +144,10 @@ rows:
     type: '`bool`'
     description: "Enable the Gateway controller."
     default: '`true`'
+  - flag: '`--enable-controller-kegdataplane`'
+    type: '`bool`'
+    description: "Enable the KEG (Kong Event Gateway) DataPlane controller."
+    default: '`false`'
   - flag: '`--enable-controller-kongplugininstallation`'
     type: '`bool`'
     description: "Enable the KongPluginInstallation controller."
@@ -262,7 +274,7 @@ rows:
     default: ""
   - flag: '`--zap-log-level`'
     type: '`string`'
-    description: "Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', 'panic'or any integer value > 0 which corresponds to custom debug levels of increasing verbosity"
+    description: "Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', 'panic' or any integer value > 0 which corresponds to custom debug levels of increasing verbosity"
     default: ""
   - flag: '`--zap-stacktrace-level`'
     type: '`string`'

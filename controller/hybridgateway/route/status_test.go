@@ -556,7 +556,13 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		},
 	}
 
+	httpRouteTypeMeta := metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
+
 	route := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      "route",
@@ -629,6 +635,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{Hostnames: []gwtypes.Hostname{"not-matching.com"}},
 			},
@@ -662,6 +669,33 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 			wantReason: string(gwtypes.RouteReasonAccepted),
 		},
 		{
+			name: "accepted route without hostnames on hostname listener",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gatewayv1.Listener{
+						{Name: "listener1", Port: 443, Protocol: gatewayv1.HTTPSProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("second-example.org"), TLS: &gatewayv1.ListenerTLSConfig{Mode: func() *gatewayv1.TLSModeType { mode := gatewayv1.TLSModeTerminate; return &mode }()}},
+					},
+					GatewayClassName: "my-class",
+				},
+				Status: gatewayv1.GatewayStatus{
+					Listeners: []gatewayv1.ListenerStatus{
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionProgrammed), Status: metav1.ConditionTrue}}},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec:       gwtypes.HTTPRouteSpec{},
+			},
+			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("listener1")},
+			client:     cl,
+			wantType:   string(gwtypes.RouteConditionAccepted),
+			wantStatus: metav1.ConditionTrue,
+			wantReason: string(gwtypes.RouteReasonAccepted),
+		},
+		{
 			name: "missing namespace triggers error branch",
 			gateway: &gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
@@ -677,6 +711,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "nonexistent", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{},
 			},
@@ -718,6 +753,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{},
 			},
@@ -753,6 +789,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 	ctx := context.Background()
 	pRef := gwtypes.ParentReference{Name: "gw"}
 	route := &gwtypes.HTTPRoute{
+		TypeMeta:   metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
 		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 	}
 	gvk := schema.GroupVersionKind{Group: "example.com", Version: "v1", Kind: "FakeResource"}
@@ -763,7 +800,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 		obj := &unstructured.Unstructured{}
 		obj.SetGroupVersionKind(gvk)
 		obj.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesAnnotation: "default/route",
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "default/route",
 		})
 		cond := map[string]any{"type": "Programmed", "status": "True"}
 		if !programmed {
@@ -777,7 +814,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 		obj := &unstructured.Unstructured{}
 		obj.SetGroupVersionKind(gvk)
 		obj.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesAnnotation: routeRef,
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: routeRef,
 		})
 		cond := map[string]any{"type": "Programmed", "status": "True"}
 		if !programmed {
@@ -1147,13 +1184,15 @@ func Test_FilterMatchingListeners(t *testing.T) {
 	}
 	listenerReady := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	listenerNotReady := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.HTTPProtocolType}
-	listenerWrongProtocol := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: "TCP"}
 	tlsModePassthrough := gatewayv1.TLSModePassthrough
-	listenerWrongTLS := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
+	tlsModeTerminate := gatewayv1.TLSModeTerminate
+	listenerNotReadyTLS := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModeTerminate}}
+	listenerProtocolTLS := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
 
 	tests := []struct {
 		name      string
 		pRef      gwtypes.ParentReference
+		routeKind string
 		listeners []gwtypes.Listener
 		wantLen   int
 		wantCond  bool
@@ -1162,6 +1201,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "no listeners",
 			pRef:      pRef,
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{},
 			wantLen:   0,
 			wantCond:  true,
@@ -1170,6 +1210,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "section name mismatch",
 			pRef:      gwtypes.ParentReference{Name: "listener1", SectionName: sectionPtr("notfound")},
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerReady},
 			wantLen:   0,
 			wantCond:  true,
@@ -1178,23 +1219,8 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "port mismatch",
 			pRef:      gwtypes.ParentReference{Name: "listener1", Port: new(int32(81))},
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerReady},
-			wantLen:   0,
-			wantCond:  true,
-			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
-		},
-		{
-			name:      "protocol mismatch",
-			pRef:      pRef,
-			listeners: []gwtypes.Listener{listenerWrongProtocol},
-			wantLen:   0,
-			wantCond:  true,
-			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
-		},
-		{
-			name:      "TLS mode mismatch",
-			pRef:      pRef,
-			listeners: []gwtypes.Listener{listenerWrongTLS},
 			wantLen:   0,
 			wantCond:  true,
 			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
@@ -1202,6 +1228,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "listener matches but not ready",
 			pRef:      gwtypes.ParentReference{Name: "listener2"},
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerNotReady},
 			wantLen:   0,
 			wantCond:  true,
@@ -1210,6 +1237,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "listener matches and is ready",
 			pRef:      pRef,
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerReady},
 			wantLen:   1,
 			wantCond:  false,
@@ -1217,14 +1245,32 @@ func Test_FilterMatchingListeners(t *testing.T) {
 		{
 			name:      "multiple listeners, mixed readiness",
 			pRef:      gwtypes.ParentReference{Name: "listener1"},
+			routeKind: "HTTPRoute",
 			listeners: []gwtypes.Listener{listenerReady, listenerNotReady},
+			wantLen:   1,
+			wantCond:  false,
+		},
+		{
+			name:      "TLSRoute - no ready listeners",
+			pRef:      pRef,
+			routeKind: "TLSRoute",
+			listeners: []gwtypes.Listener{listenerNotReadyTLS},
+			wantLen:   0,
+			wantCond:  true,
+			condMsg:   "A Gateway Listener matches this route but is not ready",
+		},
+		{
+			name:      "TLSRoute - ready and match listener",
+			pRef:      pRef,
+			routeKind: "TLSRoute",
+			listeners: []gwtypes.Listener{listenerProtocolTLS},
 			wantLen:   1,
 			wantCond:  false,
 		},
 	}
 
 	for _, tt := range tests {
-		matches, cond := FilterMatchingListeners(logr.Discard(), gw, tt.pRef, tt.listeners)
+		matches, cond := FilterMatchingListeners(logr.Discard(), gw, tt.routeKind, tt.pRef, tt.listeners)
 		require.Len(t, matches, tt.wantLen, tt.name)
 		if tt.wantCond {
 			require.NotNil(t, cond, tt.name)
@@ -1240,6 +1286,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	pRef := gwtypes.ParentReference{Name: "listener1"}
 	listener := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	kind := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "HTTPRoute"}
+	kindTLSRoute := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "TLSRoute"}
 	routeNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
 
 	selector := &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
@@ -1269,6 +1316,10 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	listenerNSSelectorInvalid := listener
 	listenerNSSelectorInvalid.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: new(gwtypes.NamespacesFromSelector), Selector: invalidSelector}}
 
+	listenerTLSPassthrough := listener
+	listenerTLSPassthrough.Protocol = gwtypes.HTTPSProtocolType
+	listenerTLSPassthrough.TLS = &gatewayv1.ListenerTLSConfig{Mode: new(gwtypes.TLSModePassthrough)}
+
 	unknownFrom := gwtypes.NamespacesFromAll
 	listenerNSUnknown := listener
 	listenerNSUnknown.AllowedRoutes = &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: &unknownFrom}}
@@ -1283,6 +1334,22 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 		wantCond  bool
 		wantErr   bool
 	}{
+		{
+			name:      "TLSRoute - protocol mismatch",
+			kind:      kindTLSRoute,
+			listeners: []gwtypes.Listener{listener},
+			routeNS:   routeNS,
+			wantLen:   0,
+			wantCond:  true,
+		},
+		{
+			name:      "TLS mode mismatch",
+			kind:      kind,
+			listeners: []gwtypes.Listener{listenerTLSPassthrough},
+			routeNS:   routeNS,
+			wantLen:   0,
+			wantCond:  true,
+		},
 		{
 			name:      "AllowedRoutes nil (all allowed)",
 			listeners: []gwtypes.Listener{listener},
@@ -1455,6 +1522,13 @@ func Test_FilterListenersByHostnames(t *testing.T) {
 			wantCond:  false,
 		},
 		{
+			name:      "listener with explicit hostname matches route with no hostnames",
+			listeners: []gwtypes.Listener{listenerExact},
+			hostnames: nil,
+			wantLen:   1,
+			wantCond:  false,
+		},
+		{
 			name:      "no matching listener hostname",
 			listeners: []gwtypes.Listener{listenerMismatch},
 			hostnames: []gwtypes.Hostname{"foo.example.com"},
@@ -1466,6 +1540,13 @@ func Test_FilterListenersByHostnames(t *testing.T) {
 			listeners: []gwtypes.Listener{listenerMismatch, listenerExact},
 			hostnames: []gwtypes.Hostname{"foo.example.com"},
 			wantLen:   1,
+			wantCond:  false,
+		},
+		{
+			name:      "empty route hostnames match all listeners",
+			listeners: []gwtypes.Listener{listenerMismatch, listenerExact},
+			hostnames: []gwtypes.Hostname{},
+			wantLen:   2,
 			wantCond:  false,
 		},
 	}
@@ -2066,6 +2147,75 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			wantStatus:  metav1.ConditionTrue,
 			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
 			wantMsgPart: "All references resolved",
+		},
+		{
+			name: "partially invalid cross-namespace sibling backends still report ref not permitted",
+			clientObjs: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-backend",
+						Name:      "app-backend-v1",
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-backend",
+						Name:      "app-backend-v2",
+					},
+				},
+				&gwtypes.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-backend",
+						Name:      "grant-v1-only",
+					},
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{{
+							Group:     gwtypes.GroupName,
+							Kind:      "HTTPRoute",
+							Namespace: gwtypes.Namespace("default"),
+						}},
+						To: []gwtypes.ReferenceGrantTo{{
+							Group: gwtypes.Group("core"),
+							Kind:  gwtypes.Kind("Service"),
+							Name:  ptrObjName("app-backend-v1"),
+						}},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
+						{
+							BackendRefs: []gwtypes.HTTPBackendRef{{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:      gwtypes.ObjectName("app-backend-v2"),
+										Kind:      kindPtr("Service"),
+										Group:     groupPtr("core"),
+										Namespace: nsPtr("app-backend"),
+									},
+								},
+							}},
+						},
+						{
+							BackendRefs: []gwtypes.HTTPBackendRef{{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:      gwtypes.ObjectName("app-backend-v1"),
+										Kind:      kindPtr("Service"),
+										Group:     groupPtr("core"),
+										Namespace: nsPtr("app-backend"),
+									},
+								},
+							}},
+						},
+					},
+				},
+			},
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonRefNotPermitted),
+			wantMsgPart: "not permitted by any ReferenceGrant",
 		},
 		{
 			name:       "multiple refs, first fails",

@@ -1,7 +1,6 @@
 package subtranslator
 
 import (
-	"regexp"
 	"sort"
 	"strings"
 
@@ -17,13 +16,6 @@ import (
 
 var (
 	headerAnnotationRegexPrefix = "~*"
-
-	validMethods = regexp.MustCompile(`\A[A-Z]+$`)
-
-	// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
-	// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change.
-	validSNIs  = regexp.MustCompile(`^([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*$`)
-	validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
 )
 
 const IngressDefaultBackendPriority RoutePriorityType = 0
@@ -42,7 +34,7 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 		Ingress: util.FromK8sObject(m.parentIngress),
 		Route: kong.Route{
 			Name:              new(routeName),
-			Protocols:         kong.StringSlice("http", "https"),
+			Protocols:         ingressRouteProtocols(m.parentIngress.GetAnnotations()),
 			StripPath:         new(false),
 			PreserveHost:      new(true),
 			RequestBuffering:  new(true),
@@ -195,22 +187,10 @@ func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
 func methodMatcherFromMethods(methods []string) atc.Matcher {
 	matchers := make([]atc.Matcher, 0, len(methods))
 	for _, method := range methods {
-		if !validMethods.MatchString(method) {
+		if !kongstate.ValidMethods.MatchString(method) {
 			continue
 		}
 		matchers = append(matchers, atc.NewPredicateHTTPMethod(atc.OpEqual, method))
-	}
-	return atc.Or(matchers...)
-}
-
-// sniMatcherFromSNIs generates matchers to match TLS SNIs.
-func sniMatcherFromSNIs(snis []string) atc.Matcher {
-	matchers := make([]atc.Matcher, 0, len(snis))
-	for _, sni := range snis {
-		if !validSNIs.MatchString(sni) {
-			continue
-		}
-		matchers = append(matchers, atc.NewPredicateTLSSNI(atc.OpEqual, sni))
 	}
 	return atc.Or(matchers...)
 }

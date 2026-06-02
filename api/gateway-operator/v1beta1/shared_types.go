@@ -107,8 +107,6 @@ type BlueGreenStrategy struct {
 // Promotion is a type that contains fields that define how the operator handles
 // promotion of resources during a blue/green rollout.
 type Promotion struct {
-	// TODO: implement AutomaticPromotion https://github.com/Kong/gateway-operator/issues/164
-
 	// Strategy indicates how you want the operator to handle the promotion of
 	// the preview (green) resources (Deployments and Services) after all workflows
 	// and tests succeed, OR if you even want it to break before performing
@@ -156,8 +154,6 @@ type RolloutResources struct {
 // RolloutResourcePlan is a type that holds rollout resource plan related fields
 // which control how the operator handles resources during and after a rollout.
 type RolloutResourcePlan struct {
-	// TODO: https://github.com/Kong/gateway-operator/issues/163
-
 	// Deployment describes how the operator manages Deployments during and after a rollout.
 	//
 	// +kubebuilder:validation:Enum=ScaleDownOnPromotionScaleUpOnRollout

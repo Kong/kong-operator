@@ -35,10 +35,10 @@ func DefaultControllerConfigForTests(opts ...ControllerConfigOption) manager.Con
 	cfg.AIGatewayControllerEnabled = true
 	cfg.AnonymousReports = false
 	cfg.KonnectControllersEnabled = true
+	cfg.KEGDataPlaneControllerEnabled = true
 	cfg.GatewayAPIExperimentalEnabled = true
 	cfg.EnforceConfig = true
 	cfg.ServiceAccountToImpersonate = ServiceAccountToImpersonate
-	// TODO: https://github.com/Kong/kong-operator/issues/1986
 	cfg.ConversionWebhookEnabled = false
 	cfg.ValidatingWebhookEnabled = true
 	cfg.APIServerQPS = -1

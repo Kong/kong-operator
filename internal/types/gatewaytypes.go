@@ -48,6 +48,11 @@ type (
 	RouteNamespaces        = gatewayv1.RouteNamespaces
 	RouteParentStatus      = gatewayv1.RouteParentStatus
 	SectionName            = gatewayv1.SectionName
+	TLSRoute               = gatewayv1.TLSRoute
+	TLSRouteList           = gatewayv1.TLSRouteList
+	TLSRouteSpec           = gatewayv1.TLSRouteSpec
+	TLSRouteStatus         = gatewayv1.TLSRouteStatus
+	TLSRouteRule           = gatewayv1.TLSRouteRule
 )
 
 var GroupVersion = gatewayv1.GroupVersion
@@ -56,6 +61,7 @@ const (
 	GroupName                             = gatewayv1.GroupName
 	HTTPProtocolType                      = gatewayv1.HTTPProtocolType
 	HTTPSProtocolType                     = gatewayv1.HTTPSProtocolType
+	TLSProtocolType                       = gatewayv1.TLSProtocolType
 	HTTPRouteFilterExtensionRef           = gatewayv1.HTTPRouteFilterExtensionRef
 	HTTPRouteFilterRequestHeaderModifier  = gatewayv1.HTTPRouteFilterRequestHeaderModifier
 	ListenerConditionProgrammed           = gatewayv1.ListenerConditionProgrammed
@@ -73,4 +79,5 @@ const (
 	RouteReasonRefNotPermitted            = gatewayv1.RouteReasonRefNotPermitted
 	RouteReasonResolvedRefs               = gatewayv1.RouteReasonResolvedRefs
 	TLSModeTerminate                      = gatewayv1.TLSModeTerminate
+	TLSModePassthrough                    = gatewayv1.TLSModePassthrough
 )

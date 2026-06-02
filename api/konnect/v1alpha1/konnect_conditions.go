@@ -140,6 +140,10 @@ const (
 	// KongUpstreamRefReasonInvalid is the reason used with the KongUpstreamRefValid
 	// condition type indicating that the KongUpstream reference is invalid.
 	KongUpstreamRefReasonInvalid = "Invalid"
+	// KongUpstreamRefReasonRefNotPermitted is the reason used with the KongUpstreamRefValid
+	// condition type indicating that a KongReferenceGrant is missing or invalid for
+	// a cross-namespace upstreamRef.
+	KongUpstreamRefReasonRefNotPermitted = "RefNotPermitted"
 )
 
 const (
@@ -268,4 +272,36 @@ const (
 	// KonnectEntityAdoptedReasonNotMatch is the reason used with the Adopted condition type
 	// indicating that the spec of the object does not match the entity in Konnect when adopted in match mode.
 	KonnectEntityAdoptedReasonNotMatch = "NotMatch"
+)
+
+const (
+	// KongPluginRefValidConditionType is the type of the condition that indicates
+	// whether the KongPlugin reference in KongPluginBinding.spec.pluginRef is valid,
+	// i.e. the KongPlugin exists and the cross-namespace access is permitted by a
+	// KongReferenceGrant (when applicable).
+	KongPluginRefValidConditionType = "PluginRefValid"
+
+	// KongPluginRefReasonValid is the reason used with the PluginRefValid condition type
+	// indicating that the pluginRef is valid (same-namespace, or cross-namespace with a grant).
+	KongPluginRefReasonValid = "Valid"
+	// KongPluginRefReasonRefNotPermitted is the reason used with the PluginRefValid
+	// condition type indicating that a KongReferenceGrant is missing or invalid for a
+	// cross-namespace pluginRef.
+	KongPluginRefReasonRefNotPermitted = "RefNotPermitted"
+	// KongPluginRefReasonInvalid is the reason used with the PluginRefValid condition type
+	// indicating that the referenced KongPlugin does not exist or cannot be fetched.
+	KongPluginRefReasonInvalid = "Invalid"
+)
+
+const (
+	// KongCACertificateRefsValidConditionType is the type of the condition that indicates
+	// whether the KongCACertificate references are valid and point to existing KongCACertificates.
+	KongCACertificateRefsValidConditionType = "KongCACertificateRefsValid"
+
+	// KongCACertificateRefsReasonValid is the reason used with the KongCACertificateRefsValid
+	// condition type indicating that all KongCACertificate references are valid.
+	KongCACertificateRefsReasonValid = "Valid"
+	// KongCACertificateRefsReasonInvalid is the reason used with the KongCACertificateRefsValid
+	// condition type indicating that one or more KongCACertificate references are invalid.
+	KongCACertificateRefsReasonInvalid = "Invalid"
 )

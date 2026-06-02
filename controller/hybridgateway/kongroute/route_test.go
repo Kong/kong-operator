@@ -20,6 +20,11 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
+var httpRouteTypeMeta = metav1.TypeMeta{
+	Kind:       "HTTPRoute",
+	APIVersion: "gateway.networking.k8s.io/v1",
+}
+
 func TestRoutesForRule(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
@@ -27,9 +32,11 @@ func TestRoutesForRule(t *testing.T) {
 	// Create a scheme with the necessary types
 	scheme := runtime.NewScheme()
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
 
 	// Create test HTTPRoute
 	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "test-namespace",
@@ -76,32 +83,85 @@ func TestRoutesForRule(t *testing.T) {
 		},
 	}
 
+	// Gateway with both HTTP and HTTPS listeners.
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+				{Name: "https", Protocol: gatewayv1.HTTPSProtocolType, Port: 443},
+			},
+		},
+	}
+
+	httpSectionName := gatewayv1.SectionName("http")
+	httpsSectionName := gatewayv1.SectionName("https")
+
 	tests := []struct {
-		name          string
-		existingRoute *configurationv1alpha1.KongRoute
-		serviceName   string
-		hostnames     []string
-		expectError   bool
-		expectRoutes  int
+		name            string
+		existingRoute   *configurationv1alpha1.KongRoute
+		parentRef       *gwtypes.ParentReference
+		serviceName     string
+		hostnames       []string
+		expectError     bool
+		expectRoutes    int
+		expectProtocols []sdkkonnectcomp.RouteJSONProtocols
 	}{
 		{
-			name:         "create new route",
+			name:         "no sectionName - both protocols from all listeners",
+			parentRef:    pRef,
 			serviceName:  "test-service",
 			hostnames:    []string{"example.com"},
-			expectError:  false,
 			expectRoutes: 2,
+			expectProtocols: []sdkkonnectcomp.RouteJSONProtocols{
+				sdkkonnectcomp.RouteJSONProtocols("http"),
+				sdkkonnectcomp.RouteJSONProtocols("https"),
+			},
+		},
+		{
+			name: "sectionName=http - only http protocol",
+			parentRef: &gwtypes.ParentReference{
+				Name:        "test-gateway",
+				Namespace:   (*gatewayv1.Namespace)(new("test-namespace")),
+				SectionName: &httpSectionName,
+			},
+			serviceName:  "test-service",
+			hostnames:    []string{"example.com"},
+			expectRoutes: 2,
+			expectProtocols: []sdkkonnectcomp.RouteJSONProtocols{
+				sdkkonnectcomp.RouteJSONProtocols("http"),
+			},
+		},
+		{
+			name: "sectionName=https - only https protocol",
+			parentRef: &gwtypes.ParentReference{
+				Name:        "test-gateway",
+				Namespace:   (*gatewayv1.Namespace)(new("test-namespace")),
+				SectionName: &httpsSectionName,
+			},
+			serviceName:  "test-service",
+			hostnames:    []string{"example.com"},
+			expectRoutes: 2,
+			expectProtocols: []sdkkonnectcomp.RouteJSONProtocols{
+				sdkkonnectcomp.RouteJSONProtocols("https"),
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var objects []client.Object
+			objects = append(objects, gateway)
 			if tt.existingRoute != nil {
 				objects = append(objects, tt.existingRoute)
 			}
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, tt.serviceName, tt.hostnames)
+			results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, tt.parentRef, cpRef, nil, tt.serviceName, tt.hostnames)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -118,13 +178,7 @@ func TestRoutesForRule(t *testing.T) {
 				assert.Equal(t, "test-namespace", result.Namespace)
 				assert.NotEmpty(t, result.Name)
 				assert.Equal(t, tt.hostnames, result.Spec.Hosts)
-				assert.Equal(t,
-					[]sdkkonnectcomp.RouteJSONProtocols{
-						sdkkonnectcomp.RouteJSONProtocols("http"),
-						sdkkonnectcomp.RouteJSONProtocols("https"),
-					},
-					result.Spec.Protocols,
-				)
+				assert.ElementsMatch(t, tt.expectProtocols, result.Spec.Protocols)
 
 				// Verify service reference
 				if tt.serviceName != "" {
@@ -136,7 +190,7 @@ func TestRoutesForRule(t *testing.T) {
 
 				// Verify HTTPRoute annotation
 				expectedAnnotation := httpRoute.Namespace + "/" + httpRoute.Name
-				assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesAnnotation], expectedAnnotation)
+				assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation], expectedAnnotation)
 
 				// Verify at least one path/header/method is set based on the match.
 				// For the first match with path, we expect Paths to be non-empty.
@@ -144,7 +198,11 @@ func TestRoutesForRule(t *testing.T) {
 				if len(result.Spec.Paths) == 0 {
 					// header-only route
 					assert.Contains(t, result.Spec.Headers, "X-Foo")
+					assert.Nil(t, result.Spec.RegexPriority)
+					continue
 				}
+
+				assert.Equal(t, new(int64(10)), result.Spec.RegexPriority)
 			}
 		})
 	}
@@ -156,6 +214,7 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
 
 	httpRoute := &gwtypes.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -193,14 +252,29 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 		},
 	}
 
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+				{Name: "https", Protocol: gatewayv1.HTTPSProtocolType, Port: 443},
+			},
+		},
+	}
 
-	results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, "test-service", nil)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, nil, "test-service", nil)
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 
 	assert.Equal(t, []string{"~/one$"}, results[0].Spec.Paths)
-	assert.Equal(t,
+	assert.Equal(t, new(int64(9)), results[0].Spec.RegexPriority)
+	assert.ElementsMatch(t,
 		[]sdkkonnectcomp.RouteJSONProtocols{
 			sdkkonnectcomp.RouteJSONProtocols("http"),
 			sdkkonnectcomp.RouteJSONProtocols("https"),

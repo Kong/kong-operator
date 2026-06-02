@@ -1,0 +1,1629 @@
+# KongSNI cross-namespace test.
+#
+# Exercises two orthogonal cross-namespace axes:
+#   1. KongSNI -> KongCertificate -> KonnectGatewayControlPlane (cross-namespace controlPlaneRef
+#      via KongCertificateRef) and KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration
+#      (cross-namespace authRef)
+#   2. KongSNI -> KongCertificate (cross-namespace certificateRef)
+#
+# Scenario A: All resources in the same namespace — baseline, no grants needed.
+#   ResolvedRefs condition is absent (same-namespace CPRef removes it).
+#
+# Scenario B: KongCertificate+KongSNI in ns-A, CP and AuthConfig co-located in ns-B.
+#   Only a Certificate->CP grant is needed.
+#
+# Scenario C: KongCertificate+KongSNI in ns-A, CP in ns-B, AuthConfig in ns-C.
+#   Both Certificate->CP AND CP->AuthConfig grants are required.
+#
+# Scenario D: KongCertificate+KongSNI and CP in the same namespace ns-B, AuthConfig in ns-C.
+#   No Certificate->CP grant needed (same namespace). Only CP->AuthConfig grant required.
+#   ResolvedRefs condition is absent (same-namespace CPRef removes it).
+#
+# Scenario E: KongSNI in sni_namespace (ns-A), KongCertificate+CP+AuthConfig in cp_namespace (ns-B).
+#   Only a SNI->Certificate grant is needed (CP and AuthConfig are co-located with the certificate).
+#   SNI shows ResolvedRefs=False/RefNotPermitted when the grant is missing.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongsni-cross-namespace
+spec:
+  description: |
+    Tests cross-namespace behaviour for KongSNI along two dimensions.
+
+    === Dimension 1: Cross-namespace controlPlaneRef (via KongCertificateRef) ===
+
+    Scenario A: All resources in the same namespace. No grants needed; baseline sanity check.
+
+    Scenario B: KongCertificate+KongSNI (ns-A) -> KonnectGatewayControlPlane (ns-B) -> KonnectAPIAuthConfiguration (ns-B).
+    CP and AuthConfig co-located: only one Certificate->CP grant is needed.
+
+    Scenario C: KongCertificate+KongSNI (ns-A) -> KonnectGatewayControlPlane (ns-B) -> KonnectAPIAuthConfiguration (ns-C).
+    All three in different namespaces: both Certificate->CP AND CP->AuthConfig grants required.
+    Includes an intermediate assertion that shows the certificate fails when CP->AuthConfig
+    grant is missing even after the Certificate->CP grant is in place.
+
+    Scenario D: KongCertificate+KongSNI (ns-B) -> KonnectGatewayControlPlane (ns-B) -> KonnectAPIAuthConfiguration (ns-C).
+    Certificate and CP in the same namespace: no Certificate->CP grant needed.
+    Only the CP->AuthConfig grant is required.
+
+    === Dimension 2: Cross-namespace certificateRef (Feature 1) ===
+
+    Scenario E: KongSNI (test-ns) -> KongCertificate+CP+AuthConfig (cp-ns).
+    A single KongReferenceGrant in cp-ns allows KongSNI from test-ns to reference KongCertificate.
+    No grant → ResolvedRefs=False/RefNotPermitted on the KongSNI.
+    Grant present → KongSNI reaches Programmed=True with ResolvedRefs=True and certificateID set.
+
+    Scenario F: KongSNI (sni-ns) -> KongCertificate (test-ns) -> CP+AuthConfig (cp-ns).
+    All three resources in different namespaces, combining both cross-namespace dimensions.
+    Requires two grants: SNI→Certificate (in test-ns) and Certificate→CP (in cp-ns).
+    Verifies the intermediate state where only the Certificate→CP grant is present
+    (cert is Programmed but SNI is still RefNotPermitted).
+
+  bindings:
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Namespace bindings.
+    - name: cp_namespace
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_namespace
+      value: (join('-', [$namespace, 'auth']))
+    # Scenario A resource names (all in test namespace).
+    - name: cp0_name
+      value: (join('-', [$namespace, 'cp0']))
+    - name: auth0_name
+      value: (join('-', [$namespace, 'auth0-konnect-api-auth']))
+    - name: cert0_name
+      value: (join('-', [$namespace, 'cert0']))
+    - name: sni0_name
+      value: (join('-', [$namespace, 'sni0']))
+    # Scenario B resource names (cert+sni in test namespace, CP+AuthConfig in cp_namespace).
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_name
+      value: (join('-', [$namespace, 'konnect-api-auth']))
+    - name: cert_name
+      value: (join('-', [$namespace, 'cert']))
+    - name: sni_name
+      value: (join('-', [$namespace, 'sni']))
+    # Scenario C resource names (cert+sni in test namespace, CP in cp_namespace, AuthConfig in auth_namespace).
+    - name: cp2_name
+      value: (join('-', [$namespace, 'cp2']))
+    - name: auth2_name
+      value: (join('-', [$namespace, 'auth2-konnect-api-auth']))
+    - name: cert2_name
+      value: (join('-', [$namespace, 'cert2']))
+    - name: sni2_name
+      value: (join('-', [$namespace, 'sni2']))
+    # Scenario D resource names (cert+sni+CP in cp_namespace, AuthConfig in auth_namespace).
+    - name: cp3_name
+      value: (join('-', [$namespace, 'cp3']))
+    - name: auth3_name
+      value: (join('-', [$namespace, 'auth3-konnect-api-auth']))
+    - name: cert3_name
+      value: (join('-', [$namespace, 'cert3']))
+    - name: sni3_name
+      value: (join('-', [$namespace, 'sni3']))
+    # Scenario E resource names (sni4 in sni_namespace, cert4+cp4+auth4 in cp_namespace).
+    - name: sni_namespace
+      value: (join('-', [$namespace, 'sni']))
+    - name: cp4_name
+      value: (join('-', [$namespace, 'cp4']))
+    - name: auth4_name
+      value: (join('-', [$namespace, 'auth4-konnect-api-auth']))
+    - name: cert4_name
+      value: (join('-', [$namespace, 'cert4']))
+    - name: sni4_name
+      value: (join('-', [$namespace, 'sni4']))
+    # Scenario F resource names (sni5 in sni_namespace, cert5 in test namespace, cp5+auth5 in cp_namespace).
+    - name: cp5_name
+      value: (join('-', [$namespace, 'cp5']))
+    - name: auth5_name
+      value: (join('-', [$namespace, 'auth5-konnect-api-auth']))
+    - name: cert5_name
+      value: (join('-', [$namespace, 'cert5']))
+    - name: sni5_name
+      value: (join('-', [$namespace, 'sni5']))
+
+  steps:
+    # =========================================================================
+    # Scenario A: All resources in the same namespace. No grants needed.
+    # ResolvedRefs condition is absent for same-namespace CPRefs.
+    # =========================================================================
+
+    - name: 1-create-auth-config-same-ns
+      description: Create KonnectAPIAuthConfiguration in the test namespace.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth0']))
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-control-plane-same-ns
+      description: Create KonnectGatewayControlPlane in the test namespace.
+      bindings:
+        - name: cp_name
+          value: ($cp0_name)
+        - name: cp_namespace
+          value: ($namespace)
+        - name: auth_name
+          value: ($auth0_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 3-create-cert0-same-ns
+      description: Create KongCertificate cert0 in the test namespace (no grants needed, same-namespace CPRef).
+      bindings:
+        - name: cert_name
+          value: ($cert0_name)
+        - name: cert_namespace
+          value: ($namespace)
+        - name: cp_name
+          value: ($cp0_name)
+        - name: cp_ref_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
+
+    - name: 4-create-sni0-same-ns
+      description: Create KongSNI sni0 in the test namespace.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni0_name)
+                namespace: ($namespace)
+              spec:
+                certificateRef:
+                  name: ($cert0_name)
+                name: "sni0.example.com"
+
+    - name: 5-assert-cert-and-sni-programmed-same-ns
+      description: Assert KongCertificate and KongSNI are Programmed. ResolvedRefs is absent (same-namespace CPRef).
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.certificateID != null): true
+
+    - name: 6-cleanup-scenario-a
+      description: Delete SNI, cert, and CP in order; wait for each to be gone.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              name: ($sni0_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              name: ($cert0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni0_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert0_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp0_name)
+                namespace: ($namespace)
+
+    # =========================================================================
+    # Scenario B: KongCertificate+KongSNI in test namespace, CP+AuthConfig in cp_namespace.
+    # Only the Certificate->CP grant is needed.
+    # =========================================================================
+
+    - name: 7-create-cp-namespace
+      description: Create namespace for KonnectGatewayControlPlane and KonnectAPIAuthConfiguration.
+      bindings:
+        - name: namespace_name
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 8-create-auth-config
+      description: Create KonnectAPIAuthConfiguration in the CP namespace.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+        - name: namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 9-create-control-plane
+      description: Create KonnectGatewayControlPlane in the CP namespace with same-namespace authRef.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 10-create-cert-no-grant
+      description: |
+        Create KongCertificate before any KongReferenceGrant exists.
+        The cert has a cross-namespace CPRef (cert in test ns, CP in cp_namespace).
+      bindings:
+        - name: cert_name
+          value: ($cert_name)
+        - name: cert_namespace
+          value: ($namespace)
+        - name: cp_name
+          value: ($cp_name)
+        - name: cp_ref_namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
+
+    - name: 11-create-sni-no-grant
+      description: Create KongSNI before any KongReferenceGrant exists.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni_name)
+                namespace: ($namespace)
+              spec:
+                certificateRef:
+                  name: ($cert_name)
+                name: "sni.example.com"
+
+    - name: 12-assert-negative-no-grant
+      description: Assert cert ResolvedRefs=False and SNI KongCertificateRefValid=False (no grant yet).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 13-create-cert-to-cp-grant
+      description: Create KongReferenceGrant in cp_namespace allowing KongCertificate from test namespace to reference the CP.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cert-to-cp']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongCertificate
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 14-assert-cert-and-sni-programmed
+      description: Assert KongCertificate and KongSNI are both Programmed after the Certificate->CP grant is in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.certificateID != null): true
+
+    - name: 15-cleanup-scenario-b
+      description: |
+        Delete SNI, cert, and CP in order; wait for each to be gone.
+        The cert->CP grant is deleted after the cert is confirmed gone (the cert
+        needs the grant during Konnect deprovisioning to locate the CP).
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              name: ($sni_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              name: ($cert_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cert-to-cp']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($cp_namespace)
+
+    # =========================================================================
+    # Scenario C: KongCertificate+KongSNI in test namespace, CP in cp_namespace,
+    # AuthConfig in auth_namespace. Both Certificate->CP AND CP->AuthConfig grants required.
+    # =========================================================================
+
+    - name: 16-create-auth-namespace
+      description: Create separate auth namespace for KonnectAPIAuthConfiguration.
+      bindings:
+        - name: namespace_name
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 17-create-auth-config-cross-ns
+      description: Create KonnectAPIAuthConfiguration in auth_namespace (ns-C).
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth2']))
+        - name: namespace
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 18-create-cp2-cross-ns-auth
+      description: Create KonnectGatewayControlPlane in cp_namespace with cross-namespace authRef to auth_namespace.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              spec:
+                createControlPlaneRequest:
+                  name: ($cp2_name)
+                konnect:
+                  authRef:
+                    name: ($auth2_name)
+                    namespace: ($auth_namespace)
+
+    - name: 19-assert-cp2-auth-grant-missing
+      description: Assert CP2 has APIAuthResolvedRef=False/RefNotPermitted because no CP->AuthConfig grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 20-create-cert2-no-grant
+      description: Create KongCertificate cert2 before any Certificate->CP grant exists.
+      bindings:
+        - name: cert_name
+          value: ($cert2_name)
+        - name: cert_namespace
+          value: ($namespace)
+        - name: cp_name
+          value: ($cp2_name)
+        - name: cp_ref_namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
+
+    - name: 21-create-sni2-no-grant
+      description: Create KongSNI sni2 before any Certificate->CP grant exists.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni2_name)
+                namespace: ($namespace)
+              spec:
+                certificateRef:
+                  name: ($cert2_name)
+                name: "sni2.example.com"
+
+    - name: 22-assert-negative-no-cert-grant
+      description: Assert cert2 ResolvedRefs=False and sni2 KongCertificateRefValid=False (no Certificate->CP grant).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 23-create-cert2-to-cp2-grant
+      description: Create KongReferenceGrant in cp_namespace allowing cert2 from test namespace to reference CP2.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cert2-to-cp2']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongCertificate
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 24-assert-cert2-cp-not-programmed
+      description: |
+        Assert cert2 ResolvedRefs=True (Certificate->CP grant resolved) but ControlPlaneRefValid=False/NotProgrammed
+        because CP2 is not yet Programmed (CP->AuthConfig grant still missing).
+        SNI2 is still not Programmed (cert2 is not Programmed).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'False'
+                    reason: NotProgrammed
+
+    - name: 25-create-cp2-to-auth2-grant
+      description: Create KongReferenceGrant in auth_namespace allowing CP2 from cp_namespace to reference auth2.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cp2-to-auth2']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              namespace: ($cp_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 26-assert-cp2-cert2-sni2-programmed
+      description: Assert CP2, cert2, and sni2 are all Programmed after both grants are in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.certificateID != null): true
+
+    - name: 27-cleanup-scenario-c
+      description: |
+        Delete sni2, cert2, and CP2 in order; wait for each to be gone.
+        cert2->CP2 grant is deleted after cert2 is confirmed gone.
+        cp2->auth2 grant is deleted last, after CP2 is fully deprovisioned.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              name: ($sni2_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              name: ($cert2_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni2_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert2_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cert2-to-cp2']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp2_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cp2-to-auth2']))
+              namespace: ($auth_namespace)
+
+    # =========================================================================
+    # Scenario D: KongCertificate+KongSNI and CP in the same namespace (cp_namespace),
+    # AuthConfig in auth_namespace. No Certificate->CP grant needed (same namespace).
+    # Only the CP->AuthConfig grant is required.
+    # ResolvedRefs condition is absent (same-namespace CPRef removes it).
+    # =========================================================================
+
+    - name: 28-create-auth3-cross-ns
+      description: Create a second KonnectAPIAuthConfiguration in auth_namespace for Scenario D.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth3']))
+        - name: namespace
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 29-create-cp3-cross-ns-auth
+      description: Create CP3 in cp_namespace with cross-namespace authRef to auth_namespace (no grant yet).
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp3_name)
+                namespace: ($cp_namespace)
+              spec:
+                createControlPlaneRequest:
+                  name: ($cp3_name)
+                konnect:
+                  authRef:
+                    name: ($auth3_name)
+                    namespace: ($auth_namespace)
+
+    - name: 30-assert-cp3-auth-grant-missing
+      description: Assert CP3 has APIAuthResolvedRef=False/RefNotPermitted because no CP->AuthConfig grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 31-create-cert3-same-ns-as-cp
+      description: |
+        Create KongCertificate cert3 in cp_namespace (same namespace as CP3). No Certificate->CP grant needed.
+      bindings:
+        - name: cert_name
+          value: ($cert3_name)
+        - name: cert_namespace
+          value: ($cp_namespace)
+        - name: cp_name
+          value: ($cp3_name)
+        - name: cp_ref_namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
+
+    - name: 32-create-sni3-same-ns-as-cp
+      description: Create KongSNI sni3 in cp_namespace.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni3_name)
+                namespace: ($cp_namespace)
+              spec:
+                certificateRef:
+                  name: ($cert3_name)
+                name: "sni3.example.com"
+
+    - name: 33-assert-negative-cp-not-programmed
+      description: |
+        Assert cert3 ControlPlaneRefValid=False/NotProgrammed (CP3 not Programmed, no CP->AuthConfig grant)
+        and sni3 KongCertificateRefValid=False/Invalid (cert3 not Programmed).
+        No ResolvedRefs condition on cert3 (same-namespace CPRef removes it).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'False'
+                    reason: NotProgrammed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 34-create-cp3-to-auth3-grant
+      description: Create KongReferenceGrant in auth_namespace allowing CP3 from cp_namespace to reference auth3.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cp3-to-auth3']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              namespace: ($cp_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 35-assert-cp3-cert3-sni3-programmed
+      description: Assert CP3, cert3, and sni3 are all Programmed. No ResolvedRefs on cert3 (same-namespace CPRef).
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.certificateID != null): true
+
+    - name: 36-cleanup-scenario-d
+      description: |
+        Delete sni3, cert3, and CP3 in order; wait for each to be gone.
+        CP3->auth3 grant is deleted last, after CP3 is fully deprovisioned.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              name: ($sni3_name)
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              name: ($cert3_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni3_name)
+                namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert3_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp3_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp3_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cp3-to-auth3']))
+              namespace: ($auth_namespace)
+
+    # =========================================================================
+    # Scenario E: cross-namespace certificateRef.
+    # KongSNI in sni_namespace, KongCertificate+CP+AuthConfig in cp_namespace.
+    # A KongReferenceGrant in cp_namespace (allowing KongSNI from sni_namespace
+    # to reference KongCertificate) is required.
+    # =========================================================================
+
+    - name: 37-create-auth4-for-cert-cross-ns
+      description: Create KonnectAPIAuthConfiguration in cp_namespace for Scenario E.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth4']))
+        - name: namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 38-create-cp4-same-ns-auth
+      description: Create KonnectGatewayControlPlane in cp_namespace with same-namespace authRef.
+      bindings:
+        - name: cp_name
+          value: ($cp4_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: auth_name
+          value: ($auth4_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 39-create-cert4-same-ns-as-cp
+      description: Create KongCertificate cert4 in cp_namespace with cpRef to cp4.
+      bindings:
+        - name: cert_name
+          value: ($cert4_name)
+        - name: cert_namespace
+          value: ($cp_namespace)
+        - name: cp_name
+          value: ($cp4_name)
+        - name: cp_ref_namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
+
+    - name: 40-assert-cert4-programmed
+      description: Assert cert4 is Programmed before creating the cross-namespace SNI.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert4_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.id != null): true
+
+    - name: 41-create-sni-namespace
+      description: Create dedicated namespace for sni4 in Scenario E.
+      bindings:
+        - name: namespace_name
+          value: ($sni_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 42-create-sni4-cross-ns-cert-no-grant
+      description: |
+        Create KongSNI in sni_namespace with a cross-namespace certificateRef
+        pointing to cert4 in cp_namespace. No KongReferenceGrant exists yet.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni4_name)
+                namespace: ($sni_namespace)
+              spec:
+                certificateRef:
+                  name: ($cert4_name)
+                  namespace: ($cp_namespace)
+                name: "sni4.example.com"
+
+    - name: 43-assert-sni4-ref-not-permitted
+      description: |
+        Assert sni4 has ResolvedRefs=False/RefNotPermitted because no
+        KongReferenceGrant allows KongSNI from sni_namespace to reference
+        KongCertificate in cp_namespace.
+      timeouts:
+        assert: 60s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni4_name)
+                namespace: ($sni_namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+
+    - name: 44-create-sni-to-cert-grant
+      description: |
+        Create KongReferenceGrant in cp_namespace allowing KongSNI from
+        sni_namespace to reference KongCertificate.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'sni-to-cert']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongSNI
+              namespace: ($sni_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: KongCertificate
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 45-assert-sni4-programmed
+      description: |
+        Assert sni4 is Programmed with ResolvedRefs=True and certificateID set
+        after the KongReferenceGrant is in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni4_name)
+                namespace: ($sni_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.certificateID != null): true
+
+    - name: 46-delete-sni-to-cert-grant
+      description: Delete the SNI->Cert grant and verify sni4 reverts to RefNotPermitted.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'sni-to-cert']))
+              namespace: ($cp_namespace)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni4_name)
+                namespace: ($sni_namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 47-cleanup-scenario-e
+      description: |
+        Recreate the grant so sni4 can be deprovisioned from Konnect, then
+        delete sni4, cert4, and cp4 in order.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              metadata:
+                name: (join('-', [$namespace, 'sni-to-cert']))
+                namespace: ($cp_namespace)
+              spec:
+                from:
+                  - group: configuration.konghq.com
+                    kind: KongSNI
+                    namespace: ($sni_namespace)
+                to:
+                  - group: configuration.konghq.com
+                    kind: KongCertificate
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              name: ($sni4_name)
+              namespace: ($sni_namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni4_name)
+                namespace: ($sni_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              name: ($cert4_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert4_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'sni-to-cert']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp4_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp4_name)
+                namespace: ($cp_namespace)
+
+    # =========================================================================
+    # Scenario F: all three resources in different namespaces.
+    # KongSNI in sni_namespace, KongCertificate in test namespace, CP+AuthConfig
+    # in cp_namespace. Combines both cross-namespace dimensions:
+    #   - SNI cross-namespace certificateRef (SNI→Cert grant in test namespace)
+    #   - Cert cross-namespace controlPlaneRef (Cert→CP grant in cp_namespace)
+    # =========================================================================
+
+    - name: 48-create-auth5-for-all-xns
+      description: Create KonnectAPIAuthConfiguration in cp_namespace for Scenario F.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth5']))
+        - name: namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 49-create-cp5-all-xns
+      description: Create KonnectGatewayControlPlane in cp_namespace with same-namespace authRef.
+      bindings:
+        - name: cp_name
+          value: ($cp5_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: auth_name
+          value: ($auth5_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 50-create-cert5-no-grants
+      description: |
+        Create KongCertificate cert5 in test namespace with cross-namespace cpRef to cp_namespace.
+        No grants exist yet — cert5 should show ResolvedRefs=False/RefNotPermitted.
+      bindings:
+        - name: cert_name
+          value: ($cert5_name)
+        - name: cert_namespace
+          value: ($namespace)
+        - name: cp_name
+          value: ($cp5_name)
+        - name: cp_ref_namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-kongCertificate-and-Secret.yaml
+
+    - name: 51-create-sni5-no-grants
+      description: |
+        Create KongSNI sni5 in sni_namespace with cross-namespace certificateRef to test namespace.
+        No grants exist yet — sni5 should show ResolvedRefs=False/RefNotPermitted.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni5_name)
+                namespace: ($sni_namespace)
+              spec:
+                certificateRef:
+                  name: ($cert5_name)
+                  namespace: ($namespace)
+                name: "sni5.example.com"
+
+    - name: 52-assert-negative-both-grants-missing
+      description: |
+        Assert cert5 ResolvedRefs=False (no Cert→CP grant) and sni5
+        ResolvedRefs=False (no SNI→Cert grant). Both are blocked.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert5_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni5_name)
+                namespace: ($sni_namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+
+    - name: 53-create-cert5-to-cp5-grant
+      description: |
+        Create KongReferenceGrant in cp_namespace allowing cert5 from test namespace
+        to reference CP5. cert5 should become Programmed; sni5 remains blocked.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cert5-to-cp5']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongCertificate
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 54-assert-cert5-programmed-sni5-still-blocked
+      description: |
+        Assert cert5 is Programmed (Cert→CP grant in place) but sni5 is still
+        ResolvedRefs=False/RefNotPermitted (no SNI→Cert grant yet).
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert5_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni5_name)
+                namespace: ($sni_namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+
+    - name: 55-create-sni5-to-cert5-grant
+      description: |
+        Create KongReferenceGrant in test namespace allowing sni5 from sni_namespace
+        to reference KongCertificate. Both grants are now in place.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'sni5-to-cert5']))
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongSNI
+              namespace: ($sni_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: KongCertificate
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 56-assert-cert5-and-sni5-programmed
+      description: |
+        Assert both cert5 and sni5 are Programmed with both ResolvedRefs=True.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert5_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni5_name)
+                namespace: ($sni_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'KongCertificateRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.certificateID != null): true
+
+    - name: 57-cleanup-scenario-f
+      description: |
+        Delete sni5 and cert5 (grants must stay until resources are deprovisioned),
+        then remove grants and cp5.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              name: ($sni5_name)
+              namespace: ($sni_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              name: ($cert5_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: ($sni5_name)
+                namespace: ($sni_namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert5_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'sni5-to-cert5']))
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cert5-to-cp5']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp5_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp5_name)
+                namespace: ($cp_namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: kongsni-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: (join(',', [$cp_namespace, $auth_namespace, $sni_namespace]))
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

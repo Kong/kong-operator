@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +16,7 @@ func CreateNamespace(ctx context.Context, t *testing.T, client ctrlclient.Client
 
 	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
+			GenerateName: "ns-",
 			Labels: map[string]string{
 				"test": "envtest",
 			},
@@ -35,8 +34,8 @@ func CreatePod(ctx context.Context, t *testing.T, client ctrlclient.Client, ns s
 
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
-			Name:      uuid.NewString(),
+			Namespace:    ns,
+			GenerateName: "pod-",
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{

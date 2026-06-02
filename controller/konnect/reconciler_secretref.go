@@ -36,6 +36,13 @@ func getSecretRefs[T constraints.SupportedKonnectEntityType, TEnt constraints.En
 			secretRefs = append(secretRefs, *e.Spec.SecretRef)
 		}
 	}
+	// Entities using the generated SensitiveDataSource mechanism implement
+	// SensitiveDataSecretRefsGetter; collect all active secretRef pointers.
+	if g, ok := any(e).(sensitiveDataSecretRefsGetter); ok {
+		for _, r := range g.GetSensitiveDataSecretRefs() {
+			secretRefs = append(secretRefs, r.Ref)
+		}
+	}
 	return secretRefs
 }
 
@@ -80,6 +87,34 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			return ctrl.Result{}, true, &ReferencedSecretDoesNotExistError{
 				Reference: nn,
 				Err:       err,
+			}
+		}
+
+		// For entities using SensitiveDataSource, verify every expected key exists.
+		if !deleting {
+			if g, ok := any(ent).(sensitiveDataSecretRefsGetter); ok {
+				for _, sdr := range g.GetSensitiveDataSecretRefs() {
+					refNS := ent.GetNamespace()
+					if sdr.Ref.Namespace != nil && *sdr.Ref.Namespace != "" {
+						refNS = *sdr.Ref.Namespace
+					}
+					if sdr.Ref.Name != secretRef.Name || refNS != ns {
+						continue
+					}
+					if _, ok := secret.Data[sdr.Key]; !ok {
+						msg := fmt.Sprintf("secret %s/%s is missing key %q", ns, secretRef.Name, sdr.Key)
+						if res, errStatus := patch.StatusWithCondition(
+							ctx, cl, ent,
+							konnectv1alpha1.SecretRefValidConditionType,
+							metav1.ConditionFalse,
+							konnectv1alpha1.SecretRefReasonInvalid,
+							msg,
+						); errStatus != nil || !res.IsZero() {
+							return res, true, errStatus
+						}
+						return ctrl.Result{}, true, fmt.Errorf("%s", msg)
+					}
+				}
 			}
 		}
 

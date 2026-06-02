@@ -3,12 +3,12 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/format"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
-
-	"github.com/Masterminds/sprig/v3"
 )
 
 type supportedTypesT struct {
@@ -150,7 +150,17 @@ func renderTemplate(
 ) error {
 	log := slog.With("packageName", packagename, "outputFile", outputFile)
 
-	tpl, err := template.New("tpl").Funcs(sprig.TxtFuncMap()).Parse(templateContent)
+	tpl, err := template.New("tpl").Funcs(template.FuncMap{
+		"hasPrefix": func(prefix, value string) bool {
+			return strings.HasPrefix(value, prefix)
+		},
+		"trimPrefix": func(prefix, value string) string {
+			return strings.TrimPrefix(value, prefix)
+		},
+		"hasSuffix": func(suffix, value string) bool {
+			return strings.HasSuffix(value, suffix)
+		},
+	}).Parse(templateContent)
 	if err != nil {
 		return fmt.Errorf("failed to parse template for %s: %w", outputFile, err)
 	}
@@ -160,9 +170,13 @@ func renderTemplate(
 		if err := tpl.Execute(contents, st); err != nil {
 			return fmt.Errorf("%s: failed to execute template for %s: %w", path, outputFile, err)
 		}
+		formatted, err := format.Source(contents.Bytes())
+		if err != nil {
+			return fmt.Errorf("%s: failed to format rendered output for %s: %w", path, outputFile, err)
+		}
 
 		log.Info("Writing to file", "path", path)
-		if err := os.WriteFile(path, contents.Bytes(), 0o600); err != nil {
+		if err := os.WriteFile(path, formatted, 0o600); err != nil {
 			return fmt.Errorf("%s: failed to write file %s: %w", path, outputFile, err)
 		}
 	}

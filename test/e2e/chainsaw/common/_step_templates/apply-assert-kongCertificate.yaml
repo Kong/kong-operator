@@ -1,0 +1,45 @@
+# Template for creating and asserting a KongCertificate sourced from an existing Secret.
+#
+# The referenced Secret must be of type kubernetes.io/tls and contain keys tls.crt and tls.key.
+#
+# Required bindings:
+#   - cert_name: Name of the KongCertificate to create.
+#   - cert_namespace: Namespace where the KongCertificate will be created.
+#   - secret_name: Name of the existing kubernetes.io/tls Secret.
+#   - secret_namespace: Namespace of the Secret.
+#   - cp_name: Name of the KonnectGatewayControlPlane to reference.
+#   - cp_ref_namespace: Namespace of the KonnectGatewayControlPlane.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kong-certificate
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongCertificate
+          metadata:
+            name: ($cert_name)
+            namespace: ($cert_namespace)
+          spec:
+            type: secretRef
+            secretRef:
+              name: ($secret_name)
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($cp_name)
+                namespace: ($cp_ref_namespace)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongCertificate
+          metadata:
+            name: ($cert_name)
+            namespace: ($cert_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (konnect.id != null): true

@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,6 +36,7 @@ type routeValidator interface {
 func ValidateHTTPRoute(
 	ctx context.Context,
 	routesValidator routeValidator,
+	kongVersion semver.Version,
 	translatorFeatures translator.FeatureFlags,
 	httproute *gatewayapi.HTTPRoute,
 	managerClient client.Client,
@@ -71,7 +73,7 @@ func ValidateHTTPRoute(
 	}
 
 	// Validate that the route is valid against Kong Gateway.
-	ok, msg := validateWithKongGateway(ctx, routesValidator, translatorFeatures, httproute)
+	ok, msg := validateWithKongGateway(ctx, routesValidator, kongVersion, translatorFeatures, httproute)
 	return ok, msg, nil
 }
 
@@ -113,7 +115,7 @@ func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewa
 			Name:      string(parentRef.Name),
 		}, &gateway); err != nil {
 			if apierrors.IsNotFound(err) {
-				return false, nil
+				continue
 			}
 			return false, fmt.Errorf("failed to get Gateway: %w", err)
 		}
@@ -233,7 +235,7 @@ func validateHTTPRouteRegexes(httproute *gatewayapi.HTTPRoute) error {
 // -----------------------------------------------------------------------------
 
 func validateWithKongGateway(
-	ctx context.Context, routesValidator routeValidator, translatorFeatures translator.FeatureFlags, httproute *gatewayapi.HTTPRoute,
+	ctx context.Context, routesValidator routeValidator, kongVersion semver.Version, translatorFeatures translator.FeatureFlags, httproute *gatewayapi.HTTPRoute,
 ) (bool, string) {
 	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
 	// Reuse KIC translator that works both for traditional and expressions router to use exactly the same logic.
@@ -259,7 +261,7 @@ func validateWithKongGateway(
 	}
 	for _, service := range translationResult.ServiceNameToKongstateService {
 		for _, route := range service.Routes {
-			route.Override(logr.Discard())
+			route.Override(logr.Discard(), kongVersion)
 			ok, msg, err := routesValidator.Validate(ctx, &route.Route)
 			if err != nil {
 				return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error())

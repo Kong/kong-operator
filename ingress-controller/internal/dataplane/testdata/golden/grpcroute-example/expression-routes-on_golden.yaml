@@ -1,7 +1,7 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: grpcroute.default.grpcbin.example.com.2
+  host: grpcroute.default.grpcbin.example.com.2.invalid
   id: 3ffe4b8d-2338-5124-ae9f-8dccbb3af27b
   name: grpcroute.default.grpcbin.example.com.2
   plugins:
@@ -19,9 +19,6 @@ services:
     name: grpcroute.default.grpcbin.example.com.2.0
     preserve_host: true
     priority: 26766487871743
-    protocols:
-    - http
-    - https
     tags:
     - k8s-name:grpcbin
     - k8s-namespace:default
@@ -39,7 +36,7 @@ services:
   - k8s-version:v1
   write_timeout: 60000
 - connect_timeout: 60000
-  host: grpcroute.default.grpcbin.example.com.1
+  host: grpcroute.default.grpcbin.example.com.1.invalid
   id: 4d9f08e3-4be4-5155-85df-879454f38400
   name: grpcroute.default.grpcbin.example.com.1
   plugins:
@@ -57,9 +54,6 @@ services:
     name: grpcroute.default.grpcbin.example.com.1.0
     preserve_host: true
     priority: 26766487904511
-    protocols:
-    - http
-    - https
     tags:
     - k8s-name:grpcbin
     - k8s-namespace:default
@@ -77,7 +71,7 @@ services:
   - k8s-version:v1
   write_timeout: 60000
 - connect_timeout: 60000
-  host: grpcroute.default.grpcbin.example.com.0
+  host: grpcroute.default.grpcbin.example.com.0.invalid
   id: e3750232-74d7-5496-bf14-1c266ec17184
   name: grpcroute.default.grpcbin.example.com.0
   plugins:
@@ -95,9 +89,6 @@ services:
     name: grpcroute.default.grpcbin.example.com.0.0
     preserve_host: true
     priority: 26766487929087
-    protocols:
-    - http
-    - https
     tags:
     - k8s-name:grpcbin
     - k8s-namespace:default
@@ -116,7 +107,7 @@ services:
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
-  name: grpcroute.default.grpcbin.example.com.2
+  name: grpcroute.default.grpcbin.example.com.2.invalid
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN
@@ -125,7 +116,7 @@ upstreams:
   - k8s-group:core
   - k8s-version:v1
 - algorithm: round-robin
-  name: grpcroute.default.grpcbin.example.com.1
+  name: grpcroute.default.grpcbin.example.com.1.invalid
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN
@@ -134,7 +125,7 @@ upstreams:
   - k8s-group:core
   - k8s-version:v1
 - algorithm: round-robin
-  name: grpcroute.default.grpcbin.example.com.0
+  name: grpcroute.default.grpcbin.example.com.0.invalid
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN

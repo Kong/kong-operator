@@ -52,6 +52,10 @@ const (
 	WaitIngressTick = time.Second * 1
 	// DefaultIngressWait is the default timeout for checking on ingress resources.
 	DefaultIngressWait = time.Minute * 3
+	// WaitTLSRouteTick is the default timeout tick interval for checking on TLSRoute resources.
+	WaitTLSRouteTick = time.Second * 1
+	// DefaultTLSRouteWait is the default timeout for checking on TLSRoute resources.
+	DefaultTLSRouteWait = time.Minute * 3
 )
 
 // -----------------------------------------------------------------------------
@@ -69,7 +73,7 @@ const (
 	// Running on Pod tcp-echo-58ccd6b78d-hn9t8.
 	// In namespace foo.
 	// With IP address 10.244.0.13.
-	TCPEchoImage = "kong/go-echo:0.1.0"
+	TCPEchoImage = "kong/go-echo:0.5.0"
 )
 
 // -----------------------------------------------------------------------------

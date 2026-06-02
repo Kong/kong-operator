@@ -288,7 +288,7 @@ func KonnectGatewayControlPlaneType(typ sdkkonnectcomp.CreateControlPlaneRequest
 		if !ok {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
-		cp.SetKonnectClusterType(new(typ))
+		cp.SetKonnectClusterType(&typ)
 	}
 }
 
@@ -301,6 +301,26 @@ func KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled() ObjOption {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
 		cp.SetKonnectCloudGateway(new(true))
+	}
+}
+
+// KonnectAPIAuthConfigurationWithTestToken returns an ObjOption that sets
+// KonnectAPIAuthConfiguration's token, type and server URL for tests.
+func KonnectAPIAuthConfigurationWithTestToken(token, url string) ObjOption {
+	return func(obj client.Object) {
+		apiAuth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+		if !ok {
+			panic(fmt.Errorf("%T does not implement KonnectAPIAuthConfiguration", obj))
+		}
+		apiAuth.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
+		if token == "" {
+			panic("konnect access token is not set through environment variable")
+		}
+		apiAuth.Spec.Token = token
+		if url == "" {
+			panic("konnect server url is not set through environment variable")
+		}
+		apiAuth.Spec.ServerURL = url
 	}
 }
 
@@ -370,7 +390,7 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 	t.Helper()
 	obj := konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "data-plane-group-configuration-" + randomSuffix(),
+			GenerateName: "data-plane-group-configuration-",
 		},
 		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 			Version:         consts.DefaultDataPlaneTag,
@@ -384,6 +404,180 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 	}
 
 	require.NoError(t, cl.Create(ctx, &obj))
+	return &obj
+}
+
+// Portal deploys a Portal resource and returns it.
+func Portal(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.Portal {
+	t.Helper()
+	name := "portal-" + randomSuffix()
+	obj := konnectv1alpha1.Portal{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.PortalSpec{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: apiAuth.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.PortalAPISpec{
+				Name:                  name,
+				DisplayName:           name,
+				AuthenticationEnabled: "Enabled",
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
+// KonnectEventGateway deploys a KonnectEventGateway resource and returns it.
+func KonnectEventGateway(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectEventGateway {
+	t.Helper()
+	name := "event-gateway-" + randomSuffix()
+	obj := konnectv1alpha1.KonnectEventGateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: apiAuth.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
+				Name: konnectv1alpha1.GatewayName(name),
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
+// EventGatewayVirtualCluster deploys an EventGatewayVirtualCluster resource and returns it.
+func EventGatewayVirtualCluster(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	backendCluster *configurationv1alpha1.EventGatewayBackendCluster,
+	opts ...ObjOption,
+) *configurationv1alpha1.EventGatewayVirtualCluster {
+	t.Helper()
+	name := "virtual-cluster-" + randomSuffix()
+	obj := configurationv1alpha1.EventGatewayVirtualCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
+			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: backendCluster.Name,
+				},
+			},
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterAPISpec{
+				AclMode: configurationv1alpha1.VirtualClusterACLMode("enforce_on_gateway"),
+				Authentication: []configurationv1alpha1.VirtualClusterAuthenticationScheme{
+					{
+						Type:      configurationv1alpha1.VirtualClusterAuthenticationSchemeTypeAnonymous,
+						Anonymous: &configurationv1alpha1.VirtualClusterAuthenticationAnonymous{},
+					},
+				},
+				DNSLabel: configurationv1alpha1.VirtualClusterDNSLabel("vc-" + randomSuffix()),
+				Name:     configurationv1alpha1.VirtualClusterName(name),
+				Namespace: configurationv1alpha1.VirtualClusterNamespace{
+					Mode:   "hide_prefix",
+					Prefix: "tenant_",
+				},
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
+// EventGatewayBackendCluster deploys an EventGatewayBackendCluster resource and returns it.
+func EventGatewayBackendCluster(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	gateway *konnectv1alpha1.KonnectEventGateway,
+	opts ...ObjOption,
+) *configurationv1alpha1.EventGatewayBackendCluster {
+	t.Helper()
+	name := "backend-cluster-" + randomSuffix()
+	obj := configurationv1alpha1.EventGatewayBackendCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
+			GatewayRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: gateway.Name,
+				},
+			},
+			APISpec: configurationv1alpha1.EventGatewayBackendClusterAPISpec{
+				Authentication: &configurationv1alpha1.EventGatewayBackendClusterAuthentication{
+					Type:      configurationv1alpha1.EventGatewayBackendClusterAuthenticationTypeAnonymous,
+					Anonymous: &configurationv1alpha1.BackendClusterAuthenticationAnonymous{},
+				},
+				BootstrapServers: []string{"broker.example.com:9092"},
+				Name:             configurationv1alpha1.BackendClusterName(name),
+				TLS: configurationv1alpha1.BackendClusterTLS{
+					Enabled: "Disabled",
+					ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
+						Certificate: configurationv1alpha1.SensitiveDataSource{
+							Type:  configurationv1alpha1.SensitiveDataSourceTypeInline,
+							Value: new("dummy-cert"),
+						},
+						Key: configurationv1alpha1.SensitiveDataSource{
+							Type:  configurationv1alpha1.SensitiveDataSourceTypeInline,
+							Value: new("dummy-key"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
 	return &obj
 }
 
@@ -886,7 +1080,7 @@ func KongTargetAttachedToUpstream(
 			GenerateName: "upstream-",
 		},
 		Spec: configurationv1alpha1.KongTargetSpec{
-			UpstreamRef: commonv1alpha1.NameRef{
+			UpstreamRef: commonv1alpha1.NamespacedRef{
 				Name: upstream.Name,
 			},
 		},
@@ -1191,7 +1385,7 @@ func KongSNIAttachedToCertificate(
 			Name: name,
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: commonv1alpha1.NameRef{
+			CertificateRef: commonv1alpha1.NamespacedRef{
 				Name: cert.Name,
 			},
 			KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
@@ -1377,10 +1571,9 @@ func KongReferenceGrant(
 ) *configurationv1alpha1.KongReferenceGrant {
 	t.Helper()
 
-	name := "kongreferencegrant-" + randomSuffix()
 	krg := configurationv1alpha1.KongReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			GenerateName: "kongreferencegrant-",
 		},
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{},
 	}

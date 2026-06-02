@@ -102,7 +102,3 @@ type KongLicenseList struct {
 
 	Items []KongLicense `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&KongLicense{}, &KongLicenseList{})
-}

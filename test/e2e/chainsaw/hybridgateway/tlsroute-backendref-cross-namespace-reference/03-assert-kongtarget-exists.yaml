@@ -1,0 +1,14 @@
+---
+# Assert that at least one KongTarget owned by this TLSRoute exists, is
+# Programmed, and is annotated with our TLSRoute reference.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongTarget
+metadata:
+  namespace: ($namespace)
+  (labels."gateway-operator.konghq.com/managed-by" == 'TLSRoute'): true
+  (annotations."gateway-operator.konghq.com/hybrid-routes-TLSRoute" | contains(@, join('/', [($tls_route_namespace), ($tls_route_name)]))): true
+  (annotations."gateway-operator.konghq.com/hybrid-gateways" == join('/', [($gateway_namespace), ($gateway_name)])): true
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed

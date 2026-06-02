@@ -23,8 +23,8 @@ import (
 )
 
 // validBackendRef represents a BackendRef that has passed all validation checks.
-type validBackendRef struct {
-	backendRef  *gwtypes.HTTPBackendRef
+type validBackendRef[T gwtypes.SupportedBackendRef] struct {
+	backendRef  *T
 	service     *corev1.Service
 	servicePort *corev1.ServicePort
 	// readyEndpoints contains merged endpoint addresses from all EndpointSlices for this service.
@@ -37,19 +37,41 @@ type validBackendRef struct {
 
 // TargetsForBackendRefs creates KongTargets for all BackendRefs in a rule.
 // This function processes all BackendRefs together, enabling better weight distribution and optimization.
-func TargetsForBackendRefs(
+func TargetsForBackendRefs[
+	T gwtypes.SupportedRoute,
+	TPtr gwtypes.SupportedRoutePtr[T],
+	R gwtypes.SupportedBackendRef,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	backendRefs []gwtypes.HTTPBackendRef,
+	parentRoute TPtr,
+	backendRefs []R,
 	pRef *gwtypes.ParentReference,
 	upstreamName string,
 	fqdn bool,
 	clusterDomain string,
 ) ([]configurationv1alpha1.KongTarget, error) {
+
+	// Step 0: Check if type of parentRoute matches the type of BackendRefs
+	switch any(parentRoute).(type) {
+	case *gwtypes.HTTPRoute:
+		if _, ok := any(backendRefs).([]gwtypes.HTTPBackendRef); !ok {
+			return nil, fmt.Errorf("failed to build KongTarget: unmatched route and backendRefs type: %T and  %T", parentRoute, backendRefs)
+		}
+	case *gwtypes.TLSRoute:
+		if _, ok := any(backendRefs).([]gwtypes.BackendRef); !ok {
+			return nil, fmt.Errorf("failed to build KongTarget: unmatched route and backendRefs type: %T and  %T", parentRoute, backendRefs)
+		}
+		// TODO: add other types of routes when we support them.
+
+		// Should be unreachable.
+	default:
+		return nil, fmt.Errorf("failed to build KongTarget: unsupported route type %T", parentRoute)
+	}
+
 	// Step 1: Filter and validate all BackendRefs, extracting endpoints.
-	validBackendRefs, err := filterValidBackendRefs(ctx, logger, cl, httpRoute, backendRefs, fqdn, clusterDomain)
+	validBackendRefs, err := filterValidBackendRefs(ctx, logger, cl, parentRoute, backendRefs, fqdn, clusterDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to filter valid BackendRefs: %w", err)
 	}
@@ -63,7 +85,7 @@ func TargetsForBackendRefs(
 	validBackendRefs = recalculateWeightsAcrossBackendRefs(validBackendRefs)
 
 	// Step 3: Create KongTargets from the processed ValidBackendRef structs.
-	targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, httpRoute, pRef, upstreamName, validBackendRefs)
+	targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, parentRoute, pRef, upstreamName, validBackendRefs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create targets from valid BackendRefs: %w", err)
 	}
@@ -79,7 +101,7 @@ func TargetsForBackendRefs(
 // findBackendRefPortInService returns the ServicePort from svc that matches the port specified in bRef.
 // If bRef.Port is nil or no matching port is found in svc.Spec.Ports, an error is returned.
 // This function is used to validate and resolve the actual ServicePort for a given BackendRef.
-func findBackendRefPortInService(bRef *gwtypes.HTTPBackendRef, svc *corev1.Service) (*corev1.ServicePort, error) {
+func findBackendRefPortInService(bRef *gwtypes.BackendRef, svc *corev1.Service) (*corev1.ServicePort, error) {
 	// Check if the port is specified in the BackendRef. The port is required.
 	if bRef.Port == nil {
 		// If the port is not specified, return an error.
@@ -148,8 +170,8 @@ func resolveServiceEndpoints(
 	clusterDomain string,
 ) ([]string, bool, error) {
 	switch {
-	case fqdn && svc.Spec.ClusterIP != "None":
-		// For FQDN mode with regular services (non-headless), use the service FQDN as the single "endpoint".
+	case shouldUseServiceFQDNTarget(svc, fqdn):
+		// For service-upstream or FQDN mode, use the service FQDN as the single endpoint.
 		return resolveFQDNEndpoints(svc, clusterDomain), false, nil
 
 	case svc.Spec.Type == corev1.ServiceTypeExternalName:
@@ -160,6 +182,14 @@ func resolveServiceEndpoints(
 		// For all other cases (headless services, regular services without FQDN mode).
 		return resolveEndpointSliceEndpoints(ctx, logger, cl, svc, svcPort)
 	}
+}
+
+func shouldUseServiceFQDNTarget(svc *corev1.Service, fqdn bool) bool {
+	if metadata.IsServiceUpstream(svc) {
+		return true
+	}
+
+	return fqdn && svc.Spec.ClusterIP != "None"
 }
 
 // resolveFQDNEndpoints creates FQDN-based endpoints for regular services.
@@ -218,8 +248,8 @@ func resolveEndpointSliceEndpoints(
 // resolveTargetPort determines the appropriate target port based on service type and mode.
 func resolveTargetPort(ctx context.Context, cl client.Client, svc *corev1.Service, svcPort *corev1.ServicePort, fqdn bool) (int, error) {
 	switch {
-	case fqdn && svc.Spec.ClusterIP != "None":
-		// For FQDN mode with regular services, use service port (Kong will resolve via DNS).
+	case shouldUseServiceFQDNTarget(svc, fqdn):
+		// For service-upstream or FQDN mode, use the service port (Kong will resolve via DNS).
 		return int(svcPort.Port), nil
 
 	case svc.Spec.Type == corev1.ServiceTypeExternalName:
@@ -262,18 +292,25 @@ func resolveTargetPort(ctx context.Context, cl client.Client, svc *corev1.Servic
 // 3. Check if the specified port exists in the Service.
 // 4. Check if ReferenceGrant permits cross-namespace access (if needed).
 // 5. Fetch EndpointSlices and extract ready endpoints (for headless services, regular services, or when FQDN is disabled).
-func filterValidBackendRefs(
+func filterValidBackendRefs[
+	T gwtypes.SupportedRoute,
+	TPtr gwtypes.SupportedRoutePtr[T],
+	R gwtypes.SupportedBackendRef,
+](
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
-	httpRoute *gwtypes.HTTPRoute,
-	backendRefs []gwtypes.HTTPBackendRef,
+	parentRoute TPtr,
+	backendRefs []R,
 	fqdn bool,
 	clusterDomain string,
-) ([]validBackendRef, error) {
-	var validBackendRefs []validBackendRef
+) ([]validBackendRef[R], error) {
+	var validBackendRefs []validBackendRef[R]
 
-	for _, bRef := range backendRefs {
+	for _, backendRef := range backendRefs {
+		// Extract the `gwtypes.BackendRef` for checking the validity of the backendRef itself
+		// since we do not support `filters` in `HTTPBackendRef` yet.
+		bRef := gwtypes.GetBackendRef(backendRef)
 		// Check if the backendRef is supported.
 		if !route.IsBackendRefSupported(bRef.Group, bRef.Kind) {
 			log.Info(logger, "skipping unsupported backendRef", "group", bRef.Group, "kind", bRef.Kind)
@@ -281,7 +318,7 @@ func filterValidBackendRefs(
 		}
 
 		// Determine the namespace for the referenced Service.
-		bRefNamespace := httpRoute.Namespace
+		bRefNamespace := parentRoute.GetNamespace()
 		if bRef.Namespace != nil && *bRef.Namespace != "" {
 			bRefNamespace = string(*bRef.Namespace)
 		}
@@ -302,8 +339,8 @@ func filterValidBackendRefs(
 		}
 
 		// Check ReferenceGrant permission for cross-namespace access.
-		if bRefNamespace != httpRoute.Namespace {
-			permitted, found, err := route.CheckReferenceGrant(ctx, cl, &bRef.BackendRef, httpRoute.GetObjectKind().GroupVersionKind().Kind, httpRoute.Namespace)
+		if bRefNamespace != parentRoute.GetNamespace() {
+			permitted, found, err := route.CheckReferenceGrant(ctx, cl, &bRef, parentRoute.GetObjectKind().GroupVersionKind().Kind, parentRoute.GetNamespace())
 			if err != nil {
 				return nil, fmt.Errorf("error checking ReferenceGrant for BackendRef %s: %w", bRef.Name, err)
 			}
@@ -333,8 +370,8 @@ func filterValidBackendRefs(
 		}
 
 		// If we reach here, the BackendRef is valid and has endpoints.
-		validBackendRefs = append(validBackendRefs, validBackendRef{
-			backendRef:     &bRef,
+		validBackendRefs = append(validBackendRefs, validBackendRef[R]{
+			backendRef:     &backendRef,
 			service:        svc,
 			servicePort:    svcPort,
 			readyEndpoints: readyEndpoints,
@@ -350,7 +387,7 @@ func filterValidBackendRefs(
 // recalculateWeightsAcrossBackendRefs recalculates weights across all valid BackendRefs in a rule.
 // This uses the weight calculation algorithm from weight.go to ensure mathematically
 // correct proportional distribution based on the original BackendRef weights and endpoint counts.
-func recalculateWeightsAcrossBackendRefs(validBackendRefs []validBackendRef) []validBackendRef {
+func recalculateWeightsAcrossBackendRefs[T gwtypes.SupportedBackendRef](validBackendRefs []validBackendRef[T]) []validBackendRef[T] {
 	if len(validBackendRefs) == 0 {
 		return validBackendRefs
 	}
@@ -363,8 +400,9 @@ func recalculateWeightsAcrossBackendRefs(validBackendRefs []validBackendRef) []v
 
 		// Get the original weight (default to 1 if not specified).
 		weight := uint32(1)
-		if vbRef.backendRef.Weight != nil {
-			weight = uint32(*vbRef.backendRef.Weight)
+		backendRef := gwtypes.GetBackendRef(*vbRef.backendRef)
+		if backendRef.Weight != nil {
+			weight = uint32(*backendRef.Weight)
 		}
 
 		// Number of ready endpoints (could be 1 for FQDN/ExternalName).
@@ -392,11 +430,15 @@ func recalculateWeightsAcrossBackendRefs(validBackendRefs []validBackendRef) []v
 
 // createTargetsFromValidBackendRefs creates KongTargets from validBackendRef structs.
 // This function handles all service types (ClusterIP, ExternalName, FQDN) using a unified approach.
-func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, cl client.Client, httpRoute *gwtypes.HTTPRoute, pRef *gwtypes.ParentReference, upstreamName string,
-	validBackendRefs []validBackendRef,
+func createTargetsFromValidBackendRefs[
+	T gwtypes.SupportedRoute,
+	TPtr gwtypes.SupportedRoutePtr[T],
+	R gwtypes.SupportedBackendRef,
+](ctx context.Context, logger logr.Logger, cl client.Client, parentRoute TPtr, pRef *gwtypes.ParentReference, upstreamName string,
+	validBackendRefs []validBackendRef[R],
 ) ([]configurationv1alpha1.KongTarget, error) {
-	var targets []configurationv1alpha1.KongTarget
 
+	var targets []configurationv1alpha1.KongTarget
 	for _, vbRef := range validBackendRefs {
 		// Skip backends with no endpoints (they have weight 0 anyway).
 		// This should not happen, but if it happens then we skip them.
@@ -418,9 +460,9 @@ func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, 
 
 			target, err := builder.NewKongTarget().
 				WithName(targetName).
-				WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-				WithLabels(httpRoute, pRef).
-				WithAnnotations(httpRoute, pRef).
+				WithNamespace(metadata.NamespaceFromParentRef(parentRoute, pRef)).
+				WithLabels(parentRoute, pRef).
+				WithAnnotations(parentRoute, pRef).
 				WithUpstreamRef(upstreamName).
 				WithTarget(endpoint, port).
 				WithWeight(&weight).
@@ -430,7 +472,7 @@ func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, 
 				return nil, fmt.Errorf("failed to build KongTarget %s: %w", targetName, err)
 			}
 
-			_, err = translator.VerifyAndUpdate(ctx, logger, cl, &target, httpRoute, false)
+			_, err = translator.VerifyAndUpdate(ctx, logger, cl, &target, parentRoute, false)
 			if err != nil {
 				return nil, err
 			}

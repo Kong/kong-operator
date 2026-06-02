@@ -3,10 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/format"
 	"os"
 	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/samber/lo"
 )
 
@@ -35,8 +35,19 @@ func main() {
 	lo.Must0(renderTemplate(cacheStoresTestTemplate, cacheStoresTestOutputFile))
 }
 
+func parseTemplate(templateContent string) (*template.Template, error) {
+	return template.New("tpl").Funcs(template.FuncMap{
+		"default": func(defaultValue, value string) string {
+			if value == "" {
+				return defaultValue
+			}
+			return value
+		},
+	}).Parse(templateContent)
+}
+
 func renderTemplate(templateContent string, outputFile string) error {
-	tpl, err := template.New("tpl").Funcs(sprig.TxtFuncMap()).Parse(templateContent)
+	tpl, err := parseTemplate(templateContent)
 	if err != nil {
 		return fmt.Errorf("failed to parse template for %s: %w", outputFile, err)
 	}
@@ -44,7 +55,11 @@ func renderTemplate(templateContent string, outputFile string) error {
 	if err := tpl.Execute(contents, supportedTypes); err != nil {
 		return fmt.Errorf("failed to execute template for %s: %w", outputFile, err)
 	}
-	if err := os.WriteFile(outputFile, contents.Bytes(), 0o600); err != nil {
+	formatted, err := format.Source(contents.Bytes())
+	if err != nil {
+		return fmt.Errorf("failed to format file %s: %w", outputFile, err)
+	}
+	if err := os.WriteFile(outputFile, formatted, 0o600); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", outputFile, err)
 	}
 	return nil

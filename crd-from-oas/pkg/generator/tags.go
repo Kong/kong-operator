@@ -1,7 +1,7 @@
 package generator
 
 import (
-	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
@@ -12,9 +12,21 @@ import (
 // the OpenAPI spec does not declare an explicit maxLength constraint.
 const defaultMaxLength = 253
 
+// jsonTagForProperty returns the JSON tag segment for a property, mirroring
+// the logic the CRD type template uses: reference properties get a "Ref" suffix,
+// all others use the lowerCamelCase form of the OAS property name.
+func jsonTagForProperty(prop *parser.Property) string {
+	if prop.IsReference {
+		return jsonName(prop.Name) + "Ref"
+	}
+	return jsonName(prop.Name)
+}
+
 // KubebuilderTags generates kubebuilder validation tags for a property.
-// It takes an optional fieldConfig for custom validations.
-func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *config.Config) []string {
+// fieldCursor is the *config.FieldConfig for the struct that contains prop
+// (i.e. the parent-level cursor); the function advances it by the property's
+// JSON tag to locate any custom validations for that specific field.
+func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []string {
 	var tags []string
 
 	// Required validation
@@ -70,28 +82,67 @@ func KubebuilderTags(prop *parser.Property, entityName string, fieldConfig *conf
 		}
 	}
 
-	// Default value
-	if prop.Default != nil {
-		switch v := prop.Default.(type) {
-		case bool:
-			// Bool defaults map to Enabled/Disabled to match the string enum.
-			if v {
-				tags = append(tags, markerDefaultString("Enabled"))
-			} else {
-				tags = append(tags, markerDefaultString("Disabled"))
-			}
-		case string:
-			tags = append(tags, markerDefaultString(v))
-		default:
-			panic("unsupported default value type: " + fmt.Sprintf("%T", v))
-		}
+	// Map MaxProperties constraint (applies to both ref and inline map types)
+	if prop.MaxProperties != nil {
+		tags = append(tags, markerValidationMaxProperties(int(*prop.MaxProperties)))
 	}
 
-	// Add custom validations from config
-	if fieldConfig != nil {
-		customValidations := fieldConfig.GetFieldValidations(entityName, prop.Name)
-		tags = append(tags, customValidations...)
+	// Apply custom validations from config, overriding any auto-generated
+	// marker that shares the same key (text before the first '=').
+	propCursor := fieldCursor.Sub(jsonTagForProperty(prop))
+	if propCursor != nil && len(propCursor.Validations) > 0 {
+		overrideKeys := make(map[string]struct{}, len(propCursor.Validations))
+		for _, v := range propCursor.Validations {
+			overrideKeys[markerKey(v)] = struct{}{}
+		}
+		tags = slices.DeleteFunc(tags, func(t string) bool {
+			_, replaced := overrideKeys[markerKey(t)]
+			return replaced
+		})
+		tags = append(tags, propCursor.Validations...)
 	}
 
 	return tags
+}
+
+// markerKey returns the portion of a kubebuilder marker before the first '=',
+// which acts as the unique key for override matching.
+// For markers without '=' the whole string is the key (e.g. "+optional").
+func markerKey(marker string) string {
+	key, _, _ := strings.Cut(marker, "=")
+	return key
+}
+
+// valueTypeMarkers generates kubebuilder validation markers for a map value type
+// based on the additionalProperties constraints from the OpenAPI spec.
+func valueTypeMarkers(ap *parser.Property) []string {
+	var markers []string
+	if ap.Type == "string" {
+		if ap.MinLength != nil {
+			markers = append(markers, markerValidationMinLength(int(*ap.MinLength)))
+		}
+		if ap.MaxLength != nil {
+			markers = append(markers, markerValidationMaxLength(int(*ap.MaxLength)))
+		}
+		if ap.Pattern != "" {
+			markers = append(markers, markerValidationPattern(ap.Pattern))
+		}
+	}
+	return markers
+}
+
+// propertyToGoBaseType returns the Go base type for a simple property.
+func propertyToGoBaseType(prop *parser.Property) string {
+	switch prop.Type {
+	case "string":
+		return "string"
+	case "integer":
+		return "int"
+	case "boolean":
+		return "bool"
+	case "number":
+		return "float64"
+	default:
+		return "string"
+	}
 }

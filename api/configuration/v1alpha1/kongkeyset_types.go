@@ -33,6 +33,7 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +kong:channels=kong-operator
 type KongKeySet struct {
@@ -95,8 +96,4 @@ type KongKeySetList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []KongKeySet `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&KongKeySet{}, &KongKeySetList{})
 }

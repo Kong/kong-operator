@@ -3,6 +3,7 @@ package konnect
 import (
 	"context"
 	"fmt"
+	"maps"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
@@ -76,13 +77,24 @@ func listKonnectAPIAuthConfigurationsReferencingSecret(cl client.Client) func(ct
 	}
 }
 
-// konnectAPIAuthReferencingTypes is a list of all entity types that can reference
-// a KonnectAPIAuthConfiguration. This list is used to set up watches so that when
-// a KonnectAPIAuthConfiguration changes, all entities referencing it are reconciled.
-var konnectAPIAuthReferencingTypes = []constraints.EntityWithKonnectAPIAuthConfigurationRef{
+var handwrittenKonnectAPIAuthReferencingTypes = []constraints.EntityWithKonnectAPIAuthConfigurationRef{
 	&konnectv1alpha1.KonnectCloudGatewayNetwork{},
 	&konnectv1alpha2.KonnectGatewayControlPlane{},
 	&konnectv1alpha2.KonnectExtension{},
+}
+
+// konnectAPIAuthReferencingTypes is a list of all entity types that can reference
+// a KonnectAPIAuthConfiguration. This list is used to set up watches so that when
+// a KonnectAPIAuthConfiguration changes, all entities referencing it are reconciled.
+var konnectAPIAuthReferencingTypes = append(
+	append([]constraints.EntityWithKonnectAPIAuthConfigurationRef{}, handwrittenKonnectAPIAuthReferencingTypes...),
+	generatedKonnectAPIAuthReferencingTypes...,
+)
+
+var handwrittenKonnectAPIAuthReferencingTypeListsWithIndexes = map[client.ObjectList]string{
+	&konnectv1alpha1.KonnectCloudGatewayNetworkList{}: index.IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration,
+	&konnectv1alpha2.KonnectGatewayControlPlaneList{}: index.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
+	&konnectv1alpha2.KonnectExtensionList{}:           index.IndexFieldKonnectExtensionOnAPIAuthConfiguration,
 }
 
 // konnectAPIAuthReferencingTypeListsWithIndexes is a map of Konnect resource list types
@@ -90,11 +102,14 @@ var konnectAPIAuthReferencingTypes = []constraints.EntityWithKonnectAPIAuthConfi
 // This map is used to identify which resource types need to be reconciled when a
 // KonnectAPIAuth object changes, enabling efficient lookup of dependent resources
 // through indexed fields.
-var konnectAPIAuthReferencingTypeListsWithIndexes = map[client.ObjectList]string{
-	&konnectv1alpha1.KonnectCloudGatewayNetworkList{}: index.IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration,
-	&konnectv1alpha2.KonnectGatewayControlPlaneList{}: index.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
-	&konnectv1alpha2.KonnectExtensionList{}:           index.IndexFieldKonnectExtensionOnAPIAuthConfiguration,
-}
+var konnectAPIAuthReferencingTypeListsWithIndexes = func() map[client.ObjectList]string {
+	ret := make(map[client.ObjectList]string,
+		len(handwrittenKonnectAPIAuthReferencingTypeListsWithIndexes)+len(generatedKonnectAPIAuthReferencingTypeListsWithIndexes),
+	)
+	maps.Copy(ret, handwrittenKonnectAPIAuthReferencingTypeListsWithIndexes)
+	maps.Copy(ret, generatedKonnectAPIAuthReferencingTypeListsWithIndexes)
+	return ret
+}()
 
 // setKonnectAPIAuthConfigurationRefWatches sets up watches for types that reference KonnectAPIAuthConfiguration.
 func setKonnectAPIAuthConfigurationRefWatches(b *builder.Builder) *builder.Builder {

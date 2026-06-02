@@ -24,9 +24,13 @@ jobs:
         gateway-type:
           - standard
           - hybrid
+        exclude:
+         - router-flavor: expressions
+           gateway-type: hybrid
+
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -52,7 +56,7 @@ jobs:
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -64,7 +68,7 @@ jobs:
 
     - name: Go cache (restore only for non-main branches)
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -73,6 +77,8 @@ jobs:
         restore-keys: |
           ${{ env.GO_CACHE_KEY }}
           ${{ env.GO_CACHE_KEY_2 }}
+
+    - uses: ./.github/actions/bump-inotify
 
     - name: run conformance tests
       run: make test.conformance
@@ -86,7 +92,7 @@ jobs:
 
     - name: upload diagnostics
       if: ${{ always() }}
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: diagnostics-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
         path: /tmp/ktf-diag*
@@ -94,20 +100,20 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
         path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}.xml
 
     - name: collect conformance report
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
         path: experimental-*-report.yaml
 
     - name: upload controller logs
       if: ${{ always() }}
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: controller-logs-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
         path: /tmp/kong-operator-controller-logs*

@@ -17,6 +17,7 @@ func TestParsePaths_BasicPath(t *testing.T) {
 					RequestBody: &openapi3.RequestBodyRef{
 						Ref: "#/components/requestBodies/CreatePortal",
 						Value: &openapi3.RequestBody{
+							Required: true,
 							Content: openapi3.Content{
 								"application/json": &openapi3.MediaType{
 									Schema: &openapi3.SchemaRef{
@@ -80,6 +81,39 @@ func TestParsePaths_BasicPath(t *testing.T) {
 	assert.True(t, schema.Properties[1].Required)
 	assert.Equal(t, int64(1), *schema.Properties[1].MinLength)
 	assert.Equal(t, int64(100), *schema.Properties[1].MaxLength)
+	assert.False(t, schema.CreateReqBodyPointer)
+}
+
+func TestParsePaths_CreateRequestBodyPointerHint(t *testing.T) {
+	doc := &openapi3.T{
+		Paths: openapi3.NewPaths(
+			openapi3.WithPath("/v1/event-gateways/{gatewayId}/data-plane-certificates", &openapi3.PathItem{
+				Post: &openapi3.Operation{
+					OperationID: "create-event-gateway-data-plane-certificate",
+					RequestBody: &openapi3.RequestBodyRef{
+						Value: &openapi3.RequestBody{
+							Content: openapi3.Content{
+								"application/json": &openapi3.MediaType{
+									Schema: &openapi3.SchemaRef{
+										Value: &openapi3.Schema{Type: &openapi3.Types{"object"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+		),
+		Components: &openapi3.Components{Schemas: openapi3.Schemas{}},
+	}
+
+	parser := NewParser(doc)
+	result, err := parser.ParsePaths([]string{"/v1/event-gateways/{gatewayId}/data-plane-certificates"})
+
+	require.NoError(t, err)
+	schema := result.RequestBodies["CreateEventGatewayDataPlaneCertificate"]
+	require.NotNil(t, schema)
+	assert.True(t, schema.CreateReqBodyPointer)
 }
 
 func TestParsePaths_WithPathDependencies(t *testing.T) {
@@ -132,7 +166,7 @@ func TestParsePaths_WithPathDependencies(t *testing.T) {
 	assert.Equal(t, "portalId", dep.ParamName)
 	assert.Equal(t, "Portal", dep.EntityName)
 	assert.Equal(t, "PortalRef", dep.FieldName)
-	assert.Equal(t, "portal_ref", dep.JSONName)
+	assert.Equal(t, "portalRef", dep.JSONName)
 }
 
 func TestParsePaths_MultiplePaths(t *testing.T) {
@@ -239,7 +273,7 @@ func TestParsePaths_NoPostOperation(t *testing.T) {
 	result, err := parser.ParsePaths([]string{"/v3/portals"})
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "does not have a POST operation")
+	assert.Contains(t, err.Error(), "path /v3/portals does not have a POST or PUT operation")
 	assert.Nil(t, result)
 }
 
@@ -767,10 +801,24 @@ func TestExtractPathDependencies(t *testing.T) {
 			path: "/v3/portals/{portalId}/teams",
 			expected: []*Dependency{
 				{
-					ParamName:  "portalId",
-					EntityName: "Portal",
-					FieldName:  "PortalRef",
-					JSONName:   "portal_ref",
+					ParamName:          "portalId",
+					EntityName:         "Portal",
+					AccessorEntityName: "Portal",
+					FieldName:          "PortalRef",
+					JSONName:           "portalRef",
+				},
+			},
+		},
+		{
+			name: "event gateway dependency keeps event gateway accessor name",
+			path: "/v1/event-gateways/{gatewayId}/data-plane-certificates",
+			expected: []*Dependency{
+				{
+					ParamName:          "gatewayId",
+					EntityName:         "Gateway",
+					AccessorEntityName: "EventGateway",
+					FieldName:          "GatewayRef",
+					JSONName:           "gatewayRef",
 				},
 			},
 		},
@@ -779,16 +827,38 @@ func TestExtractPathDependencies(t *testing.T) {
 			path: "/v3/portals/{portalId}/teams/{teamId}/members",
 			expected: []*Dependency{
 				{
-					ParamName:  "portalId",
-					EntityName: "Portal",
-					FieldName:  "PortalRef",
-					JSONName:   "portal_ref",
+					ParamName:          "portalId",
+					EntityName:         "Portal",
+					AccessorEntityName: "Portal",
+					FieldName:          "PortalRef",
+					JSONName:           "portalRef",
 				},
 				{
-					ParamName:  "teamId",
-					EntityName: "Team",
-					FieldName:  "TeamRef",
-					JSONName:   "team_ref",
+					ParamName:          "teamId",
+					EntityName:         "Team",
+					AccessorEntityName: "Team",
+					FieldName:          "TeamRef",
+					JSONName:           "teamRef",
+				},
+			},
+		},
+		{
+			name: "event gateway nested virtual cluster dependency keeps event gateway accessor and ref field names",
+			path: "/v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policies",
+			expected: []*Dependency{
+				{
+					ParamName:          "gatewayId",
+					EntityName:         "Gateway",
+					AccessorEntityName: "EventGateway",
+					FieldName:          "GatewayRef",
+					JSONName:           "gatewayRef",
+				},
+				{
+					ParamName:          "virtualClusterId",
+					EntityName:         "VirtualCluster",
+					AccessorEntityName: "EventGatewayVirtualCluster",
+					FieldName:          "EventGatewayVirtualClusterRef",
+					JSONName:           "eventGatewayVirtualClusterRef",
 				},
 			},
 		},
@@ -806,6 +876,7 @@ func TestExtractPathDependencies(t *testing.T) {
 				for i, expected := range tc.expected {
 					assert.Equal(t, expected.ParamName, deps[i].ParamName)
 					assert.Equal(t, expected.EntityName, deps[i].EntityName)
+					assert.Equal(t, expected.AccessorEntityName, deps[i].AccessorEntityName)
 					assert.Equal(t, expected.FieldName, deps[i].FieldName)
 					assert.Equal(t, expected.JSONName, deps[i].JSONName)
 				}

@@ -1,0 +1,1541 @@
+# KongRoute cross-namespace reference test.
+#
+# Exercises two orthogonal cross-namespace axes:
+#   1. KongRoute -> KongService (cross-namespace serviceRef)
+#   2. KongService -> KonnectGatewayControlPlane (cross-namespace controlPlaneRef)
+#      and KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration (cross-namespace authRef)
+#
+# Scenario A: All resources in the same namespace — baseline, no grants needed.
+#   No ResolvedRefs condition on route (same-namespace serviceRef removes it).
+#
+# Scenario B: KongRoute+KongService in ns-A, CP and AuthConfig co-located in ns-B.
+#   Only a Service->CP grant is needed (route and service are still co-located).
+#   Route shows KongServiceRefValid=False while service is not programmed.
+#
+# Scenario C: KongRoute+KongService in ns-A, CP in ns-B, AuthConfig in ns-C.
+#   Both Service->CP AND CP->AuthConfig grants are required.
+#
+# Scenario D: KongRoute+KongService and CP in the same namespace ns-B, AuthConfig in ns-C.
+#   No Service->CP grant needed (same namespace). Only CP->AuthConfig grant required.
+#   No ResolvedRefs condition on route (same-namespace serviceRef removes it).
+#
+# Scenario E: KongRoute in ns-A, KongService+CP+AuthConfig in ns-B.
+#   Only a Route->Service grant is needed (CP and AuthConfig are co-located with the service).
+#   Route shows ResolvedRefs=False/RefNotPermitted when the grant is missing.
+#
+# Scenario F: Both cross-namespace axes active simultaneously.
+#   KongRoute in route_namespace (ns-A), KongService in test namespace (ns-B), CP+AuthConfig in cp_namespace (ns-C).
+#   Two grants required: Route->Service in ns-B AND Service->CP in ns-C.
+#   Exercises that removing one grant re-blocks the route even when the other grant is present.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongroute-cross-namespace
+spec:
+  description: |
+    Tests cross-namespace reference behaviour for KongRoute across two axes:
+    (1) KongRoute -> KongService cross-namespace serviceRef, and
+    (2) KongService -> KonnectGatewayControlPlane cross-namespace controlPlaneRef
+        (and the CP's cross-namespace authRef).
+
+    Scenario A: All resources in the same namespace. No grants needed; baseline sanity check.
+
+    Scenario B: KongRoute+KongService (ns-A) -> KonnectGatewayControlPlane (ns-B) -> KonnectAPIAuthConfiguration (ns-B).
+    CP and AuthConfig co-located: only one Service->CP grant is needed.
+    Route shows KongServiceRefValid=False while service has no grant.
+
+    Scenario C: KongRoute+KongService (ns-A) -> KonnectGatewayControlPlane (ns-B) -> KonnectAPIAuthConfiguration (ns-C).
+    All three in different namespaces: both Service->CP AND CP->AuthConfig grants required.
+    Includes an intermediate assertion that shows the service (and route) fail when
+    CP->AuthConfig grant is missing even after the Service->CP grant is in place.
+
+    Scenario D: KongRoute+KongService (ns-B) -> KonnectGatewayControlPlane (ns-B) -> KonnectAPIAuthConfiguration (ns-C).
+    Service and CP in the same namespace: no Service->CP grant needed.
+    Only the CP->AuthConfig grant is required.
+
+    Scenario E: KongRoute (ns-A) -> KongService+KonnectGatewayControlPlane+KonnectAPIAuthConfiguration (ns-B).
+    Cross-namespace serviceRef: only one Route->Service grant is needed.
+    Route shows ResolvedRefs=False/RefNotPermitted when the grant is missing.
+    After the grant is added the route shows ResolvedRefs=True/ResolvedRefs and becomes Programmed.
+
+    Scenario F: KongRoute (route-ns) -> KongService (test-ns) -> KonnectGatewayControlPlane+KonnectAPIAuthConfiguration (cp-ns).
+    Both axes are cross-namespace simultaneously. Two grants required:
+      1. Route->Service in test-ns (for the cross-namespace serviceRef)
+      2. Service->CP in cp-ns (for the cross-namespace CPRef)
+    Includes an intermediate assertion showing route5 is still blocked after only the
+    Service->CP grant is in place (Route->Service grant still missing).
+
+  bindings:
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Namespace bindings.
+    - name: cp_namespace
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_namespace
+      value: (join('-', [$namespace, 'auth']))
+    # Scenario A resource names (all in test namespace).
+    - name: cp0_name
+      value: (join('-', [$namespace, 'cp0']))
+    - name: auth0_name
+      value: (join('-', [$namespace, 'auth0-konnect-api-auth']))
+    - name: svc0_name
+      value: (join('-', [$namespace, 'svc0']))
+    - name: route0_name
+      value: (join('-', [$namespace, 'route0']))
+    # Scenario B resource names (route+service in test namespace, CP+AuthConfig in cp_namespace).
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_name
+      value: (join('-', [$namespace, 'konnect-api-auth']))
+    - name: svc_name
+      value: (join('-', [$namespace, 'svc']))
+    - name: route_name
+      value: (join('-', [$namespace, 'route']))
+    # Scenario C resource names (route+service in test namespace, CP in cp_namespace, AuthConfig in auth_namespace).
+    - name: cp2_name
+      value: (join('-', [$namespace, 'cp2']))
+    - name: auth2_name
+      value: (join('-', [$namespace, 'auth2-konnect-api-auth']))
+    - name: svc2_name
+      value: (join('-', [$namespace, 'svc2']))
+    - name: route2_name
+      value: (join('-', [$namespace, 'route2']))
+    # Scenario D resource names (route+service+CP in cp_namespace, AuthConfig in auth_namespace).
+    - name: cp3_name
+      value: (join('-', [$namespace, 'cp3']))
+    - name: auth3_name
+      value: (join('-', [$namespace, 'auth3-konnect-api-auth']))
+    - name: svc3_name
+      value: (join('-', [$namespace, 'svc3']))
+    - name: route3_name
+      value: (join('-', [$namespace, 'route3']))
+    # Scenario E resource names (route in test namespace, service+CP+AuthConfig in cp_namespace).
+    - name: cp4_name
+      value: (join('-', [$namespace, 'cp4']))
+    - name: auth4_name
+      value: (join('-', [$namespace, 'auth4-konnect-api-auth']))
+    - name: svc4_name
+      value: (join('-', [$namespace, 'svc4']))
+    - name: route4_name
+      value: (join('-', [$namespace, 'route4']))
+    # Scenario F resource names (route5 in route_namespace, svc5 in test namespace, cp5+auth5 in cp_namespace).
+    - name: route_namespace
+      value: (join('-', [$namespace, 'rte']))
+    - name: cp5_name
+      value: (join('-', [$namespace, 'cp5']))
+    - name: auth5_name
+      value: (join('-', [$namespace, 'auth5-konnect-api-auth']))
+    - name: svc5_name
+      value: (join('-', [$namespace, 'svc5']))
+    - name: route5_name
+      value: (join('-', [$namespace, 'route5']))
+
+  steps:
+    # =========================================================================
+    # Scenario A: All resources in the same namespace. No grants needed.
+    # No ResolvedRefs condition on route (same-namespace serviceRef).
+    # =========================================================================
+
+    - name: 1-create-auth-config-same-ns
+      description: Create KonnectAPIAuthConfiguration in the test namespace.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth0']))
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-control-plane-same-ns
+      description: Create KonnectGatewayControlPlane in the test namespace.
+      bindings:
+        - name: cp_name
+          value: ($cp0_name)
+        - name: cp_namespace
+          value: ($namespace)
+        - name: auth_name
+          value: ($auth0_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 3-create-service-and-route-same-ns
+      description: Create KongService and KongRoute in the test namespace (no grants needed).
+      bindings:
+        - name: svc_name
+          value: ($svc0_name)
+        - name: svc_namespace
+          value: ($namespace)
+        - name: cp_name
+          value: ($cp0_name)
+        - name: cp_namespace
+          value: ($namespace)
+        - name: route_name
+          value: ($route0_name)
+        - name: route_namespace
+          value: ($namespace)
+      try:
+        - apply:
+            file: ./kongservice.yaml
+        - apply:
+            file: ./kongroute.yaml
+
+    - name: 4-assert-service-and-route-programmed-same-ns
+      description: Assert KongService and KongRoute are Programmed. No ResolvedRefs on route (same-namespace serviceRef).
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.serviceID != null): true
+
+    - name: 5-cleanup-scenario-a
+      description: Delete route, service, and CP in order; wait for each to be gone.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              name: ($route0_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              name: ($svc0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route0_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc0_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp0_name)
+                namespace: ($namespace)
+
+    # =========================================================================
+    # Scenario B: KongRoute+KongService in test namespace, CP+AuthConfig in cp_namespace.
+    # Only the Service->CP grant is needed (KongRoute uses same-namespace serviceRef).
+    # =========================================================================
+
+    - name: 6-create-cp-namespace
+      description: Create namespace for KonnectGatewayControlPlane and KonnectAPIAuthConfiguration.
+      bindings:
+        - name: namespace_name
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 7-create-auth-config
+      description: Create KonnectAPIAuthConfiguration in the CP namespace.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+        - name: namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 8-create-control-plane
+      description: Create KonnectGatewayControlPlane in the CP namespace with same-namespace authRef.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 9-create-service-and-route-no-grant
+      description: |
+        Create KongService (test namespace, cross-namespace CPRef to cp_namespace) and
+        KongRoute (test namespace, same-namespace serviceRef). No Service->CP grant yet.
+      bindings:
+        - name: svc_name
+          value: ($svc_name)
+        - name: svc_namespace
+          value: ($namespace)
+        - name: cp_name
+          value: ($cp_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: route_name
+          value: ($route_name)
+        - name: route_namespace
+          value: ($namespace)
+      try:
+        - apply:
+            file: ./kongservice.yaml
+        - apply:
+            file: ./kongroute.yaml
+
+    - name: 10-assert-negative-no-grant
+      description: Assert service ResolvedRefs=False and route KongServiceRefValid=False (no Service->CP grant yet).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 11-create-service-to-cp-grant
+      description: Create KongReferenceGrant in cp_namespace allowing KongService from test namespace to reference the CP.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'svc-to-cp']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongService
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 12-assert-service-and-route-programmed
+      description: Assert KongService and KongRoute are both Programmed after the Service->CP grant is in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.serviceID != null): true
+
+    - name: 13-cleanup-scenario-b
+      description: |
+        Delete route and service in order; wait for each to be gone.
+        The Service->CP grant is deleted after the service is confirmed gone (the service
+        needs the grant during Konnect deprovisioning to locate the CP).
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              name: ($route_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              name: ($svc_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'svc-to-cp']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($cp_namespace)
+
+    # =========================================================================
+    # Scenario C: KongRoute+KongService in test namespace, CP in cp_namespace,
+    # AuthConfig in auth_namespace. Both Service->CP AND CP->AuthConfig grants required.
+    # =========================================================================
+
+    - name: 14-create-auth-namespace
+      description: Create separate auth namespace for KonnectAPIAuthConfiguration.
+      bindings:
+        - name: namespace_name
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 15-create-auth-config-cross-ns
+      description: Create KonnectAPIAuthConfiguration in auth_namespace (ns-C).
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth2']))
+        - name: namespace
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 16-create-cp2-cross-ns-auth
+      description: Create KonnectGatewayControlPlane in cp_namespace with cross-namespace authRef to auth_namespace.
+      bindings:
+        - name: cp_name
+          value: ($cp2_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: auth_name
+          value: ($auth2_name)
+        - name: auth_namespace
+          value: ($auth_namespace)
+      try:
+        - apply:
+            file: ./konnectgatewaycontrolplane-crossns-auth.yaml
+
+    - name: 17-assert-cp2-auth-grant-missing
+      description: Assert CP2 has APIAuthResolvedRef=False/RefNotPermitted because no CP->AuthConfig grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 18-create-service2-and-route2-no-grant
+      description: Create KongService2 and KongRoute2 before any Service->CP grant exists.
+      bindings:
+        - name: svc_name
+          value: ($svc2_name)
+        - name: svc_namespace
+          value: ($namespace)
+        - name: cp_name
+          value: ($cp2_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: route_name
+          value: ($route2_name)
+        - name: route_namespace
+          value: ($namespace)
+      try:
+        - apply:
+            file: ./kongservice.yaml
+        - apply:
+            file: ./kongroute.yaml
+
+    - name: 19-assert-negative-no-service-grant
+      description: Assert service2 ResolvedRefs=False and route2 KongServiceRefValid=False (no Service->CP grant).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 20-create-service2-to-cp2-grant
+      description: Create KongReferenceGrant in cp_namespace allowing service2 from test namespace to reference CP2.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'svc2-to-cp2']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongService
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 21-assert-service2-cp-not-programmed
+      description: |
+        Assert service2 ResolvedRefs=True (Service->CP grant resolved) but ControlPlaneRefValid=False/NotProgrammed
+        because CP2 is not yet Programmed (CP->AuthConfig grant still missing).
+        Route2 is still not Programmed (service2 is not Programmed).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'False'
+                    reason: NotProgrammed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 22-create-cp2-to-auth2-grant
+      description: Create KongReferenceGrant in auth_namespace allowing CP2 from cp_namespace to reference auth2.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cp2-to-auth2']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              namespace: ($cp_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 23-assert-cp2-service2-route2-programmed
+      description: Assert CP2, service2, and route2 are all Programmed after both grants are in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.serviceID != null): true
+
+    - name: 24-cleanup-scenario-c
+      description: |
+        Delete route2 and service2 in order; wait for each to be gone.
+        svc2->CP2 grant is deleted after service2 is confirmed gone.
+        cp2->auth2 grant is deleted last, after CP2 is fully deprovisioned.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              name: ($route2_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              name: ($svc2_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route2_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc2_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'svc2-to-cp2']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp2_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cp2-to-auth2']))
+              namespace: ($auth_namespace)
+
+    # =========================================================================
+    # Scenario D: KongRoute+KongService and CP in the same namespace (cp_namespace),
+    # AuthConfig in auth_namespace. No Service->CP grant needed (same namespace).
+    # Only the CP->AuthConfig grant is required.
+    # No ResolvedRefs condition on route (same-namespace serviceRef).
+    # =========================================================================
+
+    - name: 25-create-auth3-cross-ns
+      description: Create a second KonnectAPIAuthConfiguration in auth_namespace for Scenario D.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth3']))
+        - name: namespace
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 26-create-cp3-cross-ns-auth
+      description: Create CP3 in cp_namespace with cross-namespace authRef to auth_namespace (no grant yet).
+      bindings:
+        - name: cp_name
+          value: ($cp3_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: auth_name
+          value: ($auth3_name)
+        - name: auth_namespace
+          value: ($auth_namespace)
+      try:
+        - apply:
+            file: ./konnectgatewaycontrolplane-crossns-auth.yaml
+
+    - name: 27-assert-cp3-auth-grant-missing
+      description: Assert CP3 has APIAuthResolvedRef=False/RefNotPermitted because no CP->AuthConfig grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 28-create-service3-and-route3-same-ns-as-cp
+      description: Create KongService3 and KongRoute3 in cp_namespace (same namespace as CP3). No Service->CP grant needed.
+      bindings:
+        - name: svc_name
+          value: ($svc3_name)
+        - name: svc_namespace
+          value: ($cp_namespace)
+        - name: cp_name
+          value: ($cp3_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: route_name
+          value: ($route3_name)
+        - name: route_namespace
+          value: ($cp_namespace)
+      try:
+        - apply:
+            file: ./kongservice.yaml
+        - apply:
+            file: ./kongroute.yaml
+
+    - name: 29-assert-negative-cp-not-programmed
+      description: |
+        Assert service3 ControlPlaneRefValid=False/NotProgrammed (CP3 not Programmed)
+        and route3 KongServiceRefValid=False/Invalid (service3 not Programmed).
+        No ResolvedRefs condition on route3 (same-namespace serviceRef).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'False'
+                    reason: NotProgrammed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 30-create-cp3-to-auth3-grant
+      description: Create KongReferenceGrant in auth_namespace allowing CP3 from cp_namespace to reference auth3.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cp3-to-auth3']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              namespace: ($cp_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 31-assert-cp3-service3-route3-programmed
+      description: Assert CP3, service3, and route3 are all Programmed. No ResolvedRefs on route3 (same-namespace serviceRef).
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route3_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.serviceID != null): true
+
+    - name: 32-cleanup-scenario-d
+      description: |
+        Delete route3 and service3 in order; wait for each to be gone.
+        CP3->auth3 grant is deleted last, after CP3 is fully deprovisioned.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              name: ($route3_name)
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              name: ($svc3_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route3_name)
+                namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc3_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp3_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp3_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cp3-to-auth3']))
+              namespace: ($auth_namespace)
+
+    # =========================================================================
+    # Scenario E: KongRoute in test namespace, KongService+CP+AuthConfig in cp_namespace.
+    # Cross-namespace serviceRef: only a Route->Service grant is needed.
+    # =========================================================================
+
+    - name: 33-create-auth4-and-cp4
+      description: Create KonnectAPIAuthConfiguration and KonnectGatewayControlPlane in cp_namespace for Scenario E.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth4']))
+        - name: namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 34-create-cp4
+      description: Create KonnectGatewayControlPlane in cp_namespace with same-namespace authRef.
+      bindings:
+        - name: cp_name
+          value: ($cp4_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: auth_name
+          value: ($auth4_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 35-create-svc4-and-route4-no-grant
+      description: |
+        Create KongService4 in cp_namespace (same namespace as CP4) and KongRoute4 in test namespace
+        with a cross-namespace serviceRef pointing to svc4. No Route->Service grant yet.
+      bindings:
+        - name: svc_name
+          value: ($svc4_name)
+        - name: svc_namespace
+          value: ($cp_namespace)
+        - name: cp_name
+          value: ($cp4_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: route_name
+          value: ($route4_name)
+        - name: route_namespace
+          value: ($namespace)
+      try:
+        - apply:
+            file: ./kongservice.yaml
+        - apply:
+            file: ./kongroute.yaml
+
+    - name: 36-assert-negative-no-route-service-grant
+      description: Assert route4 has ResolvedRefs=False/RefNotPermitted because no Route->Service grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route4_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 37-create-route4-to-svc4-grant
+      description: Create KongReferenceGrant in cp_namespace allowing KongRoute from test namespace to reference KongService.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'route4-to-svc4']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongRoute
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: KongService
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 38-assert-svc4-and-route4-programmed
+      description: |
+        Assert svc4 and route4 are both Programmed after the Route->Service grant is in place.
+        route4 has ResolvedRefs=True/ResolvedRefs because its serviceRef is cross-namespace.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc4_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route4_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.serviceID != null): true
+
+    - name: 39-cleanup-scenario-e
+      description: |
+        Delete route4 first; wait for it to be gone before deleting svc4 (route needs the
+        Route->Service grant during Konnect deprovisioning). Delete the grant after svc4 is gone,
+        then delete CP4 last (svc4 needs the CP during its own deprovisioning).
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              name: ($route4_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route4_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              name: ($svc4_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc4_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'route4-to-svc4']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp4_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp4_name)
+                namespace: ($cp_namespace)
+
+    # =========================================================================
+    # Scenario F: Both cross-namespace axes active simultaneously.
+    # KongRoute in route_namespace, KongService in test namespace ($namespace),
+    # CP+AuthConfig in cp_namespace. Two grants required:
+    #   - Service->CP grant in cp_namespace (for the cross-namespace CPRef on svc5)
+    #   - Route->Service grant in test namespace (for the cross-namespace serviceRef on route5)
+    # =========================================================================
+
+    - name: 40-create-route-namespace
+      description: Create dedicated namespace for route5 in Scenario F.
+      bindings:
+        - name: namespace_name
+          value: ($route_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 41-create-auth5-for-all-xns
+      description: Create KonnectAPIAuthConfiguration in cp_namespace for Scenario F.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth5']))
+        - name: namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 42-create-cp5-same-ns-auth
+      description: Create KonnectGatewayControlPlane in cp_namespace with same-namespace authRef.
+      bindings:
+        - name: cp_name
+          value: ($cp5_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+        - name: auth_name
+          value: ($auth5_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 43-create-svc5-no-grants
+      description: |
+        Create svc5 in test namespace with cross-namespace CPRef to cp_namespace.
+        No grants exist yet.
+      bindings:
+        - name: svc_name
+          value: ($svc5_name)
+        - name: svc_namespace
+          value: ($namespace)
+        - name: cp_name
+          value: ($cp5_name)
+        - name: cp_namespace
+          value: ($cp_namespace)
+      try:
+        - apply:
+            file: ./kongservice.yaml
+
+    - name: 44-create-route5-no-grants
+      description: |
+        Create route5 in route_namespace with cross-namespace serviceRef to test namespace.
+        No grants exist yet.
+      bindings:
+        - name: route_name
+          value: ($route5_name)
+        - name: route_namespace
+          value: ($route_namespace)
+        - name: svc_name
+          value: ($svc5_name)
+        - name: svc_namespace
+          value: ($namespace)
+      try:
+        - apply:
+            file: ./kongroute.yaml
+
+    - name: 45-assert-negative-both-grants-missing
+      description: |
+        Assert svc5 ResolvedRefs=False (no Service->CP grant) and
+        route5 ResolvedRefs=False/RefNotPermitted (no Route->Service grant).
+        route5 Programmed=False because patchWithProgrammedStatusConditionBasedOnOtherConditions
+        is called after setting ResolvedRefs=False.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc5_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route5_name)
+                namespace: ($route_namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+
+    - name: 46-create-svc5-to-cp5-grant
+      description: Create KongReferenceGrant in cp_namespace allowing svc5 from test namespace to reference cp5.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'svc5-to-cp5']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongService
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 47-assert-svc5-programmed-route5-still-blocked
+      description: |
+        Assert svc5 is Programmed (Service->CP grant in place) but route5 is still
+        blocked: ResolvedRefs=False/RefNotPermitted and Programmed=False because the
+        Route->Service grant is still missing.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc5_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route5_name)
+                namespace: ($route_namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+
+    - name: 48-create-route5-to-svc5-grant
+      description: |
+        Create KongReferenceGrant in test namespace allowing route5 from route_namespace
+        to reference svc5.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'route5-to-svc5']))
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongRoute
+              namespace: ($route_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: KongService
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 49-assert-svc5-and-route5-programmed
+      description: |
+        Assert both svc5 and route5 are Programmed after both grants are in place.
+        route5 has ResolvedRefs=True/ResolvedRefs and serviceID set.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc5_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route5_name)
+                namespace: ($route_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'KongServiceRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+                (konnect.serviceID != null): true
+
+    - name: 50-cleanup-scenario-f
+      description: |
+        Delete route5 first, then remove the Route->Service grant.
+        Delete svc5, then remove the Service->CP grant.
+        Delete cp5 last.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              name: ($route5_name)
+              namespace: ($route_namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($route5_name)
+                namespace: ($route_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'route5-to-svc5']))
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              name: ($svc5_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: ($svc5_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'svc5-to-cp5']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp5_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp5_name)
+                namespace: ($cp_namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: kongroute-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: (join(',', [$cp_namespace, $auth_namespace, $route_namespace]))
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

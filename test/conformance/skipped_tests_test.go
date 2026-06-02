@@ -27,33 +27,23 @@ var skippedTestsForExpressionsRouter = []string{}
 var skippedTestsForTraditionalCompatibleRouter = []string{
 	// HTTPRoute
 	tests.HTTPRouteHeaderMatching.ShortName,
-	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 }
 
 var skippedTestsForHybrid = []string{
 
 	// Core profile.
-	tests.HTTPRouteHTTPSListener.ShortName,
 	tests.HTTPRouteInvalidNonExistentBackendRef.ShortName,
-	tests.HTTPRouteInvalidReferenceGrant.ShortName,
-	tests.HTTPRouteListenerHostnameMatching.ShortName,
-	tests.HTTPRouteHeaderMatching.ShortName,
-	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
 	tests.HTTPRouteMethodMatching.ShortName,
-	tests.HTTPRouteMatchingAcrossRoutes.ShortName,
-	tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant.ShortName,
-	tests.HTTPRoutePathMatchOrder.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
-	tests.HTTPRouteHostnameIntersection.ShortName,
-	tests.GatewayModifyListeners.ShortName,
-	tests.GatewayObservedGenerationBump.ShortName,
-	tests.GatewaySecretReferenceGrantAllInNamespace.ShortName,
-	tests.GatewaySecretReferenceGrantSpecific.ShortName,
 	tests.GatewayWithAttachedRoutes.ShortName,
 
 	// Extended profile.
 	tests.HTTPRouteRewriteHost.ShortName,
 	tests.HTTPRouteRewritePath.ShortName,
+
+	// This test is skipped because it proven to be flaky.
+	// TODO: https://github.com/Kong/kong-operator/issues/2793
+	tests.HTTPRouteReferenceGrant.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.
@@ -63,6 +53,9 @@ func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType)
 	switch routerFlavor {
 	case consts.RouterFlavorTraditionalCompatible:
 		skipped = append(skipped, skippedTestsForTraditionalCompatibleRouter...)
+		if gwType == standardGateway {
+			skipped = append(skipped, tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName)
+		}
 	case consts.RouterFlavorExpressions:
 		skipped = append(skipped, skippedTestsForExpressionsRouter...)
 	}

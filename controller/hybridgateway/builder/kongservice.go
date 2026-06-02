@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -13,6 +15,15 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+)
+
+const (
+	// KongServiceProtocolHTTP stands for http protocol in Kong Service.
+	KongServiceProtocolHTTP = "http"
+	// KongServiceProtocolTCP stands for tcp protocol in Kong Service.
+	KongServiceProtocolTCP = "tcp"
+	// KongServiceProtocolTLS stands for tls protocol in Kong Service.
+	KongServiceProtocolTLS = "tls"
 )
 
 // KongServiceBuilder is a builder for configurationv1alpha1.KongService resources.
@@ -42,7 +53,7 @@ func (b *KongServiceBuilder) WithNamespace(namespace string) *KongServiceBuilder
 }
 
 // WithLabels sets the labels for the KongService being built.
-func (b *KongServiceBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongServiceBuilder {
+func (b *KongServiceBuilder) WithLabels(route client.Object, parentRef *gwtypes.ParentReference) *KongServiceBuilder {
 	labels := metadata.BuildLabels(route, parentRef)
 	if b.service.Labels == nil {
 		b.service.Labels = make(map[string]string)
@@ -52,7 +63,7 @@ func (b *KongServiceBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwt
 }
 
 // WithAnnotations sets the annotations for the KongService being built.
-func (b *KongServiceBuilder) WithAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongServiceBuilder {
+func (b *KongServiceBuilder) WithAnnotations(route client.Object, parentRef *gwtypes.ParentReference) *KongServiceBuilder {
 	annotations := metadata.BuildAnnotations(route, parentRef)
 	if b.service.Annotations == nil {
 		b.service.Annotations = make(map[string]string)
@@ -79,8 +90,8 @@ func (b *KongServiceBuilder) WithControlPlaneRef(cpr commonv1alpha1.ControlPlane
 	return b
 }
 
-// WithOwner sets the owner reference for the KongService to the given HTTPRoute.
-func (b *KongServiceBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongServiceBuilder {
+// WithOwner sets the owner reference for the KongService to the given route.
+func (b *KongServiceBuilder) WithOwner(owner client.Object) *KongServiceBuilder {
 	if owner == nil {
 		b.errors = append(b.errors, errors.New("owner cannot be nil"))
 		return b
@@ -93,17 +104,118 @@ func (b *KongServiceBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongServiceBui
 	return b
 }
 
-// WithProtocol sets the protocols for the KongService being built.
+// WithPath sets the path for the KongService being built.
+// An empty path leaves Spec.Path unset.
+func (b *KongServiceBuilder) WithPath(path string) *KongServiceBuilder {
+	if path == "" {
+		return b
+	}
+	b.service.Spec.Path = &path
+	return b
+}
+
+// WithTLSVerify sets the tls-verify flag for the KongService being built.
+// Nil leaves the field unset.
+func (b *KongServiceBuilder) WithTLSVerify(v *bool) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.TLSVerify = v
+	return b
+}
+
+// WithTLSVerifyDepth sets the TLS verify depth for the KongService being built.
+// Nil leaves the field unset.
+func (b *KongServiceBuilder) WithTLSVerifyDepth(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.TLSVerifyDepth = v
+	return b
+}
+
+// WithConnectTimeout sets the connect timeout (milliseconds) for the KongService being built.
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithConnectTimeout(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.ConnectTimeout = v
+	return b
+}
+
+// WithReadTimeout sets the read timeout (milliseconds) for the KongService being built.
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithReadTimeout(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.ReadTimeout = v
+	return b
+}
+
+// WithWriteTimeout sets the write timeout (milliseconds) for the KongService being built.
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithWriteTimeout(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.WriteTimeout = v
+	return b
+}
+
+// WithRetries sets the retries count for the KongService being built.
+// A nil pointer leaves the field unset.
+func (b *KongServiceBuilder) WithRetries(v *int64) *KongServiceBuilder {
+	if v == nil {
+		return b
+	}
+	b.service.Spec.Retries = v
+	return b
+}
+
+// WithProtocol sets the protocol for the KongService being built.
+// Supported protocols match the Kong Gateway upstream protocol set.
 func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
 	if protocol == "" {
-		protocol = "http"
+		protocol = KongServiceProtocolHTTP
 	}
+	protocol = strings.ToLower(protocol)
 	switch protocol {
-	case "http", "HTTP":
+	case "http":
 		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTP
+	case "https":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTPS
+	case "grpc":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolGrpc
+	case "grpcs":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolGrpcs
+	case "ws":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolWs
+	case "wss":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolWss
+	case "tls":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTLS
+	case "tcp":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTCP
+	case "tls_passthrough":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTLSPassthrough
+	case "udp":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolUDP
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported protocol: %s", protocol))
 	}
+	return b
+}
+
+// WithClientCertificateRef sets the clientCertificateRef on the KongService.
+// name is the metadata.name of the KongCertificate in the same namespace.
+// No-op when name is empty.
+func (b *KongServiceBuilder) WithClientCertificateRef(name string) *KongServiceBuilder {
+	if name == "" {
+		return b
+	}
+	b.service.Spec.ClientCertificateRef = &commonv1alpha1.NamespacedRef{Name: name}
 	return b
 }
 

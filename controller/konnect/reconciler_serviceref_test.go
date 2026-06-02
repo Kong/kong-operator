@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -49,7 +50,7 @@ var testKongServiceOK = &configurationv1alpha1.KongService{
 		},
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
@@ -78,7 +79,7 @@ var testKongServiceWithCPRefUnprogrammed = &configurationv1alpha1.KongService{
 		},
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
@@ -141,6 +142,81 @@ var testKongServiceBeingDeleted = &configurationv1alpha1.KongService{
 		Namespace:         "default",
 		DeletionTimestamp: &metav1.Time{Time: time.Now()},
 		Finalizers:        []string{KonnectCleanupFinalizer},
+	},
+}
+
+// Cross-namespace fixtures: service and its CP both live in svc-ns,
+// while the route consuming the service lives in default.
+const svcNamespace = "svc-ns"
+
+var testKongServiceCrossNs = &configurationv1alpha1.KongService{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc-cross-ns",
+		Namespace: svcNamespace,
+	},
+	Spec: configurationv1alpha1.KongServiceSpec{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+				Name:      "cp-cross-ns",
+				Namespace: svcNamespace,
+			},
+		},
+	},
+	Status: configurationv1alpha1.KongServiceStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+				ID: "svc-cross-ns-id",
+			},
+			ControlPlaneID: "cp-cross-ns-id",
+		},
+		Conditions: []metav1.Condition{
+			{
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+				Status: metav1.ConditionTrue,
+			},
+		},
+	},
+}
+
+var testControlPlaneCrossNs = &konnectv1alpha2.KonnectGatewayControlPlane{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "cp-cross-ns",
+		Namespace: svcNamespace,
+	},
+	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+		KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+			ID: "cp-cross-ns-id",
+		},
+		Conditions: []metav1.Condition{
+			{
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+				Status: metav1.ConditionTrue,
+			},
+		},
+	},
+}
+
+// testKongRouteToSvcGrant allows KongRoute in `default` to reference KongService in `svc-ns`.
+var testKongRouteToSvcGrant = &configurationv1alpha1.KongReferenceGrant{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "route-to-svc",
+		Namespace: svcNamespace,
+	},
+	Spec: configurationv1alpha1.KongReferenceGrantSpec{
+		From: []configurationv1alpha1.ReferenceGrantFrom{
+			{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "KongRoute",
+				Namespace: "default",
+			},
+		},
+		To: []configurationv1alpha1.ReferenceGrantTo{
+			{
+				Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:  "KongService",
+			},
+		},
 	},
 }
 
@@ -302,6 +378,83 @@ func TestHandleServiceRef(t *testing.T) {
 			},
 		},
 		{
+			// Cross-namespace serviceRef with a valid KongReferenceGrant.
+			// Verifies that handleKongServiceRef resolves both the KongService and its CP
+			// using the service's namespace (from serviceRef.namespace), not the route's.
+			name: "has cross-namespace service ref with valid grant",
+			ent: &configurationv1alpha1.KongRoute{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: configurationv1alpha1.GroupVersion.String(),
+					Kind:       "KongRoute",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route-cross-ns",
+					Namespace: "default",
+				},
+				Spec: configurationv1alpha1.KongRouteSpec{
+					ServiceRef: &configurationv1alpha1.ServiceRef{
+						Type: configurationv1alpha1.ServiceRefNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name:      "svc-cross-ns",
+							Namespace: new(svcNamespace),
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				testKongServiceCrossNs,
+				testControlPlaneCrossNs,
+				testKongRouteToSvcGrant,
+			},
+			expectResult: ctrl.Result{},
+			expectError:  false,
+			updatedEntAssertions: []func(*configurationv1alpha1.KongRoute) (bool, string){
+				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
+					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongServiceRefValidConditionType &&
+							c.Status == metav1.ConditionTrue
+					}), "KongRoute does not have KongServiceRefValid=True after cross-namespace serviceRef resolution"
+				},
+				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
+					return ks.Status.Konnect != nil && ks.Status.Konnect.ServiceID == "svc-cross-ns-id",
+						"KongRoute does not have ServiceID propagated from the cross-namespace service"
+				},
+			},
+		},
+		{
+			// Cross-namespace serviceRef without a KongReferenceGrant.
+			// handleKongServiceRef propagates the ReferenceNotGrantedError so the
+			// reconciliation does not proceed.
+			name: "has cross-namespace service ref without grant returns ReferenceNotGrantedError",
+			ent: &configurationv1alpha1.KongRoute{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: configurationv1alpha1.GroupVersion.String(),
+					Kind:       "KongRoute",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route-cross-ns-no-grant",
+					Namespace: "default",
+				},
+				Spec: configurationv1alpha1.KongRouteSpec{
+					ServiceRef: &configurationv1alpha1.ServiceRef{
+						Type: configurationv1alpha1.ServiceRefNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name:      "svc-cross-ns",
+							Namespace: new(svcNamespace),
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				testKongServiceCrossNs,
+				testControlPlaneCrossNs,
+				// no grant
+			},
+			expectResult:        ctrl.Result{},
+			expectError:         true,
+			expectErrorContains: "is not granted",
+		},
+		{
 			name: "has service ref which has an unprogrammed cp",
 			ent: &configurationv1alpha1.KongRoute{
 				ObjectMeta: metav1.ObjectMeta{
@@ -376,6 +529,13 @@ func testHandleServiceRef[
 				Build()
 			require.NoError(t, fakeClient.SubResource("status").Update(t.Context(), tc.ent))
 
+			// fake client's Update strips TypeMeta. handleKongServiceRef reads
+			// ent.GetObjectKind().GroupVersionKind() when checking cross-namespace grants,
+			// so restore the GVK from the scheme before invoking the function.
+			if gvk, gvkErr := apiutil.GVKForObject(tc.ent, scheme); gvkErr == nil {
+				tc.ent.GetObjectKind().SetGroupVersionKind(gvk)
+			}
+
 			res, err := handleKongServiceRef(t.Context(), fakeClient, tc.ent)
 
 			updatedEnt := tc.ent.DeepCopyObject().(TEnt)
@@ -395,4 +555,79 @@ func testHandleServiceRef[
 			require.Equal(t, tc.expectResult, res)
 		})
 	}
+}
+
+// TestReconcile_CrossNamespaceServiceRefWithoutGrant verifies that when a KongRoute
+// uses a cross-namespace serviceRef and no KongReferenceGrant permits it, the full
+// Reconcile loop sets ResolvedRefs=False/RefNotPermitted AND Programmed=False.
+//
+// This is a regression test for the bug where Reconcile returned early with
+// `return ctrl.Result{}, err` after setting ResolvedRefs, skipping the call to
+// patchWithProgrammedStatusConditionBasedOnOtherConditions and leaving
+// Programmed=Unknown instead of False.
+func TestReconcile_CrossNamespaceServiceRefWithoutGrant(t *testing.T) {
+	route := &configurationv1alpha1.KongRoute{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+			Kind:       "KongRoute",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "route-cross-ns-no-grant",
+			Namespace: "default",
+		},
+		Spec: configurationv1alpha1.KongRouteSpec{
+			ServiceRef: &configurationv1alpha1.ServiceRef{
+				Type: configurationv1alpha1.ServiceRefNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name:      "svc-cross-ns",
+					Namespace: new(svcNamespace),
+				},
+			},
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
+	require.NoError(t, konnectv1alpha2.AddToScheme(scheme))
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(route, testKongServiceCrossNs, testControlPlaneCrossNs).
+		// no KongReferenceGrant
+		WithStatusSubresource(route).
+		Build()
+
+	// Restore GVK stripped by the fake client builder.
+	gvk, err := apiutil.GVKForObject(route, scheme)
+	require.NoError(t, err)
+	route.GetObjectKind().SetGroupVersionKind(gvk)
+
+	r := &KonnectEntityReconciler[
+		configurationv1alpha1.KongRoute, *configurationv1alpha1.KongRoute,
+	]{
+		Client: fakeClient,
+	}
+
+	res, err := r.Reconcile(t.Context(), route)
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{}, res)
+
+	var updated configurationv1alpha1.KongRoute
+	require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(route), &updated))
+
+	resolvedRefs, ok := lo.Find(updated.Status.Conditions, func(c metav1.Condition) bool {
+		return c.Type == string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+	})
+	require.True(t, ok, "expected ResolvedRefs condition to be set")
+	require.Equal(t, metav1.ConditionFalse, resolvedRefs.Status)
+	require.Equal(t, string(configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted), resolvedRefs.Reason)
+
+	programmed, ok := lo.Find(updated.Status.Conditions, func(c metav1.Condition) bool {
+		return c.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType
+	})
+	require.True(t, ok, "expected Programmed condition to be set")
+	require.Equal(t, metav1.ConditionFalse, programmed.Status,
+		"Programmed must be False, not Unknown, when ResolvedRefs=False/RefNotPermitted")
+	require.Equal(t, string(konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists), programmed.Reason)
 }

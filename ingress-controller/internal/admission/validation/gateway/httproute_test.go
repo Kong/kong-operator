@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +35,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				ControllerName: gatewaycontroller.GetControllerName(),
 			},
 		}
+		kongVersionSupportWildcardSNI = semver.MustParse("3.7.0")
 	)
 
 	for _, tt := range []struct {
@@ -1013,6 +1015,47 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			valid: true,
 		},
+		{
+			msg: "HTTPRoute with unsupported filter when reference both existing and non-existing gateway should be rejected",
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "existing-managed-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{GatewayClassName: gatewayClassName},
+				},
+			},
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "example-route",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name:      "non-existent-gateway",
+								Namespace: new(gatewayapi.Namespace(corev1.NamespaceDefault)),
+							},
+							{
+								Name:      "existing-managed-gateway",
+								Namespace: new(gatewayapi.Namespace(corev1.NamespaceDefault)),
+							},
+						},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Filters: []gatewayapi.HTTPRouteFilter{{
+							// RequestMirror is explicitly unsupported — should be rejected.
+							Type: gatewayapi.HTTPRouteFilterRequestMirror,
+						}},
+					}},
+				},
+			},
+			valid:         false,
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type RequestMirror is unsupported",
+		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {
 			fakeClient := fakeclient.
@@ -1023,7 +1066,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 
 			// Passed routesValidator is irrelevant for the above test cases.
 			valid, validMsg, err := ValidateHTTPRoute(
-				t.Context(), mockRoutesValidator{}, translator.FeatureFlags{}, tt.route, fakeClient,
+				t.Context(), mockRoutesValidator{}, kongVersionSupportWildcardSNI, translator.FeatureFlags{}, tt.route, fakeClient,
 			)
 			assert.Equal(t, tt.valid, valid, tt.msg)
 			assert.Equal(t, tt.validationMsg, validMsg, tt.msg)

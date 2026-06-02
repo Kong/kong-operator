@@ -46,6 +46,18 @@ const (
 	AdoptOp Op = "adopt"
 )
 
+type konnectIDPersister interface {
+	PersistsKonnectID() bool
+}
+
+// EntityPersistsKonnectID reports whether an entity persists a Konnect ID in status.
+// Entities that persist a Konnect ID require it to be present for update and delete
+// operations, while non-persisting entities (e.g. singleton sub-resources) are
+// reconciled, finalized, and deleted without one.
+func EntityPersistsKonnectID(obj konnectIDPersister) bool {
+	return obj.PersistsKonnectID()
+}
+
 // Create creates a Konnect entity.
 func Create[
 	T constraints.SupportedKonnectEntityType,
@@ -115,10 +127,11 @@ func Create[
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		err = ensureMCPServer(ctx, sdk.GetMCPServersSDK(), ent)
-		// ---------------------------------------------------------------------
-		// TODO: add other Konnect types
+
+	// ---------------------------------------------------------------------
+	// TODO: add other manually maintained Konnect types here
 	default:
-		return nil, fmt.Errorf("unsupported entity type %T", ent)
+		err = CreateGeneratedOps(ctx, sdk, cl, e)
 	}
 
 	var errGet error
@@ -177,12 +190,15 @@ func Create[
 			id, errGet = getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 		case *configurationv1alpha1.KongCACertificate:
 			id, errGet = getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
-			// ---------------------------------------------------------------------
-			// TODO: add other Konnect types
+
+		// ---------------------------------------------------------------------
+		// TODO: add other manually maintained Konnect types here
 		default:
-			return e, fmt.Errorf("conflict on create request for %T %s, but no conflict handling implemented: %w",
-				e, client.ObjectKeyFromObject(e), err,
-			)
+			id, errGet = getForUID(ctx, sdk, e)
+		}
+
+		if errConflict, ok := errors.AsType[ConflictOnCreateButNoConflifctHandlingImplementedError](errGet); ok {
+			return e, errConflict
 		}
 
 		if errGet == nil && id != "" {
@@ -256,7 +272,7 @@ func Delete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, metricRecorder metrics.Recorder, ent TEnt) error {
-	if ent.GetKonnectStatus().GetKonnectID() == "" {
+	if ent.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(ent) {
 		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		if ok && cond.Status == metav1.ConditionTrue {
 			return fmt.Errorf(
@@ -273,60 +289,65 @@ func Delete[
 		entityType = ent.GetTypeName()
 		statusCode int
 	)
-	switch ent := any(ent).(type) {
+	switch e := any(ent).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
-		err = deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
+		err = deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), e)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
-		err = deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		err = deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), e)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent, sdk.GetServer().Region())
+		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), e, sdk.GetServer().Region())
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-		err = deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		err = deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), e)
 	case *configurationv1alpha1.KongService:
-		err = deleteService(ctx, sdk.GetServicesSDK(), ent)
+		err = deleteService(ctx, sdk.GetServicesSDK(), e)
 	case *configurationv1alpha1.KongRoute:
-		err = deleteRoute(ctx, sdk.GetRoutesSDK(), ent)
+		err = deleteRoute(ctx, sdk.GetRoutesSDK(), e)
 	case *configurationv1.KongConsumer:
-		err = deleteConsumer(ctx, sdk.GetConsumersSDK(), ent)
+		err = deleteConsumer(ctx, sdk.GetConsumersSDK(), e)
 	case *configurationv1beta1.KongConsumerGroup:
-		err = deleteConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
+		err = deleteConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), e)
 	case *configurationv1alpha1.KongPluginBinding:
-		err = deletePlugin(ctx, sdk.GetPluginSDK(), ent)
+		err = deletePlugin(ctx, sdk.GetPluginSDK(), e)
 	case *configurationv1alpha1.KongUpstream:
-		err = deleteUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
+		err = deleteUpstream(ctx, sdk.GetUpstreamsSDK(), e)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		err = deleteKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+		err = deleteKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), e)
 	case *configurationv1alpha1.KongCredentialAPIKey:
-		err = deleteKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+		err = deleteKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), e)
 	case *configurationv1alpha1.KongCredentialACL:
-		err = deleteKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
+		err = deleteKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), e)
 	case *configurationv1alpha1.KongCredentialJWT:
-		err = deleteKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
+		err = deleteKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), e)
 	case *configurationv1alpha1.KongCredentialHMAC:
-		err = deleteKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
+		err = deleteKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), e)
 	case *configurationv1alpha1.KongCACertificate:
-		err = deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+		err = deleteCACertificate(ctx, sdk.GetCACertificatesSDK(), e)
 	case *configurationv1alpha1.KongCertificate:
-		err = deleteCertificate(ctx, sdk.GetCertificatesSDK(), ent)
+		err = deleteCertificate(ctx, sdk.GetCertificatesSDK(), e)
 	case *configurationv1alpha1.KongTarget:
-		err = deleteTarget(ctx, sdk.GetTargetsSDK(), ent)
+		err = deleteTarget(ctx, sdk.GetTargetsSDK(), e)
 	case *configurationv1alpha1.KongVault:
-		err = deleteVault(ctx, sdk.GetVaultSDK(), ent)
+		err = deleteVault(ctx, sdk.GetVaultSDK(), e)
 	case *configurationv1alpha1.KongKey:
-		err = deleteKey(ctx, sdk.GetKeysSDK(), ent)
+		err = deleteKey(ctx, sdk.GetKeysSDK(), e)
 	case *configurationv1alpha1.KongKeySet:
-		err = deleteKeySet(ctx, sdk.GetKeySetsSDK(), ent)
+		err = deleteKeySet(ctx, sdk.GetKeySetsSDK(), e)
 	case *configurationv1alpha1.KongSNI:
-		err = deleteSNI(ctx, sdk.GetSNIsSDK(), ent)
+		err = deleteSNI(ctx, sdk.GetSNIsSDK(), e)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
-		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), e)
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
-		// ---------------------------------------------------------------------
-		// TODO: add other Konnect types
+	// ---------------------------------------------------------------------
+	// TODO: add other manually maintained Konnect types here
 	default:
-		return fmt.Errorf("unsupported entity type %T", ent)
+		err = DeleteGeneratedOps(ctx, sdk, ent)
+	}
+
+	var isMirror bool
+	if isMirrorableEntity(ent) {
+		isMirror = isMirrorEntity(ent)
 	}
 
 	if err != nil {
@@ -340,7 +361,7 @@ func Delete[
 			time.Since(start),
 			statusCode,
 		)
-	} else {
+	} else if !isMirror {
 		metricRecorder.RecordKonnectEntityOperationSuccess(
 			sdk.GetServerURL(),
 			metrics.KonnectEntityOperationDelete,
@@ -413,7 +434,7 @@ func Update[
 		return res, nil
 	}
 
-	if e.GetKonnectStatus().GetKonnectID() == "" {
+	if e.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(e) {
 		return ctrl.Result{}, fmt.Errorf(
 			"can't update %T %s when it does not have the Konnect ID",
 			e, client.ObjectKeyFromObject(e),
@@ -479,10 +500,11 @@ func Update[
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
-		// ---------------------------------------------------------------------
-		// TODO: add other Konnect types
+
+	// ---------------------------------------------------------------------
+	// TODO: add other manually maintained Konnect types here
 	default:
-		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
+		err = UpdateGeneratedOps(ctx, sdk, cl, e)
 	}
 
 	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)
@@ -607,6 +629,9 @@ func Adopt[
 		err = adoptKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = adoptKongDataPlaneCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+	case *konnectv1alpha1.Portal:
+		// TODO: implement Portal adoption
+		err = fmt.Errorf("Portal adopt operation not yet implemented")
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)

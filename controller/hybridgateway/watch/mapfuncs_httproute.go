@@ -3,13 +3,11 @@ package watch
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -66,81 +64,7 @@ func listHTTPRoutesForService(ctx context.Context, cl client.Client, svcNamespac
 // to the ReferenceGrant's namespace. It returns a slice of reconcile.Requests for each matching
 // HTTPRoute, enabling efficient event handling and reconciliation when a ReferenceGrant changes.
 func MapHTTPRouteForReferenceGrant(cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		rg, ok := obj.(*gwtypes.ReferenceGrant)
-		if !ok {
-			return nil
-		}
-
-		// For each from namespace in the ReferenceGrant, list all HTTPRoutes
-		// that have cross-namespace backend refs to the ReferenceGrant's namespace.
-		var requests []reconcile.Request
-		for _, from := range rg.Spec.From {
-			// Check that the from kind is HTTPRoute and group is gateway.networking.k8s.io.
-			if from.Kind != "HTTPRoute" || (from.Group != "" && from.Group != gwtypes.GroupName) {
-				continue
-			}
-
-			httpRoutes := &gwtypes.HTTPRouteList{}
-			err := cl.List(ctx, httpRoutes, client.InNamespace(string(from.Namespace)))
-			if err != nil {
-				return nil
-			}
-
-			for _, httpRoute := range httpRoutes.Items {
-				// Check if the HTTPRoute has any backend refs to the ReferenceGrant's namespace.
-				hasCrossNamespaceRef := false
-				for _, rule := range httpRoute.Spec.Rules {
-					for _, backendRef := range rule.BackendRefs {
-						// The backend must be in the ReferenceGrant's namespace (target namespace).
-						if backendRef.Namespace != nil && string(*backendRef.Namespace) == rg.Namespace && httpRoute.Namespace != rg.Namespace {
-							hasCrossNamespaceRef = true
-							break
-						}
-					}
-					if hasCrossNamespaceRef {
-						break
-					}
-				}
-
-				if hasCrossNamespaceRef {
-					requests = append(requests, reconcile.Request{
-						NamespacedName: client.ObjectKey{
-							Namespace: httpRoute.Namespace,
-							Name:      httpRoute.Name,
-						},
-					})
-				}
-			}
-		}
-		return requests
-	}
-}
-
-// MapHTTPRouteForKongResource returns a handler.MapFunc that, given a Kong resource object of type T,
-// retrieves the HTTPRoutes referenced in its annotations. It returns a slice of reconcile.Requests
-// for each matching HTTPRoute.
-func MapHTTPRouteForKongResource[T kongResource](cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		_, ok := obj.(T)
-		if !ok {
-			return nil
-		}
-
-		am := metadata.NewAnnotationManager(logr.Discard())
-		routes := am.GetRoutes(obj)
-		if len(routes) == 0 {
-			return nil
-		}
-
-		var requests []reconcile.Request
-		for _, r := range routes {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: metadata.NameStringToObjectKey(r),
-			})
-		}
-		return requests
-	}
+	return MapRouteForReferenceGrant[gwtypes.HTTPRouteList](cl)
 }
 
 // MapHTTPRouteForKongPlugin returns a handler.MapFunc that, given a KongPlugin object,
@@ -178,7 +102,7 @@ func MapHTTPRouteForKongPlugin(cl client.Client) handler.MapFunc {
 		}
 
 		// Add requests for Plugins referencing the HTTPRoute via annotation.
-		requests := MapRouteForKongResource[*configurationv1.KongPlugin](cl)(ctx, obj)
+		requests := MapRouteForKongResource[*configurationv1.KongPlugin](kindHTTPRoute)(ctx, obj)
 		return append(requests, indexRequests...)
 	}
 }

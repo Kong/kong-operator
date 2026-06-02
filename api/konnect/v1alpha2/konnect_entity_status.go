@@ -6,16 +6,19 @@ type KonnectEntityStatus struct {
 	// If it's unset (empty string), it means the Konnect entity hasn't been created yet.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=256
 	ID string `json:"id,omitempty"`
 
 	// ServerURL is the URL of the Konnect server in which the entity exists.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=512
 	ServerURL string `json:"serverURL,omitempty"`
 
 	// OrgID is ID of Konnect Org that this entity has been created in.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=256
 	OrgID string `json:"organizationID,omitempty"`
 }
 
@@ -207,6 +210,38 @@ type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
 	//
 	// +optional
 	CertificateID string `json:"certificateID,omitempty"`
+}
+
+// KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs represents the status of a Konnect entity
+// with references to a ControlPlane, a (client) Certificate, and a list of CA Certificates.
+type KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs struct {
+	KonnectEntityStatus `json:",inline"`
+
+	// ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
+	//
+	// +optional
+	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// CertificateID is the Konnect ID of the client Certificate referenced by this entity.
+	//
+	// +optional
+	CertificateID string `json:"certificateID,omitempty"`
+
+	// CACertificateIDs lists the Konnect IDs of the CA Certificates referenced by this entity.
+	//
+	// +optional
+	// +listType=set
+	CACertificateIDs []string `json:"caCertificateIDs,omitempty"`
+}
+
+// SetControlPlaneID sets the ControlPlane ID of the KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs struct.
+func (in *KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs) SetControlPlaneID(id string) {
+	in.ControlPlaneID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID of the KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs struct.
+func (in *KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs) GetControlPlaneID() string {
+	return in.ControlPlaneID
 }
 
 // KonnectEntityStatusWithNetworkRef represents the status of a Konnect entity

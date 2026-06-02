@@ -14,6 +14,7 @@ type KonnectConfig struct {
 	ControlPlaneID               string
 	Address                      string
 	UploadConfigPeriod           time.Duration
+	UploadConfigConcurrency      int
 	RefreshNodePeriod            time.Duration
 	TLSClient                    TLSClientConfig
 
@@ -40,8 +41,9 @@ func DefaultKonnectConfig() KonnectConfig {
 			Key:      "",
 			KeyFile:  "",
 		},
-		UploadConfigPeriod:    DefaultKonnectConfigUploadPeriod,
-		RefreshNodePeriod:     DefaultKonnectNodeRefreshPeriod,
-		ConsumersSyncDisabled: false,
+		UploadConfigPeriod:      DefaultKonnectConfigUploadPeriod,
+		UploadConfigConcurrency: DefaultKonnectConfigUploadConcurrency,
+		RefreshNodePeriod:       DefaultKonnectNodeRefreshPeriod,
+		ConsumersSyncDisabled:   false,
 	}
 }

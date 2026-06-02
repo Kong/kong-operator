@@ -1,7 +1,7 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: tlsroute.tls-namespace.echo-tls.0
+  host: tlsroute.tls-namespace.echo-tls.0.invalid
   id: 2a2aad7c-6331-5bcf-bd7c-d9516639f65d
   name: tlsroute.tls-namespace.echo-tls.0
   plugins:
@@ -25,7 +25,7 @@ services:
     - k8s-namespace:tls-namespace
     - k8s-kind:TLSRoute
     - k8s-group:gateway.networking.k8s.io
-    - k8s-version:v1alpha2
+    - k8s-version:v1
     - k8s-named-route-rule:rule-echo
   tags:
   - k8s-name:UNKNOWN
@@ -37,7 +37,7 @@ services:
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
-  name: tlsroute.tls-namespace.echo-tls.0
+  name: tlsroute.tls-namespace.echo-tls.0.invalid
   tags:
   - k8s-name:UNKNOWN
   - k8s-namespace:UNKNOWN

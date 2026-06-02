@@ -74,9 +74,6 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 			Name:      uuid.NewString(),
 		},
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
-			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/kong/kong-operator/issues/1728
-
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv2beta1.DeploymentOptions{
@@ -162,4 +159,41 @@ func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts .
 	}
 
 	return httpRoute
+}
+
+// GenerateTLSRoute generates a TLSRoute to be used in tests.
+func GenerateTLSRoute(namespace string, gatewayName, serviceName string, portNumber int, opts ...func(*gatewayv1.TLSRoute)) *gatewayv1.TLSRoute {
+	tlsRoute := &gatewayv1.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewString(),
+			Namespace: namespace,
+		},
+		Spec: gatewayv1.TLSRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{
+					{
+						Name: gatewayv1.ObjectName(gatewayName),
+					},
+				},
+			},
+			Rules: []gatewayv1.TLSRouteRule{
+				{
+					BackendRefs: []gatewayv1.BackendRef{
+						{
+							BackendObjectReference: gatewayv1.BackendObjectReference{
+								Name: gatewayv1.ObjectName(serviceName),
+								Port: new(gatewayv1.PortNumber(portNumber)),
+								Kind: new(gatewayv1.Kind("Service")),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(tlsRoute)
+	}
+	return tlsRoute
 }

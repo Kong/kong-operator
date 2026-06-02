@@ -34,7 +34,6 @@ import (
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2867 is resolved")
 	t.Parallel()
 	ctx := t.Context()
 	clients := integration.GetClients()
@@ -339,18 +338,20 @@ func attachKongPluginBasedOnKPIToRoute(
 	ctx := t.Context()
 
 	kongPluginName := kpiNN.Name + "-plugin"
-	// To have it in the same namespace as the HTTPRoute to which it is attached.
 	kongPluginNamespace := httpRouteNN.Namespace
-	kongPlugin := configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kongPluginName,
-			Namespace: kongPluginNamespace,
-		},
-		PluginName: kpiNN.Name,
-	}
-	_, err := integration.GetClients().ConfigurationClient.ConfigurationV1().KongPlugins(kongPluginNamespace).Create(ctx, &kongPlugin, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(&kongPlugin)
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		// To have it in the same namespace as the HTTPRoute to which it is attached.
+		kongPlugin := configurationv1.KongPlugin{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      kongPluginName,
+				Namespace: kongPluginNamespace,
+			},
+			PluginName: kpiNN.Name,
+		}
+		_, err := integration.GetClients().ConfigurationClient.ConfigurationV1().KongPlugins(kongPluginNamespace).Create(ctx, &kongPlugin, metav1.CreateOptions{})
+		require.NoError(t, err)
+		cleaner.Add(&kongPlugin)
+	}, time.Minute, 250*time.Millisecond)
 
 	t.Logf("attaching KongPlugin %s to HTTPRoute %s", kongPluginName, httpRouteNN)
 	require.Eventually(t,

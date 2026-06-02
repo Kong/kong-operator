@@ -11,7 +11,7 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
@@ -42,63 +42,65 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 	testID := uuid.NewString()[:8]
 
 	var cpID string
-	createRgErr := retry.Do(func() error {
-		createResp, err := s.ControlPlanes.CreateControlPlane(ctx,
-			sdkkonnectcomp.CreateControlPlaneRequest{
-				Name:        uuid.NewString(),
-				Description: new(generateTestKonnectControlPlaneDescription(t)),
-				Labels: map[string]string{
-					test.KonnectControlPlaneLabelCreatedInTests: "true",
-					// Add test ID label so that Konnect cleanup workflow can find
-					// and clean up the control plane after the test finishes.
-					deploy.KonnectTestIDLabel: testID,
-				},
-				ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
-			},
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create control plane: %w", err)
-		}
-		if createResp == nil || createResp.ControlPlane == nil {
-			return fmt.Errorf("failed to create control plane: response is nil, status code %d, response: %v",
-				createResp.GetStatusCode(), createResp)
-		}
-
-		if createResp.GetStatusCode() != http.StatusCreated {
-			body, err := io.ReadAll(createResp.RawResponse.Body)
-			if err != nil {
-				body = []byte(err.Error())
-			}
-			return fmt.Errorf("failed to create RG: code %d, message %s", createResp.GetStatusCode(), body)
-		}
-		if createResp.ControlPlane == nil || createResp.ControlPlane.ID == "" {
-			return errors.New("No control plane ID in response")
-		}
-
-		cpID = createResp.ControlPlane.ID
-		return nil
-	},
+	createRgErr := retry.New(
 		retry.Attempts(5),
 		retry.Delay(time.Second),
 		retry.OnRetry(func(_ uint, err error) {
 			t.Logf("failed to create control plane, retrying: %v", err)
 		}),
+	).Do(
+		func() error {
+			createResp, err := s.ControlPlanes.CreateControlPlane(ctx,
+				sdkkonnectcomp.CreateControlPlaneRequest{
+					Name:        uuid.NewString(),
+					Description: new(generateTestKonnectControlPlaneDescription(t)),
+					Labels: map[string]string{
+						test.KonnectControlPlaneLabelCreatedInTests: "true",
+						// Add test ID label so that Konnect cleanup workflow can find
+						// and clean up the control plane after the test finishes.
+						deploy.KonnectTestIDLabel: testID,
+					},
+					ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("failed to create control plane: %w", err)
+			}
+			if createResp == nil || createResp.ControlPlane == nil {
+				return fmt.Errorf("failed to create control plane: response is nil, status code %d, response: %v",
+					createResp.GetStatusCode(), createResp)
+			}
+
+			if createResp.GetStatusCode() != http.StatusCreated {
+				body, err := io.ReadAll(createResp.RawResponse.Body)
+				if err != nil {
+					body = []byte(err.Error())
+				}
+				return fmt.Errorf("failed to create RG: code %d, message %s", createResp.GetStatusCode(), body)
+			}
+			if createResp.ControlPlane == nil || createResp.ControlPlane.ID == "" {
+				return errors.New("No control plane ID in response")
+			}
+
+			cpID = createResp.ControlPlane.ID
+			return nil
+		},
 	)
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
 		fmt.Printf("deleting test Konnect Control Plane: %q\n", cpID)
-		err := retry.Do(
+		if err := retry.New(
+			retry.Attempts(5),
+			retry.Delay(time.Second),
+		).Do(
 			func() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				_, err := s.ControlPlanes.DeleteControlPlane(ctx, cpID)
 				return err
 			},
-			retry.Attempts(5),
-			retry.Delay(time.Second),
-		)
-		if err != nil {
+		); err != nil {
 			// Don't fail the test if cleanup fails, just log the error.
 			// Cleanup job will eventually clean up the control plane.
 			fmt.Printf("failed to delete control plane %q: %v\n", cpID, err)

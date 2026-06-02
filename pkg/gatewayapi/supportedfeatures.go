@@ -25,6 +25,7 @@ var commonSupportedFeatures = sets.New(
 	// Core features.
 	features.SupportGateway,
 	features.SupportHTTPRoute,
+	features.SupportTLSRoute,
 	features.SupportGRPCRoute,
 	features.SupportReferenceGrant,
 
@@ -39,6 +40,12 @@ var commonSupportedFeatures = sets.New(
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
 	// Temporarily disabled and tracking through the following issue.
 	// features.SupportHTTPRouteBackendTimeout,
+
+	// TLSRoute extended.
+	features.SupportTLSRouteModeTerminate,
+	// TODO: support multiple TLSRoute modes on the same port:
+	// https://github.com/Kong/kong-operator/issues/3511
+	// features.SupportTLSRouteModeMixed,
 )
 
 // GetSupportedFeatures returns the supported features for the given router type.

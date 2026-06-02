@@ -50,7 +50,7 @@ func generateKongServiceFromBackendRefWithName(
 
 	// the service host needs to be a resolvable name due to legacy logic so we'll
 	// use the anchor backendRef as the basis for the name
-	serviceHost := serviceName
+	serviceHost := subtranslator.HostForKongService(serviceName, len(backends), len(backendRefs))
 
 	// check if the service is already known, and if not create it
 	service, ok := rules.ServiceNameToServices[serviceName]
@@ -70,6 +70,7 @@ func generateKongServiceFromBackendRefWithName(
 			Parent:    route,
 		}
 	}
+	service.Host = new(serviceHost)
 
 	// In the context of the gateway API conformance tests, if there is no service for the backend,
 	// the response must have a status code of 500. Since The default behavior of Kong is returning 503

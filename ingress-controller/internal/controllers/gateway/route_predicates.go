@@ -52,7 +52,7 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 
 	parentRefs := getRouteParentRefs(route)
 
-	// If the reconciler has a GatewayNN set, only HTTPRoutes attached to that Gateway are reconciled.
+	// If the reconciler has a GatewayNN set, only routes attached to that Gateway are reconciled.
 	if gNN, ok := gatewayNN.Get(); ok {
 		for _, parentRef := range parentRefs {
 			if parentRef.Namespace != nil && string(*parentRef.Namespace) != gNN.Namespace {
@@ -72,8 +72,8 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 		return false
 	}
 
-	// If the GatewayNN is not set, all HTTPRoutes are reconciled.
-	// Hence we need to check if the HTTPRoute is attached to a Gateway that is managed by this controller.
+	// If the GatewayNN is not set, all routes are reconciled.
+	// Hence we need to check if the route is attached to a Gateway that is managed by this controller.
 	for _, parentRef := range parentRefs {
 		namespace := route.GetNamespace()
 		if parentRef.Namespace != nil {

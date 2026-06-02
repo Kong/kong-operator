@@ -17,6 +17,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 )
 
@@ -49,7 +50,7 @@ var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
@@ -120,7 +121,7 @@ var testKongUpstreamControlPlaneRefNotFound = &configurationv1alpha1.KongUpstrea
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
@@ -152,7 +153,7 @@ var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUp
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
@@ -202,6 +203,56 @@ var testControlPlaneNotProgrammed = &konnectv1alpha2.KonnectGatewayControlPlane{
 	},
 }
 
+var testKongUpstreamOKInOtherNS = &configurationv1alpha1.KongUpstream{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "upstream-xns-ok",
+		Namespace: "other-namespace",
+	},
+	Spec: configurationv1alpha1.KongUpstreamSpec{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+				Name: "cp-other",
+			},
+		},
+		KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+			Slots: new(int64(12345)),
+		},
+	},
+	Status: configurationv1alpha1.KongUpstreamStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+				ID: "99999",
+			},
+			ControlPlaneID: "987654321",
+		},
+		Conditions: []metav1.Condition{
+			{
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+				Status: metav1.ConditionTrue,
+			},
+		},
+	},
+}
+
+var testControlPlaneOKInOtherNSForUpstream = &konnectv1alpha2.KonnectGatewayControlPlane{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "cp-other",
+		Namespace: "other-namespace",
+	},
+	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+		KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+			ID: "987654321",
+		},
+		Conditions: []metav1.Condition{
+			{
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+				Status: metav1.ConditionTrue,
+			},
+		},
+	},
+}
+
 func TestHandleUpstreamRef(t *testing.T) {
 	// The test cases here includes test cases for handling upstream ref for KongTarget, which are expected to have KongUpstream reference.
 	// We can define test cases for other types and call `testHandleUpstreamRef` to test handling entities with other types.
@@ -214,7 +265,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: commonv1alpha1.NameRef{
+					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-ok",
 					},
 				},
@@ -233,6 +284,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 				},
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+
 						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongTarget does not have ControlPlaneRefValid condition set to True"
 				},
@@ -251,7 +303,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: commonv1alpha1.NameRef{
+					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-nonexist",
 					},
 				},
@@ -274,7 +326,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: commonv1alpha1.NameRef{
+					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-not-programmed",
 					},
 				},
@@ -300,7 +352,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: commonv1alpha1.NameRef{
+					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-no-cp-ref",
 					},
 				},
@@ -325,7 +377,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: commonv1alpha1.NameRef{
+					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-being-deleted",
 					},
 				},
@@ -342,7 +394,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: commonv1alpha1.NameRef{
+					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-cpref-not-found",
 					},
 				},
@@ -361,7 +413,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: commonv1alpha1.NameRef{
+					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-cpref-not-programmed",
 					},
 				},
@@ -385,6 +437,113 @@ func TestHandleUpstreamRef(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "cross-namespace upstream ref with no KongReferenceGrant",
+			ent: &configurationv1alpha1.KongTarget{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "configuration.konghq.com/v1alpha1",
+					Kind:       "KongTarget",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "target-xns-no-grant",
+					Namespace: "default",
+				},
+				Spec: configurationv1alpha1.KongTargetSpec{
+					UpstreamRef: commonv1alpha1.NamespacedRef{
+						Name:      "upstream-xns-ok",
+						Namespace: new("other-namespace"),
+					},
+					KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
+						Target: "10.0.0.1:8080",
+						Weight: 100,
+					},
+				},
+			},
+			objects:      []client.Object{testKongUpstreamOKInOtherNS},
+			expectError:  false,
+			expectResult: ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff},
+			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.KongUpstreamRefValidConditionType &&
+							c.Status == metav1.ConditionFalse &&
+							c.Reason == konnectv1alpha1.KongUpstreamRefReasonRefNotPermitted
+					}), "KongTarget does not have KongUpstreamRefValid=False/RefNotPermitted condition"
+				},
+			},
+		},
+		{
+			name: "cross-namespace upstream ref with KongReferenceGrant",
+			ent: &configurationv1alpha1.KongTarget{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "configuration.konghq.com/v1alpha1",
+					Kind:       "KongTarget",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "target-xns-with-grant",
+					Namespace: "default",
+				},
+				Spec: configurationv1alpha1.KongTargetSpec{
+					UpstreamRef: commonv1alpha1.NamespacedRef{
+						Name:      "upstream-xns-ok",
+						Namespace: new("other-namespace"),
+					},
+					KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
+						Target: "10.0.0.1:8080",
+						Weight: 100,
+					},
+				},
+				Status: configurationv1alpha1.KongTargetStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefConditionType,
+							Status: metav1.ConditionTrue,
+							Reason: konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonResolvedRef,
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				testKongUpstreamOKInOtherNS,
+				testControlPlaneOKInOtherNSForUpstream,
+				&configurationv1alpha1.KongReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "target-to-upstream",
+						Namespace: "other-namespace",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     "configuration.konghq.com",
+								Kind:      "KongTarget",
+								Namespace: "default",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "configuration.konghq.com",
+								Kind:  "KongUpstream",
+							},
+						},
+					},
+				},
+			},
+			expectError:  false,
+			expectResult: ctrl.Result{},
+			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+
+						return c.Type == konnectv1alpha1.KongUpstreamRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongTarget does not have KongUpstreamRefValid=True condition"
+				},
+				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
+					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {
+						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
+					}), "KongTarget does not have ControlPlaneRefValid=True condition"
+				},
+			},
+		},
 	}
 	testHandleUpstreamRef(t, testCases)
 }
@@ -404,7 +563,12 @@ func testHandleUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 				WithObjects(tc.ent).WithObjects(tc.objects...).
 				// WithStatusSubresource is required for updating status of handled entity.
 				WithStatusSubresource(tc.ent).Build()
+			// Save GVK before the status update: the fake client clears TypeMeta
+			// when writing back the result, breaking GetObjectKind().GroupVersionKind()
+			// which is needed for cross-namespace reference grant checks.
+			savedGVK := tc.ent.GetObjectKind().GroupVersionKind()
 			require.NoError(t, fakeClient.SubResource("status").Update(t.Context(), tc.ent))
+			tc.ent.GetObjectKind().SetGroupVersionKind(savedGVK)
 
 			res, err := handleKongUpstreamRef(t.Context(), fakeClient, tc.ent)
 

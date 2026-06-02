@@ -60,6 +60,8 @@ func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, fqdnM
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongPluginBinding"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongCertificate"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongReferenceGrant"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongUpstream"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1.GroupVersion.Version, Kind: "KongPlugin"},
 		},
@@ -321,7 +323,7 @@ func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger 
 	am.RemoveRouteFromAnnotation(resource, c.route)
 
 	// If other Routes are still present in the annotation, we just need to update the resource.
-	if len(am.GetRoutes(resource)) > 0 {
+	if len(am.GetRoutesWithKind(resource, "HTTPRoute")) > 0 {
 		log.Debug(logger, "Updating hybrid-routes annotation", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
 		if err := c.Patch(ctx, resource, client.MergeFrom(oldResource)); err != nil && !apierrors.IsNotFound(err) {
 			return true, fmt.Errorf("failed to update resource: %w", err)
@@ -386,6 +388,10 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 		pRef := pRefData.parentRef
 		cp := pRefData.cpRef
 		hostnames := pRefData.hostnames
+		var namingParentRef *gwtypes.ParentReference
+		if len(supportedParentRefs) > 1 {
+			namingParentRef = &pRef
+		}
 
 		log.Debug(logger, "Processing parent reference",
 			"parentRef", pRef,
@@ -412,14 +418,23 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			log.Debug(logger, "Successfully translated KongUpstream resource",
 				"upstream", upstreamName)
 
-			// Build the KongService resource.
-			servicePtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
+			// Build the KongService resource (and optionally a KongCertificate + KongReferenceGrant for client-cert).
+			servicePtr, certPtr, grantPtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongService resource, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef,
 					"upstream", upstreamName)
 				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongService for rule: %w", err))
 				continue
+			}
+			// Append KongReferenceGrant before KongCertificate so the grant exists when the cert is applied.
+			if grantPtr != nil {
+				c.outputStore = append(c.outputStore, grantPtr)
+				log.Debug(logger, "Successfully translated KongReferenceGrant resource", "grant", grantPtr.Name)
+			}
+			if certPtr != nil {
+				c.outputStore = append(c.outputStore, certPtr)
+				log.Debug(logger, "Successfully translated KongCertificate resource", "cert", certPtr.Name)
 			}
 			serviceName := servicePtr.Name
 			c.outputStore = append(c.outputStore, servicePtr)
@@ -430,7 +445,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			// Gateway API semantics require OR across matches within a rule
 			// and AND within a single match. Generating a route per match
 			// preserves the OR semantics for Hybrid Gateway.
-			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
+			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, namingParentRef, serviceName, hostnames)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongRoute resources for rule, skipping rule",
 					"ruleIndex", ruleIndex,

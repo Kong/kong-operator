@@ -6,24 +6,22 @@ const (
 	kbOptional = "+optional"
 	kbRequired = "+required"
 
-	kbValidationMaxLengthFmt = "+kubebuilder:validation:MaxLength=%d"
-	kbValidationMinLengthFmt = "+kubebuilder:validation:MinLength=%d"
-	kbValidationPatternFmt   = "+kubebuilder:validation:Pattern=`%s`"
-	kbValidationMinimumFmt   = "+kubebuilder:validation:Minimum=%v"
-	kbValidationMaximumFmt   = "+kubebuilder:validation:Maximum=%v"
-	kbValidationEnumFmt      = "+kubebuilder:validation:Enum=%s"
-
-	kbDefaultStringFmt = "+kubebuilder:default=%s"
+	kbValidationMaxLengthFmt     = "+kubebuilder:validation:MaxLength=%d"
+	kbValidationMinLengthFmt     = "+kubebuilder:validation:MinLength=%d"
+	kbValidationPatternFmt       = "+kubebuilder:validation:Pattern=`%s`"
+	kbValidationMinimumFmt       = "+kubebuilder:validation:Minimum=%v"
+	kbValidationMaximumFmt       = "+kubebuilder:validation:Maximum=%v"
+	kbValidationEnumFmt          = "+kubebuilder:validation:Enum=%s"
+	kbValidationMaxPropertiesFmt = "+kubebuilder:validation:MaxProperties=%d"
 )
 
 func markerOptional() string { return kbOptional }
 func markerRequired() string { return kbRequired }
 
-func markerValidationMaxLength(v int) string  { return fmt.Sprintf(kbValidationMaxLengthFmt, v) }
-func markerValidationMinLength(v int) string  { return fmt.Sprintf(kbValidationMinLengthFmt, v) }
-func markerValidationPattern(v string) string { return fmt.Sprintf(kbValidationPatternFmt, v) }
-func markerValidationMinimum(v any) string    { return fmt.Sprintf(kbValidationMinimumFmt, v) }
-func markerValidationMaximum(v any) string    { return fmt.Sprintf(kbValidationMaximumFmt, v) }
-func markerValidationEnum(v string) string    { return fmt.Sprintf(kbValidationEnumFmt, v) }
-
-func markerDefaultString(v string) string { return fmt.Sprintf(kbDefaultStringFmt, v) }
+func markerValidationMaxLength(v int) string     { return fmt.Sprintf(kbValidationMaxLengthFmt, v) }
+func markerValidationMinLength(v int) string     { return fmt.Sprintf(kbValidationMinLengthFmt, v) }
+func markerValidationPattern(v string) string    { return fmt.Sprintf(kbValidationPatternFmt, v) }
+func markerValidationMinimum(v any) string       { return fmt.Sprintf(kbValidationMinimumFmt, v) }
+func markerValidationMaximum(v any) string       { return fmt.Sprintf(kbValidationMaximumFmt, v) }
+func markerValidationEnum(v string) string       { return fmt.Sprintf(kbValidationEnumFmt, v) }
+func markerValidationMaxProperties(v int) string { return fmt.Sprintf(kbValidationMaxPropertiesFmt, v) }

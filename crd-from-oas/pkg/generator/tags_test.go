@@ -11,11 +11,9 @@ import (
 
 func TestKubebuilderTags(t *testing.T) {
 	tests := []struct {
-		name        string
-		prop        *parser.Property
-		entityName  string
-		fieldConfig *config.Config
-		expected    []string
+		name     string
+		prop     *parser.Property
+		expected []string
 	}{
 		{
 			name: "required non-nullable string without validations",
@@ -130,48 +128,6 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 		},
 		{
-			name: "boolean with default true",
-			prop: &parser.Property{
-				Name:     "enabled",
-				Type:     "boolean",
-				Required: false,
-				Default:  true,
-			},
-			expected: []string{
-				"+optional",
-				"+kubebuilder:validation:Enum=Enabled;Disabled",
-				"+kubebuilder:default=Enabled",
-			},
-		},
-		{
-			name: "boolean with default false",
-			prop: &parser.Property{
-				Name:     "disabled",
-				Type:     "boolean",
-				Required: false,
-				Default:  false,
-			},
-			expected: []string{
-				"+optional",
-				"+kubebuilder:validation:Enum=Enabled;Disabled",
-				"+kubebuilder:default=Disabled",
-			},
-		},
-		{
-			name: "string with default value",
-			prop: &parser.Property{
-				Name:     "protocol",
-				Type:     "string",
-				Required: false,
-				Default:  "https",
-			},
-			expected: []string{
-				"+optional",
-				"+kubebuilder:validation:MaxLength=253",
-				"+kubebuilder:default=https",
-			},
-		},
-		{
 			name: "non-string type without string validations",
 			prop: &parser.Property{
 				Name:     "count",
@@ -234,7 +190,148 @@ func TestKubebuilderTags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := KubebuilderTags(tt.prop, tt.entityName, tt.fieldConfig)
+			result := KubebuilderTags(tt.prop, nil)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestKubebuilderTags_MapType(t *testing.T) {
+	tests := []struct {
+		name     string
+		prop     *parser.Property
+		expected []string
+	}{
+		{
+			name: "map field with MaxProperties",
+			prop: &parser.Property{
+				Name:          "labels",
+				Type:          "object",
+				Required:      false,
+				MaxProperties: new(int64(50)),
+				AdditionalProperties: &parser.Property{
+					Name: "value",
+					Type: "string",
+				},
+			},
+			expected: []string{
+				"+optional",
+				"+kubebuilder:validation:MaxProperties=50",
+			},
+		},
+		{
+			name: "map ref field with MaxProperties",
+			prop: &parser.Property{
+				Name:          "labels",
+				Type:          "object",
+				Required:      false,
+				RefName:       "LabelsUpdate",
+				MaxProperties: new(int64(50)),
+				AdditionalProperties: &parser.Property{
+					Name:      "value",
+					Type:      "string",
+					MinLength: new(int64(1)),
+					MaxLength: new(int64(63)),
+				},
+			},
+			expected: []string{
+				"+optional",
+				"+kubebuilder:validation:MaxProperties=50",
+			},
+		},
+		{
+			name: "map field without MaxProperties",
+			prop: &parser.Property{
+				Name:     "tags",
+				Type:     "object",
+				Required: false,
+				AdditionalProperties: &parser.Property{
+					Name: "value",
+					Type: "string",
+				},
+			},
+			expected: []string{
+				"+optional",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := KubebuilderTags(tt.prop, nil)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestValueTypeMarkers(t *testing.T) {
+	tests := []struct {
+		name     string
+		prop     *parser.Property
+		expected []string
+	}{
+		{
+			name: "string with all constraints",
+			prop: &parser.Property{
+				Type:      "string",
+				MinLength: new(int64(1)),
+				MaxLength: new(int64(63)),
+				Pattern:   `^[a-z0-9A-Z]+$`,
+			},
+			expected: []string{
+				"+kubebuilder:validation:MinLength=1",
+				"+kubebuilder:validation:MaxLength=63",
+				"+kubebuilder:validation:Pattern=`^[a-z0-9A-Z]+$`",
+			},
+		},
+		{
+			name: "string with only maxLength",
+			prop: &parser.Property{
+				Type:      "string",
+				MaxLength: new(int64(256)),
+			},
+			expected: []string{
+				"+kubebuilder:validation:MaxLength=256",
+			},
+		},
+		{
+			name:     "string with no constraints",
+			prop:     &parser.Property{Type: "string"},
+			expected: nil,
+		},
+		{
+			name: "non-string type returns nil",
+			prop: &parser.Property{
+				Type:      "integer",
+				MinLength: new(int64(1)),
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := valueTypeMarkers(tt.prop)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestPropertyToGoBaseType(t *testing.T) {
+	tests := []struct {
+		propType string
+		expected string
+	}{
+		{"string", "string"},
+		{"integer", "int"},
+		{"boolean", "bool"},
+		{"number", "float64"},
+		{"unknown", "string"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.propType, func(t *testing.T) {
+			result := propertyToGoBaseType(&parser.Property{Type: tt.propType})
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -244,8 +341,7 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 	tests := []struct {
 		name        string
 		prop        *parser.Property
-		entityName  string
-		fieldConfig *config.Config
+		fieldCursor *config.FieldConfig
 		expected    []string
 	}{
 		{
@@ -255,16 +351,12 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 				Type:     "string",
 				Required: true,
 			},
-			entityName: "Portal",
-			fieldConfig: &config.Config{
-				Entities: map[string]*config.EntityConfig{
-					"Portal": {
-						Fields: map[string]*config.FieldConfig{
-							"url": {
-								Validations: []string{
-									"+kubebuilder:validation:Format=uri",
-								},
-							},
+			// cursor represents the struct containing "url" (json tag matches)
+			fieldCursor: &config.FieldConfig{
+				Fields: map[string]*config.FieldConfig{
+					"url": {
+						Validations: []string{
+							"+kubebuilder:validation:Format=uri",
 						},
 					},
 				},
@@ -283,17 +375,12 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 				Type:     "string",
 				Required: false,
 			},
-			entityName: "Service",
-			fieldConfig: &config.Config{
-				Entities: map[string]*config.EntityConfig{
-					"Service": {
-						Fields: map[string]*config.FieldConfig{
-							"host": {
-								Validations: []string{
-									"+kubebuilder:validation:Format=hostname",
-									"+kubebuilder:validation:XValidation:rule=\"self.matches('^[a-z]')\"",
-								},
-							},
+			fieldCursor: &config.FieldConfig{
+				Fields: map[string]*config.FieldConfig{
+					"host": {
+						Validations: []string{
+							"+kubebuilder:validation:Format=hostname",
+							"+kubebuilder:validation:XValidation:rule=\"self.matches('^[a-z]')\"",
 						},
 					},
 				},
@@ -306,22 +393,17 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "field config for different entity does not apply",
+			name: "cursor without matching field key does not apply",
 			prop: &parser.Property{
 				Name:     "name",
 				Type:     "string",
 				Required: true,
 			},
-			entityName: "Portal",
-			fieldConfig: &config.Config{
-				Entities: map[string]*config.EntityConfig{
-					"Service": {
-						Fields: map[string]*config.FieldConfig{
-							"name": {
-								Validations: []string{
-									"+kubebuilder:validation:Format=dns",
-								},
-							},
+			fieldCursor: &config.FieldConfig{
+				Fields: map[string]*config.FieldConfig{
+					"url": {
+						Validations: []string{
+							"+kubebuilder:validation:Format=uri",
 						},
 					},
 				},
@@ -333,26 +415,13 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "field config for different field does not apply",
+			name: "nil cursor",
 			prop: &parser.Property{
 				Name:     "name",
 				Type:     "string",
 				Required: true,
 			},
-			entityName: "Portal",
-			fieldConfig: &config.Config{
-				Entities: map[string]*config.EntityConfig{
-					"Portal": {
-						Fields: map[string]*config.FieldConfig{
-							"url": {
-								Validations: []string{
-									"+kubebuilder:validation:Format=uri",
-								},
-							},
-						},
-					},
-				},
-			},
+			fieldCursor: nil,
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
@@ -360,31 +429,13 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "nil field config",
+			name: "empty cursor fields",
 			prop: &parser.Property{
 				Name:     "name",
 				Type:     "string",
 				Required: true,
 			},
-			entityName:  "Portal",
-			fieldConfig: nil,
-			expected: []string{
-				"+required",
-				"+kubebuilder:validation:MinLength=1",
-				"+kubebuilder:validation:MaxLength=253",
-			},
-		},
-		{
-			name: "empty field config",
-			prop: &parser.Property{
-				Name:     "name",
-				Type:     "string",
-				Required: true,
-			},
-			entityName: "Portal",
-			fieldConfig: &config.Config{
-				Entities: map[string]*config.EntityConfig{},
-			},
+			fieldCursor: &config.FieldConfig{},
 			expected: []string{
 				"+required",
 				"+kubebuilder:validation:MinLength=1",
@@ -395,21 +446,26 @@ func TestKubebuilderTags_WithFieldConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := KubebuilderTags(tt.prop, tt.entityName, tt.fieldConfig)
+			result := KubebuilderTags(tt.prop, tt.fieldCursor)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
 
-func TestKubebuilderTags_DefaultPanic(t *testing.T) {
+func TestKubebuilderTags_OverrideMaxLength(t *testing.T) {
 	prop := &parser.Property{
-		Name:     "count",
-		Type:     "integer",
-		Required: false,
-		Default:  123, // int type, not bool or string
+		Name:     "certificate",
+		Type:     "string",
+		Required: true,
 	}
-
-	assert.Panics(t, func() {
-		KubebuilderTags(prop, "Test", nil)
-	})
+	cursor := &config.FieldConfig{
+		Fields: map[string]*config.FieldConfig{
+			"certificate": {
+				Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+			},
+		},
+	}
+	result := KubebuilderTags(prop, cursor)
+	assert.Contains(t, result, "+kubebuilder:validation:MaxLength=1024", "user-provided MaxLength should be present")
+	assert.NotContains(t, result, "+kubebuilder:validation:MaxLength=253", "default MaxLength should be removed")
 }

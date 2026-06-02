@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: konnect
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: event-gateways
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: event-listeners
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: konnect
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:
+  # https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: eu.api.konghq.com
+---
+# Allow the Event Gateway in event-gateways to use the Konnect auth
+# configuration in konnect.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-eventgateway-to-konnect-auth
+  namespace: konnect
+spec:
+  from:
+    - group: konnect.konghq.com
+      kind: KonnectEventGateway
+      namespace: event-gateways
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectAPIAuthConfiguration
+---
+# Allow the Listener in event-listeners to reference the Event Gateway in
+# event-gateways. The same grant pattern applies to EventGatewayDataPlaneCertificate.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-listener-to-eventgateway
+  namespace: event-gateways
+spec:
+  from:
+    - group: konnect.konghq.com
+      kind: EventGatewayListener
+      namespace: event-listeners
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectEventGateway
+---
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: shared-event-gateway
+  namespace: event-gateways
+spec:
+  apiSpec:
+    name: shared-event-gateway
+    description: Event Gateway shared across namespaces
+    labels:
+      app: sample
+      env: demo
+  konnect:
+    authRef:
+      name: konnect-api-auth
+      namespace: konnect
+---
+kind: EventGatewayListener
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: shared-event-gateway-listener
+  namespace: event-listeners
+spec:
+  apiSpec:
+    name: shared-event-gateway-listener
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - 8080
+    description: Listener referencing a cross-namespace Event Gateway
+    labels:
+      app: sample
+      env: demo
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: shared-event-gateway
+      namespace: event-gateways

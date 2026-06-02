@@ -9,6 +9,9 @@ const (
 	// HybridHTTPRouteFinalizer is the finalizer added to HTTPRoute objects to manage cleanup of generated resources.
 	HybridHTTPRouteFinalizer = "gateway-operator.konghq.com/hybrid-httproute-cleanup"
 
+	// HybridTLSRouteFinalizer is the finalizer added to TLSRoute objects to manage cleanup of generated resources.
+	HybridTLSRouteFinalizer = "gateway-operator.konghq.com/hybrid-tlsroute-cleanup"
+
 	// HybridGatewayFinalizer is the finalizer added to Gateway objects to manage cleanup of generated resources.
 	HybridGatewayFinalizer = "gateway-operator.konghq.com/hybrid-gateway-cleanup"
 
@@ -22,6 +25,8 @@ func GetFinalizerForType[t converter.RootObject](obj t) string {
 	switch any(obj).(type) {
 	case gwtypes.HTTPRoute:
 		return HybridHTTPRouteFinalizer
+	case gwtypes.TLSRoute:
+		return HybridTLSRouteFinalizer
 	case gwtypes.Gateway:
 		return HybridGatewayFinalizer
 	default:

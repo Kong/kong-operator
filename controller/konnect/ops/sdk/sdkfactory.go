@@ -36,6 +36,8 @@ type SDKWrapper interface {
 	GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK
 	GetMCPServersSDK() *sdkkonnectgo.MCPServers
 
+	GeneratedSDK
+
 	// GetServerURL returns the server URL for recording metrics.
 	GetServerURL() string
 	GetServer() server.Server

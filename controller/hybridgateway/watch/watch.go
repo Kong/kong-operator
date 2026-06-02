@@ -8,6 +8,7 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -26,35 +27,35 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 	case *gwtypes.HTTPRoute:
 		return []Watcher{
 			{
-				MapRouteForGateway(cl, &gwtypes.HTTPRoute{}),
+				MapRouteForGateway(cl, gwtypes.HTTPRoute{}),
 				&gwtypes.Gateway{},
 			},
 			{
-				MapRouteForGatewayClass(cl, &gwtypes.HTTPRoute{}),
+				MapRouteForGatewayClass(cl, gwtypes.HTTPRoute{}),
 				&gwtypes.GatewayClass{},
 			},
 			{
-				MapRouteForService(cl, &gwtypes.HTTPRoute{}),
+				MapRouteForService(cl, gwtypes.HTTPRoute{}),
 				&corev1.Service{},
 			},
 			{
-				MapRouteForEndpointSlice(cl, &gwtypes.HTTPRoute{}),
+				MapRouteForEndpointSlice(cl, gwtypes.HTTPRoute{}),
 				&discoveryv1.EndpointSlice{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindHTTPRoute),
 				&configurationv1alpha1.KongUpstream{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongTarget](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongTarget](kindHTTPRoute),
 				&configurationv1alpha1.KongTarget{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongService](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongService](kindHTTPRoute),
 				&configurationv1alpha1.KongService{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongRoute](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongRoute](kindHTTPRoute),
 				&configurationv1alpha1.KongRoute{},
 			},
 			{
@@ -62,12 +63,79 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				&configurationv1.KongPlugin{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongPluginBinding](cl),
+				MapRouteForKongResource[*configurationv1alpha1.KongPluginBinding](kindHTTPRoute),
 				&configurationv1alpha1.KongPluginBinding{},
 			},
 			{
 				MapHTTPRouteForReferenceGrant(cl),
 				&gwtypes.ReferenceGrant{},
+			},
+			{
+				MapHTTPRouteForKongUpstreamPolicy(cl),
+				&configurationv1beta1.KongUpstreamPolicy{},
+			},
+			{
+				MapHTTPRouteForClientCertSecret(cl),
+				&corev1.Secret{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindHTTPRoute),
+				&configurationv1alpha1.KongCertificate{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindHTTPRoute),
+				&configurationv1alpha1.KongReferenceGrant{},
+			},
+		}
+	case *gwtypes.TLSRoute:
+		return []Watcher{
+			{
+				MapRouteForGateway(cl, gwtypes.TLSRoute{}),
+				&gwtypes.Gateway{},
+			},
+			{
+				MapRouteForGatewayClass(cl, gwtypes.TLSRoute{}),
+				&gwtypes.GatewayClass{},
+			},
+			{
+				MapRouteForService(cl, gwtypes.TLSRoute{}),
+				&corev1.Service{},
+			},
+			{
+				MapRouteForEndpointSlice(cl, gwtypes.TLSRoute{}),
+				&discoveryv1.EndpointSlice{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindTLSRoute),
+				&configurationv1alpha1.KongUpstream{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongTarget](kindTLSRoute),
+				&configurationv1alpha1.KongTarget{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongService](kindTLSRoute),
+				&configurationv1alpha1.KongService{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongRoute](kindTLSRoute),
+				&configurationv1alpha1.KongRoute{},
+			},
+			{
+				MapTLSRouteForReferenceGrant(cl),
+				&gwtypes.ReferenceGrant{},
+			},
+			{
+				MapTLSRouteForClientCertSecret(cl),
+				&corev1.Secret{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindTLSRoute),
+				&configurationv1alpha1.KongCertificate{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindTLSRoute),
+				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		}
 	case *gwtypes.Gateway:

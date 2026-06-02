@@ -23,7 +23,7 @@ linters:
     - gocritic
     - godoclint
     - godot
-    - gomodguard
+    - gomodguard_v2
     - gosec
     - importas
     - ineffassign
@@ -88,6 +88,8 @@ linters:
           msg: Please use the types package to refer to the type (through github.com/kong/kong-operator/internal/types)
         - pattern: ^errors.As$
           msg: Please use errors.AsType instead
+        - pattern: ^ptr\.To$
+          msg: Please use built-in new() instead
         - pattern: ^lo\.ToPtr$
           msg: Please use built-in new() instead
         - pattern: ^lo\.Contains$
@@ -98,22 +100,21 @@ linters:
           msg: Please use controller-runtime client and v2beta1 GatewayConfigurations instead
         - pattern: v1beta1\.GatewayConfiguration$
           msg: Please use v2beta1 GatewayConfiguration instead
-    gomodguard:
+    gomodguard_v2:
       blocked:
-        modules:
-          - golang.org/x/exp:
-              recommendations:
-                - maps
-                - slices
-                - github.com/samber/lo
-          - github.com/pkg/errors:
-              recommendations:
-                - fmt
-                - errors
-          - github.com/sirupsen/logrus:
-              recommendations:
-                - sigs.k8s.io/controller-runtime/pkg/log
-                - go.uber.org/zap/zapcore
+        - module: golang.org/x/exp
+          recommendations:
+            - maps
+            - slices
+            - github.com/samber/lo
+        - module: github.com/pkg/errors
+          recommendations:
+            - fmt
+            - errors
+        - module: github.com/sirupsen/logrus
+          recommendations:
+            - sigs.k8s.io/controller-runtime/pkg/log
+            - go.uber.org/zap/zapcore
     govet:
       disable:
         - fieldalignment
@@ -320,11 +321,6 @@ linters:
           - forbidigo
         text: use of `errors.As` forbidden because
         path: ".*_test.go|test/.*|ingress-controller/.*"
-      # TODO: remove when https://github.com/golangci/golangci-lint/issues/6363
-      # is resolved and we can use new(expression) instead of ToPtr.
-      - linters:
-          - modernize
-        text: call of .+\(x\) can be simplified to new\(x\)
       - linters:
           - modernize
         text: .+ can be an inlinable wrapper around new

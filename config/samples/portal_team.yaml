@@ -1,0 +1,28 @@
+kind: Portal
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: portal1
+  namespace: default
+spec:
+  konnect:
+    authRef:
+      name: konnect-api-auth
+  apiSpec:
+    name: portal1
+    authenticationEnabled: Enabled
+    labels:
+      env: production
+      team: team1
+---
+kind: PortalTeam
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: portal1-team
+  namespace: default
+spec:
+  portalRef:
+    type: namespacedRef
+    namespacedRef:
+      name: portal1
+  apiSpec:
+    name: team1

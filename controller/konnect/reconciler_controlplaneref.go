@@ -69,18 +69,28 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, err
 	}
 
+	cpnn := types.NamespacedName{
+		Name:      cp.Name,
+		Namespace: cp.Namespace,
+	}
+
 	// Do not continue reconciling of the control plane has incompatible cluster type to prevent repeated failure of creation.
 	// Only CLUSTER_TYPE_CONTROL_PLANE is supported.
 	// The configuration in control plane group type are read only so they are unsupported to attach entities to them:
 	// https://docs.konghq.com/konnect/gateway-manager/control-plane-groups/#limitations
 	if cp.GetKonnectClusterType() != nil &&
-		*cp.GetKonnectClusterType() == sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
+		(*cp.GetKonnectClusterType() == sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup &&
+			// We don't allow attaching to control plane group type as they are read only
+			// and don't have the configuration that can be used by the entities,
+			// but we want to allow attaching KongDataPlaneClientCertificate to them
+			// as they are used for CP/DP mTLS.
+			ent.GetObjectKind().GroupVersionKind().GroupKind().Kind != "KongDataPlaneClientCertificate") {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
-			fmt.Sprintf("Attaching to ControlPlane %s with cluster type %s is not supported", cpRef.String(), *cp.GetKonnectClusterType()),
+			fmt.Sprintf("Attaching to ControlPlane %s with cluster type %s is not supported", cpnn, *cp.GetKonnectClusterType()),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -94,12 +104,13 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonNotProgrammed,
-			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", cpRef.String()),
+			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", cpnn),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		// Don't requeue. The referenced entity's changes will trigger the reconciliation.
+		return ctrl.Result{}, nil
 	}
 
 	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
@@ -119,7 +130,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.ControlPlaneRefReasonValid,
-		fmt.Sprintf("Referenced ControlPlane %s is programmed", cpRef.String()),
+		fmt.Sprintf("Referenced ControlPlane %s is programmed", cpnn),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}

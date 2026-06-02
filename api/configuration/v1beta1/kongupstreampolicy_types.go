@@ -11,10 +11,6 @@ const (
 	KongUpstreamPolicyAnnotationKey = "konghq.com/upstream-policy"
 )
 
-func init() {
-	SchemeBuilder.Register(&KongUpstreamPolicy{}, &KongUpstreamPolicyList{})
-}
-
 // KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong
 // Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets.
 //
@@ -39,6 +35,7 @@ func init() {
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced,shortName=kup,categories=kong
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:storageversion
 // +kubebuilder:metadata:labels=gateway.networking.k8s.io/policy=direct
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) ? [has(self.spec.hashOn.input), has(self.spec.hashOn.cookie), has(self.spec.hashOn.header), has(self.spec.hashOn.uriCapture), has(self.spec.hashOn.queryArg)].filter(fieldSet, fieldSet == true).size() <= 1 : true", message="Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set."

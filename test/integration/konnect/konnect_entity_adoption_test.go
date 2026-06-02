@@ -21,7 +21,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
@@ -62,12 +61,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 
 	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
-		func(obj client.Object) {
-			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
-			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
-			authCfg.Spec.Token = test.KonnectAccessToken()
-			authCfg.Spec.ServerURL = test.KonnectServerURL()
-		},
+		deploy.KonnectAPIAuthConfigurationWithTestToken(test.KonnectAccessToken(), test.KonnectServerURL()),
 	)
 
 	cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
@@ -158,7 +152,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 
 	t.Logf("Creating a route attached to service %s by SDK for adoption", serviceKonnectID)
 	routeResp, err := sdk.GetRoutesSDK().CreateRoute(ctx, cpKonnectID, sdkkonnectcomp.Route{
-		Type: sdkkonnectcomp.RouteTypeRouteJSON,
+		Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 		RouteJSON: &sdkkonnectcomp.RouteJSON{
 			Name: new("route-test-adopt"),
 			Paths: []string{
@@ -239,12 +233,7 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	t.Log("Creating Konnect API auth configuration and Konnect control plane")
 	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
-		func(obj client.Object) {
-			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
-			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
-			authCfg.Spec.Token = test.KonnectAccessToken()
-			authCfg.Spec.ServerURL = test.KonnectServerURL()
-		},
+		deploy.KonnectAPIAuthConfigurationWithTestToken(test.KonnectAccessToken(), test.KonnectServerURL()),
 	)
 
 	cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
@@ -402,12 +391,7 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 	t.Log("Creating Konnect API auth configuration and Konnect control plane")
 	authCfg := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
 		deploy.WithTestIDLabel(testID),
-		func(obj client.Object) {
-			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
-			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
-			authCfg.Spec.Token = test.KonnectAccessToken()
-			authCfg.Spec.ServerURL = test.KonnectServerURL()
-		},
+		deploy.KonnectAPIAuthConfigurationWithTestToken(test.KonnectAccessToken(), test.KonnectServerURL()),
 	)
 
 	cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,

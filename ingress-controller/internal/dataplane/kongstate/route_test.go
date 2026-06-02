@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
@@ -211,7 +212,7 @@ func TestOverrideRoute(t *testing.T) {
 			route.Ingress = util.K8sObjectInfo{
 				Annotations: tc.inAnnotations,
 			}
-			route.overrideByAnnotation(zapr.NewLogger(zap.NewNop()))
+			route.overrideByAnnotation(zapr.NewLogger(zap.NewNop()), defaultTestKongVersion)
 			require.Equal(t, tc.expectedRoute.Route, route.Route)
 		})
 	}
@@ -220,7 +221,7 @@ func TestOverrideRoute(t *testing.T) {
 func TestNilRouteOverrideDoesntPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		var nilRoute *Route
-		nilRoute.Override(zapr.NewLogger(zap.NewNop()))
+		nilRoute.Override(zapr.NewLogger(zap.NewNop()), defaultTestKongVersion)
 	})
 }
 
@@ -305,7 +306,7 @@ func TestOverrideExpressionRoute(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
-			tc.inRoute.Override(zapr.NewLogger(zap.NewNop()))
+			tc.inRoute.Override(zapr.NewLogger(zap.NewNop()), defaultTestKongVersion)
 			assert.Equal(t, tc.outRoute, tc.inRoute, "should be the same as expected after overriding")
 		})
 	}
@@ -800,9 +801,12 @@ func TestOverrideRouteMethods(t *testing.T) {
 }
 
 func TestOverrideRouteSNIs(t *testing.T) {
+	kongVersionNotSupportingWildcardSNI := semver.MustParse("3.4.3")
+	kongVersionSupportingWildcardSNI := semver.MustParse("3.10.0")
 	type args struct {
-		route Route
-		anns  map[string]string
+		route       Route
+		anns        map[string]string
+		kongVersion semver.Version
 	}
 	tests := []struct {
 		name string
@@ -816,6 +820,7 @@ func TestOverrideRouteSNIs(t *testing.T) {
 				anns: map[string]string{
 					"konghq.com/snis": "hrodna.kong.example, katowice.kong.example",
 				},
+				kongVersion: kongVersionNotSupportingWildcardSNI,
 			},
 			want: Route{
 				Route: kong.Route{
@@ -829,20 +834,36 @@ func TestOverrideRouteSNIs(t *testing.T) {
 				anns: map[string]string{
 					"konghq.com/snis": "-10,GET",
 				},
+				kongVersion: kongVersionNotSupportingWildcardSNI,
 			},
 		},
 		{
-			name: "wildcard hostname, not valid for SNI",
+			name: "wildcard hostname, not valid for SNI if version does not support it",
 			args: args{
 				anns: map[string]string{
 					"konghq.com/snis": "*.example.com",
+				},
+				kongVersion: kongVersionNotSupportingWildcardSNI,
+			},
+		},
+		{
+			name: "wildcard hostname, valid for SNI if version supports it",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/snis": "*.example.com",
+				},
+				kongVersion: kongVersionSupportingWildcardSNI,
+			},
+			want: Route{
+				Route: kong.Route{
+					SNIs: kong.StringSlice("*.example.com"),
 				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideSNIs(zapr.NewLogger(zap.NewNop()), tt.args.anns)
+			tt.args.route.overrideSNIs(zapr.NewLogger(zap.NewNop()), tt.args.anns, tt.args.kongVersion)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRouteSNIs() got = %v, want %v", tt.args.route, tt.want)
 			}

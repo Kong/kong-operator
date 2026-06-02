@@ -19,10 +19,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
-func init() {
-	SchemeBuilder.Register(&KonnectExtension{}, &KonnectExtensionList{})
-}
-
 const (
 	// KonnectExtensionKind holds the kind for the KonnectExtension.
 	KonnectExtensionKind = "KonnectExtension"
@@ -221,6 +217,8 @@ const (
 	ClusterTypeControlPlane KonnectExtensionClusterType = "ControlPlane"
 	// ClusterTypeK8sIngressController is the type of the Kubernetes Control Plane.
 	ClusterTypeK8sIngressController KonnectExtensionClusterType = "K8SIngressController"
+	// ClusterTypeControlPlaneGroup is the type of the Control Plane Group.
+	ClusterTypeControlPlaneGroup KonnectExtensionClusterType = "ControlPlaneGroup"
 )
 
 // KonnectEndpoints defines the Konnect endpoints for the control plane.
@@ -249,7 +247,7 @@ type KonnectExtensionControlPlaneStatus struct {
 	// ClusterType is the type of the Konnect Control Plane.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=ControlPlane;K8SIngressController
+	// +kubebuilder:validation:Enum=ControlPlane;K8SIngressController;ControlPlaneGroup
 	ClusterType KonnectExtensionClusterType `json:"clusterType"`
 
 	// Endpoints defines the Konnect endpoints for the control plane.

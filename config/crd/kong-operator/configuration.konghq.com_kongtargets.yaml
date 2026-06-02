@@ -22,6 +22,10 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -127,9 +131,19 @@ spec:
                   is attached to.
                 properties:
                   name:
-                    description: Name is the name of the entity.
+                    description: Name is the name of the referred resource.
                     maxLength: 253
                     minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
                     type: string
                 required:
                 - name
@@ -233,14 +247,17 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been
                       created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which
                       the entity exists.
+                    maxLength: 512
                     type: string
                   upstreamID:
                     description: UpstreamID is the Konnect ID of the Upstream this

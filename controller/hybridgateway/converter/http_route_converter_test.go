@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -444,6 +446,212 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 			},
 		},
 		{
+			name: "translates partially invalid cross-namespace sibling backends",
+			setup: func() *httpRouteConverter {
+				v1Name := gwtypes.ObjectName("app-backend-v1")
+				v2Name := gwtypes.ObjectName("app-backend-v2")
+				serviceKind := gwtypes.Kind("Service")
+				serviceGroup := gwtypes.Group("")
+
+				route := newHTTPRouteWithRules(
+					[]string{"api.example.com"},
+					[]gwtypes.HTTPRouteRule{
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  new(gatewayv1.PathMatchPathPrefix),
+									Value: new("/v2"),
+								},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:      v2Name,
+										Namespace: new(gwtypes.Namespace("app-backend")),
+										Kind:      &serviceKind,
+										Group:     &serviceGroup,
+										Port:      new(gwtypes.PortNumber(80)),
+									},
+								},
+							}},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  new(gatewayv1.PathMatchPathPrefix),
+									Value: new("/"),
+								},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:      v1Name,
+										Namespace: new(gwtypes.Namespace("app-backend")),
+										Kind:      &serviceKind,
+										Group:     &serviceGroup,
+										Port:      new(gwtypes.PortNumber(80)),
+									},
+								},
+							}},
+						},
+					},
+				)
+
+				gateway := baseGateway()
+				objects := append(
+					newKonnectGatewayStandardObjects(gateway),
+					newNamespace(),
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v1", Namespace: "app-backend"},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "10.0.0.2",
+							Ports: []corev1.ServicePort{{
+								Name:       "http",
+								Port:       80,
+								Protocol:   corev1.ProtocolTCP,
+								TargetPort: intstr.FromInt(8080),
+							}},
+						},
+					},
+					&corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v2", Namespace: "app-backend"},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "10.0.0.3",
+							Ports: []corev1.ServicePort{{
+								Name:       "http",
+								Port:       80,
+								Protocol:   corev1.ProtocolTCP,
+								TargetPort: intstr.FromInt(8080),
+							}},
+						},
+					},
+					newEndpointSlice("app-backend-v1", "app-backend", 8080, []string{"10.0.1.1"}),
+					&gwtypes.ReferenceGrant{
+						ObjectMeta: metav1.ObjectMeta{Name: "allow-app-backend-v1", Namespace: "app-backend"},
+						Spec: gwtypes.ReferenceGrantSpec{
+							From: []gwtypes.ReferenceGrantFrom{{
+								Group:     gwtypes.GroupName,
+								Kind:      "HTTPRoute",
+								Namespace: "default",
+							}},
+							To: []gwtypes.ReferenceGrantTo{{
+								Group: gwtypes.Group(""),
+								Kind:  gwtypes.Kind("Service"),
+								Name:  &v1Name,
+							}},
+						},
+					},
+				)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount: 9,
+			wantOutputs: outputCount{
+				upstreams: 2,
+				services:  2,
+				routes:    2,
+				targets:   1,
+				bindings:  1,
+				plugins:   1,
+			},
+			wantStoreLen: 9,
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+
+				var (
+					targets    []*configurationv1alpha1.KongTarget
+					pluginObj  *configurationv1.KongPlugin
+					bindingObj *configurationv1alpha1.KongPluginBinding
+				)
+
+				for _, obj := range store {
+					switch typed := obj.(type) {
+					case *configurationv1alpha1.KongTarget:
+						targets = append(targets, typed)
+					case *configurationv1.KongPlugin:
+						pluginObj = typed
+					case *configurationv1alpha1.KongPluginBinding:
+						bindingObj = typed
+					}
+				}
+
+				require.Len(t, targets, 1)
+				assert.Equal(t, "10.0.1.1:8080", targets[0].Spec.Target)
+
+				require.NotNil(t, pluginObj)
+				require.NotNil(t, bindingObj)
+				assert.Equal(t, "request-termination", pluginObj.PluginName)
+
+				var config map[string]any
+				require.NoError(t, json.Unmarshal(pluginObj.Config.Raw, &config))
+				assert.Equal(t, "no existing backendRef provided", config["message"])
+			},
+		},
+		{
+			name: "translates unsupported backend kind into request termination plugin",
+			setup: func() *httpRouteConverter {
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					func() gwtypes.HTTPBackendRef {
+						ref := newBackendRef("")
+						unsupportedKind := gwtypes.Kind("ConfigMap")
+						ref.Kind = &unsupportedKind
+						return ref
+					}(),
+				}, nil)
+				gateway := baseGateway()
+				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace())
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount: 5,
+			wantOutputs: outputCount{
+				upstreams: 1,
+				services:  1,
+				routes:    1,
+				targets:   0,
+				bindings:  1,
+				plugins:   1,
+			},
+			wantStoreLen: 5,
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+
+				var (
+					serviceName string
+					pluginObj   *configurationv1.KongPlugin
+					bindingObj  *configurationv1alpha1.KongPluginBinding
+				)
+
+				for _, obj := range store {
+					switch typed := obj.(type) {
+					case *configurationv1alpha1.KongService:
+						serviceName = typed.Name
+					case *configurationv1.KongPlugin:
+						pluginObj = typed
+					case *configurationv1alpha1.KongPluginBinding:
+						bindingObj = typed
+					}
+				}
+
+				require.NotEmpty(t, serviceName)
+				require.NotNil(t, pluginObj)
+				require.NotNil(t, bindingObj)
+				assert.Equal(t, "request-termination", pluginObj.PluginName)
+
+				var config map[string]any
+				require.NoError(t, json.Unmarshal(pluginObj.Config.Raw, &config))
+				statusCode, ok := config["status_code"].(float64)
+				require.True(t, ok)
+				assert.InDelta(t, 500, statusCode, 0)
+				assert.Equal(t, "no existing backendRef provided", config["message"])
+
+				require.NotNil(t, bindingObj.Spec.Targets)
+				require.NotNil(t, bindingObj.Spec.Targets.ServiceReference)
+				assert.Equal(t, serviceName, bindingObj.Spec.Targets.ServiceReference.Name)
+				assert.Equal(t, pluginObj.Name, bindingObj.Spec.PluginReference.Name)
+			},
+		},
+		{
 			name: "translates multi rule redirect only route end to end",
 			setup: func() *httpRouteConverter {
 				route := newHTTPRouteWithRules(
@@ -544,6 +752,134 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				}
 				assert.True(t, sawDefaultStatus)
 				assert.True(t, sawCustomStatus)
+			},
+		},
+		{
+			name: "translates upstream header matching route end to end",
+			setup: func() *httpRouteConverter {
+				route := newHTTPRouteWithRules(
+					[]string{"api.example.com"},
+					[]gwtypes.HTTPRouteRule{
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Headers: []gatewayv1.HTTPHeaderMatch{{
+									Name:  "version",
+									Value: "one",
+								}},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Headers: []gatewayv1.HTTPHeaderMatch{{
+									Name:  "version",
+									Value: "two",
+								}},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{{
+								Headers: []gatewayv1.HTTPHeaderMatch{
+									{
+										Name:  "version",
+										Value: "two",
+									},
+									{
+										Name:  "color",
+										Value: "orange",
+									},
+								},
+							}},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "blue",
+									}},
+								},
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "green",
+									}},
+								},
+							},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+						{
+							Matches: []gwtypes.HTTPRouteMatch{
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "red",
+									}},
+								},
+								{
+									Headers: []gatewayv1.HTTPHeaderMatch{{
+										Name:  "color",
+										Value: "yellow",
+									}},
+								},
+							},
+							BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+						},
+					},
+				)
+				gateway := baseGateway()
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(baseObjects(gateway)...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount: 22,
+			wantOutputs: outputCount{
+				upstreams: 5,
+				services:  5,
+				routes:    7,
+				targets:   5,
+			},
+			wantStoreLen: 22,
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+
+				routeNames := map[string]struct{}{}
+				serviceNames := map[string]struct{}{}
+				headersByRoute := map[string]int{}
+
+				for _, obj := range store {
+					route, ok := obj.(*configurationv1alpha1.KongRoute)
+					if !ok {
+						continue
+					}
+
+					routeNames[route.Name] = struct{}{}
+					assert.Empty(t, route.Spec.Paths)
+					assert.Empty(t, route.Spec.Methods)
+					require.NotNil(t, route.Spec.ServiceRef)
+					require.NotNil(t, route.Spec.ServiceRef.NamespacedRef)
+
+					serviceName := route.Spec.ServiceRef.NamespacedRef.Name
+					serviceNames[serviceName] = struct{}{}
+
+					headersKey := canonicalHeaderMatchSet(route.Spec.Headers)
+					headersByRoute[headersKey]++
+				}
+
+				expectedHeaders := map[string]int{
+					"color=blue":               1,
+					"color=green":              1,
+					"color=orange&version=two": 1,
+					"color=red":                1,
+					"color=yellow":             1,
+					"version=one":              1,
+					"version=two":              1,
+				}
+
+				assert.Len(t, routeNames, 7)
+				assert.Len(t, serviceNames, 1)
+				assert.Equal(t, expectedHeaders, headersByRoute)
 			},
 		},
 		{
@@ -1083,7 +1419,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 			},
 			wantSkip: true,
 			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
-				assert.Equal(t, "other-ns/other-route", resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesAnnotation])
+				assert.Equal(t, "other-ns/other-route", resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
 			},
 		},
 		{
@@ -1095,7 +1431,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), resource
 			},
 			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
-				_, exists := resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesAnnotation]
+				_, exists := resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 				assert.False(t, exists)
 			},
 		},
@@ -1196,6 +1532,26 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 			wantHosts: []string{"api.example.com", "web.example.com"},
 		},
 		{
+			name: "returns nil when no hostname intersection",
+			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
+				route := newHTTPRouteWithHostnames("api.example.com")
+				gateway := newGatewayWithListenerHostnames("other.example.com")
+				gateway.UID = types.UID("gateway-uid")
+				objects := newKonnectGatewayStandardObjects(gateway)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				port := gwtypes.PortNumber(80)
+				pRef := gwtypes.ParentReference{
+					Name:  "test-gateway",
+					Port:  &port,
+					Group: new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:  new(gwtypes.Kind("Gateway")),
+				}
+				return converter, pRef
+			},
+			wantNil: true,
+		},
+		{
 			name: "returns nil when port mismatches",
 			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
 				route := newHTTPRouteWithHostnames("api.example.com")
@@ -1238,6 +1594,26 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 			wantHosts: []string{"api.example.com", "web.example.com"},
 		},
 		{
+			name: "route without hostnames uses listener hostnames",
+			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
+				route := newHTTPRouteWithHostnames()
+				gateway := newGatewayWithListenerHostnames("api.example.com", "web.example.com")
+				gateway.UID = types.UID("gateway-uid")
+				objects := newKonnectGatewayStandardObjects(gateway)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				port := gwtypes.PortNumber(80)
+				pRef := gwtypes.ParentReference{
+					Name:  "test-gateway",
+					Port:  &port,
+					Group: new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:  new(gwtypes.Kind("Gateway")),
+				}
+				return converter, pRef
+			},
+			wantHosts: []string{"api.example.com", "web.example.com"},
+		},
+		{
 			name: "listener accepts all hostnames with empty route hostnames",
 			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
 				route := newHTTPRouteWithHostnames()
@@ -1256,6 +1632,26 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				return converter, pRef
 			},
 			wantHosts: []string{},
+		},
+		{
+			name: "returns listener hostname when route hostnames are empty and section name matches without port",
+			setup: func() (*httpRouteConverter, gwtypes.ParentReference) {
+				route := newHTTPRouteWithHostnames()
+				gateway := newGatewayWithListenerHostnames("second-example.org")
+				gateway.UID = types.UID("gateway-uid")
+				objects := newKonnectGatewayStandardObjects(gateway)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				sectionName := gwtypes.SectionName("listener-0")
+				pRef := gwtypes.ParentReference{
+					Name:        "test-gateway",
+					SectionName: &sectionName,
+					Group:       new(gwtypes.Group(gwtypes.GroupName)),
+					Kind:        new(gwtypes.Kind("Gateway")),
+				}
+				return converter, pRef
+			},
+			wantHosts: []string{"second-example.org"},
 		},
 		{
 			name: "returns error when listener lookup fails",
@@ -1353,6 +1749,27 @@ func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBa
 		BackendRefs: backendRefs,
 		Filters:     filters,
 	}})
+}
+
+func canonicalHeaderMatchSet(headers map[string][]string) string {
+	if len(headers) == 0 {
+		return ""
+	}
+
+	keys := make([]string, 0, len(headers))
+	for key := range headers {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		values := append([]string(nil), headers[key]...)
+		slices.Sort(values)
+		parts = append(parts, key+"="+strings.Join(values, "|"))
+	}
+
+	return strings.Join(parts, "&")
 }
 
 func newHTTPRouteWithRules(hostnames []string, rules []gwtypes.HTTPRouteRule) *gwtypes.HTTPRoute {
@@ -1508,7 +1925,7 @@ func newUnstructuredResource(routesAnnotation string) *unstructured.Unstructured
 	resource.SetNamespace("default")
 	if routesAnnotation != "" {
 		resource.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesAnnotation: routesAnnotation,
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: routesAnnotation,
 		})
 	}
 	return resource

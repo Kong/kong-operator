@@ -80,12 +80,9 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 	t.Cleanup(func() {
 		ts.Stop(t)
 		t.Logf("Checking for goroutine leaks")
-		// Ignore leaks in controller-runtime/manager before the issue fixed:
-		// https://github.com/kubernetes-sigs/controller-runtime/issues/3218
-		ignoreManagerReconcile := goleak.IgnoreTopFunction("sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1")
-		ignoreManagerEnagageProcedure := goleak.IgnoreAnyFunction("sigs.k8s.io/controller-runtime/pkg/manager.(*controllerManager).engageStopProcedure.func3.(*runnableGroup).StopAndWait.3.2")
-		ignorePriorityQueueHandleItems := goleak.IgnoreAnyFunction("sigs.k8s.io/controller-runtime/pkg/controller/priorityqueue.(*priorityqueue[...]).handleReadyItems")
-		goleak.VerifyNone(t, ignoreManagerReconcile, ignoreManagerEnagageProcedure, ignorePriorityQueueHandleItems)
+		goleak.VerifyNone(t,
+			goleak.IgnoreTopFunction("sigs.k8s.io/controller-runtime/pkg/controller/priorityqueue.(*priorityqueue[...]).handleReadyItems.func1.1"),
+		)
 	})
 
 	scheme := Scheme(t, WithKong)

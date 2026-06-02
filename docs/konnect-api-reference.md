@@ -13,9 +13,17 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
+- [KonnectEventGateway](#konnect-konghq-com-v1alpha1-konnecteventgateway)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+- [Portal](#konnect-konghq-com-v1alpha1-portal)
+- [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
+- [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
+- [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
+- [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
+- [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
 
 ### KonnectAPIAuthConfiguration
 
@@ -77,6 +85,21 @@ KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway 
 | `spec` _[KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)_ | Spec defines the desired state of KonnectCloudGatewayTransitGateway. |
 | `status` _[KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)_ | Status defines the observed state of KonnectCloudGatewayTransitGateway. |
 
+### KonnectEventGateway
+
+
+KonnectEventGateway is the Schema for the konnecteventgateways API.
+
+<!-- konnect_event_gateway description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectEventGateway`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)_ |  |
+| `status` _[KonnectEventGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnecteventgatewaystatus)_ |  |
+
 ### KonnectExtension
 
 
@@ -124,6 +147,111 @@ MCPServer is the Schema for the MCPServer API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)_ |  |
 | `status` _[MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)_ |  |
+
+### Portal
+
+
+Portal is the Schema for the portals API.
+
+<!-- portal description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `Portal`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)_ |  |
+| `status` _[PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)_ |  |
+
+### PortalCustomDomain
+
+
+PortalCustomDomain is the Schema for the portalcustomdomains API.
+
+<!-- portal_custom_domain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalCustomDomain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalCustomDomainSpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainspec)_ |  |
+| `status` _[PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)_ |  |
+
+### PortalCustomization
+
+
+PortalCustomization is the Schema for the portalcustomizations API.
+
+<!-- portal_customization description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalCustomization`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalCustomizationSpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationspec)_ |  |
+| `status` _[PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)_ |  |
+
+### PortalEmailConfig
+
+
+PortalEmailConfig is the Schema for the portalemailconfigs API.
+
+<!-- portal_email_config description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalEmailConfig`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalEmailConfigSpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigspec)_ |  |
+| `status` _[PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)_ |  |
+
+### PortalIdentityProviderRequest
+
+
+PortalIdentityProviderRequest is the Schema for the portalidentityproviderrequests API.
+
+<!-- portal_identity_provider_request description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalIdentityProviderRequest`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalIdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestspec)_ |  |
+| `status` _[PortalIdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequeststatus)_ |  |
+
+### PortalPage
+
+
+PortalPage is the Schema for the portalpages API.
+
+<!-- portal_page description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalPage`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalPageSpec](#konnect-konghq-com-v1alpha1-types-portalpagespec)_ |  |
+| `status` _[PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)_ |  |
+
+### PortalTeam
+
+
+PortalTeam is the Schema for the portalteams API.
+
+<!-- portal_team description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `PortalTeam`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[PortalTeamSpec](#konnect-konghq-com-v1alpha1-types-portalteamspec)_ |  |
+| `status` _[PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)_ |  |
 
 ### Types
 
@@ -216,6 +344,23 @@ CertificateSecret contains the information to access the client certificate.
 _Appears in:_
 
 - [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha1-types-konnectextensionclientauth)
+
+#### Colors
+
+
+Colors is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `primary` _string_ |  |
+
+_Appears in:_
+
+- [Theme](#konnect-konghq-com-v1alpha1-types-theme)
+
+
 
 #### ConfigurationDataPlaneGroupAutoscale
 
@@ -323,6 +468,41 @@ _Appears in:_
 
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 
+
+
+#### CreatePortalCustomDomainSSLStandard
+
+
+CreatePortalCustomDomainSSLStandard is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `domainVerificationMethod` _string_ |  |
+
+_Appears in:_
+
+- [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
+#### CreatePortalCustomDomainSSLWithCustomCertificate
+
+
+CreatePortalCustomDomainSSLWithCustomCertificate is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `customCertificate` _string_ | Custom certificate to be used for the SSL termination. |
+| `customPrivateKey` _string_ | Custom certificate private key to be used for the SSL termination. |
+| `domainVerificationMethod` _string_ |  |
+| `skipCaCheck` _string_ | Advanced option. If true, the custom certificate is served exactly as provided, without attempting to bundle against a public trust store. Required for certificates issued by an internal/private CA. |
+
+_Appears in:_
+
+- [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
 #### DataPlaneClientAuthStatus
 
 
@@ -350,6 +530,58 @@ DataPlaneLabelValue is the type that defines the value of a label that will be a
 _Appears in:_
 
 - [KonnectExtensionDataPlane](#konnect-konghq-com-v1alpha1-types-konnectextensiondataplane)
+
+#### Description
+
+_Underlying type:_ `string`
+
+Description is a type alias.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### GatewayDescription
+
+_Underlying type:_ `string`
+
+GatewayDescription A human-readable description of the Gateway.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
+
+#### GatewayName
+
+_Underlying type:_ `string`
+
+GatewayName The name of the Gateway.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
+
+#### IdentityProviderType
+
+_Underlying type:_ `string`
+
+IdentityProviderType Specifies the type of identity provider.
+
+
+
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -582,6 +814,82 @@ _Appears in:_
 - [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 
+#### KonnectEntityRef
+
+
+KonnectEntityRef is a reference to a Konnect entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. |
+
+_Appears in:_
+
+- [PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)
+- [PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)
+- [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
+- [PortalIPAllowListStatus](#konnect-konghq-com-v1alpha1-types-portalipallowliststatus)
+- [PortalIdentityProviderRequestStatus](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequeststatus)
+- [PortalPageStatus](#konnect-konghq-com-v1alpha1-types-portalpagestatus)
+- [PortalTeamStatus](#konnect-konghq-com-v1alpha1-types-portalteamstatus)
+
+
+
+#### KonnectEventGatewayAPISpec
+
+
+KonnectEventGatewayAPISpec defines the API spec fields for KonnectEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `description` _[GatewayDescription](#konnect-konghq-com-v1alpha1-types-gatewaydescription)_ | A human-readable description of the Gateway. |
+| `labels` _[Labels](#konnect-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `minRuntimeVersion` _[MinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-minruntimeversion)_ | The minimum runtime version supported by the API. This is the lowest version of the data plane release that can be used with the entity model. When not specified, the minimum runtime version will be pinned to the latest available release. |
+| `name` _[GatewayName](#konnect-konghq-com-v1alpha1-types-gatewayname)_ | The name of the Gateway. |
+
+_Appears in:_
+
+- [KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)
+
+#### KonnectEventGatewaySpec
+
+
+KonnectEventGatewaySpec defines the desired state of KonnectEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [KonnectEventGateway](#konnect-konghq-com-v1alpha1-konnecteventgateway)
+
+#### KonnectEventGatewayStatus
+
+
+KonnectEventGatewayStatus defines the observed state of KonnectEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [KonnectEventGateway](#konnect-konghq-com-v1alpha1-konnecteventgateway)
+
 #### KonnectExtensionClientAuth
 
 
@@ -780,6 +1088,78 @@ _Appears in:_
 
 - [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
 
+#### Labels
+
+_Underlying type:_ `[map[string]LabelsValue](#map[string]labelsvalue)`
+
+Labels store metadata of an entity that can be used for filtering an entity
+list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
+
+#### LabelsUpdate
+
+_Underlying type:_ `[map[string]LabelsUpdateValue](#map[string]labelsupdatevalue)`
+
+LabelsUpdate Labels store metadata of an entity that can be used for
+filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
+
+#### LabelsUpdateValue
+
+_Underlying type:_ `string`
+
+LabelsUpdateValue is the value type for LabelsUpdate.
+
+
+
+
+_Appears in:_
+
+- [LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)
+
+#### LabelsValue
+
+_Underlying type:_ `string`
+
+LabelsValue is the value type for Labels.
+
+
+
+
+_Appears in:_
+
+- [Labels](#konnect-konghq-com-v1alpha1-types-labels)
+
+#### MCPServerKonnectSpec
+
+
+MCPServerKonnectSpec defines the observed state of the MCPServer on Konnect.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _*string_ | Name is the name of the MCPServer on Konnect. |
+| `version` _*string_ | Version is the version of the MCPServer on Konnect. |
+
+_Appears in:_
+
+- [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
+
 #### MCPServerSpec
 
 
@@ -811,10 +1191,45 @@ MCPServerStatus defines the observed state of MCPServer.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `konnectSpec` _[MCPServerKonnectSpec](#konnect-konghq-com-v1alpha1-types-mcpserverkonnectspec)_ | KonnectSpec holds MCPServer-specific status fields related to its state on Konnect, such as the remote name and version. |
 
 _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+
+#### Menu
+
+
+Menu is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `footerBottom` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+| `footerSections` _[PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)_ |  |
+| `main` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
+
+#### MinRuntimeVersion
+
+_Underlying type:_ `string`
+
+MinRuntimeVersion The minimum runtime version supported by the API.
+This is the lowest version of the data plane
+release that can be used with the entity model.
+When not specified, the minimum runtime version will be pinned to the latest
+available release.
+
+
+
+
+_Appears in:_
+
+- [KonnectEventGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayapispec)
 
 #### MirrorKonnect
 
@@ -847,6 +1262,674 @@ _Appears in:_
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 - [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
 
+#### OIDCIdentityProviderClaimMappings
+
+
+OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
+(OIDC) claims and local claims used by your application for
+authentication.
+
+
+
+| Field | Description |
+| --- | --- |
+| `email` _string_ | The claim mapping for the user's email address. |
+| `groups` _string_ | The claim mapping for the user's group membership information. |
+| `name` _string_ | The claim mapping for the user's name. |
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderClientID
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderClientID The client ID assigned to your application by
+the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderClientSecret
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderClientSecret The Client Secret assigned to your
+application by the identity provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### OIDCIdentityProviderConfig
+
+
+OIDCIdentityProviderConfig The identity provider that contains configuration
+data for the OIDC authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
+| `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
+| `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
+| `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
+| `scopes` _[]string_ | The scopes requested by your application when authenticating with the identity provider. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
+
+#### OIDCIdentityProviderIssuer
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderIssuer The issuer URI of the identity provider.
+This is the URL where the provider's metadata can be obtained.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+
+#### PageContent
+
+_Underlying type:_ `string`
+
+PageContent The renderable markdown content of a page in a portal.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PageSlug
+
+_Underlying type:_ `string`
+
+PageSlug The slug of a page in a portal, used to compute its full URL path
+within the portal hierarchy.
+When a page has a `parent_page_id`, its full path is built by joining the
+parent’s slug with its own.
+For example, if a parent page has the slug `slug1` and this page’s slug is
+`slug2`, the resulting path will be `/slug1/slug2`.
+This enables nested page structures like `/slug1/slug2/slug3`.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PageTitle
+
+_Underlying type:_ `string`
+
+PageTitle The title of a page in a portal.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PageVisibilityStatus
+
+_Underlying type:_ `string`
+
+PageVisibilityStatus Whether a page is publicly accessible to
+non-authenticated users.
+If not provided, the default_page_visibility value of the portal will be
+used.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### PortalAPISpec
+
+
+PortalAPISpec defines the API spec fields for Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
+| `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `defaultAPIVisibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
+| `defaultApplicationAuthStrategyIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
+| `defaultPageVisibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
+| `description` _*string_ | A description of the portal. |
+| `displayName` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
+| `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
+| `rbacEnabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
+| `siprEnabled` _string_ | Whether ip allow list is enabled for the portal. |
+
+_Appears in:_
+
+- [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+#### PortalCustomDomainAPISpec
+
+
+PortalCustomDomainAPISpec defines the API spec fields for PortalCustomDomain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ |  |
+| `hostname` _string_ |  |
+| `ssl` _[PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)_ |  |
+
+_Appears in:_
+
+- [PortalCustomDomainSpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainspec)
+
+
+
+#### PortalCustomDomainSSL
+
+
+PortalCustomDomainSSL represents a union type for ssl.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[PortalCustomDomainSSLType](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssltype)_ | Type designates the type of configuration. |
+| `withCustomCertificate` _[CreatePortalCustomDomainSSLWithCustomCertificate](#konnect-konghq-com-v1alpha1-types-createportalcustomdomainsslwithcustomcertificate)_ | WithCustomCertificate configuration. |
+| `standard` _[CreatePortalCustomDomainSSLStandard](#konnect-konghq-com-v1alpha1-types-createportalcustomdomainsslstandard)_ | Standard configuration. |
+
+_Appears in:_
+
+- [PortalCustomDomainAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainapispec)
+
+#### PortalCustomDomainSSLType
+
+_Underlying type:_ `string`
+
+PortalCustomDomainSSLType represents the type of ssl.
+
+
+
+
+_Appears in:_
+
+- [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `withCustomCertificate` |  |
+| `standard` |  |
+
+#### PortalCustomDomainSpec
+
+
+PortalCustomDomainSpec defines the desired state of PortalCustomDomain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalCustomDomainAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
+
+#### PortalCustomDomainStatus
+
+
+PortalCustomDomainStatus defines the observed state of PortalCustomDomain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalCustomDomain](#konnect-konghq-com-v1alpha1-portalcustomdomain)
+
+#### PortalCustomizationAPISpec
+
+
+PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
+
+
+
+| Field | Description |
+| --- | --- |
+| `css` _*string_ |  |
+| `layout` _string_ |  |
+| `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
+| `robots` _*string_ |  |
+| `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ |  |
+| `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationSpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationspec)
+
+
+
+#### PortalCustomizationSpec
+
+
+PortalCustomizationSpec defines the desired state of PortalCustomization.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
+
+#### PortalCustomizationStatus
+
+
+PortalCustomizationStatus defines the observed state of PortalCustomization.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
+
+#### PortalEmailConfigAPISpec
+
+
+PortalEmailConfigAPISpec defines the API spec fields for PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `domainName` _*string_ | The domain name to use for sending emails. Null means default. |
+| `fromEmail` _*string_ | The email address to use in the 'From' field. |
+| `fromName` _*string_ | The name to display in the 'From' field of emails. |
+| `replyToEmail` _*string_ | The email address to use in the 'Reply-To' field. 'Reply-To' header is omitted if omitted or null. |
+
+_Appears in:_
+
+- [PortalEmailConfigSpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigspec)
+
+#### PortalEmailConfigSpec
+
+
+PortalEmailConfigSpec defines the desired state of PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalEmailConfigAPISpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
+
+#### PortalEmailConfigStatus
+
+
+PortalEmailConfigStatus defines the observed state of PortalEmailConfig.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalEmailConfig](#konnect-konghq-com-v1alpha1-portalemailconfig)
+
+#### PortalFooterMenuSection
+
+
+PortalFooterMenuSection is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `items` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+| `title` _string_ | The footer menu section title |
+
+_Appears in:_
+
+- [Menu](#konnect-konghq-com-v1alpha1-types-menu)
+
+#### PortalIPAllowListAPISpec
+
+
+PortalIPAllowListAPISpec defines the API spec fields for PortalIPAllowList.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowedIps` _[]string_ | The list of allowed ips for the portal. |
+
+_Appears in:_
+
+- [PortalIPAllowListSpec](#konnect-konghq-com-v1alpha1-types-portalipallowlistspec)
+
+
+
+
+
+#### PortalIdentityProviderRequestAPISpec
+
+
+PortalIdentityProviderRequestAPISpec defines the API spec fields for PortalIdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)_ |  |
+| `enabled` _string_ | Indicates whether the identity provider is enabled. Only one identity provider can be active at a time, such as SAML or OIDC. |
+| `type` _[IdentityProviderType](#konnect-konghq-com-v1alpha1-types-identityprovidertype)_ | Specifies the type of identity provider. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestspec)
+
+#### PortalIdentityProviderRequestConfig
+
+
+PortalIdentityProviderRequestConfig represents a union type for config.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[PortalIdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfigtype)_ | Type designates the type of configuration. |
+| `oIDC` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
+| `portalSAML` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | PortalSAML configuration. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)
+
+#### PortalIdentityProviderRequestConfigType
+
+_Underlying type:_ `string`
+
+PortalIdentityProviderRequestConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `oIDC` |  |
+| `portalSAML` |  |
+
+
+
+#### PortalIdentityProviderRequestSpec
+
+
+PortalIdentityProviderRequestSpec defines the desired state of PortalIdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
+
+#### PortalIdentityProviderRequestStatus
+
+
+PortalIdentityProviderRequestStatus defines the observed state of PortalIdentityProviderRequest.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
+
+#### PortalMenuItem
+
+
+PortalMenuItem is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `external` _string_ | When clicked, open the link in a new window |
+| `path` _string_ | The absolute path of a page in a portal with a leading slash. |
+| `title` _string_ | The link display text |
+| `visibility` _string_ | Whether a menu item is public or private. Private menu items are only accessible to authenticated users. |
+
+_Appears in:_
+
+- [Menu](#konnect-konghq-com-v1alpha1-types-menu)
+- [PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)
+
+#### PortalPageAPISpec
+
+
+PortalPageAPISpec defines the API spec fields for PortalPage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `content` _[PageContent](#konnect-konghq-com-v1alpha1-types-pagecontent)_ | The renderable markdown content of a page in a portal. |
+| `description` _[Description](#konnect-konghq-com-v1alpha1-types-description)_ |  |
+| `parentPageIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | Pages may be rendered as a tree of files.<br /><br />Specify the `id` of another page as the `parent_page_id` to add some hierarchy to your pages. |
+| `slug` _[PageSlug](#konnect-konghq-com-v1alpha1-types-pageslug)_ | The slug of a page in a portal, used to compute its full URL path within the portal hierarchy. When a page has a `parent_page_id`, its full path is built by joining the parent’s slug with its own. For example, if a parent page has the slug `slug1` and this page’s slug is `slug2`, the resulting path will be `/slug1/slug2`. This enables nested page structures like `/slug1/slug2/slug3`. |
+| `status` _[PublishedStatus](#konnect-konghq-com-v1alpha1-types-publishedstatus)_ | Whether the resource is visible on a given portal. Defaults to unpublished. |
+| `title` _[PageTitle](#konnect-konghq-com-v1alpha1-types-pagetitle)_ | The title of a page in a portal. |
+| `visibility` _[PageVisibilityStatus](#konnect-konghq-com-v1alpha1-types-pagevisibilitystatus)_ | Whether a page is publicly accessible to non-authenticated users. If not provided, the default_page_visibility value of the portal will be used. |
+
+_Appears in:_
+
+- [PortalPageSpec](#konnect-konghq-com-v1alpha1-types-portalpagespec)
+
+#### PortalPageSpec
+
+
+PortalPageSpec defines the desired state of PortalPage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
+
+#### PortalPageStatus
+
+
+PortalPageStatus defines the observed state of PortalPage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
+
+#### PortalSAMLIdentityProviderConfig
+
+
+PortalSAMLIdentityProviderConfig The identity provider that contains
+configuration data for the SAML authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `idpMetadataURL` _[SAMLIdentityProviderMetadataURL](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadataurl)_ | The identity provider's metadata URL where the identity provider's metadata can be obtained. |
+| `idpMetadataXML` _[SAMLIdentityProviderMetadata](#konnect-konghq-com-v1alpha1-types-samlidentityprovidermetadata)_ | The identity provider's SAML metadata. If the identity provider supports a metadata URL, you can use the `idp_metadata_url` field instead. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
+
+
+
+#### PortalSpec
+
+
+PortalSpec defines the desired state of Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [Portal](#konnect-konghq-com-v1alpha1-portal)
+
+#### PortalStatus
+
+
+PortalStatus defines the observed state of Portal.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [Portal](#konnect-konghq-com-v1alpha1-portal)
+
+#### PortalTeamAPISpec
+
+
+PortalTeamAPISpec defines the API spec fields for PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `canOwnApplications` _string_ | Whether the team is allowed to own applications |
+| `description` _string_ |  |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [PortalTeamSpec](#konnect-konghq-com-v1alpha1-types-portalteamspec)
+
+
+
+#### PortalTeamSpec
+
+
+PortalTeamSpec defines the desired state of PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `portalRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | PortalRef is the reference to the parent Portal object. |
+| `apiSpec` _[PortalTeamAPISpec](#konnect-konghq-com-v1alpha1-types-portalteamapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
+
+#### PortalTeamStatus
+
+
+PortalTeamStatus defines the observed state of PortalTeam.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `portalID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | PortalID is the Konnect ID of the parent Portal. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
+
 #### ProvisioningMethod
 
 _Underlying type:_ `string`
@@ -867,6 +1950,51 @@ Allowed values:
 | `Manual` | ManualSecretProvisioning is the method used to provision the certificate manually.<br /> |
 | `Automatic` | AutomaticSecretProvisioning is the method used to provision the certificate automatically.<br /> |
 
+#### PublishedStatus
+
+_Underlying type:_ `string`
+
+PublishedStatus Whether the resource is visible on a given portal.
+Defaults to unpublished.
+
+
+
+
+_Appears in:_
+
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+#### SAMLIdentityProviderMetadata
+
+_Underlying type:_ `string`
+
+SAMLIdentityProviderMetadata The identity provider's SAML metadata.
+If the identity provider supports a metadata URL, you can use the
+`idp_metadata_url` field instead.
+
+
+
+
+_Appears in:_
+
+- [PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)
+
+#### SAMLIdentityProviderMetadataURL
+
+_Underlying type:_ `string`
+
+SAMLIdentityProviderMetadataURL The identity provider's metadata URL where
+the identity provider's metadata can be obtained.
+
+
+
+
+_Appears in:_
+
+- [PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)
+
+
+
 #### SecretRef
 
 
@@ -882,6 +2010,46 @@ _Appears in:_
 
 - [CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)
+
+
+
+#### SpecRenderer
+
+
+SpecRenderer is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowCustomServerUrls` _string_ | Let users define a custom server URL for endpoints. This will be used to generate code snippets and to test the API. The URL is client-side only and is not saved. |
+| `hideDeprecated` _string_ | Manage visibility of deprecated endpoints and models. |
+| `hideInternal` _string_ | Manage visibility of internal endpoints and models. |
+| `infiniteScroll` _string_ | Display the full spec on a single, scrollable page. If disabled, documentation, endpoints, and schemas appear on separate pages. |
+| `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
+| `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
+| `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
+
+#### Theme
+
+
+Theme is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
+| `mode` _string_ |  |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
 
 #### TransitGatewayDNSConfig
 
@@ -1069,8 +2237,10 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 _Appears in:_
 
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
+- [KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+- [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
 
 #### KonnectEndpoints
 
@@ -1107,6 +2277,7 @@ _Appears in:_
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
+- [KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificateandcacertificatesrefs)
 - [KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)
 - [KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)
 - [KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandkeysetref)
@@ -1114,9 +2285,13 @@ _Appears in:_
 - [KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandupstreamrefs)
 - [KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)
 - [KonnectEntityStatusWithNetworkRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithnetworkref)
+- [KonnectEventGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnecteventgatewaystatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 - [MCPServerStatus](#konnect-konghq-com-v1alpha1-types-mcpserverstatus)
+- [PortalStatus](#konnect-konghq-com-v1alpha1-types-portalstatus)
+
+
 
 
 
@@ -1203,6 +2378,7 @@ Allowed values:
 | --- | --- |
 | `ControlPlane` | ClusterTypeControlPlane is the type of the Konnect Control Plane.<br /> |
 | `K8SIngressController` | ClusterTypeK8sIngressController is the type of the Kubernetes Control Plane.<br /> |
+| `ControlPlaneGroup` | ClusterTypeControlPlaneGroup is the type of the Control Plane Group.<br /> |
 
 #### KonnectExtensionControlPlane
 

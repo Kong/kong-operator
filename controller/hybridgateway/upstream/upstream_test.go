@@ -5,18 +5,30 @@ import (
 	"maps"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+)
+
+var (
+	httpRouteTypeMeta = metav1.TypeMeta{
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
 )
 
 func TestAppendHTTPRouteToAnnotations(t *testing.T) {
@@ -33,6 +45,7 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 			name:                "no existing annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -44,9 +57,10 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 		{
 			name: "empty hybrid-routes annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -58,9 +72,10 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 		{
 			name: "existing different route in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "other-namespace/other-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -72,9 +87,10 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 		{
 			name: "route already exists in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -86,9 +102,10 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 		{
 			name: "multiple existing routes, adding new one",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1,ns2/route2",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route3",
 					Namespace: "ns3",
@@ -111,7 +128,7 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 
 			am := metadata.NewAnnotationManager(logger)
 			am.AppendRouteToAnnotation(upstream, tt.httpRoute)
-			actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+			actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 			assert.Equal(t, tt.expectedAnnotation, actualAnnotation)
 		})
 	}
@@ -132,6 +149,7 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 			name:                "no annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -143,9 +161,10 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 		{
 			name: "route not in annotation",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "other-namespace/other-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -157,9 +176,10 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 		{
 			name: "remove only route - annotation should be deleted",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -172,9 +192,10 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 		{
 			name: "remove first route from multiple",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "test-namespace/test-route,ns2/route2",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -186,9 +207,10 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 		{
 			name: "remove middle route from multiple",
 			existingAnnotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesAnnotation: "ns1/route1,test-namespace/test-route,ns3/route3",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,test-namespace/test-route,ns3/route3",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
@@ -196,6 +218,22 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 			},
 			expectedAnnotation: "ns1/route1,ns3/route3",
 			expectModification: true,
+		},
+		{
+			name: "same namespace and name but different kind",
+			existingAnnotations: map[string]string{
+				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "test-namespace/test-route,ns1/route1",
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
+			},
+			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "test-namespace",
+				},
+			},
+			expectedAnnotation: "other-namespace/other-route",
+			expectModification: false,
 		},
 	}
 
@@ -219,14 +257,22 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 			assert.Equal(t, tt.expectModification, modified)
 
 			if tt.expectAnnotationDeleted {
-				_, exists := upstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+				_, exists := upstream.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 				assert.False(t, exists, "annotation should be deleted")
 			} else if tt.expectedAnnotation != "" {
-				actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+				actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 				assert.Equal(t, tt.expectedAnnotation, actualAnnotation)
 			}
 		})
 	}
+}
+
+func newTestScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	s := runtime.NewScheme()
+	require.NoError(t, clientgoscheme.AddToScheme(s))
+	require.NoError(t, configurationv1alpha1.AddToScheme(s))
+	return s
 }
 
 func TestUpstreamForRule_NewUpstream(t *testing.T) {
@@ -238,6 +284,7 @@ func TestUpstreamForRule_NewUpstream(t *testing.T) {
 	ctx := context.Background()
 
 	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "test-namespace",
@@ -275,6 +322,536 @@ func TestUpstreamForRule_NewUpstream(t *testing.T) {
 
 	// Verify the upstream has the expected annotation
 	expectedAnnotation := "test-namespace/test-route"
-	actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 	assert.Equal(t, expectedAnnotation, actualAnnotation)
+}
+
+func TestUpstreamForRule_WithUpstreamPolicy(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1beta1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-service",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
+			},
+		},
+	}
+	policy := &configurationv1beta1.KongUpstreamPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-policy",
+			Namespace: "test-namespace",
+		},
+		Spec: configurationv1beta1.KongUpstreamPolicySpec{
+			Algorithm: func() *string { s := "least-connections"; return &s }(),
+			Slots:     func() *int { v := 100; return &v }(),
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(svc, policy).
+		Build()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	rule := gwtypes.HTTPRouteRule{
+		BackendRefs: []gwtypes.HTTPBackendRef{
+			{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name: "test-service",
+						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+					},
+				},
+			},
+		},
+	}
+
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+
+	upstream, err := UpstreamForRule(ctx, logger, cl, httpRoute, rule, pRef, cp)
+	require.NoError(t, err)
+	require.NotNil(t, upstream)
+
+	require.NotNil(t, upstream.Spec.Algorithm)
+	assert.Equal(t, sdkkonnectcomp.UpstreamAlgorithm("least-connections"), *upstream.Spec.Algorithm)
+	require.NotNil(t, upstream.Spec.Slots)
+	assert.Equal(t, int64(100), *upstream.Spec.Slots)
+}
+
+func TestUpstreamForRule_InconsistentUpstreamPolicies(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1beta1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	// Two services with different policies.
+	svc1 := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "svc-a",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy-a",
+			},
+		},
+	}
+	svc2 := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "svc-b",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy-b",
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(svc1, svc2).
+		Build()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	rule := gwtypes.HTTPRouteRule{
+		BackendRefs: []gwtypes.HTTPBackendRef{
+			{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name: "svc-a",
+						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+					},
+				},
+			},
+			{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name: "svc-b",
+						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+					},
+				},
+			},
+		},
+	}
+
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+
+	upstream, err := UpstreamForRule(ctx, logger, cl, httpRoute, rule, pRef, cp)
+	require.NoError(t, err)
+	require.NotNil(t, upstream)
+
+	// Policy must not be applied when annotations are inconsistent.
+	assert.Nil(t, upstream.Spec.Algorithm)
+	assert.Nil(t, upstream.Spec.Slots)
+}
+
+func TestUpstreamForRule_HostHeaderAnnotation(t *testing.T) {
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	makeRule := func(svcName string) gwtypes.HTTPRouteRule {
+		return gwtypes.HTTPRouteRule{
+			BackendRefs: []gwtypes.HTTPBackendRef{
+				{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name: gwtypes.ObjectName(svcName),
+							Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+						},
+					},
+				},
+			},
+		}
+	}
+
+	makeSvc := func(name, namespace string, anns map[string]string) *corev1.Service {
+		return &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        name,
+				Namespace:   namespace,
+				Annotations: anns,
+			},
+		}
+	}
+
+	tests := []struct {
+		name           string
+		backendSvc     *corev1.Service
+		expectedHeader *string
+	}{
+		{
+			name: "annotation present",
+			backendSvc: makeSvc("test-svc", "test-namespace", map[string]string{
+				"konghq.com/host-header": "my-service.example.com",
+			}),
+			expectedHeader: func() *string { s := "my-service.example.com"; return &s }(),
+		},
+		{
+			name:           "annotation absent",
+			backendSvc:     makeSvc("test-svc", "test-namespace", nil),
+			expectedHeader: nil,
+		},
+		{
+			name: "annotation empty value",
+			backendSvc: makeSvc("test-svc", "test-namespace", map[string]string{
+				"konghq.com/host-header": "",
+			}),
+			expectedHeader: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := newTestScheme(t)
+			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.backendSvc).Build()
+
+			upstream, err := UpstreamForRule(context.Background(), logr.Discard(), cl, httpRoute, makeRule("test-svc"), pRef, cp)
+			require.NoError(t, err)
+			require.NotNil(t, upstream)
+
+			if tt.expectedHeader == nil {
+				assert.Nil(t, upstream.Spec.HostHeader)
+			} else {
+				require.NotNil(t, upstream.Spec.HostHeader)
+				assert.Equal(t, *tt.expectedHeader, *upstream.Spec.HostHeader)
+			}
+		})
+	}
+}
+
+func TestUpstreamForRule_HostHeaderFirstWins(t *testing.T) {
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	rule := gwtypes.HTTPRouteRule{
+		BackendRefs: []gwtypes.HTTPBackendRef{
+			{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name: "svc-first",
+						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+					},
+				},
+			},
+			{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name: "svc-second",
+						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+					},
+				},
+			},
+		},
+	}
+
+	svcFirst := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "svc-first",
+			Namespace:   "test-namespace",
+			Annotations: map[string]string{"konghq.com/host-header": "first.example.com"},
+		},
+	}
+	svcSecond := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "svc-second",
+			Namespace:   "test-namespace",
+			Annotations: map[string]string{"konghq.com/host-header": "second.example.com"},
+		},
+	}
+
+	s := newTestScheme(t)
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(svcFirst, svcSecond).Build()
+
+	upstream, err := UpstreamForRule(context.Background(), logr.Discard(), cl, httpRoute, rule, pRef, cp)
+	require.NoError(t, err)
+	require.NotNil(t, upstream)
+	require.NotNil(t, upstream.Spec.HostHeader)
+	assert.Equal(t, "first.example.com", *upstream.Spec.HostHeader)
+}
+
+func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name            string
+		namespace       string
+		backendRefs     []gwtypes.BackendRef
+		backendServices []corev1.Service
+		expected        *string
+	}{
+		{
+			name:      "service with host-header annotation returns value",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-with-header"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
+			},
+			expected: new("api.example.com"),
+		},
+		{
+			name:      "service without annotation returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "plain-svc"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "first backend ref with annotation wins",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-first"}},
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-second"}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "first.example.com"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "second.example.com"}}},
+			},
+			expected: new("first.example.com"),
+		},
+		{
+			name:            "no backend refs returns nil",
+			namespace:       "test-namespace",
+			backendRefs:     []gwtypes.BackendRef{},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name:      "service does not exist returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "nonexistent-svc"}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name:      "unsupported backend ref returns nil",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  "some-ref",
+					Group: new(gwtypes.Group("example.com")),
+					Kind:  new(gwtypes.Kind("NotService")),
+				}},
+			},
+			backendServices: []corev1.Service{},
+			expected:        nil,
+		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Namespace: new(gwtypes.Namespace("other-namespace")),
+				}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
+			},
+			expected: new("other.example.com"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			got := resolveHostHeaderFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
+		})
+	}
+}
+
+func TestExtractHostHeaderFromBackendRef(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name       string
+		namespace  string
+		backendRef gwtypes.BackendRef
+		services   []corev1.Service
+		expected   *string
+	}{
+		{
+			name:      "supported backend ref with host-header annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-with-header"},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
+			},
+			expected: new("api.example.com"),
+		},
+		{
+			name:      "supported backend ref without annotation",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-no-header"},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-header", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "empty annotation value returns nil",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-empty-header"},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-empty-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": ""}}},
+			},
+			expected: nil,
+		},
+		{
+			name:      "unsupported backend ref group",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:  "some-ref",
+					Group: new(gwtypes.Group("example.com")),
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:      "unsupported backend ref kind",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name: "some-ref",
+					Kind: new(gwtypes.Kind("NotService")),
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:      "backend service does not exist",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{Name: "nonexistent-svc"},
+			},
+			expected: nil,
+		},
+		{
+			name:      "cross-namespace backend ref",
+			namespace: "test-namespace",
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name:      "svc-other-ns",
+					Namespace: new(gwtypes.Namespace("other-namespace")),
+				},
+			},
+			services: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
+			},
+			expected: new("other.example.com"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var objects []client.Object
+			for i := range tt.services {
+				objects = append(objects, &tt.services[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			got := extractHostHeaderFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tt.expected, *got)
+			}
+		})
+	}
 }

@@ -224,6 +224,153 @@ func TestFilterHostnames(t *testing.T) {
 	}
 }
 
+func TestFilterHostnames_TLSRoute(t *testing.T) {
+	// Listeners modelled on the gateway-api TLSRouteHostnameIntersection conformance:
+	// abc.example.com, *.example.com, *.com, and an empty (match-any) listener.
+	commonGateway := &gatewayapi.Gateway{
+		Spec: gatewayapi.GatewaySpec{
+			Listeners: []gatewayapi.Listener{
+				{
+					Name:     "listener-exact-hostname",
+					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("abc.example.com"),
+				},
+				{
+					Name:     "listener-more-specific-wc-hostname",
+					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.example.com"),
+				},
+				{
+					Name:     "listener-less-specific-wc-hostname",
+					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.com"),
+				},
+				{
+					Name: "listener-empty-hostname",
+				},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name             string
+		gateways         []supportedGatewayWithCondition
+		tlsRoute         *gatewayapi.TLSRoute
+		expectedTLSRoute *gatewayapi.TLSRoute
+		hasError         bool
+		errString        string
+	}{
+		{
+			name: "exact listener × wildcard route — listener hostname returned",
+			gateways: []supportedGatewayWithCondition{
+				{gateway: commonGateway, listenerName: "listener-exact-hostname"},
+			},
+			tlsRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"*.example.com"},
+				},
+			},
+			expectedTLSRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"abc.example.com"},
+				},
+			},
+		},
+		{
+			name: "more-specific wildcard listener × exact route — exact route returned",
+			gateways: []supportedGatewayWithCondition{
+				{gateway: commonGateway, listenerName: "listener-more-specific-wc-hostname"},
+			},
+			tlsRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"abc.example.com"},
+				},
+			},
+			expectedTLSRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"abc.example.com"},
+				},
+			},
+		},
+		{
+			name: "more-specific wildcard listener × less-specific wildcard route — listener returned",
+			gateways: []supportedGatewayWithCondition{
+				{gateway: commonGateway, listenerName: "listener-more-specific-wc-hostname"},
+			},
+			tlsRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"*.com"},
+				},
+			},
+			expectedTLSRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"*.example.com"},
+				},
+			},
+		},
+		{
+			name: "less-specific wildcard listener × more-specific wildcard route — route returned",
+			gateways: []supportedGatewayWithCondition{
+				{gateway: commonGateway, listenerName: "listener-less-specific-wc-hostname"},
+			},
+			tlsRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"*.example.com"},
+				},
+			},
+			expectedTLSRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"*.example.com"},
+				},
+			},
+		},
+		{
+			name: "empty listener × wildcard route — route returned verbatim",
+			gateways: []supportedGatewayWithCondition{
+				{gateway: commonGateway, listenerName: "listener-empty-hostname"},
+			},
+			tlsRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"*.com"},
+				},
+			},
+			expectedTLSRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"*.com"},
+				},
+			},
+		},
+		{
+			name: "no intersection — returns ErrNoMatchingListenerHostname",
+			gateways: []supportedGatewayWithCondition{
+				{gateway: commonGateway, listenerName: "listener-exact-hostname"},
+			},
+			tlsRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{"some.other.org"},
+				},
+			},
+			expectedTLSRoute: &gatewayapi.TLSRoute{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{},
+				},
+			},
+			hasError:  true,
+			errString: "no matching hostnames in listener",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filteredTLSRoute, err := filterHostnames(tc.gateways, tc.tlsRoute)
+			if tc.hasError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errString)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedTLSRoute.Spec, filteredTLSRoute.Spec)
+			}
+		})
+	}
+}
+
 func TestGetSupportedGatewayForRoute(t *testing.T) {
 	gatewayClass := &gatewayapi.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1177,7 +1324,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			},
 			{
-				name:  "basic TLSRoute does not get accepted because there is no listener with TLS in passthrough mode",
+				name:  "basic TLSRouteget accepted because there is a listener with TLS in terminate mode",
 				route: basicTLSRoute(),
 				objects: []client.Object{
 					func() *gatewayapi.Gateway {
@@ -1195,7 +1342,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},

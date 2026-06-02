@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/blang/semver/v4"
+	kongversion "github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -31,6 +32,8 @@ import (
 // -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
+
+var kongGatewayVersion kongversion.Version
 
 func TestMain(m *testing.M) {
 	var code int
@@ -140,17 +143,7 @@ func TestMain(m *testing.M) {
 
 	helpers.ExitOnErr(
 		ctx,
-		retry.Do(
-			func() error {
-				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
-				defer cancel()
-				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, proxyAdminURL, consts.KongTestPassword)
-				if err != nil {
-					return err
-				}
-				fmt.Printf("INFO: using Kong instance (version: %q) reachable at %s\n", kongVersion, proxyAdminURL)
-				return nil
-			},
+		retry.New(
 			retry.OnRetry(
 				func(n uint, err error) {
 					fmt.Printf("WARNING: try to get Kong Gateway version attempt %d/10 - error: %s\n", n+1, err)
@@ -160,6 +153,18 @@ func TestMain(m *testing.M) {
 				_, ok := errors.AsType[helpers.TooOldKongGatewayError](err)
 				return !ok
 			}),
+		).Do(
+			func() error {
+				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+				defer cancel()
+				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, proxyAdminURL, consts.KongTestPassword)
+				kongGatewayVersion = kongVersion
+				if err != nil {
+					return err
+				}
+				fmt.Printf("INFO: using Kong instance (version: %q) reachable at %s\n", kongVersion, proxyAdminURL)
+				return nil
+			},
 		))
 
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
@@ -251,4 +256,8 @@ func TestMain(m *testing.M) {
 		defer cancel()
 		helpers.ExitOnErr(ctx, helpers.RemoveCluster(ctx, env.Cluster()))
 	}
+}
+
+func isKongGatewayVersionAtLeast3_14() bool {
+	return kongGatewayVersion.Major() >= 3 && kongGatewayVersion.Minor() >= 14
 }

@@ -52,6 +52,8 @@ spec:
       value: (join('-', [($test_name), 'echo']))
     - name: echo_deployment_namespace
       value: (join('-', [($namespace), 'echo-backend']))
+    - name: echo_deployment_replicas
+      value: 1
     - name: http_method
       value: "GET"
     - name: reference_grant_name
@@ -154,6 +156,8 @@ spec:
             - "/echo/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     
@@ -185,6 +189,9 @@ spec:
       description: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
       use:
         template: ../../common/_step_templates/verify-gateway-tls-fingerprint.yaml
+      bindings:
+        - name: proxy_port
+          value: "443"
 
     # Step 17: Verify that the dataplane is configured, traffic can be routed, and TLS certificates are working.
     # The verification is done by sending an HTTPS request to the gateway and checking the response from the host.

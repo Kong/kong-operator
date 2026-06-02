@@ -1,0 +1,15 @@
+---
+# Regression assertion: after the ReferenceGrant is deleted, no KongTarget
+# owned by this TLSRoute should remain in the cluster. Orphan cleanup must
+# remove the previously-created KongTarget whose backend Service is no longer
+# permitted.
+#
+# Before the fix in controller/hybridgateway/converter/tls_route.go, the
+# reconciler short-circuited on ResolvedRefs=False before Phase 5 (orphan
+# cleanup), leaving this KongTarget behind.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongTarget
+metadata:
+  namespace: ($namespace)
+  (labels."gateway-operator.konghq.com/managed-by" == 'TLSRoute'): true
+  (annotations."gateway-operator.konghq.com/hybrid-routes-TLSRoute" | contains(@, join('/', [($tls_route_namespace), ($tls_route_name)]))): true

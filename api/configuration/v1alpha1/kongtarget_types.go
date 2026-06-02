@@ -33,6 +33,7 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.upstreamRef == self.spec.upstreamRef", message="spec.upstreamRef is immutable"
 // +kong:channels=kong-operator
 type KongTarget struct {
@@ -51,7 +52,7 @@ type KongTargetSpec struct {
 	KongTargetAPISpec `json:",inline"`
 
 	// UpstreamRef is a reference to a KongUpstream this KongTarget is attached to.
-	UpstreamRef commonv1alpha1.NameRef `json:"upstreamRef"`
+	UpstreamRef commonv1alpha1.NamespacedRef `json:"upstreamRef"`
 
 	// Adopt is the options for adopting a target from an existing target in Konnect.
 	// +optional
@@ -92,8 +93,4 @@ type KongTargetList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []KongTarget `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&KongTarget{}, &KongTargetList{})
 }

@@ -345,6 +345,7 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				ServiceEnabled:                     false,
 				GatewayAPIGatewayController:        false,
 				GatewayAPIHTTPRouteController:      false,
+				GatewayAPITLSRouteController:       false,
 				GatewayAPIGRPCRouteController:      false,
 				GatewayAPIReferenceGrantController: false,
 			},
@@ -407,6 +408,10 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				},
 				{
 					Name:  ControllerNameGatewayAPIGRPCRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPITLSRoute,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{
@@ -484,6 +489,10 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{
+					Name:  ControllerNameGatewayAPITLSRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
 					Name:  ControllerNameGatewayAPIReferenceGrant,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
@@ -553,6 +562,10 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				},
 				{
 					Name:  ControllerNameGatewayAPIGRPCRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPITLSRoute,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{
@@ -1143,13 +1156,15 @@ func TestWithKonnectOptions(t *testing.T) {
 		{
 			name: "should configure node refresh and config upload periods",
 			konnectOptions: &operatorv2beta1.ControlPlaneKonnectOptions{
-				NodeRefreshPeriod:  &metav1.Duration{Duration: 15 * time.Second},
-				ConfigUploadPeriod: &metav1.Duration{Duration: 30 * time.Second},
+				NodeRefreshPeriod:       &metav1.Duration{Duration: 15 * time.Second},
+				ConfigUploadPeriod:      &metav1.Duration{Duration: 30 * time.Second},
+				ConfigUploadConcurrency: new(int32(8)),
 			},
 			existingKonnectConfig: &managercfg.KonnectConfig{},
 			expectedConfig: managercfg.KonnectConfig{
-				RefreshNodePeriod:  15 * time.Second,
-				UploadConfigPeriod: 30 * time.Second,
+				RefreshNodePeriod:       15 * time.Second,
+				UploadConfigPeriod:      30 * time.Second,
+				UploadConfigConcurrency: 8,
 			},
 		},
 		{

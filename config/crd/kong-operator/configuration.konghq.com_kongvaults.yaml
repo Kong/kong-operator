@@ -147,7 +147,8 @@ spec:
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
-                      It contains the name of the Konnect Control Plane.
+                      It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups,
+                      because they are read-only.
                       This field is required when the Type is konnectNamespacedRef.
                     properties:
                       name:
@@ -314,14 +315,17 @@ spec:
                     description: |-
                       ID is the unique identifier of the Konnect entity as assigned by Konnect API.
                       If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                    maxLength: 256
                     type: string
                   organizationID:
                     description: OrgID is ID of Konnect Org that this entity has been
                       created in.
+                    maxLength: 256
                     type: string
                   serverURL:
                     description: ServerURL is the URL of the Konnect server in which
                       the entity exists.
+                    maxLength: 512
                     type: string
                 type: object
             required:

@@ -34,6 +34,7 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +kong:channels=kong-operator
@@ -77,11 +78,18 @@ type KongUpstreamSpec struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.algorithm) || (self.algorithm != 'sticky-sessions' || has(self.sticky_sessions_cookie))", message="sticky_sessions_cookie is required when algorithm is set to `sticky-sessions`."
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
+// +kubebuilder:validation:XValidation:rule="!(has(self.client_certificate) && has(self.clientCertificateRef))", message="client_certificate and clientCertificateRef are mutually exclusive"
 type KongUpstreamAPISpec struct {
 	// Which load balancing algorithm to use.
 	Algorithm *sdkkonnectcomp.UpstreamAlgorithm `default:"round-robin" json:"algorithm,omitempty"`
-	// If set, the certificate to be used as client certificate while TLS handshaking to the upstream server.
+	// Deprecated: use clientCertificateRef instead. If set, the certificate to be used as client certificate while TLS handshaking to the upstream server.
 	ClientCertificate *sdkkonnectcomp.UpstreamClientCertificate `json:"client_certificate,omitempty"`
+	// ClientCertificateRef is a reference to a KongCertificate used as the client certificate
+	// during TLS handshaking to the upstream server. Mutually exclusive with the deprecated
+	// client_certificate field. Cross-namespace references require a KongReferenceGrant
+	// in the target namespace.
+	// +optional
+	ClientCertificateRef *commonv1alpha1.NamespacedRef `json:"clientCertificateRef,omitempty"`
 	// What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`.
 	HashFallback *sdkkonnectcomp.HashFallback `default:"none" json:"hash_fallback,omitempty"`
 	// The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`.
@@ -128,7 +136,7 @@ type KongUpstreamAPISpec struct {
 type KongUpstreamStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map
@@ -145,8 +153,4 @@ type KongUpstreamList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []KongUpstream `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&KongUpstream{}, &KongUpstreamList{})
 }

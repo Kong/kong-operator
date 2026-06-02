@@ -184,6 +184,54 @@ func TestKongReferenceGrant(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("Generated Konnect child references to Konnect targets", func(t *testing.T) {
+		testCases := []struct {
+			name     string
+			fromKind string
+			toKind   string
+		}{
+			{
+				name:     "PortalPage to Portal",
+				fromKind: "PortalPage",
+				toKind:   "Portal",
+			},
+			{
+				name:     "EventGatewayListener to KonnectEventGateway",
+				fromKind: "EventGatewayListener",
+				toKind:   "KonnectEventGateway",
+			},
+			{
+				name:     "EventGatewayListenerPolicy to EventGatewayListener",
+				fromKind: "EventGatewayListenerPolicy",
+				toKind:   "EventGatewayListener",
+			},
+			{
+				name:     "EventGatewayVirtualCluster to EventGatewayBackendCluster",
+				fromKind: "EventGatewayVirtualCluster",
+				toKind:   "EventGatewayBackendCluster",
+			},
+			{
+				name:     "EventGatewayVirtualClusterConsumePolicy to EventGatewayVirtualCluster",
+				fromKind: "EventGatewayVirtualClusterConsumePolicy",
+				toKind:   "EventGatewayVirtualCluster",
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				toKonnectTarget := configurationv1alpha1.ReferenceGrantTo{
+					Group: "konnect.konghq.com",
+					Kind:  configurationv1alpha1.Kind(tc.toKind),
+				}
+
+				common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+					kongReferenceGrantCase(withName, typeMeta, ns.Name, "other", "konnect.konghq.com", tc.fromKind, toKonnectTarget),
+					kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "other", "konnect.konghq.com", tc.fromKind, toKonnectTarget),
+				}.RunWithConfig(t, cfg, scheme)
+			})
+		}
+	})
+
 	toKonnectCP := configurationv1alpha1.ReferenceGrantTo{
 		Group: "konnect.konghq.com",
 		Kind:  "KonnectGatewayControlPlane",

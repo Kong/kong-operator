@@ -1,6 +1,10 @@
 package main
 
-import "github.com/samber/lo"
+import (
+	"slices"
+
+	"github.com/samber/lo"
+)
 
 var supportedKonnectTypesWithControlPlaneRef = []supportedTypesT{
 	{
@@ -143,7 +147,7 @@ var supportedKonnectTypesWithControlPlaneConfig = []supportedTypesT{
 			},
 			{
 				Type:                       "KongService",
-				KonnectStatusType:          "*konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef",
+				KonnectStatusType:          "*konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs",
 				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
 				ControlPlaneRefType:        "commonv1alpha1.ControlPlaneRef",
 			},
@@ -160,7 +164,7 @@ var supportedKonnectTypesWithControlPlaneConfig = []supportedTypesT{
 			},
 			{
 				Type:                       "KongUpstream",
-				KonnectStatusType:          "*konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef",
+				KonnectStatusType:          "*konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs",
 				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
 				ControlPlaneRefType:        "commonv1alpha1.ControlPlaneRef",
 			},
@@ -280,8 +284,14 @@ var supportedGatewayOperatorTypes = []supportedTypesT{
 	},
 }
 
-var supportedConfigurationPackageTypesWithList = supportedKonnectTypesWithControlPlaneConfig
+// supportedConfigurationPackageTypesWithList excludes configuration types whose
+// per-entity funcs, including GetItems, are emitted by crd-from-oas.
+var supportedConfigurationPackageTypesWithList = func() []supportedTypesT {
+	return slices.Clone(supportedKonnectTypesWithControlPlaneConfig)
+}()
 
+// supportedKonnectPackageTypesWithList excludes Konnect types whose per-entity
+// funcs, including GetItems, are emitted by crd-from-oas.
 var supportedKonnectPackageTypesWithList = func() []supportedTypesT {
 	// Make sure that each template is generated once per package version.
 	base := append(

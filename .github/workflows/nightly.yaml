@@ -23,3 +23,6 @@ jobs:
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO_NIGHTLY }}
       push: true
       slack-send: true
+      # Ensure manual workflow_dispatch runs produce the same 'nightly' and YYYYMMDD
+      # tags as scheduled runs, so the nightly Helm chart can consume the image.
+      nightly-tags: true

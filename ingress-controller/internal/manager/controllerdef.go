@@ -353,6 +353,28 @@ func setupControllers(
 			},
 		},
 		{
+			Enabled: c.GatewayAPITLSRouteController,
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TLSRoute"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
+					Resource: "tlsroutes",
+				}),
+				Controller: &gateway.TLSRouteReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TLSRoute"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
+					StatusQueue:      kubernetesStatusQueue,
+					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+				},
+			},
+		},
+		{
 			Enabled: c.GatewayAPIGRPCRouteController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
@@ -413,28 +435,6 @@ func setupControllers(
 				Controller: &gateway.TCPRouteReconciler{
 					Client:           mgr.GetClient(),
 					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TCPRoute"),
-					Scheme:           mgr.GetScheme(),
-					DataplaneClient:  dataplaneClient,
-					CacheSyncTimeout: c.CacheSyncTimeout,
-					StatusQueue:      kubernetesStatusQueue,
-					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
-				},
-			},
-		},
-		{
-			Enabled: c.GatewayAPITLSRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature),
-			Controller: &crds.DynamicCRDController{
-				Manager:          mgr,
-				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TLSRoute"),
-				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.GroupVersion.Group,
-					Version:  gatewayv1alpha2.GroupVersion.Version,
-					Resource: "tlsroutes",
-				}),
-				Controller: &gateway.TLSRouteReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TLSRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
 					CacheSyncTimeout: c.CacheSyncTimeout,

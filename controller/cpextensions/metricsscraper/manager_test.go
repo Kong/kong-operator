@@ -2,6 +2,7 @@ package metricsscraper
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -10,10 +11,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -247,15 +248,15 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().Build()
-			msm := NewManager(logr.Discard(), interval, fakeClient, types.NamespacedName{})
+			msm := NewManager(logr.Discard(), interval, time.Hour, 10*time.Minute, fakeClient, types.NamespacedName{})
 			for _, pipeline := range tt.pairs {
 				msm.Add(pipeline.controlplane, pipeline.pipeline)
 			}
 
-			assert.Equal(t, tt.expectedCpNNToDPUID, msm.cpNNToDpUID)
-			assert.ElementsMatch(t, tt.expectedScrapersUIDs, lo.Keys(msm.pipelines))
+			require.Equal(t, tt.expectedCpNNToDPUID, msm.cpNNToDpUID)
+			require.ElementsMatch(t, tt.expectedScrapersUIDs, lo.Keys(msm.pipelines))
 			for uid, scraper := range msm.pipelines {
-				assert.Equal(t, uid, scraper.DataPlaneUID())
+				require.Equal(t, uid, scraper.DataPlaneUID())
 			}
 		})
 	}
@@ -356,7 +357,7 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().Build()
-			msm := NewManager(logr.Discard(), interval, fakeClient, types.NamespacedName{})
+			msm := NewManager(logr.Discard(), interval, time.Hour, 10*time.Minute, fakeClient, types.NamespacedName{})
 			for _, pair := range tt.addPairs {
 				msm.Add(pair.controlplane, pair.pipeline)
 			}
@@ -365,10 +366,10 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 				msm.RemoveForControlPlaneNN(*tt.removeCpNN)
 			}
 
-			assert.Equal(t, tt.expectedCpNNToDPUID, msm.cpNNToDpUID)
-			assert.Equal(t, tt.expectedScrapersUIDs, lo.Keys(msm.pipelines))
+			require.Equal(t, tt.expectedCpNNToDPUID, msm.cpNNToDpUID)
+			require.Equal(t, tt.expectedScrapersUIDs, lo.Keys(msm.pipelines))
 			for uid, scraper := range msm.pipelines {
-				assert.Equal(t, uid, scraper.DataPlaneUID())
+				require.Equal(t, uid, scraper.DataPlaneUID())
 			}
 		})
 	}
@@ -488,7 +489,7 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 			}
 			fakeClient := fake.NewClientBuilder().WithObjects(caSecret).Build()
 
-			msm := NewManager(logr.Discard(), intervalTime, fakeClient, client.ObjectKeyFromObject(caSecret))
+			msm := NewManager(logr.Discard(), intervalTime, time.Hour, 10*time.Minute, fakeClient, client.ObjectKeyFromObject(caSecret))
 			for _, pair := range tc.addPairs {
 				msm.Add(pair.controlplane, pair.pipeline)
 			}
@@ -496,7 +497,7 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 			for idx, pipeline := range msm.pipelines {
 				mp, ok := pipeline.(metricsPipeline)
 				require.True(t, ok)
-				assert.Zero(t, mp.MetricsScraper.(*mockScraper).CallCount(),
+				require.Zero(t, mp.MetricsScraper.(*mockScraper).CallCount(),
 					"scraper %d should not have been called yet", idx,
 				)
 			}
@@ -519,4 +520,122 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestMetricsScrapeManager_CertRotation(t *testing.T) {
+	const (
+		certTTL              = time.Hour
+		certExpirationMargin = 10 * time.Minute
+	)
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
+
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue())
+	caSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ca-secret",
+			Namespace: "kong-system",
+		},
+		Data: map[string][]byte{
+			"ca.crt":  certPEM,
+			"tls.crt": certPEM,
+			"tls.key": keyPEM,
+		},
+	}
+	dp := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "dp1",
+			Namespace: "ns1",
+			UID:       types.UID("dp-uid1"),
+		},
+	}
+	cp := &gwtypes.ControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cp1",
+			Namespace: "ns1",
+		},
+		Spec: gwtypes.ControlPlaneSpec{
+			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+					Name: "dp1",
+				},
+			},
+		},
+	}
+
+	t.Run("initializes certs when nil", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(caSecret, dp).
+			Build()
+		msm := NewManager(logr.Discard(), time.Second, certTTL, certExpirationMargin, fakeClient, client.ObjectKeyFromObject(caSecret))
+		require.Nil(t, msm.certs)
+
+		require.NoError(t, msm.enableMetricsScraperForControlPlanesDataPlane(t.Context(), cp))
+		require.NotNil(t, msm.certs)
+		require.False(t, msm.certs.ExpirationDate.IsZero(), "expiration date should be set")
+		require.WithinDuration(t, time.Now().Add(certTTL), msm.certs.ExpirationDate, certExpirationMargin)
+	})
+
+	t.Run("does not rotate certs when far from expiration", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(caSecret, dp).
+			Build()
+		msm := NewManager(logr.Discard(), time.Second, certTTL, certExpirationMargin, fakeClient, client.ObjectKeyFromObject(caSecret))
+
+		// Pre-populate certs with a far-future expiration.
+		msm.certs = &certs{
+			ExpirationDate: time.Now().Add(24 * time.Hour),
+			Cert:           &x509.Certificate{},
+			CA:             &x509.Certificate{},
+		}
+		originalExpiration := msm.certs.ExpirationDate
+
+		require.NoError(t, msm.enableMetricsScraperForControlPlanesDataPlane(t.Context(), cp))
+		require.Equal(t, originalExpiration, msm.certs.ExpirationDate, "certs should not have been rotated")
+	})
+
+	t.Run("rotates certs when near expiration", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(caSecret, dp).
+			Build()
+		msm := NewManager(logr.Discard(), time.Second, certTTL, certExpirationMargin, fakeClient, client.ObjectKeyFromObject(caSecret))
+
+		// Pre-populate certs with an expiration within the margin.
+		nearExpiration := time.Now().Add(certExpirationMargin / 2)
+		msm.certs = &certs{
+			ExpirationDate: nearExpiration,
+			Cert:           &x509.Certificate{},
+			CA:             &x509.Certificate{},
+		}
+
+		require.NoError(t, msm.enableMetricsScraperForControlPlanesDataPlane(t.Context(), cp))
+		require.NotEqual(t, nearExpiration, msm.certs.ExpirationDate, "certs should have been rotated")
+		require.True(t, msm.certs.ExpirationDate.After(time.Now()), "new cert should expire in the future")
+	})
+
+	t.Run("rotates certs when already expired", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(caSecret, dp).
+			Build()
+		msm := NewManager(logr.Discard(), time.Second, certTTL, certExpirationMargin, fakeClient, client.ObjectKeyFromObject(caSecret))
+
+		// Pre-populate certs with an expiration in the past.
+		expired := time.Now().Add(-time.Hour)
+		msm.certs = &certs{
+			ExpirationDate: expired,
+			Cert:           &x509.Certificate{},
+			CA:             &x509.Certificate{},
+		}
+
+		require.NoError(t, msm.enableMetricsScraperForControlPlanesDataPlane(t.Context(), cp))
+		require.NotEqual(t, expired, msm.certs.ExpirationDate, "certs should have been rotated")
+		require.True(t, msm.certs.ExpirationDate.After(time.Now()), "new cert should expire in the future")
+	})
 }

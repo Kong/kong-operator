@@ -1,0 +1,41 @@
+# Template for generating a TLS certificate and creating a KongCertificate with
+# inline spec.cert / spec.key (Konnect-style; no Kubernetes Secret required).
+#
+# Required bindings:
+#   - cert_name:        Name of the KongCertificate to create.
+#   - cert_namespace:   Namespace for the KongCertificate.
+#   - cp_name:          Name of the KonnectGatewayControlPlane to reference.
+#   - cp_ref_namespace: Namespace of the KonnectGatewayControlPlane. May equal
+#       cert_namespace for same-namespace references.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-kong-certificate-inline
+spec:
+  try:
+    - script:
+        env:
+          - name: HOSTNAME
+            value: ($cert_name)
+        content: |
+          bash ../../common/scripts/generate_tls_certificate.sh
+        outputs:
+          - name: cert_data
+            value: (json_parse($stdout).cert)
+          - name: key_data
+            value: (json_parse($stdout).key)
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongCertificate
+          metadata:
+            name: ($cert_name)
+            namespace: ($cert_namespace)
+          spec:
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($cp_name)
+                namespace: ($cp_ref_namespace)
+            cert: ($cert_data)
+            key: ($key_data)
