@@ -336,10 +336,11 @@ func TestReconciler_listGatewaysAttachedByHTTPRoute(t *testing.T) {
 	testCases := []struct {
 		name             string
 		parentRef        gatewayv1.ParentReference
+		includeGateway   bool
 		expectedRequests []reconcile.Request
 	}{
 		{
-			name: "matches gateway when group is omitted",
+			name: "matches gateway when group is omitted even if gateway is not yet in cache",
 			parentRef: gatewayv1.ParentReference{
 				Name:      "test-gateway",
 				Namespace: new(gatewayv1.Namespace("default")),
@@ -355,6 +356,7 @@ func TestReconciler_listGatewaysAttachedByHTTPRoute(t *testing.T) {
 				Name: "test-gateway",
 				Kind: new(gatewayv1.Kind("Gateway")),
 			},
+			includeGateway: true,
 			expectedRequests: []reconcile.Request{
 				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "test-gateway"}},
 			},
@@ -366,19 +368,22 @@ func TestReconciler_listGatewaysAttachedByHTTPRoute(t *testing.T) {
 				Group: new(gatewayv1.Group(gatewayv1.GroupName)),
 				Kind:  new(gatewayv1.Kind("Service")),
 			},
+			includeGateway:   true,
 			expectedRequests: nil,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gateway := makeGateway()
 			route := makeRoute(tc.parentRef)
 
-			fakeClient := fakectrlruntimeclient.NewClientBuilder().
+			clientBuilder := fakectrlruntimeclient.NewClientBuilder().
 				WithScheme(scheme.Get()).
-				WithObjects(gateway, route).
-				Build()
+				WithObjects(route)
+			if tc.includeGateway {
+				clientBuilder.WithObjects(makeGateway())
+			}
+			fakeClient := clientBuilder.Build()
 
 			reconciler := &Reconciler{
 				Client: fakeClient,
