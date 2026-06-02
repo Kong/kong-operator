@@ -29,6 +29,11 @@ func (obj PortalIPAllowList) GetTypeName() string {
 	return "PortalIPAllowList"
 }
 
+// GetItems returns the list of PortalIPAllowList items.
+func (obj PortalIPAllowListList) GetItems() []PortalIPAllowList {
+	return obj.Items
+}
+
 // HasParent returns true if the PortalIPAllowList has a parent entity.
 func (obj PortalIPAllowList) HasParent() bool {
 	return true

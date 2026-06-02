@@ -29,6 +29,11 @@ func (obj PortalEmailConfig) GetTypeName() string {
 	return "PortalEmailConfig"
 }
 
+// GetItems returns the list of PortalEmailConfig items.
+func (obj PortalEmailConfigList) GetItems() []PortalEmailConfig {
+	return obj.Items
+}
+
 // HasParent returns true if the PortalEmailConfig has a parent entity.
 func (obj PortalEmailConfig) HasParent() bool {
 	return true

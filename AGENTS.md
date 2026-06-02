@@ -25,6 +25,7 @@ make lint               # Run Go linters (modules, golangci-lint)
 make lint.all           # Full lint: Go + charts + GitHub Actions + markdown
 make lint.api           # Lint Kubernetes API types
 make lint.golangci-lint # Run golangci-lint linter for Go code
+make lint.actions       # Lint github action files 
 make go-fix             # Run go-fix on the codebase to ensure you're not using old or deprecated Go constructs.
 ```
 

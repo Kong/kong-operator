@@ -55,6 +55,11 @@ func (obj Portal) GetTypeName() string {
 	return "Portal"
 }
 
+// GetItems returns the list of Portal items.
+func (obj PortalList) GetItems() []Portal {
+	return obj.Items
+}
+
 // HasParent returns true if the Portal has a parent entity.
 func (obj Portal) HasParent() bool {
 	return false

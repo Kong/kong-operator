@@ -29,6 +29,11 @@ func (obj PortalIdentityProviderRequest) GetTypeName() string {
 	return "PortalIdentityProviderRequest"
 }
 
+// GetItems returns the list of PortalIdentityProviderRequest items.
+func (obj PortalIdentityProviderRequestList) GetItems() []PortalIdentityProviderRequest {
+	return obj.Items
+}
+
 // HasParent returns true if the PortalIdentityProviderRequest has a parent entity.
 func (obj PortalIdentityProviderRequest) HasParent() bool {
 	return true
