@@ -96,8 +96,12 @@ func kongRouteRefersToKonnectGatewayControlPlane(cl client.Client) func(obj clie
 		if scvRef == nil || scvRef.Type != configurationv1alpha1.ServiceRefNamespacedRef {
 			return false
 		}
+		svcNamespace := kongRoute.Namespace
+		if scvRef.NamespacedRef.Namespace != nil {
+			svcNamespace = *scvRef.NamespacedRef.Namespace
+		}
 		nn := types.NamespacedName{
-			Namespace: kongRoute.Namespace,
+			Namespace: svcNamespace,
 			Name:      scvRef.NamespacedRef.Name,
 		}
 		kongSvc := configurationv1alpha1.KongService{}
@@ -125,8 +129,6 @@ func enqueueKongRouteForKongService(
 
 		var l configurationv1alpha1.KongRouteList
 		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(kongSvc.GetNamespace()),
 			client.MatchingFields{
 				index.IndexFieldKongRouteOnReferencedKongService: kongSvc.Namespace + "/" + kongSvc.Name,
 			},

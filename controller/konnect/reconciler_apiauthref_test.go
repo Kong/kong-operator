@@ -43,14 +43,14 @@ func populateGVKOnGet(scheme *runtime.Scheme) interceptor.Funcs {
 }
 
 // TestGetCPAuthRefForRef covers all branches of getCPAuthRefForRef:
-//   - GetCPForRef error (CP missing)
-//   - same-namespace authRef (Namespace nil) verifies the resolved namespace
-//     is the CP's own namespace, not the namespace argument passed by the caller
-//     (this is the bug Fix 1 addresses)
-//   - same-namespace authRef (Namespace explicitly equal to CP's), guards the
-//     "!= cpNamespace" condition
-//   - cross-namespace authRef without a grant, surfaces ReferenceNotGrantedError
-//   - cross-namespace authRef with a valid grant, returns the authRef's namespace
+//   - CP missing: GetCPForRef returns an error and it is propagated.
+//   - Same-namespace authRef (Namespace nil): the returned namespace is the CP's
+//     namespace, regardless of which namespace the caller passed in.
+//   - Same-namespace authRef (Namespace explicitly equal to the CP's): the
+//     cross-namespace branch is skipped (covers the `!= cpNamespace` condition).
+//   - Cross-namespace authRef without a grant: ReferenceNotGrantedError is returned.
+//   - Cross-namespace authRef with a valid grant: the returned namespace is the
+//     authRef's namespace.
 func TestGetCPAuthRefForRef(t *testing.T) {
 	const (
 		cpName        = "cp"
@@ -180,6 +180,167 @@ func TestGetCPAuthRefForRef(t *testing.T) {
 					require.ErrorAs(t, err, &notGranted)
 				}
 				require.Equal(t, types.NamespacedName{}, nn)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantNN, nn)
+		})
+	}
+}
+
+// TestGetAPIAuthRefNN_ServiceRef covers the serviceRef branch of GetAPIAuthRefNN.
+// It is the path that resolves a KongRoute -> KongService -> CP -> auth chain.
+//
+// The branch must:
+//   - look up the KongService using the namespace from `serviceRef.namespace` (falling
+//     back to the route's namespace when not set), not the route's namespace unconditionally.
+//   - call getCPAuthRefForRef with the resolved service's namespace, not the route's.
+func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
+	const (
+		routeNs   = "route-ns"
+		serviceNs = "svc-ns"
+		cpName    = "cp"
+		svcName   = "cross-ns-service"
+		authName  = "konnect-api-auth"
+	)
+
+	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cpName,
+			Namespace: serviceNs,
+		},
+		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+			KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+					Name: authName,
+				},
+			},
+		},
+	}
+
+	svc := &configurationv1alpha1.KongService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      svcName,
+			Namespace: serviceNs,
+		},
+		Spec: configurationv1alpha1.KongServiceSpec{
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+					Name:      cpName,
+					Namespace: serviceNs,
+				},
+			},
+		},
+	}
+
+	svcNoCPRef := &configurationv1alpha1.KongService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      svcName,
+			Namespace: serviceNs,
+		},
+	}
+
+	makeRoute := func(svcRefNamespace *string) *configurationv1alpha1.KongRoute {
+		return &configurationv1alpha1.KongRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "route",
+				Namespace: routeNs,
+			},
+			Spec: configurationv1alpha1.KongRouteSpec{
+				ServiceRef: &configurationv1alpha1.ServiceRef{
+					Type: configurationv1alpha1.ServiceRefNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      svcName,
+						Namespace: svcRefNamespace,
+					},
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name              string
+		route             *configurationv1alpha1.KongRoute
+		objects           []client.Object
+		wantNN            types.NamespacedName
+		wantErrorContains string
+	}{
+		{
+			name:  "cross-namespace serviceRef resolves auth from service's namespace",
+			route: makeRoute(lo.ToPtr(serviceNs)),
+			objects: []client.Object{
+				// Service lives in serviceNs, not the route's namespace. Verifies that
+				// the lookup uses serviceRef.namespace rather than the route's namespace.
+				svc, cp,
+			},
+			wantNN: types.NamespacedName{
+				Name:      authName,
+				Namespace: serviceNs,
+			},
+		},
+		{
+			name:  "same-namespace serviceRef (Namespace nil) falls back to entity's namespace",
+			route: makeRoute(nil),
+			objects: []client.Object{
+				// In the same-namespace case the service is co-located with the route.
+				&configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{Name: svcName, Namespace: routeNs},
+					Spec: configurationv1alpha1.KongServiceSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name:      cpName,
+								Namespace: routeNs,
+							},
+						},
+					},
+				},
+				&konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{Name: cpName, Namespace: routeNs},
+					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: authName,
+							},
+						},
+					},
+				},
+			},
+			wantNN: types.NamespacedName{
+				Name:      authName,
+				Namespace: routeNs,
+			},
+		},
+		{
+			name:              "service not found returns error",
+			route:             makeRoute(lo.ToPtr(serviceNs)),
+			objects:           nil,
+			wantErrorContains: "failed to get KongService",
+		},
+		{
+			name:              "service without ControlPlaneRef returns error",
+			route:             makeRoute(lo.ToPtr(serviceNs)),
+			objects:           []client.Object{svcNoCPRef},
+			wantErrorContains: "does not have a ControlPlaneRef",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := scheme.Get()
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithObjects(append(tc.objects, tc.route)...).
+				WithInterceptorFuncs(populateGVKOnGet(s)).
+				Build()
+
+			nn, err := GetAPIAuthRefNN(t.Context(), cl, tc.route)
+
+			if tc.wantErrorContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.wantErrorContains)
 				return
 			}
 
