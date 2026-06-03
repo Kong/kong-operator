@@ -1,0 +1,21 @@
+---
+# Scenario C: both backendRefs present but now select distinct pods → 2 KongTargets.
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: ($tls_route_name)
+  namespace: ($tls_route_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+spec:
+  hostnames: ($route_hosts)
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - backendRefs:
+        - name: ($echo_active_service_name)
+          port: 1030
+        - name: ($echo_preview_service_name)
+          port: 1030
