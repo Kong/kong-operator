@@ -2,6 +2,18 @@ name: falco-analyzed-e2e
 
 on:
   workflow_dispatch:
+  workflow_call:
+    secrets:
+      konnect-pat:
+        description: "Konnect PAT used by tests that hit Konnect"
+        required: false
+    
+    inputs:
+      test-image:
+        description: "image used for e2e tests, if not set, the image built in the workflow will be used"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -32,10 +44,17 @@ jobs:
         go-version-file: go.mod
 
     - name: build docker image
+      if: ${{ inputs.test-image == '' }}
       env:
         IMG: kong-operator
         TAG: e2e-${{ github.sha }}
-      run: make docker.build
+      run: make docker.build && echo "test-image=$IMG:$TAG" >> $GITHUB_OUTPUT
+
+    - name: set test image
+      if: ${{ inputs.test-image != '' }}
+      env:
+         TEST_IMAGE: ${{ inputs.test-image }}
+      run: echo "test-image=$TEST_IMAGE" >> $GITHUB_OUTPUT
 
     - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
       with:
@@ -44,9 +63,11 @@ jobs:
     - name: run e2e tests
       run: make test.e2e
       env:
-        KONG_TEST_KONG_OPERATOR_IMAGE_LOAD: kong-operator:e2e-${{ github.sha }}
+        KONG_TEST_KONG_OPERATOR_IMAGE_LOAD: ${{ env.test-image }}
         GOTESTSUM_JUNITFILE: "e2e-tests.xml"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
+        KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 
     - name: upload diagnostics
       if: always()
@@ -68,6 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: run-e2e
+    continue-on-error: true
     if: contains(needs.run-e2e.result, 'success') && needs.run-e2e.outputs.falco_result == 'success'
     permissions:
       contents: read
