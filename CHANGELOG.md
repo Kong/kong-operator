@@ -86,6 +86,12 @@
   resources until the next full resync cycle. Grant changes now immediately re-queue
   affected objects.
   [#4219](https://github.com/Kong/kong-operator/pull/4219)
+- `KongRoute`: when a cross-namespace `serviceRef` has no `KongReferenceGrant`, the
+  `Programmed` condition now transitions to `False` in the same reconcile pass that sets
+  `ResolvedRefs=False/RefNotPermitted`. Previously `Programmed` remained `Unknown`
+  because the reconciler returned early before calling
+  `patchWithProgrammedStatusConditionBasedOnOtherConditions`.
+  [#4318](https://github.com/Kong/kong-operator/pull/4318)
   
 ## [v2.1.6]
 
