@@ -580,7 +580,7 @@ func TestReconcile_CrossNamespaceServiceRefWithoutGrant(t *testing.T) {
 				Type: configurationv1alpha1.ServiceRefNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name:      "svc-cross-ns",
-					Namespace: new(svcNamespace),
+					Namespace: lo.ToPtr(svcNamespace),
 				},
 			},
 		},
