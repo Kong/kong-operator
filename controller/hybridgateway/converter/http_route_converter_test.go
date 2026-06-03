@@ -24,6 +24,7 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -352,15 +353,15 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				t.Helper()
 
 				var (
-					serviceName string
-					pluginObj   *configurationv1.KongPlugin
-					bindingObj  *configurationv1alpha1.KongPluginBinding
+					serviceObj *configurationv1alpha1.KongService
+					pluginObj  *configurationv1.KongPlugin
+					bindingObj *configurationv1alpha1.KongPluginBinding
 				)
 
 				for _, obj := range store {
 					switch typed := obj.(type) {
 					case *configurationv1alpha1.KongService:
-						serviceName = typed.Name
+						serviceObj = typed
 					case *configurationv1.KongPlugin:
 						pluginObj = typed
 					case *configurationv1alpha1.KongPluginBinding:
@@ -368,7 +369,14 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					}
 				}
 
+				require.NotNil(t, serviceObj)
+				serviceName := serviceObj.Name
+				normalRoute := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef("backend"),
+				}, nil)
+				normalServiceName := namegen.NewKongServiceNameForHTTPRouteRule(normalRoute, serviceObj.Spec.ControlPlaneRef, normalRoute.Spec.Rules[0])
 				require.NotEmpty(t, serviceName)
+				assert.NotEqual(t, normalServiceName, serviceName)
 				require.NotNil(t, pluginObj)
 				require.NotNil(t, bindingObj)
 				assert.Equal(t, "request-termination", pluginObj.PluginName)

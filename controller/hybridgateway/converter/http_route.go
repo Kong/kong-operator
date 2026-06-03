@@ -408,8 +408,36 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 
 			upstreamName := namegen.NewKongUpstreamNameForHTTPRouteRule(c.route, cp, rule)
 
+			// Build the KongTarget resources before the service so fallback services for
+			// invalid backends can use a route-scoped name and avoid colliding with normal backend services.
+			targets, err := target.TargetsForBackendRefs(
+				ctx,
+				logger.WithValues("upstream", upstreamName),
+				c.Client,
+				c.route,
+				rule.BackendRefs,
+				&pRef,
+				upstreamName,
+				c.fqdnMode,
+				c.clusterDomain,
+			)
+			if err != nil {
+				log.Error(logger, err, "Failed to translate KongTarget resources for rule, skipping rule",
+					"upstream", upstreamName,
+					"backendRefs", rule.BackendRefs,
+					"parentRef", pRef)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongTarget resources for upstream %s: %w", upstreamName, err))
+				continue
+			}
+			log.Debug(logger, "Successfully translated KongTarget resources", "upstream", upstreamName, "targetCount", len(targets))
+
+			serviceNameOverride := ""
+			if len(rule.BackendRefs) > 0 && len(targets) == 0 {
+				serviceNameOverride = namegen.NewKongServiceNameForHTTPRouteRuleBackendNotFound(c.route, cp, rule)
+			}
+
 			// Build the KongService resource (and optionally a KongCertificate + KongReferenceGrant for client-cert).
-			servicePtr, certPtr, grantPtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
+			servicePtr, certPtr, grantPtr, err := service.ServiceForRuleWithName(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName, serviceNameOverride)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongService resource, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef,
@@ -479,29 +507,6 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					}
 				}
 			}
-
-			// Build the KongTarget resources.
-			// Leave them as the last step since we want everything fully configured before enabling the traffic to the backends.
-			targets, err := target.TargetsForBackendRefs(
-				ctx,
-				logger.WithValues("upstream", upstreamName),
-				c.Client,
-				c.route,
-				rule.BackendRefs,
-				&pRef,
-				upstreamName,
-				c.fqdnMode,
-				c.clusterDomain,
-			)
-			if err != nil {
-				log.Error(logger, err, "Failed to translate KongTarget resources for rule, skipping rule",
-					"upstream", upstreamName,
-					"backendRefs", rule.BackendRefs,
-					"parentRef", pRef)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongTarget resources for upstream %s: %w", upstreamName, err))
-				continue
-			}
-			log.Debug(logger, "Successfully translated KongTarget resources", "upstream", upstreamName, "targetCount", len(targets))
 
 			ruleOutputs := make([]client.Object, 0, 1+len(routes)+len(filterOutputs)+len(targets)+4)
 			if len(rule.BackendRefs) == 0 || len(targets) > 0 {
