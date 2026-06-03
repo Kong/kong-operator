@@ -67,7 +67,13 @@
   Users are suggested to block network access to debug endpoints (which are disabled
   by default) if plugin configuration can contain sensitive information.
   [#4499](https://github.com/Kong/kong-operator/pull/4499)
-
+- Use the ControlPlane's own namespace when resolving its `KonnectAPIAuthConfiguration`
+  reference and when checking the `KongReferenceGrant`. Previously the namespace of the
+  requesting entity was used, which caused resources that resolve their CP through a
+  parent ref (`KongRoute` via `serviceRef`, `KongCredential*` via `consumerRef`) to
+  silently fail when the parent's `controlPlaneRef` was cross-namespace.
+  [#4210](https://github.com/Kong/kong-operator/pull/4210)
+  
 ## [v2.1.6]
 
 > Release date: 2026-05-12
