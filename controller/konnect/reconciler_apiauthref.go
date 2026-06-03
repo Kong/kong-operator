@@ -51,7 +51,8 @@ func getCPAuthRefForRef(
 	}, nil
 }
 
-func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+// GetAPIAuthRefNN returns the NamespacedName of the KonnectAPIAuthConfiguration referenced by the entity.
+func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	ctx context.Context,
 	cl client.Client,
 	ent TEnt,

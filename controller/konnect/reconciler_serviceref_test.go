@@ -1,6 +1,7 @@
 package konnect
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -99,6 +100,33 @@ var testKongServiceNotProgrammed = &configurationv1alpha1.KongService{
 		Namespace: "default",
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
+		Conditions: []metav1.Condition{
+			{
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+				Status: metav1.ConditionFalse,
+			},
+		},
+	},
+}
+
+// testKongServiceNotProgrammedWithCPRef is a KongService with KonnectEntityProgrammed=False,
+// a ControlPlane ref, and Status.Konnect == nil (never synced to Konnect).
+// Used to test the nil pointer dereference regression in handleKongServiceRef.
+var testKongServiceNotProgrammedWithCPRef = &configurationv1alpha1.KongService{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "svc-not-programmed-with-cp-ref",
+		Namespace: "default",
+	},
+	Spec: configurationv1alpha1.KongServiceSpec{
+		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+				Name: "cp-ok",
+			},
+		},
+	},
+	Status: configurationv1alpha1.KongServiceStatus{
+		// Status.Konnect is intentionally nil to simulate a service not yet synced to Konnect.
 		Conditions: []metav1.Condition{
 			{
 				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -368,7 +396,7 @@ func TestHandleServiceRef(t *testing.T) {
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name:      "svc-cross-ns",
-							Namespace: new(svcNamespace),
+							Namespace: lo.ToPtr(svcNamespace),
 						},
 					},
 				},
@@ -412,7 +440,7 @@ func TestHandleServiceRef(t *testing.T) {
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name:      "svc-cross-ns",
-							Namespace: new(svcNamespace),
+							Namespace: lo.ToPtr(svcNamespace),
 						},
 					},
 				},

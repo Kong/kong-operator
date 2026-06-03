@@ -269,7 +269,7 @@ func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
 	}{
 		{
 			name:  "cross-namespace serviceRef resolves auth from service's namespace",
-			route: makeRoute(new(serviceNs)),
+			route: makeRoute(lo.ToPtr(serviceNs)),
 			objects: []client.Object{
 				// Service lives in serviceNs, not the route's namespace. Verifies that
 				// the lookup uses serviceRef.namespace rather than the route's namespace.
@@ -315,13 +315,13 @@ func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
 		},
 		{
 			name:              "service not found returns error",
-			route:             makeRoute(new(serviceNs)),
+			route:             makeRoute(lo.ToPtr(serviceNs)),
 			objects:           nil,
 			wantErrorContains: "failed to get KongService",
 		},
 		{
 			name:              "service without ControlPlaneRef returns error",
-			route:             makeRoute(new(serviceNs)),
+			route:             makeRoute(lo.ToPtr(serviceNs)),
 			objects:           []client.Object{svcNoCPRef},
 			wantErrorContains: "does not have a ControlPlaneRef",
 		},

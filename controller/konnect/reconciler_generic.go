@@ -407,7 +407,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		Message: "Some conditions have status set to False",
 	}
 
-	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
+	apiAuthRef, err := GetAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		if crossnamespace.IsReferenceNotGranted(err) {
 			log.Info(logger, "cross-namespace reference to KonnectAPIAuthConfiguration is not granted", "error", err.Error())
