@@ -324,7 +324,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// requeue the object and wait until all supported gateways are ready.
 	debug(log, tcproute, "Checking if the tcproute's gateways are ready")
 	for _, gateway := range gateways {
-		if !isGatewayProgrammed(gateway.gateway) {
+		if !isGatewayProgrammedForRoute(tcproute, gateway) {
 			debug(log, tcproute, "Gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}

@@ -687,6 +687,39 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 	return false
 }
 
+func isGatewayProgrammedForRoute[T gatewayapi.RouteT](route T, gateway supportedGatewayWithCondition) bool {
+	if !isGatewayProgrammed(gateway.gateway) {
+		return false
+	}
+
+	matchingListeners := make([]gatewayapi.Listener, 0, len(gateway.gateway.Spec.Listeners))
+	for _, listener := range gateway.gateway.Spec.Listeners {
+		if gateway.listenerName != "" && gatewayapi.SectionName(gateway.listenerName) != listener.Name {
+			continue
+		}
+		if !routeTypeMatchesListenerType(route, listener) {
+			continue
+		}
+		matchingListeners = append(matchingListeners, listener)
+	}
+
+	// If the Gateway spec has no listener that could match this route, let normal
+	// route acceptance handling set the terminal status. This readiness check is
+	// only intended to wait for listener status to catch up when the spec listener
+	// exists but its status is not programmed yet.
+	if len(matchingListeners) == 0 {
+		return true
+	}
+
+	for _, listener := range matchingListeners {
+		if err := listenerProgrammedInStatus(listener.Name, gateway.gateway.Status.Listeners); err == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
 // isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by a ReferenceGrant.
 func isHTTPReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef gatewayapi.HTTPBackendRef, fromNamespace string) bool {
 	var backendRefGroup gatewayapi.Group

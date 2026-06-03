@@ -36,6 +36,130 @@ func init() {
 	}
 }
 
+func TestIsGatewayProgrammedForRoute(t *testing.T) {
+	udpRoute := &gatewayapi.UDPRoute{}
+	udpListener := gatewayapi.Listener{
+		Name:     "udp",
+		Protocol: gatewayapi.UDPProtocolType,
+		Port:     9999,
+	}
+
+	testCases := []struct {
+		name      string
+		gateway   *gatewayapi.Gateway
+		listener  string
+		wantReady bool
+	}{
+		{
+			name: "gateway programmed and matching listener programmed",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{udpListener},
+				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionTrue)},
+			),
+			listener:  "udp",
+			wantReady: true,
+		},
+		{
+			name: "gateway programmed but matching listener status missing",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{udpListener},
+				nil,
+			),
+			listener:  "udp",
+			wantReady: false,
+		},
+		{
+			name: "gateway programmed but matching listener not programmed",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{udpListener},
+				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionFalse)},
+			),
+			listener:  "udp",
+			wantReady: false,
+		},
+		{
+			name: "gateway not programmed even when matching listener is programmed",
+			gateway: &gatewayapi.Gateway{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{udpListener},
+				},
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionTrue)},
+				},
+			},
+			listener:  "udp",
+			wantReady: false,
+		},
+		{
+			name: "specified listener absent from spec is terminal not transient",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{{Name: "other", Protocol: gatewayapi.UDPProtocolType, Port: 9999}},
+				nil,
+			),
+			listener:  "udp",
+			wantReady: true,
+		},
+		{
+			name: "no section name waits for matching route protocol listener, ignoring unrelated programmed listener",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{
+					{Name: "http", Protocol: gatewayapi.HTTPProtocolType, Port: 80},
+					udpListener,
+				},
+				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("http", metav1.ConditionTrue)},
+			),
+			wantReady: false,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			gateway := supportedGatewayWithCondition{
+				gateway:      tt.gateway,
+				listenerName: tt.listener,
+			}
+			assert.Equal(t, tt.wantReady, isGatewayProgrammedForRoute(udpRoute, gateway))
+		})
+	}
+}
+
+func programmedGatewayForRouteReadinessTest(
+	listeners []gatewayapi.Listener,
+	listenerStatuses []gatewayapi.ListenerStatus,
+) *gatewayapi.Gateway {
+	return &gatewayapi.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Generation: 1},
+		Spec: gatewayapi.GatewaySpec{
+			Listeners: listeners,
+		},
+		Status: gatewayapi.GatewayStatus{
+			Conditions: []metav1.Condition{{
+				Type:               string(gatewayapi.GatewayConditionProgrammed),
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: 1,
+				Reason:             string(gatewayapi.GatewayReasonProgrammed),
+			}},
+			Listeners: listenerStatuses,
+		},
+	}
+}
+
+func programmedListenerStatusForRouteReadinessTest(
+	name gatewayapi.SectionName,
+	conditionStatus metav1.ConditionStatus,
+) gatewayapi.ListenerStatus {
+	return gatewayapi.ListenerStatus{
+		Name: name,
+		Conditions: []metav1.Condition{{
+			Type:               string(gatewayapi.ListenerConditionProgrammed),
+			Status:             conditionStatus,
+			ObservedGeneration: 1,
+			Reason:             string(gatewayapi.ListenerReasonProgrammed),
+		}},
+	}
+}
+
 func TestFilterHostnames(t *testing.T) {
 	commonGateway := &gatewayapi.Gateway{
 		Spec: gatewayapi.GatewaySpec{

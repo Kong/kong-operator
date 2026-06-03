@@ -329,7 +329,7 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// requeue the object and wait until all supported gateways are ready.
 	debug(log, grpcroute, "Checking if the grpcroute's gateways are ready")
 	for _, gateway := range gateways {
-		if !isGatewayProgrammed(gateway.gateway) {
+		if !isGatewayProgrammedForRoute(grpcroute, gateway) {
 			debug(log, grpcroute, "Gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}
