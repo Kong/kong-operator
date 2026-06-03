@@ -7,8 +7,6 @@ integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
     kong: '3.2.0'
-  # renovate: datasource=docker depName=kindest/node versioning=docker
-  kind: 'v1.35.1'
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
