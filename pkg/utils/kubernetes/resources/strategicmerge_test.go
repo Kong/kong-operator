@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tidwall/pretty"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -751,7 +751,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			if !assert.Empty(t, diff) {
 				b := bytes.Buffer{}
 				require.NoError(t, json.NewEncoder(&b).Encode(result))
-				t.Logf("result:\n%s", pretty.Pretty(b.Bytes()))
+				t.Logf("result:\n%s", pretty.Sprint(b.Bytes()))
 			}
 		})
 	}

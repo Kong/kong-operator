@@ -143,6 +143,7 @@ func runConformance(
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
+		suite.GatewayTLSConformanceProfileName,
 	)
 	opts.SupportedFeatures = supportedFeatures
 	opts.SkipTests = skipped

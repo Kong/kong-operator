@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixes
+
+- Allow `fullnameOverride` to control the webhook cert-manager `Certificate`
+  and `Issuer` resource names.
+  When `fullnameOverride` is aleady being used, the webhook certificate resources
+  will be renamed which can cause intermittent webhook failures during upgrade.
+  [#4091](https://github.com/Kong/kong-operator/pull/4091)
+
 ### Changed
 
 - Bootstrapping CA certificate (that is used for signing certificates for
