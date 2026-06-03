@@ -1161,6 +1161,33 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 			},
 		},
 		{
+			name: "nonexistent backend sets BackendNotFound without stop",
+			setup: func() (*httpRouteConverter, *gwtypes.HTTPRoute) {
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef(""),
+				}, nil)
+				gateway := baseGateway()
+				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace(), route)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+			},
+			wantUpdated: true,
+			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents, 1)
+				conditions := route.Status.Parents[0].Conditions
+				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue)
+				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionResolvedRefs), metav1.ConditionFalse)
+
+				for _, condition := range conditions {
+					if condition.Type == string(gwtypes.RouteConditionResolvedRefs) {
+						assert.Equal(t, string(gwtypes.RouteReasonBackendNotFound), condition.Reason)
+						return
+					}
+				}
+				t.Fatalf("missing %s condition", gwtypes.RouteConditionResolvedRefs)
+			},
+		},
+		{
 			name: "accepted false sets stop",
 			setup: func() (*httpRouteConverter, *gwtypes.HTTPRoute) {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
