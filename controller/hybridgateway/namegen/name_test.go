@@ -591,68 +591,91 @@ func TestNewKongPluginBindingName(t *testing.T) {
 }
 
 func TestNewKongTargetName(t *testing.T) {
-	tests := []struct {
-		name       string
-		upstreamID string
-		endpointID string
-		port       int
-		br         *gwtypes.HTTPBackendRef
-	}{
-		{
-			name:       "basic target name",
-			upstreamID: "cp12345678.ab123456",
-			endpointID: "192.168.1.100",
-			port:       8080,
-			br: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "backend-service",
-						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-					},
+	httpBR := func(name string) *gwtypes.HTTPBackendRef {
+		return &gwtypes.HTTPBackendRef{
+			BackendRef: gatewayv1.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name: gatewayv1.ObjectName(name),
+					Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
 				},
 			},
-		},
-		{
-			name:       "target with different port",
-			upstreamID: "cp87654321.cd987654",
-			endpointID: "10.0.0.50",
-			port:       9090,
-			br: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name:      "api-service",
-						Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("api-ns"); return &ns }(),
-						Port:      func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(9090); return &p }(),
-					},
-					Weight: func() *int32 { w := int32(100); return &w }(),
-				},
+		}
+	}
+	tlsBR := func(name string) *gwtypes.BackendRef {
+		return &gwtypes.BackendRef{
+			BackendObjectReference: gatewayv1.BackendObjectReference{
+				Name: gatewayv1.ObjectName(name),
+				Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
 			},
-		},
-		{
-			name:       "target with IPv6 endpoint",
-			upstreamID: "cp11223344.ef556677",
-			endpointID: "2001:db8::1",
-			port:       443,
-			br: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "secure-service",
-						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(443); return &p }(),
-					},
-				},
-			},
-		},
+		}
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongTargetName(tt.upstreamID, tt.endpointID, tt.port, tt.br)
-			assert.NotEmpty(t, result)
-			parts := strings.Split(result, ".")
-			assert.GreaterOrEqual(t, len(parts), 2)
-			assert.Equal(t, tt.upstreamID, strings.Join(parts[0:2], "."))
-		})
-	}
+	t.Run("idempotent: same inputs produce the same name", func(t *testing.T) {
+		br := httpBR("svc-a")
+		first := NewKongTargetName("upstream", "10.0.0.1", 8080, br)
+		second := NewKongTargetName("upstream", "10.0.0.1", 8080, br)
+		assert.Equal(t, first, second)
+	})
+
+	t.Run("different backendRef same endpoint produces different name", func(t *testing.T) {
+		// Critical for the name-reuse logic: when a rollout swaps the contributing
+		// backendRef but points at the same pod IP, a fresh mint must produce a
+		// different name so existingTargetNamesByAddress can distinguish the two.
+		assert.NotEqual(t,
+			NewKongTargetName("upstream", "10.0.0.1", 8080, httpBR("svc-a")),
+			NewKongTargetName("upstream", "10.0.0.1", 8080, httpBR("svc-b")),
+		)
+	})
+
+	t.Run("different endpoint same backendRef produces different name", func(t *testing.T) {
+		br := httpBR("svc-a")
+		assert.NotEqual(t,
+			NewKongTargetName("upstream", "10.0.0.1", 8080, br),
+			NewKongTargetName("upstream", "10.0.0.2", 8080, br),
+		)
+	})
+
+	t.Run("different port same backendRef and endpoint produces different name", func(t *testing.T) {
+		br := httpBR("svc-a")
+		assert.NotEqual(t,
+			NewKongTargetName("upstream", "10.0.0.1", 8080, br),
+			NewKongTargetName("upstream", "10.0.0.1", 9090, br),
+		)
+	})
+
+	t.Run("different upstream produces different name", func(t *testing.T) {
+		br := httpBR("svc-a")
+		assert.NotEqual(t,
+			NewKongTargetName("upstream-x", "10.0.0.1", 8080, br),
+			NewKongTargetName("upstream-y", "10.0.0.1", 8080, br),
+		)
+	})
+
+	t.Run("name starts with upstream prefix", func(t *testing.T) {
+		result := NewKongTargetName("cp12345678.ab123456", "192.168.1.100", 8080, httpBR("svc"))
+		assert.True(t, strings.HasPrefix(result, "cp12345678.ab123456."), "name must start with upstream")
+	})
+
+	t.Run("name does not exceed kubernetes max length", func(t *testing.T) {
+		longUpstream := strings.Repeat("very-long-upstream-segment-", 10)
+		result := NewKongTargetName(longUpstream, "10.0.0.1", 8080, httpBR("svc"))
+		assert.LessOrEqual(t, len(result), maxLen)
+	})
+
+	t.Run("TLSRoute BackendRef variant is idempotent", func(t *testing.T) {
+		br := tlsBR("tls-backend")
+		first := NewKongTargetName("upstream", "10.0.0.1", 443, br)
+		second := NewKongTargetName("upstream", "10.0.0.1", 443, br)
+		assert.Equal(t, first, second)
+	})
+
+	t.Run("TLSRoute BackendRef different service produces different name than HTTPBackendRef", func(t *testing.T) {
+		// The TLS and HTTP variants hash different struct types, so names must not collide.
+		assert.NotEqual(t,
+			NewKongTargetName("upstream", "10.0.0.1", 8080, httpBR("svc-a")),
+			NewKongTargetName("upstream", "10.0.0.1", 8080, tlsBR("svc-a")),
+		)
+	})
 }
 
 func TestNameGenerationConsistency(t *testing.T) {

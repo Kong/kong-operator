@@ -98,7 +98,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		setup       func() *httpRouteConverter
+		setup       func(t *testing.T) *httpRouteConverter
 		wantLen     int
 		wantErr     bool
 		errContains string
@@ -106,7 +106,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 	}{
 		{
 			name: "returns supported parent with hostnames",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteWithHostnames("api.example.com")
 				gateway := newGatewayWithListenerHostnames("api.example.com")
 				gateway.UID = types.UID("gateway-uid")
@@ -123,7 +123,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 		},
 		{
 			name: "skips parent with no matching hostnames",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteWithHostnames("api.example.com")
 				gateway := newGatewayWithListenerHostnames("other.example.com")
 				gateway.UID = types.UID("gateway-uid")
@@ -134,7 +134,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 		},
 		{
 			name: "skips parent with unsupported group",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				invalidGroup := gwtypes.Group("invalid.group")
 				gatewayKind := gwtypes.Kind("Gateway")
 				route := newHTTPRouteWithHostnames("api.example.com")
@@ -149,7 +149,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 		},
 		{
 			name: "skips parent with unsupported kind",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				gatewayGroup := gwtypes.Group(gwtypes.GroupName)
 				invalidKind := gwtypes.Kind("ConfigMap")
 				route := newHTTPRouteWithHostnames("api.example.com")
@@ -164,7 +164,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 		},
 		{
 			name: "skips parent without control plane reference",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteWithHostnames("api.example.com")
 				gateway := newGatewayWithListenerHostnames("api.example.com")
 				gateway.UID = types.UID("gateway-uid")
@@ -178,7 +178,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 		},
 		{
 			name: "returns error on gateway lookup failure",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteWithHostnames("api.example.com")
 				fakeClient := fake.NewClientBuilder().
 					WithScheme(scheme.Get()).
@@ -198,7 +198,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 		},
 		{
 			name: "returns error when hostname lookup fails",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteWithHostnames("api.example.com")
 				gateway := newGatewayWithListenerHostnames("api.example.com")
 				gateway.UID = types.UID("gateway-uid")
@@ -228,7 +228,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			converter := tt.setup()
+			converter := tt.setup(t)
 			parents, err := getHybridGatewayParents(ctx, logr.Discard(), converter.Client, converter.route)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -285,13 +285,31 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		return append(newKonnectGatewayStandardObjects(gateway),
 			newNamespace(),
 			newService("default"),
-			newEndpointSlice("backend-service", "default", 8080, []string{"10.0.0.1"}),
+			newEndpointSlice("backend-service", "default", []string{"10.0.0.1"}),
 		)
+	}
+
+	// translateAndFindTarget runs Translate on a fresh converter built from objects and
+	// returns the first KongTarget in the output store.
+	translateAndFindTarget := func(t *testing.T, objects []client.Object) *configurationv1alpha1.KongTarget {
+		t.Helper()
+		route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+		conv := newHTTPRouteConverter(route, cl, false, "").(*httpRouteConverter)
+		_, err := conv.Translate(context.Background(), logr.Discard())
+		require.NoError(t, err)
+		for _, obj := range conv.outputStore {
+			if kt, ok := obj.(*configurationv1alpha1.KongTarget); ok {
+				return kt
+			}
+		}
+		t.Fatal("no KongTarget produced")
+		return nil
 	}
 
 	tests := []struct {
 		name         string
-		setup        func() *httpRouteConverter
+		setup        func(t *testing.T) *httpRouteConverter
 		wantCount    int
 		wantErr      bool
 		wantErrSub   string
@@ -301,7 +319,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 	}{
 		{
 			name: "translates route with plugins and targets",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
 					newBackendRef(""),
 				}, []gwtypes.HTTPRouteFilter{
@@ -329,7 +347,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "translates nonexistent backend into request termination plugin",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
 					newBackendRef(""),
 				}, nil)
@@ -388,7 +406,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "translates cross-namespace backend without reference grant into request termination plugin",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
 					newBackendRef("backend"),
 				}, nil)
@@ -447,7 +465,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "translates partially invalid cross-namespace sibling backends",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				v1Name := gwtypes.ObjectName("app-backend-v1")
 				v2Name := gwtypes.ObjectName("app-backend-v2")
 				serviceKind := gwtypes.Kind("Service")
@@ -525,7 +543,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 							}},
 						},
 					},
-					newEndpointSlice("app-backend-v1", "app-backend", 8080, []string{"10.0.1.1"}),
+					newEndpointSlice("app-backend-v1", "app-backend", []string{"10.0.1.1"}),
 					&gwtypes.ReferenceGrant{
 						ObjectMeta: metav1.ObjectMeta{Name: "allow-app-backend-v1", Namespace: "app-backend"},
 						Spec: gwtypes.ReferenceGrantSpec{
@@ -589,7 +607,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "translates unsupported backend kind into request termination plugin",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
 					func() gwtypes.HTTPBackendRef {
 						ref := newBackendRef("")
@@ -653,7 +671,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "translates multi rule redirect only route end to end",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteWithRules(
 					[]string{"api.example.com"},
 					[]gwtypes.HTTPRouteRule{
@@ -756,7 +774,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "translates upstream header matching route end to end",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteWithRules(
 					[]string{"api.example.com"},
 					[]gwtypes.HTTPRouteRule{
@@ -884,7 +902,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "returns error when filter translation fails",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
 					newBackendRef(""),
 				}, []gwtypes.HTTPRouteFilter{{
@@ -906,7 +924,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "no supported parents produces no output",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				invalidGroup := gwtypes.Group("invalid.group")
 				gatewayKind := gwtypes.Kind("Gateway")
 				route := newHTTPRouteWithHostnames("api.example.com")
@@ -921,7 +939,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "returns error when parent lookup fails",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteWithHostnames("api.example.com")
 				fakeClient := fake.NewClientBuilder().
 					WithScheme(scheme.Get()).
@@ -941,7 +959,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "returns error when upstream translation fails",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
 				gateway := baseGateway()
 				fakeClient := fake.NewClientBuilder().
@@ -963,7 +981,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "returns error when service translation fails",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
 				gateway := baseGateway()
 				fakeClient := fake.NewClientBuilder().
@@ -989,7 +1007,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "returns error when route translation fails",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
 				gateway := baseGateway()
 				fakeClient := fake.NewClientBuilder().
@@ -1016,7 +1034,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "returns error when plugin binding fails",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, []gwtypes.HTTPRouteFilter{
 					newRequestHeaderFilter("x-test", "true"),
 				})
@@ -1048,7 +1066,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		},
 		{
 			name: "returns error when targets translation fails",
-			setup: func() *httpRouteConverter {
+			setup: func(t *testing.T) *httpRouteConverter {
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
 					newBackendRef("backend"),
 				}, nil)
@@ -1077,11 +1095,188 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 			},
 			wantStoreLen: 3,
 		},
+		{
+			// When a KongTarget already exists in-cluster for the same (upstream, address), the
+			// translator must reuse its name so the reconciler issues an UPDATE (not a
+			// CREATE-then-duplicate) — the core invariant added by existingTargetNamesByAddress.
+			name: "existing KongTarget name is reused on re-translate",
+			setup: func(t *testing.T) *httpRouteConverter {
+				gateway := baseGateway()
+				objects := baseObjects(gateway)
+
+				// First pass: discover the labels/annotations/upstream the translator assigns.
+				firstTarget := translateAndFindTarget(t, objects)
+
+				// Pre-seed the client with the same target under a legacy name — simulating an
+				// in-cluster resource left over from a previous install with a different naming scheme.
+				legacy := firstTarget.DeepCopy()
+				legacy.Name = "legacy-target-name"
+
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
+				cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(append(objects, legacy)...).Build()
+				return newHTTPRouteConverter(route, cl, false, "").(*httpRouteConverter)
+			},
+			wantCount:    4,
+			wantStoreLen: 4,
+			wantOutputs:  outputCount{upstreams: 1, services: 1, routes: 1, targets: 1},
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+				var targets []*configurationv1alpha1.KongTarget
+				for _, obj := range store {
+					if kt, ok := obj.(*configurationv1alpha1.KongTarget); ok {
+						targets = append(targets, kt)
+					}
+				}
+				require.Len(t, targets, 1)
+				assert.Equal(t, "legacy-target-name", targets[0].Name,
+					"translator must reuse the pre-existing target name instead of minting a new one")
+			},
+		},
+		{
+			// When two KongTargets exist for the same address (broken/duplicate state), the
+			// translator must prefer the Programmed one so the desired state equals the live
+			// one and the non-programmed duplicate becomes an orphan to be cleaned up.
+			name: "Programmed duplicate KongTarget name is preferred over non-programmed one",
+			setup: func(t *testing.T) *httpRouteConverter {
+				gateway := baseGateway()
+				objects := baseObjects(gateway)
+
+				// First pass: discover the labels/annotations/upstream the translator assigns.
+				firstTarget := translateAndFindTarget(t, objects)
+
+				programmedDup := firstTarget.DeepCopy()
+				programmedDup.Name = "zzz-programmed-name" // larger name, must win
+				programmedDup.Status.Conditions = []metav1.Condition{{
+					Type:               "Programmed",
+					Status:             metav1.ConditionTrue,
+					Reason:             "Test",
+					LastTransitionTime: metav1.Now(),
+				}}
+
+				failedDup := firstTarget.DeepCopy()
+				failedDup.Name = "aaa-failed-name" // smaller name, must lose
+				failedDup.Status.Conditions = []metav1.Condition{{
+					Type:               "Programmed",
+					Status:             metav1.ConditionFalse,
+					Reason:             "Test",
+					LastTransitionTime: metav1.Now(),
+				}}
+
+				cl := fake.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithObjects(append(objects, programmedDup, failedDup)...).
+					WithStatusSubresource(programmedDup, failedDup).
+					Build()
+				require.NoError(t, cl.Status().Update(context.Background(), programmedDup))
+				require.NoError(t, cl.Status().Update(context.Background(), failedDup))
+
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
+				return newHTTPRouteConverter(route, cl, false, "").(*httpRouteConverter)
+			},
+			wantCount:    4,
+			wantStoreLen: 4,
+			wantOutputs:  outputCount{upstreams: 1, services: 1, routes: 1, targets: 1},
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+				var targets []*configurationv1alpha1.KongTarget
+				for _, obj := range store {
+					if kt, ok := obj.(*configurationv1alpha1.KongTarget); ok {
+						targets = append(targets, kt)
+					}
+				}
+				require.Len(t, targets, 1)
+				assert.Equal(t, "zzz-programmed-name", targets[0].Name,
+					"Programmed target name must win even when a smaller name exists for the same address")
+			},
+		},
+		{
+			name: "two backendRefs selecting the same pod IP produce one merged KongTarget",
+			setup: func(t *testing.T) *httpRouteConverter {
+				serviceKind := gwtypes.Kind("Service")
+				serviceGroup := gwtypes.Group("")
+				w100 := int32(100)
+				w0 := int32(0)
+				route := newHTTPRouteForTranslation(
+					[]string{"api.example.com"},
+					[]gwtypes.HTTPBackendRef{
+						{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  "svc-active",
+									Kind:  &serviceKind,
+									Group: &serviceGroup,
+									Port:  new(gwtypes.PortNumber(80)),
+								},
+								Weight: &w100,
+							},
+						},
+						{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  "svc-preview",
+									Kind:  &serviceKind,
+									Group: &serviceGroup,
+									Port:  new(gwtypes.PortNumber(80)),
+								},
+								Weight: &w0,
+							},
+						},
+					},
+					nil,
+				)
+				gateway := baseGateway()
+				// Both services resolve to the same pod IP — the classic blue-green overlap scenario.
+				svcActive := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: "svc-active", Namespace: "default"},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "10.0.1.1",
+						Ports: []corev1.ServicePort{
+							{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)},
+						},
+					},
+				}
+				svcPreview := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: "svc-preview", Namespace: "default"},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "10.0.1.2",
+						Ports: []corev1.ServicePort{
+							{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)},
+						},
+					},
+				}
+				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace(), svcActive, svcPreview,
+					newEndpointSlice("svc-active", "default", []string{"10.0.0.1"}),
+					newEndpointSlice("svc-preview", "default", []string{"10.0.0.1"}), // same pod IP
+				)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount:    4,
+			wantStoreLen: 4,
+			wantOutputs: outputCount{
+				upstreams: 1,
+				services:  1,
+				routes:    1,
+				targets:   1, // merged — not 2
+			},
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+				var targets []*configurationv1alpha1.KongTarget
+				for _, obj := range store {
+					if tgt, ok := obj.(*configurationv1alpha1.KongTarget); ok {
+						targets = append(targets, tgt)
+					}
+				}
+				require.Len(t, targets, 1)
+				assert.Equal(t, "10.0.0.1:8080", targets[0].Spec.Target)
+				assert.Positive(t, targets[0].Spec.Weight)
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			converter := tt.setup()
+			converter := tt.setup(t)
 			count, err := converter.Translate(context.Background(), logr.Discard())
 			if tt.wantErr {
 				require.Error(t, err)
@@ -1910,7 +2105,8 @@ func newService(namespace string) *corev1.Service {
 	}
 }
 
-func newEndpointSlice(serviceName, namespace string, port int32, addresses []string) *discoveryv1.EndpointSlice {
+func newEndpointSlice(serviceName, namespace string, addresses []string) *discoveryv1.EndpointSlice {
+	port := int32(8080)
 	return &discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-slice", serviceName),

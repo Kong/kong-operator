@@ -1,0 +1,30 @@
+---
+# Assert exactly one KongTarget exists for this TLSRoute and is Programmed.
+# If duplicate endpoints were not merged, two KongTargets with identical
+# host:port would be attempted and the second would remain Programmed=False.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongTarget
+metadata:
+  namespace: ($namespace)
+  (labels."gateway-operator.konghq.com/managed-by" == 'TLSRoute'): true
+  (annotations."gateway-operator.konghq.com/hybrid-routes-TLSRoute" | contains(@, join('/', [($tls_route_namespace), ($tls_route_name)]))): true
+  (annotations."gateway-operator.konghq.com/hybrid-gateways" == join('/', [($gateway_namespace), ($gateway_name)])): true
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'KongUpstreamRefValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'ControlPlaneRefValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'APIAuthResolvedRef']):
+    - status: 'True'
+      reason: ResolvedRef
+  (conditions[?type == 'APIAuthValid']):
+    - status: 'True'
+      reason: Valid
+  (konnect.controlPlaneID != null): true
+  (konnect.id != null): true
+  (konnect.upstreamID != null): true
