@@ -60,6 +60,13 @@
   [#4382](https://github.com/Kong/kong-operator/pull/4382) [#4394](https://github.com/Kong/kong-operator/pull/4394)
 - Fixed KonnectExtension changes won't trigger ControlPlane reconciliations.
   [#4361](https://github.com/Kong/kong-operator/pull/4361) [#4371](https://github.com/Kong/kong-operator/pull/4371)
+- Revert plugin config sanitization when `ControlPlane`'s `configDump.dumpSensitive` isn't enabled.
+  Due to plugin configuration being dependent on plugin type controller is not
+  able to make an informed decision whether a field is sensitive or not and more
+  importantly whether it has a constrained set of allowed values like e.g. HTTP methods.
+  Users are suggested to block network access to debug endpoints (which are disabled
+  by default) if plugin configuration can contain sensitive information.
+  [#4499](https://github.com/Kong/kong-operator/pull/4499)
 
 ## [v2.1.6]
 
