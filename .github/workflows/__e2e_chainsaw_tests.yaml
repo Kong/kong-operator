@@ -18,7 +18,7 @@ env:
 
 jobs:
   e2e-tests-chainsaw:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
     runs-on: ubuntu-latest
     name: ${{ format('{0}', inputs.node_image_version) }}
     env:
@@ -42,7 +42,7 @@ jobs:
 
     - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
       with:
-        install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm
+        install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind
 
     - uses: ./.github/actions/bump-inotify
 

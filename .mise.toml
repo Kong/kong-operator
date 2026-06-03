@@ -45,7 +45,7 @@ macos-arm64 = { asset_pattern = "kind-darwin-arm64" }
 
 [tools."github:Kong/kubernetes-testing-framework"]
 # renovate: datasource=github-releases depName=Kong/kubernetes-testing-framework
-version = "v0.50.0"
+version = "v0.51.0"
 bin = "ktf"
 
 [tools."github:telepresenceio/telepresence"]
