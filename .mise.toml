@@ -36,7 +36,7 @@ version_prefix = "kustomize/"
 
 [tools."kind"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
-version = "v0.31.0"
+version = "v0.32.0"
 bin = "kind"
 [tools."kind".platforms]
 linux-x64 = { asset_pattern = "kind-linux-amd64" }
