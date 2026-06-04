@@ -37,7 +37,6 @@ func init() {
 }
 
 func TestIsGatewayProgrammedForRoute(t *testing.T) {
-	udpRoute := &gatewayapi.UDPRoute{}
 	udpListener := gatewayapi.Listener{
 		Name:     "udp",
 		Protocol: gatewayapi.UDPProtocolType,
@@ -45,10 +44,11 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name      string
-		gateway   *gatewayapi.Gateway
-		listener  string
-		wantReady bool
+		name                  string
+		gateway               *gatewayapi.Gateway
+		listener              string
+		attachedListenerNames []gatewayapi.SectionName
+		wantReady             bool
 	}{
 		{
 			name: "gateway programmed and matching listener programmed",
@@ -56,8 +56,9 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 				[]gatewayapi.Listener{udpListener},
 				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionTrue)},
 			),
-			listener:  "udp",
-			wantReady: true,
+			listener:              "udp",
+			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			wantReady:             true,
 		},
 		{
 			name: "gateway programmed but matching listener status missing",
@@ -65,8 +66,9 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 				[]gatewayapi.Listener{udpListener},
 				nil,
 			),
-			listener:  "udp",
-			wantReady: false,
+			listener:              "udp",
+			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			wantReady:             false,
 		},
 		{
 			name: "gateway programmed but matching listener not programmed",
@@ -74,8 +76,9 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 				[]gatewayapi.Listener{udpListener},
 				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionFalse)},
 			),
-			listener:  "udp",
-			wantReady: false,
+			listener:              "udp",
+			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			wantReady:             false,
 		},
 		{
 			name: "gateway not programmed even when matching listener is programmed",
@@ -88,8 +91,9 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 					Listeners: []gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionTrue)},
 				},
 			},
-			listener:  "udp",
-			wantReady: false,
+			listener:              "udp",
+			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			wantReady:             false,
 		},
 		{
 			name: "specified listener absent from spec is terminal not transient",
@@ -109,17 +113,31 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 				},
 				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("http", metav1.ConditionTrue)},
 			),
-			wantReady: false,
+			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			wantReady:             false,
+		},
+		{
+			name: "no section name ignores same protocol listener that did not attach",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{
+					{Name: "udp-attached", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
+					{Name: "udp-unattached", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
+				},
+				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp-unattached", metav1.ConditionTrue)},
+			),
+			attachedListenerNames: []gatewayapi.SectionName{"udp-attached"},
+			wantReady:             false,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			gateway := supportedGatewayWithCondition{
-				gateway:      tt.gateway,
-				listenerName: tt.listener,
+				gateway:               tt.gateway,
+				listenerName:          tt.listener,
+				attachedListenerNames: tt.attachedListenerNames,
 			}
-			assert.Equal(t, tt.wantReady, isGatewayProgrammedForRoute(udpRoute, gateway))
+			assert.Equal(t, tt.wantReady, isGatewayProgrammedForRoute(gateway))
 		})
 	}
 }
@@ -520,8 +538,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	}
 
 	type expected struct {
-		condition    metav1.Condition
-		listenerName string
+		condition             metav1.Condition
+		listenerName          string
+		attachedListenerNames []gatewayapi.SectionName
 	}
 
 	goodGroup := gatewayapi.Group(gatewayv1.GroupName)
@@ -660,6 +679,50 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				expected: []expected{
 					{
 						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					},
+				},
+			},
+			{
+				name: "basic HTTPRoute without section name tracks only attached listeners",
+				route: func() *gatewayapi.HTTPRoute {
+					r := basicHTTPRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
+					return r
+				}(),
+				objects: []client.Object{
+					func() *gatewayapi.Gateway {
+						gw := gatewayWithHTTP80Ready()
+						gw.Spec.Listeners = []gatewayapi.Listener{
+							{Name: "http", Port: 80, Protocol: gatewayapi.HTTPProtocolType},
+							{Name: "http-unattached", Port: 81, Protocol: gatewayapi.HTTPProtocolType},
+						}
+						gw.Status.Listeners = []gatewayapi.ListenerStatus{
+							{
+								Name: "http",
+								Conditions: []metav1.Condition{{
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Status: metav1.ConditionTrue,
+								}},
+								SupportedKinds: supportedRouteGroupKinds,
+							},
+							{
+								Name: "http-unattached",
+								Conditions: []metav1.Condition{{
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Status: metav1.ConditionTrue,
+								}},
+								SupportedKinds: supportedRouteGroupKinds,
+							},
+						}
+						return gw
+					}(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition:             routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						attachedListenerNames: []gatewayapi.SectionName{"http"},
 					},
 				},
 			},
@@ -858,6 +921,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					assert.Equalf(t, "test-namespace", got[i].gateway.Namespace, "gateway namespace #%d", i)
 					assert.Equalf(t, "test-gateway", got[i].gateway.Name, "gateway name #%d", i)
 					assert.Equalf(t, tt.expected[i].listenerName, got[i].listenerName, "listenerName #%d", i)
+					if tt.expected[i].attachedListenerNames != nil {
+						assert.Equalf(t, tt.expected[i].attachedListenerNames, got[i].attachedListenerNames, "attachedListenerNames #%d", i)
+					}
 					assert.Equalf(t, tt.expected[i].condition, got[i].condition, "condition #%d", i)
 				}
 			})
