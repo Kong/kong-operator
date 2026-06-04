@@ -272,6 +272,13 @@ const (
 	// DefaultRateLimitRetryAfter is the default retry-after duration when the
 	// Retry-After header is not present in the rate limit response.
 	DefaultRateLimitRetryAfter = 15 * time.Second
+
+	// DefaultReferenceRetryAfter is the fixed retry-after duration used when a Konnect
+	// operation returns a 400 with only ERROR_TYPE_REFERENCE errors. This avoids
+	// controller-runtime's exponential backoff (which can grow into minutes) for a
+	// condition that is inherently transient (e.g. all targets recreated at once while
+	// the upstream is not yet present in Konnect).
+	DefaultReferenceRetryAfter = 500 * time.Millisecond
 )
 
 // GetRetryAfterFromRateLimitError extracts the Retry-After duration from a rate limit error.
@@ -454,8 +461,34 @@ func handleDeleteError[
 }
 
 // IgnoreUnrecoverableAPIErr ignores unrecoverable errors that would cause the
-// reconciler to endlessly requeue, and wraps rate limit errors with retry-after duration.
+// reconciler to endlessly requeue, and wraps transient errors with a fixed retry-after
+// duration to avoid controller-runtime's exponential backoff.
 func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
+	// If the error is a rate limit error, wrap it with the retry-after duration
+	// so the reconciler can use it to set RequeueAfter.
+	if retryAfter, isRateLimited := GetRetryAfterFromRateLimitError(err); isRateLimited {
+		logger.Info("rate limited by Konnect API", "retry_after", retryAfter.String())
+		return RateLimitError{
+			Err:        err,
+			RetryAfter: retryAfter,
+		}
+	}
+
+	// If the error is a 400 whose details are all ERROR_TYPE_REFERENCE it is transient
+	// (e.g. a unique-constraint conflict because an old entity hasn't been cleaned up yet,
+	// or a referenced entity hasn't landed in Konnect yet). Check this BEFORE the
+	// conflict/bad-request block: some errors (e.g. "target (type: unique) constraint
+	// failed" with ERROR_TYPE_REFERENCE details) would otherwise be swallowed by
+	// ErrorIsCreateConflict and never retried. The reconciler decides whether to actually
+	// requeue based on whether the entity is HybridGateway-managed.
+	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok && errSDK.StatusCode == 400 && !ErrorIsSDKError400(err) {
+		logger.Info("reference-only 400 from Konnect, will retry shortly", "retry_after", DefaultReferenceRetryAfter.String())
+		return ReferenceError{
+			Err:        err,
+			RetryAfter: DefaultReferenceRetryAfter,
+		}
+	}
+
 	// If the error is a type field error or bad request error, then don't propagate
 	// it to the caller.
 	// We cannot recover from this error as this requires user to change object's
@@ -466,16 +499,6 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 		ErrorIsCreateConflict(err) {
 		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)
 		return nil
-	}
-
-	// If the error is a rate limit error, wrap it with the retry-after duration
-	// so the reconciler can use it to set RequeueAfter.
-	if retryAfter, isRateLimited := GetRetryAfterFromRateLimitError(err); isRateLimited {
-		logger.Info("rate limited by Konnect API", "retry_after", retryAfter.String())
-		return RateLimitError{
-			Err:        err,
-			RetryAfter: retryAfter,
-		}
 	}
 
 	return err
