@@ -29,7 +29,7 @@ require (
 	github.com/kong/go-database-reconciler v1.39.0
 	github.com/kong/go-kong v0.76.0
 	github.com/kong/kubernetes-telemetry v0.1.14
-	github.com/kong/kubernetes-testing-framework v0.50.0
+	github.com/kong/kubernetes-testing-framework v0.51.0
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.0
@@ -311,7 +311,7 @@ require (
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
-	sigs.k8s.io/kind v0.31.0 // indirect
+	sigs.k8s.io/kind v0.32.0 // indirect
 	sigs.k8s.io/kustomize/api v0.21.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.21.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
