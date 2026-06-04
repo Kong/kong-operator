@@ -508,7 +508,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				}
 			}
 
-			ruleOutputs := make([]client.Object, 0, 1+len(routes)+len(filterOutputs)+len(targets)+4)
+			var ruleOutputs []client.Object
 			if len(rule.BackendRefs) == 0 || len(targets) > 0 {
 				upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
 				if err != nil {
