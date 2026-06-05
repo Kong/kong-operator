@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.2.0](#v220)
 - [v2.1.7](#v217)
 - [v2.1.6](#v216)
 - [v2.1.5](#v215)
@@ -47,6 +48,10 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [v2.2.0]
+
+> Release date: 2026-06-05
 
 ### Added
 
@@ -2244,6 +2249,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
 [v2.1.7]: https://github.com/Kong/kong-operator/compare/v2.1.6..v2.1.7
 [v2.1.6]: https://github.com/Kong/kong-operator/compare/v2.1.5..v2.1.6
 [v2.1.5]: https://github.com/Kong/kong-operator/compare/v2.1.4..v2.1.5
