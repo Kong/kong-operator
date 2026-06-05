@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.1.7](#v217)
 - [v2.1.6](#v216)
 - [v2.1.5](#v215)
 - [v2.1.4](#v214)
@@ -9,6 +10,7 @@
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
+- [v2.0.10](#v2010)
 - [v2.0.9](#v209)
 - [v2.0.8](#v208)
 - [v2.0.7](#v207)
@@ -45,8 +47,6 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
-
-## Unreleased
 
 ### Added
 
@@ -323,6 +323,53 @@
   Users are suggested to block network access to debug endpoints (which are disabled
   by default) if plugin configuration can contain sensitive information.
   [#4467](https://github.com/Kong/kong-operator/pull/4467)
+
+## [v2.1.7]
+
+> Release date: 2026-06-04
+
+### Fixes
+
+- Hybridgateway: fix `KongCertificate` name collisions when a `Gateway` has
+  multiple listeners using the same port by including listener identity in
+  generated certificate names.
+  **Attention**: This will re-create CA certificates in Konnect,
+  as it changes the names of the generated `KongCertificate`s.
+  [#4382](https://github.com/Kong/kong-operator/pull/4382) [#4394](https://github.com/Kong/kong-operator/pull/4394)
+- Fixed KonnectExtension changes won't trigger ControlPlane reconciliations.
+  [#4361](https://github.com/Kong/kong-operator/pull/4361) [#4371](https://github.com/Kong/kong-operator/pull/4371)
+- Revert plugin config sanitization when `ControlPlane`'s `configDump.dumpSensitive` isn't enabled.
+  Due to plugin configuration being dependent on plugin type controller is not
+  able to make an informed decision whether a field is sensitive or not and more
+  importantly whether it has a constrained set of allowed values like e.g. HTTP methods.
+  Users are suggested to block network access to debug endpoints (which are disabled
+  by default) if plugin configuration can contain sensitive information.
+  [#4499](https://github.com/Kong/kong-operator/pull/4499)
+- Use the ControlPlane's own namespace when resolving its `KonnectAPIAuthConfiguration`
+  reference and when checking the `KongReferenceGrant`. Previously the namespace of the
+  requesting entity was used, which caused resources that resolve their CP through a
+  parent ref (`KongRoute` via `serviceRef`, `KongCredential*` via `consumerRef`) to
+  silently fail when the parent's `controlPlaneRef` was cross-namespace.
+  [#4210](https://github.com/Kong/kong-operator/pull/4210)
+- Fix cross-namespace `KongRoute → KongService` reference resolution: `handleKongServiceRef`
+  and `GetAPIAuthRefNN` (serviceRef branch) now derive the `KongService` namespace from
+  `serviceRef.namespace` instead of always using the route's namespace, so a cross-namespace
+  serviceRef with a valid `KongReferenceGrant` correctly reaches `Programmed=True`.
+  The `kongRouteRefersToKongService` index key and `enqueueKongRouteForKongService` watch
+  handler are also fixed to use the service's namespace, ensuring cross-namespace routes are
+  re-queued immediately when the referenced service changes rather than waiting for a full resync.
+  [#4212](https://github.com/Kong/kong-operator/pull/4212)
+- Add `KongReferenceGrant` watch to `KongVault` and `KongConsumerGroup` reconcilers.
+  Previously, creating or deleting a grant would not trigger re-reconciliation of these
+  resources until the next full resync cycle. Grant changes now immediately re-queue
+  affected objects.
+  [#4219](https://github.com/Kong/kong-operator/pull/4219)
+- `KongRoute`: when a cross-namespace `serviceRef` has no `KongReferenceGrant`, the
+  `Programmed` condition now transitions to `False` in the same reconcile pass that sets
+  `ResolvedRefs=False/RefNotPermitted`. Previously `Programmed` remained `Unknown`
+  because the reconciler returned early before calling
+  `patchWithProgrammedStatusConditionBasedOnOtherConditions`.
+  [#4318](https://github.com/Kong/kong-operator/pull/4318)
 
 ## [v2.1.6]
 
@@ -770,6 +817,16 @@
   `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
+
+## [v2.0.10]
+
+> Release date: 2026-06-04
+
+
+### Fixes
+
+- Fixed KonnectExtension changes won't trigger ControlPlane reconciliations.
+  [#4361](https://github.com/Kong/kong-operator/pull/4361) [#4370](https://github.com/Kong/kong-operator/pull/4370)
 
 ## [v2.0.9]
 
@@ -2188,6 +2245,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.7]: https://github.com/Kong/kong-operator/compare/v2.1.6..v2.1.7
 [v2.1.6]: https://github.com/Kong/kong-operator/compare/v2.1.5..v2.1.6
 [v2.1.5]: https://github.com/Kong/kong-operator/compare/v2.1.4..v2.1.5
 [v2.1.4]: https://github.com/Kong/kong-operator/compare/v2.1.3..v2.1.4
@@ -2195,6 +2253,7 @@ re-installing the operator through the bundle.
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
+[v2.0.10]: https://github.com/Kong/kong-operator/compare/v2.0.9..v2.0.10
 [v2.0.9]: https://github.com/Kong/kong-operator/compare/v2.0.8..v2.0.9
 [v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
 [v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7
