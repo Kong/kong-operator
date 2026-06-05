@@ -171,6 +171,35 @@ func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger l
 	return updated, stop, nil
 }
 
+// SetRootAcceptedFalse sets Accepted=False for all supported parent references on the TLSRoute.
+func (c *tlsRouteConverter) SetRootAcceptedFalse(ctx context.Context, logger logr.Logger, reason, message string) error {
+	logger = logger.WithValues("phase", "tlsroute-status")
+	supportedParentRefs, err := getHybridGatewayParents(ctx, logger, c.Client, c.route)
+	if err != nil {
+		return err
+	}
+
+	updated := false
+	condition := route.SetConditionMeta(metav1.Condition{
+		Type:    string(gwtypes.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  reason,
+		Message: message,
+	}, c.route)
+	for _, pRefData := range supportedParentRefs {
+		if route.SetStatusConditions(c.route, pRefData.parentRef, vars.ControllerName(), *condition) {
+			updated = true
+		}
+	}
+	if !updated {
+		return nil
+	}
+	if err := c.Status().Update(ctx, c.route); err != nil {
+		return fmt.Errorf("failed to update TLSRoute status: %w", err)
+	}
+	return nil
+}
+
 // GetOutputStore implements APIConverter.
 //
 // Converts all objects in the outputStore to unstructured format for use by the caller.

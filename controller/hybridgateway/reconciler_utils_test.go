@@ -2,6 +2,7 @@ package hybridgateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"testing"
@@ -23,6 +24,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
+	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -230,11 +232,12 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 
 func TestTranslate(t *testing.T) {
 	tests := []struct {
-		name          string
-		translateRet  int
-		translateErr  error
-		expectedCount int
-		expectError   bool
+		name               string
+		translateRet       int
+		translateErr       error
+		expectedCount      int
+		expectError        bool
+		expectMalformedErr bool
 	}{
 		{
 			name:          "returns translated count",
@@ -246,6 +249,14 @@ func TestTranslate(t *testing.T) {
 			translateErr: assert.AnError,
 			expectError:  true,
 		},
+		{
+			name: "preserves malformed annotation sentinel through aggregated translate error",
+			translateErr: fmt.Errorf("translation failed with 1 errors: %w", errors.Join(
+				fmt.Errorf("failed to translate KongService for rule: %w", hgerrors.ErrMalformedAnnotation),
+			)),
+			expectError:        true,
+			expectMalformedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -256,6 +267,9 @@ func TestTranslate(t *testing.T) {
 
 			if tt.expectError {
 				require.Error(t, err)
+				if tt.expectMalformedErr {
+					assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				}
 				return
 			}
 			require.NoError(t, err)
@@ -707,6 +721,10 @@ func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, log
 		return false, false, f.statusErr
 	}
 	return f.statusUpdated, f.statusStop, nil
+}
+
+func (f *fakeHTTPRouteConverter) SetRootAcceptedFalse(ctx context.Context, logger logr.Logger, reason, message string) error {
+	return nil
 }
 
 func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (bool, error) {

@@ -295,6 +295,35 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	return updated, stop, nil
 }
 
+// SetRootAcceptedFalse sets Accepted=False for all supported parent references on the HTTPRoute.
+func (c *httpRouteConverter) SetRootAcceptedFalse(ctx context.Context, logger logr.Logger, reason, message string) error {
+	logger = logger.WithValues("phase", "httproute-status")
+	supportedParentRefs, err := getHybridGatewayParents(ctx, logger, c.Client, c.route)
+	if err != nil {
+		return err
+	}
+
+	updated := false
+	condition := route.SetConditionMeta(metav1.Condition{
+		Type:    string(gwtypes.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  reason,
+		Message: message,
+	}, c.route)
+	for _, pRefData := range supportedParentRefs {
+		if route.SetStatusConditions(c.route, pRefData.parentRef, vars.ControllerName(), *condition) {
+			updated = true
+		}
+	}
+	if !updated {
+		return nil
+	}
+	if err := c.Status().Update(ctx, c.route); err != nil {
+		return fmt.Errorf("failed to update HTTPRoute status: %w", err)
+	}
+	return nil
+}
+
 // HandleOrphanedResource implements OrphanedResourceHandler.
 //
 // Processes orphaned resources by checking and updating hybrid-routes annotations.
