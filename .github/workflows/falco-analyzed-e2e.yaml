@@ -59,7 +59,9 @@ jobs:
       if: ${{ inputs.test-image != '' }}
       env:
          TEST_IMAGE: ${{ inputs.test-image }}
-      run: echo "TEST_IMAGE=$TEST_IMAGE" >> $GITHUB_ENV
+      run: |
+        docker pull "$TEST_IMAGE"
+        echo "TEST_IMAGE=$TEST_IMAGE" >> $GITHUB_ENV
 
     - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
       with:
