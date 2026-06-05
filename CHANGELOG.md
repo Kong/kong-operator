@@ -822,7 +822,6 @@
 
 > Release date: 2026-06-04
 
-
 ### Fixes
 
 - Fixed KonnectExtension changes won't trigger ControlPlane reconciliations.
