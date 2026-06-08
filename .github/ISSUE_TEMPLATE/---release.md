@@ -32,7 +32,10 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] Update the official documentation at [https://github.com/Kong/developer.konghq.com/][docs_repo]
   - [ ] **Changelog, CLI configuration options, and CRD reference**: Automatically synced by the release workflow (when `latest=true`). A docs PR will be created in the [docs repo][docs_repo] and a comment will be posted in this issue. Review and merge the PR when ready.
   - [ ] Update supported releases table at <https://github.com/Kong/developer.konghq.com/blob/main/app/_data/products/operator.yml>
-- [ ] Major/Minor only: update `renovate.json` config which targets the latest release branch (e.g. `release/2.1.x`) to update the `matchBaseBranches` field to the new release branch (e.g. `release/2.2.x`).
+- [ ] Major/Minor only:
+  - [ ] Update `renovate.json` config which targets the latest release branch (e.g. `release/2.1.x`) to update the `matchBaseBranches` field to the new release branch (e.g. `release/2.2.x`).
+  - [ ] Update `.github/workflows/charts-sync.yaml` workflow by replacing the old release branch (e.g. `release/2.1.x`) with the new one (e.g. `release/2.2.x`) in the `branches` section.
+  - [ ] Update `.github/workflows/govulncheck-cron.yaml` workflow by adding the new release branch (e.g. `release/2.2.x`) to the `branches` section.
 
 ## Conformance tests report
 
