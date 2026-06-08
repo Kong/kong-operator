@@ -148,7 +148,7 @@ jobs:
         with:
           # NOTE: using the full ref name because
           # https://github.com/peterjgrainger/action-create-branch?tab=readme-ov-file#branch
-          branch: "refs/heads/release/${{ env.RELEASE_BRANCH }}"
+          branch: "refs/heads/${{ env.RELEASE_BRANCH }}"
           sha: "${{ github.sha }}"
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
