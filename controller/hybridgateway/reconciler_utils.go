@@ -343,6 +343,25 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	logger logr.Logger,
 	conv converter.APIConverter[t],
 ) (bool, error) {
+	return cleanOrphanedResourcesWithOptions[t, tPtr](ctx, cl, logger, conv, true)
+}
+
+func cleanOrphanedResourcesWithoutWaitingForDeletes[t converter.RootObject, tPtr converter.RootObjectPtr[t]](
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	conv converter.APIConverter[t],
+) (bool, error) {
+	return cleanOrphanedResourcesWithOptions[t, tPtr](ctx, cl, logger, conv, false)
+}
+
+func cleanOrphanedResourcesWithOptions[t converter.RootObject, tPtr converter.RootObjectPtr[t]](
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	conv converter.APIConverter[t],
+	waitForDeletedResources bool,
+) (bool, error) {
 	logger = logger.WithValues("phase", "orphan-cleanup")
 	log.Debug(logger, "Starting orphaned resource cleanup")
 
@@ -377,9 +396,12 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	}
 	log.Debug(logger, "Finished building desired resource key set", "totalKeys", len(desiredSet))
 
-	// For each expected GVK, list resources and delete orphans.
-	// Process one GVK at a time to ensure proper deletion ordering and wait for resources
-	// to be fully deleted before moving to the next type.
+	// For each expected GVK, list resources and delete orphans. Normal reconciliation
+	// processes one GVK at a time and waits for resources to be fully deleted before
+	// moving to the next type. Root deletion cleanup only waits until delete requests
+	// have been issued; child resource controllers own their final cleanup and should
+	// not keep the root object finalizer around.
+	orphansDeleted := 0
 	for _, gvk := range expectedGVKs {
 		log.Debug(logger, "Processing GVK for orphan cleanup", "gvk", gvk.String())
 
@@ -393,8 +415,8 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 
 		log.Debug(logger, "Found existing resources for GVK", "gvk", gvk.String(), "resourceCount", len(list.Items))
 
-		orphansForGVK := 0
-		orphansForGVKInDeletion := 0
+		orphansDeletedForGVK := 0
+		orphansInDeletionForGVK := 0
 
 		for _, item := range list.Items {
 			key := fmt.Sprintf("%s/%s/%s", item.GetNamespace(), item.GetName(), gvk.String())
@@ -416,10 +438,13 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			}
 
 			// Check if the resource is already being deleted (has deletionTimestamp set).
-			// If so, we need to wait for it to be fully deleted before proceeding to the next GVK.
 			if !item.GetDeletionTimestamp().IsZero() {
-				log.Debug(logger, "Resource is already being deleted, will requeue to wait for deletion", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
-				orphansForGVKInDeletion++
+				msg := "Resource is already being deleted"
+				if waitForDeletedResources {
+					msg = "Resource is already being deleted, will requeue to wait for deletion"
+				}
+				log.Debug(logger, msg, "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+				orphansInDeletionForGVK++
 				continue
 			}
 
@@ -427,18 +452,33 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			if err := cl.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
 				return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 			}
-			orphansForGVK++
+			orphansDeletedForGVK++
 		}
+		orphansDeleted += orphansDeletedForGVK
 
 		// If we deleted any orphan resource or found any that is currently being deleted, return true to trigger a requeue.
 		// This ensures we wait for the current GVK's resources to be fully deleted before moving to the next GVK, enforcing
 		// deletion order among resource types.
-		if orphansForGVK > 0 || orphansForGVKInDeletion > 0 {
-			log.Debug(logger, "Requeuing to wait for orphaned resources deletion for GVK", "gvk", gvk.String(), "orphansDeleted", orphansForGVK)
+		if waitForDeletedResources && (orphansDeletedForGVK > 0 || orphansInDeletionForGVK > 0) {
+			log.Debug(logger, "Requeuing to wait for orphaned resources deletion for GVK", "gvk", gvk.String(), "orphansDeleted", orphansDeletedForGVK)
 			return true, nil
-		} else {
-			log.Debug(logger, "No orphaned resources found for GVK", "gvk", gvk.String())
 		}
+		if orphansDeletedForGVK > 0 || orphansInDeletionForGVK > 0 {
+			log.Debug(
+				logger,
+				"Finished processing orphaned resources for GVK",
+				"gvk", gvk.String(),
+				"orphansDeleted", orphansDeletedForGVK,
+				"orphansInDeletion", orphansInDeletionForGVK,
+			)
+			continue
+		}
+		log.Debug(logger, "No orphaned resources found for GVK", "gvk", gvk.String())
+	}
+
+	if orphansDeleted > 0 {
+		log.Debug(logger, "Requeuing after deleting orphaned resources", "orphansDeleted", orphansDeleted)
+		return true, nil
 	}
 
 	// No orphans found
