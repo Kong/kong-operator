@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
+
+### Changed
+
+- Bump default image to 2.2.0
+- Bootstrapping CA certificate (that is used for signing certificates for
+  ControlPlane - DataPlane communication) can be done by cert-manager,
+  see the options `global.certificateAuthority.options.certManager.enabled`.
+  [#3655](https://github.com/Kong/kong-operator/pull/3655)
 
 ### Fixes
 
@@ -9,13 +17,6 @@
   When `fullnameOverride` is aleady being used, the webhook certificate resources
   will be renamed which can cause intermittent webhook failures during upgrade.
   [#4091](https://github.com/Kong/kong-operator/pull/4091)
-
-### Changed
-
-- Bootstrapping CA certificate (that is used for signing certificates for
-  ControlPlane - DataPlane communication) can be done by cert-manager,
-  see the options `global.certificateAuthority.options.certManager.enabled`.
-  [#3655](https://github.com/Kong/kong-operator/pull/3655)
 
 ## 1.2.0
 
