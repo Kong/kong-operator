@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
@@ -736,31 +737,29 @@ func isProgrammed(obj *unstructured.Unstructured) bool {
 }
 
 // FilterMatchingListeners filters the provided listeners to find those that match the given ParentReference
-// based on section name, port, and protocol requirements. Only listeners that are both matching and ready
-// are returned.
+// based on section name, port, and listener acceptance status. Only listeners that are both matching and
+// accepted are returned.
 //
 // The function performs the following checks for each listener:
 // 1. Matches the section name specified in the ParentReference (if any)
 // 2. Matches the port specified in the ParentReference (if any)
-// 3. Supports the protocol with appropriate TLS mode
-// 4. Is in a "Programmed" (ready) state according to the Gateway status
+// 3. Is accepted according to the Gateway status
 //
 // Parameters:
 //   - gw: The Gateway object containing the listeners and their status
-//   - routeKind: The kind of the route
+//   - routeKind: The kind of the route. Currently unused, but kept to preserve the caller shape.
 //   - logger: Logger for debugging information
 //   - pRef: The ParentReference specifying matching criteria
 //   - listeners: The list of listeners from the Gateway spec to filter
 //
 // Returns:
-//   - []gwtypes.Listener: List of listeners that match criteria and are ready
+//   - []gwtypes.Listener: List of listeners that match criteria and are accepted
 //   - *metav1.Condition: Condition indicating why no listeners matched (nil if matches found)
 //
 // The returned condition will have status "False" with reason "NoMatchingParent" if no listeners
-// match the criteria. If listeners match but are not ready, the message will indicate this distinction.
+// match the criteria.
 func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind string, pRef gwtypes.ParentReference, listeners []gwtypes.Listener) ([]gwtypes.Listener, *metav1.Condition) {
 	var matchingListeners []gwtypes.Listener
-	var matchedNotReady bool
 	for _, listener := range listeners {
 		// Check if the listener name matches the section name of the parent reference.
 		if pRef.SectionName != nil && *pRef.SectionName != listener.Name {
@@ -774,18 +773,14 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind 
 
 		// At this point, the listener matches the parent reference.
 		log.Debug(logger, "Listener matches ParentReference criteria", "listener", listener.Name, "parentRef", pRef)
-		// Now check if the listener is ready.
+		// Now check if the listener is accepted.
 		for _, ls := range gw.Status.Listeners {
 			if ls.Name == listener.Name {
 				for _, cond := range ls.Conditions {
-					if cond.Type == string(gwtypes.ListenerConditionProgrammed) {
+					if cond.Type == string(gatewayv1.ListenerConditionAccepted) {
 						if cond.Status == metav1.ConditionTrue {
-							log.Debug(logger, "Listener is ready (programmed)", "listener", listener.Name)
+							log.Debug(logger, "Listener is accepted", "listener", listener.Name)
 							matchingListeners = append(matchingListeners, listener)
-						} else {
-							log.Debug(logger, "Listener matched but is not ready", "listener", listener.Name)
-							// Listener is not ready, and we track that at least one listener matched but is not ready.
-							matchedNotReady = true
 						}
 					}
 				}
@@ -795,21 +790,16 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind 
 
 	// If we found no matching listeners, determine the appropriate condition to return.
 	if len(matchingListeners) == 0 {
-		// If we had at least one listener that matched but was not ready, return a condition indicating that.
-		msg := string(gwtypes.RouteReasonNoMatchingParent)
-		if matchedNotReady {
-			msg = "A Gateway Listener matches this route but is not ready"
-		}
-		log.Debug(logger, "No matching listeners found for ParentReference", "parentRef", pRef, "matchedNotReady", matchedNotReady)
+		log.Debug(logger, "No matching listeners found for ParentReference", "parentRef", pRef)
 		return nil, &metav1.Condition{
 			Type:    string(gwtypes.RouteConditionAccepted),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(gwtypes.RouteReasonNoMatchingParent),
-			Message: msg,
+			Message: string(gwtypes.RouteReasonNoMatchingParent),
 		}
 	}
-	// Return the list of matching and ready listeners that can be used for further processing.
-	log.Debug(logger, "Matching and ready listeners found", "parentRef", pRef, "count", len(matchingListeners))
+	// Return the list of matching and accepted listeners that can be used for further processing.
+	log.Debug(logger, "Matching and accepted listeners found", "parentRef", pRef, "count", len(matchingListeners))
 	return matchingListeners, nil
 }
 
