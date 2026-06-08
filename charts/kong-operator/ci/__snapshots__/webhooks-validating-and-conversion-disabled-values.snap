@@ -22344,22 +22344,6 @@ spec:
                   DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
                   resource "Deployment") which are created and managed for the DataPlane resource.
                 properties:
-                  annotations:
-                    additionalProperties:
-                      type: string
-                    description: |-
-                      Annotations are custom annotations that are propagated to the DataPlane
-                      Deployment metadata by the operator.
-                    maxProperties: 64
-                    type: object
-                  labels:
-                    additionalProperties:
-                      type: string
-                    description: |-
-                      Labels are custom labels that are propagated to the DataPlane Deployment
-                      metadata by the operator.
-                    maxProperties: 64
-                    type: object
                   podTemplateSpec:
                     description: |-
                       PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
@@ -37616,22 +37600,6 @@ spec:
                       DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
                       resource "Deployment") which are created and managed for the DataPlane resource.
                     properties:
-                      annotations:
-                        additionalProperties:
-                          type: string
-                        description: |-
-                          Annotations are custom annotations that are propagated to the DataPlane
-                          Deployment metadata by the operator.
-                        maxProperties: 64
-                        type: object
-                      labels:
-                        additionalProperties:
-                          type: string
-                        description: |-
-                          Labels are custom labels that are propagated to the DataPlane Deployment
-                          metadata by the operator.
-                        maxProperties: 64
-                        type: object
                       podTemplateSpec:
                         description: |-
                           PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
@@ -48347,7 +48315,7 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.2.0
+    helm.sh/chart: kong-operator-1.3.0
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.2.0"
     app.kubernetes.io/component: ko
@@ -48375,7 +48343,7 @@ spec:
       labels:
         control-plane: controller-manager
         app.kubernetes.io/name: kong-operator
-        helm.sh/chart: kong-operator-1.2.0
+        helm.sh/chart: kong-operator-1.3.0
         app.kubernetes.io/instance: "chartsnap"
         app.kubernetes.io/version: "2.2.0"
         app.kubernetes.io/component: ko
