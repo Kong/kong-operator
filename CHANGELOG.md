@@ -49,6 +49,15 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Hybridgateway: release Gateway API route finalizers once generated Kong
+  resource delete requests have been issued, so immediate same-name route
+  re-creates are not blocked by child resource finalizers.
+  [#4465](https://github.com/Kong/kong-operator/pull/4465) [#4543](https://github.com/Kong/kong-operator/pull/4543)
+
 ## [v2.2.0]
 
 > Release date: 2026-06-05
@@ -253,10 +262,6 @@
 
 ### Fixes
 
-- Hybridgateway: release Gateway API route finalizers once generated Kong
-  resource delete requests have been issued, so immediate same-name route
-  re-creates are not blocked by child resource finalizers.
-  [#4465](https://github.com/Kong/kong-operator/pull/4465)
 - Hybridgateway: fix `KongRoute` name collisions when an `HTTPRoute` attaches
   to multiple listener-scoped `ParentRef`s on the same `Gateway`, enabling the
   `HTTPRouteListenerHostnameMatching` Gateway API conformance test for Hybrid
