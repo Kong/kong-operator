@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -659,6 +660,80 @@ func TestCleanOrphanedResources(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCleanOrphanedResourcesForRootDeletionDoesNotWaitForDeletingChildren(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	gvks := []schema.GroupVersionKind{
+		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"},
+		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},
+	}
+	root := &gwtypes.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gatewayv1.GroupVersion.String(),
+			Kind:       "HTTPRoute",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-owner",
+			Namespace: "ns",
+		},
+	}
+	ownerLabels := metadata.BuildLabels(root, nil)
+
+	deletingRoute := newUnstructured("ns", "deleting-route", gvks[0], ownerLabels)
+	deletingTimestamp := metav1.NewTime(time.Now())
+	deletingRoute.SetDeletionTimestamp(&deletingTimestamp)
+	deletingRoute.SetFinalizers([]string{"example.com/finalizer"})
+
+	service := newUnstructured("ns", "service", gvks[1], ownerLabels)
+	for _, obj := range []*unstructured.Unstructured{&deletingRoute, &service} {
+		annotations := obj.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = "ns/httproute-owner"
+		obj.SetAnnotations(annotations)
+	}
+
+	newClient := func() client.Client {
+		return fake.NewClientBuilder().
+			WithScheme(runtime.NewScheme()).
+			WithObjects(deletingRoute.DeepCopy(), service.DeepCopy()).
+			Build()
+	}
+	fakeConv := &fakeHTTPRouteConverter{
+		gvks: gvks,
+		root: *root,
+	}
+
+	t.Run("normal cleanup waits for deleting child before later GVKs", func(t *testing.T) {
+		cl := newClient()
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		require.True(t, requeue)
+
+		serviceList := &unstructured.UnstructuredList{}
+		serviceList.SetGroupVersionKind(gvks[1])
+		require.NoError(t, cl.List(ctx, serviceList))
+		require.Len(t, serviceList.Items, 1)
+	})
+
+	t.Run("root deletion cleanup deletes later GVKs before releasing root finalizer", func(t *testing.T) {
+		cl := newClient()
+		requeue, err := cleanOrphanedResourcesWithoutWaitingForDeletes[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		require.True(t, requeue)
+
+		serviceList := &unstructured.UnstructuredList{}
+		serviceList.SetGroupVersionKind(gvks[1])
+		require.NoError(t, cl.List(ctx, serviceList))
+		require.Empty(t, serviceList.Items)
+
+		requeue, err = cleanOrphanedResourcesWithoutWaitingForDeletes[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		require.False(t, requeue)
+	})
 }
 
 // Minimal fake converter for HTTPRoute
