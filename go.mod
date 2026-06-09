@@ -40,7 +40,7 @@ require (
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.68.1
 	github.com/samber/lo v1.53.0
-	github.com/samber/mo v1.16.0
+	github.com/samber/mo v1.17.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.42.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
