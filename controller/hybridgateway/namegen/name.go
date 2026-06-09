@@ -24,6 +24,10 @@ const (
 	// parentRefPrefix is the prefix used when including a ParentRef identifier.
 	parentRefPrefix = "pr"
 
+	// backendNotFoundPrefix is the prefix used for service names that intentionally
+	// route to request-termination because no backend target could be produced.
+	backendNotFoundPrefix = "bnf"
+
 	// namegenPrefix is used as the prefix for hashed names when concatenated
 	// components exceed the maximum Kubernetes resource name length.
 	namegenPrefix = "ngn"
@@ -109,6 +113,32 @@ func NewKongServiceNameForHTTPRouteRule(route *gwtypes.HTTPRoute, cp *commonv1al
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
+// NewKongServiceNameForHTTPRouteRuleBackendNotFound generates a route-scoped KongService name
+// for rules that have BackendRefs but no valid backend targets. These services get a
+// request-termination plugin, so they must not share the normal backend service name.
+func NewKongServiceNameForHTTPRouteRuleBackendNotFound(
+	route *gwtypes.HTTPRoute,
+	cp *commonv1alpha1.ControlPlaneRef,
+	rule gatewayv1.HTTPRouteRule,
+) string {
+	readableElements := append(
+		[]string{httpProcolPrefix},
+		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
+	)
+	hashElements := []string{
+		defaultCPPrefix + utils.Hash32(cp),
+		backendNotFoundPrefix + utils.Hash32(struct {
+			Namespace string
+			Name      string
+		}{
+			Namespace: route.Namespace,
+			Name:      route.Name,
+		}),
+		hashForHTTPRouteRuleServiceLikeName(route, rule),
+	}
+	return newNameWithHashSuffix(readableElements, hashElements)
+}
+
 // NewKongServiceNameForTLSRouteRule generates a KongService name based on the ControlPlaneRef and TLSRouteRule passed as arguments.
 func NewKongServiceNameForTLSRouteRule(route *gwtypes.TLSRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.TLSRouteRule) string {
 	readableElements := append(
@@ -124,6 +154,14 @@ func hashElementsForServiceLikeName(
 	cp *commonv1alpha1.ControlPlaneRef,
 	rule gatewayv1.HTTPRouteRule,
 ) []string {
+	hash := hashForHTTPRouteRuleServiceLikeName(route, rule)
+	return []string{
+		defaultCPPrefix + utils.Hash32(cp),
+		hash,
+	}
+}
+
+func hashForHTTPRouteRuleServiceLikeName(route *gwtypes.HTTPRoute, rule gatewayv1.HTTPRouteRule) string {
 	var hash string
 	if len(rule.BackendRefs) > 0 {
 		hash = utils.Hash32(rule.BackendRefs)
@@ -142,10 +180,7 @@ func hashElementsForServiceLikeName(
 		hash = utils.Hash32(zeroBackendRuleIdentity)
 	}
 
-	return []string{
-		defaultCPPrefix + utils.Hash32(cp),
-		hash,
-	}
+	return hash
 }
 
 func hashElementsForServiceLikeNameTLSRouteRule(
