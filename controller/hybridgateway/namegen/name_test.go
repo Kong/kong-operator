@@ -276,6 +276,27 @@ func TestNewKongServiceName(t *testing.T) {
 	}
 }
 
+func TestNewKongServiceNameForHTTPRouteRuleBackendNotFound(t *testing.T) {
+	backendNS := gatewayv1.Namespace("gateway-conformance-web-backend")
+	port := gatewayv1.PortNumber(8080)
+	rule := gatewayv1.HTTPRouteRule{
+		BackendRefs: []gatewayv1.HTTPBackendRef{
+			testBackendRef("web-backend", &backendNS, &port),
+		},
+	}
+	routeA := testRoute("gateway-conformance-infra", "invalid-cross-namespace-backend-ref")
+	routeB := testRoute("gateway-conformance-infra", "reference-grant")
+	cp := testControlPlaneRef("same-namespace")
+
+	normalName := NewKongServiceNameForHTTPRouteRule(routeA, cp, rule)
+	fallbackNameA := NewKongServiceNameForHTTPRouteRuleBackendNotFound(routeA, cp, rule)
+	fallbackNameB := NewKongServiceNameForHTTPRouteRuleBackendNotFound(routeB, cp, rule)
+
+	assert.NotEqual(t, normalName, fallbackNameA)
+	assert.NotEqual(t, fallbackNameA, fallbackNameB)
+	assert.Contains(t, fallbackNameA, backendNotFoundPrefix)
+}
+
 func TestNewKongServiceName_Equality(t *testing.T) {
 	tests := []struct {
 		name  string
