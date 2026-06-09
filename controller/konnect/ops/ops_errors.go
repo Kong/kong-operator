@@ -453,6 +453,16 @@ func handleDeleteError[
 	}
 }
 
+// ConflictError is an error type that wraps a conflict error from Konnect operations.
+type ConflictError struct {
+	err error
+}
+
+// Error implements the error interface.
+func (e ConflictError) Error() string {
+	return fmt.Sprintf("conflict error: %v", e.err)
+}
+
 // IgnoreUnrecoverableAPIErr ignores unrecoverable errors that would cause the
 // reconciler to endlessly requeue, and wraps rate limit errors with retry-after duration.
 func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
@@ -462,10 +472,19 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	// manifest. The entity's status is already updated with the error.
 	if ErrorIsSDKBadRequestError(err) ||
 		ErrorIsSDKError400(err) ||
-		ErrorIsForbiddenError(err) ||
-		ErrorIsCreateConflict(err) {
+		ErrorIsForbiddenError(err) {
 		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)
 		return nil
+	}
+
+	// Conflicts errors can happen either due to race conditions (a dependent
+	// resource is not yet available) or due to genuine conflicts in applied manifests
+	// (e.g. two or more KongPluginBindings binding the same KongPlugin type to
+	// 1 resource).
+	// We cannot reliably distinguish between these two cases, so we treat all conflict errors as
+	// potentially recoverable by requeuing with backoff to allow for eventual consistency to be achieved.
+	if ErrorIsCreateConflict(err) {
+		return ConflictError{err: err}
 	}
 
 	// If the error is a rate limit error, wrap it with the retry-after duration

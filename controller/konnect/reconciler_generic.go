@@ -21,6 +21,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
@@ -684,6 +685,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 			var (
 				errURL, okURL                = errors.AsType[*url.Error](err)
 				rateLimitErr, okRateLimitErr = errors.AsType[ops.RateLimitError](err)
+				conflictErr, okConflictErr   = errors.AsType[ops.ConflictError](err)
 			)
 			switch {
 			// If the error was a network error, handle it here, there's no need to proceed,
@@ -696,6 +698,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 			// instead of returning an error.
 			case okRateLimitErr:
 				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
+
+			// If the error is a conflict error, it means that the resource already exists on Konnect.
+			// This can happen either due to a race or because of genuinly multiple resources
+			// with the same desired state (e.g., same name) but different ownership.
+			case okConflictErr:
+				logger.Info("conflict error received from Konnect. Requeueing...", "error", conflictErr.Error())
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
 			}
 
 			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
@@ -725,6 +734,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		var (
 			errURL, okURL                = errors.AsType[*url.Error](err)
 			rateLimitErr, okRateLimitErr = errors.AsType[ops.RateLimitError](err)
+			conflictErr, okConflictErr   = errors.AsType[ops.ConflictError](err)
 		)
 		switch {
 		// If the error was a network error, handle it here, there's no need to proceed,
@@ -737,6 +747,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		// instead of returning an error.
 		case okRateLimitErr:
 			return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
+
+		// If the error is a conflict error, it means that the resource already exists on Konnect.
+		// This can happen either due to a race or because of genuinly multiple resources
+		// with the same desired state (e.g., same name) but different ownership.
+		case okConflictErr:
+			logger.Info("conflict error received from Konnect. Requeueing...", "error", conflictErr.Error())
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
 		}
 
 	} else if !res.IsZero() {
