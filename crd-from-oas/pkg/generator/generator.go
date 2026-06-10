@@ -1646,6 +1646,29 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				body.WriteString(comment)
 				fmt.Fprintf(&body, "type %s map[string]%s\n\n", refName, valueTypeName)
 
+			case schema.Type == "array" && schema.Items != nil && isInlineObjectWithProperties(schema.Items):
+				// Referenced array schema whose items are an inline object (not a $ref).
+				// Emit a named element struct + a slice type alias so controller-gen
+				// produces compilable, faithful deepcopy. Without this the type degrades
+				// to []any, whose generated deepcopy has an unused range variable (for
+				// i := range *in {}) and fails to compile.
+				elemTypeName := goName + "Item"
+				if !emittedNested[elemTypeName] {
+					emittedNested[elemTypeName] = true
+					body.WriteString(formatSchemaComment(elemTypeName, schema.Items.Description))
+					fmt.Fprintf(&body, "type %s struct {\n", elemTypeName)
+					for _, nested := range schema.Items.Properties {
+						if g.shouldSkipSchemaProperty(elemTypeName, nested) {
+							continue
+						}
+						g.writeSchemaTypeField(&body, nested, elemTypeName, schemaCursor)
+					}
+					body.WriteString("}\n\n")
+					g.writeNestedInlineTypes(&body, schema.Items.Properties, emittedNested, "", elemTypeName, schemaCursor)
+				}
+				body.WriteString(comment)
+				fmt.Fprintf(&body, "type %s []%s\n\n", goName, elemTypeName)
+
 			default:
 				// Generate based on the schema's actual type
 				body.WriteString(comment)

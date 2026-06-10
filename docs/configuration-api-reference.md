@@ -905,20 +905,21 @@ problematic offset and requires manual intervention to skip it.
 execution failed.
 * `mark` - passes the record to the client but marks it with a
 `kong/policy-failure-<id>` header whose value is the reason for the policy
-failure (truncated to 512 characters).
+failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
 
 _Appears in:_
 
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
 - [EventGatewayParsedRecordDecryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldsconfig)
 
 #### ConsumeKeyValidationAction
 
 _Underlying type:_ `string`
 
-ConsumeKeyValidationAction Defines a behavior when record key is not valid.
+ConsumeKeyValidationAction Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid.
 * mark - marks a record with kong/server header and client ID value
 to help to identify the clients violating schema.
 * skip - skips delivering a record.
@@ -934,8 +935,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-ConsumeValueValidationAction Defines a behavior when record value is not
-valid.
+ConsumeValueValidationAction Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid.
 * mark - marks a record with kong/server header and client ID value
 to help to identify the clients violating schema.
 * skip - skips delivering a record.
@@ -1390,10 +1390,13 @@ schema validation policy.
 
 | Field | Description |
 | --- | --- |
-| `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 | `schemaRegistry` _[EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)_ | A reference to a schema Registry. |
 | `type` _[SchemaValidationType](#configuration-konghq-com-v1alpha1-types-schemavalidationtype)_ | How to validate the schema and parse the record. * confluent_schema_registry - validates against confluent schema registry. * json - simple JSON parsing without the schema. |
-| `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+| `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 
 _Appears in:_
 
@@ -1745,6 +1748,21 @@ _Appears in:_
 
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
 
+#### EventGatewayListenerPort
+
+_Underlying type:_ `object`
+
+EventGatewayListenerPort is a type alias.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayListenerAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)
+
+
+
 
 
 #### EventGatewayListenerSpec
@@ -1897,8 +1915,8 @@ parsed record fields policy.
 
 | Field | Description |
 | --- | --- |
-| `decryptFields` _[EventGatewayParsedRecordDecryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselector)_ | Selects which fields to decrypt. |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). |
+| `decryptFields` _[EventGatewayParsedRecordDecryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselector)_ | Selects fields of a parsed record for decryption. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keySources` _[EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
 
 _Appears in:_
@@ -1955,8 +1973,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[EventGatewayParsedRecordDecryptionSelectorPathsType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpathstype)_ | Type designates the type of configuration. |
-| `variant1` _[EventGatewayParsedRecordDecryptionSelectorPathsVariant1](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpathsvariant1)_ | Variant1 configuration. |
-| `variant2` _[EventGatewayParsedRecordDecryptionSelectorPathsVariant2](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpathsvariant2)_ | Variant2 configuration. |
+| `array` _[EventGatewayParsedRecordFieldPathsArray](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsarray)_ | Array configuration. |
+| `expression` _[EventGatewayParsedRecordFieldPathsExpression](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsexpression)_ | Expression configuration. |
 
 _Appears in:_
 
@@ -1979,36 +1997,8 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `variant1` |  |
-| `variant2` |  |
-
-#### EventGatewayParsedRecordDecryptionSelectorPathsVariant1
-
-_Underlying type:_ `[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)`
-
-EventGatewayParsedRecordDecryptionSelectorPathsVariant1 is a type alias.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
-
-#### EventGatewayParsedRecordDecryptionSelectorPathsVariant2
-
-_Underlying type:_ `string`
-
-EventGatewayParsedRecordDecryptionSelectorPathsVariant2 This expression
-should evaluate to an array of exact field paths,
-equivalent to the `match` values in the array variant.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
+| `array` |  |
+| `expression` |  |
 
 #### EventGatewayParsedRecordEncryptFieldsConfig
 
@@ -2021,7 +2011,7 @@ parsed record policy.
 | Field | Description |
 | --- | --- |
 | `encryptFields` _[EventGatewayParsedRecordEncryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselector)_ | Selects which fields to encrypt and with what keys. |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -2116,8 +2106,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[EventGatewayParsedRecordEncryptionSelectorPathsType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpathstype)_ | Type designates the type of configuration. |
-| `variant1` _[EventGatewayParsedRecordEncryptionSelectorPathsVariant1](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpathsvariant1)_ | Variant1 configuration. |
-| `variant2` _[EventGatewayParsedRecordEncryptionSelectorPathsVariant2](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpathsvariant2)_ | Variant2 configuration. |
+| `array` _[EventGatewayParsedRecordFieldPathsArray](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsarray)_ | Array configuration. |
+| `expression` _[EventGatewayParsedRecordFieldPathsExpression](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsexpression)_ | Expression configuration. |
 
 _Appears in:_
 
@@ -2140,28 +2130,47 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `variant1` |  |
-| `variant2` |  |
+| `array` |  |
+| `expression` |  |
 
-#### EventGatewayParsedRecordEncryptionSelectorPathsVariant1
+#### EventGatewayParsedRecordFieldPathsArray
 
-_Underlying type:_ `[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)`
+_Underlying type:_ `[EventGatewayParsedRecordFieldPathsArrayItem](#eventgatewayparsedrecordfieldpathsarrayitem)`
 
-EventGatewayParsedRecordEncryptionSelectorPathsVariant1 is a type alias.
+EventGatewayParsedRecordFieldPathsArray is a type alias.
 
 
 
+| Field | Description |
+| --- | --- |
+| `match` _string_ | A field selector. It can select nested fields and array entries.<br /><br />Currently supported are exact matches. |
 
 _Appears in:_
 
+- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
 
-#### EventGatewayParsedRecordEncryptionSelectorPathsVariant2
+#### EventGatewayParsedRecordFieldPathsArrayItem
+
+
+EventGatewayParsedRecordFieldPathsArrayItem is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `match` _string_ | A field selector. It can select nested fields and array entries.<br /><br />Currently supported are exact matches. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordFieldPathsArray](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsarray)
+
+#### EventGatewayParsedRecordFieldPathsExpression
 
 _Underlying type:_ `string`
 
-EventGatewayParsedRecordEncryptionSelectorPathsVariant2 This expression
-should evaluate to an array of exact field paths,
+EventGatewayParsedRecordFieldPathsExpression This expression should evaluate
+to an array of exact field paths,
 equivalent to the `match` values in the array variant.
 
 
@@ -2169,6 +2178,7 @@ equivalent to the `match` values in the array variant.
 
 _Appears in:_
 
+- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
 
 #### EventGatewayProduceSchemaValidationPolicy
@@ -2240,8 +2250,11 @@ produce schema validation policy when using JSON parsing without schema.
 
 | Field | Description |
 | --- | --- |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
 | `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)_ | A reference to a schema Registry. |
+| `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
 
 _Appears in:_
@@ -2297,8 +2310,11 @@ registry.
 
 | Field | Description |
 | --- | --- |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
 | `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)_ | A reference to a schema Registry. |
+| `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
 
 _Appears in:_
@@ -4304,7 +4320,7 @@ produced records.
 though policy execution failed.
 * `mark` - passes the record to the backend cluster but marks it with a
 `kong/policy-failure-<id>` header whose value is the reason for the policy
-failure (truncated to 512 characters).
+failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -4312,6 +4328,8 @@ failure (truncated to 512 characters).
 _Appears in:_
 
 - [EventGatewayParsedRecordEncryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldsconfig)
+- [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
 
 #### ProduceKeyValidationAction
 

@@ -5,8 +5,6 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // BackendClusterAuthenticationAnonymous Anonymous authentication scheme for the
@@ -299,16 +297,21 @@ type BackendMetadataUpdateIntervalSeconds int
 // * `mark` - passes the record to the client but marks it with a
 // `kong/policy-failure-<id>` header whose value is the reason for the policy
 // failure (truncated to 512 characters).
+//
+// **Requires a minimum runtime version of `1.2`**.
 type ConsumeFailureMode string
 
-// ConsumeKeyValidationAction Defines a behavior when record key is not valid.
+// ConsumeKeyValidationAction Deprecated. Use `failure_mode`.
+//
+// Defines a behavior when record key is not valid.
 // * mark - marks a record with kong/server header and client ID value
 // to help to identify the clients violating schema.
 // * skip - skips delivering a record.
 type ConsumeKeyValidationAction string
 
-// ConsumeValueValidationAction Defines a behavior when record value is not
-// valid.
+// ConsumeValueValidationAction Deprecated. Use `failure_mode`.
+//
+// Defines a behavior when record value is not valid.
 // * mark - marks a record with kong/server header and client ID value
 // to help to identify the clients violating schema.
 // * skip - skips delivering a record.
@@ -758,6 +761,25 @@ type EventGatewayConsumeSchemaValidationPolicy struct {
 // EventGatewayConsumeSchemaValidationPolicyConfig The configuration of the
 // schema validation policy.
 type EventGatewayConsumeSchemaValidationPolicyConfig struct {
+	// Describes how to handle a failure in a policy applied to consumed records.
+	// * `error` - the batch is not delivered to the client.
+	// Use sparingly: erroring on a batch causes clients to get stuck on the
+	// problematic offset and requires manual intervention to skip it.
+	// * `skip` - the record is not delivered to the client.
+	// * `passthrough` - passes the record to the client even though policy
+	// execution failed.
+	// * `mark` - passes the record to the client but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;skip;passthrough;mark
+	FailureMode ConsumeFailureMode `json:"failureMode,omitzero"`
+	// Deprecated. Use `failure_mode`.
+	//
 	// Defines a behavior when record key is not valid.
 	// * mark - marks a record with kong/server header and client ID value
 	// to help to identify the clients violating schema.
@@ -782,6 +804,22 @@ type EventGatewayConsumeSchemaValidationPolicyConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=confluent_schema_registry;json
 	Type SchemaValidationType `json:"type,omitzero"`
+	// If true, validate the record key.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateKey string `json:"validateKey,omitzero"`
+	// If true, validate the record value.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateValue string `json:"validateValue,omitzero"`
+	// Deprecated. Use `failure_mode`.
+	//
 	// Defines a behavior when record value is not valid.
 	// * mark - marks a record with kong/server header and client ID value
 	// to help to identify the clients violating schema.
@@ -1259,9 +1297,14 @@ func (u *EventGatewayKeySource) UnmarshalJSON(data []byte) error {
 	return nil
 }
 // EventGatewayListenerPort is a type alias.
-//
-// +kubebuilder:validation:XIntOrString
-type EventGatewayListenerPort = intstr.IntOrString
+type EventGatewayListenerPort map[string]string
+
+// EventGatewayListenerPortInteger is a type alias.
+type EventGatewayListenerPortInteger int
+
+// EventGatewayListenerPortString A port or a range of ports in the format 9092
+// or 9092-9094.
+type EventGatewayListenerPortString string
 
 // EventGatewayModifyHeaderAction represents a union type for EventGatewayModifyHeaderAction.
 // Only one of the fields should be set based on the Op.
@@ -1445,10 +1488,10 @@ type EventGatewayModifyHeadersPolicyCreateConfig struct {
 // EventGatewayParsedRecordDecryptFieldsConfig The configuration of the decrypt
 // parsed record fields policy.
 type EventGatewayParsedRecordDecryptFieldsConfig struct {
-	// Selects which fields to decrypt.
+	// Selects fields of a parsed record for decryption.
 	//
 	// +required
-	DecryptFields []EventGatewayParsedRecordDecryptionSelector `json:"decryptFields,omitempty"`
+	DecryptFields EventGatewayParsedRecordDecryptionSelector `json:"decryptFields,omitzero"`
 	// Describes how to handle a failure in a policy applied to consumed records.
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
@@ -1460,6 +1503,7 @@ type EventGatewayParsedRecordDecryptFieldsConfig struct {
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
 	//
+	// **Requires a minimum runtime version of `1.2`**.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -1533,14 +1577,6 @@ type EventGatewayParsedRecordDecryptionSelector struct {
 	Paths *EventGatewayParsedRecordDecryptionSelectorPaths `json:"paths,omitempty"`
 }
 
-// EventGatewayParsedRecordDecryptionSelectorPathsVariant1 is a type alias.
-type EventGatewayParsedRecordDecryptionSelectorPathsVariant1 []apiextensionsv1.JSON
-
-// EventGatewayParsedRecordDecryptionSelectorPathsVariant2 This expression
-// should evaluate to an array of exact field paths,
-// equivalent to the `match` values in the array variant.
-type EventGatewayParsedRecordDecryptionSelectorPathsVariant2 string
-
 // EventGatewayParsedRecordDecryptionSelectorPaths represents a union type for paths.
 // Only one of the fields should be set based on the Type.
 //
@@ -1549,17 +1585,17 @@ type EventGatewayParsedRecordDecryptionSelectorPaths struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=variant1;variant2
+	// +kubebuilder:validation:Enum=array;expression
 	Type EventGatewayParsedRecordDecryptionSelectorPathsType `json:"type,omitempty"`
 
-	// Variant1 configuration.
+	// Array configuration.
 	//
 	// +optional
-	Variant1 *EventGatewayParsedRecordDecryptionSelectorPathsVariant1 `json:"variant1,omitempty"`
-	// Variant2 configuration.
+	Array *EventGatewayParsedRecordFieldPathsArray `json:"array,omitempty"`
+	// Expression configuration.
 	//
 	// +optional
-	Variant2 *EventGatewayParsedRecordDecryptionSelectorPathsVariant2 `json:"variant2,omitempty"`
+	Expression *EventGatewayParsedRecordFieldPathsExpression `json:"expression,omitempty"`
 }
 
 // EventGatewayParsedRecordDecryptionSelectorPathsType represents the type of paths.
@@ -1567,8 +1603,8 @@ type EventGatewayParsedRecordDecryptionSelectorPathsType string
 
 // EventGatewayParsedRecordDecryptionSelectorPathsType values.
 const (
-	EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant1 EventGatewayParsedRecordDecryptionSelectorPathsType = "variant1"
-	EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant2 EventGatewayParsedRecordDecryptionSelectorPathsType = "variant2"
+	EventGatewayParsedRecordDecryptionSelectorPathsTypeArray EventGatewayParsedRecordDecryptionSelectorPathsType = "array"
+	EventGatewayParsedRecordDecryptionSelectorPathsTypeExpression EventGatewayParsedRecordDecryptionSelectorPathsType = "expression"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -1580,21 +1616,21 @@ func (u EventGatewayParsedRecordDecryptionSelectorPaths) MarshalJSON() ([]byte, 
 	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant1:
-		if u.Variant1 != nil {
-			raw, err := json.Marshal(u.Variant1)
+	case EventGatewayParsedRecordDecryptionSelectorPathsTypeArray:
+		if u.Array != nil {
+			raw, err := json.Marshal(u.Array)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordDecryptionSelectorPaths Variant1: %w", err)
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordDecryptionSelectorPaths Array: %w", err)
 			}
-			m["variant1"] = raw
+			m["array"] = raw
 		}
-	case EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant2:
-		if u.Variant2 != nil {
-			raw, err := json.Marshal(u.Variant2)
+	case EventGatewayParsedRecordDecryptionSelectorPathsTypeExpression:
+		if u.Expression != nil {
+			raw, err := json.Marshal(u.Expression)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordDecryptionSelectorPaths Variant2: %w", err)
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordDecryptionSelectorPaths Expression: %w", err)
 			}
-			m["variant2"] = raw
+			m["expression"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -1617,26 +1653,26 @@ func (u *EventGatewayParsedRecordDecryptionSelectorPaths) UnmarshalJSON(data []b
 	}
 	u.Type = EventGatewayParsedRecordDecryptionSelectorPathsType(probe.Type)
 	switch probe.Type {
-	case "variant1":
-		payload, ok := raw["variant1"]
+	case "array":
+		payload, ok := raw["array"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val EventGatewayParsedRecordDecryptionSelectorPathsVariant1
+		var val EventGatewayParsedRecordFieldPathsArray
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelectorPaths Variant1: %w", err)
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelectorPaths Array: %w", err)
 		}
-		u.Variant1 = &val
-	case "variant2":
-		payload, ok := raw["variant2"]
+		u.Array = &val
+	case "expression":
+		payload, ok := raw["expression"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val EventGatewayParsedRecordDecryptionSelectorPathsVariant2
+		var val EventGatewayParsedRecordFieldPathsExpression
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelectorPaths Variant2: %w", err)
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelectorPaths Expression: %w", err)
 		}
-		u.Variant2 = &val
+		u.Expression = &val
 	}
 	return nil
 }
@@ -1651,7 +1687,7 @@ func (s *EventGatewayParsedRecordDecryptionSelector) UnmarshalJSON(data []byte) 
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayParsedRecordDecryptionSelector: %w", err)
 	}
-	if aux.Paths != nil && aux.Paths.Type == "" && aux.Paths.Variant1 == nil && aux.Paths.Variant2 == nil {
+	if aux.Paths != nil && aux.Paths.Type == "" && aux.Paths.Array == nil && aux.Paths.Expression == nil {
 		aux.Paths = nil
 	}
 	*s = EventGatewayParsedRecordDecryptionSelector(aux)
@@ -1673,6 +1709,7 @@ type EventGatewayParsedRecordEncryptFieldsConfig struct {
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
 	//
+	// **Requires a minimum runtime version of `1.2`**.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -1846,14 +1883,6 @@ func (u *EventGatewayParsedRecordEncryptionSelectorEncryptionKey) UnmarshalJSON(
 	}
 	return nil
 }
-// EventGatewayParsedRecordEncryptionSelectorPathsVariant1 is a type alias.
-type EventGatewayParsedRecordEncryptionSelectorPathsVariant1 []apiextensionsv1.JSON
-
-// EventGatewayParsedRecordEncryptionSelectorPathsVariant2 This expression
-// should evaluate to an array of exact field paths,
-// equivalent to the `match` values in the array variant.
-type EventGatewayParsedRecordEncryptionSelectorPathsVariant2 string
-
 // EventGatewayParsedRecordEncryptionSelectorPaths represents a union type for paths.
 // Only one of the fields should be set based on the Type.
 //
@@ -1862,17 +1891,17 @@ type EventGatewayParsedRecordEncryptionSelectorPaths struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=variant1;variant2
+	// +kubebuilder:validation:Enum=array;expression
 	Type EventGatewayParsedRecordEncryptionSelectorPathsType `json:"type,omitempty"`
 
-	// Variant1 configuration.
+	// Array configuration.
 	//
 	// +optional
-	Variant1 *EventGatewayParsedRecordEncryptionSelectorPathsVariant1 `json:"variant1,omitempty"`
-	// Variant2 configuration.
+	Array *EventGatewayParsedRecordFieldPathsArray `json:"array,omitempty"`
+	// Expression configuration.
 	//
 	// +optional
-	Variant2 *EventGatewayParsedRecordEncryptionSelectorPathsVariant2 `json:"variant2,omitempty"`
+	Expression *EventGatewayParsedRecordFieldPathsExpression `json:"expression,omitempty"`
 }
 
 // EventGatewayParsedRecordEncryptionSelectorPathsType represents the type of paths.
@@ -1880,8 +1909,8 @@ type EventGatewayParsedRecordEncryptionSelectorPathsType string
 
 // EventGatewayParsedRecordEncryptionSelectorPathsType values.
 const (
-	EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant1 EventGatewayParsedRecordEncryptionSelectorPathsType = "variant1"
-	EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant2 EventGatewayParsedRecordEncryptionSelectorPathsType = "variant2"
+	EventGatewayParsedRecordEncryptionSelectorPathsTypeArray EventGatewayParsedRecordEncryptionSelectorPathsType = "array"
+	EventGatewayParsedRecordEncryptionSelectorPathsTypeExpression EventGatewayParsedRecordEncryptionSelectorPathsType = "expression"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -1893,21 +1922,21 @@ func (u EventGatewayParsedRecordEncryptionSelectorPaths) MarshalJSON() ([]byte, 
 	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant1:
-		if u.Variant1 != nil {
-			raw, err := json.Marshal(u.Variant1)
+	case EventGatewayParsedRecordEncryptionSelectorPathsTypeArray:
+		if u.Array != nil {
+			raw, err := json.Marshal(u.Array)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorPaths Variant1: %w", err)
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorPaths Array: %w", err)
 			}
-			m["variant1"] = raw
+			m["array"] = raw
 		}
-	case EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant2:
-		if u.Variant2 != nil {
-			raw, err := json.Marshal(u.Variant2)
+	case EventGatewayParsedRecordEncryptionSelectorPathsTypeExpression:
+		if u.Expression != nil {
+			raw, err := json.Marshal(u.Expression)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorPaths Variant2: %w", err)
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorPaths Expression: %w", err)
 			}
-			m["variant2"] = raw
+			m["expression"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -1930,26 +1959,26 @@ func (u *EventGatewayParsedRecordEncryptionSelectorPaths) UnmarshalJSON(data []b
 	}
 	u.Type = EventGatewayParsedRecordEncryptionSelectorPathsType(probe.Type)
 	switch probe.Type {
-	case "variant1":
-		payload, ok := raw["variant1"]
+	case "array":
+		payload, ok := raw["array"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val EventGatewayParsedRecordEncryptionSelectorPathsVariant1
+		var val EventGatewayParsedRecordFieldPathsArray
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorPaths Variant1: %w", err)
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorPaths Array: %w", err)
 		}
-		u.Variant1 = &val
-	case "variant2":
-		payload, ok := raw["variant2"]
+		u.Array = &val
+	case "expression":
+		payload, ok := raw["expression"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val EventGatewayParsedRecordEncryptionSelectorPathsVariant2
+		var val EventGatewayParsedRecordFieldPathsExpression
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorPaths Variant2: %w", err)
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordEncryptionSelectorPaths Expression: %w", err)
 		}
-		u.Variant2 = &val
+		u.Expression = &val
 	}
 	return nil
 }
@@ -1968,12 +1997,33 @@ func (s *EventGatewayParsedRecordEncryptionSelector) UnmarshalJSON(data []byte) 
 	if aux.EncryptionKey != nil && aux.EncryptionKey.Type == "" && aux.EncryptionKey.AWS == nil && aux.EncryptionKey.Static == nil {
 		aux.EncryptionKey = nil
 	}
-	if aux.Paths != nil && aux.Paths.Type == "" && aux.Paths.Variant1 == nil && aux.Paths.Variant2 == nil {
+	if aux.Paths != nil && aux.Paths.Type == "" && aux.Paths.Array == nil && aux.Paths.Expression == nil {
 		aux.Paths = nil
 	}
 	*s = EventGatewayParsedRecordEncryptionSelector(aux)
 	return nil
 }
+
+// EventGatewayParsedRecordFieldPathsArrayItem is a type alias.
+type EventGatewayParsedRecordFieldPathsArrayItem struct {
+	// A field selector. It can select nested fields and array entries.
+	//
+	// Currently supported are exact matches.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Match string `json:"match,omitzero"`
+}
+
+// EventGatewayParsedRecordFieldPathsArray is a type alias.
+type EventGatewayParsedRecordFieldPathsArray []EventGatewayParsedRecordFieldPathsArrayItem
+
+// EventGatewayParsedRecordFieldPathsExpression This expression should evaluate
+// to an array of exact field paths,
+// equivalent to the `match` values in the array variant.
+type EventGatewayParsedRecordFieldPathsExpression string
 
 // EventGatewayProduceSchemaValidationPolicy A policy that validates produce
 // messages against a schema registry.
@@ -2135,6 +2185,20 @@ func (u *EventGatewayProduceSchemaValidationPolicyConfig) UnmarshalJSON(data []b
 // EventGatewayProduceSchemaValidationPolicyJSONConfig The configuration of the
 // produce schema validation policy when using JSON parsing without schema.
 type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
+	// Describes how to handle a failure in a policy applied to produced records.
+	// * `reject` - rejects the record batch.
+	// * `passthrough` - passes the record silently to the backend cluster even
+	// though policy execution failed.
+	// * `mark` - passes the record to the backend cluster but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough;mark
+	FailureMode ProduceFailureMode `json:"failureMode,omitzero"`
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
@@ -2151,6 +2215,20 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	//
 	// +optional
 	SchemaRegistry *EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	// If true, validate the record key.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateKey string `json:"validateKey,omitzero"`
+	// If true, validate the record value.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateValue string `json:"validateValue,omitzero"`
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
@@ -2286,6 +2364,20 @@ func (s *EventGatewayProduceSchemaValidationPolicyJSONConfig) UnmarshalJSON(data
 // configuration of the produce schema validation policy when using a schema
 // registry.
 type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
+	// Describes how to handle a failure in a policy applied to produced records.
+	// * `reject` - rejects the record batch.
+	// * `passthrough` - passes the record silently to the backend cluster even
+	// though policy execution failed.
+	// * `mark` - passes the record to the backend cluster but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough;mark
+	FailureMode ProduceFailureMode `json:"failureMode,omitzero"`
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
@@ -2302,6 +2394,20 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	//
 	// +optional
 	SchemaRegistry *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	// If true, validate the record key.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateKey string `json:"validateKey,omitzero"`
+	// If true, validate the record value.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateValue string `json:"validateValue,omitzero"`
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
@@ -2932,6 +3038,8 @@ type NamespaceExactAllowListItem struct {
 // * `mark` - passes the record to the backend cluster but marks it with a
 // `kong/policy-failure-<id>` header whose value is the reason for the policy
 // failure (truncated to 512 characters).
+//
+// **Requires a minimum runtime version of `1.2`**.
 type ProduceFailureMode string
 
 // ProduceKeyValidationAction Defines a behavior when record key is not valid.
