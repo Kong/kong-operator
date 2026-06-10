@@ -368,7 +368,7 @@ jobs:
     uses: ./.github/workflows/__crdvalidation_tests.yaml
     secrets: inherit
     with:
-      cluster_versions: ${{ needs.matrix_k8s_node_versions.outputs.matrix }}  
+      cluster_versions: ${{ needs.matrix_k8s_node_versions.outputs.matrix }}
 
   envtest-tests:
     needs:

@@ -1,5 +1,4 @@
 name: E2E Chainsaw tests
-run-name: "E2E Chainsaw tests ${{ format('{0}', inputs.node_image_version) }} "
 
 on:
   workflow_call:
@@ -20,11 +19,19 @@ jobs:
   e2e-tests-chainsaw:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0}', inputs.node_image_version) }}
+    name: ${{ format('{0} - {1}', matrix.suite, inputs.node_image_version) }}
     env:
       IMG: kong-operator
       TAG: e2e-${{ github.sha }}
       CLUSTER_NAME: e2e-chainsaw
+      TEST_ID: ${{ github.run_id }}
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+        - hybridgateway
+        - konnect
+        - eventgateway
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -76,21 +83,25 @@ jobs:
 
     - name: run chainsaw e2e tests
       id: chainsaw-tests
-      run: make test.e2e.chainsaw
       env:
         KONNECT_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONNECT_SERVER_URL: us.api.konghq.tech
-        TEST_ID: ${{ github.run_id }}
+        TEST_ID: ${{ env.TEST_ID }}
+        CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.suite }}
+        CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
+      run: |
+        # Use the suite name to target the specific test directory
+        make test.e2e.chainsaw
 
     - name: Upload debug snapshots as artifacts
       if: always() && steps.chainsaw-tests.outcome == 'failure'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: chainsaw-debug-snapshots-${{ github.run_id }}
-        path: /tmp/chainsaw/
+        name: chainsaw-debug-snapshots-${{ matrix.suite }}-${{ github.run_id }}
+        path: /tmp/chainsaw/${{ matrix.suite }}/
         if-no-files-found: ignore
         retention-days: 3
 
     - name: Clean up debug snapshots
       if: always() && steps.chainsaw-tests.outcome == 'failure'
-      run: rm -rf /tmp/chainsaw
+      run: rm -rf /tmp/chainsaw/${{ matrix.suite }}
