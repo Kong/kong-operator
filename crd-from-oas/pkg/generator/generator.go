@@ -1609,7 +1609,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				fmt.Fprintf(&body, "\t%sDisabled %s = \"Disabled\"\n", goName, goName)
 				fmt.Fprintf(&body, ")\n\n")
 
-			case isScalarStringIntOneOf(schema.OneOf):
+			case isScalarStringIntOneOf(schema.OneOf, parsed.Schemas):
 				// Root-level oneOf of exactly {string, integer} — emit a Go type alias for
 				// intstr.IntOrString. Alias (not named type) ensures controller-gen recognises
 				// it as IntOrString and emits anyOf:[integer,string] in the CRD schema.
@@ -1645,6 +1645,29 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 
 				body.WriteString(comment)
 				fmt.Fprintf(&body, "type %s map[string]%s\n\n", refName, valueTypeName)
+
+			case schema.Type == "array" && schema.Items != nil && isInlineObjectWithProperties(schema.Items):
+				// Referenced array schema whose items are an inline object (not a $ref).
+				// Emit a named element struct + a slice type alias so controller-gen
+				// produces compilable, faithful deepcopy. Without this the type degrades
+				// to []any, whose generated deepcopy has an unused range variable (for
+				// i := range *in {}) and fails to compile.
+				elemTypeName := goName + "Item"
+				if !emittedNested[elemTypeName] {
+					emittedNested[elemTypeName] = true
+					body.WriteString(formatSchemaComment(elemTypeName, schema.Items.Description))
+					fmt.Fprintf(&body, "type %s struct {\n", elemTypeName)
+					for _, nested := range schema.Items.Properties {
+						if g.shouldSkipSchemaProperty(elemTypeName, nested) {
+							continue
+						}
+						g.writeSchemaTypeField(&body, nested, elemTypeName, schemaCursor)
+					}
+					body.WriteString("}\n\n")
+					g.writeNestedInlineTypes(&body, schema.Items.Properties, emittedNested, "", elemTypeName, schemaCursor)
+				}
+				body.WriteString(comment)
+				fmt.Fprintf(&body, "type %s []%s\n\n", goName, elemTypeName)
 
 			default:
 				// Generate based on the schema's actual type
@@ -1708,7 +1731,7 @@ func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedS
 		if !needsAPIExtJSON && schemaUsesJSON(g, schema, parsed) {
 			needsAPIExtJSON = true
 		}
-		if !needsIntStr && isScalarStringIntOneOf(schema.OneOf) {
+		if !needsIntStr && isScalarStringIntOneOf(schema.OneOf, parsed.Schemas) {
 			needsIntStr = true
 		}
 		if objectRefImport == nil {
@@ -1915,18 +1938,30 @@ func hasRefVariants(variants []*parser.Property) bool {
 
 // isScalarStringIntOneOf reports whether variants form the narrow {string, integer}
 // scalar union for which intstr.IntOrString is the idiomatic K8s representation.
-// Returns true only when there are exactly two variants, their types are exactly
-// "string" and "integer" (in either order), and neither has a $ref or sub-properties.
-func isScalarStringIntOneOf(variants []*parser.Property) bool {
+// Returns true only when there are exactly two variants whose effective types are
+// exactly "string" and "integer" (in either order). Variants may be inline scalars
+// or $ref pointers to scalar component schemas; schemas is used to resolve $refs.
+// Variants with sub-properties, nested unions, or unresolvable refs are rejected.
+func isScalarStringIntOneOf(variants []*parser.Property, schemas map[string]*parser.Schema) bool {
 	if len(variants) != 2 {
 		return false
 	}
 	types := make(map[string]bool, 2)
 	for _, v := range variants {
-		if v.RefName != "" || len(v.Properties) > 0 {
+		switch {
+		case v.RefName != "":
+			// Resolve a $ref variant to its referenced scalar schema. Reject
+			// non-scalar targets (objects, nested unions, unresolvable refs).
+			ref, ok := schemas[v.RefName]
+			if !ok || len(ref.Properties) > 0 || len(ref.OneOf) > 0 || len(ref.AnyOf) > 0 {
+				return false
+			}
+			types[ref.Type] = true
+		case len(v.Properties) > 0:
 			return false
+		default:
+			types[v.Type] = true
 		}
-		types[v.Type] = true
 	}
 	return types["string"] && types["integer"]
 }
