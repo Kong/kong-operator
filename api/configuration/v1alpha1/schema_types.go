@@ -5,6 +5,7 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // BackendClusterAuthenticationAnonymous Anonymous authentication scheme for the
@@ -1297,7 +1298,9 @@ func (u *EventGatewayKeySource) UnmarshalJSON(data []byte) error {
 	return nil
 }
 // EventGatewayListenerPort is a type alias.
-type EventGatewayListenerPort map[string]string
+//
+// +kubebuilder:validation:XIntOrString
+type EventGatewayListenerPort = intstr.IntOrString
 
 // EventGatewayListenerPortInteger is a type alias.
 type EventGatewayListenerPortInteger int

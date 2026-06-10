@@ -109,10 +109,10 @@ spec:
 
                       It's possible to combine both, e.g. [9092, "9093-9095", 9096].
                     items:
-                      additionalProperties:
-                        type: string
-                      description: EventGatewayListenerPort is a type alias.
-                      type: object
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      x-kubernetes-int-or-string: true
                     type: array
                 required:
                 - addresses

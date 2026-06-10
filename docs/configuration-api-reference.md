@@ -1748,18 +1748,7 @@ _Appears in:_
 
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
 
-#### EventGatewayListenerPort
 
-_Underlying type:_ `object`
-
-EventGatewayListenerPort is a type alias.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayListenerAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)
 
 
 
