@@ -489,74 +489,21 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
 func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute) (*metav1.Condition, error) {
-	conditionSet := false
-	cond := &metav1.Condition{
-		Type:    string(gwtypes.RouteConditionResolvedRefs),
-		Status:  metav1.ConditionTrue,
-		Reason:  string(gwtypes.RouteReasonResolvedRefs),
-		Message: "All references resolved",
-	}
+	backendRefs := make([]gwtypes.BackendRef, 0)
+	extensionRefs := make([]*gwtypes.LocalObjectReference, 0)
 	for _, rule := range route.Spec.Rules {
 		for _, bRef := range rule.BackendRefs {
-			// BackendRef namespace.
-			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef.BackendRef)
-			if err != nil {
-				return nil, err
-			}
-			if bRefValidCond.Status != metav1.ConditionTrue {
-				cond.Status = bRefValidCond.Status
-				cond.Reason = bRefValidCond.Reason
-				cond.Message = bRefValidCond.Message
-				conditionSet = true
-				break
-			}
-		}
-		if conditionSet {
-			break
+			backendRefs = append(backendRefs, bRef.BackendRef)
 		}
 
 		for _, filter := range rule.Filters {
-			// Only process filters of type ExtensionRef
-			if filter.Type != gwtypes.HTTPRouteFilterExtensionRef {
-				continue
-			}
-
-			if filter.ExtensionRef == nil {
-				log.Debug(logger, "ExtensionRef is nil in filter but type is ExtensionRef, skipping")
-				continue
-			}
-
-			// ExtensionRef is always in the same namespace as the route.
-			extRefNamespace := route.Namespace
-
-			// Check if the group kind is supported for the reference.
-			if !IsExtensionRefSupported(filter.ExtensionRef.Group, filter.ExtensionRef.Kind) {
-				log.Debug(logger, "Unsupported ExtensionRef group/kind", "group", filter.ExtensionRef.Group, "kind", filter.ExtensionRef.Kind)
-				cond.Reason = string(gwtypes.RouteReasonInvalidKind)
-				cond.Status = metav1.ConditionFalse
-				cond.Message = fmt.Sprintf("Unsupported ExtensionRef %s/%s group/kind: %s/%s", extRefNamespace, filter.ExtensionRef.Name, filter.ExtensionRef.Group, filter.ExtensionRef.Kind)
-				conditionSet = true
-				break
-			}
-
-			// Check if the referenced object exists.
-			kongPlugin := configurationv1.KongPlugin{}
-			err := cl.Get(ctx, client.ObjectKey{Namespace: extRefNamespace, Name: string(filter.ExtensionRef.Name)}, &kongPlugin)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					log.Debug(logger, "ExtensionRef not found", "namespace", extRefNamespace, "name", filter.ExtensionRef.Name)
-					cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
-					cond.Status = metav1.ConditionFalse
-					cond.Message = fmt.Sprintf("ExtensionRef %s/%s not found", extRefNamespace, filter.ExtensionRef.Name)
-					conditionSet = true
-					break
-				}
-				return nil, fmt.Errorf("failed to get ExtensionRef %s/%s: %w", extRefNamespace, filter.ExtensionRef.Name, err)
+			if filter.Type == gwtypes.HTTPRouteFilterExtensionRef {
+				extensionRefs = append(extensionRefs, filter.ExtensionRef)
 			}
 		}
 	}
 
-	return SetConditionMeta(*cond, route), nil
+	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, extensionRefs)
 }
 
 // BuildResolvedRefsConditionForTLSRoute evaluates all BackendRefs in an TLSRoute to determine if their
@@ -578,27 +525,65 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
 func BuildResolvedRefsConditionForTLSRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.TLSRoute) (*metav1.Condition, error) {
+	backendRefs := make([]gwtypes.BackendRef, 0)
+	for _, rule := range route.Spec.Rules {
+		backendRefs = append(backendRefs, rule.BackendRefs...)
+	}
+	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, nil)
+}
+
+func buildResolvedRefsCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, logger logr.Logger, cl client.Client, route TPtr,
+	backendRefs []gwtypes.BackendRef, extensionRefs []*gwtypes.LocalObjectReference,
+) (*metav1.Condition, error) {
 	cond := &metav1.Condition{
 		Type:    string(gwtypes.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionTrue,
 		Reason:  string(gwtypes.RouteReasonResolvedRefs),
 		Message: "All references resolved",
 	}
-	for _, rule := range route.Spec.Rules {
-		for _, bRef := range rule.BackendRefs {
-			// BackendRef namespace.
-			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef)
-			if err != nil {
-				return nil, err
-			}
-			if bRefValidCond.Status != metav1.ConditionTrue {
-				cond.Status = bRefValidCond.Status
-				cond.Reason = bRefValidCond.Reason
-				cond.Message = bRefValidCond.Message
-				return SetConditionMeta(*cond, route), nil
-			}
+
+	for _, bRef := range backendRefs {
+		bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef)
+		if err != nil {
+			return nil, err
+		}
+		if bRefValidCond.Status != metav1.ConditionTrue {
+			cond.Status = bRefValidCond.Status
+			cond.Reason = bRefValidCond.Reason
+			cond.Message = bRefValidCond.Message
+			return SetConditionMeta(*cond, route), nil
 		}
 	}
+
+	for _, extensionRef := range extensionRefs {
+		if extensionRef == nil {
+			log.Debug(logger, "ExtensionRef is nil in filter but type is ExtensionRef, skipping")
+			continue
+		}
+
+		if !IsExtensionRefSupported(extensionRef.Group, extensionRef.Kind) {
+			log.Debug(logger, "Unsupported ExtensionRef group/kind", "group", extensionRef.Group, "kind", extensionRef.Kind)
+			cond.Reason = string(gwtypes.RouteReasonInvalidKind)
+			cond.Status = metav1.ConditionFalse
+			cond.Message = fmt.Sprintf("Unsupported ExtensionRef %s/%s group/kind: %s/%s", route.GetNamespace(), extensionRef.Name, extensionRef.Group, extensionRef.Kind)
+			return SetConditionMeta(*cond, route), nil
+		}
+
+		kongPlugin := configurationv1.KongPlugin{}
+		err := cl.Get(ctx, client.ObjectKey{Namespace: route.GetNamespace(), Name: string(extensionRef.Name)}, &kongPlugin)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Debug(logger, "ExtensionRef not found", "namespace", route.GetNamespace(), "name", extensionRef.Name)
+				cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
+				cond.Status = metav1.ConditionFalse
+				cond.Message = fmt.Sprintf("ExtensionRef %s/%s not found", route.GetNamespace(), extensionRef.Name)
+				return SetConditionMeta(*cond, route), nil
+			}
+			return nil, fmt.Errorf("failed to get ExtensionRef %s/%s: %w", route.GetNamespace(), extensionRef.Name, err)
+		}
+	}
+
 	return SetConditionMeta(*cond, route), nil
 }
 
