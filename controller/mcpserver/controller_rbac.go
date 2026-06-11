@@ -14,3 +14,4 @@ package mcpserver
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongpluginbindings,verbs=create;get;list;watch;update;patch;delete
+// +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
