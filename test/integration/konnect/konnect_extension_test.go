@@ -537,7 +537,7 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+dpIngressIP+"/test", "")
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, integration.GetClients(), httpClient, request, "<title>httpbin.org</title>"),
+		testutils.GetResponseBodyContains(t, httpClient, request, "<title>httpbin.org</title>"),
 		routeAccessTimeout,
 		time.Second,
 	)
