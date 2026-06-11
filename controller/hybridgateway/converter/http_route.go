@@ -199,7 +199,7 @@ func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 // The function respects controller ownership and only manages ParentStatus entries
 // for Gateways controlled by this controller, leaving other controllers' entries untouched.
 func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	return updateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForHTTPRoute)
+	return route.UpdateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForHTTPRoute)
 }
 
 // HandleOrphanedResource implements OrphanedResourceHandler.

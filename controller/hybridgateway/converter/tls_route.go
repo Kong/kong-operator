@@ -74,7 +74,7 @@ func (c *tlsRouteConverter) GetRootObject() gwtypes.TLSRoute {
 // - stop is true if the TLSRoute is not ready for the next round of reconciliation;
 // - err is the error happened (if there is) in processing.
 func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	return updateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForTLSRoute)
+	return route.UpdateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForTLSRoute)
 }
 
 // GetOutputStore implements APIConverter.
