@@ -83,14 +83,29 @@ spec:
       use:
         template: ../../common/_step_templates/apply-assert-kafka-cluster.yaml
 
-    # Event Gateway CRs (advertisedHost is a placeholder at this point).
+    # Event Gateway base resources: control plane, data plane, backend cluster,
+    # virtual cluster, and listener. Policies are applied in the next step,
+    # after these are confirmed Programmed, to avoid the race where
+    # EventGatewayListenerPolicy's destination.name is rejected by Konnect
+    # because the VirtualCluster has not yet been synced there.
     - name: Create-event-gateway-resources
-      description: Create KonnectEventGateway, KegDataPlane, and Event Gateway config CRDs.
+      description: Create KonnectEventGateway, KegDataPlane, EventGatewayBackendCluster, EventGatewayVirtualCluster, and EventGatewayListener.
       try:
         - apply:
             file: 02-event-gateway.yaml
         - assert:
             file: 02-event-gateway-assert.yaml
+
+    # Event Gateway policies: applied only after the base resources are
+    # Programmed so the VirtualCluster is already known to Konnect when the
+    # ListenerPolicy's destination.name reference is evaluated.
+    - name: Create-event-gateway-policies
+      description: Create EventGatewayListenerPolicy, EventGatewayVirtualClusterPolicy, and EventGatewayVirtualClusterConsumePolicy.
+      try:
+        - apply:
+            file: 03-event-gateway-policies.yaml
+        - assert:
+            file: 03-event-gateway-policies-assert.yaml
 
     # Patch advertisedHost to the LB external address and confirm Konnect
     # accepted the change. All three operations live in one step so that the
