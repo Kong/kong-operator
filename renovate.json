@@ -162,9 +162,9 @@
       "extractVersion": "^kustomize/(?<version>.*)$"
     },
     {
-      "description": "Ignore minor updates if depName has `@only-patch` suffix.",
-      "matchBaseBranches": ["$default"],
+      "description": "Ignore minor and major updates if depName has `@only-patch` suffix.",
       "matchUpdateTypes": [
+        "major",
         "minor"
       ],
       "enabled": false,
