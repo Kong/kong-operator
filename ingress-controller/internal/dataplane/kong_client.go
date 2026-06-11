@@ -1040,6 +1040,8 @@ func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Configuration
 	c.kubernetesObjectReportsFilter = set
 }
 
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+
 // recordResourceFailureEvents records warning Events for each causing object in each input resource failure, with the
 // provided reason.
 func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.ResourceFailure, reason string) {
