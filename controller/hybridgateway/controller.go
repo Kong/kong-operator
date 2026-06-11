@@ -76,7 +76,7 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
 		Client:        mgr.GetClient(),
-		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorderFor(ControllerName)), //nolint:staticcheck // It should be replaced with GetEventRecorder in the future.
+		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorder(ControllerName)),
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
 	}
@@ -154,7 +154,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	statusChanged, stop, err := enforceStatus(ctx, logger, conv)
 	if err != nil && !apierrors.IsConflict(err) {
 		// Record status update failure event.
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonStatusUpdateFailed,
@@ -171,7 +171,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 
 	// Only emit success event if status was actually changed.
 	if statusChanged {
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeNormal,
 			eventconst.EventReasonStatusUpdateSucceeded,
@@ -185,7 +185,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	resourceCount, err := translate(conv, ctx, logger)
 	if err != nil {
 		// Record translation failure event.
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonTranslationFailed,
@@ -195,7 +195,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	}
 
 	// Record translation success event.
-	r.eventRecorder.Event(
+	r.eventRecorder.Eventf(
 		obj,
 		corev1.EventTypeNormal,
 		eventconst.EventReasonTranslationSucceeded,
@@ -213,7 +213,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 		updated, stop, err := su.UpdateRootObjectStatus(ctx, logger)
 		if err != nil {
 			// Record status update failure event and exit.
-			r.eventRecorder.Event(
+			r.eventRecorder.Eventf(
 				obj,
 				corev1.EventTypeWarning,
 				eventconst.EventReasonStatusUpdateFailed,
@@ -239,7 +239,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	applied, waiting, err := enforceState(ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record state enforcement failure event.
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonStateEnforcementFailed,
@@ -250,7 +250,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 
 	// Only emit success event if state was actually changed.
 	if applied {
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeNormal,
 			eventconst.EventReasonStateEnforcementSucceeded,
@@ -270,7 +270,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record orphan cleanup failure event.
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonOrphanCleanupFailed,
@@ -285,7 +285,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	// KongPluginBinding to prevent routes from being active without security plugins).
 	if orphansDeleted {
 		log.Debug(logger, "Orphan cleanup in progress, requeueing to continue multi-step deletion")
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeNormal,
 			eventconst.EventReasonOrphanCleanupSucceeded,
@@ -328,7 +328,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	orphansDeleted, err := r.cleanupGeneratedResources(ctx, logger, conv)
 	if err != nil {
 		// Record cleanup failure event
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonOrphanCleanupFailed,
@@ -341,7 +341,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	// We must wait for all resources to be fully deleted before removing the finalizer.
 	if orphansDeleted {
 		log.Debug(logger, "Resource deletion cleanup in progress, requeueing to continue")
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeNormal,
 			eventconst.EventReasonOrphanCleanupSucceeded,
