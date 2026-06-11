@@ -334,6 +334,124 @@ spec:
                   - status: 'True'
                     reason: Valid
 
+    # Step 19: Set a malformed konghq.com/tls-verify value on the backend Service.
+    - name: Patch-service-malformed-annotation
+      description: Patch backend Service with a malformed konghq.com/tls-verify value.
+      try:
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                namespace: ($namespace)
+                name: echo-with-annotations
+                annotations:
+                  konghq.com/tls-verify: "maybe"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (conditions[?type == 'Accepted'] | [0]):
+                      type: Accepted
+                      status: "False"
+                      reason: UnsupportedValue
+
+    # Step 20: Fix the Service annotation back to a valid boolean.
+    - name: Fix-service-malformed-annotation
+      description: Patch the malformed konghq.com/tls-verify back to a valid boolean.
+      try:
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                namespace: ($namespace)
+                name: echo-with-annotations
+                annotations:
+                  konghq.com/tls-verify: "true"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (conditions[?type == 'Accepted'] | [0]):
+                      type: Accepted
+                      status: "True"
+
+    # Step 21: Set a malformed konghq.com/tls-verify-depth value on the backend Service.
+    - name: Patch-service-malformed-int-annotation
+      description: Patch backend Service with a malformed konghq.com/tls-verify-depth value.
+      try:
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                namespace: ($namespace)
+                name: echo-with-annotations
+                annotations:
+                  konghq.com/tls-verify-depth: "not-an-int"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (conditions[?type == 'Accepted'] | [0]):
+                      type: Accepted
+                      status: "False"
+                      reason: UnsupportedValue
+
+    # Step 22: Fix the Service annotation back to a valid non-negative integer.
+    - name: Fix-service-malformed-int-annotation
+      description: Patch the malformed konghq.com/tls-verify-depth back to a valid integer.
+      try:
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                namespace: ($namespace)
+                name: echo-with-annotations
+                annotations:
+                  konghq.com/tls-verify-depth: "2"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (conditions[?type == 'Accepted'] | [0]):
+                      type: Accepted
+                      status: "True"
+
   catch:
     # Capture debug snapshot on test failure.
     - description: Capture debug snapshot
