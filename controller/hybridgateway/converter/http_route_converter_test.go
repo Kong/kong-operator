@@ -24,6 +24,7 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -338,29 +339,29 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 5,
+			wantCount: 4,
 			wantOutputs: outputCount{
-				upstreams: 1,
+				upstreams: 0,
 				services:  1,
 				routes:    1,
 				targets:   0,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 5,
+			wantStoreLen: 4,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
 				var (
-					serviceName string
-					pluginObj   *configurationv1.KongPlugin
-					bindingObj  *configurationv1alpha1.KongPluginBinding
+					serviceObj *configurationv1alpha1.KongService
+					pluginObj  *configurationv1.KongPlugin
+					bindingObj *configurationv1alpha1.KongPluginBinding
 				)
 
 				for _, obj := range store {
 					switch typed := obj.(type) {
 					case *configurationv1alpha1.KongService:
-						serviceName = typed.Name
+						serviceObj = typed
 					case *configurationv1.KongPlugin:
 						pluginObj = typed
 					case *configurationv1alpha1.KongPluginBinding:
@@ -368,7 +369,14 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					}
 				}
 
+				require.NotNil(t, serviceObj)
+				serviceName := serviceObj.Name
+				normalRoute := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef("backend"),
+				}, nil)
+				normalServiceName := namegen.NewKongServiceNameForHTTPRouteRule(normalRoute, serviceObj.Spec.ControlPlaneRef, normalRoute.Spec.Rules[0])
 				require.NotEmpty(t, serviceName)
+				assert.NotEqual(t, normalServiceName, serviceName)
 				require.NotNil(t, pluginObj)
 				require.NotNil(t, bindingObj)
 				assert.Equal(t, "request-termination", pluginObj.PluginName)
@@ -397,16 +405,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 5,
+			wantCount: 4,
 			wantOutputs: outputCount{
-				upstreams: 1,
+				upstreams: 0,
 				services:  1,
 				routes:    1,
 				targets:   0,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 5,
+			wantStoreLen: 4,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -545,16 +553,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 9,
+			wantCount: 8,
 			wantOutputs: outputCount{
-				upstreams: 2,
+				upstreams: 1,
 				services:  2,
 				routes:    2,
 				targets:   1,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 9,
+			wantStoreLen: 8,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -603,16 +611,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 5,
+			wantCount: 4,
 			wantOutputs: outputCount{
-				upstreams: 1,
+				upstreams: 0,
 				services:  1,
 				routes:    1,
 				targets:   0,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 5,
+			wantStoreLen: 4,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -980,12 +988,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantErr:    true,
-			wantErrSub: "failed to translate KongService for rule",
-			wantOutputs: outputCount{
-				upstreams: 1,
-			},
-			wantStoreLen: 1,
+			wantErr:      true,
+			wantErrSub:   "failed to translate KongService for rule",
+			wantStoreLen: 0,
 		},
 		{
 			name: "returns error when route translation fails",
@@ -1006,13 +1011,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantErr:    true,
-			wantErrSub: "failed to translate KongRoutes for rule",
-			wantOutputs: outputCount{
-				upstreams: 1,
-				services:  1,
-			},
-			wantStoreLen: 2,
+			wantErr:      true,
+			wantErrSub:   "failed to translate KongRoutes for rule",
+			wantStoreLen: 0,
 		},
 		{
 			name: "returns error when plugin binding fails",
@@ -1068,14 +1069,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantErr:    true,
-			wantErrSub: "failed to translate KongTarget resources for upstream",
-			wantOutputs: outputCount{
-				upstreams: 1,
-				services:  1,
-				routes:    1,
-			},
-			wantStoreLen: 3,
+			wantErr:      true,
+			wantErrSub:   "failed to translate KongTarget resources for upstream",
+			wantStoreLen: 0,
 		},
 	}
 

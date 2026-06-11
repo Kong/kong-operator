@@ -57,6 +57,11 @@
   resource delete requests have been issued, so immediate same-name route
   re-creates are not blocked by child resource finalizers.
   [#4465](https://github.com/Kong/kong-operator/pull/4465) [#4543](https://github.com/Kong/kong-operator/pull/4543)
+- Hybridgateway: use route-scoped `KongService` names for `HTTPRoute` rules
+  whose backendRefs resolve to no valid targets. This avoids Konnect name
+  conflicts with valid backend services while keeping normally generated service
+  names unchanged.
+  [#4437](https://github.com/Kong/kong-operator/pull/4437) [#4559](https://github.com/Kong/kong-operator/pull/4559)
 
 ## [v2.2.0]
 
