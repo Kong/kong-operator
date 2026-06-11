@@ -266,6 +266,22 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
 	}
 
+	// Phase 4.5: Readiness gate before orphan cleanup.
+	// For converters that opt in (currently HTTPRoute), defer deleting orphaned resources
+	// until all desired resources are Programmed. This prevents removing stale resources
+	// before their replacements are live in the data plane, which would otherwise open a
+	// traffic gap when a spec change rotates the desired resource names.
+	if checker, ok := any(conv).(converter.DesiredStateReadinessChecker); ok {
+		ready, err := checker.DesiredResourcesReady(ctx, logger)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if !ready {
+			log.Debug(logger, "Desired resources not ready yet, deferring orphan cleanup")
+			return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
+		}
+	}
+
 	// Phase 5: Orphan Cleanup.
 	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
 	if err != nil {

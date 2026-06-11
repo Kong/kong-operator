@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -92,7 +91,7 @@ func TestPruneDesiredObj(t *testing.T) {
 }
 
 func TestEnforceState_DependencyGating(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 
 	// Prepare Scheme with needed types.
@@ -253,7 +252,7 @@ func TestTranslate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			conv := &fakeHTTPRouteConverter{translateRet: tt.translateRet, translateErr: tt.translateErr}
 
-			count, err := translate[gwtypes.HTTPRoute](conv, context.Background(), logr.Discard())
+			count, err := translate[gwtypes.HTTPRoute](conv, t.Context(), logr.Discard())
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -293,7 +292,7 @@ func TestEnforceStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			conv := &fakeHTTPRouteConverter{statusUpdated: tt.statusUpdated, statusStop: tt.statusStop, statusErr: tt.statusErr}
 
-			updated, stop, err := enforceStatus[gwtypes.HTTPRoute](context.Background(), logr.Discard(), conv)
+			updated, stop, err := enforceStatus[gwtypes.HTTPRoute](t.Context(), logr.Discard(), conv)
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -307,7 +306,7 @@ func TestEnforceStatus(t *testing.T) {
 }
 
 func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 	kongServiceGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
 
@@ -476,264 +475,300 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 }
 
 func TestCleanOrphanedResources(t *testing.T) {
-	gvks := []schema.GroupVersionKind{
-		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"},
-		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},
+	ctx := t.Context()
+	logger := logr.Discard()
+
+	routeGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"}
+	serviceGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+
+	root := &gwtypes.HTTPRoute{
+		TypeMeta:   metav1.TypeMeta{APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute"},
+		ObjectMeta: metav1.ObjectMeta{Name: "owner", Namespace: "ns"},
 	}
-	root := &gwtypes.HTTPRoute{}
-	root.SetName("httproute-owner")
-	root.SetNamespace("ns")
-	root.SetGroupVersionKind(schema.GroupVersionKind{Group: gwtypes.GroupName, Version: "v1alpha2", Kind: "HTTPRoute"})
 	ownerLabels := metadata.BuildLabels(root, nil)
+	ownerAnnotation := fmt.Sprintf("%s/%s", root.Namespace, root.Name)
+
+	// makeOrphan creates an object that is owned (has owner labels) and has the route
+	// annotation that the fake HandleOrphanedResource uses to allow deletion.
+	makeOrphan := func(name string, gvk schema.GroupVersionKind) unstructured.Unstructured {
+		obj := newUnstructured("ns", name, gvk, ownerLabels)
+		obj.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: ownerAnnotation,
+		})
+		return obj
+	}
+
+	// makeDeletingOrphan is an orphan that is already being deleted (has DeletionTimestamp).
+	makeDeletingOrphan := func(name string, gvk schema.GroupVersionKind) unstructured.Unstructured {
+		obj := makeOrphan(name, gvk)
+		ts := metav1.Now()
+		obj.SetDeletionTimestamp(&ts)
+		obj.SetFinalizers([]string{"example.com/test"})
+		return obj
+	}
+
+	// makeDesired creates an object that represents a desired resource in the cluster.
+	makeDesired := func(name string, gvk schema.GroupVersionKind) unstructured.Unstructured {
+		return newUnstructured("ns", name, gvk, ownerLabels)
+	}
+
+	// listNames returns the names of all objects in the cluster for a given GVK.
+	listNames := func(t *testing.T, cl client.Client, gvk schema.GroupVersionKind) []string {
+		t.Helper()
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk)
+		require.NoError(t, cl.List(ctx, list))
+		names := make([]string, len(list.Items))
+		for i, item := range list.Items {
+			names[i] = item.GetName()
+		}
+		return names
+	}
 
 	tests := []struct {
-		name         string
-		desiredNames map[schema.GroupVersionKind][]string
-		orphanNames  map[schema.GroupVersionKind][]string
-		wantNames    map[schema.GroupVersionKind][]string
-		gvks         []schema.GroupVersionKind
+		name                 string
+		gvks                 []schema.GroupVersionKind
+		desired              []unstructured.Unstructured // what the converter reports as desired
+		existing             []unstructured.Unstructured // what's in the cluster
+		noWait               bool                        // true → cleanOrphanedResourcesWithoutWaitingForDeletes
+		runUntilDone         bool                        // loop until requeue=false
+		outputStoreErr       error
+		interceptorFn        *interceptor.Funcs
+		handleOrphanedResErr bool
+		wantRequeue          bool
+		wantErrContains      string
+		wantRemaining        map[schema.GroupVersionKind][]string
 	}{
+		// --- basic cleanup ---
 		{
-			name:         "KongRoute orphans cleaned",
-			gvks:         []schema.GroupVersionKind{gvks[0]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2"}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+			name:        "no objects → requeue=false",
+			gvks:        []schema.GroupVersionKind{routeGVK},
+			wantRequeue: false,
 		},
 		{
-			name:         "KongService orphans cleaned",
-			gvks:         []schema.GroupVersionKind{gvks[1]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[1]: {"service1"}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[1]: {"service2"}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[1]: {"service1"}},
+			name:          "no orphans → requeue=false",
+			gvks:          []schema.GroupVersionKind{routeGVK},
+			desired:       []unstructured.Unstructured{makeDesired("r1", routeGVK)},
+			existing:      []unstructured.Unstructured{makeDesired("r1", routeGVK)},
+			wantRequeue:   false,
+			wantRemaining: map[schema.GroupVersionKind][]string{routeGVK: {"r1"}},
 		},
 		{
-			name:         "No orphans present",
-			gvks:         []schema.GroupVersionKind{gvks[0]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+			name:          "single orphan is deleted",
+			gvks:          []schema.GroupVersionKind{routeGVK},
+			desired:       []unstructured.Unstructured{makeDesired("r1", routeGVK)},
+			existing:      []unstructured.Unstructured{makeDesired("r1", routeGVK), makeOrphan("r-orphan", routeGVK)},
+			runUntilDone:  true,
+			wantRequeue:   false,
+			wantRemaining: map[schema.GroupVersionKind][]string{routeGVK: {"r1"}},
 		},
 		{
-			name:         "Multiple orphans and multiple desired resources",
-			gvks:         []schema.GroupVersionKind{gvks[0]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2", "route3"}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route4", "route5"}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2", "route3"}},
+			name:          "multiple orphans in one GVK are all deleted",
+			gvks:          []schema.GroupVersionKind{routeGVK},
+			desired:       []unstructured.Unstructured{makeDesired("r1", routeGVK)},
+			existing:      []unstructured.Unstructured{makeDesired("r1", routeGVK), makeOrphan("orphan-a", routeGVK), makeOrphan("orphan-b", routeGVK)},
+			runUntilDone:  true,
+			wantRequeue:   false,
+			wantRemaining: map[schema.GroupVersionKind][]string{routeGVK: {"r1"}},
 		},
 		{
-			name:         "No desired, only orphans",
-			gvks:         []schema.GroupVersionKind{gvks[0]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {}},
+			name:          "all cluster objects are orphans → all deleted",
+			gvks:          []schema.GroupVersionKind{routeGVK},
+			existing:      []unstructured.Unstructured{makeOrphan("orphan-a", routeGVK), makeOrphan("orphan-b", routeGVK)},
+			runUntilDone:  true,
+			wantRequeue:   false,
+			wantRemaining: map[schema.GroupVersionKind][]string{routeGVK: {}},
 		},
 		{
-			name:         "Desired and orphan have overlapping names",
-			gvks:         []schema.GroupVersionKind{gvks[0]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2", "route3"}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}},
-		},
-		{
-			name:         "Orphan with label mismatch is not deleted",
-			gvks:         []schema.GroupVersionKind{gvks[0]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2"}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}}, // route2 has wrong labels, should not be deleted
-		},
-		{
-			name: "Multiple GVKs in one test",
-			gvks: []schema.GroupVersionKind{gvks[0], gvks[1]},
-			desiredNames: map[schema.GroupVersionKind][]string{
-				gvks[0]: {"routeA"},
-				gvks[1]: {"serviceA"},
+			name:    "desired name overlaps with orphan name: desired-set object is kept",
+			gvks:    []schema.GroupVersionKind{routeGVK},
+			desired: []unstructured.Unstructured{makeDesired("r1", routeGVK), makeDesired("r2", routeGVK)},
+			existing: []unstructured.Unstructured{
+				makeDesired("r1", routeGVK),
+				makeDesired("r2", routeGVK),
+				makeOrphan("r3", routeGVK), // orphan not in desired
 			},
-			orphanNames: map[schema.GroupVersionKind][]string{
-				gvks[0]: {"routeB"},
-				gvks[1]: {"serviceB"},
+			runUntilDone:  true,
+			wantRequeue:   false,
+			wantRemaining: map[schema.GroupVersionKind][]string{routeGVK: {"r1", "r2"}},
+		},
+		{
+			name:    "object without owner labels is not matched by selector and not deleted",
+			gvks:    []schema.GroupVersionKind{routeGVK},
+			desired: []unstructured.Unstructured{makeDesired("r1", routeGVK)},
+			existing: []unstructured.Unstructured{
+				makeDesired("r1", routeGVK),
+				newUnstructured("ns", "unrelated", routeGVK, map[string]string{"other": "label"}),
 			},
-			wantNames: map[schema.GroupVersionKind][]string{
-				gvks[0]: {"routeA"},
-				gvks[1]: {"serviceA"},
+			wantRequeue:   false,
+			wantRemaining: map[schema.GroupVersionKind][]string{routeGVK: {"r1", "unrelated"}},
+		},
+		// --- multi-GVK eventual cleanup ---
+		{
+			name: "multiple GVKs: all orphans are eventually cleaned",
+			gvks: []schema.GroupVersionKind{routeGVK, serviceGVK},
+			desired: []unstructured.Unstructured{
+				makeDesired("r1", routeGVK),
+				makeDesired("svc1", serviceGVK),
+			},
+			existing: []unstructured.Unstructured{
+				makeDesired("r1", routeGVK), makeOrphan("r-orphan", routeGVK),
+				makeDesired("svc1", serviceGVK), makeOrphan("svc-orphan", serviceGVK),
+			},
+			runUntilDone: true,
+			wantRequeue:  false,
+			wantRemaining: map[schema.GroupVersionKind][]string{
+				routeGVK:   {"r1"},
+				serviceGVK: {"svc1"},
+			},
+		},
+		// --- gating: noWait=false (cleanOrphanedResources, waitForDeletedResources=true) ---
+		{
+			// After deleting the orphan in GVK1, the function returns immediately without
+			// processing GVK2. A second call is needed to clean GVK2 orphans.
+			name:        "noWait=false: orphan deleted in GVK1 stops processing GVK2 in same pass",
+			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
+			existing:    []unstructured.Unstructured{makeOrphan("r-orphan", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
+			wantRequeue: true,
+			wantRemaining: map[schema.GroupVersionKind][]string{
+				routeGVK:   {},
+				serviceGVK: {"svc-orphan"},
 			},
 		},
 		{
-			name:         "No resources at all",
-			gvks:         []schema.GroupVersionKind{gvks[0]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {}},
+			// An in-deletion object in GVK1 also triggers an early return, blocking GVK2.
+			name:        "noWait=false: in-deletion orphan in GVK1 stops processing GVK2",
+			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
+			existing:    []unstructured.Unstructured{makeDeletingOrphan("r-deleting", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
+			wantRequeue: true,
+			wantRemaining: map[schema.GroupVersionKind][]string{
+				routeGVK:   {"r-deleting"},
+				serviceGVK: {"svc-orphan"},
+			},
+		},
+		// --- gating: noWait=true (cleanOrphanedResourcesWithoutWaitingForDeletes, waitForDeletedResources=false) ---
+		{
+			// With noWait=true, GVK2 is processed even when GVK1 had orphans to delete.
+			name:        "noWait=true: orphan deleted in GVK1 continues to GVK2 in same pass",
+			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
+			existing:    []unstructured.Unstructured{makeOrphan("r-orphan", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
+			noWait:      true,
+			wantRequeue: true,
+			wantRemaining: map[schema.GroupVersionKind][]string{
+				routeGVK:   {},
+				serviceGVK: {},
+			},
 		},
 		{
-			name:         "Orphan with extra fields is deleted",
-			gvks:         []schema.GroupVersionKind{gvks[0]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2"}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+			// With noWait=true, an in-deletion GVK1 orphan does not block GVK2.
+			name:        "noWait=true: in-deletion orphan in GVK1 does not block GVK2",
+			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
+			existing:    []unstructured.Unstructured{makeDeletingOrphan("r-deleting", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
+			noWait:      true,
+			wantRequeue: true,
+			wantRemaining: map[schema.GroupVersionKind][]string{
+				routeGVK:   {"r-deleting"},
+				serviceGVK: {},
+			},
+		},
+		// --- error paths ---
+		{
+			name:            "GetOutputStore error is propagated",
+			gvks:            []schema.GroupVersionKind{routeGVK},
+			outputStoreErr:  assert.AnError,
+			wantErrContains: "failed to get desired objects from converter for cleanup",
+		},
+		{
+			name: "cl.List error is propagated",
+			gvks: []schema.GroupVersionKind{routeGVK},
+			interceptorFn: &interceptor.Funcs{
+				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					return assert.AnError
+				},
+			},
+			wantErrContains: "unable to list objects with gvk",
+		},
+		{
+			name:     "cl.Delete error is propagated",
+			gvks:     []schema.GroupVersionKind{routeGVK},
+			existing: []unstructured.Unstructured{makeOrphan("r-orphan", routeGVK)},
+			interceptorFn: &interceptor.Funcs{
+				Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					return assert.AnError
+				},
+			},
+			wantErrContains: "failed to delete orphaned resource",
+		},
+		{
+			name:                 "HandleOrphanedResource error is propagated",
+			gvks:                 []schema.GroupVersionKind{routeGVK},
+			existing:             []unstructured.Unstructured{makeOrphan("r-orphan", routeGVK)},
+			handleOrphanedResErr: true,
+			wantErrContains:      "failed to handle orphaned resource",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var desired, orphans []unstructured.Unstructured
-			for _, gvk := range tt.gvks {
-				desiredSet := make(map[string]struct{})
-				for _, name := range tt.desiredNames[gvk] {
-					desired = append(desired, newUnstructured("ns", name, gvk, ownerLabels))
-					desiredSet[name] = struct{}{}
-				}
-				for _, name := range tt.orphanNames[gvk] {
-					ns := "ns"
-					labels := ownerLabels
-					extraFields := false
-					if tt.name == "Orphans in different namespace are not deleted" {
-						ns = "other-ns"
-					}
-					if tt.name == "Orphan with label mismatch is not deleted" {
-						labels = map[string]string{"unrelated": "true"}
-					}
-					if tt.name == "Orphan with extra fields is deleted" && name == "route2" {
-						extraFields = true
-					}
-					if _, exists := desiredSet[name]; !exists {
-						obj := newUnstructured(ns, name, gvk, labels)
+			allObjs := make([]client.Object, len(tt.existing))
+			for i := range tt.existing {
+				allObjs[i] = &tt.existing[i]
+			}
+			builder := fake.NewClientBuilder().WithScheme(runtime.NewScheme()).WithObjects(allObjs...)
+			if tt.interceptorFn != nil {
+				builder = builder.WithInterceptorFuncs(*tt.interceptorFn)
+			}
+			cl := builder.Build()
 
-						annotations := obj.GetAnnotations()
-						if annotations == nil {
-							annotations = make(map[string]string)
-						}
-						annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = "ns/httproute-owner"
-						obj.SetAnnotations(annotations)
-
-						if extraFields {
-							annotations["extra"] = "field"
-							obj.SetAnnotations(annotations)
-						}
-						orphans = append(orphans, obj)
-					}
-				}
-			}
-			var allObjs []client.Object
-			for i := range desired {
-				allObjs = append(allObjs, &desired[i])
-			}
-			for i := range orphans {
-				allObjs = append(allObjs, &orphans[i])
-			}
-			scheme := runtime.NewScheme()
-			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(allObjs...).Build()
-			fakeConv := &fakeHTTPRouteConverter{
-				desired: desired,
-				gvks:    tt.gvks,
-				root:    *root,
-			}
-			logger := logr.Discard()
+			var requeue bool
 			var err error
-			requeue := true
-			for requeue {
-				requeue, err = cleanOrphanedResources(context.Background(), cl, logger, fakeConv)
-				assert.NoError(t, err)
-			}
-			for _, gvk := range tt.gvks {
-				list := &unstructured.UnstructuredList{}
-				list.SetGroupVersionKind(gvk)
-				err = cl.List(context.Background(), list)
-				assert.NoError(t, err)
-				var nsNames, otherNsNames []string
-				for _, item := range list.Items {
-					if item.GetNamespace() == "ns" {
-						nsNames = append(nsNames, item.GetName())
-					} else if item.GetNamespace() == "other-ns" {
-						otherNsNames = append(otherNsNames, item.GetName())
+			for {
+				if tt.handleOrphanedResErr {
+					conv := &fakeHTTPRouteConverterWithHandleErr{
+						fakeHTTPRouteConverter: fakeHTTPRouteConverter{
+							gvks:           tt.gvks,
+							root:           *root,
+							desired:        tt.desired,
+							outputStoreErr: tt.outputStoreErr,
+						},
+					}
+					if tt.noWait {
+						requeue, err = cleanOrphanedResourcesWithoutWaitingForDeletes(ctx, cl, logger, conv)
+					} else {
+						requeue, err = cleanOrphanedResources(ctx, cl, logger, conv)
+					}
+				} else {
+					conv := &fakeHTTPRouteConverter{
+						gvks:           tt.gvks,
+						root:           *root,
+						desired:        tt.desired,
+						outputStoreErr: tt.outputStoreErr,
+					}
+					if tt.noWait {
+						requeue, err = cleanOrphanedResourcesWithoutWaitingForDeletes(ctx, cl, logger, conv)
+					} else {
+						requeue, err = cleanOrphanedResources(ctx, cl, logger, conv)
 					}
 				}
-				switch tt.name {
-				case "Orphans in different namespace are not deleted":
-					assert.ElementsMatch(t, tt.wantNames[gvk][:1], nsNames)
-					assert.ElementsMatch(t, tt.wantNames[gvk][1:], otherNsNames)
-				case "Orphan with label mismatch is not deleted":
-					assert.ElementsMatch(t, tt.wantNames[gvk], nsNames)
-				default:
-					assert.ElementsMatch(t, tt.wantNames[gvk], nsNames)
+				if !tt.runUntilDone || !requeue || err != nil {
+					break
 				}
+			}
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantRequeue, requeue)
+
+			for gvk, wantNames := range tt.wantRemaining {
+				assert.ElementsMatch(t, wantNames, listNames(t, cl, gvk),
+					"remaining names for GVK %s", gvk)
 			}
 		})
 	}
-}
-
-func TestCleanOrphanedResourcesForRootDeletionDoesNotWaitForDeletingChildren(t *testing.T) {
-	ctx := context.Background()
-	logger := logr.Discard()
-	gvks := []schema.GroupVersionKind{
-		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"},
-		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},
-	}
-	root := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gatewayv1.GroupVersion.String(),
-			Kind:       "HTTPRoute",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "httproute-owner",
-			Namespace: "ns",
-		},
-	}
-	ownerLabels := metadata.BuildLabels(root, nil)
-
-	deletingRoute := newUnstructured("ns", "deleting-route", gvks[0], ownerLabels)
-	deletingTimestamp := metav1.NewTime(time.Now())
-	deletingRoute.SetDeletionTimestamp(&deletingTimestamp)
-	deletingRoute.SetFinalizers([]string{"example.com/finalizer"})
-
-	service := newUnstructured("ns", "service", gvks[1], ownerLabels)
-	for _, obj := range []*unstructured.Unstructured{&deletingRoute, &service} {
-		annotations := obj.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = "ns/httproute-owner"
-		obj.SetAnnotations(annotations)
-	}
-
-	newClient := func() client.Client {
-		return fake.NewClientBuilder().
-			WithScheme(runtime.NewScheme()).
-			WithObjects(deletingRoute.DeepCopy(), service.DeepCopy()).
-			Build()
-	}
-	fakeConv := &fakeHTTPRouteConverter{
-		gvks: gvks,
-		root: *root,
-	}
-
-	t.Run("normal cleanup waits for deleting child before later GVKs", func(t *testing.T) {
-		cl := newClient()
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
-		require.NoError(t, err)
-		require.True(t, requeue)
-
-		serviceList := &unstructured.UnstructuredList{}
-		serviceList.SetGroupVersionKind(gvks[1])
-		require.NoError(t, cl.List(ctx, serviceList))
-		require.Len(t, serviceList.Items, 1)
-	})
-
-	t.Run("root deletion cleanup deletes later GVKs before releasing root finalizer", func(t *testing.T) {
-		cl := newClient()
-		requeue, err := cleanOrphanedResourcesWithoutWaitingForDeletes[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
-		require.NoError(t, err)
-		require.True(t, requeue)
-
-		serviceList := &unstructured.UnstructuredList{}
-		serviceList.SetGroupVersionKind(gvks[1])
-		require.NoError(t, cl.List(ctx, serviceList))
-		require.Empty(t, serviceList.Items)
-
-		requeue, err = cleanOrphanedResourcesWithoutWaitingForDeletes[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
-		require.NoError(t, err)
-		require.False(t, requeue)
-	})
 }
 
 // Minimal fake converter for HTTPRoute
@@ -806,7 +841,7 @@ func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, log
 }
 
 func TestShouldProcessObject_HTTPRoute(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 
 	// Create a test Gateway with KonnectExtension (managed by us).
@@ -1124,7 +1159,7 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 }
 
 func TestShouldProcessObject_Gateway(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 
 	// KonnectExtension for managed Gateway
@@ -1323,7 +1358,7 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 }
 
 func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 
 	// Create a supported Gateway (managed by KonnectExtension)
@@ -1621,8 +1656,380 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 	}
 }
 
+func TestDesiredHasUpstreamNamed(t *testing.T) {
+	upstream := func(name string) unstructured.Unstructured {
+		u := unstructured.Unstructured{}
+		u.SetName(name)
+		u.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"})
+		return u
+	}
+	notUpstream := func(name string) unstructured.Unstructured {
+		u := unstructured.Unstructured{}
+		u.SetName(name)
+		u.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"})
+		return u
+	}
+
+	tests := []struct {
+		name    string
+		desired []unstructured.Unstructured
+		search  string
+		want    bool
+	}{
+		{
+			name:    "empty list returns false",
+			desired: nil,
+			search:  "u1",
+			want:    false,
+		},
+		{
+			name:    "matching upstream returns true",
+			desired: []unstructured.Unstructured{upstream("u1"), upstream("u2")},
+			search:  "u1",
+			want:    true,
+		},
+		{
+			name:    "name present under different kind returns false",
+			desired: []unstructured.Unstructured{notUpstream("u1")},
+			search:  "u1",
+			want:    false,
+		},
+		{
+			name:    "name not in list returns false",
+			desired: []unstructured.Unstructured{upstream("u2")},
+			search:  "u1",
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, desiredHasUpstreamNamed(tt.desired, tt.search))
+		})
+	}
+}
+
+func TestUpstreamTargetsProgrammed(t *testing.T) {
+	ctx := t.Context()
+	s := scheme.Get()
+	ns := "ns"
+
+	programmedCondition := metav1.Condition{
+		Type:               "Programmed",
+		Status:             metav1.ConditionTrue,
+		Reason:             "Programmed",
+		LastTransitionTime: metav1.Now(),
+	}
+
+	makeDesiredTarget := func(name, upstreamName string) unstructured.Unstructured {
+		u := unstructured.Unstructured{}
+		u.SetName(name)
+		u.SetNamespace(ns)
+		u.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongTarget"})
+		_ = unstructured.SetNestedField(u.Object, map[string]any{"name": upstreamName}, "spec", "upstreamRef")
+		return u
+	}
+
+	makeTarget := func(name string, programmed bool) *configurationv1alpha1.KongTarget {
+		tgt := &configurationv1alpha1.KongTarget{}
+		tgt.SetName(name)
+		tgt.SetNamespace(ns)
+		if programmed {
+			tgt.Status.Conditions = []metav1.Condition{programmedCondition}
+		}
+		return tgt
+	}
+
+	tests := []struct {
+		name            string
+		desired         []unstructured.Unstructured
+		existing        []client.Object
+		upstreamName    string
+		wantReady       bool
+		wantErrContains string
+		interceptorFn   *interceptor.Funcs
+	}{
+		{
+			name:         "no desired targets for upstream returns ready",
+			desired:      []unstructured.Unstructured{makeDesiredTarget("t1", "other-upstream")},
+			upstreamName: "my-upstream",
+			wantReady:    true,
+		},
+		{
+			name:         "empty desired list returns ready",
+			desired:      nil,
+			upstreamName: "my-upstream",
+			wantReady:    true,
+		},
+		{
+			name:         "target not in cluster returns not ready",
+			desired:      []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			existing:     nil,
+			upstreamName: "my-upstream",
+			wantReady:    false,
+		},
+		{
+			name:         "target in cluster but not Programmed returns not ready",
+			desired:      []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			existing:     []client.Object{makeTarget("t1", false)},
+			upstreamName: "my-upstream",
+			wantReady:    false,
+		},
+		{
+			name:         "target in cluster and Programmed returns ready",
+			desired:      []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			existing:     []client.Object{makeTarget("t1", true)},
+			upstreamName: "my-upstream",
+			wantReady:    true,
+		},
+		{
+			name: "multiple targets all Programmed returns ready",
+			desired: []unstructured.Unstructured{
+				makeDesiredTarget("t1", "my-upstream"),
+				makeDesiredTarget("t2", "my-upstream"),
+			},
+			existing:     []client.Object{makeTarget("t1", true), makeTarget("t2", true)},
+			upstreamName: "my-upstream",
+			wantReady:    true,
+		},
+		{
+			name: "multiple targets, one not Programmed returns not ready",
+			desired: []unstructured.Unstructured{
+				makeDesiredTarget("t1", "my-upstream"),
+				makeDesiredTarget("t2", "my-upstream"),
+			},
+			existing:     []client.Object{makeTarget("t1", true), makeTarget("t2", false)},
+			upstreamName: "my-upstream",
+			wantReady:    false,
+		},
+		{
+			name:    "Get error for existing target is propagated",
+			desired: []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			interceptorFn: &interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*configurationv1alpha1.KongTarget); ok {
+						return assert.AnError
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			},
+			upstreamName:    "my-upstream",
+			wantReady:       false,
+			wantErrContains: "failed to get KongTarget",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(s)
+			if len(tt.existing) > 0 {
+				builder = builder.WithObjects(tt.existing...)
+			}
+			if tt.interceptorFn != nil {
+				builder = builder.WithInterceptorFuncs(*tt.interceptorFn)
+			}
+			cl := builder.Build()
+
+			ready, err := upstreamTargetsProgrammed(ctx, cl, tt.desired, tt.upstreamName)
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantReady, ready)
+		})
+	}
+}
+
+func TestEnforceState_UpstreamGating(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+	s := scheme.Get()
+	ns := "ns"
+
+	programmedCondition := metav1.Condition{
+		Type:               "Programmed",
+		Status:             metav1.ConditionTrue,
+		Reason:             "Programmed",
+		LastTransitionTime: metav1.Now(),
+	}
+
+	svcGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+	tgtGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongTarget"}
+	upGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"}
+	routeGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"}
+	kpbGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongPluginBinding"}
+
+	makeObj := func(name string, gvk schema.GroupVersionKind, spec map[string]any) unstructured.Unstructured {
+		u := newUnstructured(ns, name, gvk, nil)
+		if spec != nil {
+			_ = unstructured.SetNestedField(u.Object, spec, "spec")
+		}
+		return u
+	}
+
+	tests := []struct {
+		name        string
+		desired     []unstructured.Unstructured
+		existing    []client.Object
+		wantApplied bool
+		wantWaiting bool
+		wantErr     bool
+	}{
+		{
+			// The service is gated (waiting=true) but the upstream prerequisite itself is
+			// still created in the same pass (applied=true): the loop skips the service
+			// but processes the upstream object that follows it.
+			name: "KongService waits when its host upstream is missing from cluster",
+			desired: []unstructured.Unstructured{
+				makeObj("svc1", svcGVK, map[string]any{"host": "upstream1"}),
+				makeObj("upstream1", upGVK, nil),
+			},
+			existing:    nil,
+			wantApplied: true,
+			wantWaiting: true,
+		},
+		{
+			// Upstream exists but isn't Programmed yet. The service is gated; the
+			// upstream is updated (no managed-fields yet → apply), so applied=true.
+			name: "KongService waits when its host upstream is not Programmed",
+			desired: []unstructured.Unstructured{
+				makeObj("svc1", svcGVK, map[string]any{"host": "upstream1"}),
+				makeObj("upstream1", upGVK, nil),
+			},
+			existing: func() []client.Object {
+				up := &configurationv1alpha1.KongUpstream{}
+				up.SetName("upstream1")
+				up.SetNamespace(ns)
+				return []client.Object{up}
+			}(),
+			wantApplied: true,
+			wantWaiting: true,
+		},
+		{
+			// Upstream is Programmed but targets are not yet. The service is gated on
+			// targets; the target itself is still processed in the same pass (applied=true).
+			name: "KongService waits when upstream is Programmed but targets are not",
+			desired: []unstructured.Unstructured{
+				makeObj("svc1", svcGVK, map[string]any{"host": "upstream1"}),
+				makeObj("upstream1", upGVK, nil),
+				makeObj("tgt1", tgtGVK, map[string]any{"upstreamRef": map[string]any{"name": "upstream1"}}),
+			},
+			existing: func() []client.Object {
+				up := &configurationv1alpha1.KongUpstream{}
+				up.SetName("upstream1")
+				up.SetNamespace(ns)
+				up.Status.Conditions = []metav1.Condition{programmedCondition}
+				// KongTarget exists but is not Programmed.
+				tgt := &configurationv1alpha1.KongTarget{}
+				tgt.SetName("tgt1")
+				tgt.SetNamespace(ns)
+				return []client.Object{up, tgt}
+			}(),
+			wantApplied: true,
+			wantWaiting: true,
+		},
+		{
+			name: "KongService skips upstream gate when host is not a desired upstream (external)",
+			desired: []unstructured.Unstructured{
+				makeObj("svc1", svcGVK, map[string]any{"host": "external.example.com"}),
+			},
+			existing:    nil,
+			wantApplied: true, // proceeds immediately, no upstream to wait for
+			wantWaiting: false,
+		},
+		{
+			name: "KongTarget waits when upstream exists but is not Programmed",
+			desired: []unstructured.Unstructured{
+				makeObj("tgt1", tgtGVK, map[string]any{"upstreamRef": map[string]any{"name": "upstream1"}}),
+			},
+			existing: func() []client.Object {
+				up := &configurationv1alpha1.KongUpstream{}
+				up.SetName("upstream1")
+				up.SetNamespace(ns)
+				return []client.Object{up}
+			}(),
+			wantApplied: false,
+			wantWaiting: true,
+		},
+		{
+			name: "KongRoute waits when service is missing",
+			desired: []unstructured.Unstructured{
+				makeObj("r1", routeGVK, map[string]any{
+					"serviceRef": map[string]any{"namespacedRef": map[string]any{"name": "svc1"}},
+				}),
+			},
+			existing:    nil,
+			wantApplied: false,
+			wantWaiting: true,
+		},
+		{
+			name: "KongPluginBinding waits when route is missing",
+			desired: []unstructured.Unstructured{
+				makeObj("b1", kpbGVK, map[string]any{
+					"targets": map[string]any{"routeRef": map[string]any{"name": "r1"}},
+				}),
+			},
+			existing:    nil,
+			wantApplied: false,
+			wantWaiting: true,
+		},
+		{
+			name: "KongPluginBinding waits when referenced KongService is not Programmed",
+			desired: []unstructured.Unstructured{
+				makeObj("b1", kpbGVK, map[string]any{
+					"targets": map[string]any{
+						"serviceRef": map[string]any{"name": "svc1", "kind": "KongService"},
+					},
+				}),
+			},
+			existing: func() []client.Object {
+				svc := &configurationv1alpha1.KongService{}
+				svc.SetName("svc1")
+				svc.SetNamespace(ns)
+				return []client.Object{svc}
+			}(),
+			wantApplied: false,
+			wantWaiting: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(s)
+			if len(tt.existing) > 0 {
+				builder = builder.WithObjects(tt.existing...)
+			}
+			cl := builder.Build()
+
+			fakeConv := &fakeHTTPRouteConverter{desired: tt.desired}
+			applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantApplied, applied)
+			assert.Equal(t, tt.wantWaiting, waiting)
+		})
+	}
+}
+
+// fakeHTTPRouteConverterWithHandleErr wraps fakeHTTPRouteConverter and returns an error
+// from HandleOrphanedResource so we can test error propagation in cleanOrphanedResources.
+type fakeHTTPRouteConverterWithHandleErr struct {
+	fakeHTTPRouteConverter
+}
+
+func (f *fakeHTTPRouteConverterWithHandleErr) HandleOrphanedResource(_ context.Context, _ logr.Logger, _ *unstructured.Unstructured) (bool, error) {
+	return false, assert.AnError
+}
+
 func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 
 	// KonnectExtension for the managed Gateway (with UID test-gateway-uid)

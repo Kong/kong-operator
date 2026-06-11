@@ -100,6 +100,40 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// "can't create target without a Konnect Upstream ID".
 		switch desired.GetKind() {
 		case "KongService":
+			// KongService.Spec.Host is the KongUpstream name. Do not create/program the service before its
+			// upstream exists and is Programmed in Konnect. Otherwise Konnect can hold a service whose host
+			// has no matching upstream, and once a request hits it the dataplane falls back to DNS-resolving
+			// the (hashed) upstream name -> NXDOMAIN. Only gate when the host actually refers to a desired
+			// KongUpstream (in hybrid gateway it always does; the guard avoids waiting forever on a service
+			// that legitimately points at an external hostname).
+			if host, _, _ := unstructured.NestedString(desired.Object, "spec", "host"); host != "" && desiredHasUpstreamNamed(desiredObjects, host) {
+				var up configurationv1alpha1.KongUpstream
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: host}, &up); err != nil {
+					log.Debug(logger, "Upstream not found yet for service, waiting", "upstream", host)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &up) {
+					log.Debug(logger, "Upstream not Programmed yet for service, waiting", "upstream", host)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+				// Also wait until the upstream's targets are Programmed before creating the service, so the
+				// service is only ever live once it can actually serve traffic. Anything that depends on the
+				// service (the KongRoute) then transitively waits for a servable backend.
+				targetsReady, err := upstreamTargetsProgrammed(ctx, cl, desiredObjects, host)
+				if err != nil {
+					return false, false, fmt.Errorf("failed to check upstream targets readiness for service %s: %w", desired.GetName(), err)
+				}
+				if !targetsReady {
+					log.Debug(logger, "Upstream targets not Programmed yet for service, waiting", "service", desired.GetName(), "upstream", host)
+					objectsSkipped++
+					stopAtKind = "KongTarget"
+					continue
+				}
+			}
 			// KongService with a clientCertificateRef depends on the referenced KongCertificate being Programmed.
 			certName, _, _ := unstructured.NestedString(desired.Object, "spec", "clientCertificateRef", "name")
 			if certName != "" {
@@ -288,6 +322,49 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	applied = (objectsCreated + objectsUpdated) > 0
 	waiting = objectsSkipped > 0
 	return applied, waiting, nil
+}
+
+// desiredHasUpstreamNamed reports whether the desired objects contain a KongUpstream with the given name.
+// Used to decide whether a KongService's host refers to a managed upstream (and should therefore be gated
+// on it) versus an external hostname (which must not gate).
+func desiredHasUpstreamNamed(desiredObjects []unstructured.Unstructured, name string) bool {
+	for i := range desiredObjects {
+		if desiredObjects[i].GetKind() == "KongUpstream" && desiredObjects[i].GetName() == name {
+			return true
+		}
+	}
+	return false
+}
+
+// upstreamTargetsProgrammed reports whether every desired KongTarget belonging to the named KongUpstream
+// is present in the cluster and Programmed. It is used to hold a KongRoute's serviceRef switch until the
+// upstream it is about to point at actually has healthy targets, so a rollout never repoints a route onto
+// a freshly-created, still-empty upstream (which would drop traffic). An upstream with no desired targets
+// is considered ready (there is nothing to wait for).
+func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, desiredObjects []unstructured.Unstructured, upstreamName string) (bool, error) {
+	for i := range desiredObjects {
+		d := &desiredObjects[i]
+		if d.GetKind() != "KongTarget" {
+			continue
+		}
+		upName, _, _ := unstructured.NestedString(d.Object, "spec", "upstreamRef", "name")
+		if upName != upstreamName {
+			continue
+		}
+
+		var tgt configurationv1alpha1.KongTarget
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: d.GetNamespace(), Name: d.GetName()}, &tgt); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Not created yet (targets are appended after the route): not ready.
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to get KongTarget %s/%s: %w", d.GetNamespace(), d.GetName(), err)
+		}
+		if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &tgt) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.
