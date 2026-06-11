@@ -1045,12 +1045,12 @@ func dataPlaneSpecDeepEqual(specCurrent, specExpected *operatorv1beta1.DataPlane
 	// For Hybrid gateways ignore KonnectExtension in the comparison,
 	// it's managed later (separately) by the Gateway controller.
 	if isHybrid {
-		specCurrentExtensions = lo.Filter(specCurrentExtensions, func(e commonv1alpha1.ExtensionRef, _ int) bool {
-			return e.Group != konnectv1alpha2.SchemeGroupVersion.Group || e.Kind != konnectv1alpha2.KonnectExtensionKind
-		})
-		specExpectedExtensions = lo.Filter(specExpectedExtensions, func(e commonv1alpha1.ExtensionRef, _ int) bool {
-			return e.Group != konnectv1alpha2.SchemeGroupVersion.Group || e.Kind != konnectv1alpha2.KonnectExtensionKind
-		})
+		filter := func(e commonv1alpha1.ExtensionRef, _ int) bool {
+			return e.Group != konnectv1alpha2.SchemeGroupVersion.Group ||
+				e.Kind != konnectv1alpha2.KonnectExtensionKind
+		}
+		specCurrentExtensions = lo.Filter(specCurrentExtensions, filter)
+		specExpectedExtensions = lo.Filter(specExpectedExtensions, filter)
 	}
 	// Consider slices equal if both are empty or nil, or if they are deeply equal.
 	// This is to avoid infinite reconciliation loops when one of the specs has nil value
