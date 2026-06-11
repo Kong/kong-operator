@@ -1,0 +1,90 @@
+# Event Gateway policies for the proxy-roundtrip test.
+#
+# Applied in a separate step after the base resources (VirtualCluster,
+# Listener) are confirmed Programmed, to avoid the race where
+# EventGatewayListenerPolicy's destination.name reference is rejected by
+# Konnect because the VirtualCluster has not yet been synced there.
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: ($listener_policy_name)
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($listener_name)
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      enabled: Enabled
+      config:
+        type: portMapping
+        portMapping:
+          bootstrapPort: at_start
+          # Placeholder. Patched to the LoadBalancer IP after the Service is
+          # assigned an external address.
+          advertisedHost: placeholder.invalid
+          destination:
+            name: ($virtual_cluster_name)
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: ($acl_policy_name)
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($virtual_cluster_name)
+  apiSpec:
+    type: acls
+    acls:
+      name: ($acl_policy_name)
+      config:
+        rules:
+          - action: allow
+            resourceType: topic
+            operations:
+              - name: all
+            resourceNames:
+              type: stat
+              stat:
+                - match: "*"
+          - action: deny
+            resourceType: topic
+            operations:
+              - name: write
+            resourceNames:
+              type: stat
+              stat:
+                - match: blocked-topic
+          - action: allow
+            resourceType: group
+            operations:
+              - name: all
+            resourceNames:
+              type: stat
+              stat:
+                - match: "*"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: ($consume_policy_name)
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($virtual_cluster_name)
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: add-test-header
+      config:
+        actions:
+          - op: set
+            set:
+              key: ($injected_header_key)
+              value: ($injected_header_value)
