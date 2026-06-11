@@ -27,7 +27,7 @@ func CreateTestSystemAccount(ctx context.Context, t *testing.T) string {
 
 	var (
 		systemAccountID   string
-		systemAccountName = fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixMilli())
+		systemAccountName = fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixMicro())
 	)
 	err := retry.New(
 		retry.Attempts(5),

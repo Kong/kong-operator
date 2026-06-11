@@ -61,7 +61,7 @@ type Kong struct {
 // It sets up a cleanup function that will terminate the container when the test finishes.
 func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	req := testcontainers.ContainerRequest{
-		Image: kongImageUnderTest(),
+		Image: kongImageUnderTest(t),
 		Env: map[string]string{
 			"KONG_DATABASE":      "off",
 			"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongAdminPort),
@@ -173,13 +173,19 @@ func (c Kong) Terminate(ctx context.Context) error {
 // kongImageUnderTest returns the Kong image to be used for integration tests. If both TEST_KONG_IMAGE and
 // TEST_KONG_TAG are set, it will return the image and tag specified by them. Otherwise, it will return
 // the default image (kong:latest or kong/kong-gateway if EE tests enabled).
-func kongImageUnderTest() string {
+func kongImageUnderTest(t *testing.T) string {
+	t.Helper()
+
 	if testenv.KongImage() != "" && testenv.KongTag() != "" {
 		return fmt.Sprintf("%s:%s", testenv.KongImage(), testenv.KongTag())
 	}
 
 	if testenv.KongEnterpriseEnabled() {
-		return "kong/kong-gateway:latest"
+		gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-ee")
+		require.NoError(t, err)
+		return "kong/kong-gateway:" + gatewayTag
 	}
-	return "kong:latest"
+	gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-oss")
+	require.NoError(t, err)
+	return "kong:" + gatewayTag
 }

@@ -74,7 +74,7 @@ func runKongDBMigrations(ctx context.Context, t *testing.T, networkName string) 
 	// Run Kong migrations bootstrap command in a container.
 	kongMigrationsC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image: kongImageUnderTest(),
+			Image: kongImageUnderTest(t),
 			Env: map[string]string{
 				"KONG_DATABASE":    "postgres",
 				"KONG_PG_HOST":     postgresContainerNetworkAlias,
