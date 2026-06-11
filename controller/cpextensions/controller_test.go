@@ -19,6 +19,7 @@ import (
 
 type countingUpdateClient struct {
 	client.Client
+
 	updateCalls int
 }
 
@@ -134,4 +135,3 @@ func TestEnsurePrometheusPlugin_UpdatesWhenPluginDiffers(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, string(expectedPlugin.Config.Raw), string(updatedPlugin.Config.Raw))
 }
-
