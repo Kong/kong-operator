@@ -186,6 +186,9 @@ func New(
 		return nil, fmt.Errorf("unable to connect to Kubernetes API: %w", err)
 	}
 
+	//+kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
+	//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+
 	setupLog.Info("Initializing Dataplane Client")
 	var eventRecorder record.EventRecorder
 	if c.EmitKubernetesEvents {
