@@ -1219,9 +1219,9 @@ func TestGenerateSharedFiles_GeneratesSchemaUnionTests(t *testing.T) {
 	var schemaTestFile GeneratedFile
 	for _, file := range files {
 		switch file.Name {
-		case "schema_types.go":
+		case "zz_generated_schema_types.go":
 			schemaFile = file
-		case "schema_types_test.go":
+		case "zz_generated_schema_types_test.go":
 			schemaTestFile = file
 		}
 	}
@@ -1594,7 +1594,7 @@ func TestGenerate_OmitsUnusedArrayRefAliases(t *testing.T) {
 
 	var schemaContent string
 	for _, f := range files {
-		if f.Name == "schema_types.go" {
+		if f.Name == "zz_generated_schema_types.go" {
 			schemaContent = f.Content
 			break
 		}
