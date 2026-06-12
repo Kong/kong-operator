@@ -482,10 +482,10 @@ func existingTargetNamesByAddress[
 		cur, ok := chosen[t.Spec.Target]
 		switch {
 		case !ok:
-			chosen[t.Spec.Target] = candidate{name: t.Name, programmed: programmed}
+			fallthrough
 		case programmed && !cur.programmed:
 			// Prefer a Programmed target over a non-programmed one for the same address.
-			chosen[t.Spec.Target] = candidate{name: t.Name, programmed: programmed}
+			fallthrough
 		case programmed == cur.programmed && t.Name < cur.name:
 			// Deterministic tie-break when both have the same Programmed status.
 			chosen[t.Spec.Target] = candidate{name: t.Name, programmed: programmed}
