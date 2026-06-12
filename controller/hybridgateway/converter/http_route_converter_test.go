@@ -32,7 +32,7 @@ import (
 )
 
 func TestHTTPRouteConverter_GetOutputStore(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 
 	validUpstream := &configurationv1alpha1.KongUpstream{
@@ -95,7 +95,7 @@ func TestHTTPRouteConverter_GetOutputStore(t *testing.T) {
 }
 
 func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name        string
@@ -297,7 +297,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 		conv := newHTTPRouteConverter(route, cl, false, "").(*httpRouteConverter)
-		_, err := conv.Translate(context.Background(), logr.Discard())
+		_, err := conv.Translate(t.Context(), logr.Discard())
 		require.NoError(t, err)
 		for _, obj := range conv.outputStore {
 			if kt, ok := obj.(*configurationv1alpha1.KongTarget); ok {
@@ -1163,8 +1163,8 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					WithObjects(append(objects, programmedDup, failedDup)...).
 					WithStatusSubresource(programmedDup, failedDup).
 					Build()
-				require.NoError(t, cl.Status().Update(context.Background(), programmedDup))
-				require.NoError(t, cl.Status().Update(context.Background(), failedDup))
+				require.NoError(t, cl.Status().Update(t.Context(), programmedDup))
+				require.NoError(t, cl.Status().Update(t.Context(), failedDup))
 
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
 				return newHTTPRouteConverter(route, cl, false, "").(*httpRouteConverter)
@@ -1273,7 +1273,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			converter := tt.setup(t)
-			count, err := converter.Translate(context.Background(), logr.Discard())
+			count, err := converter.Translate(t.Context(), logr.Discard())
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.wantErrSub)
@@ -1591,7 +1591,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			converter, route := tt.setup()
-			updated, stop, err := converter.UpdateRootObjectStatus(context.Background(), logr.Discard())
+			updated, stop, err := converter.UpdateRootObjectStatus(t.Context(), logr.Discard())
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
@@ -1678,7 +1678,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			converter, resource := tt.setup()
-			skipDelete, err := converter.HandleOrphanedResource(context.Background(), logr.Discard(), resource)
+			skipDelete, err := converter.HandleOrphanedResource(t.Context(), logr.Discard(), resource)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
@@ -1695,7 +1695,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 }
 
 func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name        string
@@ -1939,7 +1939,7 @@ func TestHTTPRouteConverter_MetadataAccessors(t *testing.T) {
 
 			root := converter.GetRootObject()
 			assert.Equal(t, route.Name, root.Name)
-			assert.Equal(t, 1, converter.GetOutputStoreLen(context.Background(), logr.Discard()))
+			assert.Equal(t, 1, converter.GetOutputStoreLen(t.Context(), logr.Discard()))
 			assert.NotEmpty(t, converter.GetExpectedGVKs())
 		})
 	}
