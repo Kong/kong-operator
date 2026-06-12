@@ -33,6 +33,7 @@ import (
 	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
@@ -153,6 +154,53 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	return kgcp, nil
+}
+
+// enforceKonnectGatewayControlPlaneSpec ensures that the spec of the provided
+// KonnectGatewayControlPlane matches the desired state derived from the Gateway
+// and GatewayConfiguration. Any manual changes to enforced fields are overridden.
+// Returns true if the resource was patched.
+//
+// Note: spec.konnect.authRef is only enforced when the control plane is not yet
+// Programmed, as the field becomes immutable once Programmed is True. Other fields
+// are skipped, because there are immutable in both GatewayConfiguration and KonnectGatewayControlPlane.
+func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
+	ctx context.Context,
+	kgcp *konnectv1alpha2.KonnectGatewayControlPlane,
+	gatewayConfig *GatewayConfiguration,
+) (bool, error) {
+	if gatewayConfig.Spec.Konnect == nil {
+		return false, nil
+	}
+
+	old := kgcp.DeepCopy()
+	updated := false
+
+	// Enforce the auth ref only when APIAuthValid=True and Programmed=False.
+	// The field is immutable once APIAuthValid becomes True (enforced by the CEL
+	// validation rule on the CRD), so patching is only meaningful in the window
+	// between APIAuthValid being set True and the resource becoming Programmed.
+	apiAuthValidCond, hasAPIAuthValid := k8sutils.GetCondition(
+		konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, kgcp,
+	)
+	if gatewayConfig.Spec.Konnect.APIAuthConfigurationRef != nil &&
+		hasAPIAuthValid && apiAuthValidCond.Status == metav1.ConditionTrue &&
+		!k8sutils.IsProgrammed(kgcp) {
+		desired := *gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
+		if kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef != desired {
+			kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef = desired
+			updated = true
+		}
+	}
+
+	if !updated {
+		return false, nil
+	}
+
+	if err := r.Patch(ctx, kgcp, client.MergeFrom(old)); err != nil {
+		return false, fmt.Errorf("failed patching KonnectGatewayControlPlane %s spec: %w", kgcp.Name, err)
+	}
+	return true, nil
 }
 
 func (r *Reconciler) createKonnectExtension(
