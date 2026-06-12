@@ -771,6 +771,22 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 			},
 		},
 		{
+			msg: "multiple identical header names only use the first match",
+			input: []gatewayapi.HTTPHeaderMatch{
+				{
+					Name:  "Content-Type",
+					Value: "audio/vorbis",
+				},
+				{
+					Name:  "Content-Type",
+					Value: "audio/flac",
+				},
+			},
+			output: map[string][]string{
+				"Content-Type": {"audio/vorbis"},
+			},
+		},
+		{
 			msg: "multiple equivalent header names only use the first match",
 			input: []gatewayapi.HTTPHeaderMatch{
 				{

@@ -71,6 +71,10 @@
   enforce-time gate delays `KongService` creation until its `KongUpstream` and
   all desired `KongTarget`s are Programmed.
   [#4577](https://github.com/Kong/kong-operator/pull/4577)
+- HTTPRoute: traditional route translation now treats header match names
+  case-insensitively and ignores later equivalent duplicates, aligning with
+  Gateway API matching semantics.
+  [#4597](https://github.com/Kong/kong-operator/pull/4597)
 - Hybridgateway: release Gateway API route finalizers once generated Kong
   resource delete requests have been issued, so immediate same-name route
   re-creates are not blocked by child resource finalizers.
