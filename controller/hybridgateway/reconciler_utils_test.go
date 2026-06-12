@@ -25,6 +25,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/konnect"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -610,6 +611,14 @@ func TestCleanOrphanedResources(t *testing.T) {
 							annotations["extra"] = "field"
 							obj.SetAnnotations(annotations)
 						}
+
+						// Simulate Konnect reconciler has processed this orphan (set a condition),
+						// so the konnect-finalizer gate permits deletion. Real orphans will always
+						// have at least one condition after being processed by the Konnect reconciler.
+						_ = unstructured.SetNestedSlice(obj.Object, []any{
+							map[string]any{"type": "Programmed", "status": "False", "reason": "NotProgrammed"},
+						}, "status", "conditions")
+
 						orphans = append(orphans, obj)
 					}
 				}
@@ -687,6 +696,10 @@ func TestCleanOrphanedResourcesForRootDeletionDoesNotWaitForDeletingChildren(t *
 	deletingRoute.SetFinalizers([]string{"example.com/finalizer"})
 
 	service := newUnstructured("ns", "service", gvks[1], ownerLabels)
+	// Simulate the Konnect reconciler having processed this object so the gate permits deletion.
+	_ = unstructured.SetNestedSlice(service.Object, []any{
+		map[string]any{"type": "Programmed", "status": "False", "reason": "NotProgrammed"},
+	}, "status", "conditions")
 	for _, obj := range []*unstructured.Unstructured{&deletingRoute, &service} {
 		annotations := obj.GetAnnotations()
 		if annotations == nil {
@@ -803,6 +816,130 @@ func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, log
 
 	// Annotation exists and matches our root - allow deletion
 	return false, nil
+}
+
+// newOrphanWithAnnotation builds a minimal orphaned unstructured object that
+// HandleOrphanedResource will allow through (correct annotation, no desired key).
+func newOrphanWithAnnotation(name string, gvk schema.GroupVersionKind, ownerLabels map[string]string) unstructured.Unstructured {
+	obj := newUnstructured("ns", name, gvk, ownerLabels)
+	obj.SetAnnotations(map[string]string{
+		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
+	})
+	// Simulate a Konnect-managed resource (generic Konnect entity reconciler) by
+	// setting spec.controlPlaneRef. Without this field the konnect reconciler gate
+	// would not apply (the gate only protects resources that go through Konnect).
+	_ = unstructured.SetNestedMap(obj.Object, map[string]any{
+		"type":      "konnectID",
+		"konnectID": map[string]any{"id": "test-cp-id"},
+	}, "spec", "controlPlaneRef")
+	return obj
+}
+
+func TestCleanOrphanedResourcesKonnectFinalizerGate(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	gvk := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+	root := &gwtypes.HTTPRoute{}
+	root.SetName("httproute-owner")
+	root.SetNamespace("ns")
+	root.SetGroupVersionKind(schema.GroupVersionKind{Group: gwtypes.GroupName, Version: "v1alpha2", Kind: "HTTPRoute"})
+	ownerLabels := metadata.BuildLabels(root, nil)
+
+	fakeConv := &fakeHTTPRouteConverter{
+		gvks: []schema.GroupVersionKind{gvk},
+		root: *root,
+	}
+
+	t.Run("orphan with no finalizer and no conditions is not deleted (konnect reconciler pending)", func(t *testing.T) {
+		orphan := newOrphanWithAnnotation("bnf-svc", gvk, ownerLabels)
+		// No finalizer, no status conditions: Konnect reconciler hasn't run yet.
+		cl := fake.NewClientBuilder().
+			WithScheme(runtime.NewScheme()).
+			WithObjects(orphan.DeepCopy()).
+			Build()
+
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		require.True(t, requeue, "should requeue while waiting for Konnect reconciler")
+
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk)
+		require.NoError(t, cl.List(ctx, list))
+		require.Len(t, list.Items, 1, "orphan must NOT be deleted until Konnect reconciler completes")
+	})
+
+	t.Run("orphan with konnect-cleanup finalizer is deleted (Konnect entity exists)", func(t *testing.T) {
+		orphan := newOrphanWithAnnotation("bnf-svc", gvk, ownerLabels)
+		orphan.SetFinalizers([]string{konnect.KonnectCleanupFinalizer})
+		cl := fake.NewClientBuilder().
+			WithScheme(runtime.NewScheme()).
+			WithObjects(orphan.DeepCopy()).
+			Build()
+
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		require.True(t, requeue, "should requeue after initiating deletion")
+
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk)
+		require.NoError(t, cl.List(ctx, list))
+		// Fake client: delete with a finalizer sets deletionTimestamp, object stays until finalizer removed.
+		require.Len(t, list.Items, 1)
+		require.False(t, list.Items[0].GetDeletionTimestamp().IsZero(), "deletion should be in progress (timestamp set)")
+	})
+
+	t.Run("orphan with no finalizer but Programmed condition is deleted (entity never created)", func(t *testing.T) {
+		orphan := newOrphanWithAnnotation("bnf-svc", gvk, ownerLabels)
+		// Set Programmed=False condition: Konnect reconciler ran, entity NOT created.
+		require.NoError(t, unstructured.SetNestedSlice(orphan.Object, []any{
+			map[string]any{
+				"type":               "Programmed",
+				"status":             "False",
+				"reason":             "FailedToCreate",
+				"lastTransitionTime": "2026-06-12T13:00:00Z",
+			},
+		}, "status", "conditions"))
+		cl := fake.NewClientBuilder().
+			WithScheme(runtime.NewScheme()).
+			WithObjects(orphan.DeepCopy()).
+			Build()
+
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		require.True(t, requeue, "should requeue after deleting orphan")
+
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk)
+		require.NoError(t, cl.List(ctx, list))
+		require.Empty(t, list.Items, "orphan with no finalizer but Programmed condition should be deleted")
+	})
+
+	t.Run("orphan with no finalizer and no conditions does not block desired resources", func(t *testing.T) {
+		// A pending orphan should not prevent desired resources from being tracked.
+		desired := newOrphanWithAnnotation("normal-svc", gvk, ownerLabels)
+		pending := newOrphanWithAnnotation("bnf-svc", gvk, ownerLabels)
+
+		fakeConvWithDesired := &fakeHTTPRouteConverter{
+			desired: []unstructured.Unstructured{desired},
+			gvks:    []schema.GroupVersionKind{gvk},
+			root:    *root,
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(runtime.NewScheme()).
+			WithObjects(desired.DeepCopy(), pending.DeepCopy()).
+			Build()
+
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConvWithDesired)
+		require.NoError(t, err)
+		require.True(t, requeue, "should requeue to retry the pending orphan")
+
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk)
+		require.NoError(t, cl.List(ctx, list))
+		require.Len(t, list.Items, 2, "desired resource and pending orphan should both remain")
+	})
 }
 
 func TestShouldProcessObject_HTTPRoute(t *testing.T) {

@@ -3,6 +3,7 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -417,6 +419,7 @@ func cleanOrphanedResourcesWithOptions[t converter.RootObject, tPtr converter.Ro
 
 		orphansDeletedForGVK := 0
 		orphansInDeletionForGVK := 0
+		orphansPendingKonnectForGVK := 0
 
 		for _, item := range list.Items {
 			key := fmt.Sprintf("%s/%s/%s", item.GetNamespace(), item.GetName(), gvk.String())
@@ -448,6 +451,34 @@ func cleanOrphanedResourcesWithOptions[t converter.RootObject, tPtr converter.Ro
 				continue
 			}
 
+			// Gate: do not delete an orphaned child resource until the Konnect reconciler has
+			// had a chance to either create the Konnect entity (adding the konnect-cleanup
+			// finalizer) or determine that no entity was created (setting a status condition).
+			// Without this gate, a race between orphan-cleanup and the Konnect reconciler can
+			// delete the child CR before the konnect-cleanup finalizer is written, leaking the
+			// Konnect entity and blocking subsequent re-creates with a unique-name conflict.
+			//
+			// Only apply the gate to Konnect-managed resource types — those that carry a
+			// spec.controlPlaneRef field and are synced to Konnect by the generic Konnect
+			// entity reconciler (e.g. KongService, KongRoute, KongUpstream, KongPluginBinding).
+			// Resources without controlPlaneRef (e.g. KongPlugin v1) are managed by a
+			// different controller that does not add the konnect-cleanup finalizer, so the
+			// gate would block their deletion indefinitely.
+			//
+			// Skip criteria: no konnect-cleanup finalizer AND no status conditions. This means
+			// the Konnect reconciler has not yet completed its first reconcile for this object.
+			// Once the Konnect reconciler finishes it will either add the finalizer (entity
+			// created) or set a condition without the finalizer (entity not created / error).
+			// In both cases the next orphan-cleanup pass handles deletion correctly:
+			//   - finalizer present: k8s deletion triggers Konnect-side cleanup via finalizer.
+			//   - no finalizer + condition present: no Konnect entity to clean up, safe to delete.
+			if konnectManagedResource(&item) && !konnectCleanupFinalizerPresent(&item) && !konnectStatusConditionsPresent(&item) {
+				log.Debug(logger, "Orphaned resource has no konnect-cleanup finalizer and no status conditions; waiting for Konnect reconciler before deleting",
+					"kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+				orphansPendingKonnectForGVK++
+				continue
+			}
+
 			log.Info(logger, "Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
 			if err := cl.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
 				return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
@@ -473,6 +504,11 @@ func cleanOrphanedResourcesWithOptions[t converter.RootObject, tPtr converter.Ro
 			)
 			continue
 		}
+		if orphansPendingKonnectForGVK > 0 {
+			log.Debug(logger, "Requeuing to wait for Konnect reconciler to complete for orphaned resources",
+				"gvk", gvk.String(), "pendingCount", orphansPendingKonnectForGVK)
+			return true, nil
+		}
 		log.Debug(logger, "No orphaned resources found for GVK", "gvk", gvk.String())
 	}
 
@@ -484,6 +520,33 @@ func cleanOrphanedResourcesWithOptions[t converter.RootObject, tPtr converter.Ro
 	// No orphans found
 	log.Debug(logger, "Finished orphaned resource cleanup")
 	return false, nil
+}
+
+// konnectCleanupFinalizerPresent returns true if the object carries the
+// konnect-cleanup finalizer, indicating the Konnect reconciler has confirmed
+// a Konnect entity exists and has taken ownership of deletion cleanup.
+func konnectCleanupFinalizerPresent(obj *unstructured.Unstructured) bool {
+	return slices.Contains(obj.GetFinalizers(), konnect.KonnectCleanupFinalizer)
+}
+
+// konnectStatusConditionsPresent returns true if the object has at least one
+// entry in .status.conditions, indicating the Konnect reconciler has completed
+// at least one reconcile pass (either successfully creating the entity or
+// recording a failure condition).
+func konnectStatusConditionsPresent(obj *unstructured.Unstructured) bool {
+	conditions, found, err := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	return err == nil && found && len(conditions) > 0
+}
+
+// konnectManagedResource returns true if the object is managed by the generic
+// Konnect entity reconciler. Such resources carry a spec.controlPlaneRef field
+// (e.g. KongService, KongRoute, KongUpstream, KongPluginBinding) and are synced
+// to Konnect — they get the konnect-cleanup finalizer and Programmed conditions.
+// Resources without controlPlaneRef (e.g. KongPlugin v1) use a different
+// controller and must not be subject to the Konnect reconciler gate.
+func konnectManagedResource(obj *unstructured.Unstructured) bool {
+	ref, found, err := unstructured.NestedMap(obj.Object, "spec", "controlPlaneRef")
+	return err == nil && found && len(ref) > 0
 }
 
 // pruneDesiredObj removes fields that should not be compared when checking for differences.

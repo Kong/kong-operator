@@ -354,6 +354,7 @@ generate.apidocs: crd-ref-docs
 # Apply same auto-fixes as golangci-lint to keep generate and lint consistent
 .PHONY: generate.lint-fix
 generate.lint-fix: golangci-lint
+	go mod download
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) --fix
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
