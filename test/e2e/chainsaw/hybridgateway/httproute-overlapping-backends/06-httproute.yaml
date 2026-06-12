@@ -1,0 +1,29 @@
+---
+# HTTPRoute with two backendRefs that select the same pods.
+# Weights 100:0 mimic a blue-green post-promotion state where the preview
+# service still resolves to the same ReplicaSet as the active service.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($httproute_name)
+  namespace: ($http_route_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /echo
+          method: GET
+      backendRefs:
+        - name: ($echo_active_service_name)
+          port: 1027
+          weight: 100
+        - name: ($echo_preview_service_name)
+          port: 1027
+          weight: 0
