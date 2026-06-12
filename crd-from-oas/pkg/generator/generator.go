@@ -1318,7 +1318,7 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 		return nil, fmt.Errorf("failed to generate common types: %w", err)
 	}
 	files = append(files, GeneratedFile{
-		Name:    "common_types.go",
+		Name:    "zz_generated_common_types.go",
 		Content: commonContent,
 	})
 
@@ -1340,13 +1340,13 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 
 	if len(referencedSchemas) > 0 {
 		files = append(files, GeneratedFile{
-			Name:    "schema_types.go",
+			Name:    "zz_generated_schema_types.go",
 			Content: g.generateSchemaTypes(referencedSchemas, parsed, schemaCursors),
 		})
 
 		if testsContent := g.generateSchemaTypesTests(referencedSchemas, parsed); testsContent != "" {
 			files = append(files, GeneratedFile{
-				Name:    "schema_types_test.go",
+				Name:    "zz_generated_schema_types_test.go",
 				Content: testsContent,
 			})
 		}
