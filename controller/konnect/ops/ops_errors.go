@@ -474,13 +474,19 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 		}
 	}
 
-	// If the error is a 400 whose details are all ERROR_TYPE_REFERENCE it is transient
-	// (e.g. a unique-constraint conflict because an old entity hasn't been cleaned up yet,
-	// or a referenced entity hasn't landed in Konnect yet). Check this BEFORE the
-	// conflict/bad-request block: some errors (e.g. "target (type: unique) constraint
-	// failed" with ERROR_TYPE_REFERENCE details) would otherwise be swallowed by
-	// ErrorIsCreateConflict and never retried. The reconciler decides whether to actually
-	// requeue based on whether the entity is HybridGateway-managed.
+	// If the error is a 400 whose details are all ERROR_TYPE_REFERENCE it may be transient:
+	// a unique-constraint violation because a stale entity hasn't been cleaned up yet, or a
+	// forward-reference to an entity that hasn't propagated yet. Check this BEFORE the
+	// conflict/bad-request block: some errors (e.g. "target (type: unique) constraint failed"
+	// with ERROR_TYPE_REFERENCE details) would otherwise be swallowed by ErrorIsCreateConflict
+	// and never retried.
+	//
+	// Whether to requeue on this error depends on context, not entity type. For a
+	// user-created resource the same error shape can represent a permanent misconfiguration
+	// (e.g. two plugins of the same type bound to the same resource), so the reconciler
+	// suppresses it rather than retrying indefinitely. For HybridGateway-managed resources the
+	// operator itself is responsible for both sides of the constraint, so a duplicate address
+	// or reference conflict is always a transient race during cleanup and is safe to retry.
 	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok && errSDK.StatusCode == 400 && !ErrorIsSDKError400(err) {
 		logger.Info("reference-only 400 from Konnect, will retry shortly", "retry_after", DefaultReferenceRetryAfter.String())
 		return ReferenceError{
