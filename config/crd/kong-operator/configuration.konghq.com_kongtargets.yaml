@@ -18,6 +18,14 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - description: The KongUpstream this Target is attached to
+      jsonPath: .spec.upstreamRef.name
+      name: Upstream
+      type: string
+    - description: The target address of the upstream
+      jsonPath: .spec.target
+      name: Target
+      type: string
     - description: The Resource is Programmed on Konnect
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed

@@ -881,9 +881,10 @@ func GatewayClassHasSupportedFeatures(t *testing.T, ctx context.Context, gateway
 }
 
 // GetResponseBodyContains issues an HTTP request and checks if a response body contains a string.
-func GetResponseBodyContains(t *testing.T, clients K8sClients, httpc *http.Client, request *http.Request, responseContains string) func() bool {
+func GetResponseBodyContains(t *testing.T, httpc *http.Client, request *http.Request, responseContains string) func() bool {
 	return func() bool {
-		resp, err := httpc.Do(request)
+		ctx := request.Context()
+		resp, err := httpc.Do(request.WithContext(ctx))
 		if err != nil {
 			return false
 		}

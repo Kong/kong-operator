@@ -1,0 +1,32 @@
+# Template for verifying the count of KongTarget resources for a specific TLSRoute.
+#
+# Required bindings:
+#   - namespace: Namespace where to look for KongTargets.
+#   - tls_route_name: Name of the TLSRoute.
+#   - tls_route_namespace: Namespace of the TLSRoute.
+#   - expected_kong_target_count: Expected number of KongTargets.
+#   - target_weight: Filter by specific weight. Use "" (empty string) to count all targets regardless of weight.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-kong-target-count-tlsroute
+spec:
+  try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: TLS_ROUTE_NAME
+            value: ($tls_route_name)
+          - name: TLS_ROUTE_NAMESPACE
+            value: ($tls_route_namespace)
+          - name: ROUTE_TYPE
+            value: TLSRoute
+          - name: EXPECTED_COUNT
+            value: ($expected_kong_target_count)
+          - name: TARGET_WEIGHT
+            value: ($target_weight)
+        content: |
+          bash ../../common/scripts/kongTarget_count.sh
+        check:
+          (to_string(json_parse($stdout).count) == $expected_kong_target_count): true

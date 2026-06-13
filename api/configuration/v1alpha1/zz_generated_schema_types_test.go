@@ -1041,8 +1041,8 @@ func TestEventGatewayParsedRecordDecryptionSelectorPathsUnmarshalJSON_NilReceive
 		name    string
 		payload []byte
 	}{
-		{name: "Variant1", payload: []byte("{\"type\":\"variant1\",\"variant1\":[]}")},
-		{name: "Variant2", payload: []byte("{\"type\":\"variant2\",\"variant2\":\"\"}")},
+		{name: "Array", payload: []byte("{\"type\":\"array\",\"array\":[]}")},
+		{name: "Expression", payload: []byte("{\"type\":\"expression\",\"expression\":\"\"}")},
 	}
 
 	for _, tt := range tests {
@@ -1097,8 +1097,8 @@ func TestEventGatewayParsedRecordEncryptionSelectorPathsUnmarshalJSON_NilReceive
 		name    string
 		payload []byte
 	}{
-		{name: "Variant1", payload: []byte("{\"type\":\"variant1\",\"variant1\":[]}")},
-		{name: "Variant2", payload: []byte("{\"type\":\"variant2\",\"variant2\":\"\"}")},
+		{name: "Array", payload: []byte("{\"type\":\"array\",\"array\":[]}")},
+		{name: "Expression", payload: []byte("{\"type\":\"expression\",\"expression\":\"\"}")},
 	}
 
 	for _, tt := range tests {
@@ -1438,34 +1438,34 @@ func TestEventGatewayParsedRecordDecryptionSelectorUnmarshalJSON_DecodesUnionFie
 		assert func(*testing.T, EventGatewayParsedRecordDecryptionSelector)
 	}{
 		{
-			name: "Paths/Variant1",
-			payload: []byte("{\"paths\":{\"type\":\"variant1\",\"variant1\":[]}}"),
+			name: "Paths/Array",
+			payload: []byte("{\"paths\":{\"type\":\"array\",\"array\":[]}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordDecryptionSelector) {
 				t.Helper()
 				if target.Paths == nil {
 					t.Fatalf("Paths should be allocated")
 				}
-				if got, want := target.Paths.Type, EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant1; got != want {
+				if got, want := target.Paths.Type, EventGatewayParsedRecordDecryptionSelectorPathsTypeArray; got != want {
 					t.Fatalf("unexpected type: got %q want %q", got, want)
 				}
-				if target.Paths.Variant1 == nil {
-					t.Fatalf("Paths.Variant1 should be allocated")
+				if target.Paths.Array == nil {
+					t.Fatalf("Paths.Array should be allocated")
 				}
 			},
 		},
 		{
-			name: "Paths/Variant2",
-			payload: []byte("{\"paths\":{\"type\":\"variant2\",\"variant2\":\"\"}}"),
+			name: "Paths/Expression",
+			payload: []byte("{\"paths\":{\"type\":\"expression\",\"expression\":\"\"}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordDecryptionSelector) {
 				t.Helper()
 				if target.Paths == nil {
 					t.Fatalf("Paths should be allocated")
 				}
-				if got, want := target.Paths.Type, EventGatewayParsedRecordDecryptionSelectorPathsTypeVariant2; got != want {
+				if got, want := target.Paths.Type, EventGatewayParsedRecordDecryptionSelectorPathsTypeExpression; got != want {
 					t.Fatalf("unexpected type: got %q want %q", got, want)
 				}
-				if target.Paths.Variant2 == nil {
-					t.Fatalf("Paths.Variant2 should be allocated")
+				if target.Paths.Expression == nil {
+					t.Fatalf("Paths.Expression should be allocated")
 				}
 			},
 		},
@@ -1526,34 +1526,34 @@ func TestEventGatewayParsedRecordEncryptionSelectorUnmarshalJSON_DecodesUnionFie
 			},
 		},
 		{
-			name: "Paths/Variant1",
-			payload: []byte("{\"paths\":{\"type\":\"variant1\",\"variant1\":[]}}"),
+			name: "Paths/Array",
+			payload: []byte("{\"paths\":{\"type\":\"array\",\"array\":[]}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
 				t.Helper()
 				if target.Paths == nil {
 					t.Fatalf("Paths should be allocated")
 				}
-				if got, want := target.Paths.Type, EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant1; got != want {
+				if got, want := target.Paths.Type, EventGatewayParsedRecordEncryptionSelectorPathsTypeArray; got != want {
 					t.Fatalf("unexpected type: got %q want %q", got, want)
 				}
-				if target.Paths.Variant1 == nil {
-					t.Fatalf("Paths.Variant1 should be allocated")
+				if target.Paths.Array == nil {
+					t.Fatalf("Paths.Array should be allocated")
 				}
 			},
 		},
 		{
-			name: "Paths/Variant2",
-			payload: []byte("{\"paths\":{\"type\":\"variant2\",\"variant2\":\"\"}}"),
+			name: "Paths/Expression",
+			payload: []byte("{\"paths\":{\"type\":\"expression\",\"expression\":\"\"}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
 				t.Helper()
 				if target.Paths == nil {
 					t.Fatalf("Paths should be allocated")
 				}
-				if got, want := target.Paths.Type, EventGatewayParsedRecordEncryptionSelectorPathsTypeVariant2; got != want {
+				if got, want := target.Paths.Type, EventGatewayParsedRecordEncryptionSelectorPathsTypeExpression; got != want {
 					t.Fatalf("unexpected type: got %q want %q", got, want)
 				}
-				if target.Paths.Variant2 == nil {
-					t.Fatalf("Paths.Variant2 should be allocated")
+				if target.Paths.Expression == nil {
+					t.Fatalf("Paths.Expression should be allocated")
 				}
 			},
 		},

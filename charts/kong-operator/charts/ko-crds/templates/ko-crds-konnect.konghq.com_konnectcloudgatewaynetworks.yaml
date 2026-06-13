@@ -152,6 +152,7 @@ spec:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration
                           resource.
+                        maxLength: 253
                         minLength: 1
                         type: string
                     required:

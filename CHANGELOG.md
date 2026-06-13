@@ -49,6 +49,25 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Added
+
+- API: add PrintColumns for KongTarget upstream and target fields.
+  [#4576](https://github.com/Kong/kong-operator/pull/4576)
+
+### Fixes
+
+- Hybridgateway: release Gateway API route finalizers once generated Kong
+  resource delete requests have been issued, so immediate same-name route
+  re-creates are not blocked by child resource finalizers.
+  [#4465](https://github.com/Kong/kong-operator/pull/4465)
+- Hybridgateway: use route-scoped `KongService` names for `HTTPRoute` rules
+  whose backendRefs resolve to no valid targets. This avoids Konnect name
+  conflicts with valid backend services while keeping normally generated service
+  names unchanged.
+  [#4437](https://github.com/Kong/kong-operator/pull/4437)
+
 ## [v2.2.0]
 > Release date: 2026-06-05
 
@@ -257,10 +276,6 @@
 
 ### Fixes
 
-- Hybridgateway: release Gateway API route finalizers once generated Kong
-  resource delete requests have been issued, so immediate same-name route
-  re-creates are not blocked by child resource finalizers.
-  [#4465](https://github.com/Kong/kong-operator/pull/4465)
 - Hybridgateway: fix `KongRoute` name collisions when an `HTTPRoute` attaches
   to multiple listener-scoped `ParentRef`s on the same `Gateway`, enabling the
   `HTTPRouteListenerHostnameMatching` Gateway API conformance test for Hybrid
@@ -336,6 +351,18 @@
   Users are suggested to block network access to debug endpoints (which are disabled
   by default) if plugin configuration can contain sensitive information.
   [#4467](https://github.com/Kong/kong-operator/pull/4467)
+- Hybridgateway: fix `KongTarget` stuck in `Programmed=False` when multiple
+  backendRef Services in an HTTPRoute or TLSRoute rule resolve to the same pod
+  IP and port. The operator now creates one `KongTarget` per unique endpoint
+  address across all backendRefs in a rule, merging duplicate endpoints and
+  summing their weights, instead of attempting to create one per backendRef per
+  endpoint which violated Konnect's upstream/target uniqueness constraint.
+  **Note:** the `KongTarget` naming scheme has changed and the backendRef is no
+  longer part of the name hash. All existing `KongTarget` resources will be
+  orphaned and recreated on the first reconciliation after upgrading. During
+  the transition, both old and new entries may be present in Konnect
+  simultaneously as creation and orphan cleanup are not synchronized.
+  [#4509](https://github.com/Kong/kong-operator/pull/4509)
 
 ## [v2.1.7]
 

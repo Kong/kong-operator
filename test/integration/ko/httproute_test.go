@@ -104,7 +104,7 @@ func TestHTTPRoute(t *testing.T) {
 	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test", "")
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<title>httpbin.org</title>"),
+		testutils.GetResponseBodyContains(t, httpClient, request, "<title>httpbin.org</title>"),
 		httpRouteAccessTimeout,
 		time.Second,
 	)
@@ -113,7 +113,7 @@ func TestHTTPRoute(t *testing.T) {
 	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test/1234", "")
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<h1>Not Found</h1>"),
+		testutils.GetResponseBodyContains(t, httpClient, request, "<h1>Not Found</h1>"),
 		httpRouteAccessTimeout,
 		time.Second,
 	)
@@ -236,7 +236,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "https://"+gatewayIPAddress+"/test", host)
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<title>httpbin.org</title>"),
+		testutils.GetResponseBodyContains(t, httpClient, request, "<title>httpbin.org</title>"),
 		httpRouteAccessTimeout,
 		time.Second,
 	)
@@ -244,7 +244,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "https://"+gatewayIPAddress+"/test/1234", host)
 	require.Eventually(
 		t,
-		testutils.GetResponseBodyContains(t, clients, httpClient, request, "<h1>Not Found</h1>"),
+		testutils.GetResponseBodyContains(t, httpClient, request, "<h1>Not Found</h1>"),
 		httpRouteAccessTimeout,
 		time.Second,
 	)
