@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/objects"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
@@ -69,7 +70,7 @@ func (r *Reconciler) cleanup(
 		return false, ctrl.Result{}, err
 	}
 	if len(controlplanes) > 0 {
-		deletions, err := r.ensureOwnedControlPlanesDeleted(ctx, gateway)
+		deletions, err := objects.DeleteAll(ctx, r.Client, controlplanes)
 		if err != nil {
 			return false, ctrl.Result{}, err
 		}
@@ -99,7 +100,7 @@ func (r *Reconciler) cleanup(
 	}
 
 	if len(dataplanes) > 0 {
-		deletions, err := r.ensureOwnedDataPlanesDeleted(ctx, gateway)
+		deletions, err := objects.DeleteAll(ctx, r.Client, dataplanes)
 		if err != nil {
 			return false, ctrl.Result{}, err
 		}
@@ -139,7 +140,7 @@ func (r *Reconciler) cleanup(
 		return false, ctrl.Result{}, err
 	}
 	if len(networkPolicies) > 0 {
-		deletions, err := r.ensureOwnedNetworkPoliciesDeleted(ctx, gateway)
+		deletions, err := objects.DeleteAll(ctx, r.Client, networkPolicies)
 		if err != nil {
 			return false, ctrl.Result{}, err
 		}
