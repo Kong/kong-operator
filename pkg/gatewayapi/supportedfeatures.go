@@ -34,6 +34,7 @@ var commonSupportedFeatures = sets.New(
 	features.SupportGatewayInfrastructurePropagation,
 
 	// HTTPRoute extended.
+	features.SupportGatewayHTTPListenerIsolation,
 	features.SupportHTTPRouteResponseHeaderModification,
 	features.SupportHTTPRoutePathRewrite,
 	features.SupportHTTPRouteHostRewrite,
