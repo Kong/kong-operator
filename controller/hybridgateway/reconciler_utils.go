@@ -72,6 +72,20 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 
 	log.Debug(logger, "Retrieved desired objects for enforcement", "objectCount", len(desiredObjects))
 
+	// Build lookup maps once so that per-object gating checks are O(1) instead of O(n).
+	desiredUpstreamNames := make(map[string]struct{}, len(desiredObjects))
+	desiredTargetsByUpstream := make(map[string][]unstructured.Unstructured, len(desiredObjects))
+	for _, obj := range desiredObjects {
+		switch obj.GetKind() {
+		case "KongUpstream":
+			desiredUpstreamNames[obj.GetName()] = struct{}{}
+		case "KongTarget":
+			if upName, _, _ := unstructured.NestedString(obj.Object, "spec", "upstreamRef", "name"); upName != "" {
+				desiredTargetsByUpstream[upName] = append(desiredTargetsByUpstream[upName], obj)
+			}
+		}
+	}
+
 	var (
 		objectsCreated = 0
 		objectsUpdated = 0
@@ -106,7 +120,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			// the (hashed) upstream name -> NXDOMAIN. Only gate when the host actually refers to a desired
 			// KongUpstream (in hybrid gateway it always does; the guard avoids waiting forever on a service
 			// that legitimately points at an external hostname).
-			if host, _, _ := unstructured.NestedString(desired.Object, "spec", "host"); host != "" && desiredHasUpstreamNamed(desiredObjects, host) {
+			if host, _, _ := unstructured.NestedString(desired.Object, "spec", "host"); host != "" && desiredHasUpstreamNamed(desiredUpstreamNames, host) {
 				var up configurationv1alpha1.KongUpstream
 				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: host}, &up); err != nil {
 					log.Debug(logger, "Upstream not found yet for service, waiting", "upstream", host)
@@ -123,7 +137,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 				// Also wait until the upstream's targets are Programmed before creating the service, so the
 				// service is only ever live once it can actually serve traffic. Anything that depends on the
 				// service (the KongRoute) then transitively waits for a servable backend.
-				targetsReady, err := upstreamTargetsProgrammed(ctx, cl, desiredObjects, host)
+				targetsReady, err := upstreamTargetsProgrammed(ctx, cl, desiredTargetsByUpstream[host])
 				if err != nil {
 					return false, false, fmt.Errorf("failed to check upstream targets readiness for service %s: %w", desired.GetName(), err)
 				}
@@ -324,34 +338,21 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	return applied, waiting, nil
 }
 
-// desiredHasUpstreamNamed reports whether the desired objects contain a KongUpstream with the given name.
+// desiredHasUpstreamNamed reports whether the pre-built upstream name set contains the given name.
 // Used to decide whether a KongService's host refers to a managed upstream (and should therefore be gated
 // on it) versus an external hostname (which must not gate).
-func desiredHasUpstreamNamed(desiredObjects []unstructured.Unstructured, name string) bool {
-	for i := range desiredObjects {
-		if desiredObjects[i].GetKind() == "KongUpstream" && desiredObjects[i].GetName() == name {
-			return true
-		}
-	}
-	return false
+func desiredHasUpstreamNamed(desiredUpstreamNames map[string]struct{}, name string) bool {
+	_, ok := desiredUpstreamNames[name]
+	return ok
 }
 
-// upstreamTargetsProgrammed reports whether every desired KongTarget belonging to the named KongUpstream
-// is present in the cluster and Programmed. It is used to hold a KongRoute's serviceRef switch until the
-// upstream it is about to point at actually has healthy targets, so a rollout never repoints a route onto
-// a freshly-created, still-empty upstream (which would drop traffic). An upstream with no desired targets
-// is considered ready (there is nothing to wait for).
-func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, desiredObjects []unstructured.Unstructured, upstreamName string) (bool, error) {
-	for i := range desiredObjects {
-		d := &desiredObjects[i]
-		if d.GetKind() != "KongTarget" {
-			continue
-		}
-		upName, _, _ := unstructured.NestedString(d.Object, "spec", "upstreamRef", "name")
-		if upName != upstreamName {
-			continue
-		}
-
+// upstreamTargetsProgrammed reports whether every KongTarget in the pre-filtered targets slice is present
+// in the cluster and Programmed. The caller is responsible for passing only the targets that belong to the
+// upstream being checked (use the desiredTargetsByUpstream map built in enforceState). An empty/nil slice
+// means no targets exist for that upstream and is considered ready.
+func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, targets []unstructured.Unstructured) (bool, error) {
+	for i := range targets {
+		d := &targets[i]
 		var tgt configurationv1alpha1.KongTarget
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: d.GetNamespace(), Name: d.GetName()}, &tgt); err != nil {
 			if apierrors.IsNotFound(err) {

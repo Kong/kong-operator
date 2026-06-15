@@ -1704,7 +1704,13 @@ func TestDesiredHasUpstreamNamed(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, desiredHasUpstreamNamed(tt.desired, tt.search))
+			names := make(map[string]struct{}, len(tt.desired))
+			for _, obj := range tt.desired {
+				if obj.GetKind() == "KongUpstream" {
+					names[obj.GetName()] = struct{}{}
+				}
+			}
+			assert.Equal(t, tt.want, desiredHasUpstreamNamed(names, tt.search))
 		})
 	}
 }
@@ -1742,69 +1748,61 @@ func TestUpstreamTargetsProgrammed(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		desired         []unstructured.Unstructured
+		targets         []unstructured.Unstructured // pre-filtered targets for the upstream under test
 		existing        []client.Object
-		upstreamName    string
 		wantReady       bool
 		wantErrContains string
 		interceptorFn   *interceptor.Funcs
 	}{
 		{
-			name:         "no desired targets for upstream returns ready",
-			desired:      []unstructured.Unstructured{makeDesiredTarget("t1", "other-upstream")},
-			upstreamName: "my-upstream",
-			wantReady:    true,
+			name:      "nil targets returns ready",
+			targets:   nil,
+			wantReady: true,
 		},
 		{
-			name:         "empty desired list returns ready",
-			desired:      nil,
-			upstreamName: "my-upstream",
-			wantReady:    true,
+			name:      "empty targets slice returns ready",
+			targets:   []unstructured.Unstructured{},
+			wantReady: true,
 		},
 		{
-			name:         "target not in cluster returns not ready",
-			desired:      []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
-			existing:     nil,
-			upstreamName: "my-upstream",
-			wantReady:    false,
+			name:      "target not in cluster returns not ready",
+			targets:   []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			existing:  nil,
+			wantReady: false,
 		},
 		{
-			name:         "target in cluster but not Programmed returns not ready",
-			desired:      []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
-			existing:     []client.Object{makeTarget("t1", false)},
-			upstreamName: "my-upstream",
-			wantReady:    false,
+			name:      "target in cluster but not Programmed returns not ready",
+			targets:   []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			existing:  []client.Object{makeTarget("t1", false)},
+			wantReady: false,
 		},
 		{
-			name:         "target in cluster and Programmed returns ready",
-			desired:      []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
-			existing:     []client.Object{makeTarget("t1", true)},
-			upstreamName: "my-upstream",
-			wantReady:    true,
+			name:      "target in cluster and Programmed returns ready",
+			targets:   []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			existing:  []client.Object{makeTarget("t1", true)},
+			wantReady: true,
 		},
 		{
 			name: "multiple targets all Programmed returns ready",
-			desired: []unstructured.Unstructured{
+			targets: []unstructured.Unstructured{
 				makeDesiredTarget("t1", "my-upstream"),
 				makeDesiredTarget("t2", "my-upstream"),
 			},
-			existing:     []client.Object{makeTarget("t1", true), makeTarget("t2", true)},
-			upstreamName: "my-upstream",
-			wantReady:    true,
+			existing:  []client.Object{makeTarget("t1", true), makeTarget("t2", true)},
+			wantReady: true,
 		},
 		{
 			name: "multiple targets, one not Programmed returns not ready",
-			desired: []unstructured.Unstructured{
+			targets: []unstructured.Unstructured{
 				makeDesiredTarget("t1", "my-upstream"),
 				makeDesiredTarget("t2", "my-upstream"),
 			},
-			existing:     []client.Object{makeTarget("t1", true), makeTarget("t2", false)},
-			upstreamName: "my-upstream",
-			wantReady:    false,
+			existing:  []client.Object{makeTarget("t1", true), makeTarget("t2", false)},
+			wantReady: false,
 		},
 		{
 			name:    "Get error for existing target is propagated",
-			desired: []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			targets: []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
 			interceptorFn: &interceptor.Funcs{
 				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 					if _, ok := obj.(*configurationv1alpha1.KongTarget); ok {
@@ -1813,7 +1811,6 @@ func TestUpstreamTargetsProgrammed(t *testing.T) {
 					return c.Get(ctx, key, obj, opts...)
 				},
 			},
-			upstreamName:    "my-upstream",
 			wantReady:       false,
 			wantErrContains: "failed to get KongTarget",
 		},
@@ -1830,7 +1827,7 @@ func TestUpstreamTargetsProgrammed(t *testing.T) {
 			}
 			cl := builder.Build()
 
-			ready, err := upstreamTargetsProgrammed(ctx, cl, tt.desired, tt.upstreamName)
+			ready, err := upstreamTargetsProgrammed(ctx, cl, tt.targets)
 
 			if tt.wantErrContains != "" {
 				require.Error(t, err)

@@ -371,7 +371,10 @@ func (c *httpRouteConverter) DesiredResourcesReady(ctx context.Context, logger l
 		}
 		if desiredServiceID == "" || boundServiceID != desiredServiceID {
 			log.Debug(logger, "KongRoute not yet bound to its referenced KongService in Konnect, deferring orphan cleanup",
-				"route", client.ObjectKeyFromObject(r), "service", serviceRefName, "boundServiceID", boundServiceID, "desiredServiceID", desiredServiceID)
+				"route", client.ObjectKeyFromObject(r),
+				"service", serviceRefName,
+				"boundServiceID", boundServiceID,
+				"desiredServiceID", desiredServiceID)
 			return false, nil
 		}
 	}
