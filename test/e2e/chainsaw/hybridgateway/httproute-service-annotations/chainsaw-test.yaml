@@ -20,6 +20,12 @@ spec:
     - konghq.com/retries: <retries>
     - konghq.com/host-header: <host>
     the value should be applied to the generated KongService.
+    It also verifies that malformed Service annotations are treated as errors
+    since KO 2.3 (issue #4233), covering both a malformed boolean
+    (konghq.com/tls-verify) and a malformed integer (konghq.com/tls-verify-depth):
+    the HTTPRoute gets a dedicated implementation-specific KongConfigurationValid
+    condition set to False with reason InvalidKongConfiguration (Accepted stays True),
+    and fixing the annotation removes the condition again.
 
   bindings:
     # Common bindings (reused from basic-httproute pattern).
@@ -361,8 +367,11 @@ spec:
                       namespace: ($gateway_namespace)
                     (conditions[?type == 'Accepted'] | [0]):
                       type: Accepted
+                      status: "True"
+                    (conditions[?type == 'KongConfigurationValid'] | [0]):
+                      type: KongConfigurationValid
                       status: "False"
-                      reason: UnsupportedValue
+                      reason: InvalidKongConfiguration
 
     # Step 20: Fix the Service annotation back to a valid boolean.
     - name: Fix-service-malformed-annotation
@@ -389,9 +398,8 @@ spec:
                   - parentRef:
                       name: ($gateway_name)
                       namespace: ($gateway_namespace)
-                    (conditions[?type == 'Accepted'] | [0]):
-                      type: Accepted
-                      status: "True"
+                    # The condition is removed once the configuration is valid again.
+                    (length(conditions[?type == 'KongConfigurationValid'])): 0
 
     # Step 21: Set a malformed konghq.com/tls-verify-depth value on the backend Service.
     - name: Patch-service-malformed-int-annotation
@@ -420,8 +428,11 @@ spec:
                       namespace: ($gateway_namespace)
                     (conditions[?type == 'Accepted'] | [0]):
                       type: Accepted
+                      status: "True"
+                    (conditions[?type == 'KongConfigurationValid'] | [0]):
+                      type: KongConfigurationValid
                       status: "False"
-                      reason: UnsupportedValue
+                      reason: InvalidKongConfiguration
 
     # Step 22: Fix the Service annotation back to a valid non-negative integer.
     - name: Fix-service-malformed-int-annotation
@@ -448,9 +459,8 @@ spec:
                   - parentRef:
                       name: ($gateway_name)
                       namespace: ($gateway_namespace)
-                    (conditions[?type == 'Accepted'] | [0]):
-                      type: Accepted
-                      status: "True"
+                    # The condition is removed once the configuration is valid again.
+                    (length(conditions[?type == 'KongConfigurationValid'])): 0
 
   catch:
     # Capture debug snapshot on test failure.

@@ -24,6 +24,7 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -1140,6 +1141,54 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				conditions := route.Status.Parents[0].Conditions
 				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue)
 				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionResolvedRefs), metav1.ConditionTrue)
+				// Well-formed configuration: the dedicated condition is absent.
+				assertConditionAbsent(t, conditions, routeconst.ConditionTypeKongConfigurationValid)
+			},
+		},
+		{
+			name: "malformed route annotation sets KongConfigurationValid false and stop",
+			setup: func() (*httpRouteConverter, *gwtypes.HTTPRoute) {
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef(""),
+				}, nil)
+				route.Annotations = map[string]string{"konghq.com/strip-path": "not-a-bool"}
+				gateway := baseGateway()
+				objects := baseObjects(gateway, route)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+			},
+			wantUpdated: true,
+			wantStop:    true,
+			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents, 1)
+				conditions := route.Status.Parents[0].Conditions
+				// Accepted is unaffected: configuration validity is orthogonal to attachment.
+				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue)
+				assertConditionStatus(t, conditions, routeconst.ConditionTypeKongConfigurationValid, metav1.ConditionFalse)
+				assertConditionReason(t, conditions, routeconst.ConditionTypeKongConfigurationValid, routeconst.ConditionReasonInvalidKongConfiguration)
+			},
+		},
+		{
+			name: "malformed backend service annotation sets KongConfigurationValid false and stop",
+			setup: func() (*httpRouteConverter, *gwtypes.HTTPRoute) {
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef(""),
+				}, nil)
+				gateway := baseGateway()
+				badService := newService("default")
+				badService.Annotations = map[string]string{"konghq.com/tls-verify": "maybe"}
+				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace(), badService, route)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+			},
+			wantUpdated: true,
+			wantStop:    true,
+			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents, 1)
+				conditions := route.Status.Parents[0].Conditions
+				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue)
+				assertConditionStatus(t, conditions, routeconst.ConditionTypeKongConfigurationValid, metav1.ConditionFalse)
+				assertConditionReason(t, conditions, routeconst.ConditionTypeKongConfigurationValid, routeconst.ConditionReasonInvalidKongConfiguration)
 			},
 		},
 		{
@@ -1763,6 +1812,26 @@ func assertConditionStatus(t *testing.T, conditions []metav1.Condition, conditio
 		}
 	}
 	t.Fatalf("condition %s not found", conditionType)
+}
+
+func assertConditionReason(t *testing.T, conditions []metav1.Condition, conditionType, reason string) {
+	t.Helper()
+	for _, cond := range conditions {
+		if cond.Type == conditionType {
+			assert.Equal(t, reason, cond.Reason)
+			return
+		}
+	}
+	t.Fatalf("condition %s not found", conditionType)
+}
+
+func assertConditionAbsent(t *testing.T, conditions []metav1.Condition, conditionType string) {
+	t.Helper()
+	for _, cond := range conditions {
+		if cond.Type == conditionType {
+			t.Fatalf("condition %s should be absent but was present with status %s", conditionType, cond.Status)
+		}
+	}
 }
 
 func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBackendRef, filters []gwtypes.HTTPRouteFilter) *gwtypes.HTTPRoute {

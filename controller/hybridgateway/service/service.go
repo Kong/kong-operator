@@ -173,6 +173,37 @@ func ServiceForRule[
 	return &service, kongCertificate, kongReferenceGrant, nil
 }
 
+// ValidateBackendRefAnnotations validates the konghq.com/* annotations on the backend Services
+// referenced by backendRefs in the given namespace. It returns an error wrapping
+// [hgerrors.ErrMalformedAnnotation] if any annotation value fails to parse, and nil otherwise.
+func ValidateBackendRefAnnotations(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) error {
+	if _, err := resolveTLSVerifyFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveRetriesFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	return nil
+}
+
 // clientCertRefName returns the cert's metadata.name or "" when cert is nil.
 func clientCertRefName(cert *configurationv1alpha1.KongCertificate) string {
 	if cert == nil {

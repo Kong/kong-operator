@@ -213,6 +213,19 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
 	}
 
+	// Validate the implementation-specific konghq.com/* annotations once (route-level and
+	// backend-Service-level). A malformed value is surfaced via the KongConfigurationValid
+	// condition and halts state enforcement until the user fixes the annotation. This is a pure
+	// function of the spec and referenced objects, so it is computed identically on every
+	// reconcile and never flaps. The condition is set only while invalid; a valid Route carries
+	// no such condition.
+	var invalidConfigCond *metav1.Condition
+	if annotationErr := c.validateAnnotations(ctx, logger); annotationErr != nil {
+		log.Debug(logger, "HTTPRoute has malformed Kong annotations", "error", annotationErr)
+		invalidConfigCond = route.BuildKongConfigurationInvalidCondition(c.route, annotationErr)
+		stop = true
+	}
+
 	// For each parentRef in the HTTPRoute, build the conditions and set them in the status.
 	for _, pRef := range c.route.Spec.ParentRefs {
 		log.Debug(logger, "Processing ParentReference", "parentRef", pRef)
@@ -261,8 +274,13 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 			return false, stop, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
 		}
 
-		// Combine all conditions.
+		// Combine all conditions. The KongConfigurationValid condition is appended only when the
+		// Kong configuration is invalid; when valid it is omitted so SetStatusConditions removes
+		// any stale instance.
 		programmedConditions = append(programmedConditions, *acceptedCondition, *resolvedRefsCond)
+		if invalidConfigCond != nil {
+			programmedConditions = append(programmedConditions, *invalidConfigCond)
+		}
 
 		log.Debug(logger, "Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
 		if route.SetStatusConditions(c.route, pRef, vars.ControllerName(), programmedConditions...) {
@@ -295,31 +313,24 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	return updated, stop, nil
 }
 
-// SetRootAcceptedFalse sets Accepted=False for all supported parent references on the HTTPRoute.
-func (c *httpRouteConverter) SetRootAcceptedFalse(ctx context.Context, logger logr.Logger, reason, message string) error {
-	logger = logger.WithValues("phase", "httproute-status")
-	supportedParentRefs, err := getHybridGatewayParents(ctx, logger, c.Client, c.route)
-	if err != nil {
-		return err
+// validateAnnotations validates the implementation-specific konghq.com/* annotations that the
+// HTTPRoute translation consumes: the route-level strip-path and preserve-host annotations, and
+// the backend-Service-level annotations of every rule. It returns an error wrapping
+// [hybridgatewayerrors.ErrMalformedAnnotation] on the first malformed value, or nil if all are valid.
+func (c *httpRouteConverter) validateAnnotations(ctx context.Context, logger logr.Logger) error {
+	if _, err := metadata.ExtractStripPath(c.route.Annotations); err != nil {
+		return fmt.Errorf("%w: konghq.com/strip-path on %s/%s: %w",
+			hybridgatewayerrors.ErrMalformedAnnotation, c.route.Namespace, c.route.Name, err)
 	}
-
-	updated := false
-	condition := route.SetConditionMeta(metav1.Condition{
-		Type:    string(gwtypes.RouteConditionAccepted),
-		Status:  metav1.ConditionFalse,
-		Reason:  reason,
-		Message: message,
-	}, c.route)
-	for _, pRefData := range supportedParentRefs {
-		if route.SetStatusConditions(c.route, pRefData.parentRef, vars.ControllerName(), *condition) {
-			updated = true
+	if _, err := metadata.ExtractPreserveHost(c.route.Annotations); err != nil {
+		return fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
+			hybridgatewayerrors.ErrMalformedAnnotation, c.route.Namespace, c.route.Name, err)
+	}
+	for _, rule := range c.route.Spec.Rules {
+		backendRefs := utils.HTTPBackendRefsToBackendRefs(rule.BackendRefs)
+		if err := service.ValidateBackendRefAnnotations(ctx, c.Client, c.route.Namespace, backendRefs, logger); err != nil {
+			return err
 		}
-	}
-	if !updated {
-		return nil
-	}
-	if err := c.Status().Update(ctx, c.route); err != nil {
-		return fmt.Errorf("failed to update HTTPRoute status: %w", err)
 	}
 	return nil
 }

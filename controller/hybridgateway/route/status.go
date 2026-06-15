@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -1072,6 +1073,24 @@ func SetConditionMeta[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T
 	cond.ObservedGeneration = route.GetGeneration()
 	cond.LastTransitionTime = metav1.Now()
 	return &cond
+}
+
+// BuildKongConfigurationInvalidCondition builds the implementation-specific
+// KongConfigurationValid condition reporting malformed Kong configuration.
+// The returned condition has Status=False and the given error's text as its message.
+//
+// This condition is only set when configuration is invalid; callers omit it entirely when
+// everything parses, so SetStatusConditions removes any previously-set instance.
+func BuildKongConfigurationInvalidCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	route TPtr, configErr error,
+) *metav1.Condition {
+	cond := metav1.Condition{
+		Type:    routeconst.ConditionTypeKongConfigurationValid,
+		Status:  metav1.ConditionFalse,
+		Reason:  routeconst.ConditionReasonInvalidKongConfiguration,
+		Message: configErr.Error(),
+	}
+	return SetConditionMeta(cond, route)
 }
 
 // FilterOutGVKByKind returns a new slice of GVKs with the specified kind removed.

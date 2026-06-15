@@ -18,9 +18,10 @@ spec:
     the HTTPRoute to flip them back and re-asserts the KongRoute spec to
     verify that subsequent annotation changes are reconciled.
     Finally it sets a malformed konghq.com/strip-path value and verifies the
-    controller treats it as an error (issue #4233): the HTTPRoute Accepted
-    condition becomes False with reason UnsupportedValue, and fixing the
-    annotation flips Accepted back to True and reconciles the KongRoute.
+    controller treats it as an error (issue #4233): the HTTPRoute gets a dedicated
+    implementation-specific KongConfigurationValid condition set to False with reason
+    InvalidKongConfiguration (Accepted stays True), and fixing the annotation removes
+    the condition again and reconciles the KongRoute.
 
   bindings:
     - name: test_name
@@ -332,13 +333,17 @@ spec:
                       namespace: ($gateway_namespace)
                     (conditions[?type == 'Accepted'] | [0]):
                       type: Accepted
+                      status: "True"
+                    (conditions[?type == 'KongConfigurationValid'] | [0]):
+                      type: KongConfigurationValid
                       status: "False"
-                      reason: UnsupportedValue
+                      reason: InvalidKongConfiguration
 
     # ---------------------------------------------------------------------------
     # Phase 6: Fix the annotation back to a valid value.
-    # The HTTPRoute change re-triggers reconciliation, translation succeeds,
-    # Accepted flips back to True, and the KongRoute reflects strip_path=true.
+    # The HTTPRoute change re-triggers reconciliation, translation succeeds, the
+    # KongConfigurationValid condition is removed (only present while invalid), and the
+    # KongRoute reflects strip_path=true.
     # ---------------------------------------------------------------------------
     - name: Fix-httproute-malformed-annotation
       description: Patch the malformed konghq.com/strip-path back to a valid boolean.
@@ -364,9 +369,8 @@ spec:
                   - parentRef:
                       name: ($gateway_name)
                       namespace: ($gateway_namespace)
-                    (conditions[?type == 'Accepted'] | [0]):
-                      type: Accepted
-                      status: "True"
+                    # The condition is removed once the configuration is valid again.
+                    (length(conditions[?type == 'KongConfigurationValid'])): 0
 
     - name: Assert-kong-route-recovered-after-fix
       description: Assert KongRoute reflects strip_path=true after the annotation is fixed.

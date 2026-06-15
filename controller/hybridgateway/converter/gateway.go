@@ -204,11 +204,6 @@ func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger lo
 	return false, false, nil
 }
 
-// SetRootAcceptedFalse is a no-op for Gateway resources, whose status is managed by the Gateway controller.
-func (c *gatewayConverter) SetRootAcceptedFalse(ctx context.Context, logger logr.Logger, reason, message string) error {
-	return nil
-}
-
 // HandleOrphanedResource implements OrphanedResourceHandler.
 //
 // Determines whether an orphaned resource should be deleted or preserved during cleanup.

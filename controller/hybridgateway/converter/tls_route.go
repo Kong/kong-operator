@@ -88,6 +88,17 @@ func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger l
 		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for TLSRoute %s: %w", c.route.Name, err)
 	}
 
+	// Validate the implementation-specific konghq.com/* annotations once (backend-Service-level).
+	// A malformed value is surfaced via the KongConfigurationValid condition and halts state
+	// enforcement until the user fixes the annotation.
+	// The condition is set only while invalid; a valid Route carries no such condition.
+	var invalidConfigCond *metav1.Condition
+	if annotationErr := c.validateAnnotations(ctx, logger); annotationErr != nil {
+		log.Debug(logger, "TLSRoute has malformed Kong annotations", "error", annotationErr)
+		invalidConfigCond = route.BuildKongConfigurationInvalidCondition(c.route, annotationErr)
+		stop = true
+	}
+
 	// For each parentRef in the TLSRoute, build the conditions and set them in the status.
 	for _, pRef := range c.route.Spec.ParentRefs {
 		log.Debug(logger, "Processing ParentReference", "parentRef", pRef)
@@ -137,8 +148,13 @@ func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger l
 			return false, stop, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
 		}
 
-		// Combine all conditions.
+		// Combine all conditions. The KongConfigurationValid condition is appended only when the
+		// Kong configuration is invalid; when valid it is omitted so SetStatusConditions removes
+		// any stale instance.
 		programmedConditions = append(programmedConditions, *acceptedCondition, *resolvedRefsCond)
+		if invalidConfigCond != nil {
+			programmedConditions = append(programmedConditions, *invalidConfigCond)
+		}
 
 		log.Debug(logger, "Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
 		if route.SetStatusConditions(c.route, pRef, vars.ControllerName(), programmedConditions...) {
@@ -171,31 +187,15 @@ func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger l
 	return updated, stop, nil
 }
 
-// SetRootAcceptedFalse sets Accepted=False for all supported parent references on the TLSRoute.
-func (c *tlsRouteConverter) SetRootAcceptedFalse(ctx context.Context, logger logr.Logger, reason, message string) error {
-	logger = logger.WithValues("phase", "tlsroute-status")
-	supportedParentRefs, err := getHybridGatewayParents(ctx, logger, c.Client, c.route)
-	if err != nil {
-		return err
-	}
-
-	updated := false
-	condition := route.SetConditionMeta(metav1.Condition{
-		Type:    string(gwtypes.RouteConditionAccepted),
-		Status:  metav1.ConditionFalse,
-		Reason:  reason,
-		Message: message,
-	}, c.route)
-	for _, pRefData := range supportedParentRefs {
-		if route.SetStatusConditions(c.route, pRefData.parentRef, vars.ControllerName(), *condition) {
-			updated = true
+// validateAnnotations validates the implementation-specific konghq.com/* annotations that the
+// TLSRoute translation consumes: the backend-Service-level annotations of every rule. It returns
+// an error wrapping [hybridgatewayerrors.ErrMalformedAnnotation] on the first malformed value, or
+// nil if all are valid.
+func (c *tlsRouteConverter) validateAnnotations(ctx context.Context, logger logr.Logger) error {
+	for _, rule := range c.route.Spec.Rules {
+		if err := service.ValidateBackendRefAnnotations(ctx, c.Client, c.route.Namespace, rule.BackendRefs, logger); err != nil {
+			return err
 		}
-	}
-	if !updated {
-		return nil
-	}
-	if err := c.Status().Update(ctx, c.route); err != nil {
-		return fmt.Errorf("failed to update TLSRoute status: %w", err)
 	}
 	return nil
 }

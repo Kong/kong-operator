@@ -2,7 +2,6 @@ package hybridgateway
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -15,12 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	eventconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/events"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
-	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/events"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
@@ -194,14 +191,6 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 			eventconst.EventReasonTranslationFailed,
 			fmt.Sprintf("Translation failed: %v", err),
 		)
-		// halt if err wraps ErrMalformedAnnotation without requeueing until the user fixes the annotation;
-		// set Accepted=False with reason UnsupportedValue for all supported parent references in status.
-		if errors.Is(err, hgerrors.ErrMalformedAnnotation) {
-			if statusErr := conv.SetRootAcceptedFalse(ctx, logger, string(gatewayv1.RouteReasonUnsupportedValue), err.Error()); statusErr != nil {
-				return ctrl.Result{}, statusErr
-			}
-			return ctrl.Result{}, nil
-		}
 		return ctrl.Result{}, err
 	}
 

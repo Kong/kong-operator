@@ -723,10 +723,6 @@ func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, log
 	return f.statusUpdated, f.statusStop, nil
 }
 
-func (f *fakeHTTPRouteConverter) SetRootAcceptedFalse(ctx context.Context, logger logr.Logger, reason, message string) error {
-	return nil
-}
-
 func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (bool, error) {
 	annotations := resource.GetAnnotations()
 	if annotations == nil {
