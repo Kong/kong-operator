@@ -696,6 +696,7 @@ func loggerForEntity[
 ](ctx context.Context, e TEnt, op Op) logr.Logger {
 	keysAndValues := []any{
 		"op", op,
+		"namespacedName", e.GetNamespace() + "/" + e.GetName(),
 	}
 
 	// Only add the Konnect ID if it exists and it's a create operation.

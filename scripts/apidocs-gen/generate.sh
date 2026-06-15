@@ -18,12 +18,12 @@ generate() {
       --max-depth=20
 }
 
-generate "/api/configuration" "/docs/configuration-api-reference.md"
-  
-generate "/api/konnect" "/docs/konnect-api-reference.md"
-
-generate "/api/incubator" "/docs/incubator-api-reference.md"
-
-generate "/api/gateway-operator" "/docs/gateway-operator-api-reference.md"
+for dir in $(find "${SCRIPT_ROOT}/api" -mindepth 1 -maxdepth 1 -type d); do
+  if [[ "${dir}" == "${SCRIPT_ROOT}/api/common" || "${dir}" == "${SCRIPT_ROOT}/api/test" ]]; then
+    continue
+  fi
+  output_file="/docs/$(basename ${dir})-api-reference.md"
+  generate "${dir#${SCRIPT_ROOT}}" "${output_file}"
+done
 
 generate "/api" "/docs/all-api-reference.md"

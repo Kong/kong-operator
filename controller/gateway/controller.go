@@ -1041,18 +1041,22 @@ func (r *Reconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtyp
 
 func dataPlaneSpecDeepEqual(specCurrent, specExpected *operatorv1beta1.DataPlaneOptions, isHybrid bool) bool {
 	specCurrentExtensions := specCurrent.Extensions
+	specExpectedExtensions := specExpected.Extensions
 	// For Hybrid gateways ignore KonnectExtension in the comparison,
 	// it's managed later (separately) by the Gateway controller.
 	if isHybrid {
-		specCurrentExtensions = lo.Filter(specCurrentExtensions, func(e commonv1alpha1.ExtensionRef, _ int) bool {
-			return e.Group != konnectv1alpha2.SchemeGroupVersion.Group || e.Kind != konnectv1alpha2.KonnectExtensionKind
-		})
+		filter := func(e commonv1alpha1.ExtensionRef, _ int) bool {
+			return e.Group != konnectv1alpha2.SchemeGroupVersion.Group ||
+				e.Kind != konnectv1alpha2.KonnectExtensionKind
+		}
+		specCurrentExtensions = lo.Filter(specCurrentExtensions, filter)
+		specExpectedExtensions = lo.Filter(specExpectedExtensions, filter)
 	}
 	// Consider slices equal if both are empty or nil, or if they are deeply equal.
 	// This is to avoid infinite reconciliation loops when one of the specs has nil value
 	// and the other has an empty slice.
-	extensionsEqual := len(specCurrentExtensions) == 0 && len(specExpected.Extensions) == 0 ||
-		reflect.DeepEqual(specCurrentExtensions, specExpected.Extensions)
+	extensionsEqual := len(specCurrentExtensions) == 0 && len(specExpectedExtensions) == 0 ||
+		reflect.DeepEqual(specCurrentExtensions, specExpectedExtensions)
 	pluginsToInstallEqual := len(specCurrent.PluginsToInstall) == 0 && len(specExpected.PluginsToInstall) == 0 ||
 		reflect.DeepEqual(specCurrent.PluginsToInstall, specExpected.PluginsToInstall)
 

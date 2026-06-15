@@ -60,7 +60,7 @@ func TestHelmUpgrade(t *testing.T) {
 	// This is the latest Chart available publicly (used by actual users) that we can upgrade from.
 	const (
 		lastReleasedChart        = "oci://docker.io/kong/kong-operator-chart"
-		lastReleasedChartVersion = "1.2.4" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
+		lastReleasedChartVersion = "1.3.0" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
 	)
 	// This is the Chart and image from current state of the repository that we want to upgrade to.
 	// Image has to be loaded into the cluster beforehand and specified via KONG_TEST_KONG_OPERATOR_IMAGE_LOAD
@@ -92,12 +92,7 @@ func TestHelmUpgrade(t *testing.T) {
 			// For instance change in CRDs requires manual installation of new CRDs before the upgrade,
 			// see charts/kong-operator/UPGRADE.md this section mostly should be empty.
 			// IDEALLY IT SHOULD BE EMPTY - seamless upgrade should not require manual steps.
-			stepsToDoBeforeUpgrade := []func(context.Context, *testing.T, clusters.Cluster){
-				func(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
-					t.Log("Applying Gateway API CRDs for v1.5.1 due to PR #3491")
-					require.NoError(t, clusters.KustomizeDeployForCluster(ctx, cluster, "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.5.1"))
-				},
-			}
+			stepsToDoBeforeUpgrade := []func(context.Context, *testing.T, clusters.Cluster){}
 
 			onPremObjects, onPremGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeOnPrem)
 			suitesToRun := []suite{
@@ -156,11 +151,10 @@ func TestHelmUpgrade(t *testing.T) {
 								dataPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
-						// Normally DataPlane Deployment should not be patched during the upgrade.
 						{
-							Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
+							Name: "DataPlane deployment is not patched after operator upgrade",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsNotPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -230,9 +224,9 @@ func TestHelmUpgrade(t *testing.T) {
 							},
 						},
 						{
-							Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
+							Name: "DataPlane deployment is not patched after operator upgrade",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -589,19 +583,6 @@ func gatewayDataPlaneDeploymentIsNotPatched(
 	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
 		if d.Generation != 1 {
 			return fmt.Errorf("Gateway's DataPlane Deployment %q got patched but it shouldn't:\n%# v",
-				client.ObjectKeyFromObject(d), pretty.Formatter(d),
-			)
-		}
-		return nil
-	})
-}
-
-func gatewayDataPlaneDeploymentIsPatched(
-	gatewayLabelSelector string,
-) func(context.Context, *assert.CollectT, client.Client) {
-	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
-		if d.Generation == 1 {
-			return fmt.Errorf("Gateway's DataPlane Deployment %q did not get patched but it should:\n%# v",
 				client.ObjectKeyFromObject(d), pretty.Formatter(d),
 			)
 		}

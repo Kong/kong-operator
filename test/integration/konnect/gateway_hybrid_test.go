@@ -182,7 +182,7 @@ func TestGatewayHybridFull(t *testing.T) {
 		request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test", "")
 		require.Eventually(
 			t,
-			testutils.GetResponseBodyContains(t, integration.GetClients(), httpClient, request, "<title>httpbin.org</title>"),
+			testutils.GetResponseBodyContains(t, httpClient, request, "<title>httpbin.org</title>"),
 			httpRouteAccessTimeout,
 			time.Second,
 		)
@@ -191,7 +191,7 @@ func TestGatewayHybridFull(t *testing.T) {
 		request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test/1234", "")
 		require.Eventually(
 			t,
-			testutils.GetResponseBodyContains(t, integration.GetClients(), httpClient, request, "<h1>Not Found</h1>"),
+			testutils.GetResponseBodyContains(t, httpClient, request, "<h1>Not Found</h1>"),
 			httpRouteAccessTimeout,
 			time.Second,
 		)

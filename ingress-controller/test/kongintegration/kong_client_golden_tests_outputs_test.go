@@ -105,12 +105,14 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 	if test.KonnectAccessToken() == "" {
 		t.Skip("Konnect token is not available, skipping test")
 	}
+	if testenv.KongImage() != "kong/kong-gateway" {
+		t.Skip("Non EE image is used, skipping Konnect test")
+	}
 	t.Parallel()
 
 	ctx := t.Context()
 
-	gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-ee")
-	require.NoError(t, err)
+	gatewayTag := testenv.KongTag()
 	gatewayTag = trimEnterpriseTagToSemver(gatewayTag)
 
 	systemAccountID := konnect.CreateTestSystemAccount(ctx, t)
