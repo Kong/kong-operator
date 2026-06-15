@@ -1353,7 +1353,6 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
 				require.Len(t, route.Status.Parents, 1)
 				conditions := route.Status.Parents[0].Conditions
-				// Accepted is unaffected: configuration validity is orthogonal to attachment.
 				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue)
 				assertConditionStatus(t, conditions, routeconst.ConditionTypeKongConfigurationValid, metav1.ConditionFalse)
 				assertConditionReason(t, conditions, routeconst.ConditionTypeKongConfigurationValid, routeconst.ConditionReasonInvalidKongConfiguration)

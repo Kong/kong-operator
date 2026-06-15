@@ -216,10 +216,8 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 
 	// Validate the implementation-specific konghq.com/* annotations once (route-level and
 	// backend-Service-level). A malformed value is surfaced via the KongConfigurationValid
-	// condition and halts state enforcement until the user fixes the annotation. This is a pure
-	// function of the spec and referenced objects, so it is computed identically on every
-	// reconcile and never flaps. The condition is set only while invalid; a valid Route carries
-	// no such condition.
+	// condition and halts state enforcement until the user fixes the annotation.
+	// The condition is set only while invalid; a valid Route carries no such condition.
 	var invalidConfigCond *metav1.Condition
 	if annotationErr := c.validateAnnotations(ctx, logger); annotationErr != nil {
 		log.Debug(logger, "HTTPRoute has malformed Kong annotations", "error", annotationErr)
@@ -314,10 +312,9 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	return updated, stop, nil
 }
 
-// validateAnnotations validates the implementation-specific konghq.com/* annotations that the
-// HTTPRoute translation consumes: the route-level strip-path and preserve-host annotations, and
-// the backend-Service-level annotations of every rule. It returns an error wrapping
-// [hybridgatewayerrors.ErrMalformedAnnotation] on the first malformed value, or nil if all are valid.
+// validateAnnotations validates the implementation-specific konghq.com/* annotations.
+// It returns an error wrapping [hybridgatewayerrors.ErrMalformedAnnotation] on the first malformed value,
+// or nil if all are valid.
 func (c *httpRouteConverter) validateAnnotations(ctx context.Context, logger logr.Logger) error {
 	if _, err := metadata.ExtractStripPath(c.route.Annotations); err != nil {
 		return fmt.Errorf("%w: konghq.com/strip-path on %s/%s: %w",

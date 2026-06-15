@@ -187,10 +187,9 @@ func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger l
 	return updated, stop, nil
 }
 
-// validateAnnotations validates the implementation-specific konghq.com/* annotations that the
-// TLSRoute translation consumes: the backend-Service-level annotations of every rule. It returns
-// an error wrapping [hybridgatewayerrors.ErrMalformedAnnotation] on the first malformed value, or
-// nil if all are valid.
+// validateAnnotations validates the implementation-specific konghq.com/* annotations.
+// It returns an error wrapping [hybridgatewayerrors.ErrMalformedAnnotation] on the first malformed value,
+// or nil if all are valid.
 func (c *tlsRouteConverter) validateAnnotations(ctx context.Context, logger logr.Logger) error {
 	for _, rule := range c.route.Spec.Rules {
 		if err := service.ValidateBackendRefAnnotations(ctx, c.Client, c.route.Namespace, rule.BackendRefs, logger); err != nil {
