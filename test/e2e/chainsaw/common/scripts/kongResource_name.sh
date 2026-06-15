@@ -11,6 +11,9 @@ set -o pipefail
 #   GATEWAY_NAMESPACE: The namespace of the gateway.
 #   HTTP_ROUTE_NAME: (Optional) The name of the HTTPRoute.
 #   HTTP_ROUTE_NAMESPACE: (Optional) The namespace of the HTTPRoute.
+#   EXPECTED_SERVICE_NAME: (Optional) The KongService name referenced by a KongRoute.
+#   REQUIRED_CONDITION_TYPE: (Optional) Condition type that the resource must have.
+#   REQUIRED_CONDITION_STATUS: (Optional) Required condition status. Default: True.
 #   RETRY_COUNT: (Optional) Number of retries. Default: 180.
 #   RETRY_DELAY: (Optional) Delay between retries in seconds. Default: 1.
 
@@ -20,6 +23,9 @@ GATEWAY_NAME="${GATEWAY_NAME}"
 GATEWAY_NAMESPACE="${GATEWAY_NAMESPACE}"
 HTTP_ROUTE_NAME="${HTTP_ROUTE_NAME:-}"
 HTTP_ROUTE_NAMESPACE="${HTTP_ROUTE_NAMESPACE:-}"
+EXPECTED_SERVICE_NAME="${EXPECTED_SERVICE_NAME:-}"
+REQUIRED_CONDITION_TYPE="${REQUIRED_CONDITION_TYPE:-}"
+REQUIRED_CONDITION_STATUS="${REQUIRED_CONDITION_STATUS:-True}"
 RETRY_COUNT="${RETRY_COUNT:-180}"
 RETRY_DELAY="${RETRY_DELAY:-1}"
 
@@ -75,20 +81,26 @@ EOF
   # Find resource that matches annotations
   # If route is specified, require both gateway and route annotations
   # If route is not specified, only require gateway annotation
-  if [[ -n "$EXPECTED_RT" ]]; then
-    RESOURCE_INFO=$(echo "$KUBECTL_OUTPUT" | jq -r --arg gw "$EXPECTED_GW" --arg rt "$EXPECTED_RT" '
-      .items[] | 
-      select(
-        (.metadata.annotations["gateway-operator.konghq.com/hybrid-gateways"] // "" | split(",") | contains([$gw])) and
-        (.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] // "" | split(",") | contains([$rt]))
-      ) | {name: .metadata.name, kind: .kind, namespace: .metadata.namespace} | @json' | head -n 1)
-  else
-    RESOURCE_INFO=$(echo "$KUBECTL_OUTPUT" | jq -r --arg gw "$EXPECTED_GW" '
-      .items[] | 
-      select(
-        .metadata.annotations["gateway-operator.konghq.com/hybrid-gateways"] // "" | split(",") | contains([$gw])
-      ) | {name: .metadata.name, kind: .kind, namespace: .metadata.namespace} | @json' | head -n 1)
-  fi
+  RESOURCE_INFO=$(echo "$KUBECTL_OUTPUT" | jq -r \
+    --arg gw "$EXPECTED_GW" \
+    --arg rt "$EXPECTED_RT" \
+    --arg service "$EXPECTED_SERVICE_NAME" \
+    --arg condition_type "$REQUIRED_CONDITION_TYPE" \
+    --arg condition_status "$REQUIRED_CONDITION_STATUS" '
+      [
+        .items[]
+        | select(
+          (.metadata.annotations["gateway-operator.konghq.com/hybrid-gateways"] // "" | split(",") | contains([$gw]))
+          and ($rt == "" or (.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] // "" | split(",") | contains([$rt])))
+          and ($service == "" or .spec.serviceRef.namespacedRef.name == $service)
+          and (
+            $condition_type == ""
+            or any(.status.conditions[]?; .type == $condition_type and .status == $condition_status)
+          )
+        )
+        | {name: .metadata.name, kind: .kind, namespace: .metadata.namespace}
+      ][0] // empty
+      | if type == "object" then @json else empty end')
 
   # If resource found, we're done
   if [[ -n "$RESOURCE_INFO" && "$RESOURCE_INFO" != "null" ]]; then
@@ -119,8 +131,11 @@ EOF
   "namespace": "$NAMESPACE",
   "expected_gateway": "$EXPECTED_GW",
   "expected_route": "$EXPECTED_RT",
+  "expected_service_name": "$EXPECTED_SERVICE_NAME",
+  "required_condition_type": "$REQUIRED_CONDITION_TYPE",
+  "required_condition_status": "$REQUIRED_CONDITION_STATUS",
   "kubectl_command": "$KUBECTL_CMD",
-  "available_resources": $(echo "$KUBECTL_OUTPUT" | jq -c '[.items[] | {name: .metadata.name, annotations: .metadata.annotations}]')
+  "available_resources": $(echo "$KUBECTL_OUTPUT" | jq -c '[.items[] | {name: .metadata.name, annotations: .metadata.annotations, serviceRef: .spec.serviceRef, conditions: .status.conditions}]')
 }
 EOF
     else
@@ -130,8 +145,11 @@ EOF
   "resource_type": "$RESOURCE_TYPE",
   "namespace": "$NAMESPACE",
   "expected_gateway": "$EXPECTED_GW",
+  "expected_service_name": "$EXPECTED_SERVICE_NAME",
+  "required_condition_type": "$REQUIRED_CONDITION_TYPE",
+  "required_condition_status": "$REQUIRED_CONDITION_STATUS",
   "kubectl_command": "$KUBECTL_CMD",
-  "available_resources": $(echo "$KUBECTL_OUTPUT" | jq -c '[.items[] | {name: .metadata.name, annotations: .metadata.annotations}]')
+  "available_resources": $(echo "$KUBECTL_OUTPUT" | jq -c '[.items[] | {name: .metadata.name, annotations: .metadata.annotations, serviceRef: .spec.serviceRef, conditions: .status.conditions}]')
 }
 EOF
     fi
