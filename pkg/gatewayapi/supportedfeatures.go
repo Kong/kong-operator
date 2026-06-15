@@ -30,6 +30,7 @@ var commonSupportedFeatures = sets.New(
 	features.SupportReferenceGrant,
 
 	// Gateway extended.
+	features.SupportGatewayAddressEmpty,
 	features.SupportGatewayPort8080,
 	features.SupportGatewayInfrastructurePropagation,
 
