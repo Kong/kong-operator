@@ -1219,9 +1219,9 @@ func TestGenerateSharedFiles_GeneratesSchemaUnionTests(t *testing.T) {
 	var schemaTestFile GeneratedFile
 	for _, file := range files {
 		switch file.Name {
-		case "schema_types.go":
+		case "zz_generated_schema_types.go":
 			schemaFile = file
-		case "schema_types_test.go":
+		case "zz_generated_schema_types_test.go":
 			schemaTestFile = file
 		}
 	}
@@ -1594,7 +1594,7 @@ func TestGenerate_OmitsUnusedArrayRefAliases(t *testing.T) {
 
 	var schemaContent string
 	for _, f := range files {
-		if f.Name == "schema_types.go" {
+		if f.Name == "zz_generated_schema_types.go" {
 			schemaContent = f.Content
 			break
 		}
@@ -5409,6 +5409,40 @@ func TestGenerateSchemaTypes_ScalarOneOfEmitsIntOrString(t *testing.T) {
 	assert.NotContains(t, content, `map[string]string`)
 }
 
+func TestGenerateSchemaTypes_ScalarOneOfViaRefsEmitsIntOrString(t *testing.T) {
+	// Regression test for sdk-konnect-go 0.39: the EventGatewayListenerPort oneOf
+	// changed from inline scalars to $ref variants pointing to scalar schemas.
+	// isScalarStringIntOneOf must resolve the refs and still emit intstr.IntOrString.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayListenerPort": {
+				Name:        "EventGatewayListenerPort",
+				Description: "A port or a range of ports.",
+				OneOf: []*parser.Property{
+					{Name: "variant0", RefName: "EventGatewayListenerPortString"},
+					{Name: "variant1", RefName: "EventGatewayListenerPortInteger"},
+				},
+			},
+			"EventGatewayListenerPortString": {
+				Name: "EventGatewayListenerPortString",
+				Type: "string",
+			},
+			"EventGatewayListenerPortInteger": {
+				Name: "EventGatewayListenerPortInteger",
+				Type: "integer",
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPort": true}, parsed, nil)
+
+	assert.Contains(t, content, `type EventGatewayListenerPort = intstr.IntOrString`)
+	assert.Contains(t, content, `+kubebuilder:validation:XIntOrString`)
+	assert.Contains(t, content, `intstr "k8s.io/apimachinery/pkg/util/intstr"`)
+	assert.NotContains(t, content, `map[string]string`)
+}
+
 func TestGenerateSchemaTypes_ArrayItemsRefEmitsTypedSlice(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	parsed := &parser.ParsedSpec{
@@ -5429,9 +5463,8 @@ func TestGenerateSchemaTypes_ArrayItemsRefEmitsTypedSlice(t *testing.T) {
 }
 
 func TestGenerateSchemaTypes_NonScalarOneOfFallsBack(t *testing.T) {
-	// A oneOf where variants have RefName must NOT be consumed by the scalar arm;
-	// it falls through to default (map[string]string) until a dedicated follow-up
-	// handles ref-bearing root oneOf.
+	// A oneOf where ref variants point to non-scalar (object) schemas must NOT be
+	// consumed by the scalar intstr arm; it falls through to default handling.
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	parsed := &parser.ParsedSpec{
 		Schemas: map[string]*parser.Schema{

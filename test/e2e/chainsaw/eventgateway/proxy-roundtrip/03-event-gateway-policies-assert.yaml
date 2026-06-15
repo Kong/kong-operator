@@ -1,0 +1,24 @@
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: ($listener_policy_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: ($acl_policy_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: ($consume_policy_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"

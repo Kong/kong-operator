@@ -3,16 +3,20 @@ package target
 import (
 	"context"
 	"fmt"
+	"net"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
@@ -428,8 +432,78 @@ func recalculateWeightsAcrossBackendRefs[T gwtypes.SupportedBackendRef](validBac
 	return validBackendRefs
 }
 
+// existingTargetNamesByAddress lists the KongTargets already managed for the given upstream and returns a
+// map from target address (host:port) to the name of an existing KongTarget to reuse for that address.
+//
+// Reusing an existing name keeps the "one KongTarget per (upstream, address)" invariant stable across
+// reconciles WITHOUT changing the naming scheme: a brand-new address still gets a freshly minted name, but
+// once a target exists for an address its name is reused. This means a changing contributing backendRef
+// (e.g. a rollout where two Services resolve to the same pods, with EndpointSlices updating at different
+// times) or an upgrade never mints a second KongTarget with a duplicate Spec.Target — which Konnect
+// rejects via the per-upstream target uniqueness constraint.
+//
+// When more than one target already exists for an address, the name of an already-Programmed target is preferred.
+// That way the desired target equals the one that is actually live in Konnect, so applying it is an in-place
+// UPDATE (which also corrects its weight), and it avoids a deadlock where the desired target could never become
+// Programmed because a non-programmed duplicate still holds the address.
+func existingTargetNamesByAddress[
+	T gwtypes.SupportedRoute,
+	TPtr gwtypes.SupportedRoutePtr[T],
+](
+	ctx context.Context,
+	cl client.Client,
+	parentRoute TPtr,
+	pRef *gwtypes.ParentReference,
+	upstreamName string,
+) (map[string]string, error) {
+	namespace := metadata.NamespaceFromParentRef(parentRoute, pRef)
+
+	list := &configurationv1alpha1.KongTargetList{}
+	if err := cl.List(ctx, list,
+		client.InNamespace(namespace),
+		metadata.LabelSelectorForOwnedResources(parentRoute, pRef),
+	); err != nil {
+		return nil, fmt.Errorf("failed to list existing KongTargets in namespace %s: %w", namespace, err)
+	}
+
+	type candidate struct {
+		name       string
+		programmed bool
+	}
+	chosen := make(map[string]candidate, len(list.Items))
+	for i := range list.Items {
+		t := &list.Items[i]
+		// Scope to the upstream we are reconciling: the same address under a different upstream is a
+		// distinct target and must keep its own name.
+		if t.Spec.UpstreamRef.Name != upstreamName {
+			continue
+		}
+		programmed := meta.IsStatusConditionTrue(t.Status.Conditions, konnectv1alpha1.KonnectEntityProgrammedConditionType)
+		cur, ok := chosen[t.Spec.Target]
+		switch {
+		case !ok:
+			fallthrough
+		case programmed && !cur.programmed:
+			// Prefer a Programmed target over a non-programmed one for the same address.
+			fallthrough
+		case programmed == cur.programmed && t.Name < cur.name:
+			// Deterministic tie-break when both have the same Programmed status.
+			chosen[t.Spec.Target] = candidate{name: t.Name, programmed: programmed}
+		}
+	}
+
+	byAddr := make(map[string]string, len(chosen))
+	for addr, c := range chosen {
+		byAddr[addr] = c.name
+	}
+	return byAddr, nil
+}
+
 // createTargetsFromValidBackendRefs creates KongTargets from validBackendRef structs.
 // This function handles all service types (ClusterIP, ExternalName, FQDN) using a unified approach.
+// Endpoints that appear in more than one BackendRef are merged into a single KongTarget whose
+// weight is the sum of the per-endpoint weights from all contributing BackendRefs. This prevents
+// Konnect unique-constraint failures when two different BackendRef Services select the same pods.
 func createTargetsFromValidBackendRefs[
 	T gwtypes.SupportedRoute,
 	TPtr gwtypes.SupportedRoutePtr[T],
@@ -438,7 +512,19 @@ func createTargetsFromValidBackendRefs[
 	validBackendRefs []validBackendRef[R],
 ) ([]configurationv1alpha1.KongTarget, error) {
 
+	// Reuse the names of any KongTargets that already exist for this upstream/address so a changing
+	// contributing backendRef (rollout) or an upgrade does not create a second target with a duplicate
+	// Spec.Target, which Konnect rejects. See existingTargetNamesByAddress for details.
+	existingByAddr, err := existingTargetNamesByAddress(ctx, cl, parentRoute, pRef, upstreamName)
+	if err != nil {
+		return nil, err
+	}
+
+	// seenIdx maps a target address (host:port) to its index in targets, enabling O(1) duplicate
+	// detection and in-place weight accumulation without a second pass.
+	seenIdx := make(map[string]int)
 	var targets []configurationv1alpha1.KongTarget
+
 	for _, vbRef := range validBackendRefs {
 		// Skip backends with no endpoints (they have weight 0 anyway).
 		// This should not happen, but if it happens then we skip them.
@@ -453,8 +539,24 @@ func createTargetsFromValidBackendRefs[
 		for _, endpoint := range vbRef.readyEndpoints {
 			// Use the pre-calculated target port (already resolved based on service type and mode).
 			port := vbRef.targetPort
+			targetAddr := net.JoinHostPort(endpoint, strconv.Itoa(port))
 
-			targetName := namegen.NewKongTargetName(upstreamName, endpoint, port, vbRef.backendRef)
+			if idx, dup := seenIdx[targetAddr]; dup {
+				// Same host:port already produced by a previous BackendRef. Sum the weights so
+				// Konnect receives a single target entry with the combined traffic share.
+				targets[idx].Spec.Weight += int(weight)
+				log.Debug(logger, "Merged duplicate KongTarget endpoint, summing weight",
+					"target", targetAddr, "addedWeight", weight)
+				continue
+			}
+
+			// Prefer the name of an existing KongTarget for this address so we UPDATE it (and correct its
+			// weight) rather than creating a duplicate Spec.Target under the same upstream. Only when no
+			// target exists yet do we mint a fresh name from the upstream, endpoint, port and backendRef.
+			targetName := existingByAddr[targetAddr]
+			if targetName == "" {
+				targetName = namegen.NewKongTargetName(upstreamName, endpoint, port, vbRef.backendRef)
+			}
 			logger := logger.WithValues("kongtarget", targetName)
 			log.Debug(logger, "Creating KongTarget for BackendRef")
 
@@ -477,6 +579,7 @@ func createTargetsFromValidBackendRefs[
 				return nil, err
 			}
 
+			seenIdx[targetAddr] = len(targets)
 			targets = append(targets, target)
 		}
 	}

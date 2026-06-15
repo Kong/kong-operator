@@ -61,7 +61,25 @@ func ServiceForRule[
 	cp *commonv1alpha1.ControlPlaneRef,
 	upstreamName string,
 ) (kongService *configurationv1alpha1.KongService, kongCertificate *configurationv1alpha1.KongCertificate, kongReferenceGrant *configurationv1alpha1.KongReferenceGrant, err error) {
+	return ServiceForRuleWithName(ctx, logger, cl, parentRoute, rule, pRef, cp, upstreamName, "")
+}
 
+// ServiceForRuleWithName behaves like ServiceForRule but uses serviceName when it is not empty.
+func ServiceForRuleWithName[
+	T gwtypes.SupportedRoute,
+	TPtr gwtypes.SupportedRoutePtr[T],
+	R gwtypes.SupportedRouteRule,
+](
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	parentRoute TPtr,
+	rule R,
+	pRef *gwtypes.ParentReference,
+	cp *commonv1alpha1.ControlPlaneRef,
+	upstreamName string,
+	serviceNameOverride string,
+) (kongService *configurationv1alpha1.KongService, kongCertificate *configurationv1alpha1.KongCertificate, kongReferenceGrant *configurationv1alpha1.KongReferenceGrant, err error) {
 	var serviceName string
 	var namespace string
 	var backendRefs []gwtypes.BackendRef
@@ -93,6 +111,10 @@ func ServiceForRule[
 	// Should be unreachable.
 	default:
 		return nil, nil, nil, fmt.Errorf("failed to build KongService: unsupported route type: %T", parentRoute)
+	}
+
+	if serviceNameOverride != "" {
+		serviceName = serviceNameOverride
 	}
 
 	// Resolve service attributes once, outside the switch — future route types only add a case above.

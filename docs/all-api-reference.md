@@ -5,6 +5,7 @@
 - [configuration.konghq.com/v1](#configuration-konghq-com-v1)
 - [configuration.konghq.com/v1alpha1](#configuration-konghq-com-v1alpha1)
 - [configuration.konghq.com/v1beta1](#configuration-konghq-com-v1beta1)
+- [eventgateway.konghq.com/v1alpha1](#eventgateway-konghq-com-v1alpha1)
 - [gateway-operator.konghq.com/v1alpha1](#gateway-operator-konghq-com-v1alpha1)
 - [gateway-operator.konghq.com/v1beta1](#gateway-operator-konghq-com-v1beta1)
 - [gateway-operator.konghq.com/v2beta1](#gateway-operator-konghq-com-v2beta1)
@@ -911,20 +912,21 @@ problematic offset and requires manual intervention to skip it.
 execution failed.
 * `mark` - passes the record to the client but marks it with a
 `kong/policy-failure-<id>` header whose value is the reason for the policy
-failure (truncated to 512 characters).
+failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
 
 _Appears in:_
 
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
 - [EventGatewayParsedRecordDecryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldsconfig)
 
 #### ConsumeKeyValidationAction
 
 _Underlying type:_ `string`
 
-ConsumeKeyValidationAction Defines a behavior when record key is not valid.
+ConsumeKeyValidationAction Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid.
 * mark - marks a record with kong/server header and client ID value
 to help to identify the clients violating schema.
 * skip - skips delivering a record.
@@ -940,8 +942,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-ConsumeValueValidationAction Defines a behavior when record value is not
-valid.
+ConsumeValueValidationAction Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid.
 * mark - marks a record with kong/server header and client ID value
 to help to identify the clients violating schema.
 * skip - skips delivering a record.
@@ -1396,10 +1397,13 @@ schema validation policy.
 
 | Field | Description |
 | --- | --- |
-| `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 | `schemaRegistry` _[EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)_ | A reference to a schema Registry. |
 | `type` _[SchemaValidationType](#configuration-konghq-com-v1alpha1-types-schemavalidationtype)_ | How to validate the schema and parse the record. * confluent_schema_registry - validates against confluent schema registry. * json - simple JSON parsing without the schema. |
-| `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+| `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 
 _Appears in:_
 
@@ -1753,6 +1757,10 @@ _Appears in:_
 
 
 
+
+
+
+
 #### EventGatewayListenerSpec
 
 
@@ -1903,8 +1911,8 @@ parsed record fields policy.
 
 | Field | Description |
 | --- | --- |
-| `decryptFields` _[EventGatewayParsedRecordDecryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselector)_ | Selects which fields to decrypt. |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). |
+| `decryptFields` _[EventGatewayParsedRecordDecryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselector)_ | Selects fields of a parsed record for decryption. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keySources` _[EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
 
 _Appears in:_
@@ -1961,8 +1969,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[EventGatewayParsedRecordDecryptionSelectorPathsType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpathstype)_ | Type designates the type of configuration. |
-| `variant1` _[EventGatewayParsedRecordDecryptionSelectorPathsVariant1](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpathsvariant1)_ | Variant1 configuration. |
-| `variant2` _[EventGatewayParsedRecordDecryptionSelectorPathsVariant2](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpathsvariant2)_ | Variant2 configuration. |
+| `array` _[EventGatewayParsedRecordFieldPathsArray](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsarray)_ | Array configuration. |
+| `expression` _[EventGatewayParsedRecordFieldPathsExpression](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsexpression)_ | Expression configuration. |
 
 _Appears in:_
 
@@ -1985,36 +1993,8 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `variant1` |  |
-| `variant2` |  |
-
-#### EventGatewayParsedRecordDecryptionSelectorPathsVariant1
-
-_Underlying type:_ `[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)`
-
-EventGatewayParsedRecordDecryptionSelectorPathsVariant1 is a type alias.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
-
-#### EventGatewayParsedRecordDecryptionSelectorPathsVariant2
-
-_Underlying type:_ `string`
-
-EventGatewayParsedRecordDecryptionSelectorPathsVariant2 This expression
-should evaluate to an array of exact field paths,
-equivalent to the `match` values in the array variant.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
+| `array` |  |
+| `expression` |  |
 
 #### EventGatewayParsedRecordEncryptFieldsConfig
 
@@ -2027,7 +2007,7 @@ parsed record policy.
 | Field | Description |
 | --- | --- |
 | `encryptFields` _[EventGatewayParsedRecordEncryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselector)_ | Selects which fields to encrypt and with what keys. |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -2122,8 +2102,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[EventGatewayParsedRecordEncryptionSelectorPathsType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpathstype)_ | Type designates the type of configuration. |
-| `variant1` _[EventGatewayParsedRecordEncryptionSelectorPathsVariant1](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpathsvariant1)_ | Variant1 configuration. |
-| `variant2` _[EventGatewayParsedRecordEncryptionSelectorPathsVariant2](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpathsvariant2)_ | Variant2 configuration. |
+| `array` _[EventGatewayParsedRecordFieldPathsArray](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsarray)_ | Array configuration. |
+| `expression` _[EventGatewayParsedRecordFieldPathsExpression](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsexpression)_ | Expression configuration. |
 
 _Appears in:_
 
@@ -2146,28 +2126,47 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `variant1` |  |
-| `variant2` |  |
+| `array` |  |
+| `expression` |  |
 
-#### EventGatewayParsedRecordEncryptionSelectorPathsVariant1
+#### EventGatewayParsedRecordFieldPathsArray
 
-_Underlying type:_ `[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)`
+_Underlying type:_ `[EventGatewayParsedRecordFieldPathsArrayItem](#eventgatewayparsedrecordfieldpathsarrayitem)`
 
-EventGatewayParsedRecordEncryptionSelectorPathsVariant1 is a type alias.
+EventGatewayParsedRecordFieldPathsArray is a type alias.
 
 
 
+| Field | Description |
+| --- | --- |
+| `match` _string_ | A field selector. It can select nested fields and array entries.<br /><br />Currently supported are exact matches. |
 
 _Appears in:_
 
+- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
 
-#### EventGatewayParsedRecordEncryptionSelectorPathsVariant2
+#### EventGatewayParsedRecordFieldPathsArrayItem
+
+
+EventGatewayParsedRecordFieldPathsArrayItem is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `match` _string_ | A field selector. It can select nested fields and array entries.<br /><br />Currently supported are exact matches. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordFieldPathsArray](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsarray)
+
+#### EventGatewayParsedRecordFieldPathsExpression
 
 _Underlying type:_ `string`
 
-EventGatewayParsedRecordEncryptionSelectorPathsVariant2 This expression
-should evaluate to an array of exact field paths,
+EventGatewayParsedRecordFieldPathsExpression This expression should evaluate
+to an array of exact field paths,
 equivalent to the `match` values in the array variant.
 
 
@@ -2175,6 +2174,7 @@ equivalent to the `match` values in the array variant.
 
 _Appears in:_
 
+- [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
 
 #### EventGatewayProduceSchemaValidationPolicy
@@ -2246,8 +2246,11 @@ produce schema validation policy when using JSON parsing without schema.
 
 | Field | Description |
 | --- | --- |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
 | `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)_ | A reference to a schema Registry. |
+| `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
 
 _Appears in:_
@@ -2303,8 +2306,11 @@ registry.
 
 | Field | Description |
 | --- | --- |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
 | `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)_ | A reference to a schema Registry. |
+| `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
 
 _Appears in:_
@@ -4310,7 +4316,7 @@ produced records.
 though policy execution failed.
 * `mark` - passes the record to the backend cluster but marks it with a
 `kong/policy-failure-<id>` header whose value is the reason for the policy
-failure (truncated to 512 characters).
+failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -4318,6 +4324,8 @@ failure (truncated to 512 characters).
 _Appears in:_
 
 - [EventGatewayParsedRecordEncryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldsconfig)
+- [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
 
 #### ProduceKeyValidationAction
 
@@ -5309,6 +5317,379 @@ This is achieved using cookies and requires Kong Enterprise Gateway.
 _Appears in:_
 
 - [KongUpstreamPolicySpec](#configuration-konghq-com-v1beta1-types-kongupstreampolicyspec)
+
+## eventgateway.konghq.com/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the eventgateway.konghq.com v1alpha1 API group.
+
+- [KegDataPlane](#eventgateway-konghq-com-v1alpha1-kegdataplane)
+
+### KegDataPlane
+
+
+KegDataPlane is the Schema for the EventGateway data planes API.
+It manages a keg binary Deployment that connects to Konnect via a
+referenced KonnectEventGateway resource.
+
+<!-- keg_data_plane description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `eventgateway.konghq.com/v1alpha1`
+| `kind` _string_ | `KegDataPlane`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)_ | Spec defines the desired state of KegDataPlane. |
+| `status` _[KegDataPlaneStatus](#eventgateway-konghq-com-v1alpha1-types-kegdataplanestatus)_ | Status defines the observed state of KegDataPlane. |
+
+### Types
+
+In this section you will find types that the CRDs rely on.
+#### ControlPlaneRef
+
+
+ControlPlaneRef identifies the control plane this DataPlane connects to.
+The Type field determines which sub-field is active.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ControlPlaneRefType](#eventgateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced. Currently only konnectNamespacedRef is supported. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#eventgateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+
+_Appears in:_
+
+- [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
+
+#### ControlPlaneRefType
+
+_Underlying type:_ `string`
+
+ControlPlaneRefType identifies the kind of control plane being referenced.
+
+
+
+
+_Appears in:_
+
+- [ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a KonnectEventGateway<br />resource in the same namespace as the DataPlane.<br /> |
+
+#### DebugEndpointsState
+
+_Underlying type:_ `string`
+
+DebugEndpointsState controls whether keg debug endpoints are exposed.
+
+
+
+
+_Appears in:_
+
+- [KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | DebugEndpointsStateEnabled enables the /debug/pprof/allocs endpoint.<br /> |
+| `Disabled` | DebugEndpointsStateDisabled disables the debug endpoints (default).<br /> |
+
+#### DeploymentOptions
+
+
+DeploymentOptions specifies options for the Deployment managed by the KegDataPlane controller.
+
+
+
+| Field | Description |
+| --- | --- |
+| `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
+| `scaling` _[Scaling](#eventgateway-konghq-com-v1alpha1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
+| `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).<br /><br />Note: environment variables set here take precedence over strongly-typed fields in Spec.Config. Using raw env vars is discouraged and intended for advanced use cases only. |
+
+_Appears in:_
+
+- [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
+
+#### HorizontalScaling
+
+
+HorizontalScaling defines horizontal scaling options for the deployment.
+It holds all the options from the HorizontalPodAutoscalerSpec besides the
+ScaleTargetRef which is being controlled by the Operator.
+
+
+
+| Field | Description |
+| --- | --- |
+| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
+| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less than minReplicas. |
+| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
+| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
+
+_Appears in:_
+
+- [Scaling](#eventgateway-konghq-com-v1alpha1-types-scaling)
+
+#### KegDataPlaneConfiguration
+
+
+KegDataPlaneConfiguration provides optional overrides for keg runtime settings.
+All fields map 1-to-1 to keg configuration variables.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfig](#eventgateway-konghq-com-v1alpha1-types-konnectconfig)_ | Konnect provides optional overrides for the keg to Konnect connection parameters. All other connection values (region, gateway_cluster_id, cert paths) are derived automatically and cannot be overridden here. |
+| `configPollIntervalSeconds` _*int32_ | ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds. Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL. |
+| `enableDebugEndpoints` _[DebugEndpointsState](#eventgateway-konghq-com-v1alpha1-types-debugendpointsstate)_ | EnableDebugEndpoints enables the /debug/pprof/allocs endpoint. Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS. |
+| `observability` _[ObservabilityConfig](#eventgateway-konghq-com-v1alpha1-types-observabilityconfig)_ | Observability configures logging, metrics, and tracing. |
+| `runtime` _[RuntimeOptions](#eventgateway-konghq-com-v1alpha1-types-runtimeoptions)_ | Runtime configures graceful shutdown and health endpoint behaviour. |
+
+_Appears in:_
+
+- [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
+
+#### KegDataPlaneSpec
+
+
+KegDataPlaneSpec defines the desired state of KegDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controlPlaneRef` _[ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this KegDataPlane connects to. The type field identifies which kind of control plane is being referenced. Currently only konnectNamespacedRef is supported, which references a KonnectEventGateway resource in the same namespace. |
+| `deployment` _[DeploymentOptions](#eventgateway-konghq-com-v1alpha1-types-deploymentoptions)_ | Deployment configures the keg Deployment: image, replicas, resources, extra env vars, volume mounts, etc. |
+| `network` _[NetworkOptions](#eventgateway-konghq-com-v1alpha1-types-networkoptions)_ | Network configures how the keg pod is exposed to Kafka clients. |
+| `config` _[KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)_ | Config provides optional overrides for keg runtime settings. When omitted, the keg built-in defaults are used. https://developer.konghq.com/event-gateway/configuration/#applying-configuration |
+
+_Appears in:_
+
+- [KegDataPlane](#eventgateway-konghq-com-v1alpha1-kegdataplane)
+
+#### KegDataPlaneStatus
+
+
+KegDataPlaneStatus defines the observed state of KegDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the KegDataPlane. |
+| `readyReplicas` _int32_ | ReadyReplicas indicates how many replicas have reported to be ready. |
+| `replicas` _int32_ | Replicas indicates how many replicas have been set for the KegDataPlane. |
+
+_Appears in:_
+
+- [KegDataPlane](#eventgateway-konghq-com-v1alpha1-kegdataplane)
+
+#### KonnectConfig
+
+
+KonnectConfig exposes the small subset of konnect.* config keys
+that are user-tunable (all others are set automatically by the controller).
+
+
+
+| Field | Description |
+| --- | --- |
+| `domain` _*string_ | Domain overrides the Konnect domain. Corresponds to konnect.domain / KONG_KONNECT_DOMAIN. |
+| `apiRequestTimeoutSeconds` _*int32_ | APIRequestTimeoutSeconds overrides the Konnect API request timeout, in seconds. Corresponds to konnect.api_request_timeout / KONG_KONNECT_API_REQUEST_TIMEOUT. |
+| `insecureSkipVerify` _[TLSVerificationState](#eventgateway-konghq-com-v1alpha1-types-tlsverificationstate)_ | InsecureSkipVerify disables TLS verification for the Konnect connection. For testing only, do not use in production. Corresponds to konnect.insecure_skip_verify / KONG_KONNECT_INSECURE_SKIP_VERIFY. |
+
+_Appears in:_
+
+- [KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)
+
+#### KonnectNamespacedRef
+
+
+KonnectNamespacedRef is a reference to a KonnectEventGateway resource in the same namespace.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the KonnectEventGateway resource. |
+
+_Appears in:_
+
+- [ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)
+
+#### LabelName
+
+_Underlying type:_ `string`
+
+LabelName is a label key with constraints matching Kubernetes label key requirements.
+
+
+
+
+_Appears in:_
+
+- [ServiceOptions](#eventgateway-konghq-com-v1alpha1-types-serviceoptions)
+
+#### LabelValue
+
+_Underlying type:_ `string`
+
+LabelValue is a label value with constraints matching Kubernetes label value requirements.
+
+
+
+
+_Appears in:_
+
+- [ServiceOptions](#eventgateway-konghq-com-v1alpha1-types-serviceoptions)
+
+#### NetworkOptions
+
+
+NetworkOptions defines network-related options for a KegDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `services` _[Services](#eventgateway-konghq-com-v1alpha1-types-services)_ | Services configures the Kubernetes Services that expose the keg pod to Kafka clients. |
+
+_Appears in:_
+
+- [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
+
+#### ObservabilityConfig
+
+
+ObservabilityConfig configures logging, metrics, and tracing for KEG.
+
+
+
+| Field | Description |
+| --- | --- |
+| `logFlags` _*string_ | LogFlags sets the log level. Corresponds to observability.log_flags / KEG__OBSERVABILITY__LOG_FLAGS. |
+| `logFormat` _*string_ | LogFormat sets the log output format. Corresponds to observability.log_format / KEG__OBSERVABILITY__LOG_FORMAT. |
+| `metricsRollupAllowMap` _*string_ | MetricsRollupAllowMap prevents high-cardinality metrics by collapsing unmatched label values to "other". Corresponds to observability.metrics_rollup_allow_map / KEG__OBSERVABILITY__METRICS_ROLLUP_ALLOW_MAP. |
+| `policyErrorsInfoLogIntervalSeconds` _*int32_ | PolicyErrorsInfoLogIntervalSeconds sets the interval for INFO-level logging of policy errors, in seconds. Set to 0 to disable. Corresponds to observability.policy_errors_info_log_interval / KEG__OBSERVABILITY__POLICY_ERRORS_INFO_LOG_INTERVAL. |
+
+_Appears in:_
+
+- [KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)
+
+#### RuntimeOptions
+
+
+RuntimeOptions configures graceful shutdown and health endpoint behaviour for keg.
+
+
+
+| Field | Description |
+| --- | --- |
+| `healthListenerAddressPort` _*string_ | HealthListenerAddressPort sets the address:port for the health endpoint. Corresponds to runtime.health_listener_address_port / KEG__RUNTIME__HEALTH_LISTENER_ADDRESS_PORT. |
+| `drainDurationSeconds` _*int32_ | DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds. Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. |
+| `shutdownTimeoutSeconds` _*int32_ | ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds. Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. |
+
+_Appears in:_
+
+- [KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)
+
+#### Scaling
+
+
+Scaling defines the scaling options for the deployment.
+
+
+
+| Field | Description |
+| --- | --- |
+| `horizontal` _[HorizontalScaling](#eventgateway-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
+
+_Appears in:_
+
+- [DeploymentOptions](#eventgateway-konghq-com-v1alpha1-types-deploymentoptions)
+
+#### ServiceOptions
+
+
+ServiceOptions contains Service configuration for the KegDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type determines how the Service is exposed. Defaults to ClusterIP. |
+| `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with the Service resource. |
+| `labels` _[LabelValue](#eventgateway-konghq-com-v1alpha1-types-labelvalue)_ | Labels are propagated to the KegDataPlane's Kafka Service. |
+| `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core)_ | ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's externally-facing addresses. |
+| `ports` _[ServicePort](#eventgateway-konghq-com-v1alpha1-types-serviceport)_ | Ports defines the list of ports that are exposed by the service. |
+
+_Appears in:_
+
+- [Services](#eventgateway-konghq-com-v1alpha1-types-services)
+
+#### ServicePort
+
+
+ServicePort contains information on a service port.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _*string_ | The name of this port within the service. |
+| `port` _int32_ | The port that will be exposed by this service. |
+| `targetPort` _*k8s.io/apimachinery/pkg/util/intstr.IntOrString_ | Number or name of the port to access on the pods targeted by the service. |
+| `nodePort` _*int32_ | The port on each node on which this service is exposed when type is NodePort or LoadBalancer. |
+
+_Appears in:_
+
+- [ServiceOptions](#eventgateway-konghq-com-v1alpha1-types-serviceoptions)
+
+#### Services
+
+
+Services configures the Kubernetes Services created for a keg pod.<br /><br />keg exposes a single TCP port for Kafka client traffic. In production the
+recommended approach is SNI mapping, one port (default 9092), multiple backend
+clusters via distinct TLS hostnames. For external access the Service type must
+be LoadBalancer (or a Gateway API TLSRoute passthrough can be used).
+
+
+
+| Field | Description |
+| --- | --- |
+| `kafka` _[ServiceOptions](#eventgateway-konghq-com-v1alpha1-types-serviceoptions)_ | Kafka is the Service that exposes the Kafka protocol listener to clients.<br /><br />In SNI mapping mode (production) this is a single port that defaults to 9092. Konnect Listeners configure which hostnames keg advertises to clients; those hostnames must resolve to this Service's external address.<br /><br />Set type to LoadBalancer for external access, or use a TLSRoute (Gateway API passthrough) to route to this Service from a shared ingress Gateway. |
+
+_Appears in:_
+
+- [NetworkOptions](#eventgateway-konghq-com-v1alpha1-types-networkoptions)
+
+#### TLSVerificationState
+
+_Underlying type:_ `string`
+
+TLSVerificationState controls whether TLS verification is skipped.
+
+
+
+
+_Appears in:_
+
+- [KonnectConfig](#eventgateway-konghq-com-v1alpha1-types-konnectconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | TLSVerificationStateEnabled skips TLS verification. For testing only.<br /> |
+| `Disabled` | TLSVerificationStateDisabled enforces TLS verification (default).<br /> |
 
 ## gateway-operator.konghq.com/v1alpha1
 

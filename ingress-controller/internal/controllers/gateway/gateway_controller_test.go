@@ -1,16 +1,22 @@
 package gateway
 
 import (
+	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
 )
 
 func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
@@ -521,4 +527,56 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			tc.referenceGrants,
 		))
 	}
+}
+
+func TestUpdateAddressesAndListenersStatus_UpdatesAddressesWhenProgrammed(t *testing.T) {
+	ctx := context.Background()
+	sch := scheme.Get()
+
+	ipType := gatewayapi.IPAddressType
+	gateway := &gatewayapi.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "gw",
+			Namespace:  "default",
+			Generation: 1,
+		},
+		Status: gatewayapi.GatewayStatus{
+			Addresses: []gatewayapi.GatewayStatusAddress{
+				{Type: &ipType, Value: "10.0.0.1"},
+			},
+			Conditions: []metav1.Condition{
+				{
+					Type:               string(gatewayapi.GatewayConditionProgrammed),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: 1,
+					Reason:             string(gatewayapi.GatewayReasonProgrammed),
+					LastTransitionTime: metav1.Now(),
+				},
+			},
+		},
+	}
+
+	cl := fakeclient.NewClientBuilder().
+		WithScheme(sch).
+		WithObjects(gateway).
+		WithStatusSubresource(gateway).
+		Build()
+
+	r := &GatewayReconciler{
+		Client: cl,
+		Log:    logr.Discard(),
+	}
+
+	listenerStatuses := []gatewayapi.ListenerStatus{}
+	newAddresses := []gatewayapi.GatewayStatusAddress{
+		{Type: &ipType, Value: "10.0.0.2"},
+	}
+
+	res, err := r.updateAddressesAndListenersStatus(ctx, logr.Discard(), gateway, listenerStatuses, newAddresses)
+	require.NoError(t, err)
+	require.True(t, res.IsZero())
+
+	updated := &gatewayapi.Gateway{}
+	require.NoError(t, cl.Get(ctx, ctrlclient.ObjectKeyFromObject(gateway), updated))
+	require.Equal(t, newAddresses, updated.Status.Addresses)
 }

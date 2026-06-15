@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -395,29 +394,31 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 }
 
 // listGatewaysAttachedByRoute is the generic method to list gateways attached to the given route with supported type.
-func listGatewaysAttachedByRoute[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
-	ctx context.Context, logger logr.Logger, cl client.Client, route TPtr) []reconcile.Request {
-
-	gateways := &gatewayv1.GatewayList{}
-	if err := cl.List(ctx, gateways); err != nil {
-		// Log kind and namespace/name of the object.
-		logger.Error(err, "Failed to list gateways in watch", route.GetObjectKind().GroupVersionKind().Kind, client.ObjectKeyFromObject(route))
-		return nil
-	}
-	var recs []reconcile.Request
-	for _, gateway := range gateways.Items {
-		for _, parentRef := range gwtypes.GetSpecParentRefs(*route) {
-			if parentRef.Group != nil && string(*parentRef.Group) == gatewayv1.GroupName &&
-				parentRef.Kind != nil && string(*parentRef.Kind) == "Gateway" &&
-				string(parentRef.Name) == gateway.Name {
-				recs = append(recs, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: gateway.Namespace,
-						Name:      gateway.Name,
-					},
-				})
-			}
+func listGatewaysAttachedByRoute[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](route TPtr) []reconcile.Request {
+	recs := make([]reconcile.Request, 0, len(gwtypes.GetSpecParentRefs(*route)))
+	seen := make(map[types.NamespacedName]struct{})
+	for _, parentRef := range gwtypes.GetSpecParentRefs(*route) {
+		if parentRef.Group != nil && string(*parentRef.Group) != gatewayv1.GroupName {
+			continue
 		}
+		if parentRef.Kind != nil && string(*parentRef.Kind) != "Gateway" {
+			continue
+		}
+
+		parentRefNamespace := route.GetNamespace()
+		if parentRef.Namespace != nil {
+			parentRefNamespace = string(*parentRef.Namespace)
+		}
+
+		nn := types.NamespacedName{
+			Namespace: parentRefNamespace,
+			Name:      string(parentRef.Name),
+		}
+		if _, ok := seen[nn]; ok {
+			continue
+		}
+		seen[nn] = struct{}{}
+		recs = append(recs, reconcile.Request{NamespacedName: nn})
 	}
 	return recs
 }
@@ -436,7 +437,7 @@ func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj cl
 		)
 		return nil
 	}
-	return listGatewaysAttachedByRoute(ctx, logger, r.Client, httpRoute)
+	return listGatewaysAttachedByRoute(httpRoute)
 }
 
 func (r *Reconciler) listGatewaysAttachedByTLSRoute(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -451,7 +452,7 @@ func (r *Reconciler) listGatewaysAttachedByTLSRoute(ctx context.Context, obj cli
 		)
 		return nil
 	}
-	return listGatewaysAttachedByRoute(ctx, logger, r.Client, tlsRoute)
+	return listGatewaysAttachedByRoute(tlsRoute)
 }
 
 // -----------------------------------------------------------------------------

@@ -16,12 +16,19 @@ jobs:
   conformance-tests:
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    name: ${{ format('{0} {1}', matrix.gateway-type, matrix.router-flavor) }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - router-flavor: traditional_compatible
+        router-flavor:
+          - traditional_compatible
+          - expressions
+        gateway-type:
+          - standard
+          - hybrid
+        exclude:
           - router-flavor: expressions
+            gateway-type: hybrid
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -29,13 +36,13 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
           fetch-tags: true
           ref: ${{ github.event.inputs.tag }}
 
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: false
 
@@ -47,6 +54,9 @@ jobs:
       - name: Run conformance tests
         env:
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
+          KONG_TEST_CONFORMANCE_GATEWAY_TYPE: ${{ matrix.gateway-type }}
+          KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ matrix.gateway-type == 'hybrid' && secrets.KONG_TEST_KONNECT_ACCESS_TOKEN || '' }}
+          KONG_TEST_KONNECT_SERVER_URL: ${{ matrix.gateway-type == 'hybrid' && 'us.api.konghq.tech' || '' }}
           # Add GITHUB_TOKEN env so that mise plugins can can access GitHub's API
           # authenticated and thus not get rate-limited (which causes failures).
           # Source ref: https://github.com/pirackr/asdf-telepresence/blob/c9eeab4d28b9851bb904c4c67239a118c8dd384d/bin/list-all#L7-L9
@@ -60,5 +70,5 @@ jobs:
       - name: Collect conformance report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: conformance-report-${{ matrix.router-flavor }}
+          name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
           path: "*report.yaml"

@@ -56,7 +56,7 @@ metadata:
 {{ end }}
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.1.0
+    kubernetes-configuration.konghq.com/version: v2.2.0
   name: controlplanes.gateway-operator.konghq.com
 spec:
 {{ if .Values.global.webhooks.conversion.enabled }}
@@ -9502,7 +9502,7 @@ metadata:
 {{ end }}
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.1.0
+    kubernetes-configuration.konghq.com/version: v2.2.0
   name: gatewayconfigurations.gateway-operator.konghq.com
 spec:
 {{ if .Values.global.webhooks.conversion.enabled }}
@@ -38212,12 +38212,14 @@ spec:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration
                           resource.
+                        maxLength: 253
                         minLength: 1
                         type: string
                       namespace:
                         description: |-
                           Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
                           If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                        maxLength: 253
                         minLength: 1
                         type: string
                     required:
@@ -38401,7 +38403,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.1.0
+    kubernetes-configuration.konghq.com/version: v2.2.0
   name: konnectextensions.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -38513,6 +38515,7 @@ spec:
                           name:
                             description: Name is the name of the KonnectAPIAuthConfiguration
                               resource.
+                            maxLength: 253
                             minLength: 1
                             type: string
                         required:
@@ -39147,12 +39150,14 @@ spec:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration
                           resource.
+                        maxLength: 253
                         minLength: 1
                         type: string
                       namespace:
                         description: |-
                           Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
                           If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                        maxLength: 253
                         minLength: 1
                         type: string
                     required:
@@ -39217,7 +39222,7 @@ metadata:
 {{ end }}
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.1.0
+    kubernetes-configuration.konghq.com/version: v2.2.0
   name: konnectgatewaycontrolplanes.konnect.konghq.com
 spec:
 {{ if .Values.global.webhooks.conversion.enabled }}
@@ -39316,6 +39321,7 @@ spec:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration
                           resource.
+                        maxLength: 253
                         minLength: 1
                         type: string
                     required:
@@ -39693,12 +39699,14 @@ spec:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration
                           resource.
+                        maxLength: 253
                         minLength: 1
                         type: string
                       namespace:
                         description: |-
                           Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
                           If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                        maxLength: 253
                         minLength: 1
                         type: string
                     required:
