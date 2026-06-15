@@ -176,15 +176,10 @@ func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
 	old := kgcp.DeepCopy()
 	updated := false
 
-	// Enforce the auth ref only when APIAuthValid=True and Programmed=False.
-	// The field is immutable once APIAuthValid becomes True (enforced by the CEL
-	// validation rule on the CRD), so patching is only meaningful in the window
-	// between APIAuthValid being set True and the resource becoming Programmed.
-	apiAuthValidCond, hasAPIAuthValid := k8sutils.GetCondition(
-		konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, kgcp,
-	)
 	if gatewayConfig.Spec.Konnect.APIAuthConfigurationRef != nil &&
-		hasAPIAuthValid && apiAuthValidCond.Status == metav1.ConditionTrue &&
+		!k8sutils.HasConditionTrue(
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, kgcp,
+		) &&
 		!k8sutils.IsProgrammed(kgcp) {
 		desired := *gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
 		if kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef != desired {

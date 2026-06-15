@@ -4277,33 +4277,7 @@ func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 			wantAuthRef: authRef,
 		},
 		{
-			name: "auth ref differs, APIAuthValid=True, not programmed - patch applied",
-			gatewayConfig: &GatewayConfiguration{
-				Spec: operatorv2beta1.GatewayConfigurationSpec{
-					Konnect: &operatorv2beta1.KonnectOptions{
-						APIAuthConfigurationRef: &authRef,
-					},
-				},
-			},
-			kgcp:        withAPIAuthValid(makeKGCP(otherAuthRef, false), metav1.ConditionTrue),
-			wantPatched: true,
-			wantAuthRef: authRef,
-		},
-		{
-			name: "auth ref differs, APIAuthValid absent, not programmed - no patch",
-			gatewayConfig: &GatewayConfiguration{
-				Spec: operatorv2beta1.GatewayConfigurationSpec{
-					Konnect: &operatorv2beta1.KonnectOptions{
-						APIAuthConfigurationRef: &authRef,
-					},
-				},
-			},
-			kgcp:        makeKGCP(otherAuthRef, false),
-			wantPatched: false,
-			wantAuthRef: otherAuthRef,
-		},
-		{
-			name: "auth ref differs, APIAuthValid=False, not programmed - no patch",
+			name: "auth ref differs, APIAuthValid=False, not programmed - patch applied",
 			gatewayConfig: &GatewayConfiguration{
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					Konnect: &operatorv2beta1.KonnectOptions{
@@ -4312,8 +4286,21 @@ func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 				},
 			},
 			kgcp:        withAPIAuthValid(makeKGCP(otherAuthRef, false), metav1.ConditionFalse),
-			wantPatched: false,
-			wantAuthRef: otherAuthRef,
+			wantPatched: true,
+			wantAuthRef: authRef,
+		},
+		{
+			name: "auth ref differs, APIAuthValid absent, not programmed - patch",
+			gatewayConfig: &GatewayConfiguration{
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					Konnect: &operatorv2beta1.KonnectOptions{
+						APIAuthConfigurationRef: &authRef,
+					},
+				},
+			},
+			kgcp:        makeKGCP(otherAuthRef, false),
+			wantPatched: true,
+			wantAuthRef: authRef,
 		},
 		{
 			name: "auth ref differs, APIAuthValid=True, already programmed - no patch",
