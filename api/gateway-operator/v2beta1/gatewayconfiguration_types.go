@@ -103,6 +103,9 @@ type GatewayConfigurationSpec struct {
 //
 // +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror",rule="self.source == 'Mirror' ? has(self.mirror) : true"
 // +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin",rule="self.source == 'Origin' ? !has(self.mirror) : true"
+// +kubebuilder:validation:XValidation:message="mirror is immutable once set",rule="!has(self.mirror) && !has(oldSelf.mirror) ? true : (has(self.mirror) && has(oldSelf.mirror) ? self.mirror == oldSelf.mirror : false)"
+// +kubebuilder:validation:XValidation:message="source is immutable once set",rule="!has(self.source) && !has(oldSelf.source) ? true : self.source == oldSelf.source"
+// +kubebuilder:validation:XValidation:message="authRef is immutable once set",rule="!has(oldSelf.authRef) ? true : self.authRef == oldSelf.authRef"
 type KonnectOptions struct {
 	// APIAuthConfigurationRef contains the Konnect API authentication configuration.
 	// If this field is not set, the operator will not be able to connect

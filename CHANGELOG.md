@@ -56,6 +56,13 @@
 - API: add PrintColumns for KongTarget upstream and target fields.
   [#4576](https://github.com/Kong/kong-operator/pull/4576)
 
+### Changed
+
+- Konnect related fields in `GatewayConfiguration` are immutable now,
+  because for underlying `KonnectGatewayControlPlane` these fields
+  have been always immutable.
+  [#4599](https://github.com/Kong/kong-operator/pull/4599)
+
 ### Fixes
 
 - Hybridgateway: release Gateway API route finalizers once generated Kong
