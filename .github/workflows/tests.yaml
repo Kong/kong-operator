@@ -165,6 +165,12 @@ jobs:
     uses: ./.github/workflows/__verify.yaml
     secrets: inherit
 
+  verify-crd-breaking-changes:
+    needs: [check-docs-only]
+    if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
+    uses: ./.github/workflows/__verify_crd_breaking_changes.yaml
+    secrets: inherit
+
   matrix_k8s_node_versions:
     runs-on: ubuntu-latest
     outputs:
