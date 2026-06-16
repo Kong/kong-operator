@@ -170,7 +170,7 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 					Network: &eventgatewayv1alpha1.NetworkOptions{
 						Services: &eventgatewayv1alpha1.Services{
 							Kafka: &eventgatewayv1alpha1.ServiceOptions{
-								TrafficDistribution: new("PreferClose"),
+								TrafficDistribution: new("PreferSameZone"),
 							},
 						},
 					},
@@ -178,7 +178,7 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 			},
 			check: func(t *testing.T, svc *corev1.Service) {
 				require.NotNil(t, svc.Spec.TrafficDistribution)
-				assert.Equal(t, "PreferClose", *svc.Spec.TrafficDistribution)
+				assert.Equal(t, "PreferSameZone", *svc.Spec.TrafficDistribution)
 			},
 		},
 		{

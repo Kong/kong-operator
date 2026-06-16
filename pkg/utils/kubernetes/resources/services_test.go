@@ -305,7 +305,7 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
 									ServiceOptions: operatorv1beta1.ServiceOptions{
 										Type:                corev1.ServiceTypeLoadBalancer,
-										TrafficDistribution: new("PreferClose"),
+										TrafficDistribution: new("PreferSameZone"),
 									},
 								},
 							},
@@ -354,7 +354,7 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 					Selector: map[string]string{
 						"app": "dp-1",
 					},
-					TrafficDistribution: new("PreferClose"),
+					TrafficDistribution: new("PreferSameZone"),
 				},
 			},
 			expectedErr: nil,
