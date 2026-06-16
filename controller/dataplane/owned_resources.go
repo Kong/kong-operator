@@ -370,6 +370,16 @@ func ensureIngressServiceForDataPlane(
 			updated = true
 		}
 
+		if !cmp.Equal(existingService.Spec.TrafficDistribution, generatedService.Spec.TrafficDistribution) {
+			existingService.Spec.TrafficDistribution = generatedService.Spec.TrafficDistribution
+			updated = true
+		}
+
+		if !cmp.Equal(existingService.Spec.InternalTrafficPolicy, generatedService.Spec.InternalTrafficPolicy) {
+			existingService.Spec.InternalTrafficPolicy = generatedService.Spec.InternalTrafficPolicy
+			updated = true
+		}
+
 		if !cmp.Equal(existingService.Spec.Selector, generatedService.Spec.Selector) {
 			existingService.Spec.Selector = generatedService.Spec.Selector
 			updated = true
