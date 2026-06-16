@@ -65,6 +65,22 @@
 
 ### Fixes
 
+- Hybridgateway: merge duplicate `KongTarget`s when multiple `backendRef`s in
+  an `HTTPRoute` or `TLSRoute` rule resolve to the same pod IP and port.
+  Previously one target per backendRef per endpoint was created, causing Konnect
+  400 uniqueness-constraint rejections that left targets stuck in
+  `Programmed=False`. The operator now creates one `KongTarget` per unique
+  endpoint address, summing the weights of all contributing backendRefs.
+  On upgrade, existing targets are looked up by address and reused to avoid
+  duplicate conflicts.
+  [#4509](https://github.com/Kong/kong-operator/pull/4509)
+- Konnect: requeue HybridGateway-managed resources on reference-only 400 errors
+  with a fixed 5 s delay. `ERROR_TYPE_REFERENCE` uniqueness conflicts are
+  transient (stale entity not yet cleaned up, or referenced entity not yet
+  propagated); previously they fell through to exponential backoff or were
+  silently dropped. For user-created resources the same error shape is still
+  suppressed as it may indicate a permanent misconfiguration.
+  [#4509](https://github.com/Kong/kong-operator/pull/4509)
 - Hybridgateway: prevent traffic drops when an `HTTPRoute` spec change rotates
   resource names. A cleanup-time gate defers orphan deletion until every desired
   `KongRoute` is confirmed bound to its new `KongService` in Konnect, and an
