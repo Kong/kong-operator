@@ -33050,6 +33050,7 @@ spec:
                 type: array
               version:
                 description: Version specifies the desired Kong Gateway version.
+                minLength: 1
                 type: string
             required:
             - controlPlaneRef

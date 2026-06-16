@@ -97,6 +97,7 @@ type MirrorKonnect struct {
 	// the ControlPlane type is Mirror.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	ID commonv1alpha1.KonnectIDType `json:"id"`
 }
 
