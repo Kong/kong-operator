@@ -96,6 +96,9 @@
   conflicts with valid backend services while keeping normally generated service
   names unchanged.
   [#4437](https://github.com/Kong/kong-operator/pull/4437)
+- Prevent recreating consumer credentials on every Konnect sync when running in
+  "KIC in Konnect" mode with on prem `ControlPlane`.
+  [#4622](https://github.com/Kong/kong-operator/pull/4622)
 
 ## [v2.2.0]
 
