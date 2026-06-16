@@ -294,13 +294,37 @@ func calculateHTTPRouteMatchPriorityTraits(match SplitHTTPRouteMatch) HTTPRouteP
 		traits.HasMethodMatch = true
 	}
 
-	// fill number of header matches.
-	traits.HeaderCount = len(match.Match.Headers)
+	// fill number of effective header matches.
+	traits.HeaderCount = countEffectiveHTTPHeaderMatches(match.Match.Headers)
 
-	// fill number of query parameters.
-	traits.QueryParamCount = len(match.Match.QueryParams)
+	// fill number of effective query parameters.
+	traits.QueryParamCount = countEffectiveHTTPQueryParamMatches(match.Match.QueryParams)
 
 	return traits
+}
+
+func countEffectiveHTTPHeaderMatches(headers []gatewayapi.HTTPHeaderMatch) int {
+	seenHeaders := make(map[string]struct{}, len(headers))
+	for _, header := range headers {
+		name := strings.ToLower(string(header.Name))
+		if _, ok := seenHeaders[name]; ok {
+			continue
+		}
+		seenHeaders[name] = struct{}{}
+	}
+	return len(seenHeaders)
+}
+
+func countEffectiveHTTPQueryParamMatches(queryParams []gatewayapi.HTTPQueryParamMatch) int {
+	seenQueryParams := make(map[string]struct{}, len(queryParams))
+	for _, queryParam := range queryParams {
+		name := string(queryParam.Name)
+		if _, ok := seenQueryParams[name]; ok {
+			continue
+		}
+		seenQueryParams[name] = struct{}{}
+	}
+	return len(seenQueryParams)
 }
 
 // EncodeToPriority turns HTTPRoute priority traits into the integer expressed priority.
