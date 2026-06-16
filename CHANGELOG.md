@@ -47,6 +47,16 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## [v2.1.8]
+
+> Release date: TBD
+
+### Fixes
+
+- Prevent recreating consumer credentials on every Konnect sync when running in
+  "KIC in Konnect" mode with on prem `ControlPlane`.
+  [#4623](https://github.com/Kong/kong-operator/pull/4622) [#4624](https://github.com/Kong/kong-operator/pull/4624)
+
 ## [v2.1.7]
 
 > Release date: 2026-06-04
