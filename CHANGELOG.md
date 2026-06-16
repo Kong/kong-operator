@@ -65,6 +65,12 @@
 
 ### Fixes
 
+- Hybridgateway: prevent traffic drops when an `HTTPRoute` spec change rotates
+  resource names. A cleanup-time gate defers orphan deletion until every desired
+  `KongRoute` is confirmed bound to its new `KongService` in Konnect, and an
+  enforce-time gate delays `KongService` creation until its `KongUpstream` and
+  all desired `KongTarget`s are Programmed.
+  [#4577](https://github.com/Kong/kong-operator/pull/4577)
 - Hybridgateway: release Gateway API route finalizers once generated Kong
   resource delete requests have been issued, so immediate same-name route
   re-creates are not blocked by child resource finalizers.
