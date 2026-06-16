@@ -276,6 +276,110 @@ func TestRefillPluginIDs(t *testing.T) {
 	}
 }
 
+func TestRefillCredentialIDs(t *testing.T) {
+	consumerID := "consumer-1"
+	consumer := &kong.Consumer{
+		Username: new("consumer-1"),
+		ID:       new(consumerID),
+	}
+	credTag := new("k8s-name/default/my-secret/abc-uid")
+
+	testCases := []struct {
+		name              string
+		currentState      *state.KongState
+		targetState       *state.KongState
+		expectedKeyAuthID string
+	}{
+		{
+			name: "key-auth ID from current state is copied to target when tags and consumer match",
+			currentState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
+				Consumers: []*kong.Consumer{consumer},
+				KeyAuths: []*kong.KeyAuth{
+					{
+						ID:       new("existing-ka-id"),
+						Key:      new("{vault://aaa}"),
+						Consumer: &kong.Consumer{ID: new(consumerID)},
+						Tags:     []*string{credTag},
+					},
+				},
+			}),
+			targetState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
+				Consumers: []*kong.Consumer{consumer},
+				KeyAuths: []*kong.KeyAuth{
+					{
+						ID:       new("new-ka-id"),
+						Key:      new("{vault://bbb}"),
+						Consumer: &kong.Consumer{ID: new(consumerID)},
+						Tags:     []*string{credTag},
+					},
+				},
+			}),
+			expectedKeyAuthID: "existing-ka-id",
+		},
+		{
+			name: "key-auth ID is NOT copied when tags differ (different credential)",
+			currentState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
+				Consumers: []*kong.Consumer{consumer},
+				KeyAuths: []*kong.KeyAuth{
+					{
+						ID:       new("existing-ka-id"),
+						Key:      new("{vault://aaa}"),
+						Consumer: &kong.Consumer{ID: new(consumerID)},
+						Tags:     []*string{new("k8s-name/default/secret-A/uid-A")},
+					},
+				},
+			}),
+			targetState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
+				Consumers: []*kong.Consumer{consumer},
+				KeyAuths: []*kong.KeyAuth{
+					{
+						ID:       new("new-ka-id"),
+						Key:      new("{vault://bbb}"),
+						Consumer: &kong.Consumer{ID: new(consumerID)},
+						Tags:     []*string{new("k8s-name/default/secret-B/uid-B")},
+					},
+				},
+			}),
+			expectedKeyAuthID: "new-ka-id",
+		},
+		{
+			name: "key-auth ID is unchanged when IDs already match",
+			currentState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
+				Consumers: []*kong.Consumer{consumer},
+				KeyAuths: []*kong.KeyAuth{
+					{
+						ID:       new("same-id"),
+						Key:      new("{vault://aaa}"),
+						Consumer: &kong.Consumer{ID: new(consumerID)},
+						Tags:     []*string{credTag},
+					},
+				},
+			}),
+			targetState: mustNewKongStateFromRawState(t, &deckutils.KongRawState{
+				Consumers: []*kong.Consumer{consumer},
+				KeyAuths: []*kong.KeyAuth{
+					{
+						ID:       new("same-id"),
+						Key:      new("{vault://bbb}"),
+						Consumer: &kong.Consumer{ID: new(consumerID)},
+						Tags:     []*string{credTag},
+					},
+				},
+			}),
+			expectedKeyAuthID: "same-id",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := refillCredentialIDs(tc.currentState, tc.targetState, logr.Discard())
+			require.NoError(t, err)
+			_, err = tc.targetState.KeyAuths.Get(tc.expectedKeyAuthID)
+			require.NoError(t, err, "key-auth with expected ID %q not found in target state", tc.expectedKeyAuthID)
+		})
+	}
+}
+
 func mustNewKongStateFromRawState(t *testing.T, rawState *deckutils.KongRawState) *state.KongState {
 	t.Helper()
 
