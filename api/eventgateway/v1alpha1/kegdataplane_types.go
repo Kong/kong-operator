@@ -239,6 +239,31 @@ type ServiceOptions struct {
 	// +kubebuilder:validation:Enum=Cluster;Local
 	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
 
+	// TrafficDistribution offers a way to express preferences for how traffic is
+	// distributed to Service endpoints. Implementations can use this field as a
+	// hint, but are not required to guarantee strict adherence. If the field is
+	// not set, the implementation will apply its default routing strategy. If set
+	// to "PreferClose", implementations should prioritize endpoints that are in the
+	// same zone as the client.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=PreferClose
+	TrafficDistribution *string `json:"trafficDistribution,omitempty"`
+
+	// InternalTrafficPolicy describes how nodes distribute service traffic they
+	// receive on the ClusterIP. If set to "Local", the proxy will assume that pods
+	// only want to talk to endpoints of the service on the same node as the pod,
+	// dropping the traffic if there are no local endpoints. The default value,
+	// "Cluster", uses the standard behavior of routing to all endpoints evenly.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#internal-traffic-policy
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Cluster;Local
+	InternalTrafficPolicy *corev1.ServiceInternalTrafficPolicy `json:"internalTrafficPolicy,omitempty"`
+
 	// Ports defines the list of ports that are exposed by the service.
 	//
 	// +kubebuilder:validation:MaxItems=64

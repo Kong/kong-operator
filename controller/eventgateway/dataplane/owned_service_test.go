@@ -162,6 +162,44 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 				assert.Equal(t, corev1.ServiceExternalTrafficPolicyLocal, svc.Spec.ExternalTrafficPolicy)
 			},
 		},
+		{
+			name: "trafficDistribution propagated",
+			egdp: &eventgatewayv1alpha1.KegDataPlane{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+					Network: &eventgatewayv1alpha1.NetworkOptions{
+						Services: &eventgatewayv1alpha1.Services{
+							Kafka: &eventgatewayv1alpha1.ServiceOptions{
+								TrafficDistribution: new("PreferClose"),
+							},
+						},
+					},
+				},
+			},
+			check: func(t *testing.T, svc *corev1.Service) {
+				require.NotNil(t, svc.Spec.TrafficDistribution)
+				assert.Equal(t, "PreferClose", *svc.Spec.TrafficDistribution)
+			},
+		},
+		{
+			name: "internalTrafficPolicy propagated",
+			egdp: &eventgatewayv1alpha1.KegDataPlane{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+					Network: &eventgatewayv1alpha1.NetworkOptions{
+						Services: &eventgatewayv1alpha1.Services{
+							Kafka: &eventgatewayv1alpha1.ServiceOptions{
+								InternalTrafficPolicy: new(corev1.ServiceInternalTrafficPolicyLocal),
+							},
+						},
+					},
+				},
+			},
+			check: func(t *testing.T, svc *corev1.Service) {
+				require.NotNil(t, svc.Spec.InternalTrafficPolicy)
+				assert.Equal(t, corev1.ServiceInternalTrafficPolicyLocal, *svc.Spec.InternalTrafficPolicy)
+			},
+		},
 	}
 
 	for _, tc := range tests {
