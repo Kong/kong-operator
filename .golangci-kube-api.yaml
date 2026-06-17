@@ -147,3 +147,9 @@ linters:
           - kubeapilinter
         path: api/eventgateway/.*
         text: 'requiredfields: field HorizontalScaling.MaxReplicas has a valid zero value'
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/v1alpha1/(konnect_extension_types|konnect_cloudgateway_network_types).go
+        text: 'requiredfields: field .* has a valid zero value (.*) and should be a pointer.'

@@ -58,6 +58,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						Version: "3.14",
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider: "aws",

@@ -847,8 +847,23 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	// If we continue, there is only one konnect gateway controlplane.
 	konnectControlPlane := konnectControlPlanes[0].DeepCopy()
 
-	// TODO: https://github.com/Kong/kong-operator/issues/2639
-	// enforce KonnectGatewayControlPlane spec
+	log.Trace(logger, "ensuring KonnectGatewayControlPlane spec is up to date")
+	patched, err := r.enforceKonnectGatewayControlPlaneSpec(ctx, konnectControlPlane, gatewayConfig)
+	if err != nil {
+		log.Debug(logger, fmt.Sprintf("failed enforcing KonnectGatewayControlPlane spec - error: %v", err))
+		k8sutils.SetCondition(
+			createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+		return konnectControlPlane, false
+	}
+	if patched {
+		log.Debug(logger, "KonnectGatewayControlPlane spec updated")
+		k8sutils.SetCondition(
+			createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceUpdatedMessage, gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+	}
 
 	log.Trace(logger, "Waiting for KonnectGatewayControlPlane readiness")
 	if !k8sutils.IsProgrammed(konnectControlPlane) {
