@@ -3,7 +3,6 @@ package translator
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -55,24 +54,17 @@ func VerifyAndUpdate[T client.Object](
 	// Update: verify and update the hybrid-routes annotation
 	routeKind := route.GetObjectKind().GroupVersionKind().Kind
 	am := metadata.NewAnnotationManager(logger)
-	routeAnnotationKey := am.RouteAnnotationKeyForKind(routeKind)
-	routesCSV := existingObj.GetAnnotations()[routeAnnotationKey]
-	routes := strings.Split(routesCSV, ",")
-	if len(routes) == 0 {
-		err = fmt.Errorf("existing %s object %s/%s has empty hybrid-routes annotation",
-			obj.GetObjectKind().GroupVersionKind().Kind, existingObj.GetNamespace(), existingObj.GetName())
-		log.Error(logger, err, "Tracking annotation check failed")
-		return true, err
-	}
+	routes := am.GetRoutesWithKind(existingObj, routeKind)
+
 	// If exclusiveRoute is true, ensure that the existing object is only associated with the provided route
 	// A resource is exclusive to a route if it cannot be shared among multiple routes, e.g., each KongRoute is derived
 	// from a single HTTPRoute only and is not shared with other HTTPRoutes by design.
 	// See https://github.com/Kong/kong-operator/blob/main/docs/internal/hybridgateway/autogen-resource-naming.md for more details of
 	// how the resource are generated and associated with routes.
-	if exclusiveRoute {
+	if exclusiveRoute && len(routes) > 0 {
 		if len(routes) > 1 || !metadata.RouteAnnotationMatch(routes[0], route) {
 			err = fmt.Errorf("existing %s object %s/%s is associated with multiple routes %s",
-				obj.GetObjectKind().GroupVersionKind().Kind, existingObj.GetNamespace(), existingObj.GetName(), routesCSV)
+				obj.GetObjectKind().GroupVersionKind().Kind, existingObj.GetNamespace(), existingObj.GetName(), routes)
 			log.Error(logger, err, "Tracking annotation exclusive source Route check failed")
 			return true, err
 		}

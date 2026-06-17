@@ -35,8 +35,6 @@ var skippedTestsForHybrid = []string{
 	// Core profile.
 	tests.HTTPRouteMethodMatching.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
-	// TODO: https://github.com/Kong/kong-operator/issues/4581
-	tests.HTTPRoutePathMatchOrder.ShortName,
 
 	// Extended profile.
 	tests.HTTPRouteRewriteHost.ShortName,

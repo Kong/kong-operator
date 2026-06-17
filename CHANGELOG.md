@@ -112,6 +112,11 @@
 - Hybridgateway: deduplicate generated Kong resources within a single
   HTTPRoute/TLSRoute translation when multiple rules reference the same backend.
   [#4567](https://github.com/Kong/kong-operator/pull/4567)
+- Hybridgateway: reconcile shared hybrid-routes annotations with optimistic-lock
+  updates so concurrent Routes do not clobber each other's route references, and
+  orphan cleanup does not delete resources that changed after the cleanup
+  decision.
+  [#4567](https://github.com/Kong/kong-operator/pull/4567)
 - Hybridgateway: use route-scoped `KongService` names for `HTTPRoute` rules
   whose backendRefs resolve to no valid targets. This avoids Konnect name
   conflicts with valid backend services while keeping normally generated service
