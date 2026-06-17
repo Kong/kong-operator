@@ -317,7 +317,7 @@ verify.go-fix: go-fix verify.diff
 
 .PHONY: verify.crd-breaking-changes
 verify.crd-breaking-changes: crdify
-	CRDIFY_BIN="$${CRDIFY_BIN:-$(CRDIFY)}" ./scripts/verify-crd-from-oas-breaking-changes.sh
+	CRDIFY_BIN="$${CRDIFY_BIN:-$(CRDIFY)}" ./scripts/verify-crd-breaking-changes.sh
 
 # ------------------------------------------------------------------------------
 # Build - Generators

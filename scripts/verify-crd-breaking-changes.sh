@@ -13,11 +13,14 @@ readonly RELATIVE_CRD_DIR
 CURRENT_CRD_DIR="${SCRIPT_ROOT}/${RELATIVE_CRD_DIR}"
 readonly CURRENT_CRD_DIR
 
-is_crd_from_oas_generated_basename() {
+is_crd_basename() {
 	local basename="${1}"
 
 	case "${basename}" in
-		konnect.konghq.com_*.yaml | configuration.konghq.com_eventgateway*.yaml)
+		kustomization.yaml)
+			return 1
+			;;
+		*.yaml)
 			return 0
 			;;
 		*)
@@ -26,12 +29,12 @@ is_crd_from_oas_generated_basename() {
 	esac
 }
 
-collect_crd_from_oas_generated_basenames() {
+collect_crd_basenames() {
 	local basename
 
 	while IFS= read -r basename; do
 		[[ -n "${basename}" ]] || continue
-		if is_crd_from_oas_generated_basename "${basename}"; then
+		if is_crd_basename "${basename}"; then
 			printf '%s\n' "${basename}"
 		fi
 	done | LC_ALL=C sort
@@ -72,13 +75,13 @@ resolve_base_revision() {
 		fi
 	done
 
-	echo "Failed to resolve a base revision for crd-from-oas CRD compatibility checks." >&2
+	echo "Failed to resolve a base revision for CRD compatibility checks." >&2
 	echo "Set CRD_BREAKING_CHANGES_BASE_SHA or CRD_BREAKING_CHANGES_BASE_REF to override the default." >&2
 	return 1
 }
 
 base_revision="$(resolve_base_revision)"
-echo "Comparing crd-from-oas-generated CRDs against ${base_revision}"
+echo "Comparing CRDs in ${RELATIVE_CRD_DIR} against ${base_revision}"
 
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "${tmpdir}"' EXIT
@@ -89,18 +92,18 @@ union_basenames="${tmpdir}/union_basenames.txt"
 
 find "${CURRENT_CRD_DIR}" -maxdepth 1 -type f -name '*.yaml' -print \
 	| sed 's#.*/##' \
-	| collect_crd_from_oas_generated_basenames > "${current_basenames}"
+	| collect_crd_basenames > "${current_basenames}"
 
 (
 	git ls-tree -r --name-only "${base_revision}" -- "${RELATIVE_CRD_DIR}" \
 		| sed 's#.*/##' \
-		| collect_crd_from_oas_generated_basenames
+		| collect_crd_basenames
 ) > "${base_basenames}" || true
 
 cat "${current_basenames}" "${base_basenames}" | sed '/^$/d' | LC_ALL=C sort -u > "${union_basenames}"
 
 if [[ ! -s "${union_basenames}" ]]; then
-	echo "No crd-from-oas-generated CRDs were found to compare."
+	echo "No CRDs were found in ${RELATIVE_CRD_DIR} to compare."
 	exit 1
 fi
 
