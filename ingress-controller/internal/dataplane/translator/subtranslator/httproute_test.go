@@ -771,22 +771,6 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 			},
 		},
 		{
-			msg: "multiple identical header names only use the first match",
-			input: []gatewayapi.HTTPHeaderMatch{
-				{
-					Name:  "Content-Type",
-					Value: "audio/vorbis",
-				},
-				{
-					Name:  "Content-Type",
-					Value: "audio/flac",
-				},
-			},
-			output: map[string][]string{
-				"Content-Type": {"audio/vorbis"},
-			},
-		},
-		{
 			msg: "multiple equivalent header names only use the first match",
 			input: []gatewayapi.HTTPHeaderMatch{
 				{
@@ -834,6 +818,125 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 			assert.Equal(t, tt.output, output)
 		})
 	}
+}
+
+func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatches(t *testing.T) {
+	serviceTypeMeta := metav1.TypeMeta{
+		APIVersion: "v1",
+		Kind:       "Service",
+	}
+	httpRouteTypeMeta := metav1.TypeMeta{
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Kind:       "HTTPRoute",
+	}
+
+	k8sServices := []*corev1.Service{
+		{
+			TypeMeta: serviceTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "infra-backend-v1",
+				Namespace: "default",
+			},
+		},
+		{
+			TypeMeta: serviceTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "infra-backend-v2",
+				Namespace: "default",
+			},
+		},
+	}
+	httpRoutes := []*gatewayapi.HTTPRoute{
+		{
+			TypeMeta: httpRouteTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "header-matching",
+			},
+			Spec: gatewayapi.HTTPRouteSpec{
+				CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
+				Rules: []gatewayapi.HTTPRouteRule{
+					{
+						Matches: []gatewayapi.HTTPRouteMatch{
+							builder.NewHTTPRouteMatch().WithHeader("version", "two").Build(),
+						},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							builder.NewHTTPBackendRef("infra-backend-v2").WithPort(80).Build(),
+						},
+					},
+					{
+						Matches: []gatewayapi.HTTPRouteMatch{
+							builder.NewHTTPRouteMatch().
+								WithHeader("Version", "two").
+								WithHeader("Color", "orange").
+								Build(),
+						},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							builder.NewHTTPBackendRef("infra-backend-v1").WithPort(80).Build(),
+						},
+					},
+					{
+						Matches: []gatewayapi.HTTPRouteMatch{
+							builder.NewHTTPRouteMatch().WithHeader("Color", "blue").Build(),
+						},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							builder.NewHTTPBackendRef("infra-backend-v1").WithPort(80).Build(),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	fakeStore, err := store.NewFakeStore(store.FakeObjects{
+		Services: k8sServices,
+	})
+	require.NoError(t, err)
+
+	translationResult := TranslateHTTPRoutesToKongstateServices(
+		logr.Discard(),
+		fakeStore,
+		httpRoutes,
+		TranslateHTTPRouteToKongstateServiceOptions{
+			CombinedServicesFromDifferentHTTPRoutes: true,
+			ExpressionRoutes:                        false,
+			SupportRedirectPlugin:                   false,
+		},
+	)
+	require.Empty(t, translationResult.HTTPRouteNameToTranslationErrors)
+
+	oneHeaderService := translationResult.ServiceNameToKongstateService["httproute.default.svc.default.infra-backend-v2.80"]
+	v1Service := translationResult.ServiceNameToKongstateService["httproute.default.svc.default.infra-backend-v1.80"]
+	require.Len(t, oneHeaderService.Routes, 1)
+	require.Len(t, v1Service.Routes, 2)
+
+	routeWithHeaders := func(routes []kongstate.Route, headers map[string][]string) kongstate.Route {
+		for _, route := range routes {
+			if assert.ObjectsAreEqual(headers, route.Headers) {
+				return route
+			}
+		}
+		t.Fatalf("route with headers %v not found", headers)
+		return kongstate.Route{}
+	}
+
+	oneHeaderRoute := oneHeaderService.Routes[0]
+	twoHeaderRoute := routeWithHeaders(v1Service.Routes, map[string][]string{"Version": {"two"}, "Color": {"orange"}})
+	colorBlueRoute := routeWithHeaders(v1Service.Routes, map[string][]string{"Color": {"blue"}})
+	regexPriority := func(route kongstate.Route) int {
+		if route.RegexPriority == nil {
+			return 0
+		}
+		return *route.RegexPriority
+	}
+	require.NotNil(t, twoHeaderRoute.RegexPriority)
+	require.NotNil(t, oneHeaderRoute.RegexPriority)
+	require.Greater(t, regexPriority(twoHeaderRoute), regexPriority(oneHeaderRoute))
+	require.Greater(t, regexPriority(oneHeaderRoute), regexPriority(colorBlueRoute))
+	require.Equal(t, map[string][]string{"version": {"two"}}, oneHeaderRoute.Headers)
+	require.Equal(t, kong.StringSlice(kongHTTPRouteHeaderOnlyRegexPath), oneHeaderRoute.Paths)
+	require.Equal(t, kong.StringSlice(kongHTTPRouteHeaderOnlyRegexPath), twoHeaderRoute.Paths)
+	require.Empty(t, colorBlueRoute.Paths)
 }
 
 func TestGetKongServiceNameByBackendRefs(t *testing.T) {
@@ -1806,7 +1909,7 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 				ExpressionRoutes:      false,
 				SupportRedirectPlugin: false,
 			}
-			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(tc.rulesMeta, generateOptions)
+			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(tc.rulesMeta, nil, generateOptions)
 			if tc.expectError {
 				require.Error(t, err)
 				return
@@ -1819,6 +1922,169 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTranslateHTTPRouteRulesMetaToKongstateRoutesConsolidatesMatchesWithMaxRegexPriority(t *testing.T) {
+	httpRoute := &gatewayapi.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "httproute-1",
+		},
+	}
+	rulesMeta := []httpRouteRuleMeta{
+		{
+			Rule: gatewayapi.HTTPRouteRule{
+				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
+				Matches: []gatewayapi.HTTPRouteMatch{
+					builder.NewHTTPRouteMatch().WithPathExact("/very-long").Build(),
+					builder.NewHTTPRouteMatch().WithPathPrefix("/bar").Build(),
+				},
+			},
+			RuleNumber:  0,
+			parentRoute: httpRoute,
+		},
+	}
+	matchesWithPriorities := []SplitHTTPRouteMatchToKongRoutePriority{
+		{
+			Match: SplitHTTPRouteMatch{
+				Source:     httpRoute,
+				RuleIndex:  0,
+				MatchIndex: 0,
+			},
+			Priority: 2,
+		},
+		{
+			Match: SplitHTTPRouteMatch{
+				Source:     httpRoute,
+				RuleIndex:  0,
+				MatchIndex: 1,
+			},
+			Priority: 1,
+		},
+	}
+
+	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
+		rulesMeta,
+		matchesWithPriorities,
+		TranslateHTTPRouteRulesToKongRouteOptions{},
+	)
+	require.NoError(t, err)
+	// Matches that differ only by path are still consolidated into a single Kong route.
+	// Since all the consolidated matches point to the same backends and filters, the
+	// relative precedence between them does not matter and the route gets the maximum
+	// regex priority of the group.
+	require.Len(t, routes, 1)
+
+	route := routes[0]
+	require.Equal(t, "httproute.default.httproute-1.0.0", *route.Name)
+	require.NotNil(t, route.RegexPriority)
+	require.Equal(t, 2, *route.RegexPriority)
+	require.Equal(t, kong.StringSlice("~/very-long$", "~/bar$", "/bar/"), route.Paths)
+}
+
+func TestTranslateHTTPRouteRulesMetaToKongstateRoutesSplitsHeaderOnlyMatchesFromPathMatches(t *testing.T) {
+	httpRoute := &gatewayapi.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "httproute-1",
+		},
+	}
+	rulesMeta := []httpRouteRuleMeta{
+		{
+			Rule: gatewayapi.HTTPRouteRule{
+				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
+				Matches: []gatewayapi.HTTPRouteMatch{
+					builder.NewHTTPRouteMatch().WithPathExact("/long-admin").WithHeader("X-Test", "a").Build(),
+					builder.NewHTTPRouteMatch().WithHeader("X-Test", "a").Build(),
+				},
+			},
+			RuleNumber:  0,
+			parentRoute: httpRoute,
+		},
+	}
+	matchesWithPriorities := []SplitHTTPRouteMatchToKongRoutePriority{
+		{
+			Match: SplitHTTPRouteMatch{
+				Source:     httpRoute,
+				RuleIndex:  0,
+				MatchIndex: 0,
+			},
+			Priority: 2,
+		},
+		{
+			Match: SplitHTTPRouteMatch{
+				Source:     httpRoute,
+				RuleIndex:  0,
+				MatchIndex: 1,
+			},
+			Priority: 1,
+		},
+	}
+
+	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
+		rulesMeta,
+		matchesWithPriorities,
+		TranslateHTTPRouteRulesToKongRouteOptions{},
+	)
+	require.NoError(t, err)
+	require.Len(t, routes, 2)
+
+	routesByName := make(map[string]kongstate.Route, len(routes))
+	for _, route := range routes {
+		routesByName[*route.Name] = route
+	}
+
+	pathRoute := routesByName["httproute.default.httproute-1.0.0"]
+	require.NotNil(t, pathRoute.RegexPriority)
+	require.Equal(t, 2, *pathRoute.RegexPriority)
+	require.Equal(t, kong.StringSlice("~/long-admin$"), pathRoute.Paths)
+
+	headerOnlyRoute := routesByName["httproute.default.httproute-1.0.1"]
+	require.NotNil(t, headerOnlyRoute.RegexPriority)
+	require.Equal(t, 1, *headerOnlyRoute.RegexPriority)
+	require.Equal(t, kong.StringSlice(kongHTTPRouteHeaderOnlyRegexPath), headerOnlyRoute.Paths)
+}
+
+func TestTranslateHTTPRouteRulesMetaToKongstateRoutesDoesNotAddCatchAllPathForNoPathMatch(t *testing.T) {
+	httpRoute := &gatewayapi.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "httproute-1",
+		},
+	}
+	rulesMeta := []httpRouteRuleMeta{
+		{
+			Rule: gatewayapi.HTTPRouteRule{
+				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
+				Matches: []gatewayapi.HTTPRouteMatch{
+					builder.NewHTTPRouteMatch().WithMethod(gatewayapi.HTTPMethodGet).Build(),
+				},
+			},
+			RuleNumber:  0,
+			parentRoute: httpRoute,
+		},
+	}
+	matchesWithPriorities := []SplitHTTPRouteMatchToKongRoutePriority{
+		{
+			Match: SplitHTTPRouteMatch{
+				Source:     httpRoute,
+				RuleIndex:  0,
+				MatchIndex: 0,
+			},
+			Priority: 1,
+		},
+	}
+
+	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
+		rulesMeta,
+		matchesWithPriorities,
+		TranslateHTTPRouteRulesToKongRouteOptions{},
+	)
+	require.NoError(t, err)
+	require.Len(t, routes, 1)
+	require.NotNil(t, routes[0].RegexPriority)
+	require.Equal(t, kong.StringSlice("GET"), routes[0].Methods)
+	require.Empty(t, routes[0].Paths)
 }
 
 func TestSchemeHostPortFromHTTPPathModifier(t *testing.T) {

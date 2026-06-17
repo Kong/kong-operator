@@ -30,10 +30,7 @@ var skippedTestsShared = []string{
 
 var skippedTestsForExpressionsRouter = []string{}
 
-var skippedTestsForTraditionalCompatibleRouter = []string{
-	// HTTPRoute
-	tests.HTTPRouteHeaderMatching.ShortName,
-}
+var skippedTestsForTraditionalCompatibleRouter = []string{}
 
 var skippedTestsForHybrid = []string{
 
