@@ -342,7 +342,7 @@ type ServiceOptions struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=PreferSameZone;PreferSameNode
-	TrafficDistribution *string `json:"trafficDistribution,omitempty"`
+	TrafficDistribution *string `json:"trafficDistribution,omitempty" hash:"ignore"` // hash:"ignore": Service-only; kept out of Deployment spec-hash (PR #4627).
 
 	// InternalTrafficPolicy describes how nodes distribute service traffic they
 	// receive on the ClusterIP. If set to "Local", the proxy will assume that pods
@@ -354,7 +354,7 @@ type ServiceOptions struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Cluster;Local
-	InternalTrafficPolicy *corev1.ServiceInternalTrafficPolicy `json:"internalTrafficPolicy,omitempty"`
+	InternalTrafficPolicy *corev1.ServiceInternalTrafficPolicy `json:"internalTrafficPolicy,omitempty" hash:"ignore"` // hash:"ignore": Service-only; kept out of Deployment spec-hash (PR #4627).
 }
 
 // DataPlaneStatus defines the observed state of DataPlane.
