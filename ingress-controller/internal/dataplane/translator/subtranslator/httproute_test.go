@@ -771,7 +771,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 			},
 		},
 		{
-			msg: "multiple header matches for the same header are rejected",
+			msg: "multiple identical header names only use the first match",
 			input: []gatewayapi.HTTPHeaderMatch{
 				{
 					Name:  "Content-Type",
@@ -782,8 +782,25 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 					Value: "audio/flac",
 				},
 			},
-			output: nil,
-			err:    fmt.Errorf("multiple header matches for the same header are not allowed: Content-Type"),
+			output: map[string][]string{
+				"Content-Type": {"audio/vorbis"},
+			},
+		},
+		{
+			msg: "multiple equivalent header names only use the first match",
+			input: []gatewayapi.HTTPHeaderMatch{
+				{
+					Name:  "Content-Type",
+					Value: "audio/vorbis",
+				},
+				{
+					Name:  "content-type",
+					Value: "audio/flac",
+				},
+			},
+			output: map[string][]string{
+				"Content-Type": {"audio/vorbis"},
+			},
 		},
 		{
 			msg: "multiple header matches convert properly",

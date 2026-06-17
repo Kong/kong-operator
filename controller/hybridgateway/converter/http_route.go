@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -15,6 +16,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/kongroute"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
@@ -32,7 +34,10 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
-var _ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
+var (
+	_ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
+	_ DesiredStateReadinessChecker    = &httpRouteConverter{}
+)
 
 // httpRouteConverter is a concrete implementation of the APIConverter interface for HTTPRoute.
 type httpRouteConverter struct {
@@ -331,6 +336,88 @@ func (c *httpRouteConverter) validateAnnotations(ctx context.Context, logger log
 		}
 	}
 	return nil
+}
+
+// DesiredResourcesReady implements DesiredStateReadinessChecker. It decides whether orphan cleanup may
+// proceed for this HTTPRoute.
+//
+// THE GATE is a single rule: every desired KongRoute must be bound, in Konnect, to its desired
+// KongService — verified via the authoritative status.konnect.serviceID, NOT the route's Programmed
+// condition. After a rollout repoints a route's serviceRef, the route can keep reporting Programmed=True
+// against the OLD service until the Konnect controller actually reprograms it; deleting the old chain
+// (KongTargets/KongUpstream/KongService) in that window drops traffic. Only the serviceID matching the
+// desired service tells us the route has truly moved and the old chain is safe to remove.
+//
+// We deliberately do NOT gate on the Programmed condition of the desired resources: the enforce-time chain
+// gating (KongService waits for its KongUpstream and KongTargets; KongRoute waits for the service)
+// already builds and programs the whole chain before a route is ever repointed, so a Programmed
+// check here would be redundant. The route serviceID is the only condition that actually makes deleting
+// the old chain safe.
+func (c *httpRouteConverter) DesiredResourcesReady(ctx context.Context, logger logr.Logger) (bool, error) {
+	desired, err := c.GetOutputStore(ctx, logger)
+	if err != nil {
+		return false, fmt.Errorf("failed to get desired objects for readiness check: %w", err)
+	}
+
+	// THE GATE: for each desired KongRoute, the service named in its spec.serviceRef must be the one it is
+	// actually bound to in Konnect. spec.serviceRef is a name and status.konnect.serviceID is a Konnect ID,
+	// so we fetch that one referenced KongService to resolve its Konnect ID and compare. The route's
+	// Programmed condition is not used: it lags on the old service right after a serviceRef repoint.
+	for i := range desired {
+		d := &desired[i]
+		if d.GetKind() != "KongRoute" {
+			continue
+		}
+
+		r := &unstructured.Unstructured{}
+		r.SetGroupVersionKind(d.GroupVersionKind())
+		if err := c.Get(ctx, client.ObjectKeyFromObject(d), r); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Route not applied yet: it cannot be confirmed on its desired service, so defer.
+				log.Debug(logger, "Desired KongRoute not found yet, deferring orphan cleanup", "obj", client.ObjectKeyFromObject(d))
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to get KongRoute %s: %w", client.ObjectKeyFromObject(d), err)
+		}
+
+		serviceRefName, _, _ := unstructured.NestedString(r.Object, "spec", "serviceRef", "namespacedRef", "name")
+		if serviceRefName == "" {
+			log.Debug(logger, "KongRoute has no serviceRef, skipping readiness check", "obj", client.ObjectKeyFromObject(r))
+			continue
+		}
+		boundServiceID, _, _ := unstructured.NestedString(r.Object, "status", "konnect", "serviceID")
+
+		// Fetch the referenced KongService: it must be Programmed (ready) and the route must be bound to
+		// its Konnect ID. spec.serviceRef is a name; the service's Konnect ID lives in its status.
+		var svc configurationv1alpha1.KongService
+		if err := c.Get(ctx, client.ObjectKey{Namespace: d.GetNamespace(), Name: serviceRefName}, &svc); err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Debug(logger, "Referenced KongService not found yet, deferring orphan cleanup", "route", client.ObjectKeyFromObject(r), "service", serviceRefName)
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to get KongService %s for route %s: %w", serviceRefName, client.ObjectKeyFromObject(r), err)
+		}
+		if !meta.IsStatusConditionTrue(svc.Status.Conditions, konnectv1alpha1.KonnectEntityProgrammedConditionType) {
+			log.Debug(logger, "Referenced KongService not Programmed yet, deferring orphan cleanup", "route", client.ObjectKeyFromObject(r), "service", serviceRefName)
+			return false, nil
+		}
+
+		var desiredServiceID string
+		if svc.Status.Konnect != nil {
+			desiredServiceID = svc.Status.Konnect.ID
+		}
+		if desiredServiceID == "" || boundServiceID != desiredServiceID {
+			log.Debug(logger, "KongRoute not yet bound to its referenced KongService in Konnect, deferring orphan cleanup",
+				"route", client.ObjectKeyFromObject(r),
+				"service", serviceRefName,
+				"boundServiceID", boundServiceID,
+				"desiredServiceID", desiredServiceID)
+			return false, nil
+		}
+	}
+
+	log.Debug(logger, "All routes are bound to their referenced KongService in Konnect, orphan cleanup may proceed")
+	return true, nil
 }
 
 // HandleOrphanedResource implements OrphanedResourceHandler.

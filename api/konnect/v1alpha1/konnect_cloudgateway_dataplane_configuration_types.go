@@ -45,6 +45,7 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationSpec struct {
 	// Version specifies the desired Kong Gateway version.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Version string `json:"version"`
 
 	// DataplaneGroups is a list of desired data-plane groups that describe where

@@ -115,7 +115,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 					{
 						KeyAuths: []*KeyAuth{
 							{
-								KeyAuth: kong.KeyAuth{ID: new("1"), Key: new("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")},
+								KeyAuth: kong.KeyAuth{ID: new("1"), Key: deterministicRedactedString("secret")},
 							},
 						},
 					},
