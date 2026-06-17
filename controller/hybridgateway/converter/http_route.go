@@ -141,6 +141,7 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 
 	var conversionErrors []error
 
+	// c.outputStore is already deduplicated in translate(); no need to deduplicate again here.
 	objects := make([]unstructured.Unstructured, 0, len(c.outputStore))
 	for _, obj := range c.outputStore {
 		unstr, err := utils.ToUnstructured(obj, c.Scheme())
@@ -174,6 +175,7 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 
 // GetOutputStoreLen returns the number of objects in the output store.
 func (c *httpRouteConverter) GetOutputStoreLen(ctx context.Context, logger logr.Logger) int {
+	// c.outputStore is already deduplicated in translate().
 	return len(c.outputStore)
 }
 
@@ -502,22 +504,16 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				}
 			}
 
-			var ruleOutputs []client.Object
-			if len(rule.BackendRefs) == 0 || len(targets) > 0 {
-				upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
-				if err != nil {
-					log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
-						"controlPlane", cp.KonnectNamespacedRef)
-					translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongUpstream resource: %w", err))
-					continue
-				}
-				ruleOutputs = append(ruleOutputs, upstreamPtr)
-				log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
-			} else {
-				log.Debug(logger, "Skipping KongUpstream translation because no valid backend targets were produced",
-					"upstream", upstreamName,
-					"backendRefCount", len(rule.BackendRefs))
+			upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
+			if err != nil {
+				log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
+					"controlPlane", cp.KonnectNamespacedRef)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongUpstream resource: %w", err))
+				continue
 			}
+
+			ruleOutputs := []client.Object{upstreamPtr}
+			log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
 
 			// Append KongReferenceGrant before KongCertificate so the grant exists when the cert is applied.
 			if grantPtr != nil {
@@ -581,6 +577,8 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			c.outputStore = append(c.outputStore, ruleOutputs...)
 		}
 	}
+
+	c.outputStore = deduplicateOutputStore(c.outputStore)
 
 	// Check if any translation errors occurred
 	if len(translationErrors) > 0 {

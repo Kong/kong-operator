@@ -109,6 +109,9 @@
   resource delete requests have been issued, so immediate same-name route
   re-creates are not blocked by child resource finalizers.
   [#4465](https://github.com/Kong/kong-operator/pull/4465)
+- Hybridgateway: deduplicate generated Kong resources within a single
+  HTTPRoute/TLSRoute translation when multiple rules reference the same backend.
+  [#4567](https://github.com/Kong/kong-operator/pull/4567)
 - Hybridgateway: use route-scoped `KongService` names for `HTTPRoute` rules
   whose backendRefs resolve to no valid targets. This avoids Konnect name
   conflicts with valid backend services while keeping normally generated service

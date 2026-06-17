@@ -88,6 +88,7 @@ func (c *tlsRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logg
 
 	var conversionErrors []error
 
+	// c.outputStore is already deduplicated in translate(); no need to deduplicate again here.
 	objects := make([]unstructured.Unstructured, 0, len(c.outputStore))
 	for _, obj := range c.outputStore {
 		unstr, err := utils.ToUnstructured(obj, c.Scheme())
@@ -284,6 +285,8 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 
 		}
 	}
+
+	c.outputStore = deduplicateOutputStore(c.outputStore)
 
 	// Check if any translation errors occurred
 	if len(translationErrors) > 0 {
