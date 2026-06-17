@@ -9567,13 +9567,15 @@ spec:
                               TrafficDistribution offers a way to express preferences for how traffic is
                               distributed to Service endpoints. Implementations can use this field as a
                               hint, but are not required to guarantee strict adherence. If the field is
-                              not set, the implementation will apply its default routing strategy. If set
-                              to "PreferClose", implementations should prioritize endpoints that are in the
-                              same zone as the client.
+                              not set, the implementation will apply its default routing strategy.
+
+                              "PreferSameZone" prioritizes endpoints in the same zone as the client.
+                              "PreferSameNode" prioritizes endpoints on the same node as the client.
 
                               More info: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution
                             enum:
-                            - PreferClose
+                            - PreferSameZone
+                            - PreferSameNode
                             type: string
                           type:
                             default: ClusterIP
