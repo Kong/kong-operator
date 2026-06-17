@@ -33025,6 +33025,7 @@ spec:
                 type: array
               version:
                 description: Version specifies the desired Kong Gateway version.
+                minLength: 1
                 type: string
             required:
             - controlPlaneRef
@@ -46845,6 +46846,12 @@ spec:
                   rule: 'self.source == ''Mirror'' ? has(self.mirror) : true'
                 - message: mirror field cannot be set for type Origin
                   rule: 'self.source == ''Origin'' ? !has(self.mirror) : true'
+                - message: mirror is immutable once set
+                  rule: '!has(self.mirror) && !has(oldSelf.mirror) ? true : (has(self.mirror) && has(oldSelf.mirror) ? self.mirror == oldSelf.mirror : false)'
+                - message: source is immutable once set
+                  rule: '!has(self.source) && !has(oldSelf.source) ? true : self.source == oldSelf.source'
+                - message: authRef is immutable once set
+                  rule: '!has(oldSelf.authRef) ? true : self.authRef == oldSelf.authRef'
               listenersOptions:
                 description: |-
                   ListenerOptions is the specification for configuration bound to specific listeners in the Gateway.

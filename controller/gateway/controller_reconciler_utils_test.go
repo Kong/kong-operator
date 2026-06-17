@@ -22,6 +22,7 @@ import (
 	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -4208,6 +4209,154 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 				assert.Equal(t, string(want.conflictedReason), conflicted.Reason,
 					"listener %d (%s): Conflicted reason", i, gw.Status.Listeners[i].Name)
 			}
+		})
+	}
+}
+
+func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
+	ns := func(s string) *string { return &s }
+
+	authRef := konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+		Name:      "my-auth",
+		Namespace: ns("my-ns"),
+	}
+	otherAuthRef := konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+		Name:      "other-auth",
+		Namespace: ns("other-ns"),
+	}
+
+	makeKGCP := func(
+		currentAuthRef konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef, programmed bool,
+	) *konnectv1alpha2.KonnectGatewayControlPlane {
+		kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "test-kgcp",
+			},
+		}
+		kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef = currentAuthRef
+		if programmed {
+			kgcp.SetConditions([]metav1.Condition{
+				{
+					Type:               string(gatewayv1.GatewayConditionProgrammed),
+					Status:             metav1.ConditionTrue,
+					Reason:             string(gatewayv1.GatewayReasonProgrammed),
+					LastTransitionTime: metav1.Now(),
+				},
+			})
+		}
+		return kgcp
+	}
+
+	withAPIAuthValid := func(
+		kgcp *konnectv1alpha2.KonnectGatewayControlPlane,
+		status metav1.ConditionStatus,
+	) *konnectv1alpha2.KonnectGatewayControlPlane {
+		kgcp.Status.Conditions = append(kgcp.Status.Conditions, metav1.Condition{
+			Type:               konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+			Status:             status,
+			Reason:             "Valid",
+			LastTransitionTime: metav1.Now(),
+		})
+		return kgcp
+	}
+
+	tests := []struct {
+		name          string
+		gatewayConfig *GatewayConfiguration
+		kgcp          *konnectv1alpha2.KonnectGatewayControlPlane
+		wantPatched   bool
+		wantAuthRef   konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef
+	}{
+		{
+			name:          "no konnect config - no patch",
+			gatewayConfig: &GatewayConfiguration{},
+			kgcp:          makeKGCP(authRef, false),
+			wantPatched:   false,
+			wantAuthRef:   authRef,
+		},
+		{
+			name: "auth ref matches - no patch",
+			gatewayConfig: &GatewayConfiguration{
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					Konnect: &operatorv2beta1.KonnectOptions{
+						APIAuthConfigurationRef: &authRef,
+					},
+				},
+			},
+			kgcp:        makeKGCP(authRef, false),
+			wantPatched: false,
+			wantAuthRef: authRef,
+		},
+		{
+			name: "auth ref differs, APIAuthValid=False, not programmed - patch applied",
+			gatewayConfig: &GatewayConfiguration{
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					Konnect: &operatorv2beta1.KonnectOptions{
+						APIAuthConfigurationRef: &authRef,
+					},
+				},
+			},
+			kgcp:        withAPIAuthValid(makeKGCP(otherAuthRef, false), metav1.ConditionFalse),
+			wantPatched: true,
+			wantAuthRef: authRef,
+		},
+		{
+			name: "auth ref differs, APIAuthValid absent, not programmed - patch",
+			gatewayConfig: &GatewayConfiguration{
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					Konnect: &operatorv2beta1.KonnectOptions{
+						APIAuthConfigurationRef: &authRef,
+					},
+				},
+			},
+			kgcp:        makeKGCP(otherAuthRef, false),
+			wantPatched: true,
+			wantAuthRef: authRef,
+		},
+		{
+			name: "auth ref differs, APIAuthValid=True, already programmed - no patch",
+			gatewayConfig: &GatewayConfiguration{
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					Konnect: &operatorv2beta1.KonnectOptions{
+						APIAuthConfigurationRef: &authRef,
+					},
+				},
+			},
+			kgcp:        withAPIAuthValid(makeKGCP(otherAuthRef, true), metav1.ConditionTrue),
+			wantPatched: false,
+			wantAuthRef: otherAuthRef,
+		},
+		{
+			name: "no auth ref in config - no patch even when kgcp has one",
+			gatewayConfig: &GatewayConfiguration{
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					Konnect: &operatorv2beta1.KonnectOptions{},
+				},
+			},
+			kgcp:        makeKGCP(otherAuthRef, false),
+			wantPatched: false,
+			wantAuthRef: otherAuthRef,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tt.kgcp).
+				Build()
+			reconciler := &Reconciler{Client: fakeClient}
+			ctx := t.Context()
+
+			patched, err := reconciler.enforceKonnectGatewayControlPlaneSpec(ctx, tt.kgcp, tt.gatewayConfig)
+			require.NoError(t, err)
+			require.Equal(t, tt.wantPatched, patched)
+
+			// Fetch from fake store to confirm persisted state.
+			var got konnectv1alpha2.KonnectGatewayControlPlane
+			require.NoError(t, fakeClient.Get(ctx, client.ObjectKeyFromObject(tt.kgcp), &got))
+			assert.Equal(t, tt.wantAuthRef, got.Spec.KonnectConfiguration.APIAuthConfigurationRef)
 		})
 	}
 }

@@ -99,7 +99,7 @@ type KonnectExtensionControlPlane struct {
 	// Ref is a reference to a Konnect ControlPlane this KonnectExtension is associated with.
 	//
 	// +required
-	Ref commonv1alpha1.KonnectExtensionControlPlaneRef `json:"ref"`
+	Ref commonv1alpha1.KonnectExtensionControlPlaneRef `json:"ref,omitempty"`
 }
 
 // KonnectExtensionDataPlane is the configuration for the Konnect DataPlane.

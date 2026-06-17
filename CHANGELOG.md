@@ -56,8 +56,41 @@
 - API: add PrintColumns for KongTarget upstream and target fields.
   [#4576](https://github.com/Kong/kong-operator/pull/4576)
 
+### Changed
+
+- Konnect related fields in `GatewayConfiguration` are immutable now,
+  because for underlying `KonnectGatewayControlPlane` these fields
+  have been always immutable.
+  [#4599](https://github.com/Kong/kong-operator/pull/4599)
+
 ### Fixes
 
+- Hybridgateway: merge duplicate `KongTarget`s when multiple `backendRef`s in
+  an `HTTPRoute` or `TLSRoute` rule resolve to the same pod IP and port.
+  Previously one target per backendRef per endpoint was created, causing Konnect
+  400 uniqueness-constraint rejections that left targets stuck in
+  `Programmed=False`. The operator now creates one `KongTarget` per unique
+  endpoint address, summing the weights of all contributing backendRefs.
+  On upgrade, existing targets are looked up by address and reused to avoid
+  duplicate conflicts.
+  [#4509](https://github.com/Kong/kong-operator/pull/4509)
+- Konnect: requeue HybridGateway-managed resources on reference-only 400 errors
+  with a fixed 5 s delay. `ERROR_TYPE_REFERENCE` uniqueness conflicts are
+  transient (stale entity not yet cleaned up, or referenced entity not yet
+  propagated); previously they fell through to exponential backoff or were
+  silently dropped. For user-created resources the same error shape is still
+  suppressed as it may indicate a permanent misconfiguration.
+  [#4509](https://github.com/Kong/kong-operator/pull/4509)
+- Hybridgateway: prevent traffic drops when an `HTTPRoute` spec change rotates
+  resource names. A cleanup-time gate defers orphan deletion until every desired
+  `KongRoute` is confirmed bound to its new `KongService` in Konnect, and an
+  enforce-time gate delays `KongService` creation until its `KongUpstream` and
+  all desired `KongTarget`s are Programmed.
+  [#4577](https://github.com/Kong/kong-operator/pull/4577)
+- HTTPRoute: traditional route translation now treats header match names
+  case-insensitively and ignores later equivalent duplicates, aligning with
+  Gateway API matching semantics.
+  [#4597](https://github.com/Kong/kong-operator/pull/4597)
 - Hybridgateway: release Gateway API route finalizers once generated Kong
   resource delete requests have been issued, so immediate same-name route
   re-creates are not blocked by child resource finalizers.
@@ -67,6 +100,9 @@
   conflicts with valid backend services while keeping normally generated service
   names unchanged.
   [#4437](https://github.com/Kong/kong-operator/pull/4437)
+- Prevent recreating consumer credentials on every Konnect sync when running in
+  "KIC in Konnect" mode with on prem `ControlPlane`.
+  [#4622](https://github.com/Kong/kong-operator/pull/4622)
 
 ## [v2.2.0]
 > Release date: 2026-06-05

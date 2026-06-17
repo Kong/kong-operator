@@ -214,6 +214,32 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 				QueryParamCount: 1,
 			},
 		},
+		{
+			name: "equivalent duplicate header and query parameter names count once",
+			match: SplitHTTPRouteMatch{
+				Source: &gatewayapi.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "duplicate-match-names",
+					},
+				},
+				Match: gatewayapi.HTTPRouteMatch{
+					Headers: []gatewayapi.HTTPHeaderMatch{
+						{Name: "X-Foo", Value: "one"},
+						{Name: "x-foo", Value: "two"},
+						{Name: "X-Bar", Value: "three"},
+					},
+					QueryParams: []gatewayapi.HTTPQueryParamMatch{
+						{Name: "version", Value: "one"},
+						{Name: "version", Value: "two"},
+					},
+				},
+			},
+			expectedTraits: HTTPRoutePriorityTraits{
+				HeaderCount:     2,
+				QueryParamCount: 1,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
