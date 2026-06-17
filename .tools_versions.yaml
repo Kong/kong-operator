@@ -12,6 +12,8 @@ dlv: "1.26.3"
 gotestsum: "1.13.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.3.0"
+# renovate: datasource=github-releases depName=kubernetes-sigs/crdify
+crdify: "0.6.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.24.1"
 # renovate: datasource=github-releases depName=rhysd/actionlint

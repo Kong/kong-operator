@@ -112,6 +112,11 @@ Whenever you add a new CRD:
 * Annotate the CRD and any new type it depends on with the right markers to make sure it will be included
   in the generated documentation. See the markers used in scripts/crds-generator for reference.
 
+When you modify CRDs in `config/crd/kong-operator/`, run `make verify.crd-breaking-changes`
+to compare them against the base branch before opening or updating a PR. Override the
+comparison source with `CRD_BREAKING_CHANGES_BASE_SHA` or
+`CRD_BREAKING_CHANGES_BASE_REF` if you need to target a different baseline.
+
 [community-operators]: https://github.com/k8s-operatorhub/community-operators/
 
 ### Install the nightly build
