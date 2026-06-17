@@ -360,6 +360,7 @@ func ensureIngressServiceForDataPlane(
 
 		const (
 			defaultExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
+			defaultInternalTrafficPolicy = corev1.ServiceInternalTrafficPolicyCluster
 		)
 
 		// Update when
@@ -370,13 +371,19 @@ func ensureIngressServiceForDataPlane(
 			updated = true
 		}
 
-		if !cmp.Equal(existingService.Spec.TrafficDistribution, generatedService.Spec.TrafficDistribution) {
-			existingService.Spec.TrafficDistribution = generatedService.Spec.TrafficDistribution
+		// Treat nil as the default (Cluster) since the API server defaults the field.
+		// Update when existing is non-default or generated explicitly requests non-default.
+		existingITP := defaultInternalTrafficPolicy
+		if existingService.Spec.InternalTrafficPolicy != nil {
+			existingITP = *existingService.Spec.InternalTrafficPolicy
+		}
+		if existingITP != defaultInternalTrafficPolicy || (generatedService.Spec.InternalTrafficPolicy != nil && *generatedService.Spec.InternalTrafficPolicy != defaultInternalTrafficPolicy) {
+			existingService.Spec.InternalTrafficPolicy = generatedService.Spec.InternalTrafficPolicy
 			updated = true
 		}
 
-		if !cmp.Equal(existingService.Spec.InternalTrafficPolicy, generatedService.Spec.InternalTrafficPolicy) {
-			existingService.Spec.InternalTrafficPolicy = generatedService.Spec.InternalTrafficPolicy
+		if !cmp.Equal(existingService.Spec.TrafficDistribution, generatedService.Spec.TrafficDistribution) {
+			existingService.Spec.TrafficDistribution = generatedService.Spec.TrafficDistribution
 			updated = true
 		}
 
