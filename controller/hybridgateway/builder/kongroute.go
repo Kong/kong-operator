@@ -24,6 +24,9 @@ const (
 	// KongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
 	// as a regex.
 	KongHeaderRegexPrefix = "~*"
+	// KongHTTPRouteHeaderOnlyRegexPath is a catch-all regex path used to make regex_priority effective
+	// for HTTPRoute matches that only match on headers.
+	KongHTTPRouteHeaderOnlyRegexPath = KongPathRegexPrefix + "/(.*)"
 )
 
 // KongRouteBuilder is a builder for configurationv1alpha1.KongRoute resources.
@@ -81,6 +84,23 @@ func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch, setC
 	}
 	// Note: QueryParams are not natively supported by KongRoute
 
+	return b
+}
+
+// WithRegexPriority sets the regex_priority for the KongRoute being built.
+func (b *KongRouteBuilder) WithRegexPriority(priority *int64) *KongRouteBuilder {
+	if priority != nil {
+		b.route.Spec.RegexPriority = priority
+	}
+	return b
+}
+
+// WithHeaderOnlyRegexPath adds a catch-all regex path when needed so Kong can use
+// regex_priority to order overlapping header-only HTTPRoute matches.
+func (b *KongRouteBuilder) WithHeaderOnlyRegexPath() *KongRouteBuilder {
+	if len(b.route.Spec.Paths) == 0 && len(b.route.Spec.Headers) > 0 {
+		b.route.Spec.Paths = append(b.route.Spec.Paths, KongHTTPRouteHeaderOnlyRegexPath)
+	}
 	return b
 }
 

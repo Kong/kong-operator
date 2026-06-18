@@ -267,7 +267,7 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 			log.Debug(logger, "Successfully translated KongService resource", "service", serviceName)
 
 			// Build the KongRoute resource.
-			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, namingParentRef, serviceName, hostnames)
+			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, ruleIndex, &pRef, cp, namingParentRef, serviceName, hostnames)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongRoute resource, skipping rule",
 					"service", serviceName,
