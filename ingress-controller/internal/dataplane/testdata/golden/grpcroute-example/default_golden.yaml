@@ -20,7 +20,7 @@ services:
     name: grpcroute.default.grpcbin.2.0
     path_handling: v0
     paths:
-    - ~/grpcbin.GRPCBin/Get
+    - ~/grpcbin\.GRPCBin/Get$
     protocols:
     - grpc
     - grpcs
@@ -60,7 +60,7 @@ services:
     name: grpcroute.default.grpcbin.1.0
     path_handling: v0
     paths:
-    - ~/grpcbin.GRPCBin/Default
+    - ~/grpcbin\.GRPCBin/Default$
     protocols:
     - grpc
     - grpcs
@@ -100,7 +100,7 @@ services:
     name: grpcroute.default.grpcbin.0.0
     path_handling: v0
     paths:
-    - ~/grpcbin.GRPCBin/DummyUnary
+    - ~/grpcbin\.GRPCBin/DummyUnary$
     protocols:
     - grpc
     - grpcs
