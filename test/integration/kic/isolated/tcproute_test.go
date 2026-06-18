@@ -154,7 +154,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 					}},
 				},
 			}
-			tcpRoute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(namespace).Create(ctx, tcpRoute, metav1.CreateOptions{})
+			tcpRoute, err = gatewayClient.GatewayV1().TCPRoutes(namespace).Create(ctx, tcpRoute, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			cleaner.Add(tcpRoute)
 			ctx = SetInCtxForT(ctx, t, tcpRoute)
@@ -371,14 +371,14 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
 			assert.Eventually(t, func() bool {
-				tcpRoute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, tcpRoute.Name, metav1.GetOptions{})
+				tcpRoute, err = gatewayClient.GatewayV1().TCPRoutes(namespace).Get(ctx, tcpRoute.Name, metav1.GetOptions{})
 				if err != nil {
 					return false
 				}
 				notExistingPort := gatewayapi.PortNumber(81)
 				tcpRoute.Spec.ParentRefs[0].Port = &notExistingPort
 				tcpRoute.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1Name)
-				tcpRoute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(namespace).Update(ctx, tcpRoute, metav1.UpdateOptions{})
+				tcpRoute, err = gatewayClient.GatewayV1().TCPRoutes(namespace).Update(ctx, tcpRoute, metav1.UpdateOptions{})
 				return err == nil
 			}, time.Minute, time.Second)
 

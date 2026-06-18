@@ -77,11 +77,10 @@ func setSupportedFeatures(ctx context.Context, cl client.Client, gwc *gatewayv1.
 	if err != nil {
 		return err
 	}
-	feats, err := gatewayapipkg.GetSupportedFeatures(flavor)
+	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(flavor)
 	if err != nil {
 		return err
 	}
-	supportedFeatures := feats.UnsortedList()
 	slices.Sort(supportedFeatures)
 	gwc.Status.SupportedFeatures = lo.Map(supportedFeatures, func(f features.FeatureName, _ int) gatewayv1.SupportedFeature {
 		return gatewayv1.SupportedFeature{

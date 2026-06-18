@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance"
@@ -88,7 +87,7 @@ func runConformance(
 	t *testing.T,
 	gwType gatewayType,
 	kongRouterFlavor consts.RouterFlavor,
-	supportedFeatures sets.Set[features.FeatureName],
+	supportedFeatures []features.FeatureName,
 	cleanupResources bool,
 	skipped []string,
 ) {
@@ -143,11 +142,11 @@ func runConformance(
 		},
 	}
 	opts.Mode = mode
-	opts.ConformanceProfiles = sets.New(
+	opts.ConformanceProfiles = []suite.ConformanceProfileName{
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
-	)
+	}
 	opts.SupportedFeatures = supportedFeatures
 	opts.SkipTests = skipped
 	opts.CleanupBaseResources = cleanupResources
