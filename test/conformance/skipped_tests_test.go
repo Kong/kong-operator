@@ -16,7 +16,7 @@ var skippedTestsShared = []string{
 	// it is necessary to create separate catch-all routes for them.
 	// However, Kong does not define priority behavior in this situation unless priorities are manually added.
 	tests.GRPCRouteHeaderMatching.ShortName,
-	tests.GRPCExactMethodMatching.ShortName,
+	//tests.GRPCExactMethodMatching.ShortName,
 	tests.GRPCRouteWeight.ShortName,
 	// When processing this scenario, the Kong's router requires `priority` to be specified for routes.
 	// We cannot provide that for routes that are part of the conformance suite.
