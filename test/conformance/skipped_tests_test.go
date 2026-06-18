@@ -32,18 +32,14 @@ var skippedTestsForTraditionalCompatibleRouter = []string{
 var skippedTestsForHybrid = []string{
 
 	// Core profile.
-	tests.HTTPRouteInvalidNonExistentBackendRef.ShortName,
 	tests.HTTPRouteMethodMatching.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
-	tests.GatewayWithAttachedRoutes.ShortName,
+	// TODO: https://github.com/Kong/kong-operator/issues/4581
+	tests.HTTPRoutePathMatchOrder.ShortName,
 
 	// Extended profile.
 	tests.HTTPRouteRewriteHost.ShortName,
 	tests.HTTPRouteRewritePath.ShortName,
-
-	// This test is skipped because it proven to be flaky.
-	// TODO: https://github.com/Kong/kong-operator/issues/2793
-	tests.HTTPRouteReferenceGrant.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.

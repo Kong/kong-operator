@@ -778,7 +778,7 @@ func (r *Reconciler) provisionControlPlane(
 	}
 
 	if !controlPlaneSpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, &expectedControlPlaneOptions) ||
-		reflect.DeepEqual(controlPlane.Spec.Extensions, expectedExtensions) {
+		!reflect.DeepEqual(controlPlane.Spec.Extensions, expectedExtensions) {
 		log.Trace(logger, "controlplane config is out of date")
 		controlplaneOld := controlPlane.DeepCopy()
 		controlPlane.Spec.ControlPlaneOptions = expectedControlPlaneOptions
@@ -866,8 +866,23 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	// If we continue, there is only one konnect gateway controlplane.
 	konnectControlPlane := konnectControlPlanes[0].DeepCopy()
 
-	// TODO: https://github.com/Kong/kong-operator/issues/2639
-	// enforce KonnectGatewayControlPlane spec
+	log.Trace(logger, "ensuring KonnectGatewayControlPlane spec is up to date")
+	patched, err := r.enforceKonnectGatewayControlPlaneSpec(ctx, konnectControlPlane, gatewayConfig)
+	if err != nil {
+		log.Debug(logger, fmt.Sprintf("failed enforcing KonnectGatewayControlPlane spec - error: %v", err))
+		k8sutils.SetCondition(
+			createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+		return konnectControlPlane, false
+	}
+	if patched {
+		log.Debug(logger, "KonnectGatewayControlPlane spec updated")
+		k8sutils.SetCondition(
+			createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceUpdatedMessage, gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+	}
 
 	log.Trace(logger, "Waiting for KonnectGatewayControlPlane readiness")
 	if !k8sutils.IsProgrammed(konnectControlPlane) {
@@ -1060,18 +1075,22 @@ func (r *Reconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtyp
 
 func dataPlaneSpecDeepEqual(specCurrent, specExpected *operatorv1beta1.DataPlaneOptions, isHybrid bool) bool {
 	specCurrentExtensions := specCurrent.Extensions
+	specExpectedExtensions := specExpected.Extensions
 	// For Hybrid gateways ignore KonnectExtension in the comparison,
 	// it's managed later (separately) by the Gateway controller.
 	if isHybrid {
-		specCurrentExtensions = lo.Filter(specCurrentExtensions, func(e commonv1alpha1.ExtensionRef, _ int) bool {
-			return e.Group != konnectv1alpha2.SchemeGroupVersion.Group || e.Kind != konnectv1alpha2.KonnectExtensionKind
-		})
+		filter := func(e commonv1alpha1.ExtensionRef, _ int) bool {
+			return e.Group != konnectv1alpha2.SchemeGroupVersion.Group ||
+				e.Kind != konnectv1alpha2.KonnectExtensionKind
+		}
+		specCurrentExtensions = lo.Filter(specCurrentExtensions, filter)
+		specExpectedExtensions = lo.Filter(specExpectedExtensions, filter)
 	}
 	// Consider slices equal if both are empty or nil, or if they are deeply equal.
 	// This is to avoid infinite reconciliation loops when one of the specs has nil value
 	// and the other has an empty slice.
-	extensionsEqual := len(specCurrentExtensions) == 0 && len(specExpected.Extensions) == 0 ||
-		reflect.DeepEqual(specCurrentExtensions, specExpected.Extensions)
+	extensionsEqual := len(specCurrentExtensions) == 0 && len(specExpectedExtensions) == 0 ||
+		reflect.DeepEqual(specCurrentExtensions, specExpectedExtensions)
 	pluginsToInstallEqual := len(specCurrent.PluginsToInstall) == 0 && len(specExpected.PluginsToInstall) == 0 ||
 		reflect.DeepEqual(specCurrent.PluginsToInstall, specExpected.PluginsToInstall)
 

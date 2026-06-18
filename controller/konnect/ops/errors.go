@@ -222,3 +222,24 @@ func (e RateLimitError) Error() string {
 func (e RateLimitError) Unwrap() error {
 	return e.Err
 }
+
+// ReferenceError is an error type returned when a Konnect API operation fails with
+// a 400 that contains only ERROR_TYPE_REFERENCE errors. These are transient conflicts
+// with referenced entities (e.g. a referenced upstream isn't fully propagated in Konnect
+// yet). It includes a fixed retry-after duration to avoid controller-runtime's
+// exponential backoff, which can grow prohibitively large when many entities are
+// recreated at once.
+type ReferenceError struct {
+	Err        error
+	RetryAfter time.Duration
+}
+
+// Error implements the error interface.
+func (e ReferenceError) Error() string {
+	return fmt.Sprintf("reference error in Konnect, retry after %s: %v", e.RetryAfter, e.Err)
+}
+
+// Unwrap returns the underlying error.
+func (e ReferenceError) Unwrap() error {
+	return e.Err
+}

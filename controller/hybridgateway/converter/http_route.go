@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -15,9 +16,11 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/kongroute"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/plugin"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/pluginbinding"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
@@ -31,7 +34,10 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
-var _ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
+var (
+	_ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
+	_ DesiredStateReadinessChecker    = &httpRouteConverter{}
+)
 
 // httpRouteConverter is a concrete implementation of the APIConverter interface for HTTPRoute.
 type httpRouteConverter struct {
@@ -295,6 +301,88 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	return updated, stop, nil
 }
 
+// DesiredResourcesReady implements DesiredStateReadinessChecker. It decides whether orphan cleanup may
+// proceed for this HTTPRoute.
+//
+// THE GATE is a single rule: every desired KongRoute must be bound, in Konnect, to its desired
+// KongService — verified via the authoritative status.konnect.serviceID, NOT the route's Programmed
+// condition. After a rollout repoints a route's serviceRef, the route can keep reporting Programmed=True
+// against the OLD service until the Konnect controller actually reprograms it; deleting the old chain
+// (KongTargets/KongUpstream/KongService) in that window drops traffic. Only the serviceID matching the
+// desired service tells us the route has truly moved and the old chain is safe to remove.
+//
+// We deliberately do NOT gate on the Programmed condition of the desired resources: the enforce-time chain
+// gating (KongService waits for its KongUpstream and KongTargets; KongRoute waits for the service)
+// already builds and programs the whole chain before a route is ever repointed, so a Programmed
+// check here would be redundant. The route serviceID is the only condition that actually makes deleting
+// the old chain safe.
+func (c *httpRouteConverter) DesiredResourcesReady(ctx context.Context, logger logr.Logger) (bool, error) {
+	desired, err := c.GetOutputStore(ctx, logger)
+	if err != nil {
+		return false, fmt.Errorf("failed to get desired objects for readiness check: %w", err)
+	}
+
+	// THE GATE: for each desired KongRoute, the service named in its spec.serviceRef must be the one it is
+	// actually bound to in Konnect. spec.serviceRef is a name and status.konnect.serviceID is a Konnect ID,
+	// so we fetch that one referenced KongService to resolve its Konnect ID and compare. The route's
+	// Programmed condition is not used: it lags on the old service right after a serviceRef repoint.
+	for i := range desired {
+		d := &desired[i]
+		if d.GetKind() != "KongRoute" {
+			continue
+		}
+
+		r := &unstructured.Unstructured{}
+		r.SetGroupVersionKind(d.GroupVersionKind())
+		if err := c.Get(ctx, client.ObjectKeyFromObject(d), r); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Route not applied yet: it cannot be confirmed on its desired service, so defer.
+				log.Debug(logger, "Desired KongRoute not found yet, deferring orphan cleanup", "obj", client.ObjectKeyFromObject(d))
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to get KongRoute %s: %w", client.ObjectKeyFromObject(d), err)
+		}
+
+		serviceRefName, _, _ := unstructured.NestedString(r.Object, "spec", "serviceRef", "namespacedRef", "name")
+		if serviceRefName == "" {
+			log.Debug(logger, "KongRoute has no serviceRef, skipping readiness check", "obj", client.ObjectKeyFromObject(r))
+			continue
+		}
+		boundServiceID, _, _ := unstructured.NestedString(r.Object, "status", "konnect", "serviceID")
+
+		// Fetch the referenced KongService: it must be Programmed (ready) and the route must be bound to
+		// its Konnect ID. spec.serviceRef is a name; the service's Konnect ID lives in its status.
+		var svc configurationv1alpha1.KongService
+		if err := c.Get(ctx, client.ObjectKey{Namespace: d.GetNamespace(), Name: serviceRefName}, &svc); err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Debug(logger, "Referenced KongService not found yet, deferring orphan cleanup", "route", client.ObjectKeyFromObject(r), "service", serviceRefName)
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to get KongService %s for route %s: %w", serviceRefName, client.ObjectKeyFromObject(r), err)
+		}
+		if !meta.IsStatusConditionTrue(svc.Status.Conditions, konnectv1alpha1.KonnectEntityProgrammedConditionType) {
+			log.Debug(logger, "Referenced KongService not Programmed yet, deferring orphan cleanup", "route", client.ObjectKeyFromObject(r), "service", serviceRefName)
+			return false, nil
+		}
+
+		var desiredServiceID string
+		if svc.Status.Konnect != nil {
+			desiredServiceID = svc.Status.Konnect.ID
+		}
+		if desiredServiceID == "" || boundServiceID != desiredServiceID {
+			log.Debug(logger, "KongRoute not yet bound to its referenced KongService in Konnect, deferring orphan cleanup",
+				"route", client.ObjectKeyFromObject(r),
+				"service", serviceRefName,
+				"boundServiceID", boundServiceID,
+				"desiredServiceID", desiredServiceID)
+			return false, nil
+		}
+	}
+
+	log.Debug(logger, "All routes are bound to their referenced KongService in Konnect, orphan cleanup may proceed")
+	return true, nil
+}
+
 // HandleOrphanedResource implements OrphanedResourceHandler.
 //
 // Processes orphaned resources by checking and updating hybrid-routes annotations.
@@ -405,21 +493,38 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"matchCount", len(rule.Matches),
 				"filterCount", len(rule.Filters))
 
-			// Build the KongUpstream resource.
-			upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
+			upstreamName := namegen.NewKongUpstreamNameForHTTPRouteRule(c.route, cp, rule)
+
+			// Build the KongTarget resources before the service so fallback services for
+			// invalid backends can use a route-scoped name and avoid colliding with normal backend services.
+			targets, err := target.TargetsForBackendRefs(
+				ctx,
+				logger.WithValues("upstream", upstreamName),
+				c.Client,
+				c.route,
+				rule.BackendRefs,
+				&pRef,
+				upstreamName,
+				c.fqdnMode,
+				c.clusterDomain,
+			)
 			if err != nil {
-				log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
-					"controlPlane", cp.KonnectNamespacedRef)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongUpstream resource: %w", err))
+				log.Error(logger, err, "Failed to translate KongTarget resources for rule, skipping rule",
+					"upstream", upstreamName,
+					"backendRefs", rule.BackendRefs,
+					"parentRef", pRef)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongTarget resources for upstream %s: %w", upstreamName, err))
 				continue
 			}
-			upstreamName := upstreamPtr.Name
-			c.outputStore = append(c.outputStore, upstreamPtr)
-			log.Debug(logger, "Successfully translated KongUpstream resource",
-				"upstream", upstreamName)
+			log.Debug(logger, "Successfully translated KongTarget resources", "upstream", upstreamName, "targetCount", len(targets))
+
+			serviceNameOverride := ""
+			if len(rule.BackendRefs) > 0 && len(targets) == 0 {
+				serviceNameOverride = namegen.NewKongServiceNameForHTTPRouteRuleBackendNotFound(c.route, cp, rule)
+			}
 
 			// Build the KongService resource (and optionally a KongCertificate + KongReferenceGrant for client-cert).
-			servicePtr, certPtr, grantPtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
+			servicePtr, certPtr, grantPtr, err := service.ServiceForRuleWithName(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName, serviceNameOverride)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongService resource, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef,
@@ -427,19 +532,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongService for rule: %w", err))
 				continue
 			}
-			// Append KongReferenceGrant before KongCertificate so the grant exists when the cert is applied.
-			if grantPtr != nil {
-				c.outputStore = append(c.outputStore, grantPtr)
-				log.Debug(logger, "Successfully translated KongReferenceGrant resource", "grant", grantPtr.Name)
-			}
-			if certPtr != nil {
-				c.outputStore = append(c.outputStore, certPtr)
-				log.Debug(logger, "Successfully translated KongCertificate resource", "cert", certPtr.Name)
-			}
 			serviceName := servicePtr.Name
-			c.outputStore = append(c.outputStore, servicePtr)
-			log.Debug(logger, "Successfully translated KongService resource",
-				"service", serviceName)
 
 			// Build one KongRoute per match in the rule.
 			// Gateway API semantics require OR across matches within a rule
@@ -454,16 +547,10 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongRoutes for rule %d: %w", ruleIndex, err))
 				continue
 			}
-			for _, r := range routes {
-				routeName := r.Name
-				c.outputStore = append(c.outputStore, r)
-				log.Debug(logger, "Successfully translated KongRoute resource",
-					"route", routeName)
-			}
-
 			// Build the KongPlugin and KongPluginBinding resources.
 			log.Debug(logger, "Processing filters for rule",
 				"filterCount", len(rule.Filters))
+			filterOutputs := make([]client.Object, 0)
 
 			for _, filter := range rule.Filters {
 				plugins, err := plugin.PluginsForFilter(ctx, logger, c.Client, c.route, rule, filter, &pRef)
@@ -474,9 +561,10 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					continue
 				}
 
-				for _, plugin := range plugins {
-					pluginName := plugin.Name
-					c.outputStore = append(c.outputStore, &plugin)
+				for i := range plugins {
+					pluginObj := &plugins[i]
+					pluginName := pluginObj.Name
+					filterOutputs = append(filterOutputs, pluginObj)
 					// Create a KongPluginBinding to bind the KongPlugin to each KongRoute generated for the rule.
 					for _, r := range routes {
 						bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
@@ -497,7 +585,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 							continue
 						}
 						bindingName := bindingPtr.Name
-						c.outputStore = append(c.outputStore, bindingPtr)
+						filterOutputs = append(filterOutputs, bindingPtr)
 
 						log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
 							"plugin", pluginName,
@@ -507,33 +595,40 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				}
 			}
 
-			// Build the KongTarget resources.
-			// Leave them as the last step since we want everything fully configured before enabling the traffic to the backends.
-			targets, err := target.TargetsForBackendRefs(
-				ctx,
-				logger.WithValues("upstream", upstreamName),
-				c.Client,
-				c.route,
-				rule.BackendRefs,
-				&pRef,
-				upstreamName,
-				c.fqdnMode,
-				c.clusterDomain,
-			)
-			if err != nil {
-				log.Error(logger, err, "Failed to translate KongTarget resources for rule, skipping rule",
+			var ruleOutputs []client.Object
+			if len(rule.BackendRefs) == 0 || len(targets) > 0 {
+				upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
+				if err != nil {
+					log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
+						"controlPlane", cp.KonnectNamespacedRef)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongUpstream resource: %w", err))
+					continue
+				}
+				ruleOutputs = append(ruleOutputs, upstreamPtr)
+				log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
+			} else {
+				log.Debug(logger, "Skipping KongUpstream translation because no valid backend targets were produced",
 					"upstream", upstreamName,
-					"backendRefs", rule.BackendRefs,
-					"parentRef", pRef)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongTarget resources for upstream %s: %w", upstreamName, err))
-				continue
+					"backendRefCount", len(rule.BackendRefs))
 			}
-			log.Debug(logger, "Successfully translated KongTarget resources",
-				"upstream", upstreamName,
-				"targetCount", len(targets))
-			for _, tgt := range targets {
-				c.outputStore = append(c.outputStore, &tgt)
+
+			// Append KongReferenceGrant before KongCertificate so the grant exists when the cert is applied.
+			if grantPtr != nil {
+				ruleOutputs = append(ruleOutputs, grantPtr)
+				log.Debug(logger, "Successfully translated KongReferenceGrant resource", "grant", grantPtr.Name)
 			}
+			if certPtr != nil {
+				ruleOutputs = append(ruleOutputs, certPtr)
+				log.Debug(logger, "Successfully translated KongCertificate resource", "cert", certPtr.Name)
+			}
+			ruleOutputs = append(ruleOutputs, servicePtr)
+			log.Debug(logger, "Successfully translated KongService resource", "service", serviceName)
+			for _, r := range routes {
+				routeName := r.Name
+				ruleOutputs = append(ruleOutputs, r)
+				log.Debug(logger, "Successfully translated KongRoute resource", "route", routeName)
+			}
+			ruleOutputs = append(ruleOutputs, filterOutputs...)
 
 			if len(rule.BackendRefs) > 0 && len(targets) == 0 {
 				terminationPlugin, err := plugin.RequestTerminationForBackendNotFound(
@@ -551,7 +646,6 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					translationErrors = append(translationErrors, fmt.Errorf("failed to translate request-termination plugin for service %s: %w", serviceName, err))
 					continue
 				}
-				c.outputStore = append(c.outputStore, terminationPlugin)
 
 				bindingPtr, err := pluginbinding.BindingForPluginAndService(
 					ctx,
@@ -570,8 +664,14 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					translationErrors = append(translationErrors, fmt.Errorf("failed to bind request-termination plugin %s to service %s: %w", terminationPlugin.Name, serviceName, err))
 					continue
 				}
-				c.outputStore = append(c.outputStore, bindingPtr)
+				ruleOutputs = append(ruleOutputs, terminationPlugin, bindingPtr)
 			}
+
+			for i := range targets {
+				ruleOutputs = append(ruleOutputs, &targets[i])
+			}
+
+			c.outputStore = append(c.outputStore, ruleOutputs...)
 		}
 	}
 

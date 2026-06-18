@@ -52,7 +52,7 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs grpcurl
+tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs crdify grpcurl
 
 MISE := $(shell which mise)
 MISE_FILE := .mise.toml
@@ -126,6 +126,12 @@ CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/github-elastic-crd-ref-docs/$(CRD_REF
 .PHONY: crd-ref-docs
 crd-ref-docs: yq ## Download crd-ref-docs locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
+
+CRDIFY_VERSION = $(shell $(YQ) -r '.crdify' < $(TOOLS_VERSIONS_FILE))
+CRDIFY = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-crdify/$(CRDIFY_VERSION)/bin/crdify
+.PHONY: crdify
+crdify: mise yq ## Download crdify locally if necessary.
+	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/crdify@v$(CRDIFY_VERSION)
 
 SKAFFOLD_VERSION = $(shell $(YQ) -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/github-google-container-tools-skaffold/$(SKAFFOLD_VERSION)/skaffold
@@ -296,7 +302,7 @@ lint.markdownlint: download.markdownlint-cli2
 lint.all: lint lint.charts lint.actions lint.markdownlint
 
 .PHONY: verify
-verify: verify.go-fix verify.manifests verify.generators
+verify: verify.go-fix verify.manifests verify.generators verify.crd-breaking-changes
 
 .PHONY: verify.diff
 verify.diff:
@@ -314,6 +320,10 @@ verify.generators: verify.repo generate verify.diff
 
 .PHONY: verify.go-fix
 verify.go-fix: go-fix verify.diff
+
+.PHONY: verify.crd-breaking-changes
+verify.crd-breaking-changes: crdify
+	CRDIFY_BIN="$${CRDIFY_BIN:-$(CRDIFY)}" ./scripts/verify-crd-breaking-changes.sh
 
 # ------------------------------------------------------------------------------
 # Build - Generators
@@ -566,6 +576,11 @@ _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
 TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < ./test/test_dependencies.yaml)
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
+
+.PHONY: tune.inotify
+tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in kind-based tests (Linux host / Docker VM).
+	sudo sysctl -w fs.inotify.max_user_instances=8192
+	sudo sysctl -w fs.inotify.max_user_watches=524288
 
 .PHONY: test
 test: test.unit

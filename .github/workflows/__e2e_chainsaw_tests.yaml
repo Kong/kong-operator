@@ -1,5 +1,4 @@
 name: E2E Chainsaw tests
-run-name: "E2E Chainsaw tests ${{ format('{0}', inputs.node_image_version) }} "
 
 on:
   workflow_call:
@@ -18,19 +17,27 @@ env:
 
 jobs:
   e2e-tests-chainsaw:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0}', inputs.node_image_version) }}
+    name: ${{ format('{0} - {1}', matrix.suite, inputs.node_image_version) }}
     env:
       IMG: kong-operator
       TAG: e2e-${{ github.sha }}
       CLUSTER_NAME: e2e-chainsaw
+      TEST_ID: ${{ github.run_id }}
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+        - hybridgateway
+        - konnect
+        - eventgateway
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
     - name: download e2e image artifact
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -40,9 +47,11 @@ jobs:
     - name: load docker image
       run: docker load -i kong-operator_e2e.tar
 
-    - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+    - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
       with:
-        install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm
+        install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind
+
+    - uses: ./.github/actions/bump-inotify
 
     - name: Create k8s KinD Cluster with ktf
       env:
@@ -74,21 +83,25 @@ jobs:
 
     - name: run chainsaw e2e tests
       id: chainsaw-tests
-      run: make test.e2e.chainsaw
       env:
         KONNECT_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONNECT_SERVER_URL: us.api.konghq.tech
-        TEST_ID: ${{ github.run_id }}
+        TEST_ID: ${{ env.TEST_ID }}
+        CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.suite }}
+        CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
+      run: |
+        # Use the suite name to target the specific test directory
+        make test.e2e.chainsaw
 
     - name: Upload debug snapshots as artifacts
       if: always() && steps.chainsaw-tests.outcome == 'failure'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: chainsaw-debug-snapshots-${{ github.run_id }}
+        name: chainsaw-debug-snapshots-${{ matrix.suite }}-${{ github.run_id }}
         path: /tmp/chainsaw/
         if-no-files-found: ignore
         retention-days: 3
 
     - name: Clean up debug snapshots
       if: always() && steps.chainsaw-tests.outcome == 'failure'
-      run: rm -rf /tmp/chainsaw
+      run: rm -rf /tmp/chainsaw/${{ matrix.suite }}

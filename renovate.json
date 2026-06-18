@@ -5,7 +5,8 @@
   ],
   "baseBranchPatterns": [
     "$default",
-    "release/2.1.x"
+    "release/2.1.x",
+    "release/2.2.x"
   ],
   "ignorePaths": [],
   "enabledManagers": [
@@ -161,9 +162,9 @@
       "extractVersion": "^kustomize/(?<version>.*)$"
     },
     {
-      "description": "Ignore minor updates if depName has `@only-patch` suffix.",
-      "matchBaseBranches": ["$default"],
+      "description": "Ignore minor and major updates if depName has `@only-patch` suffix.",
       "matchUpdateTypes": [
+        "major",
         "minor"
       ],
       "enabled": false,
@@ -190,19 +191,29 @@
       "description": "Disable Go dependencies updates (still handled by dependabot)",
       "matchManagers": ["gomod"],
       "matchDepNames": ["go"],
-      "matchBaseBranches": ["$default", "release/2.1.x"],
+      "matchBaseBranches": [
+        "$default",
+        "release/2.1.x",
+        "release/2.2.x"
+      ],
       "enabled": false
     },
     {
-      "description": "Disable dependency updates on release/2.1.x by default",
-      "matchBaseBranches": ["release/2.1.x"],
+      "description": "Disable dependency updates on 2.1 and 2.2",
+      "matchBaseBranches": [
+        "release/2.1.x",
+        "release/2.2.x"
+      ],
       "enabled": false
     },
     {
-      "description": "Go toolchain patch updates only on release/2.1.x",
+      "description": "Go toolchain patch updates only on 2.1 and 2.2",
       "matchManagers": ["gomod"],
       "matchDepNames": ["go"],
-      "matchBaseBranches": ["release/2.1.x"],
+      "matchBaseBranches": [
+        "release/2.1.x",
+        "release/2.2.x"
+      ],
       "rangeStrategy": "bump",
       "enabled": true
     },
@@ -210,32 +221,44 @@
       "description": "Disable Go toolchain major and minor updates on release/2.1.x",
       "matchManagers": ["gomod"],
       "matchDepNames": ["go"],
-      "matchBaseBranches": ["release/2.1.x"],
+      "matchBaseBranches": [
+        "release/2.1.x",
+        "release/2.2.x"
+      ],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
     },
     {
-      "description": "Go modules patch updates only on release/2.1.x",
+      "description": "Go modules patch updates only on 2.1 and 2.2",
       "matchManagers": ["gomod"],
       "matchDepNames": ["!go"],
-      "matchBaseBranches": ["release/2.1.x"],
+      "matchBaseBranches": [
+        "release/2.1.x",
+        "release/2.2.x"
+      ],
       "matchUpdateTypes": ["patch"],
       "enabled": true
     },
     {
-      "description": "Enable Dockerfile golang updates on release/2.1.x",
+      "description": "Enable Dockerfile golang updates on 2.1 and 2.2",
       "matchManagers": ["dockerfile"],
       "matchDatasources": ["docker"],
       "matchDepNames": ["golang"],
-      "matchBaseBranches": ["release/2.1.x"],
+      "matchBaseBranches": [
+        "release/2.1.x",
+        "release/2.2.x"
+      ],
       "enabled": true
     },
     {
-      "description": "Disable Dockerfile golang major and minor updates on release/2.1.x",
+      "description": "Disable Dockerfile golang major and minor updates on 2.1 and 2.2",
       "matchManagers": ["dockerfile"],
       "matchDatasources": ["docker"],
       "matchDepNames": ["golang"],
-      "matchBaseBranches": ["release/2.1.x"],
+      "matchBaseBranches": [
+        "release/2.1.x",
+        "release/2.2.x"
+      ],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
     }

@@ -18,4 +18,5 @@ limitations under the License.
 // +kubebuilder:object:generate=true
 // +groupName=eventgateway.konghq.com
 // +groupGoName=EventGateway
+// +apireference:kgo:include-all-types
 package v1alpha1

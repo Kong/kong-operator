@@ -43,8 +43,7 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), managercfg.AdminAPIClientConfig{}, "")
 	require.NoError(t, err)
 
-	gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-ee")
-	require.NoError(t, err)
+	gatewayTag := testenv.KongTag()
 	gatewayTag = trimEnterpriseTagToSemver(gatewayTag)
 
 	logbase, err := zap.NewDevelopment()

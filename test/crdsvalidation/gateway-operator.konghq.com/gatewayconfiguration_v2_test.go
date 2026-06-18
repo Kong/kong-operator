@@ -389,6 +389,157 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("Konnect immutability", func(t *testing.T) {
+		var (
+			mirrorImmutabilityErrorMessage  = new("mirror is immutable once set")
+			sourceImmutabilityErrorMessage  = new("source is immutable once set")
+			authRefImmutabilityErrorMessage = new("authRef is immutable once set")
+		)
+		common.TestCasesGroup[*operatorv2beta1.GatewayConfiguration]{
+			{
+				Name: "changing mirror on update is not allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
+							},
+							Source: new(commonv1alpha1.EntitySourceMirror),
+							Mirror: &konnectv1alpha1.MirrorSpec{
+								Konnect: konnectv1alpha1.MirrorKonnect{
+									ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
+								},
+							},
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.Konnect.Mirror = &konnectv1alpha1.MirrorSpec{
+						Konnect: konnectv1alpha1.MirrorKonnect{
+							ID: commonv1alpha1.KonnectIDType("00000000-0000-0000-0000-000000000001"),
+						},
+					}
+				},
+				ExpectedUpdateErrorMessage: mirrorImmutabilityErrorMessage,
+			},
+			{
+				Name: "removing mirror on update is not allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
+							},
+							Source: new(commonv1alpha1.EntitySourceMirror),
+							Mirror: &konnectv1alpha1.MirrorSpec{
+								Konnect: konnectv1alpha1.MirrorKonnect{
+									ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
+								},
+							},
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.Konnect.Mirror = nil
+				},
+				ExpectedUpdateErrorMessage: mirrorImmutabilityErrorMessage,
+			},
+			{
+				Name: "adding mirror on update when not initially set is not allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
+							},
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.Konnect.Source = new(commonv1alpha1.EntitySourceMirror)
+					gc.Spec.Konnect.Mirror = &konnectv1alpha1.MirrorSpec{
+						Konnect: konnectv1alpha1.MirrorKonnect{
+							ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
+						},
+					}
+				},
+				ExpectedUpdateErrorMessage: mirrorImmutabilityErrorMessage,
+			},
+			{
+				Name: "changing source on update is not allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
+							},
+							Source: new(commonv1alpha1.EntitySourceOrigin),
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.Konnect.Source = new(commonv1alpha1.EntitySourceMirror)
+				},
+				ExpectedUpdateErrorMessage: sourceImmutabilityErrorMessage,
+			},
+			{
+				Name: "setting authRef after creation without one is allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.Konnect.APIAuthConfigurationRef = &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+						Name: "my-konnect-auth-config",
+					}
+				},
+			},
+			{
+				Name: "changing authRef on update is not allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
+							},
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.Konnect.APIAuthConfigurationRef = &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+						Name: "other-konnect-auth-config",
+					}
+				},
+				ExpectedUpdateErrorMessage: authRefImmutabilityErrorMessage,
+			},
+			{
+				Name: "removing authRef on update is not allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
+							},
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.Konnect.APIAuthConfigurationRef = nil
+				},
+				ExpectedUpdateErrorMessage: authRefImmutabilityErrorMessage,
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("ListenerOptions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv2beta1.GatewayConfiguration]{
 			{

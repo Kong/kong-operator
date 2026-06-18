@@ -267,6 +267,10 @@ func newGatewayWithListenerHostnames(hostnames ...string) *gwtypes.Gateway {
 			Name: listenerName,
 			Conditions: []metav1.Condition{
 				{
+					Type:   string(gatewayv1.ListenerConditionAccepted),
+					Status: metav1.ConditionTrue,
+				},
+				{
 					Type:   string(gwtypes.ListenerConditionProgrammed),
 					Status: metav1.ConditionTrue,
 				},
@@ -284,6 +288,10 @@ func newGatewayWithListenerHostnames(hostnames ...string) *gwtypes.Gateway {
 		gwListenerStatuses = append(gwListenerStatuses, gatewayv1.ListenerStatus{
 			Name: listenerName,
 			Conditions: []metav1.Condition{
+				{
+					Type:   string(gatewayv1.ListenerConditionAccepted),
+					Status: metav1.ConditionTrue,
+				},
 				{
 					Type:   string(gwtypes.ListenerConditionProgrammed),
 					Status: metav1.ConditionTrue,

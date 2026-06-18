@@ -849,11 +849,18 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayapi.HTTP
 	// iterate through each provided header match checking for invalid
 	// options and otherwise converting to kong type format.
 	convertedHeaders := make(map[string][]string)
+	// Header names are case-insensitive, and only the first match for an equivalent
+	// header name is considered:
+	// https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPHeaderMatch
+	// The original casing of the first occurrence is kept since Kong matches header
+	// names case-insensitively either way.
+	seenHeaderNames := make(map[string]struct{}, len(headers))
 	for _, header := range headers {
-		if _, exists := convertedHeaders[string(header.Name)]; exists {
-			return nil, fmt.Errorf("multiple header matches for the same header are not allowed: %s",
-				string(header.Name))
+		lowercaseHeaderName := strings.ToLower(string(header.Name))
+		if _, exists := seenHeaderNames[lowercaseHeaderName]; exists {
+			continue
 		}
+		seenHeaderNames[lowercaseHeaderName] = struct{}{}
 		switch {
 		case header.Type != nil && *header.Type == gatewayapi.HeaderMatchRegularExpression:
 			convertedHeaders[string(header.Name)] = []string{KongHeaderRegexPrefix + header.Value}

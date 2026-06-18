@@ -33,6 +33,7 @@ import (
 	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
@@ -153,6 +154,48 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	return kgcp, nil
+}
+
+// enforceKonnectGatewayControlPlaneSpec ensures that the spec of the provided
+// KonnectGatewayControlPlane matches the desired state derived from the Gateway
+// and GatewayConfiguration. Any manual changes to enforced fields are overridden.
+// Returns true if the resource was patched.
+//
+// Note: spec.konnect.authRef is only enforced when the control plane is not yet
+// Programmed, as the field becomes immutable once Programmed is True. Other fields
+// are skipped, because there are immutable in both GatewayConfiguration and KonnectGatewayControlPlane.
+func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
+	ctx context.Context,
+	kgcp *konnectv1alpha2.KonnectGatewayControlPlane,
+	gatewayConfig *GatewayConfiguration,
+) (bool, error) {
+	if gatewayConfig.Spec.Konnect == nil {
+		return false, nil
+	}
+
+	old := kgcp.DeepCopy()
+	updated := false
+
+	if gatewayConfig.Spec.Konnect.APIAuthConfigurationRef != nil &&
+		!k8sutils.HasConditionTrue(
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, kgcp,
+		) &&
+		!k8sutils.IsProgrammed(kgcp) {
+		desired := *gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
+		if kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef != desired {
+			kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef = desired
+			updated = true
+		}
+	}
+
+	if !updated {
+		return false, nil
+	}
+
+	if err := r.Patch(ctx, kgcp, client.MergeFrom(old)); err != nil {
+		return false, fmt.Errorf("failed patching KonnectGatewayControlPlane %s spec: %w", kgcp.Name, err)
+	}
+	return true, nil
 }
 
 func (r *Reconciler) createKonnectExtension(
@@ -731,83 +774,6 @@ func generateDataPlaneNetworkPolicy(
 			Ingress: ingressRules,
 		},
 	}, nil
-}
-
-// ensureOwnedControlPlanesDeleted deletes all controlplanes owned by gateway.
-// returns true if at least one controlplane resource is deleted.
-func (r *Reconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
-	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)
-	if err != nil {
-		return false, err
-	}
-
-	var (
-		deleted bool
-		errs    []error
-	)
-	for i := range controlplanes {
-		// skip already deleted controlplanes, because controlplanes may have finalizers
-		// to wait for owned cluster wide resources deleted.
-		if !controlplanes[i].DeletionTimestamp.IsZero() {
-			continue
-		}
-		err = r.Delete(ctx, &controlplanes[i])
-		if client.IgnoreNotFound(err) != nil {
-			errs = append(errs, err)
-			continue
-		}
-		deleted = true
-	}
-
-	return deleted, errors.Join(errs...)
-}
-
-// ensureOwnedDataPlanesDeleted deleted all dataplanes owned by gateway.
-// returns true if at least one dataplane resource is deleted.
-func (r *Reconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
-	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, gateway)
-	if err != nil {
-		return false, err
-	}
-
-	var (
-		deleted bool
-		errs    []error
-	)
-	for i := range dataplanes {
-		err = r.Delete(ctx, &dataplanes[i])
-		if client.IgnoreNotFound(err) != nil {
-			errs = append(errs, err)
-			continue
-		}
-		deleted = true
-	}
-
-	return deleted, errors.Join(errs...)
-}
-
-// ensureOwnedNetworkPoliciesDeleted deleted all network policies owned by gateway.
-// returns true if at least one networkPolicy resource is deleted.
-func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
-	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
-	if err != nil {
-		return false, err
-	}
-
-	var (
-		deleted bool
-		errs    []error
-	)
-	for i := range networkPolicies {
-		err = r.Delete(ctx, &networkPolicies[i])
-		if client.IgnoreNotFound(err) != nil {
-			errs = append(errs, err)
-			continue
-		}
-		deleted = true
-	}
-
-	return deleted, errors.Join(errs...)
 }
 
 // -----------------------------------------------------------------------------

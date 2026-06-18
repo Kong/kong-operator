@@ -1,4 +1,4 @@
-name: unit tests
+name: verify
 
 on:
   workflow_call: {}
@@ -11,62 +11,41 @@ env:
   MISE_DEBUG: 1
 
 jobs:
-  gofix:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
-      with:
-        egress-policy: audit
-    - name: Checkout repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: Setup go
-      uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-      with:
-        go-version-file: go.mod
-        cache: false
-
-    - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-    - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
-
-    - run: echo "GO_CACHE_KEY=go-fix-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-fix-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
-
-    - name: Go cache main branch
-      if: ${{ github.ref == 'refs/heads/main' }}
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
-      with:
-        path: |
-          ${{ env.GO_MOD_CACHE }}
-          ${{ env.GO_BUILD_CACHE }}
-        key: ${{ env.GO_CACHE_KEY }}
-        restore-keys: |
-          ${{ env.GO_CACHE_KEY_2 }}
-
-    - name: Go cache (restore only from go fix cache)
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
-      with:
-        path: |
-          ${{ env.GO_MOD_CACHE }}
-          ${{ env.GO_BUILD_CACHE }}
-        key: ${{ env.GO_CACHE_KEY }}
-        restore-keys: |
-          ${{ env.GO_CACHE_KEY_2 }}
-
-    - name: Verify go fix
-      run: make verify.go-fix
-
   verify:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 20) }}
+    env:
+      CRD_BREAKING_CHANGES_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: go-fix
+            make-target: verify.go-fix
+            fetch_depth: 1
+            lint-cache: false
+          - name: manifests
+            make-target: verify.manifests
+            fetch_depth: 1
+            lint-cache: false
+          - name: generators
+            make-target: verify.generators
+            fetch_depth: 1
+            lint-cache: true
+          - name: crd-breaking-changes
+            make-target: verify.crd-breaking-changes
+            fetch_depth: 0
+            lint-cache: false
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
     - name: Checkout repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      with:
+        fetch-depth: ${{ matrix.fetch_depth }}
 
     - name: Setup go
       uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -74,45 +53,44 @@ jobs:
         go-version-file: go.mod
         cache: false
 
-    - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+    - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
       with:
         install: false
 
-    - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
-    - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+    - run: |
+        {
+          echo "GO_MOD_CACHE=$(go env GOMODCACHE)"
+          echo "GO_BUILD_CACHE=$(go env GOCACHE)"
+        } >> $GITHUB_ENV
 
-    - run: echo "GO_CACHE_KEY=go-build-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-build-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
-
-    - name: Go cache (restore only from build cache)
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+    # Restore-only, reusing the shared `go-build-*` cache written by the `build` job in
+    # tests.yaml. We never save here to avoid creating additional caches.
+    - name: Restore go build cache
+      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
           ${{ env.GO_BUILD_CACHE }}
-        key: ${{ env.GO_CACHE_KEY }}
+        key: go-build-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}
         restore-keys: |
-          ${{ env.GO_CACHE_KEY_2 }}
+          go-build-${{ runner.os }}-${{ runner.arch }}-go-
 
-    - run: echo "GOLANGCI_LINT_CACHE=$(make golangci-lint-cache-path | tail -1)" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_LINT=go-lint-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_LINT_2=go-lint-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    # Only the `generators` target runs golangci-lint (via generate -> generate.lint-fix).
+    # Restore-only, reusing the shared `go-lint-*` cache written by the lint job in
+    # __lint.yaml. Key/paths must match __lint.yaml exactly for the restore to hit.
+    - if: ${{ matrix.lint-cache }}
+      run: echo "GOLANGCI_LINT_CACHE=$(make golangci-lint-cache-path | tail -1)" >> $GITHUB_ENV
 
-    - name: Go lint cache (restore only from lint cache)
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+    - name: Restore lint cache
+      if: ${{ matrix.lint-cache }}
+      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
       with:
-        # Build and mod cache are already restored from build cache above.
         path: |
+          ${{ env.GO_MOD_CACHE }}
+          ${{ env.GO_BUILD_CACHE }}
           ${{ env.GOLANGCI_LINT_CACHE }}
-        key: ${{ env.GO_CACHE_KEY_LINT }}
+        key: go-lint-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}
         restore-keys: |
-          ${{ env.GO_CACHE_KEY_LINT_2 }}
+          go-lint-${{ runner.os }}-${{ runner.arch }}-go-
 
-    - name: Verify manifests consistency
-      run: make verify.manifests
-
-    - name: Verify generators consistency
-      run: make verify.generators
-
+    - run: make ${{ matrix.make-target }}

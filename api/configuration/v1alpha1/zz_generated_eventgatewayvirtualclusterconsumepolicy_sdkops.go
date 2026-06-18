@@ -40,6 +40,22 @@ var EventGatewayVirtualClusterConsumePolicySDKOpsBoolFields = []EventGatewayVirt
 		},
 	},
 	{
+		Label: "schema_validation.config.validate_key",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"validate_key",
+		},
+	},
+	{
+		Label: "schema_validation.config.validate_value",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"validate_value",
+		},
+	},
+	{
 		Label: "schema_validation.enabled",
 		Path: []string{
 			"schema_validation",

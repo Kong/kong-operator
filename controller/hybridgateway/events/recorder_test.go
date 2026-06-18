@@ -8,12 +8,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestNewTypedEventRecorder(t *testing.T) {
-	fakeRecorder := record.NewFakeRecorder(10)
+	fakeRecorder := events.NewFakeRecorder(10)
 	recorder := NewTypedEventRecorder(fakeRecorder)
 
 	require.NotNil(t, recorder)
@@ -85,10 +85,10 @@ func TestTypedEventRecorder_Event(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeRecorder := record.NewFakeRecorder(10)
+			fakeRecorder := events.NewFakeRecorder(10)
 			recorder := NewTypedEventRecorder(fakeRecorder)
 
-			recorder.Event(tt.object, tt.eventType, tt.baseReason, tt.message)
+			recorder.Eventf(tt.object, tt.eventType, tt.baseReason, tt.message)
 
 			event := <-fakeRecorder.Events
 			assert.Contains(t, event, tt.expectedEventType)
@@ -136,7 +136,7 @@ func TestTypedEventRecorder_Eventf(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeRecorder := record.NewFakeRecorder(10)
+			fakeRecorder := events.NewFakeRecorder(10)
 			recorder := NewTypedEventRecorder(fakeRecorder)
 
 			recorder.Eventf(tt.object, tt.eventType, tt.baseReason, tt.messageFmt, tt.args...)
@@ -171,20 +171,20 @@ func TestTypedEventRecorder_AllBaseReasons(t *testing.T) {
 
 	for _, baseReason := range baseReasons {
 		t.Run("HTTPRoute_"+baseReason, func(t *testing.T) {
-			fakeRecorder := record.NewFakeRecorder(10)
+			fakeRecorder := events.NewFakeRecorder(10)
 			recorder := NewTypedEventRecorder(fakeRecorder)
 
-			recorder.Event(httpRoute, corev1.EventTypeNormal, baseReason, "test message")
+			recorder.Eventf(httpRoute, corev1.EventTypeNormal, baseReason, "test message")
 
 			event := <-fakeRecorder.Events
 			assert.Contains(t, event, "HTTPRoute"+baseReason)
 		})
 
 		t.Run("Gateway_"+baseReason, func(t *testing.T) {
-			fakeRecorder := record.NewFakeRecorder(10)
+			fakeRecorder := events.NewFakeRecorder(10)
 			recorder := NewTypedEventRecorder(fakeRecorder)
 
-			recorder.Event(gateway, corev1.EventTypeNormal, baseReason, "test message")
+			recorder.Eventf(gateway, corev1.EventTypeNormal, baseReason, "test message")
 
 			event := <-fakeRecorder.Events
 			assert.Contains(t, event, "Gateway"+baseReason)
@@ -193,7 +193,7 @@ func TestTypedEventRecorder_AllBaseReasons(t *testing.T) {
 }
 
 func TestTypedEventRecorder_getTypedReason(t *testing.T) {
-	fakeRecorder := record.NewFakeRecorder(10)
+	fakeRecorder := events.NewFakeRecorder(10)
 	recorder := NewTypedEventRecorder(fakeRecorder)
 
 	tests := []struct {
@@ -231,7 +231,7 @@ func TestTypedEventRecorder_getTypedReason(t *testing.T) {
 }
 
 func TestTypedEventRecorder_MultipleEvents(t *testing.T) {
-	fakeRecorder := record.NewFakeRecorder(10)
+	fakeRecorder := events.NewFakeRecorder(10)
 	recorder := NewTypedEventRecorder(fakeRecorder)
 
 	httpRoute := &gatewayv1.HTTPRoute{
@@ -241,8 +241,8 @@ func TestTypedEventRecorder_MultipleEvents(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "gateway1"},
 	}
 
-	recorder.Event(httpRoute, corev1.EventTypeNormal, "TranslationSucceeded", "message1")
-	recorder.Event(gateway, corev1.EventTypeWarning, "TranslationFailed", "message2")
+	recorder.Eventf(httpRoute, corev1.EventTypeNormal, "TranslationSucceeded", "message1")
+	recorder.Eventf(gateway, corev1.EventTypeWarning, "TranslationFailed", "message2")
 	recorder.Eventf(httpRoute, corev1.EventTypeNormal, "StatusUpdateSucceeded", "message3")
 
 	event1 := <-fakeRecorder.Events

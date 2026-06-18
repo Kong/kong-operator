@@ -43,9 +43,10 @@ var (
 // supportedGatewayWithCondition is a struct that wraps a gateway and some further info
 // such as the condition Status condition Accepted of the gateway and the listenerName.
 type supportedGatewayWithCondition struct {
-	gateway      *gatewayapi.Gateway
-	condition    metav1.Condition
-	listenerName string
+	gateway               *gatewayapi.Gateway
+	condition             metav1.Condition
+	listenerName          string
+	attachedListenerNames []gatewayapi.SectionName
 }
 
 func (g supportedGatewayWithCondition) GetName() string {
@@ -186,6 +187,8 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			allowedBySupportedKinds = false
 			allowedByListenerName   = false
 			listenerReady           = false
+
+			attachedListenerNames []gatewayapi.SectionName
 		)
 
 		for _, listener := range gateway.Spec.Listeners {
@@ -264,6 +267,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			}
 
 			matched = true
+			attachedListenerNames = append(attachedListenerNames, listener.Name)
 		}
 
 		if matched {
@@ -273,8 +277,9 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			}
 
 			gateways = append(gateways, supportedGatewayWithCondition{
-				gateway:      &gateway,
-				listenerName: listenerName,
+				gateway:               &gateway,
+				listenerName:          listenerName,
+				attachedListenerNames: attachedListenerNames,
 				condition: metav1.Condition{
 					Type:               string(gatewayapi.RouteConditionAccepted),
 					Status:             metav1.ConditionTrue,
@@ -312,8 +317,9 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			}
 
 			gateways = append(gateways, supportedGatewayWithCondition{
-				gateway:      &gateway,
-				listenerName: listenerName,
+				gateway:               &gateway,
+				listenerName:          listenerName,
+				attachedListenerNames: attachedListenerNames,
 				condition: metav1.Condition{
 					Type:               string(gatewayapi.RouteConditionAccepted),
 					Status:             metav1.ConditionFalse,
@@ -689,6 +695,28 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 			return true
 		}
 	}
+	return false
+}
+
+func isGatewayProgrammedForRoute(gateway supportedGatewayWithCondition) bool {
+	if !isGatewayProgrammed(gateway.gateway) {
+		return false
+	}
+
+	// If the Gateway spec has no listener that could attach this route, let normal
+	// route acceptance handling set the terminal status. This readiness check is
+	// only intended to wait for listener status to catch up when an attached spec
+	// listener exists but its status is not programmed yet.
+	if len(gateway.attachedListenerNames) == 0 {
+		return true
+	}
+
+	for _, listenerName := range gateway.attachedListenerNames {
+		if err := listenerProgrammedInStatus(listenerName, gateway.gateway.Status.Listeners); err == nil {
+			return true
+		}
+	}
+
 	return false
 }
 

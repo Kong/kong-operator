@@ -1,17 +1,19 @@
 # renovate: datasource=github-tags depName=kubernetes/code-generator
-code-generator: "0.36.1"
+code-generator: "0.36.2"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
 controller-tools: "0.21.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "2.12.2"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-skaffold: "2.21.0"
+skaffold: "2.22.0"
 # renovate: datasource=github-releases depName=go-delve/delve
 dlv: "1.26.3"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
 gotestsum: "1.13.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.3.0"
+# renovate: datasource=github-releases depName=kubernetes-sigs/crdify
+crdify: "0.6.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.24.1"
 # renovate: datasource=github-releases depName=rhysd/actionlint

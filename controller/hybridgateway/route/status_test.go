@@ -551,7 +551,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		},
 		Status: gatewayv1.GatewayStatus{
 			Listeners: []gatewayv1.ListenerStatus{
-				{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gwtypes.ListenerConditionProgrammed), Status: metav1.ConditionTrue}}},
+				{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
 			},
 		},
 	}
@@ -630,7 +630,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 				Status: gatewayv1.GatewayStatus{
 					Listeners: []gatewayv1.ListenerStatus{
-						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionProgrammed), Status: metav1.ConditionTrue}}},
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
 					},
 				},
 			},
@@ -657,12 +657,57 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 				Status: gatewayv1.GatewayStatus{
 					Listeners: []gatewayv1.ListenerStatus{
-						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionProgrammed), Status: metav1.ConditionTrue}}},
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
 					},
 				},
 			},
 			route:      route,
 			pRef:       pRef,
+			client:     cl,
+			wantType:   string(gwtypes.RouteConditionAccepted),
+			wantStatus: metav1.ConditionTrue,
+			wantReason: string(gwtypes.RouteReasonAccepted),
+		},
+		{
+			name: "accepted route through unresolved but accepted listener",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gatewayv1.Listener{
+						{
+							Name:          "tls",
+							Port:          443,
+							Protocol:      gatewayv1.HTTPSProtocolType,
+							AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}},
+							TLS: &gatewayv1.ListenerTLSConfig{
+								Mode: func() *gatewayv1.TLSModeType {
+									mode := gatewayv1.TLSModeTerminate
+									return &mode
+								}(),
+							},
+						},
+					},
+					GatewayClassName: "my-class",
+				},
+				Status: gatewayv1.GatewayStatus{
+					Listeners: []gatewayv1.ListenerStatus{
+						{
+							Name: "tls",
+							Conditions: []metav1.Condition{
+								{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue},
+								{Type: string(gatewayv1.ListenerConditionProgrammed), Status: metav1.ConditionFalse},
+								{Type: string(gatewayv1.ListenerConditionResolvedRefs), Status: metav1.ConditionFalse},
+							},
+						},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				TypeMeta:   httpRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec:       gwtypes.HTTPRouteSpec{},
+			},
+			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("tls")},
 			client:     cl,
 			wantType:   string(gwtypes.RouteConditionAccepted),
 			wantStatus: metav1.ConditionTrue,
@@ -680,7 +725,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 				Status: gatewayv1.GatewayStatus{
 					Listeners: []gatewayv1.ListenerStatus{
-						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionProgrammed), Status: metav1.ConditionTrue}}},
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
 					},
 				},
 			},
@@ -706,7 +751,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 				Status: gatewayv1.GatewayStatus{
 					Listeners: []gatewayv1.ListenerStatus{
-						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionProgrammed), Status: metav1.ConditionTrue}}},
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
 					},
 				},
 			},
@@ -748,7 +793,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 				Status: gatewayv1.GatewayStatus{
 					Listeners: []gatewayv1.ListenerStatus{
-						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionProgrammed), Status: metav1.ConditionTrue}}},
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
 					},
 				},
 			},
@@ -1177,17 +1222,25 @@ func Test_FilterMatchingListeners(t *testing.T) {
 	gw := &gwtypes.Gateway{
 		Status: gatewayv1.GatewayStatus{
 			Listeners: []gatewayv1.ListenerStatus{
-				{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gwtypes.ListenerConditionProgrammed), Status: metav1.ConditionTrue}}},
-				{Name: "listener2", Conditions: []metav1.Condition{{Type: string(gwtypes.ListenerConditionProgrammed), Status: metav1.ConditionFalse}}},
+				{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
+				{Name: "listener2", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionFalse}}},
+				{
+					Name: "tls",
+					Conditions: []metav1.Condition{
+						{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue},
+						{Type: string(gatewayv1.ListenerConditionProgrammed), Status: metav1.ConditionFalse},
+					},
+				},
 			},
 		},
 	}
-	listenerReady := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
-	listenerNotReady := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.HTTPProtocolType}
+	listenerAccepted := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
+	listenerRejected := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	tlsModePassthrough := gatewayv1.TLSModePassthrough
 	tlsModeTerminate := gatewayv1.TLSModeTerminate
-	listenerNotReadyTLS := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModeTerminate}}
-	listenerProtocolTLS := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
+	listenerRejectedTLS := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModeTerminate}}
+	listenerAcceptedTLS := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
+	listenerUnresolvedTLS := gwtypes.Listener{Name: "tls", Port: 443, Protocol: gwtypes.HTTPSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModeTerminate}}
 
 	tests := []struct {
 		name      string
@@ -1211,7 +1264,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 			name:      "section name mismatch",
 			pRef:      gwtypes.ParentReference{Name: "listener1", SectionName: sectionPtr("notfound")},
 			routeKind: "HTTPRoute",
-			listeners: []gwtypes.Listener{listenerReady},
+			listeners: []gwtypes.Listener{listenerAccepted},
 			wantLen:   0,
 			wantCond:  true,
 			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
@@ -1220,50 +1273,58 @@ func Test_FilterMatchingListeners(t *testing.T) {
 			name:      "port mismatch",
 			pRef:      gwtypes.ParentReference{Name: "listener1", Port: new(int32(81))},
 			routeKind: "HTTPRoute",
-			listeners: []gwtypes.Listener{listenerReady},
+			listeners: []gwtypes.Listener{listenerAccepted},
 			wantLen:   0,
 			wantCond:  true,
 			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
 		},
 		{
-			name:      "listener matches but not ready",
+			name:      "listener matches but is not accepted",
 			pRef:      gwtypes.ParentReference{Name: "listener2"},
 			routeKind: "HTTPRoute",
-			listeners: []gwtypes.Listener{listenerNotReady},
+			listeners: []gwtypes.Listener{listenerRejected},
 			wantLen:   0,
 			wantCond:  true,
-			condMsg:   "A Gateway Listener matches this route but is not ready",
+			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
 		},
 		{
-			name:      "listener matches and is ready",
+			name:      "listener matches and is accepted",
 			pRef:      pRef,
 			routeKind: "HTTPRoute",
-			listeners: []gwtypes.Listener{listenerReady},
+			listeners: []gwtypes.Listener{listenerAccepted},
 			wantLen:   1,
 			wantCond:  false,
 		},
 		{
-			name:      "multiple listeners, mixed readiness",
+			name:      "multiple listeners, mixed acceptance",
 			pRef:      gwtypes.ParentReference{Name: "listener1"},
 			routeKind: "HTTPRoute",
-			listeners: []gwtypes.Listener{listenerReady, listenerNotReady},
+			listeners: []gwtypes.Listener{listenerAccepted, listenerRejected},
 			wantLen:   1,
 			wantCond:  false,
 		},
 		{
-			name:      "TLSRoute - no ready listeners",
+			name:      "TLSRoute - no accepted listeners",
 			pRef:      pRef,
 			routeKind: "TLSRoute",
-			listeners: []gwtypes.Listener{listenerNotReadyTLS},
+			listeners: []gwtypes.Listener{listenerRejectedTLS},
 			wantLen:   0,
 			wantCond:  true,
-			condMsg:   "A Gateway Listener matches this route but is not ready",
+			condMsg:   string(gwtypes.RouteReasonNoMatchingParent),
 		},
 		{
-			name:      "TLSRoute - ready and match listener",
+			name:      "TLSRoute - accepted and matching listener",
 			pRef:      pRef,
 			routeKind: "TLSRoute",
-			listeners: []gwtypes.Listener{listenerProtocolTLS},
+			listeners: []gwtypes.Listener{listenerAcceptedTLS},
+			wantLen:   1,
+			wantCond:  false,
+		},
+		{
+			name:      "HTTPS listener can match while unresolved and not programmed",
+			pRef:      gwtypes.ParentReference{Name: "tls", SectionName: sectionPtr("tls")},
+			routeKind: "HTTPRoute",
+			listeners: []gwtypes.Listener{listenerUnresolvedTLS},
 			wantLen:   1,
 			wantCond:  false,
 		},
