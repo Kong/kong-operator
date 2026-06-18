@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/debug"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -137,6 +139,17 @@ func TestMain(m *testing.M) {
 		logf := func(format string, args ...any) { fmt.Printf(format+"\n", args...) }
 		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1(), logf))
 		exitOnErr(waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx, logf))
+		// Gateways and KonnectGatewayControlPlanes are not the only resources the
+		// operator finalizes. Deleting them cascades to Konnect entity CRs
+		// (KongService, KongRoute, KongUpstream, KongTarget, ...) created in the
+		// conformance namespaces. Those carry their own finalizers, and if the
+		// operator's controller manager is stopped (ctx cancelled below) before
+		// it removes them, the entities are left dangling in the cluster and in
+		// Konnect. A namespace cannot finish terminating while it still holds
+		// finalizer-bearing resources, so waiting for the conformance namespaces
+		// to fully disappear keeps the operator alive until every entity it owns
+		// has been cleaned up.
+		exitOnErr(waitForConformanceNamespacesToCleanup(ctx, clients.MgrClient, logf))
 	}
 
 	if existingCluster == "" && cleanupResources {
@@ -244,6 +257,54 @@ func waitForConformanceKonnectGatewayControlPlanesToCleanup(ctx context.Context,
 				return nil
 			}
 			controlPlanesRemaining = len(controlPlaneList.Items)
+		}
+	}
+}
+
+// conformanceNamespacePrefix is the prefix shared by every namespace the
+// conformance suite creates (gateway-conformance-infra, -app-backend,
+// -web-backend).
+const conformanceNamespacePrefix = "gateway-conformance-"
+
+// conformanceNamespaceCleanupTimeout bounds how long we keep the operator alive
+// waiting for the conformance namespaces to terminate, so a genuinely stuck
+// finalizer surfaces as a failure instead of hanging the suite forever.
+const conformanceNamespaceCleanupTimeout = 5 * time.Minute
+
+// waitForConformanceNamespacesToCleanup blocks until no namespace with the
+// conformance prefix exists anymore. Because a namespace stays in Terminating
+// while it still contains finalizer-bearing resources, this guarantees that all
+// operator-owned Konnect entity CRs (KongService, KongRoute, KongUpstream,
+// KongTarget, ...) created in those namespaces have been fully reconciled away
+// before the controller manager is shut down.
+func waitForConformanceNamespacesToCleanup(ctx context.Context, cl client.Client, logf func(string, ...any)) error {
+	ctx, cancel := context.WithTimeout(ctx, conformanceNamespaceCleanupTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	var remaining []string
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("conformance cleanup failed (namespaces still terminating: %v): %w", remaining, ctx.Err())
+		case <-ticker.C:
+			var nsList corev1.NamespaceList
+			if err := cl.List(ctx, &nsList); err != nil {
+				return fmt.Errorf("failed to list namespaces during cleanup: %w", err)
+			}
+
+			remaining = remaining[:0]
+			for i := range nsList.Items {
+				if strings.HasPrefix(nsList.Items[i].Name, conformanceNamespacePrefix) {
+					remaining = append(remaining, nsList.Items[i].Name)
+				}
+			}
+			if len(remaining) == 0 {
+				return nil
+			}
+			logf("waiting for conformance namespaces to finish terminating (operator still cleaning up owned entities): %v", remaining)
 		}
 	}
 }
