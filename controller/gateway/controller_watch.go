@@ -467,7 +467,7 @@ func (r *Reconciler) listGatewaysAttachedByGRPCRoute(ctx context.Context, obj cl
 		)
 		return nil
 	}
-	return listGatewaysAttachedByRoute(ctx, logger, r.Client, grpcRoute)
+	return listGatewaysAttachedByRoute(grpcRoute)
 }
 
 // -----------------------------------------------------------------------------
