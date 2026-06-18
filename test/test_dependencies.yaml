@@ -8,13 +8,13 @@ integration:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
     kong: '3.3.0'
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.9.2'
+  kong-oss: '3.9.3'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.14.0.6'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.9.2'
+  kong-oss: '3.9.3'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.14.0.6'
 
