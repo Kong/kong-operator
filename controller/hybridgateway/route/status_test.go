@@ -942,7 +942,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 }
 
 func Test_UpdateRouteStatus(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := logr.Discard()
 	pRef := gwtypes.ParentReference{
 		Group: groupPtr(gwtypes.GroupName),
