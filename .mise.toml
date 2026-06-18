@@ -58,7 +58,7 @@ macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
 [tools."aqua:helm/helm"]
 # renovate: datasource=github-releases depName=helm/helm
-version = "4.2.0"
+version = "4.2.2"
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
