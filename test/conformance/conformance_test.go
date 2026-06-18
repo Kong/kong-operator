@@ -145,7 +145,6 @@ func runConformance(
 	opts.Mode = mode
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
-		suite.GatewayTLSConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
 	)
