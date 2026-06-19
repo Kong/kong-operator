@@ -60,5 +60,7 @@ func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType)
 		skipped = append(skipped, skippedTestsForHybrid...)
 	}
 
-	return skipped
+	// Keep the historical skip metadata above for context, but return an empty
+	// skip set so the suite exercises the full Gateway API conformance catalog.
+	return skipped[:0]
 }
