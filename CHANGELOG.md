@@ -53,6 +53,10 @@
 
 ### Added
 
+- API: expose `trafficDistribution` and `internalTrafficPolicy` in `DataPlane`,
+  `GatewayConfiguration` and `KegDataPlane` `ServiceOptions`. Both fields are
+  propagated to the managed Kubernetes Service during reconciliation.
+  [#4610](https://github.com/Kong/kong-operator/pull/4610)
 - API: add PrintColumns for KongTarget upstream and target fields.
   [#4576](https://github.com/Kong/kong-operator/pull/4576)
 

@@ -429,6 +429,16 @@ func (in *ServiceOptions) DeepCopyInto(out *ServiceOptions) {
 			(*out)[key] = val
 		}
 	}
+	if in.TrafficDistribution != nil {
+		in, out := &in.TrafficDistribution, &out.TrafficDistribution
+		*out = new(string)
+		**out = **in
+	}
+	if in.InternalTrafficPolicy != nil {
+		in, out := &in.InternalTrafficPolicy, &out.InternalTrafficPolicy
+		*out = new(v1.ServiceInternalTrafficPolicy)
+		**out = **in
+	}
 	if in.Ports != nil {
 		in, out := &in.Ports, &out.Ports
 		*out = make([]ServicePort, len(*in))

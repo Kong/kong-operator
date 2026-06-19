@@ -72,3 +72,49 @@ func TestSpecHash(t *testing.T) {
 		})
 	}
 }
+
+// TestSpecHashIgnoresServiceOnlyTrafficFields ensures that the Service-only
+// ServiceOptions fields tagged with hash:"ignore" (TrafficDistribution,
+// InternalTrafficPolicy) do not influence the DataPlane Deployment spec-hash.
+// These fields configure only the ingress Service, so setting them must not
+// change the hash - otherwise existing Deployments are spuriously patched on
+// operator upgrade (see PR #4627).
+func TestSpecHashIgnoresServiceOnlyTrafficFields(t *testing.T) {
+	// Base spec with the ingress ServiceOptions struct populated so that the
+	// hashed fields are actually reached (a nil Network.Services short-circuits
+	// before ServiceOptions is visited).
+	base := operatorv1beta1.DataPlaneSpec{
+		DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+			Network: operatorv1beta1.DataPlaneNetworkOptions{
+				Services: &operatorv1beta1.DataPlaneServices{
+					Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+						ServiceOptions: operatorv1beta1.ServiceOptions{
+							Type: corev1.ServiceTypeLoadBalancer,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	withTrafficFields := base.DeepCopy()
+	withTrafficFields.Network.Services.Ingress.TrafficDistribution = new("PreferSameZone")
+	withTrafficFields.Network.Services.Ingress.InternalTrafficPolicy = new(corev1.ServiceInternalTrafficPolicyLocal)
+
+	baseHash, err := CalculateHash(base)
+	require.NoError(t, err)
+	withHash, err := CalculateHash(*withTrafficFields)
+	require.NoError(t, err)
+
+	assert.Equal(t, baseHash, withHash,
+		"TrafficDistribution and InternalTrafficPolicy must be excluded from the DataPlane spec-hash")
+
+	// Sanity check: a non-ignored Service field (ExternalTrafficPolicy) DOES
+	// change the hash, proving the comparison above is meaningful.
+	withExternal := base.DeepCopy()
+	withExternal.Network.Services.Ingress.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
+	externalHash, err := CalculateHash(*withExternal)
+	require.NoError(t, err)
+	assert.NotEqual(t, baseHash, externalHash,
+		"ExternalTrafficPolicy is part of the spec-hash baseline and must affect the hash")
+}
