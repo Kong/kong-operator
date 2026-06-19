@@ -140,62 +140,7 @@ func Create[
 		// If there was a conflict on the create request, we can assume the entity already exists.
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		var id string
-		switch ent := any(e).(type) {
-		case *konnectv1alpha2.KonnectGatewayControlPlane:
-			id, errGet = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
-		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
-			// NOTE: since Cloud Gateways resource do not support labels/tags,
-			// we can't reliably get the Konnect ID for a Cloud Gateway Network
-			// given a K8s object UID.
-			// For now this code uses a list, using a name filter, to get the Konnect ID.
-			id, err = getKonnectNetworkMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
-		case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-			// TODO: can't get the ID for a DataPlaneGroupConfiguration
-			// as this resource type does not support labels/tags.
-		case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-			id, err = getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
-		case *configurationv1alpha1.KongService:
-			id, errGet = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
-		case *configurationv1alpha1.KongRoute:
-			id, errGet = getKongRouteForUID(ctx, sdk.GetRoutesSDK(), ent)
-		case *configurationv1alpha1.KongSNI:
-			id, errGet = getKongSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
-		case *configurationv1.KongConsumer:
-			id, errGet = getKongConsumerForUID(ctx, sdk.GetConsumersSDK(), ent)
-		case *configurationv1beta1.KongConsumerGroup:
-			id, errGet = getKongConsumerGroupForUID(ctx, sdk.GetConsumerGroupsSDK(), ent)
-		case *configurationv1alpha1.KongKeySet:
-			id, errGet = getKongKeySetForUID(ctx, sdk.GetKeySetsSDK(), ent)
-		case *configurationv1alpha1.KongKey:
-			id, errGet = getKongKeyForUID(ctx, sdk.GetKeysSDK(), ent)
-		case *configurationv1alpha1.KongUpstream:
-			id, errGet = getKongUpstreamForUID(ctx, sdk.GetUpstreamsSDK(), ent)
-		case *configurationv1alpha1.KongTarget:
-			id, errGet = getKongTargetForUID(ctx, sdk.GetTargetsSDK(), ent)
-		case *configurationv1alpha1.KongPluginBinding:
-			id, errGet = getPluginForUID(ctx, sdk.GetPluginSDK(), ent)
-		case *configurationv1alpha1.KongVault:
-			id, errGet = getKongVaultForUID(ctx, sdk.GetVaultSDK(), ent)
-		case *configurationv1alpha1.KongCredentialHMAC:
-			id, errGet = getKongCredentialHMACForUID(ctx, sdk.GetHMACCredentialsSDK(), ent)
-		case *configurationv1alpha1.KongCredentialJWT:
-			id, errGet = getKongCredentialJWTForUID(ctx, sdk.GetJWTCredentialsSDK(), ent)
-		case *configurationv1alpha1.KongCredentialBasicAuth:
-			id, errGet = getKongCredentialBasicAuthForUID(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
-		case *configurationv1alpha1.KongCredentialAPIKey:
-			id, errGet = getKongCredentialAPIKeyForUID(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
-		case *configurationv1alpha1.KongCredentialACL:
-			id, errGet = getKongCredentialACLForUID(ctx, sdk.GetACLCredentialsSDK(), ent)
-		case *configurationv1alpha1.KongCertificate:
-			id, errGet = getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
-		case *configurationv1alpha1.KongCACertificate:
-			id, errGet = getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
-
-		// ---------------------------------------------------------------------
-		// TODO: add other manually maintained Konnect types here
-		default:
-			id, errGet = getForUID(ctx, sdk, e)
-		}
+		id, errGet = getKonnectIDForUID(ctx, sdk, cl, e)
 
 		if errConflict, ok := errors.AsType[ConflictOnCreateButNoConflifctHandlingImplementedError](errGet); ok {
 			return e, errConflict
@@ -266,6 +211,83 @@ func Create[
 	return e, err
 }
 
+// getKonnectIDForUID locates an existing Konnect entity that corresponds to the
+// given Kubernetes object and returns its Konnect ID. For most entity types the
+// lookup filters by the Kubernetes object UID tag; Cloud Gateway types that do
+// not support tags are looked up by spec name where a name-based lookup exists.
+//
+// It is used both during create-conflict resolution (the entity already exists in
+// Konnect) and during deletion to recover a Konnect ID that was never persisted to
+// the object status, so the entity can still be cleaned up. It returns an empty ID
+// (and nil error) when no matching entity exists or no lookup is possible for the
+// type.
+func getKonnectIDForUID[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	sdk sdkops.SDKWrapper,
+	cl client.Client,
+	e TEnt,
+) (string, error) {
+	switch ent := any(e).(type) {
+	case *konnectv1alpha2.KonnectGatewayControlPlane:
+		return getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+		// NOTE: since Cloud Gateways resources do not support labels/tags,
+		// we can't reliably get the Konnect ID for a Cloud Gateway Network
+		// given a K8s object UID. This uses a list, with a name filter, instead.
+		return getKonnectNetworkMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
+		// NOTE: can't get the ID for a DataPlaneGroupConfiguration as this
+		// resource type does not support labels/tags nor a name-based lookup.
+		return "", nil
+	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
+		return getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
+	case *configurationv1alpha1.KongService:
+		return getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
+	case *configurationv1alpha1.KongRoute:
+		return getKongRouteForUID(ctx, sdk.GetRoutesSDK(), ent)
+	case *configurationv1alpha1.KongSNI:
+		return getKongSNIForUID(ctx, sdk.GetSNIsSDK(), ent)
+	case *configurationv1.KongConsumer:
+		return getKongConsumerForUID(ctx, sdk.GetConsumersSDK(), ent)
+	case *configurationv1beta1.KongConsumerGroup:
+		return getKongConsumerGroupForUID(ctx, sdk.GetConsumerGroupsSDK(), ent)
+	case *configurationv1alpha1.KongKeySet:
+		return getKongKeySetForUID(ctx, sdk.GetKeySetsSDK(), ent)
+	case *configurationv1alpha1.KongKey:
+		return getKongKeyForUID(ctx, sdk.GetKeysSDK(), ent)
+	case *configurationv1alpha1.KongUpstream:
+		return getKongUpstreamForUID(ctx, sdk.GetUpstreamsSDK(), ent)
+	case *configurationv1alpha1.KongTarget:
+		return getKongTargetForUID(ctx, sdk.GetTargetsSDK(), ent)
+	case *configurationv1alpha1.KongPluginBinding:
+		return getPluginForUID(ctx, sdk.GetPluginSDK(), ent)
+	case *configurationv1alpha1.KongVault:
+		return getKongVaultForUID(ctx, sdk.GetVaultSDK(), ent)
+	case *configurationv1alpha1.KongCredentialHMAC:
+		return getKongCredentialHMACForUID(ctx, sdk.GetHMACCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialJWT:
+		return getKongCredentialJWTForUID(ctx, sdk.GetJWTCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialBasicAuth:
+		return getKongCredentialBasicAuthForUID(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialAPIKey:
+		return getKongCredentialAPIKeyForUID(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialACL:
+		return getKongCredentialACLForUID(ctx, sdk.GetACLCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCertificate:
+		return getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
+	case *configurationv1alpha1.KongCACertificate:
+		return getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
+
+	// ---------------------------------------------------------------------
+	// TODO: add other manually maintained Konnect types here
+	default:
+		return getForUID(ctx, sdk, e)
+	}
+}
+
 // Delete deletes a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Delete[
@@ -273,14 +295,37 @@ func Delete[
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, metricRecorder metrics.Recorder, ent TEnt) error {
 	if ent.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(ent) {
-		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
-		if ok && cond.Status == metav1.ConditionTrue {
-			return fmt.Errorf(
-				"can't delete %T %s when it does not have the Konnect ID",
-				ent, client.ObjectKeyFromObject(ent),
-			)
+		// The Konnect ID was never persisted to the status. This can happen if the
+		// operator created the entity in Konnect but was interrupted before writing
+		// the ID to the status (and the in-memory record was lost, e.g. on restart).
+		// Probe Konnect to recover the ID so the entity can still be cleaned up.
+		id, errGet := getKonnectIDForUID(ctx, sdk, cl, ent)
+		if errGet != nil {
+			_, uidNotFound := errors.AsType[EntityWithMatchingUIDNotFoundError](errGet)
+			_, idNotFound := errors.AsType[EntityWithMatchingIDNotFoundError](errGet)
+			_, noConflictHandling := errors.AsType[ConflictOnCreateButNoConflifctHandlingImplementedError](errGet)
+			switch {
+			// No matching entity exists in Konnect (it was never created or is
+			// already gone), so there is nothing to delete.
+			case uidNotFound, idNotFound:
+				return nil
+			// No lookup is implemented for this type, so we can't determine whether a
+			// Konnect entity exists. There's nothing we can safely delete.
+			case noConflictHandling:
+				return nil
+			default:
+				return fmt.Errorf(
+					"failed to look up Konnect ID for %T %s during deletion: %w",
+					ent, client.ObjectKeyFromObject(ent), errGet,
+				)
+			}
 		}
-		return nil
+		if id == "" {
+			// No matching Konnect entity exists (it was never created or is already
+			// gone), so there is nothing to delete.
+			return nil
+		}
+		ent.SetKonnectID(id)
 	}
 
 	var (
