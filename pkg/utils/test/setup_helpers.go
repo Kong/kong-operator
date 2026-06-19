@@ -120,7 +120,15 @@ func buildEnvironmentOnExistingCluster(ctx context.Context, existingCluster stri
 		}
 		builder.WithExistingCluster(cluster)
 	default:
-		return nil, fmt.Errorf("unknown cluster type: %s", clusterType)
+		// For any other cluster type (e.g. minikube) we don't have provider
+		// specific tooling to talk to. Fall back to a generic cluster built
+		// straight from the ambient kubeconfig: no provisioning, no teardown,
+		// just reuse whatever the current kubeconfig context points at.
+		cluster, err := NewGenericClusterFromKubeconfig(clusterName, clusters.Type(clusterType))
+		if err != nil {
+			return nil, err
+		}
+		builder.WithExistingCluster(cluster)
 	}
 
 	for _, o := range builderOpts {
