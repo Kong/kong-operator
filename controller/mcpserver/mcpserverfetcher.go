@@ -130,21 +130,6 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 
 	konnectIDs := make(map[string]struct{}, len(servers))
 	for _, server := range servers {
-		if server.ResourceID == nil || *server.ResourceID == "" {
-			// The server is not fully provisioned on the Konnect side.
-			// Delete the corresponding Kubernetes resource if it exists.
-			nn := generateMCPServerNN(cpNamespace, cpName, server.ID)
-			mcpServer := &konnectv1alpha1.MCPServer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      nn.Name,
-					Namespace: nn.Namespace,
-				},
-			}
-			if err := client.IgnoreNotFound(f.client.Delete(ctx, mcpServer)); err != nil {
-				errs = append(errs, fmt.Errorf("failed to delete MCPServer without resource ID %s: %w", nn, err))
-			}
-			continue
-		}
 		konnectIDs[server.ID] = struct{}{}
 
 		nn := generateMCPServerNN(cpNamespace, cpName, server.ID)

@@ -113,12 +113,11 @@ func TestSyncMCPServers(t *testing.T) {
 		},
 	}
 
-	resourceID := "resource-id"
-	newServer := func(id, name string) sdkkonnectcomp.MCPServerCPInfo {
+	newServer := func(id, name string, resourceID *string) sdkkonnectcomp.MCPServerCPInfo {
 		return sdkkonnectcomp.MCPServerCPInfo{
 			ID:         id,
 			Name:       name,
-			ResourceID: &resourceID,
+			ResourceID: resourceID,
 			CreatedAt:  time.Now(),
 			UpdatedAt:  time.Now(),
 		}
@@ -165,19 +164,19 @@ func TestSyncMCPServers(t *testing.T) {
 		},
 		{
 			name:          "new server is created",
-			servers:       []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name")},
+			servers:       []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name", new("resource-id"))},
 			expectCreated: []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
 		},
 		{
 			name:            "existing server (by ID) is skipped without re-creating",
-			servers:         []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name")},
+			servers:         []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name", new("resource-id"))},
 			existingObjects: []client.Object{existingMCPServer("srv-id")},
 			expectCreated:   []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
 		},
 		{
 			name: "stale MCPServer not in Konnect response is deleted",
 			servers: []sdkkonnectcomp.MCPServerCPInfo{
-				newServer("live-id", "live-name"),
+				newServer("live-id", "live-name", new("resource-id")),
 			},
 			existingObjects: []client.Object{
 				existingMCPServer("live-id"),
@@ -189,8 +188,8 @@ func TestSyncMCPServers(t *testing.T) {
 		{
 			name: "mixed: creates new, keeps existing, deletes stale",
 			servers: []sdkkonnectcomp.MCPServerCPInfo{
-				newServer("existing-id", "existing-name"),
-				newServer("new-id", "new-name"),
+				newServer("existing-id", "existing-name", new("resource-id")),
+				newServer("new-id", "new-name", new("resource-id")),
 			},
 			existingObjects: []client.Object{
 				existingMCPServer("existing-id"),
@@ -214,6 +213,11 @@ func TestSyncMCPServers(t *testing.T) {
 				},
 			},
 			expectError: true,
+		},
+		{
+			name:          "new server is created without a resource ID assigned",
+			servers:       []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name", nil)},
+			expectCreated: []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
 		},
 	}
 
