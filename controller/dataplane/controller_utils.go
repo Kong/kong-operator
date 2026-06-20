@@ -197,7 +197,7 @@ func ensureDataPlaneReadyStatus(
 	}
 
 	deployment := deployments[0]
-	if _, ready := isDeploymentReady(deployment.Status); !ready {
+	if _, ready := isDeploymentReady(&deployment); !ready {
 		log.Debug(logger, "Deployment for DataPlane not ready yet")
 
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
@@ -318,16 +318,24 @@ func listDataPlaneLiveServices(
 	)
 }
 
-// isDeploymentReady if the DataPlane's Deployment is ready.
-// It does not indicate if the rollout has completed, that is a DataPlane can indicate
+// isDeploymentReady reports whether the DataPlane's Deployment is ready.
+// It does not indicate whether the rollout has completed, that is a DataPlane can indicate
 // that it's ready (e.g. all replicas are available) but not fully rolled out
 // (e.g. new spec has not completely rolled out).
-func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.ConditionStatus, bool) {
+// This will return ConditionTrue if the Deployment has .Status.AvailableReplicas equal
+// at least to the number of replicas specified in .Spec.Replicas, and .Status.Replicas is not 0.
+// This way, the DataPlane Ready status condition does not flap when a rolling update
+// is performed.
+func isDeploymentReady(deployment *appsv1.Deployment) (metav1.ConditionStatus, bool) {
 	// We check if the Deployment is not Ready.
 	// This is the case when status has replicas set to 0 or status.availableReplicas
 	// in status is less than status.replicas.
-	if deploymentStatus.Replicas == 0 ||
-		deploymentStatus.AvailableReplicas < deploymentStatus.Replicas {
+	if deployment.Status.Replicas == 0 {
+		return metav1.ConditionFalse, false
+	}
+
+	if specReplicas := deployment.Spec.Replicas; specReplicas != nil &&
+		deployment.Status.AvailableReplicas < *specReplicas {
 		return metav1.ConditionFalse, false
 	}
 
