@@ -190,6 +190,10 @@ func Create[
 			id, errGet = getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 		case *configurationv1alpha1.KongCACertificate:
 			id, errGet = getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
+		case *konnectv1alpha1.IdentityProviderRequest:
+			// IdentityProviderRequest list responses do not expose UID labels, so
+			// adopt by matching the desired spec within the resolved parent Portal.
+			id, errGet = getIdentityProviderRequestForUID(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 
 		// ---------------------------------------------------------------------
 		// TODO: add other manually maintained Konnect types here
@@ -204,6 +208,7 @@ func Create[
 		if errGet == nil && id != "" {
 			e.SetKonnectID(id)
 			SetKonnectEntityProgrammedConditionTrue(e)
+			err = nil
 		} else {
 			if errGet != nil {
 				err = fmt.Errorf("trying to find a matching Konnect entity matching the ID failed: %w, %w", errGet, err)
