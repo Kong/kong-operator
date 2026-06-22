@@ -304,6 +304,7 @@ func Delete[
 			_, uidNotFound := errors.AsType[EntityWithMatchingUIDNotFoundError](errGet)
 			_, idNotFound := errors.AsType[EntityWithMatchingIDNotFoundError](errGet)
 			_, noConflictHandling := errors.AsType[ConflictOnCreateButNoConflifctHandlingImplementedError](errGet)
+			relationsFailed, okRelationsFailed := errors.AsType[KonnectEntityCreatedButRelationsFailedError](errGet)
 			switch {
 			// No matching entity exists in Konnect (it was never created or is
 			// already gone), so there is nothing to delete.
@@ -313,6 +314,12 @@ func Delete[
 			// Konnect entity exists. There's nothing we can safely delete.
 			case noConflictHandling:
 				return nil
+			// The entity was found (its Konnect ID is known) but a side effect of the
+			// lookup failed, e.g. setting control plane group membership. That side
+			// effect is irrelevant when the entity is being deleted, so proceed with
+			// the recovered ID instead of getting stuck requeueing on the error.
+			case okRelationsFailed && relationsFailed.KonnectID != "":
+				id = relationsFailed.KonnectID
 			default:
 				return fmt.Errorf(
 					"failed to look up Konnect ID for %T %s during deletion: %w",
