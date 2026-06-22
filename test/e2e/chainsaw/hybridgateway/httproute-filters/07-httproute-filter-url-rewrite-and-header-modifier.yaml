@@ -1,0 +1,57 @@
+##
+# HTTPRoute whose single rule combines a URLRewrite and a RequestHeaderModifier filter.
+# Both filters translate to a Kong `request-transformer` plugin, so they MUST be merged into a
+# single KongPlugin/KongPluginBinding bound to the route. Emitting two `request-transformer`
+# plugins on the same route is rejected by Konnect with a `unique-plugin-per-entity` error.
+#
+# Required bindings:
+#   - http_route_name: Name of the HTTPRoute resource
+#   - http_route_namespace: Namespace of the HTTPRoute resource
+#   - test_name: The test name label to match (used for labels)
+#   - route_hosts: List of hostnames for the HTTPRoute
+#   - gateway_name: Name of the Gateway parent resource
+#   - httpbin_deployment_name: Name of the httpbin backend service
+#   - httpbin_deployment_namespace: Namespace of the httpbin backend service
+
+---
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($http_route_name)
+  namespace: ($http_route_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  hostnames: ($route_hosts)
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /get
+      # Both filters map to a request-transformer plugin and must be merged into one.
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /anything
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+            - name: X-Merge-Set
+              value: "foo"
+            add:
+            - name: X-Merge-Add
+              value: "bar"
+            remove:
+            - X-Merge-Remove
+      backendRefs:
+        - name: ($httpbin_deployment_name)
+          port: 80
+          namespace: ($httpbin_deployment_namespace)
