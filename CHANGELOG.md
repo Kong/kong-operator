@@ -53,6 +53,10 @@
 
 ### Fixes
 
+- HTTPRoute: traditional route translation now treats header match names
+  case-insensitively and ignores later equivalent duplicates, aligning with
+  Gateway API matching semantics.
+  [#4597](https://github.com/Kong/kong-operator/pull/4597)
 - Hybridgateway: release Gateway API route finalizers once generated Kong
   resource delete requests have been issued, so immediate same-name route
   re-creates are not blocked by child resource finalizers.
