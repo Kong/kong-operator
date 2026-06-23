@@ -1091,6 +1091,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
 					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1148,6 +1152,41 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 		},
 		{
+			name: "no tls, HTTPS protocol, HTTP and GRPC routes",
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.HTTPSProtocolType,
+				AllowedRoutes: &gwtypes.AllowedRoutes{
+					Kinds: []gwtypes.RouteGroupKind{
+						{
+							Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+							Kind:  "HTTPRoute",
+						},
+						{
+							Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+							Kind:  "GRPCRoute",
+						},
+					},
+				},
+			},
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "HTTPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+				Message:            "Listeners' references are accepted.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
 			name:             "tls well-formed, no cross-namespace reference",
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
@@ -1174,6 +1213,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
 				{
 					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
@@ -1216,6 +1259,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
 					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1245,6 +1292,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
 				{
 					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
@@ -1298,6 +1349,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
 					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1326,6 +1381,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
 				{
 					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
@@ -1366,6 +1425,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
 				{
 					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
@@ -1432,6 +1495,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
 					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
 				},
 			},
@@ -1471,6 +1538,10 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "GRPCRoute",
+				},
 				{
 					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
 					Kind:  "HTTPRoute",
@@ -2710,6 +2781,483 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 						Namespace: "test-namespace-2",
 					},
 					Spec: gwtypes.TLSRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 GRPCRoute in the same namespace as the Gateway",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 GRPCRoute in a different namespace than the Gateway",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-1",
+						Namespace: "test-namespace-2",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 GRPCRoute in a different namespace but allowed through 'All' namespace selector",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromAll),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-1",
+						Namespace: "test-namespace-2",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:      gwtypes.ObjectName("test-gw"),
+									Namespace: (*gwtypes.Namespace)(new("test-namespace")),
+									Group:     (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:      new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "2 GRPCRoutes, only one matching listener hostname intersection",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							Hostname: new(gatewayv1.Hostname("*.example.com")),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+						Hostnames: []gatewayv1.Hostname{gatewayv1.Hostname("grpc.example.com")},
+					},
+				},
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-2",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+						Hostnames: []gatewayv1.Hostname{gatewayv1.Hostname("grpc.example.net")},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 GRPCRoute matching via sectionName",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:        gwtypes.ObjectName("test-gw"),
+									Group:       (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									SectionName: new(gatewayv1.SectionName("http")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 GRPCRoute not matching due to wrong sectionName",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:        gwtypes.ObjectName("test-gw"),
+									Group:       (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									SectionName: new(gatewayv1.SectionName("other-listener")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "HTTP listener with explicit GRPCRoute kind in AllowedRoutes",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+								Kinds: []gwtypes.RouteGroupKind{
+									{
+										Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+										Kind:  "GRPCRoute",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "HTTP listener with duplicate GRPCRoute kind in AllowedRoutes does not double-count",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+								Kinds: []gwtypes.RouteGroupKind{
+									{
+										Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+										Kind:  "GRPCRoute",
+									},
+									{
+										Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+										Kind:  "GRPCRoute",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "HTTP listener with namespace label selector matching GRPCRoute",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("http"),
+							Protocol: gwtypes.HTTPProtocolType,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSelector),
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"kubernetes.io/metadata.name": "test-namespace-2",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-namespace-2",
+						Labels: map[string]string{
+							"kubernetes.io/metadata.name": "test-namespace-2",
+						},
+					},
+				},
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grpc-route-1",
+						Namespace: "test-namespace-2",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
 								{

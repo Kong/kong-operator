@@ -53,6 +53,9 @@ type (
 	TLSRouteSpec           = gatewayv1.TLSRouteSpec
 	TLSRouteStatus         = gatewayv1.TLSRouteStatus
 	TLSRouteRule           = gatewayv1.TLSRouteRule
+	GRPCRoute              = gatewayv1.GRPCRoute
+	GRPCRouteList          = gatewayv1.GRPCRouteList
+	GRPCRouteSpec          = gatewayv1.GRPCRouteSpec
 )
 
 var GroupVersion = gatewayv1.GroupVersion

@@ -1,0 +1,22 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: ($grpc_route_name)
+  namespace: ($gateway_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+      sectionName: grpc
+  hostnames:
+    - ($grpc_host)
+  rules:
+    - matches:
+        - method:
+            service: grpcbin.GRPCBin
+            method: DummyUnary
+      backendRefs:
+        - name: ($grpcbin_name)
+          port: 80
+
