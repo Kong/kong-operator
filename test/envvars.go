@@ -130,3 +130,23 @@ func ConformanceGatewayType() string {
 	}
 	return gt
 }
+
+// ConformanceSkipTests returns an extra list of conformance test short names to
+// skip, on top of the built-in skip lists. It reads the comma separated
+// KONG_TEST_CONFORMANCE_SKIP_TESTS environment variable, e.g.
+// "HTTPRouteReferenceGrant,HTTPRouteRedirectPort". This lets a local run drop
+// the gotest -run filter entirely and instead exclude flaky or undesired tests.
+// Whitespace around each name is trimmed and empty entries are ignored.
+func ConformanceSkipTests() []string {
+	raw := os.Getenv("KONG_TEST_CONFORMANCE_SKIP_TESTS")
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	var skip []string
+	for name := range strings.SplitSeq(raw, ",") {
+		if name = strings.TrimSpace(name); name != "" {
+			skip = append(skip, name)
+		}
+	}
+	return skip
+}
