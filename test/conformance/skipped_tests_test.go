@@ -4,6 +4,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/tests"
 
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test"
 )
 
 var skippedTestsShared = []string{
@@ -59,6 +60,11 @@ func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType)
 	if gwType == hybridGateway {
 		skipped = append(skipped, skippedTestsForHybrid...)
 	}
+
+	// Allow excluding extra (e.g. flaky or undesired) tests via the
+	// KONG_TEST_CONFORMANCE_SKIP_TESTS environment variable so a local run can
+	// drop the gotest -run filter and still avoid known-bad tests.
+	skipped = append(skipped, test.ConformanceSkipTests()...)
 
 	return skipped
 }

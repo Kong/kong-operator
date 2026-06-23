@@ -10,19 +10,24 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 // Test helpers for BuildProgrammedCondition.
@@ -934,6 +939,286 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 			require.Equal(t, metav1.ConditionTrue, conds[0].Status)
 		}
 	}
+}
+
+func Test_UpdateRouteStatus(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+	pRef := gwtypes.ParentReference{
+		Group: groupPtr(gwtypes.GroupName),
+		Kind:  kindPtr("Gateway"),
+		Name:  "gw",
+	}
+	resolvedRefsCond := metav1.Condition{
+		Type:    string(gwtypes.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(gwtypes.RouteReasonResolvedRefs),
+		Message: "resolved",
+	}
+	buildResolvedRefsCondition := func(
+		context.Context,
+		logr.Logger,
+		client.Client,
+		*gwtypes.HTTPRoute,
+	) (*metav1.Condition, error) {
+		return resolvedRefsCond.DeepCopy(), nil
+	}
+	buildScheme := func(t *testing.T) *runtime.Scheme {
+		t.Helper()
+		s := runtime.NewScheme()
+		require.NoError(t, corev1.AddToScheme(s))
+		require.NoError(t, gatewayv1.Install(s))
+		require.NoError(t, konnectv1alpha2.AddToScheme(s))
+		return s
+	}
+	newRoute := func(hostnames ...gwtypes.Hostname) *gwtypes.HTTPRoute {
+		return &gwtypes.HTTPRoute{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "HTTPRoute",
+				APIVersion: gatewayv1.GroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:  "default",
+				Name:       "route",
+				Generation: 1,
+			},
+			Spec: gwtypes.HTTPRouteSpec{
+				CommonRouteSpec: gwtypes.CommonRouteSpec{
+					ParentRefs: []gwtypes.ParentReference{pRef},
+				},
+				Hostnames: hostnames,
+			},
+		}
+	}
+	newSupportedGatewayObjects := func() []client.Object {
+		gatewayUID := k8stypes.UID("gateway-uid")
+		return []client.Object{
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+			&gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Gateway",
+					APIVersion: gatewayv1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gw",
+					UID:       gatewayUID,
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{{
+						Name:          "listener1",
+						Port:          80,
+						Protocol:      gwtypes.HTTPProtocolType,
+						Hostname:      strPtr("example.com"),
+						AllowedRoutes: &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}},
+					}},
+				},
+				Status: gatewayv1.GatewayStatus{
+					Listeners: []gatewayv1.ListenerStatus{{
+						Name: "listener1",
+						Conditions: []metav1.Condition{{
+							Type:   string(gatewayv1.ListenerConditionAccepted),
+							Status: metav1.ConditionTrue,
+						}},
+					}},
+				},
+			},
+			&konnectv1alpha2.KonnectExtension{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "konnect-extension",
+					Labels: map[string]string{
+						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+					},
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: gatewayv1.GroupVersion.String(),
+						Kind:       "Gateway",
+						Name:       "gw",
+						UID:        gatewayUID,
+					}},
+				},
+				Spec: konnectv1alpha2.KonnectExtensionSpec{
+					Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+						ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+							Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+								Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+									Name: "control-plane",
+								},
+							},
+						},
+					},
+				},
+			},
+			&konnectv1alpha2.KonnectGatewayControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "control-plane",
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name                       string
+		route                      *gwtypes.HTTPRoute
+		objects                    []client.Object
+		buildResolvedRefsCondition buildResolvedRefsConditionFunc[gwtypes.HTTPRoute, *gwtypes.HTTPRoute]
+		interceptorFuncs           interceptor.Funcs
+		wantUpdated                bool
+		wantStop                   bool
+		wantErrContains            string
+		verify                     func(*testing.T, *gwtypes.HTTPRoute)
+	}{
+		{
+			name:                       "updates status for accepted route",
+			route:                      newRoute("example.com"),
+			objects:                    newSupportedGatewayObjects(),
+			buildResolvedRefsCondition: buildResolvedRefsCondition,
+			wantUpdated:                true,
+			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents, 1)
+				require.Equal(t, gwtypes.GatewayController(vars.ControllerName()), route.Status.Parents[0].ControllerName)
+				require.Len(t, route.Status.Parents[0].Conditions, 2)
+				requireRouteCondition(t, route.Status.Parents[0].Conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue)
+				requireRouteCondition(t, route.Status.Parents[0].Conditions, string(gwtypes.RouteConditionResolvedRefs), metav1.ConditionTrue)
+			},
+		},
+		{
+			name:    "returns resolved refs builder error",
+			route:   newRoute("example.com"),
+			objects: newSupportedGatewayObjects(),
+			buildResolvedRefsCondition: func(
+				context.Context,
+				logr.Logger,
+				client.Client,
+				*gwtypes.HTTPRoute,
+			) (*metav1.Condition, error) {
+				return nil, fmt.Errorf("resolved refs failed")
+			},
+			wantErrContains: "failed to build resolvedRefs condition",
+		},
+		{
+			name:                       "unaccepted route stops enforcement",
+			route:                      newRoute("not-example.com"),
+			objects:                    newSupportedGatewayObjects(),
+			buildResolvedRefsCondition: buildResolvedRefsCondition,
+			wantUpdated:                true,
+			wantStop:                   true,
+			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents, 1)
+				requireRouteCondition(t, route.Status.Parents[0].Conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionFalse)
+				requireRouteCondition(t, route.Status.Parents[0].Conditions, string(gwtypes.RouteConditionResolvedRefs), metav1.ConditionTrue)
+			},
+		},
+		{
+			name:                       "status update conflict stops reconciliation",
+			route:                      newRoute("example.com"),
+			objects:                    newSupportedGatewayObjects(),
+			buildResolvedRefsCondition: buildResolvedRefsCondition,
+			interceptorFuncs: interceptor.Funcs{
+				SubResourceUpdate: func(context.Context, client.Client, string, client.Object, ...client.SubResourceUpdateOption) error {
+					return apierrors.NewConflict(
+						schema.GroupResource{Group: gwtypes.GroupName, Resource: "httproutes"},
+						"route",
+						fmt.Errorf("status conflict"),
+					)
+				},
+			},
+			wantStop:        true,
+			wantErrContains: "Operation cannot be fulfilled",
+		},
+		{
+			name: "removes owned status for unsupported parent",
+			route: &gwtypes.HTTPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "HTTPRoute",
+					APIVersion: gatewayv1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route",
+				},
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
+							Group: groupPtr("unsupported.example.com"),
+							Kind:  kindPtr("Gateway"),
+							Name:  "gw",
+						}},
+					},
+				},
+				Status: gatewayv1.HTTPRouteStatus{
+					RouteStatus: gatewayv1.RouteStatus{
+						Parents: []gatewayv1.RouteParentStatus{
+							{
+								ParentRef: gwtypes.ParentReference{
+									Group: groupPtr("unsupported.example.com"),
+									Kind:  kindPtr("Gateway"),
+									Name:  "gw",
+								},
+								ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+								Conditions: []metav1.Condition{{
+									Type:   string(gwtypes.RouteConditionAccepted),
+									Status: metav1.ConditionTrue,
+								}},
+							},
+							{
+								ParentRef:      gwtypes.ParentReference{Name: "other-gw"},
+								ControllerName: "example.com/other-controller",
+							},
+						},
+					},
+				},
+			},
+			buildResolvedRefsCondition: buildResolvedRefsCondition,
+			wantUpdated:                true,
+			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents, 1)
+				require.Equal(t, gwtypes.GatewayController("example.com/other-controller"), route.Status.Parents[0].ControllerName)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := append([]client.Object{}, tt.objects...)
+			objects = append(objects, tt.route)
+			cl := fake.NewClientBuilder().
+				WithScheme(buildScheme(t)).
+				WithStatusSubresource(tt.route).
+				WithObjects(objects...).
+				WithInterceptorFuncs(tt.interceptorFuncs).
+				Build()
+
+			updated, stop, err := UpdateRouteStatus(ctx, logger, cl, tt.route, nil, tt.buildResolvedRefsCondition)
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.wantErrContains)
+				require.Equal(t, tt.wantUpdated, updated)
+				require.Equal(t, tt.wantStop, stop)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantUpdated, updated)
+			require.Equal(t, tt.wantStop, stop)
+			if tt.verify != nil {
+				tt.verify(t, tt.route)
+			}
+		})
+	}
+}
+
+func requireRouteCondition(t *testing.T, conditions []metav1.Condition, conditionType string, status metav1.ConditionStatus) {
+	t.Helper()
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			require.Equal(t, status, condition.Status)
+			return
+		}
+	}
+	t.Fatalf("missing condition %q", conditionType)
 }
 
 func Test_SetStatusConditions(t *testing.T) {
