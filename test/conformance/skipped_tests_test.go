@@ -22,7 +22,7 @@ var skippedTestsShared = []string{
 	// We cannot provide that for routes that are part of the conformance suite.
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
 
-	// newly added in gateway api v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4661
+	// newly added in gateway api v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4662
 	tests.GatewayListenerUnsupportedProtocol.ShortName,
 	tests.GatewayInvalidParametersRef.ShortName,
 	tests.HTTPRouteNoBackendRefs.ShortName,
