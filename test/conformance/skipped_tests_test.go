@@ -21,6 +21,11 @@ var skippedTestsShared = []string{
 	// When processing this scenario, the Kong's router requires `priority` to be specified for routes.
 	// We cannot provide that for routes that are part of the conformance suite.
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
+
+	// newly added in gateway api v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4661
+	tests.GatewayListenerUnsupportedProtocol.ShortName,
+	tests.GatewayInvalidParametersRef.ShortName,
+	tests.HTTPRouteNoBackendRefs.ShortName,
 }
 
 var skippedTestsForExpressionsRouter = []string{}
@@ -44,11 +49,6 @@ var skippedTestsForHybrid = []string{
 
 	// failed after bumping gateway api to v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4661
 	tests.HTTPRouteWeight.ShortName,
-
-	// newly added in gateway api v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4661
-	tests.GatewayListenerUnsupportedProtocol.ShortName,
-	tests.GatewayInvalidParametersRef.ShortName,
-	tests.HTTPRouteNoBackendRefs.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.
