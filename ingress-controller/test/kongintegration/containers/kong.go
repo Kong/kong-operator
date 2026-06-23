@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"testing"
@@ -153,16 +154,22 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 
 // AdminURL returns the admin API URL of the Kong container reachable from the host machine.
 func (c Kong) AdminURL(ctx context.Context, t *testing.T) string {
+	host, err := c.container.Host(ctx)
+	require.NoError(t, err)
+
 	port, err := c.container.MappedPort(ctx, kongAdminPort)
 	require.NoError(t, err)
-	return fmt.Sprintf("http://localhost:%s", port.Port())
+	return fmt.Sprintf("http://%s", net.JoinHostPort(host, port.Port()))
 }
 
 // ProxyURL returns the proxy URL of the Kong container reachable from the host machine.
 func (c Kong) ProxyURL(ctx context.Context, t *testing.T) string {
+	host, err := c.container.Host(ctx)
+	require.NoError(t, err)
+
 	port, err := c.container.MappedPort(ctx, kongProxyPort)
 	require.NoError(t, err)
-	return fmt.Sprintf("http://localhost:%s", port.Port())
+	return fmt.Sprintf("http://%s", net.JoinHostPort(host, port.Port()))
 }
 
 // Terminate stops and removes the Kong container.
