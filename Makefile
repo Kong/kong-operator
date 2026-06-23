@@ -205,7 +205,7 @@ chainsaw: mise yq ## Download chainsaw locally if necessary.
 	$(MAKE) mise-install DEP_VER=aqua:kyverno/chainsaw@$(CHAINSAW_VERSION)
 
 GRPCURL_VERSION = $(shell $(YQ) -r '.grpcurl' < $(TOOLS_VERSIONS_FILE))
-GRPCURL = $(PROJECT_DIR)/bin/installs/github-fullstorydev-grpcurl/latest/grpcurl
+GRPCURL = $(PROJECT_DIR)/bin/installs/github-fullstorydev-grpcurl/$(GRPCURL_VERSION:v%=%)/grpcurl
 .PHONY: grpcurl
 grpcurl: mise yq ## Download grpcurl locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:fullstorydev/grpcurl@$(GRPCURL_VERSION)

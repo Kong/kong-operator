@@ -52,6 +52,6 @@ markdownlint-cli2: "0.22.1"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
 cert-manager: "1.20.2"
 # renovate: datasource=github-releases depName=kyverno/chainsaw
-chainsaw: "v0.2.15-beta.1"
+chainsaw: "v0.2.15"
 # renovate: datasource=github-releases depName=fullstorydev/grpcurl
 grpcurl: "v1.9.3"
