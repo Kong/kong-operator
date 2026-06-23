@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -316,7 +317,7 @@ func filterValidBackendRefs[
 		// since we do not support `filters` in `HTTPBackendRef` yet.
 		bRef := gwtypes.GetBackendRef(backendRef)
 		// Check if the backendRef is supported.
-		if !route.IsBackendRefSupported(bRef.Group, bRef.Kind) {
+		if !utils.IsBackendRefSupported(bRef.Group, bRef.Kind) {
 			log.Info(logger, "skipping unsupported backendRef", "group", bRef.Group, "kind", bRef.Kind)
 			continue
 		}

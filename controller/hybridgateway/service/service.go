@@ -15,7 +15,6 @@ import (
 	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -327,7 +326,7 @@ func extractProtocolFromBackendRef(
 	backendRef gwtypes.BackendRef,
 ) (string, bool) {
 
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return "", false
 	}
 
@@ -385,7 +384,7 @@ func extractPathFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) (string, bool) {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return "", false
 	}
 
@@ -441,7 +440,7 @@ func extractTLSVerifyFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) (*bool, error) {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return nil, nil
 	}
 
@@ -501,7 +500,7 @@ func extractTLSVerifyDepthFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) (*int64, error) {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return nil, nil
 	}
 
@@ -561,7 +560,7 @@ func extractConnectTimeoutFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) (*int64, error) {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return nil, nil
 	}
 
@@ -621,7 +620,7 @@ func extractReadTimeoutFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) (*int64, error) {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return nil, nil
 	}
 
@@ -681,7 +680,7 @@ func extractWriteTimeoutFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) (*int64, error) {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return nil, nil
 	}
 
@@ -741,7 +740,7 @@ func extractRetriesFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) (*int64, error) {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return nil, nil
 	}
 

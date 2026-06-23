@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +21,7 @@ import (
 	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -800,14 +799,14 @@ func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 	}
 
 	// BackendRef group/kind (default to core/Service when unset).
-	bRefGroup, bRefKind := backendRefGroupKind(bRef.Group, bRef.Kind)
+	bRefGroup, bRefKind := utils.BackendRefGroupKind(bRef.Group, bRef.Kind)
 	bRefGK := string(bRefKind)
 	if bRefGroup != "" {
 		bRefGK = fmt.Sprintf("%s/%s", string(bRefGroup), string(bRefKind))
 	}
 
 	// Check if the group kind is supported for the reference.
-	if !IsBackendRefSupported(bRef.Group, bRef.Kind) {
+	if !utils.IsBackendRefSupported(bRef.Group, bRef.Kind) {
 		log.Debug(logger, "Unsupported BackendRef group/kind", "group", bRef.Group, "kind", bRef.Kind)
 		cond.Reason = string(gwtypes.RouteReasonInvalidKind)
 		cond.Status = metav1.ConditionFalse
@@ -1260,25 +1259,6 @@ func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter str
 	return filtered
 }
 
-// backendRefGroupKind returns the effective group and kind for a BackendRef,
-// applying Gateway API defaults: kind defaults to "Service" and group defaults
-// to "" (core) when nil or empty.
-func backendRefGroupKind(group *gwtypes.Group, kind *gwtypes.Kind) (gwtypes.Group, gwtypes.Kind) {
-	g := lo.FromPtr(group)
-	k := lo.FromPtr(kind)
-	if k == "" {
-		k = "Service"
-	}
-	return g, k
-}
-
-// IsBackendRefSupported returns true if the BackendRef group and kind are supported by Gateway API.
-// Only core "Service" is supported.
-func IsBackendRefSupported(group *gwtypes.Group, kind *gwtypes.Kind) bool {
-	g, k := backendRefGroupKind(group, kind)
-	return (g == "" || g == "core") && k == "Service"
-}
-
 // IsExtensionRefSupported returns true if the ExtensionRef group and kind are supported by the Kong Gateway API implementation.
 // Only "configuration.konghq.com/v1" group and "KongPlugin" kind are supported.
 func IsExtensionRefSupported(group gwtypes.Group, kind gwtypes.Kind) bool {
@@ -1299,7 +1279,7 @@ func IsExtensionRefSupported(group gwtypes.Group, kind gwtypes.Kind) bool {
 // Returns:
 //   - bool: true if the reference is permitted by the grant, false otherwise
 func IsRouteReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwtypes.BackendRef, routeKind string, fromNamespace string) bool {
-	bRefGroup, bRefKind := backendRefGroupKind(backendRef.Group, backendRef.Kind)
+	bRefGroup, bRefKind := utils.BackendRefGroupKind(backendRef.Group, backendRef.Kind)
 
 	for _, from := range grantSpec.From {
 		if from.Group != gwtypes.GroupName || string(from.Kind) != routeKind || fromNamespace != string(from.Namespace) {
