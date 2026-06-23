@@ -2411,8 +2411,8 @@ func TestReconcileSharedRouteAnnotations(t *testing.T) {
 	// Desired KongUpstream (without the hybrid-routes annotation, as applied by enforceState).
 	desired := newUnstructured("ns", "up-1", upstreamGVK, nil)
 
-	// One shared upstream already exists with another Route recorded; the missing upstream is
-	// skipped (no-op) until it is created.
+	// One shared upstream already exists with another Route recorded; the absent upstream is not
+	// created here but is reported back via the missing return value so the reconciler can requeue.
 	existing := newUnstructured("ns", "up-1", upstreamGVK, nil)
 	existing.SetAnnotations(map[string]string{
 		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/other-route",
@@ -2426,8 +2426,9 @@ func TestReconcileSharedRouteAnnotations(t *testing.T) {
 		desired: []unstructured.Unstructured{desired, missingDesired},
 	}
 
-	err := reconcileSharedRouteAnnotations[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+	annotationsMissing, err := reconcileSharedRouteAnnotations[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
 	require.NoError(t, err)
+	assert.True(t, annotationsMissing, "absent desired upstream must be reported missing so the reconciler requeues")
 
 	got := &unstructured.Unstructured{}
 	got.SetGroupVersionKind(upstreamGVK)

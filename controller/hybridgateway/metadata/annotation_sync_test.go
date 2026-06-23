@@ -79,8 +79,9 @@ func TestEnsureRouteInAnnotation(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(tt.existing).Build()
 			am := NewAnnotationManager(logr.Discard())
 
-			err := am.EnsureRouteInAnnotation(context.Background(), cl, kongUpstreamGVK, key, route)
+			missing, err := am.EnsureRouteInAnnotation(context.Background(), cl, kongUpstreamGVK, key, route)
 			require.NoError(t, err)
+			assert.False(t, missing, "object exists, must not be reported missing")
 
 			got := &unstructured.Unstructured{}
 			got.SetGroupVersionKind(kongUpstreamGVK)
@@ -90,7 +91,7 @@ func TestEnsureRouteInAnnotation(t *testing.T) {
 	}
 }
 
-func TestEnsureRouteInAnnotation_NoopWhenObjectMissing(t *testing.T) {
+func TestEnsureRouteInAnnotation_ReportsMissingWhenObjectAbsent(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
 		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
@@ -102,11 +103,13 @@ func TestEnsureRouteInAnnotation_NoopWhenObjectMissing(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 	am := NewAnnotationManager(logr.Discard())
 
-	// Object does not exist yet: should be a no-op (it will be tracked once created).
-	err := am.EnsureRouteInAnnotation(
+	// Object does not exist: must not error, but must report missing so the caller can decide
+	// whether to requeue (concurrent delete in steady state) or wait (not created yet).
+	missing, err := am.EnsureRouteInAnnotation(
 		context.Background(), cl, kongUpstreamGVK, client.ObjectKey{Namespace: "ns", Name: "missing"}, route,
 	)
 	require.NoError(t, err)
+	assert.True(t, missing, "absent object must be reported as missing")
 }
 
 func TestEnsureRouteInAnnotation_SkipsUntrackedRouteKind(t *testing.T) {
@@ -123,10 +126,11 @@ func TestEnsureRouteInAnnotation_SkipsUntrackedRouteKind(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(existing).Build()
 	am := NewAnnotationManager(logr.Discard())
 
-	err := am.EnsureRouteInAnnotation(
+	missing, err := am.EnsureRouteInAnnotation(
 		context.Background(), cl, kongUpstreamGVK, client.ObjectKey{Namespace: "ns", Name: "up-1"}, gateway,
 	)
 	require.NoError(t, err)
+	assert.False(t, missing, "untracked kind returns early without a GET, so it cannot be missing")
 
 	got := &unstructured.Unstructured{}
 	got.SetGroupVersionKind(kongUpstreamGVK)
@@ -166,8 +170,9 @@ func TestEnsureRouteInAnnotation_ReturnsConflictForRequeue(t *testing.T) {
 		Build()
 
 	am := NewAnnotationManager(logr.Discard())
-	err := am.EnsureRouteInAnnotation(context.Background(), cl, kongUpstreamGVK, key, route)
+	missing, err := am.EnsureRouteInAnnotation(context.Background(), cl, kongUpstreamGVK, key, route)
 	require.Error(t, err)
+	assert.False(t, missing)
 	assert.True(t, apierrors.IsConflict(err))
 	assert.Equal(t, 1, patchCalls, "expected a single patch attempt and controller-level requeue")
 

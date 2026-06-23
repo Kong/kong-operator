@@ -253,7 +253,8 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	// resource. This runs regardless of whether enforceState applied or is waiting, so resources
 	// created in this (or an earlier) reconcile are tracked promptly and concurrent Routes sharing
 	// a resource do not clobber each other's entry.
-	if err := reconcileSharedRouteAnnotations[t, tPtr](ctx, r.Client, logger, conv); err != nil {
+	annotationsMissing, err := reconcileSharedRouteAnnotations[t, tPtr](ctx, r.Client, logger, conv)
+	if err != nil {
 		if result, ok := requeueOnConflict(err, logger, "Hybrid-routes annotation sync conflicted, requeueing"); ok {
 			return result, nil
 		}
@@ -283,6 +284,16 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	// schedule a short requeue as a safety net in case watch events are delayed.
 	if waiting {
 		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
+	}
+
+	// In steady state (enforceState applied nothing and is not waiting) every desired Kong resource
+	// existed when enforceState ran. If the annotation sync above then found one missing, another
+	// Route deleted the shared resource in the window before this Route recorded itself. No watch
+	// event will re-trigger this Route (the delete event maps via the annotation, which no longer
+	// lists it), so requeue to let the next reconcile recreate the resource and re-record this Route.
+	if annotationsMissing {
+		log.Debug(logger, "Shared Kong resource missing during annotation sync, requeueing to recreate")
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
 	// Phase 4.5: Readiness gate before orphan cleanup.

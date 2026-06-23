@@ -418,14 +418,17 @@ func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, targets []
 // concurrent writers. Instead each entry is added here with an optimistic-lock read-modify-write
 // that is safe against Routes (or rules) sharing the same Kong resource reconciling concurrently.
 //
-// Resources that have not been created yet are skipped (EnsureRouteInAnnotation is a no-op on
-// NotFound) and will be tracked on a subsequent reconcile once enforceState creates them.
+// A desired resource that does not exist yet is reported back via the missing return value rather
+// than failing: on early reconciles enforceState has not created it yet, but in steady state
+// (enforceState applied nothing and is not waiting) a missing resource means another Route deleted
+// it concurrently before this Route recorded itself. The caller requeues in that case to recreate
+// it, because no watch event will re-trigger this Route on its own.
 func reconcileSharedRouteAnnotations[t converter.RootObject, tPtr converter.RootObjectPtr[t]](
 	ctx context.Context,
 	cl client.Client,
 	logger logr.Logger,
 	conv converter.APIConverter[t],
-) error {
+) (missing bool, err error) {
 	logger = logger.WithValues("phase", "route-annotation-sync")
 
 	rootObj := conv.GetRootObject()
@@ -434,24 +437,26 @@ func reconcileSharedRouteAnnotations[t converter.RootObject, tPtr converter.Root
 	case tPtr:
 		rootObjPtr = v
 	default:
-		return fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
+		return false, fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
 	}
 
 	desiredObjects, err := conv.GetOutputStore(ctx, logger)
 	if err != nil {
-		return fmt.Errorf("failed to get desired objects from converter for annotation sync: %w", err)
+		return false, fmt.Errorf("failed to get desired objects from converter for annotation sync: %w", err)
 	}
 
 	am := metadata.NewAnnotationManager(logger)
 	for _, desired := range desiredObjects {
-		if err := am.EnsureRouteInAnnotation(
+		objMissing, err := am.EnsureRouteInAnnotation(
 			ctx, cl, desired.GroupVersionKind(), client.ObjectKeyFromObject(&desired), rootObjPtr,
-		); err != nil {
-			return fmt.Errorf("failed to ensure hybrid-routes annotation on %s %s: %w",
+		)
+		if err != nil {
+			return false, fmt.Errorf("failed to ensure hybrid-routes annotation on %s %s: %w",
 				desired.GetKind(), client.ObjectKeyFromObject(&desired), err)
 		}
+		missing = missing || objMissing
 	}
-	return nil
+	return missing, nil
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.
