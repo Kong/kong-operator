@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,13 +16,11 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/kongroute"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/plugin"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/pluginbinding"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/target"
@@ -31,7 +28,6 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
-	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 var (
@@ -209,96 +205,7 @@ func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 // The function respects controller ownership and only manages ParentStatus entries
 // for Gateways controlled by this controller, leaving other controllers' entries untouched.
 func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	logger = logger.WithValues("phase", "httproute-status")
-	log.Debug(logger, "Starting UpdateRootObjectStatus")
-
-	// First, build the resolvedRefs conditons for the HTTPRoute since it is the same for all ParentRefs.
-	log.Debug(logger, "Building ResolvedRefs condition for HTTPRoute")
-	resolvedRefsCond, err := route.BuildResolvedRefsConditionForHTTPRoute(ctx, logger, c.Client, c.route)
-	if err != nil {
-		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
-	}
-
-	// For each parentRef in the HTTPRoute, build the conditions and set them in the status.
-	for _, pRef := range c.route.Spec.ParentRefs {
-		log.Debug(logger, "Processing ParentReference", "parentRef", pRef)
-		// Check if the parentRef belongs to a Gateway managed by us.
-		gateway, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
-		if err != nil {
-			switch {
-			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound),
-				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController),
-				errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound),
-				errors.Is(err, hybridgatewayerrors.ErrUnsupportedKind),
-				errors.Is(err, hybridgatewayerrors.ErrUnsupportedGroup):
-				// If the gateway is not managed by us or not found we skip setting conditions.
-				log.Debug(logger, "Skipping status update Gateway", "parentRef", pRef, "reason", err)
-				if route.RemoveStatusForParentRef(logger, c.route, pRef, vars.ControllerName()) {
-					// If we removed the status, we need to mark the update as true.
-					log.Debug(logger, "Removed ParentStatus for unsupported ParentReference", "parentRef", pRef)
-					updated = true
-					stop = false
-				}
-				continue
-			default:
-				log.Error(logger, err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
-				return false, stop, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
-			}
-		}
-		if !found {
-			continue
-		}
-
-		log.Debug(logger, "Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
-		acceptedCondition, err := route.BuildAcceptedCondition(ctx, logger, c.Client, gateway, c.route, pRef)
-		if err != nil {
-			return false, stop, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
-		}
-		// Unresolved backend references should still translate and be applied so the
-		// data plane returns a Gateway API-compliant 500 instead of falling through to 404.
-		// Only an unaccepted route must halt state enforcement.
-		if acceptedCondition.Status == metav1.ConditionFalse {
-			stop = true
-		}
-
-		log.Debug(logger, "Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
-		programmedConditions, err := route.BuildProgrammedCondition(ctx, logger, c.Client, c.route, pRef, c.expectedGVKs)
-		if err != nil {
-			return false, stop, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
-		}
-
-		// Combine all conditions.
-		programmedConditions = append(programmedConditions, *acceptedCondition, *resolvedRefsCond)
-
-		log.Debug(logger, "Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
-		if route.SetStatusConditions(c.route, pRef, vars.ControllerName(), programmedConditions...) {
-			log.Debug(logger, "Status conditions updated for ParentReference", "parentRef", pRef)
-			updated = true
-		}
-	}
-
-	log.Debug(logger, "Cleaning up orphaned ParentStatus entries")
-	if route.CleanupOrphanedParentStatus(logger, c.route, vars.ControllerName()) {
-		log.Debug(logger, "Orphaned ParentStatus entries cleaned up")
-		updated = true
-	}
-
-	// Update the status in the cluster if there are changes.
-	if updated {
-		log.Debug(logger, "Updating HTTPRoute status in cluster", "status", c.route.Status)
-		if err := c.Status().Update(ctx, c.route); err != nil {
-			if apierrors.IsConflict(err) {
-				return false, true, err
-			}
-			log.Error(logger, err, "Failed to update HTTPRoute status in cluster")
-			return false, stop, fmt.Errorf("failed to update HTTPRoute status: %w", err)
-		}
-	} else {
-		log.Debug(logger, "No status update required for HTTPRoute")
-	}
-
-	log.Debug(logger, "Finished UpdateRootObjectStatus", "updated", updated)
-	return updated, stop, nil
+	return route.UpdateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForHTTPRoute)
 }
 
 // DesiredResourcesReady implements DesiredStateReadinessChecker. It decides whether orphan cleanup may

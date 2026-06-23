@@ -49,6 +49,8 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 	}
 
 	setDataPlaneIngressServiceExternalTrafficPolicy(dataplane, svc)
+	setDataPlaneIngressServiceTrafficDistribution(dataplane, svc)
+	setDataPlaneIngressServiceInternalTrafficPolicy(dataplane, svc)
 	LabelObjectAsDataPlaneManaged(svc)
 
 	for _, opt := range opts {
@@ -108,6 +110,32 @@ func setDataPlaneIngressServiceExternalTrafficPolicy(
 	}
 
 	svc.Spec.ExternalTrafficPolicy = dataplane.Spec.Network.Services.Ingress.ExternalTrafficPolicy
+}
+
+func setDataPlaneIngressServiceTrafficDistribution(
+	dataplane *operatorv1beta1.DataPlane,
+	svc *corev1.Service,
+) {
+	if dataplane == nil ||
+		dataplane.Spec.Network.Services == nil ||
+		dataplane.Spec.Network.Services.Ingress == nil ||
+		dataplane.Spec.Network.Services.Ingress.TrafficDistribution == nil {
+		return
+	}
+	svc.Spec.TrafficDistribution = dataplane.Spec.Network.Services.Ingress.TrafficDistribution
+}
+
+func setDataPlaneIngressServiceInternalTrafficPolicy(
+	dataplane *operatorv1beta1.DataPlane,
+	svc *corev1.Service,
+) {
+	if dataplane == nil ||
+		dataplane.Spec.Network.Services == nil ||
+		dataplane.Spec.Network.Services.Ingress == nil ||
+		dataplane.Spec.Network.Services.Ingress.InternalTrafficPolicy == nil {
+		return
+	}
+	svc.Spec.InternalTrafficPolicy = dataplane.Spec.Network.Services.Ingress.InternalTrafficPolicy
 }
 
 // ServiceOpt is an option function for a Service.

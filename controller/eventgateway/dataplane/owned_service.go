@@ -194,5 +194,13 @@ func generateKafkaServiceOverlay(egdp *eventgatewayv1alpha1.KegDataPlane) *corev
 		svc.Spec.ExternalTrafficPolicy = kafka.ExternalTrafficPolicy
 	}
 
+	if kafka.TrafficDistribution != nil {
+		svc.Spec.TrafficDistribution = kafka.TrafficDistribution
+	}
+
+	if kafka.InternalTrafficPolicy != nil {
+		svc.Spec.InternalTrafficPolicy = kafka.InternalTrafficPolicy
+	}
+
 	return svc
 }

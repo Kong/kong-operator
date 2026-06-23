@@ -3,6 +3,7 @@ package conformance
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,7 +14,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	conformanceconfig "sigs.k8s.io/gateway-api/conformance/utils/config"
@@ -155,8 +159,89 @@ func runConformance(
 	opts.TimeoutConfig = timeoutConfig
 	opts.RestConfig.QPS = -1
 
+	// The suite runs top-level tests one at a time. Each test (including its
+	// parallel per-request sub-cases) fully completes before the next starts.
+	// Several tests reuse the same resource names though. For example the
+	// "reference-grant" HTTPRoute is created by both HTTPRouteInvalidReferenceGrant
+	// and HTTPRouteReferenceGrant. A test's per-manifest cleanup only issues the
+	// Delete and returns without waiting, so with the hybrid gateway type, whose
+	// Konnect finalizers make teardown slower, a deleted resource can still be
+	// terminating when a later same-named test applies its manifests, then vanish
+	// mid-test. It returns immediately when nothing is terminating, so it
+	// costs effectively nothing in the common case.
+	opts.Hook = func(t *testing.T, _ suite.ConformanceTest, _ *suite.ConformanceTestSuite) {
+		waitForConformanceResourcesCleanup(ctx, clients.MgrClient, t.Logf)
+	}
+
 	t.Log("running the Gateway API conformance test suite")
 	conformance.RunConformanceWithOptions(t, opts)
+}
+
+// conformanceCleanupTimeout bounds how long the post-test Hook waits for
+// terminating resources to disappear before giving up and letting the next test
+// proceed anyway (so a stuck finalizer can't hang the whole suite).
+const conformanceCleanupTimeout = 90 * time.Second
+
+// waitForConformanceResourcesCleanup blocks until no HTTPRoute, TLSRoute or
+// ReferenceGrant in any conformance namespace still has a deletion timestamp,
+// i.e. the previous test's resources have been fully finalized and removed.
+// These are per-test resources (the base manifests only contribute
+// Gateways/Services), and several tests reuse the same names (for example the
+// "reference-grant" HTTPRoute, the "gateway-conformance-infra-test" TLSRoute,
+// and the "reference-grant-wrong-*" ReferenceGrants shared by the
+// *InvalidReferenceGrant tests), so letting them fully drain prevents the next
+// test from racing a still-finalizing object. HTTPRoutes and TLSRoutes carry
+// the operator's (hybrid/Konnect) finalizers and are the slow case;
+// ReferenceGrants are not finalized and usually clear instantly, but are
+// checked too for robustness. HTTPRoute and TLSRoute are the only route kinds
+// the operator supports. In the common case nothing is terminating and this
+// returns right away. On timeout it logs and returns without failing.
+func waitForConformanceResourcesCleanup(ctx context.Context, cl client.Client, logf func(string, ...any)) {
+	waitCtx, cancel := context.WithTimeout(ctx, conformanceCleanupTimeout)
+	defer cancel()
+
+	isConformanceNS := func(ns string) bool { return strings.HasPrefix(ns, conformanceNamespacePrefix) }
+
+	err := wait.PollUntilContextCancel(waitCtx, 200*time.Millisecond, true, func(ctx context.Context) (bool, error) {
+		var httpRoutes gatewayv1.HTTPRouteList
+		if err := cl.List(ctx, &httpRoutes); err != nil {
+			// Treat transient list errors as "not ready yet" and keep polling
+			// until the context deadline.
+			return false, nil //nolint:nilerr
+		}
+		for i := range httpRoutes.Items {
+			if r := &httpRoutes.Items[i]; isConformanceNS(r.Namespace) && r.DeletionTimestamp != nil {
+				logf("waiting for HTTPRoute %s/%s to finish terminating before next test", r.Namespace, r.Name)
+				return false, nil
+			}
+		}
+
+		var tlsRoutes gatewayv1alpha2.TLSRouteList
+		if err := cl.List(ctx, &tlsRoutes); err != nil {
+			return false, nil //nolint:nilerr
+		}
+		for i := range tlsRoutes.Items {
+			if r := &tlsRoutes.Items[i]; isConformanceNS(r.Namespace) && r.DeletionTimestamp != nil {
+				logf("waiting for TLSRoute %s/%s to finish terminating before next test", r.Namespace, r.Name)
+				return false, nil
+			}
+		}
+
+		var grants gatewayv1beta1.ReferenceGrantList
+		if err := cl.List(ctx, &grants); err != nil {
+			return false, nil //nolint:nilerr
+		}
+		for i := range grants.Items {
+			if g := &grants.Items[i]; isConformanceNS(g.Namespace) && g.DeletionTimestamp != nil {
+				logf("waiting for ReferenceGrant %s/%s to finish terminating before next test", g.Namespace, g.Name)
+				return false, nil
+			}
+		}
+		return true, nil
+	})
+	if err != nil {
+		logf("timed out after %s waiting for conformance HTTPRoutes/ReferenceGrants to be cleaned up; proceeding anyway", conformanceCleanupTimeout)
+	}
 }
 
 type gatewayType string
