@@ -61,7 +61,11 @@ func TestReconcilePendingKonnectID(t *testing.T) {
 
 		res, stop, err := r.reconcilePendingKonnectID(t.Context(), ent)
 		require.NoError(t, err)
-		assert.False(t, stop, "reconciliation should continue, not return early")
+		// stop=true: the ID was written to the cluster so this reconcile pass
+		// ends here. The watch event from the status write triggers a fresh
+		// reconcile with a consistent object, avoiding a spurious Konnect
+		// update call (e.g. UpsertPlugin).
+		assert.True(t, stop, "reconciliation should stop to let a fresh reconcile proceed with consistent state")
 		assert.True(t, res.IsZero())
 
 		// The ID is restored onto ent, so we no longer create (no duplicate).
@@ -73,9 +77,19 @@ func TestReconcilePendingKonnectID(t *testing.T) {
 		require.NoError(t, r.Client.Get(t.Context(), key, &fetched))
 		assert.Equal(t, konnectID, fetched.GetKonnectStatus().GetKonnectID())
 
-		// The bridge entry is purged once the status carries the ID.
+		// The bridge entry is NOT yet purged on this pass. It is cleaned up in
+		// the subsequent reconcile (triggered by the status watch event) once
+		// the cached status reflects the ID.
 		_, ok := r.pendingKonnectIDs.Get(key)
-		assert.False(t, ok)
+		assert.True(t, ok, "entry must remain in store until the next reconcile")
+
+		// Simulate the next reconcile: the cache now reflects the persisted ID.
+		ent2 := newKongServiceForPendingTest(konnectID)
+		_, stop2, err2 := r.reconcilePendingKonnectID(t.Context(), ent2)
+		require.NoError(t, err2)
+		assert.False(t, stop2, "second pass should continue normally")
+		_, ok2 := r.pendingKonnectIDs.Get(key)
+		assert.False(t, ok2, "entry must be purged once the cached status reflects the ID")
 	})
 
 	t.Run("does nothing and allows create when there is no store entry", func(t *testing.T) {

@@ -807,16 +807,23 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 // again on that basis would produce a duplicate Konnect entity. The in-memory
 // store records the Konnect ID as soon as the entity is created, so:
 //   - if the cached status lacks the ID but the store has it, restore and persist
-//     it. ApplyStatusPatchIfNotEmpty writes through to the API server and refreshes
-//     ent from the response, so the rest of the loop runs on a consistent object.
-//     Re-persisting is idempotent and also heals the case where the post-create
-//     status write failed.
+//     it. When the status is actually patched (op.Updated), reconciliation stops
+//     for this pass so the watch event from the status write triggers a fresh
+//     reconcile with a fully-consistent cached object. The status patch refreshes
+//     ent from the server response, so continuing here would run the rest of the
+//     loop and issue an enforcement Konnect update (e.g. ops.Update) on an object
+//     stitched together from a stale cache plus the targeted ID patch — an extra,
+//     timing-dependent API call. Deferring to a fresh reconcile matches the
+//     create path's convention (the status write drives the next pass) and keeps
+//     the behaviour deterministic. The store entry is purged in that fresh
+//     reconcile (see the block below). Re-persisting is idempotent and also heals
+//     the case where the post-create status write failed.
 //   - once the status carries the ID, the bridge entry has served its purpose and
 //     is dropped.
 //
 // It returns stop=true when the caller should return the provided result/error (a
-// conflict requeue or a persist error); otherwise reconciliation continues with a
-// consistent ent.
+// conflict requeue, a persist error, or a successful ID recovery that needs a
+// fresh reconcile); otherwise reconciliation continues with a consistent ent.
 func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 	ctx context.Context,
 	ent TEnt,
@@ -826,11 +833,22 @@ func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 		if id, ok := r.pendingKonnectIDs.Get(pendingKey); ok {
 			old := ent.DeepCopyObject().(client.Object)
 			ent.SetKonnectID(id)
-			if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, ctrllog.FromContext(ctx), any(ent).(client.Object), old); err != nil {
+			result, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, ctrllog.FromContext(ctx), any(ent).(client.Object), old)
+			if err != nil {
 				if apierrors.IsConflict(err) {
 					return ctrl.Result{Requeue: true}, true, nil
 				}
 				return ctrl.Result{}, true, fmt.Errorf("failed to persist recovered Konnect ID for %s: %w", pendingKey, err)
+			}
+			if result == op.Updated {
+				// ID was recovered and written to the cluster. Stop this reconcile
+				// pass so the status-update watch event triggers a fresh reconcile
+				// from a consistent cache. Continuing would run the enforcement
+				// ops.Update on an object built from a stale cache plus the targeted
+				// ID patch, issuing an extra, timing-dependent Konnect call. The
+				// store entry is purged in that subsequent reconcile once the cached
+				// status reflects the ID.
+				return ctrl.Result{}, true, nil
 			}
 		}
 	}
