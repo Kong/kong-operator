@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -1143,7 +1142,7 @@ func countAttachedGRPCRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener
 // countAttachedTCPRoutes counts the number of attached TCPRoutes for a given listener,
 // taking into account the ParentRefs' sectionName between the listener and the route.
 // TCPRoute has no hostnames, so only sectionName matching applies.
-func countAttachedTCPRoutes(listener gwtypes.Listener, tcpRoutes []gatewayv1alpha2.TCPRoute) int32 {
+func countAttachedTCPRoutes(listener gwtypes.Listener, tcpRoutes []gatewayv1.TCPRoute) int32 {
 	var count int32
 
 	for _, tcpRoute := range tcpRoutes {
