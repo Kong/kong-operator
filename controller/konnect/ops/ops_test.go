@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -271,12 +272,25 @@ func TestDelete(t *testing.T) {
 		*konnectv1alpha2.KonnectGatewayControlPlane,
 	]{
 		{
-			name: "no Konnect ID and no Programmed status condition - delete is not called",
+			name: "no Konnect ID and entity not found in Konnect - delete is not called",
 			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cp",
 					Namespace: "test-ns",
 				},
+			},
+			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
+				// With no Konnect ID in the status, Delete probes Konnect by UID to
+				// recover a possibly-orphaned entity. There's no matching entity, so
+				// nothing is deleted (DeleteControlPlane is never expected).
+				sdk.ControlPlaneSDK.EXPECT().
+					ListControlPlanes(mock.Anything, mock.Anything).
+					Return(&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{},
+						},
+					}, nil)
+				return sdk
 			},
 		},
 		{
@@ -300,6 +314,93 @@ func TestDelete(t *testing.T) {
 						},
 					},
 				},
+			},
+			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
+				// Same as above: the probe finds no matching Konnect entity.
+				sdk.ControlPlaneSDK.EXPECT().
+					ListControlPlanes(mock.Anything, mock.Anything).
+					Return(&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{},
+						},
+					}, nil)
+				return sdk
+			},
+		},
+		{
+			name: "no Konnect ID but entity found in Konnect by UID - delete recovers ID and deletes it",
+			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp",
+					Namespace: "test-ns",
+				},
+				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+						Name: "test-cp",
+					},
+					Source: new(commonv1alpha1.EntitySourceOrigin),
+				},
+			},
+			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
+				// The Konnect ID was never persisted to the status (e.g. status update
+				// failed after creation). Delete probes Konnect by UID, recovers the ID
+				// and deletes the entity so it is not orphaned.
+				sdk.ControlPlaneSDK.EXPECT().
+					ListControlPlanes(mock.Anything, mock.Anything).
+					Return(&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "recovered-12345",
+								},
+							},
+						},
+					}, nil)
+				sdk.ControlPlaneSDK.EXPECT().
+					DeleteControlPlane(mock.Anything, "recovered-12345").
+					Return(&sdkkonnectops.DeleteControlPlaneResponse{}, nil).
+					Once()
+				return sdk
+			},
+		},
+		{
+			name: "no Konnect ID in status, UID probe returns the ID wrapped in a group-membership error but delete proceeds with that ID",
+			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp-group",
+					Namespace: "test-ns",
+				},
+				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+						Name:        "test-cp-group",
+						ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup.ToPointer(),
+					},
+					// The group references a member that does not exist in the cluster,
+					// so resolving group membership during the UID lookup fails.
+					Members: []corev1.LocalObjectReference{{Name: "missing-member"}},
+					Source:  new(commonv1alpha1.EntitySourceOrigin),
+				},
+			},
+			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
+				// The probe finds the control plane by UID and returns its ID, but
+				// setting group membership fails (the member is missing). Deletion must
+				// still proceed using the recovered ID rather than getting stuck.
+				sdk.ControlPlaneSDK.EXPECT().
+					ListControlPlanes(mock.Anything, mock.Anything).
+					Return(&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "recovered-group-12345",
+								},
+							},
+						},
+					}, nil)
+				sdk.ControlPlaneSDK.EXPECT().
+					DeleteControlPlane(mock.Anything, "recovered-group-12345").
+					Return(&sdkkonnectops.DeleteControlPlaneResponse{}, nil).
+					Once()
+				return sdk
 			},
 		},
 		{

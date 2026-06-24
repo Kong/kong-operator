@@ -137,7 +137,7 @@ func TestGatewayHybridFull(t *testing.T) {
 	t.Log("verifying GatewayClass has supportedFeatures set")
 	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible)
 	require.NoError(t, err)
-	require.Eventually(t, testutils.GatewayClassHasSupportedFeatures(t, ctx, string(gateway.Spec.GatewayClassName), integration.GetClients(), requiredFeatures.UnsortedList()...), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, testutils.GatewayClassHasSupportedFeatures(t, ctx, string(gateway.Spec.GatewayClassName), integration.GetClients(), requiredFeatures...), testutils.SubresourceReadinessWait, time.Second)
 
 	dataplaneClient := operatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
