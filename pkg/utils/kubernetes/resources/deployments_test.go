@@ -22,6 +22,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		name      string
 		dataplane *operatorv1beta1.DataPlane
 		testFunc  func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec)
+		metaCheck func(t *testing.T, deployment *Deployment)
 	}{
 		{
 			name: "without resources specified we get the defaults",
@@ -195,6 +196,39 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			},
 		},
 		{
+			name: "with deployment metadata specified",
+			dataplane: &operatorv1beta1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dataplane-name",
+					Namespace: "test-namespace",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								Annotations: map[string]string{"annotation-a": "value-a"},
+								Labels:      map[string]string{"label-a": "value-a"},
+							},
+						},
+					},
+				},
+			},
+			testFunc: func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec) {
+				require.NotNil(t, deploymentSpec)
+			},
+			metaCheck: func(t *testing.T, deployment *Deployment) {
+				require.Equal(t, "value-a", deployment.Annotations["annotation-a"])
+				require.Equal(t, "value-a", deployment.Labels["label-a"])
+				require.Equal(t, "dataplane-name", deployment.Labels["app"])
+				require.JSONEq(t, `{"annotation-a":"value-a"}`, deployment.Annotations[consts.AnnotationLastAppliedDeploymentAnnotations])
+				require.JSONEq(t, `{"label-a":"value-a"}`, deployment.Annotations[consts.AnnotationLastAppliedDeploymentLabels])
+			},
+		},
+		{
 			name: "with Affinity specified",
 			dataplane: &operatorv1beta1.DataPlane{
 				TypeMeta: metav1.TypeMeta{
@@ -335,6 +369,9 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			deployment, err := ApplyDeploymentUserPatches(partial, tt.dataplane.Spec.Deployment.PodTemplateSpec)
 			require.NoError(t, err)
 			tt.testFunc(t, &deployment.Spec)
+			if tt.metaCheck != nil {
+				tt.metaCheck(t, deployment)
+			}
 		})
 	}
 }

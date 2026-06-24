@@ -36,6 +36,16 @@ const (
 	// shall be removed. This guarantees no interference with annotations from other sources (e.g. users).
 	AnnotationLastAppliedAnnotations = "gateway-operator.konghq.com/last-applied-annotations"
 
+	// AnnotationLastAppliedDeploymentAnnotations is the annotation key used to store
+	// the last annotations from DataPlane.spec.deployment.annotations that were applied
+	// to a DataPlane Deployment by the controller.
+	AnnotationLastAppliedDeploymentAnnotations = "gateway-operator.konghq.com/last-applied-deployment-annotations"
+
+	// AnnotationLastAppliedDeploymentLabels is the annotation key used to store
+	// the last labels from DataPlane.spec.deployment.labels that were applied to
+	// a DataPlane Deployment by the controller.
+	AnnotationLastAppliedDeploymentLabels = "gateway-operator.konghq.com/last-applied-deployment-labels"
+
 	// DataPlanePodStateLabel indicates the state of a DataPlane Pod.
 	// Useful for progressive rollouts.
 	DataPlanePodStateLabel = "gateway-operator.konghq.com/dataplane-pod-state"

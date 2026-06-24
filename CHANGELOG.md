@@ -127,11 +127,15 @@
   [#4658](https://github.com/Kong/kong-operator/pull/4658)
 
 ## [v2.2.0]
-
 > Release date: 2026-06-05
 
 ### Added
 
+- DataPlane and GatewayConfiguration: support `spec.deployment.labels` and
+  `spec.deployment.annotations` for Deployment metadata, with safe managed-key
+  removal so operator-managed keys are removed without clobbering external
+  labels or annotations.
+  [#3682](https://github.com/Kong/kong-operator/pull/3682)
 - Add `--enable-controller-kegdataplane` flag (env
   `KONG_OPERATOR_ENABLE_CONTROLLER_KEGDATAPLANE`, default `false`) to enable
   the KEG (Kong Event Gateway) DataPlane controller.
