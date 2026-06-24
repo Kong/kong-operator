@@ -2,7 +2,6 @@ package envtest
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
 	"github.com/go-logr/logr/testr"
@@ -22,7 +21,7 @@ func setupMultiInstanceDiagnosticsManager(
 	t.Log("Starting the diagnostics server and the multi-instance manager")
 	diagServer := multiinstance.NewDiagnosticsServer(diagPort, opts...)
 	go func() {
-		assert.ErrorIs(t, diagServer.Start(ctx), http.ErrServerClosed)
+		assert.NoError(t, diagServer.Start(ctx))
 	}()
 
 	multimgr := multiinstance.NewManager(testr.New(t), multiinstance.WithDiagnosticsExposer(diagServer))

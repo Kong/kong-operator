@@ -73,6 +73,8 @@ func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 }
 
 func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
+	ignoreExistingGoroutines := goleak.IgnoreCurrent()
+
 	ts := NewTelemetryServer(t)
 	ts.Start(t.Context(), t)
 
@@ -81,6 +83,7 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 		ts.Stop(t)
 		t.Logf("Checking for goroutine leaks")
 		goleak.VerifyNone(t,
+			ignoreExistingGoroutines,
 			goleak.IgnoreTopFunction("sigs.k8s.io/controller-runtime/pkg/controller/priorityqueue.(*priorityqueue[...]).handleReadyItems.func1.1"),
 		)
 	})
@@ -99,9 +102,9 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 		WithDiagnosticsServer(diagnosticsServerPort),
 		WithTelemetry(ts.Endpoint(), 100*time.Millisecond),
 	)
+	managerStopped := make(chan error, 1)
 	go func() {
-		err := m.Run(ctx)
-		assert.NoError(t, err)
+		managerStopped <- m.Run(ctx)
 	}()
 
 	t.Log("Waiting for the manager to become ready")
@@ -129,5 +132,10 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 	t.Logf("Waiting for the manager to stop gracefully, this should happen within %f seconds",
 		consts.DefaultGracefulShutdownTimeout.Seconds(),
 	)
-	<-time.After(consts.DefaultGracefulShutdownTimeout)
+	select {
+	case err := <-managerStopped:
+		require.NoError(t, err)
+	case <-time.After(consts.DefaultGracefulShutdownTimeout):
+		t.Fatal("manager did not stop gracefully before the shutdown timeout")
+	}
 }

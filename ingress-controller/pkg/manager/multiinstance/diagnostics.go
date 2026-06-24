@@ -2,6 +2,7 @@ package multiinstance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -63,14 +64,23 @@ func NewDiagnosticsServer(listenerPort int, opts ...DiagnosticsServerOption) *Di
 
 // Start starts the diagnostics server.
 func (s *DiagnosticsServer) Start(ctx context.Context) error {
-	errg, _ := errgroup.WithContext(ctx)
+	server := http.Server{
+		Addr:              fmt.Sprintf(":%d", s.listenerPort),
+		Handler:           s,
+		ReadHeaderTimeout: diagnosticsServerReadHeaderTimeout,
+	}
+
+	errg, ctx := errgroup.WithContext(ctx)
 	errg.Go(func() error {
-		server := http.Server{
-			Addr:              fmt.Sprintf(":%d", s.listenerPort),
-			Handler:           s,
-			ReadHeaderTimeout: diagnosticsServerReadHeaderTimeout,
+		err := server.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
 		}
-		return server.ListenAndServe()
+		return err
+	})
+	errg.Go(func() error {
+		<-ctx.Done()
+		return server.Shutdown(context.Background())
 	})
 	return errg.Wait()
 }
