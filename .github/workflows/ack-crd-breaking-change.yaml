@@ -1,0 +1,40 @@
+name: ack CRD breaking change
+
+on:
+  pull_request_target:
+    types:
+      - labeled
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  rerun-failed-tests:
+    if: ${{ github.event.label.name == 'ack_crd_breaking_change' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rerun failed tests workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          run_id="$(gh run list \
+            --repo "${GITHUB_REPOSITORY}" \
+            --workflow tests.yaml \
+            --limit 50 \
+            --json conclusion,createdAt,databaseId,event,headSha,status \
+            --jq '[.[] | select(.headSha == env.HEAD_SHA and .event == "pull_request" and .status == "completed" and .conclusion == "failure")] | sort_by(.createdAt) | reverse | .[0].databaseId // ""')"
+
+          if [[ -z "${run_id}" ]]; then
+            echo "No failed tests workflow run found for ${HEAD_SHA}."
+            exit 0
+          fi
+
+          echo "Rerunning failed jobs in tests workflow run ${run_id}."
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/rerun-failed-jobs"

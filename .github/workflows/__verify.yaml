@@ -5,6 +5,8 @@ on:
 
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
 
 env:
   MISE_VERBOSE: 1
@@ -17,6 +19,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 20) }}
     env:
       CRD_BREAKING_CHANGES_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || '' }}
+      ACK_CRD_BREAKING_CHANGE_LABEL: ack_crd_breaking_change
     strategy:
       fail-fast: false
       matrix:
@@ -92,5 +95,44 @@ jobs:
         key: go-lint-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}
         restore-keys: |
           go-lint-${{ runner.os }}-${{ runner.arch }}-go-
+
+    - name: Check CRD breaking-change acknowledgement
+      if: ${{ matrix.name == 'crd-breaking-changes' }}
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
+        MERGE_GROUP_HEAD_REF: ${{ github.event.merge_group.head_ref || '' }}
+      run: |
+        set -euo pipefail
+
+        ack="false"
+        pr_numbers="${PULL_REQUEST_NUMBER}"
+
+        if [[ "${GITHUB_EVENT_NAME}" == "merge_group" ]]; then
+          pr_numbers="$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
+            --jq '.[].number' || true)"
+
+          if [[ -z "${pr_numbers}" && "${MERGE_GROUP_HEAD_REF}" =~ (^|/)pr-([0-9]+)- ]]; then
+            pr_numbers="${BASH_REMATCH[2]}"
+          fi
+
+          if [[ -z "${pr_numbers}" ]]; then
+            echo "Could not determine pull requests for merge group; CRD breaking changes will not be acknowledged automatically."
+          fi
+        fi
+
+        for pr_number in ${pr_numbers}; do
+          if gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/labels" \
+            --jq '.[].name' | grep -Fxq "${ACK_CRD_BREAKING_CHANGE_LABEL}"; then
+            ack="true"
+            break
+          fi
+        done
+
+        echo "ACK_CRD_BREAKING_CHANGE=${ack}" >> "${GITHUB_ENV}"
 
     - run: make ${{ matrix.make-target }}
