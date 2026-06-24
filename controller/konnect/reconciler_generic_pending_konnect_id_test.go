@@ -50,7 +50,7 @@ func newReconcilerForPendingTest(
 func TestReconcilePendingKonnectID(t *testing.T) {
 	const konnectID = "service-12345"
 
-	t.Run("restores and persists the ID when the cached status lacks it but the store has it", func(t *testing.T) {
+	t.Run("restores and persists the ID then stops when the cached status lacks it but the store has it", func(t *testing.T) {
 		// The API server copy does not carry the ID yet - this models both the
 		// cache-lag case and the case where the post-create status write failed.
 		r := newReconcilerForPendingTest(newKongServiceForPendingTest(""))
@@ -61,21 +61,28 @@ func TestReconcilePendingKonnectID(t *testing.T) {
 
 		res, stop, err := r.reconcilePendingKonnectID(t.Context(), ent)
 		require.NoError(t, err)
-		assert.False(t, stop, "reconciliation should continue, not return early")
+		assert.True(t, stop, "reconciliation should return early until the cache observes the persisted ID")
 		assert.True(t, res.IsZero())
 
-		// The ID is restored onto ent, so we no longer create (no duplicate).
+		// The ID is restored onto ent before patching status.
 		assert.Equal(t, konnectID, ent.GetKonnectStatus().GetKonnectID())
-		assert.False(t, shouldCreateKonnectEntity(ent), "must not create a duplicate Konnect entity")
 
 		// The ID is written through to the API server.
 		var fetched configurationv1alpha1.KongService
 		require.NoError(t, r.Client.Get(t.Context(), key, &fetched))
 		assert.Equal(t, konnectID, fetched.GetKonnectStatus().GetKonnectID())
 
-		// The bridge entry is purged once the status carries the ID.
+		// The bridge entry remains until a later cached read carries the ID.
 		_, ok := r.pendingKonnectIDs.Get(key)
-		assert.False(t, ok)
+		assert.True(t, ok)
+
+		res, stop, err = r.reconcilePendingKonnectID(t.Context(), &fetched)
+		require.NoError(t, err)
+		assert.False(t, stop)
+		assert.True(t, res.IsZero())
+
+		_, ok = r.pendingKonnectIDs.Get(key)
+		assert.False(t, ok, "entry must be purged once the cached status reflects the ID")
 	})
 
 	t.Run("does nothing and allows create when there is no store entry", func(t *testing.T) {
