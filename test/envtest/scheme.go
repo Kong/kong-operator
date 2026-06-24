@@ -7,7 +7,6 @@ import (
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -23,7 +22,6 @@ type SchemeOption func(t *testing.T, s *k8sruntime.Scheme)
 func WithGatewayAPI(t *testing.T, s *k8sruntime.Scheme) {
 	require.NoError(t, gatewayv1.Install(s))
 	require.NoError(t, gatewayv1beta1.Install(s))
-	require.NoError(t, gatewayv1alpha2.Install(s))
 }
 
 // WithKong registers the Kong types with the scheme.

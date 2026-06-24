@@ -6,7 +6,6 @@ import (
 	kubernetesclient "k8s.io/client-go/kubernetes"
 	ctrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -85,12 +84,6 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 		return clients, err
 	}
 	if err := configurationv1beta1.AddToScheme(clients.MgrClient.Scheme()); err != nil {
-		return clients, err
-	}
-
-	// TODO: remove this when support for v1alpha2 is dropped in GW API. For now
-	// we need to add it to the scheme so that we can pass conformance tests.
-	if err := gatewayv1alpha2.Install(clients.MgrClient.Scheme()); err != nil {
 		return clients, err
 	}
 

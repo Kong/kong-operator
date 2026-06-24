@@ -131,7 +131,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 				// normally the k8s api call populates TypeMeta properly, but we have no such luxuries here
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "HTTPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+					APIVersion: "gateway.networking.k8s.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tong-sirlari",
@@ -184,7 +184,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					},
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "HTTPRoute",
-						APIVersion: "gateway.networking.k8s.io/v1alpha2",
+						APIVersion: "gateway.networking.k8s.io/v1",
 					},
 				},
 			},
@@ -195,7 +195,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			route: &gatewayapi.UDPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "UDPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+					APIVersion: "gateway.networking.k8s.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "padarkush",
@@ -249,7 +249,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					},
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "UDPRoute",
-						APIVersion: "gateway.networking.k8s.io/v1alpha2",
+						APIVersion: "gateway.networking.k8s.io/v1",
 					},
 				},
 			},
@@ -260,7 +260,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			route: &gatewayapi.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "TCPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+					APIVersion: "gateway.networking.k8s.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "kitab-ul-atfol",
@@ -306,7 +306,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					},
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "TCPRoute",
-						APIVersion: "gateway.networking.k8s.io/v1alpha2",
+						APIVersion: "gateway.networking.k8s.io/v1",
 					},
 				},
 			},
@@ -317,7 +317,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			route: &gatewayapi.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "TCPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+					APIVersion: "gateway.networking.k8s.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "muntaxabi-jugrofiyai-umumiy",
@@ -367,7 +367,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					},
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "TCPRoute",
-						APIVersion: "gateway.networking.k8s.io/v1alpha2",
+						APIVersion: "gateway.networking.k8s.io/v1",
 					},
 				},
 			},
