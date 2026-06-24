@@ -154,7 +154,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 					}},
 				},
 			}
-			udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(namespace).Create(ctx, udpRoute, metav1.CreateOptions{})
+			udpRoute, err = gatewayClient.GatewayV1().UDPRoutes(namespace).Create(ctx, udpRoute, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			cleaner.Add(udpRoute)
 			ctx = SetInCtxForT(ctx, t, udpRoute)
@@ -371,14 +371,14 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
 			assert.Eventually(t, func() bool {
-				udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
+				udpRoute, err = gatewayClient.GatewayV1().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
 				if err != nil {
 					return false
 				}
 				notExistingPort := gatewayapi.PortNumber(81)
 				udpRoute.Spec.ParentRefs[0].Port = &notExistingPort
 				udpRoute.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1Name)
-				udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(namespace).Update(ctx, udpRoute, metav1.UpdateOptions{})
+				udpRoute, err = gatewayClient.GatewayV1().UDPRoutes(namespace).Update(ctx, udpRoute, metav1.UpdateOptions{})
 				return err == nil
 			}, time.Minute, time.Second)
 
