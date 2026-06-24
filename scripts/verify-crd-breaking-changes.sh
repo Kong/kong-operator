@@ -46,6 +46,13 @@ if [[ -z "${CRDIFY_BIN}" ]]; then
 	exit 1
 fi
 
+CRDIFY_CONFIG="${CRDIFY_CONFIG:-${SCRIPT_ROOT}/scripts/crdify-config.yaml}"
+readonly CRDIFY_CONFIG
+if [[ ! -f "${CRDIFY_CONFIG}" ]]; then
+	echo "CRDIFY_CONFIG must point to an existing file: ${CRDIFY_CONFIG}"
+	exit 1
+fi
+
 resolve_base_revision() {
 	local candidate
 
@@ -129,7 +136,7 @@ while IFS= read -r basename; do
 	git show "${base_revision}:${base_file}" > "${old_file}"
 
 	echo "Checking ${basename}"
-	if ! "${CRDIFY_BIN}" "file://${old_file}" "file://${current_file}"; then
+	if ! "${CRDIFY_BIN}" --config "${CRDIFY_CONFIG}" "file://${old_file}" "file://${current_file}"; then
 		status=1
 	fi
 done < "${union_basenames}"

@@ -1,0 +1,4 @@
+# Description-only changes do not affect CRD validation compatibility.
+validations:
+  - name: description
+    enforcement: None
