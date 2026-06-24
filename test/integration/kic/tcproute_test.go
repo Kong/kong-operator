@@ -152,7 +152,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 			}},
 		},
 	}
-	tcproute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(ns.Name).Create(ctx, tcproute, metav1.CreateOptions{})
+	tcproute, err = gatewayClient.GatewayV1().TCPRoutes(ns.Name).Create(ctx, tcproute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(tcproute)
 

@@ -26,7 +26,7 @@ services:
     - k8s-namespace:udp-example
     - k8s-kind:UDPRoute
     - k8s-group:gateway.networking.k8s.io
-    - k8s-version:v1alpha2
+    - k8s-version:v1
     - k8s-named-route-rule:rule-tftp
   tags:
   - k8s-name:UNKNOWN

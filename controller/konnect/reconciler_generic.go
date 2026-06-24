@@ -53,6 +53,12 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 	SyncPeriod        time.Duration
 
 	MetricRecorder metrics.Recorder
+
+	// pendingKonnectIDs holds the Konnect ID of entities created in Konnect whose
+	// ID has not yet been persisted to their status. It lets the cleanup logic
+	// recover and delete a Konnect entity even if the status update that would
+	// persist its ID fails, preventing orphaned entities.
+	pendingKonnectIDs *pendingKonnectIDStore
 }
 
 // KonnectEntityReconcilerOption is a functional option for the KonnectEntityReconciler.
@@ -100,11 +106,12 @@ func NewKonnectEntityReconciler[
 	opts ...KonnectEntityReconcilerOption[T, TEnt],
 ) *KonnectEntityReconciler[T, TEnt] {
 	r := &KonnectEntityReconciler[T, TEnt]{
-		sdkFactory:     sdkFactory,
-		LoggingMode:    loggingMode,
-		Client:         client,
-		SyncPeriod:     consts.DefaultKonnectSyncPeriod,
-		MetricRecorder: nil,
+		sdkFactory:        sdkFactory,
+		LoggingMode:       loggingMode,
+		Client:            client,
+		SyncPeriod:        consts.DefaultKonnectSyncPeriod,
+		MetricRecorder:    nil,
+		pendingKonnectIDs: newPendingKonnectIDStore(),
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -556,6 +563,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		}
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+			// If the Konnect ID was never persisted to the status (e.g. the status
+			// update failed after the entity was created in Konnect), try to recover
+			// it from the in-memory store so the entity can still be cleaned up.
+			r.restorePendingKonnectIDForDeletion(ent)
+
 			if err := ops.Delete(ctx, sdk, r.Client, r.MetricRecorder, ent); err != nil {
 				// If the error was a network error, handle it here, there's no need to proceed,
 				// as no state has changed.
@@ -581,6 +593,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 				}
 				return ctrl.Result{}, err
 			}
+
+			// The Konnect entity has been deleted (or there was nothing to delete);
+			// drop any in-memory copy of its ID.
+			r.pendingKonnectIDs.Delete(client.ObjectKeyFromObject(ent))
 		}
 
 		// For KonnectGatewayControlPlane resources, also remove the finalizer added
@@ -603,6 +619,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		}
 
 		return ctrl.Result{}, nil
+	}
+
+	// Add the cleanup finalizer before creating anything in Konnect. This
+	// guarantees that, even if the operator is interrupted right after the
+	// Konnect entity is created, there is always a finalizer that triggers the
+	// cleanup logic on deletion, so the Konnect entity can never be orphaned.
+	if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
+		return res, err
 	}
 
 	// Handle type specific operations and stop reconciliation if needed.
@@ -632,12 +656,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return res, nil
 	}
 
-	// TODO: relying on status ID is OK but we need to rethink this because
-	// we're using a cached client so after creating the resource on Konnect it might
-	// happen that we've just created the resource but the status ID is not there yet.
-	//
-	// We should look at the "expectations" for this:
-	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
+	// Reconcile the cached view of the object with what we know we have already
+	// created in Konnect, so a stale cache cannot drive a duplicate create.
+	if res, stop, err := r.reconcilePendingKonnectID(ctx, ent); stop {
+		return res, err
+	}
+
 	if shouldCreateKonnectEntity(ent) {
 
 		// Check if the object is adopting an existing Konnect entity.
@@ -651,23 +675,24 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 
 		_, err := ops.Create(ctx, sdk, r.Client, r.MetricRecorder, ent)
 
-		// TODO: this is actually not 100% error prone because when status
-		// update fails we don't store the Konnect ID and hence the reconciler
-		// will try to create the resource again on next reconciliation.
+		// Add the Org ID and Server URL to the status so that the status can
+		// indicate where the corresponding Konnect entity is located. The cleanup
+		// finalizer has already been added before the create above.
+		setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 
-		// Regardless of the error reported from Create(), if the Konnect ID has been
-		// set then:
-		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
-		if shouldAttachKonnectFinalizerAfterCreate(ent) {
-			if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
-				return res, err
-			}
-
-			// ...
-			// - add the Org ID and Server URL to the status so that the resource can be
-			//   cleaned up from Konnect on deletion and also so that the status can
-			//   indicate where the corresponding Konnect entity is located.
-			setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
+		// If the entity was created in Konnect, record its Konnect ID in the
+		// in-memory store. The entry is intentionally kept (not purged here) until a
+		// later reconcile observes the persisted ID on the cached status (see the
+		// reconciliation block above) or the entity is deleted. This serves two
+		// purposes:
+		//   - cleanup: the deletion logic can find and delete the Konnect entity even
+		//     if the status update below fails (preventing orphaned entities);
+		//   - de-duplication: a subsequent reconcile reading a stale, ID-less cached
+		//     status will restore the ID from here instead of creating a duplicate.
+		// Only the entity's own ID can be lost here; parent references are persisted
+		// by their reference handlers in earlier reconcile passes.
+		if id := ent.GetKonnectStatus().GetKonnectID(); id != "" {
+			r.pendingKonnectIDs.Store(client.ObjectKeyFromObject(ent), id)
 		}
 
 		// Regardless of the error, patch the status as it can contain the Konnect ID,
@@ -767,20 +792,67 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return res, nil
 	}
 
-	// Ensure that successfully reconciled object has the cleanup finalizer.
-	// This can happen when the finalizer was removed e.g. when the referenced
-	// object was removed, breaking the reference chain in Konnect and thus making
-	// the delete operation on the Konnect side impossible.
-	if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
-		return res, err
-	}
-
 	// NOTE: We requeue here to keep enforcing the state of the resource in Konnect.
 	// Konnect does not allow subscribing to changes so we need to keep pushing the
 	// desired state periodically.
 	return ctrl.Result{
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+// reconcilePendingKonnectID reconciles the cached view of the object with the
+// in-memory record of Konnect entities we have already created. Reads go through
+// a cache, so right after creating an entity and persisting its Konnect ID to the
+// status, a later reconcile may still observe a stale, ID-less status; creating
+// again on that basis would produce a duplicate Konnect entity. The in-memory
+// store records the Konnect ID as soon as the entity is created, so:
+//   - if the cached status lacks the ID but the store has it, restore and persist
+//     it. ApplyStatusPatchIfNotEmpty writes through to the API server and refreshes
+//     ent from the response, so the rest of the loop runs on a consistent object.
+//     Re-persisting is idempotent and also heals the case where the post-create
+//     status write failed.
+//   - once the status carries the ID, the bridge entry has served its purpose and
+//     is dropped.
+//
+// It returns stop=true when the caller should return the provided result/error (a
+// conflict requeue or a persist error); otherwise reconciliation continues with a
+// consistent ent.
+func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
+	ctx context.Context,
+	ent TEnt,
+) (ctrl.Result, bool, error) {
+	pendingKey := client.ObjectKeyFromObject(ent)
+	if ent.GetKonnectStatus().GetKonnectID() == "" {
+		if id, ok := r.pendingKonnectIDs.Get(pendingKey); ok {
+			old := ent.DeepCopyObject().(client.Object)
+			ent.SetKonnectID(id)
+			if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, ctrllog.FromContext(ctx), any(ent).(client.Object), old); err != nil {
+				if apierrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, true, nil
+				}
+				return ctrl.Result{}, true, fmt.Errorf("failed to persist recovered Konnect ID for %s: %w", pendingKey, err)
+			}
+		}
+	}
+	if ent.GetKonnectStatus().GetKonnectID() != "" {
+		r.pendingKonnectIDs.Delete(pendingKey)
+	}
+	return ctrl.Result{}, false, nil
+}
+
+// restorePendingKonnectIDForDeletion restores the Konnect ID from the in-memory
+// store onto the object when its status does not carry one, so the deletion logic
+// can clean up the corresponding Konnect entity. If the ID is not in memory either
+// (e.g. after an operator restart), ops.Delete falls back to probing Konnect by
+// Kubernetes UID. Parent references needed for deletion are already on the object,
+// persisted by their reference handlers in earlier reconcile passes.
+func (r *KonnectEntityReconciler[T, TEnt]) restorePendingKonnectIDForDeletion(ent TEnt) {
+	if ent.GetKonnectStatus().GetKonnectID() != "" {
+		return
+	}
+	if id, ok := r.pendingKonnectIDs.Get(client.ObjectKeyFromObject(ent)); ok {
+		ent.SetKonnectID(id)
+	}
 }
 
 func shouldCreateKonnectEntity[
@@ -798,17 +870,6 @@ func shouldCreateKonnectEntity[
 		return true
 	}
 	return !entityHasProgrammedStatusTrue(ent)
-}
-
-func shouldAttachKonnectFinalizerAfterCreate[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](ent TEnt) bool {
-	status := ent.GetKonnectStatus()
-	if status != nil && status.GetKonnectID() != "" {
-		return true
-	}
-	return !ops.EntityPersistsKonnectID(ent) && entityHasProgrammedStatusTrue(ent)
 }
 
 func entityHasProgrammedStatusTrue[

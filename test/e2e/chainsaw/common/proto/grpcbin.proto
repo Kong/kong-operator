@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package grpcbin;
+
+service GRPCBin {
+  rpc DummyUnary(DummyMessage) returns (DummyMessage) {}
+}
+
+message DummyMessage {
+  string f_string = 1;
+}
+
