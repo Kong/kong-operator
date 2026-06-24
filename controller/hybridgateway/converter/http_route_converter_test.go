@@ -329,6 +329,63 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 			wantStoreLen: 8,
 		},
 		{
+			// Regression test: a rule combining a URLRewrite and a RequestHeaderModifier filter
+			// must produce a single request-transformer KongPlugin (and a single binding per
+			// route) instead of two plugins of the same type bound to the same route, which Kong
+			// rejects with a unique-plugin-per-entity constraint error.
+			name: "merges filters mapping to the same plugin type into a single request-transformer",
+			setup: func() *httpRouteConverter {
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef(""),
+				}, []gwtypes.HTTPRouteFilter{
+					{
+						Type: gatewayv1.HTTPRouteFilterURLRewrite,
+						URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+							Path: &gatewayv1.HTTPPathModifier{
+								Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+								ReplacePrefixMatch: lo.ToPtr("/echo"),
+							},
+						},
+					},
+					newRequestHeaderFilter("x-test", "true"),
+				})
+				gateway := baseGateway()
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(baseObjects(gateway)...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			},
+			wantCount: 6,
+			wantOutputs: outputCount{
+				upstreams: 1,
+				services:  1,
+				routes:    1,
+				targets:   1,
+				bindings:  1,
+				plugins:   1,
+			},
+			wantStoreLen: 6,
+			assertFn: func(t *testing.T, store []client.Object) {
+				t.Helper()
+
+				var pluginObj *configurationv1.KongPlugin
+				for _, obj := range store {
+					if p, ok := obj.(*configurationv1.KongPlugin); ok {
+						pluginObj = p
+					}
+				}
+				require.NotNil(t, pluginObj)
+				assert.Equal(t, "request-transformer", pluginObj.PluginName)
+
+				// The merged config must carry both the URLRewrite (replace.uri) and the
+				// RequestHeaderModifier (the Set header lands in add+replace) contributions.
+				var config map[string]any
+				require.NoError(t, json.Unmarshal(pluginObj.Config.Raw, &config))
+				replace, ok := config["replace"].(map[string]any)
+				require.True(t, ok, "merged config must contain a replace block")
+				assert.NotEmpty(t, replace["uri"], "URLRewrite contribution (replace.uri) must be present")
+				assert.Contains(t, replace["headers"], "x-test:true", "RequestHeaderModifier contribution must be present")
+			},
+		},
+		{
 			name: "translates multi rule redirect only route end to end",
 			setup: func() *httpRouteConverter {
 				route := newHTTPRouteWithRules(
@@ -444,7 +501,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
 			wantErr:    true,
-			wantErrSub: "failed to translate KongPlugin for filter",
+			wantErrSub: "failed to translate KongPlugins for rule",
 			wantOutputs: outputCount{
 				upstreams: 1,
 				services:  1,

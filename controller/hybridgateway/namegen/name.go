@@ -140,6 +140,23 @@ func NewKongPluginName(filter gatewayv1.HTTPRouteFilter, namespace string, plugi
 	return newName(namespace, pluginName, utils.Hash32(filter))
 }
 
+// NewKongPluginNameForFilters generates a KongPlugin name for a plugin produced by one or more
+// HTTPRoute filters. When several filters map to the same Kong plugin type (e.g. URLRewrite and
+// RequestHeaderModifier both map to request-transformer) they are merged into a single KongPlugin,
+// so the name must be derived from the whole set of contributing filters. The single-filter case
+// is kept identical to NewKongPluginName to avoid renaming existing resources.
+func NewKongPluginNameForFilters(filters []gatewayv1.HTTPRouteFilter, namespace string, pluginName string) string {
+	if len(filters) == 1 {
+		return NewKongPluginName(filters[0], namespace, pluginName)
+	}
+	return newName(namespace, pluginName, utils.Hash32(filters))
+}
+
+// NewKongPluginNameForService generates a KongPlugin name tied to a KongService.
+func NewKongPluginNameForService(serviceName, pluginName string) string {
+	return newName(serviceName, pluginName)
+}
+
 // NewKongPluginBindingName generates a KongPlugin name based on the KongRoute and the KongPlugin names.
 func NewKongPluginBindingName(routeID, pluginId string) string {
 	return newName(routeID, pluginId)
