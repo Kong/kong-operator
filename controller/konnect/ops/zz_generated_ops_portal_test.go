@@ -38,6 +38,7 @@ func testGeneratedPortalForSDKOps() *konnectv1alpha1.Portal {
 				DisplayName: "test-value",
 				Labels: konnectv1alpha1.LabelsUpdate{"test-key": "test-value"},
 				Name: "test-value",
+				NotificationsDeveloperPiiVisibilityEnabled: "Enabled",
 				RBACEnabled: "Enabled",
 				SiprEnabled: "Enabled",
 			},

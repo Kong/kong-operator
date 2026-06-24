@@ -1423,6 +1423,7 @@ PortalAPISpec defines the API spec fields for Portal.
 | `displayName` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
 | `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
+| `notificationsDeveloperPiiVisibilityEnabled` _string_ | When enabled, portal registration notifications include the registering developer's identifying information (such as name and email). |
 | `rbacEnabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
 | `siprEnabled` _string_ | Whether ip allow list is enabled for the portal. |
 

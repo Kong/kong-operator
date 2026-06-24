@@ -728,10 +728,10 @@ type EventGatewayConsumeSchemaValidationPolicy struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=1000
 	Condition string `json:"condition,omitzero"`
-	// The configuration of the schema validation policy.
+	// The configuration of the policy.
 	//
 	// +required
-	Config EventGatewayConsumeSchemaValidationPolicyConfig `json:"config,omitzero"`
+	Config *EventGatewayConsumeSchemaValidationPolicyConfig `json:"config,omitempty"`
 	// A human-readable description of the policy.
 	//
 	// +optional
@@ -759,9 +759,126 @@ type EventGatewayConsumeSchemaValidationPolicy struct {
 	Name string `json:"name,omitzero"`
 }
 
-// EventGatewayConsumeSchemaValidationPolicyConfig The configuration of the
-// schema validation policy.
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayConsumeSchemaValidationPolicy) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicy: nil receiver")
+	}
+	type alias EventGatewayConsumeSchemaValidationPolicy
+	aux := alias{}
+	aux.Config = &EventGatewayConsumeSchemaValidationPolicyConfig{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicy: %w", err)
+	}
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.SchemaRegistry == nil && aux.Config.JSON == nil {
+		aux.Config = nil
+	}
+	*s = EventGatewayConsumeSchemaValidationPolicy(aux)
+	return nil
+}
+
+// EventGatewayConsumeSchemaValidationPolicyConfig represents a union type for EventGatewayConsumeSchemaValidationPolicyConfig.
+// Only one of the fields should be set based on the Type.
+//
 type EventGatewayConsumeSchemaValidationPolicyConfig struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=confluentSchemaRegistry;json
+	Type EventGatewayConsumeSchemaValidationPolicyConfigType `json:"type,omitempty"`
+
+	// SchemaRegistry configuration.
+	//
+	// +optional
+	SchemaRegistry *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig `json:"confluentSchemaRegistry,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *EventGatewayConsumeSchemaValidationPolicyJSONConfig `json:"json,omitempty"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicyConfigType represents the type of EventGatewayConsumeSchemaValidationPolicyConfig.
+type EventGatewayConsumeSchemaValidationPolicyConfigType string
+
+// EventGatewayConsumeSchemaValidationPolicyConfigType values.
+const (
+	EventGatewayConsumeSchemaValidationPolicyConfigTypeSchemaRegistry EventGatewayConsumeSchemaValidationPolicyConfigType = "confluentSchemaRegistry"
+	EventGatewayConsumeSchemaValidationPolicyConfigTypeJSON EventGatewayConsumeSchemaValidationPolicyConfigType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayConsumeSchemaValidationPolicyConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfig type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayConsumeSchemaValidationPolicyConfigTypeSchemaRegistry:
+		if u.SchemaRegistry != nil {
+			raw, err := json.Marshal(u.SchemaRegistry)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfig confluent_schema_registry: %w", err)
+			}
+			m["confluentSchemaRegistry"] = raw
+		}
+	case EventGatewayConsumeSchemaValidationPolicyConfigTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfig json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayConsumeSchemaValidationPolicyConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayConsumeSchemaValidationPolicyConfigType(probe.Type)
+	switch probe.Type {
+	case "confluentSchemaRegistry":
+		payload, ok := raw["confluentSchemaRegistry"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig confluent_schema_registry: %w", err)
+		}
+		u.SchemaRegistry = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayConsumeSchemaValidationPolicyJSONConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
+}
+// EventGatewayConsumeSchemaValidationPolicyJSONConfig The configuration of the
+// consume schema validation policy when using JSON parsing without schema.
+type EventGatewayConsumeSchemaValidationPolicyJSONConfig struct {
 	// Describes how to handle a failure in a policy applied to consumed records.
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
@@ -794,17 +911,7 @@ type EventGatewayConsumeSchemaValidationPolicyConfig struct {
 	// A reference to a schema Registry.
 	//
 	// +optional
-	SchemaRegistry *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
-	// How to validate the schema and parse the record.
-	// * confluent_schema_registry - validates against confluent schema registry.
-	// * json - simple JSON parsing without the schema.
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=confluent_schema_registry;json
-	Type SchemaValidationType `json:"type,omitzero"`
+	SchemaRegistry *EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -833,16 +940,16 @@ type EventGatewayConsumeSchemaValidationPolicyConfig struct {
 	ValueValidationAction ConsumeValueValidationAction `json:"valueValidationAction,omitzero"`
 }
 
-// EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry represents a union type for schema_registry.
+// EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
 // Only one of the fields should be set based on the Type.
 //
-type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry struct {
+type EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry struct {
 	// Type designates the type of configuration.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Enum=id;name
-	Type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType `json:"type,omitempty"`
+	Type EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType `json:"type,omitempty"`
 
 	// ID configuration.
 	//
@@ -854,37 +961,37 @@ type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry struct {
 	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
 }
 
-// EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType represents the type of schema_registry.
-type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType string
+// EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType represents the type of schema_registry.
+type EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType string
 
-// EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType values.
+// EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType values.
 const (
-	EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryTypeID EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType = "id"
-	EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryTypeName EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType = "name"
+	EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeID EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType = "id"
+	EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeName EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType = "name"
 )
 
 // MarshalJSON implements json.Marshaler.
-func (u EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
+func (u EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
 	typeBytes, err := json.Marshal(string(u.Type))
 	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry type: %w", err)
+		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry type: %w", err)
 	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryTypeID:
+	case EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeID:
 		if u.ID != nil {
 			raw, err := json.Marshal(u.ID)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry Id: %w", err)
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry Id: %w", err)
 			}
 			m["id"] = raw
 		}
-	case EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryTypeName:
+	case EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeName:
 		if u.Name != nil {
 			raw, err := json.Marshal(u.Name)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry Name: %w", err)
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry Name: %w", err)
 			}
 			m["name"] = raw
 		}
@@ -893,9 +1000,9 @@ func (u EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) MarshalJS
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (u *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
+func (u *EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
 	if u == nil {
-		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry: nil receiver")
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry: nil receiver")
 	}
 	var probe struct {
 		Type string `json:"type"`
@@ -907,7 +1014,7 @@ func (u *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) Unmarsha
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
-	u.Type = EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType(probe.Type)
+	u.Type = EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType(probe.Type)
 	switch probe.Type {
 	case "id":
 		payload, ok := raw["id"]
@@ -916,7 +1023,7 @@ func (u *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) Unmarsha
 		}
 		var val SchemaRegistryReferenceByID
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry Id: %w", err)
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry Id: %w", err)
 		}
 		u.ID = &val
 	case "name":
@@ -926,27 +1033,209 @@ func (u *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry) Unmarsha
 		}
 		var val SchemaRegistryReferenceByName
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry Name: %w", err)
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry Name: %w", err)
 		}
 		u.Name = &val
 	}
 	return nil
 }
 // UnmarshalJSON implements json.Unmarshaler.
-func (s *EventGatewayConsumeSchemaValidationPolicyConfig) UnmarshalJSON(data []byte) error {
+func (s *EventGatewayConsumeSchemaValidationPolicyJSONConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
-		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig: nil receiver")
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfig: nil receiver")
 	}
-	type alias EventGatewayConsumeSchemaValidationPolicyConfig
+	type alias EventGatewayConsumeSchemaValidationPolicyJSONConfig
 	aux := alias{}
-	aux.SchemaRegistry = &EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry{}
+	aux.SchemaRegistry = &EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry{}
 	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig: %w", err)
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfig: %w", err)
 	}
 	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
 		aux.SchemaRegistry = nil
 	}
-	*s = EventGatewayConsumeSchemaValidationPolicyConfig(aux)
+	*s = EventGatewayConsumeSchemaValidationPolicyJSONConfig(aux)
+	return nil
+}
+
+// EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig The
+// configuration of the consume schema validation policy when using a schema
+// registry.
+type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig struct {
+	// Describes how to handle a failure in a policy applied to consumed records.
+	// * `error` - the batch is not delivered to the client.
+	// Use sparingly: erroring on a batch causes clients to get stuck on the
+	// problematic offset and requires manual intervention to skip it.
+	// * `skip` - the record is not delivered to the client.
+	// * `passthrough` - passes the record to the client even though policy
+	// execution failed.
+	// * `mark` - passes the record to the client but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;skip;passthrough;mark
+	FailureMode ConsumeFailureMode `json:"failureMode,omitzero"`
+	// Deprecated. Use `failure_mode`.
+	//
+	// Defines a behavior when record key is not valid.
+	// * mark - marks a record with kong/server header and client ID value
+	// to help to identify the clients violating schema.
+	// * skip - skips delivering a record.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=mark;skip
+	KeyValidationAction ConsumeKeyValidationAction `json:"keyValidationAction,omitzero"`
+	// A reference to a schema Registry.
+	//
+	// +optional
+	SchemaRegistry *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	// If true, validate the record key.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateKey string `json:"validateKey,omitzero"`
+	// If true, validate the record value.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateValue string `json:"validateValue,omitzero"`
+	// Deprecated. Use `failure_mode`.
+	//
+	// Defines a behavior when record value is not valid.
+	// * mark - marks a record with kong/server header and client ID value
+	// to help to identify the clients violating schema.
+	// * skip - skips delivering a record.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=mark;skip
+	ValueValidationAction ConsumeValueValidationAction `json:"valueValidationAction,omitzero"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
+// Only one of the fields should be set based on the Type.
+//
+type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=id;name
+	Type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType `json:"type,omitempty"`
+
+	// ID configuration.
+	//
+	// +optional
+	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
+	// Name configuration.
+	//
+	// +optional
+	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType represents the type of schema_registry.
+type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType string
+
+// EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType values.
+const (
+	EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "id"
+	EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "name"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID:
+		if u.ID != nil {
+			raw, err := json.Marshal(u.ID)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Id: %w", err)
+			}
+			m["id"] = raw
+		}
+	case EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName:
+		if u.Name != nil {
+			raw, err := json.Marshal(u.Name)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Name: %w", err)
+			}
+			m["name"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType(probe.Type)
+	switch probe.Type {
+	case "id":
+		payload, ok := raw["id"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByID
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Id: %w", err)
+		}
+		u.ID = &val
+	case "name":
+		payload, ok := raw["name"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByName
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Name: %w", err)
+		}
+		u.Name = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig: nil receiver")
+	}
+	type alias EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig
+	aux := alias{}
+	aux.SchemaRegistry = &EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig: %w", err)
+	}
+	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
+		aux.SchemaRegistry = nil
+	}
+	*s = EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig(aux)
 	return nil
 }
 
@@ -3079,11 +3368,6 @@ type SchemaRegistryReferenceByName struct {
 	Name string `json:"name,omitzero"`
 }
 
-// SchemaValidationType How to validate the schema and parse the record.
-// * confluent_schema_registry - validates against confluent schema registry.
-// * json - simple JSON parsing without the schema.
-type SchemaValidationType string
-
 // TLSCertificate A TLS certificate and its associated private key.
 type TLSCertificate struct {
 	// A literal value or a reference to an existing secret as a template string
@@ -3881,6 +4165,13 @@ type VirtualClusterTopicAlias struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Alias string `json:"alias,omitzero"`
+	// CEL expression evaluated against the connection's auth context.
+	// If omitted or empty, the alias is active for all connections.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Condition string `json:"condition,omitzero"`
 	// How to handle conflicts where an alias shadows a physical topic.
 	// * warn - activate the alias but log a warning and set the conflict metric to
 	// 1.
@@ -3891,13 +4182,6 @@ type VirtualClusterTopicAlias struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=warn;ignore
 	Conflict VirtualClusterTopicAliasConflict `json:"conflict,omitzero"`
-	// CEL expression evaluated against the connection's auth context.
-	// If omitted or empty, the alias is active for all connections.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Match string `json:"match,omitzero"`
 	// The namespace-visible topic name this alias resolves to.
 	//
 	// +required

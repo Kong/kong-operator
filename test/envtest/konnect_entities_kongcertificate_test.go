@@ -64,10 +64,10 @@ func TestKongCertificate(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongCertificate creation")
 		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(mock.Anything, cpID,
-				mock.MatchedBy(func(input sdkkonnectcomp.Certificate) bool {
-					return input.Cert == deploy.TestValidCertPEM &&
-						input.Key == deploy.TestValidCertKeyPEM &&
-						slices.Contains(input.Tags, "tag1")
+				mock.MatchedBy(func(input sdkkonnectcomp.CertificateRequest) bool {
+					return input.CertificateRequest2.Cert == deploy.TestValidCertPEM &&
+						input.CertificateRequest2.Key == deploy.TestValidCertKeyPEM &&
+						slices.Contains(input.CertificateRequest2.Tags, "tag1")
 				}),
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
@@ -212,8 +212,8 @@ func TestKongCertificate(t *testing.T) {
 			CreateCertificate(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Certificate) bool {
-					return slices.Contains(req.Tags, "tag3")
+				mock.MatchedBy(func(req sdkkonnectcomp.CertificateRequest) bool {
+					return slices.Contains(req.CertificateRequest2.Tags, "tag3")
 				}),
 			).
 			Return(
@@ -383,9 +383,9 @@ func TestKongCertificate(t *testing.T) {
 
 		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(mock.Anything, cpID,
-				mock.MatchedBy(func(input sdkkonnectcomp.Certificate) bool {
-					return input.Cert == deploy.TestValidCertPEM &&
-						input.Key == deploy.TestValidCertKeyPEM
+				mock.MatchedBy(func(input sdkkonnectcomp.CertificateRequest) bool {
+					return input.CertificateRequest2.Cert == deploy.TestValidCertPEM &&
+						input.CertificateRequest2.Key == deploy.TestValidCertKeyPEM
 				}),
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
@@ -480,9 +480,9 @@ func TestKongCertificate(t *testing.T) {
 
 		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(mock.Anything, cpID,
-				mock.MatchedBy(func(input sdkkonnectcomp.Certificate) bool {
-					return input.Cert == deploy.TestValidCertPEM &&
-						input.Key == deploy.TestValidCertKeyPEM
+				mock.MatchedBy(func(input sdkkonnectcomp.CertificateRequest) bool {
+					return input.CertificateRequest2.Cert == deploy.TestValidCertPEM &&
+						input.CertificateRequest2.Key == deploy.TestValidCertKeyPEM
 				}),
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
