@@ -106,9 +106,14 @@ jobs:
         set -euo pipefail
 
         ack="false"
+        # pull_request has one PR number. merge_group can represent one or more queued PRs,
+        # so keep this as a whitespace-separated list and acknowledge if any PR has the label.
         pr_numbers="${PULL_REQUEST_NUMBER}"
 
         if [[ "${GITHUB_EVENT_NAME}" == "merge_group" ]]; then
+          # The merge-group SHA is synthetic, so resolve the queued PRs from that commit.
+          # Fall back to the generated head_ref format because the commit-to-PR API can
+          # return nothing for merge queue commits.
           pr_numbers="$(gh api \
             -H "Accept: application/vnd.github+json" \
             "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
@@ -124,10 +129,12 @@ jobs:
         fi
 
         for pr_number in ${pr_numbers}; do
-          if gh api \
+          has_ack_label="$(gh api \
             -H "Accept: application/vnd.github+json" \
             "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/labels" \
-            --jq '.[].name' | grep -Fxq "${ACK_CRD_BREAKING_CHANGE_LABEL}"; then
+            --jq 'any(.[].name; . == env.ACK_CRD_BREAKING_CHANGE_LABEL)')"
+
+          if [[ "${has_ack_label}" == "true" ]]; then
             ack="true"
             break
           fi

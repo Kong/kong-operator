@@ -46,6 +46,13 @@ if [[ -z "${CRDIFY_BIN}" ]]; then
 	exit 1
 fi
 
+YQ_BIN="${YQ_BIN:-yq}"
+readonly YQ_BIN
+if ! command -v "${YQ_BIN}" >/dev/null 2>&1; then
+	echo "YQ_BIN must point to an executable yq binary"
+	exit 1
+fi
+
 CRDIFY_CONFIG="${CRDIFY_CONFIG:-${SCRIPT_ROOT}/scripts/crdify-config.yaml}"
 readonly CRDIFY_CONFIG
 if [[ ! -f "${CRDIFY_CONFIG}" ]]; then
@@ -67,6 +74,41 @@ case "${ACK_CRD_BREAKING_CHANGE}" in
 		exit 1
 		;;
 esac
+
+collect_description_paths() {
+	local crd_file="${1}"
+
+	"${YQ_BIN}" -r '
+		.spec.versions[].schema.openAPIV3Schema |
+			.. |
+			select(tag == "!!map" and has("description") and .description != null and .description != "") |
+			path | join(".")
+	' "${crd_file}" | LC_ALL=C sort -u
+}
+
+check_description_removals() {
+	local old_crd_file="${1}"
+	local new_crd_file="${2}"
+	local old_description_paths="${3}"
+	local new_description_paths="${4}"
+	local removed_description_paths="${5}"
+
+	collect_description_paths "${old_crd_file}" > "${old_description_paths}"
+	collect_description_paths "${new_crd_file}" > "${new_description_paths}"
+
+	comm -23 "${old_description_paths}" "${new_description_paths}" > "${removed_description_paths}"
+	if [[ ! -s "${removed_description_paths}" ]]; then
+		return 0
+	fi
+
+	echo "Description removals detected:"
+	while IFS= read -r path; do
+		[[ -n "${path}" ]] || continue
+		echo "- descriptionRemoval - ERROR - removed description : ${path}"
+	done < "${removed_description_paths}"
+
+	return 1
+}
 
 resolve_base_revision() {
 	local candidate
@@ -151,6 +193,15 @@ while IFS= read -r basename; do
 	git show "${base_revision}:${base_file}" > "${old_file}"
 
 	echo "Checking ${basename}"
+	if ! check_description_removals \
+		"${old_file}" \
+		"${current_file}" \
+		"${tmpdir}/${basename}.old-descriptions.txt" \
+		"${tmpdir}/${basename}.new-descriptions.txt" \
+		"${tmpdir}/${basename}.removed-descriptions.txt"; then
+		status=1
+	fi
+
 	if ! "${CRDIFY_BIN}" --config "${CRDIFY_CONFIG}" "file://${old_file}" "file://${current_file}"; then
 		status=1
 	fi

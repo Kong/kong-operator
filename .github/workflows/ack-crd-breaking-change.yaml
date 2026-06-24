@@ -1,7 +1,7 @@
 name: ack CRD breaking change
 
 on:
-  pull_request_target:
+  pull_request:
     types:
       - labeled
 
@@ -14,25 +14,40 @@ jobs:
     if: ${{ github.event.label.name == 'ack_crd_breaking_change' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Rerun failed tests workflow
+      - name: Rerun failed CRD breaking-change check
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
 
-          run_id="$(gh run list \
+          run_ids="$(gh run list \
             --repo "${GITHUB_REPOSITORY}" \
             --workflow tests.yaml \
             --limit 50 \
             --json conclusion,createdAt,databaseId,event,headSha,status \
-            --jq '[.[] | select(.headSha == env.HEAD_SHA and .event == "pull_request" and .status == "completed" and .conclusion == "failure")] | sort_by(.createdAt) | reverse | .[0].databaseId // ""')"
+            --jq '[.[] | select(.headSha == env.HEAD_SHA and .event == "pull_request" and .status == "completed" and .conclusion == "failure")] | sort_by(.createdAt) | reverse | .[].databaseId')"
+
+          run_id=""
+          for candidate_run_id in ${run_ids}; do
+            crd_job_id="$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${candidate_run_id}/jobs?filter=latest" \
+              --jq '.jobs[] | select(.name == "verify / crd-breaking-changes" and .conclusion == "failure") | .id' | head -n 1)"
+
+            if [[ -n "${crd_job_id}" ]]; then
+              run_id="${candidate_run_id}"
+              break
+            fi
+          done
 
           if [[ -z "${run_id}" ]]; then
-            echo "No failed tests workflow run found for ${HEAD_SHA}."
+            echo "No failed CRD breaking-change check found for ${HEAD_SHA}."
             exit 0
           fi
 
+          # Rerun failed jobs for this run, not just the matrix job, so the aggregate
+          # required `passed` job is recalculated after crd-breaking-changes succeeds.
           echo "Rerunning failed jobs in tests workflow run ${run_id}."
           gh api \
             --method POST \
