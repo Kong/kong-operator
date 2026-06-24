@@ -92,6 +92,14 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	require.NoError(t, clientNamespaced.Create(ctx, rateLimitingkongPlugin))
 	t.Logf("deployed %s KongPlugin (%s) resource", client.ObjectKeyFromObject(rateLimitingkongPlugin), rateLimitingkongPlugin.PluginName)
 
+	// The stale-cache reconcile (driven by pendingKonnectIDs after any CreatePlugin call) reaches
+	// ops.Update which calls UpsertPlugin. Register a single optional expectation here to absorb
+	// those calls across all subtests. No subtest has a strict UpsertPlugin expectation, so there
+	// is no FIFO ordering conflict.
+	sdk.PluginSDK.EXPECT().UpsertPlugin(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpsertPluginResponse{}, nil).
+		Maybe()
+
 	t.Run("binding to KongService", func(t *testing.T) {
 		serviceID := uuid.NewString()
 
