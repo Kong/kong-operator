@@ -63,7 +63,7 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&gatewayapi.GatewayClass{}).
 		// set the event filters
 		WithEventFilter(predicate.NewPredicateFuncs(r.GatewayClassIsUnmanaged)).
-		Complete(reconcile.AsReconciler[*gatewayapi.GatewayClass](mgr.GetClient(), r))
+		Complete(reconcile.AsReconciler(mgr.GetClient(), r))
 }
 
 // -----------------------------------------------------------------------------

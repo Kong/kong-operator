@@ -197,8 +197,8 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	}
 
 	tcpRouteGVR := schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.GroupName,
-		Version:  gatewayv1alpha2.GroupVersion.Version,
+		Group:    gatewayv1.GroupName,
+		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "tcproutes",
 	}
 	tcpRouteExist, err := crdChecker.CRDExists(tcpRouteGVR)

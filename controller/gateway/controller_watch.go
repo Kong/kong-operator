@@ -15,7 +15,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -478,7 +477,7 @@ func (r *Reconciler) listGatewaysAttachedByGRPCRoute(ctx context.Context, obj cl
 func (r *Reconciler) listGatewaysAttachedByTCPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
-	tcpRoute, ok := obj.(*gatewayv1alpha2.TCPRoute)
+	tcpRoute, ok := obj.(*gatewayv1.TCPRoute)
 	if !ok {
 		logger.Error(
 			fmt.Errorf("unexpected object type"),
