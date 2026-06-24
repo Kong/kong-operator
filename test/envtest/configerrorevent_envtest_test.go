@@ -120,9 +120,8 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 
 	predicatesToCheck := []func(e corev1.Event) bool{
 		// `ingress-controller/internal/dataplane/kong_client_test.go` covers every individual
-		// recorder emission. Here we only assert the subset of Events that is stably
-		// observable through the API server in envtest, as the Kubernetes event broadcaster
-		// may coalesce or drop bursts for the same source/object.
+		// recorder emission. Here we only assert the subset of Events that has been stable
+		// through the API-server-backed envtest Event stream.
 		warningPredicate(dataplane.KongConfigurationApplyFailedEventReason, "Ingress", ingress.Name, `^invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'$`),
 		warningPredicate(dataplane.KongConfigurationApplyFailedEventReason, "Service", service.Name, `^invalid path: value must be null$`),
 		warningPredicate(dataplane.FallbackKongConfigurationApplyFailedEventReason, "Ingress", ingress.Name, `^invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'$`),
@@ -134,9 +133,9 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		warningPredicate(dataplane.FallbackKongConfigurationApplyFailedEventReason, "Pod", podName, `failed to apply fallback Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: HTTP status 400 \(message: "failed posting new config to /config"\)`),
 	}
 	optionalPredicates := []func(e corev1.Event) bool{
-		// These Service translation failures can be coalesced or dropped from the
-		// API server-backed Event stream during the startup burst. They are covered
-		// per-recorder in unit tests, but if they are observed here they must still
+		// These Service translation failures are not special at the recorder level;
+		// they were observed to be unstable in the API-server-backed envtest Event
+		// stream during the startup burst. If they are observed here they must still
 		// have the expected shape.
 		warningPredicate(dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^referenced KongPlugin or KongClusterPlugin "foo" does not exist$`),
 		warningPredicate(dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^referenced KongPlugin or KongClusterPlugin "bar" does not exist$`),

@@ -71,7 +71,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
-	expectPluginDelete := func() {
+	addPluginDeleteExpectation := func() {
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
 			Return(
@@ -112,7 +112,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		}
 
 		t.Logf("delete managed kongPluginBinding %s (bound to %s), then check it gets recreated", client.ObjectKeyFromObject(kpb), client.ObjectKeyFromObject(obj))
-		expectPluginDelete()
+		addPluginDeleteExpectation()
 		require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, kpb)))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, kpb, waitTime, tickTime)
 	}
@@ -251,7 +251,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
 
-		expectPluginDelete()
+		addPluginDeleteExpectation()
 
 		t.Logf(
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer removed",
@@ -334,7 +334,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
 
-		expectPluginDelete()
+		addPluginDeleteExpectation()
 
 		t.Logf(
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer removed",
@@ -439,7 +439,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				"a managed KongPluginBinding with only KongService in its targets",
 			client.ObjectKeyFromObject(kongRoute),
 		)
-		expectPluginDelete()
+		addPluginDeleteExpectation()
 
 		delete(kongRoute.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
@@ -583,7 +583,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				"a managed KongPluginBinding with KongService and KongConsumer in its targets",
 			client.ObjectKeyFromObject(kongRoute),
 		)
-		expectPluginDelete()
+		addPluginDeleteExpectation()
 
 		delete(kongRoute.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
@@ -652,7 +652,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			client.ObjectKeyFromObject(kongConsumer),
 		)
 
-		expectPluginDelete()
+		addPluginDeleteExpectation()
 
 		delete(kongConsumer.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongConsumer))
@@ -786,7 +786,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				"a managed KongPluginBinding with KongService and KongConsumerGroup in its targets",
 			client.ObjectKeyFromObject(kongRoute),
 		)
-		expectPluginDelete()
+		addPluginDeleteExpectation()
 
 		delete(kongRoute.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
@@ -855,7 +855,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			client.ObjectKeyFromObject(kongConsumerGroup),
 		)
 
-		expectPluginDelete()
+		addPluginDeleteExpectation()
 
 		delete(kongConsumerGroup.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongConsumerGroup))
