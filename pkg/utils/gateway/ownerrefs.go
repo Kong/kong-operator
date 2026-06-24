@@ -7,7 +7,6 @@ import (
 	"github.com/samber/lo"
 	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -287,17 +286,17 @@ func ListTCPRoutesForGateway(
 	c client.Client,
 	gateway *gwtypes.Gateway,
 	opts ...client.ListOption,
-) ([]gatewayv1alpha2.TCPRoute, error) {
+) ([]gwtypes.TCPRoute, error) {
 	if gateway.Namespace == "" {
 		return nil, fmt.Errorf("can't list TCPRoutes for gateway: Gateway %s was missing namespace", gateway.Name)
 	}
 
-	var tcpRoutesList gatewayv1alpha2.TCPRouteList
+	var tcpRoutesList gwtypes.TCPRouteList
 	if err := c.List(ctx, &tcpRoutesList, opts...); err != nil {
 		return nil, fmt.Errorf("can't list TCPRoutes for gateway: %w", err)
 	}
 
-	var tcpRoutes []gatewayv1alpha2.TCPRoute
+	var tcpRoutes []gwtypes.TCPRoute
 	for _, tcpRoute := range tcpRoutesList.Items {
 		if !lo.ContainsBy(tcpRoute.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
 			gwGVK := gateway.GroupVersionKind()

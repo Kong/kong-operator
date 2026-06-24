@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
@@ -20,7 +19,7 @@ func TestMapHTTPRouteForClientCertSecret(t *testing.T) {
 	ctx := context.Background()
 
 	scheme := schemeWithAll()
-	require.NoError(t, gatewayv1alpha2.Install(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "my-cert", Namespace: "ns1"},
@@ -153,7 +152,7 @@ func TestMapTLSRouteForClientCertSecret(t *testing.T) {
 	ctx := context.Background()
 
 	scheme := schemeWithAll()
-	require.NoError(t, gatewayv1alpha2.Install(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "my-cert", Namespace: "ns1"},

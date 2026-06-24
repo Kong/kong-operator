@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
@@ -112,8 +112,8 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   gatewayv1alpha2.GroupVersion.Group,
-					Version: gatewayv1alpha2.GroupVersion.Version,
+					Group:   gatewayv1.GroupVersion.Group,
+					Version: gatewayv1.GroupVersion.Version,
 					Kind:    "TCPRoute",
 				}),
 				&handler.EnqueueRequestForObject{},
