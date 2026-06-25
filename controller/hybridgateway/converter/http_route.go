@@ -141,6 +141,7 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 
 	var conversionErrors []error
 
+	// c.outputStore is already deduplicated in translate(); no need to deduplicate again here.
 	objects := make([]unstructured.Unstructured, 0, len(c.outputStore))
 	for _, obj := range c.outputStore {
 		unstr, err := utils.ToUnstructured(obj, c.Scheme())
@@ -174,6 +175,7 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 
 // GetOutputStoreLen returns the number of objects in the output store.
 func (c *httpRouteConverter) GetOutputStoreLen(ctx context.Context, logger logr.Logger) int {
+	// c.outputStore is already deduplicated in translate().
 	return len(c.outputStore)
 }
 
@@ -307,26 +309,53 @@ func (c *httpRouteConverter) DesiredResourcesReady(ctx context.Context, logger l
 //   - err: any error that occurred during processing
 func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
 	am := metadata.NewAnnotationManager(logger)
+	key := client.ObjectKeyFromObject(resource)
+	gvk := resource.GroupVersionKind()
+
+	// Remove this Route from the shared hybrid-routes annotation atomically. Multiple Routes (or
+	// rules) can share the same Kong resource, so a concurrent Route adding itself must not be lost
+	// and the resource must not be deleted while still referenced. We re-read the live object, drop
+	// our entry, and either patch with an optimistic lock (when other Routes remain) or surface the
+	// validated resourceVersion so the caller can delete with an optimistic-lock precondition.
+	fresh := &unstructured.Unstructured{}
+	fresh.SetGroupVersionKind(gvk)
+	if err := c.Get(ctx, key, fresh); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Already gone; nothing to delete.
+			return true, nil
+		}
+		return true, fmt.Errorf("failed to get resource: %w", err)
+	}
 
 	// If the route is not present in the hybrid-routes annotation of the Kong resource, don't touch it.
-	if !am.ContainsRoute(resource, c.route) {
-		log.Trace(logger, "Route annotation not found, skipping resource", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
+	if !am.ContainsRoute(fresh, c.route) {
+		log.Trace(logger, "Route annotation not found, skipping resource", "kind", fresh.GetKind(), "obj", key)
 		return true, nil
 	}
 
-	oldResource := resource.DeepCopy()
-	am.RemoveRouteFromAnnotation(resource, c.route)
+	base := fresh.DeepCopy()
+	am.RemoveRouteFromAnnotation(fresh, c.route)
 
 	// If other Routes are still present in the annotation, we just need to update the resource.
-	if len(am.GetRoutesWithKind(resource, "HTTPRoute")) > 0 {
-		log.Debug(logger, "Updating hybrid-routes annotation", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
-		if err := c.Patch(ctx, resource, client.MergeFrom(oldResource)); err != nil && !apierrors.IsNotFound(err) {
+	if len(am.GetRoutesWithKind(fresh, "HTTPRoute")) > 0 {
+		log.Debug(logger, "Updating hybrid-routes annotation", "kind", fresh.GetKind(), "obj", key)
+		if err := c.Patch(ctx, fresh, client.MergeFromWithOptions(base, client.MergeFromWithOptimisticLock{})); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
 			return true, fmt.Errorf("failed to update resource: %w", err)
 		}
+		// Reflect the persisted state back onto the caller's resource.
+		resource.SetAnnotations(fresh.GetAnnotations())
+		resource.SetResourceVersion(fresh.GetResourceVersion())
 		return true, nil
 	}
 
-	// No other routes in the annotation, don't skip deletion.
+	// No other routes remain. Surface the validated resourceVersion (and the annotation
+	// removal) on the caller's resource so the orphan deletion uses it as an optimistic-lock
+	// precondition, and don't skip deletion.
+	resource.SetAnnotations(fresh.GetAnnotations())
+	resource.SetResourceVersion(fresh.GetResourceVersion())
 	return false, nil
 }
 
@@ -504,22 +533,16 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				}
 			}
 
-			var ruleOutputs []client.Object
-			if len(rule.BackendRefs) == 0 || len(targets) > 0 {
-				upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
-				if err != nil {
-					log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
-						"controlPlane", cp.KonnectNamespacedRef)
-					translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongUpstream resource: %w", err))
-					continue
-				}
-				ruleOutputs = append(ruleOutputs, upstreamPtr)
-				log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
-			} else {
-				log.Debug(logger, "Skipping KongUpstream translation because no valid backend targets were produced",
-					"upstream", upstreamName,
-					"backendRefCount", len(rule.BackendRefs))
+			upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
+			if err != nil {
+				log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
+					"controlPlane", cp.KonnectNamespacedRef)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongUpstream resource: %w", err))
+				continue
 			}
+
+			ruleOutputs := []client.Object{upstreamPtr}
+			log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
 
 			// Append KongReferenceGrant before KongCertificate so the grant exists when the cert is applied.
 			if grantPtr != nil {
@@ -583,6 +606,8 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			c.outputStore = append(c.outputStore, ruleOutputs...)
 		}
 	}
+
+	c.outputStore = deduplicateOutputStore(c.outputStore)
 
 	// Check if any translation errors occurred
 	if len(translationErrors) > 0 {

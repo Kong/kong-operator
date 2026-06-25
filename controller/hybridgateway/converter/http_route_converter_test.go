@@ -95,6 +95,58 @@ func TestHTTPRouteConverter_GetOutputStore(t *testing.T) {
 	}
 }
 
+func TestHTTPRouteConverter_TranslateDeduplicatesSharedBackendResources(t *testing.T) {
+	backendRef := newBackendRef("")
+	route := newHTTPRouteWithRules(nil, []gwtypes.HTTPRouteRule{
+		{
+			Matches: []gwtypes.HTTPRouteMatch{{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  new(gatewayv1.PathMatchExact),
+					Value: new("/one"),
+				},
+			}},
+			BackendRefs: []gwtypes.HTTPBackendRef{backendRef},
+		},
+		{
+			Matches: []gwtypes.HTTPRouteMatch{{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  new(gatewayv1.PathMatchPathPrefix),
+					Value: new("/two"),
+				},
+			}},
+			BackendRefs: []gwtypes.HTTPBackendRef{backendRef},
+		},
+	})
+
+	gateway := newGatewayWithListenerHostnames()
+	gateway.UID = types.UID("gateway-uid")
+	objects := append(
+		newKonnectGatewayStandardObjects(gateway),
+		newService("default"),
+		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+
+	converter := newHTTPRouteConverter(route, fakeClient, false, "")
+	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
+	require.NoError(t, err)
+	require.Equal(t, 6, resourceCount)
+
+	output, err := converter.GetOutputStore(t.Context(), logr.Discard())
+	require.NoError(t, err)
+	require.Len(t, output, 6)
+
+	kindCounts := map[string]int{}
+	for _, obj := range output {
+		kindCounts[obj.GetKind()]++
+	}
+
+	assert.Equal(t, 1, kindCounts["KongUpstream"])
+	assert.Equal(t, 1, kindCounts["KongService"])
+	assert.Equal(t, 2, kindCounts["KongRoute"])
+	assert.Equal(t, 2, kindCounts["KongTarget"])
+}
+
 func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 	ctx := t.Context()
 
@@ -415,16 +467,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 4,
+			wantCount: 5,
 			wantOutputs: outputCount{
-				upstreams: 0,
+				upstreams: 1,
 				services:  1,
 				routes:    1,
 				targets:   0,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 4,
+			wantStoreLen: 5,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -481,16 +533,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 4,
+			wantCount: 5,
 			wantOutputs: outputCount{
-				upstreams: 0,
+				upstreams: 1,
 				services:  1,
 				routes:    1,
 				targets:   0,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 4,
+			wantStoreLen: 5,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -629,16 +681,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 8,
+			wantCount: 9,
 			wantOutputs: outputCount{
-				upstreams: 1,
+				upstreams: 2,
 				services:  2,
 				routes:    2,
 				targets:   1,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 8,
+			wantStoreLen: 9,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -687,16 +739,16 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 4,
+			wantCount: 5,
 			wantOutputs: outputCount{
-				upstreams: 0,
+				upstreams: 1,
 				services:  1,
 				routes:    1,
 				targets:   0,
 				bindings:  1,
 				plugins:   1,
 			},
-			wantStoreLen: 4,
+			wantStoreLen: 5,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 
@@ -917,14 +969,14 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(baseObjects(gateway)...).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 			},
-			wantCount: 22,
+			wantCount: 10,
 			wantOutputs: outputCount{
-				upstreams: 5,
-				services:  5,
+				upstreams: 1,
+				services:  1,
 				routes:    7,
-				targets:   5,
+				targets:   1,
 			},
-			wantStoreLen: 22,
+			wantStoreLen: 10,
 			assertFn: func(t *testing.T, store []client.Object) {
 				t.Helper()
 

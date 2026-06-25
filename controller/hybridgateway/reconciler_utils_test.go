@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -22,6 +23,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -530,7 +532,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 		gvks                 []schema.GroupVersionKind
 		desired              []unstructured.Unstructured // what the converter reports as desired
 		existing             []unstructured.Unstructured // what's in the cluster
-		noWait               bool                        // true → cleanOrphanedResourcesWithoutWaitingForDeletes
+		noWait               bool                        // true → orphanCleanupOptions{waitForDeletes: false}
 		runUntilDone         bool                        // loop until requeue=false
 		outputStoreErr       error
 		interceptorFn        *interceptor.Funcs
@@ -622,7 +624,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 				serviceGVK: {"svc1"},
 			},
 		},
-		// --- gating: noWait=false (cleanOrphanedResources, waitForDeletedResources=true) ---
+		// --- gating: noWait=false (orphanCleanupOptions{waitForDeletes: true}) ---
 		{
 			// After deleting the orphan in GVK1, the function returns immediately without
 			// processing GVK2. A second call is needed to clean GVK2 orphans.
@@ -646,14 +648,14 @@ func TestCleanOrphanedResources(t *testing.T) {
 				serviceGVK: {"svc-orphan"},
 			},
 		},
-		// --- gating: noWait=true (cleanOrphanedResourcesWithoutWaitingForDeletes, waitForDeletedResources=false) ---
+		// --- gating: noWait=true (orphanCleanupOptions{waitForDeletes: false}) ---
 		{
 			// With noWait=true, GVK2 is processed even when GVK1 had orphans to delete.
 			name:        "noWait=true: orphan deleted in GVK1 continues to GVK2 in same pass",
 			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
 			existing:    []unstructured.Unstructured{makeOrphan("r-orphan", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
 			noWait:      true,
-			wantRequeue: true,
+			wantRequeue: false,
 			wantRemaining: map[schema.GroupVersionKind][]string{
 				routeGVK:   {},
 				serviceGVK: {},
@@ -665,7 +667,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
 			existing:    []unstructured.Unstructured{makeDeletingOrphan("r-deleting", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
 			noWait:      true,
-			wantRequeue: true,
+			wantRequeue: false,
 			wantRemaining: map[schema.GroupVersionKind][]string{
 				routeGVK:   {"r-deleting"},
 				serviceGVK: {},
@@ -732,11 +734,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 							outputStoreErr: tt.outputStoreErr,
 						},
 					}
-					if tt.noWait {
-						requeue, err = cleanOrphanedResourcesWithoutWaitingForDeletes(ctx, cl, logger, conv)
-					} else {
-						requeue, err = cleanOrphanedResources(ctx, cl, logger, conv)
-					}
+					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: !tt.noWait})
 				} else {
 					conv := &fakeHTTPRouteConverter{
 						gvks:           tt.gvks,
@@ -744,11 +742,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 						desired:        tt.desired,
 						outputStoreErr: tt.outputStoreErr,
 					}
-					if tt.noWait {
-						requeue, err = cleanOrphanedResourcesWithoutWaitingForDeletes(ctx, cl, logger, conv)
-					} else {
-						requeue, err = cleanOrphanedResources(ctx, cl, logger, conv)
-					}
+					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: !tt.noWait})
 				}
 				if !tt.runUntilDone || !requeue || err != nil {
 					break
@@ -769,6 +763,104 @@ func TestCleanOrphanedResources(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	gvks := []schema.GroupVersionKind{
+		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"},
+		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},
+	}
+	root := &gwtypes.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gatewayv1.GroupVersion.String(),
+			Kind:       "HTTPRoute",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-owner",
+			Namespace: "ns",
+		},
+	}
+	ownerLabels := metadata.BuildLabels(root, nil)
+
+	deletingRoute := newUnstructured("ns", "deleting-route", gvks[0], ownerLabels)
+	deletingTimestamp := metav1.NewTime(time.Now())
+	deletingRoute.SetDeletionTimestamp(&deletingTimestamp)
+	deletingRoute.SetFinalizers([]string{"example.com/finalizer"})
+
+	service := newUnstructured("ns", "service", gvks[1], ownerLabels)
+	for _, obj := range []*unstructured.Unstructured{&deletingRoute, &service} {
+		annotations := obj.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = "ns/httproute-owner"
+		obj.SetAnnotations(annotations)
+	}
+
+	newClient := func() client.Client {
+		return fake.NewClientBuilder().
+			WithScheme(runtime.NewScheme()).
+			WithObjects(deletingRoute.DeepCopy(), service.DeepCopy()).
+			Build()
+	}
+	fakeConv := &fakeHTTPRouteConverter{
+		gvks: gvks,
+		root: *root,
+	}
+
+	t.Run("normal cleanup waits for deleting child before later GVKs", func(t *testing.T) {
+		cl := newClient()
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: true})
+		require.NoError(t, err)
+		require.True(t, requeue)
+
+		serviceList := &unstructured.UnstructuredList{}
+		serviceList.SetGroupVersionKind(gvks[1])
+		require.NoError(t, cl.List(ctx, serviceList))
+		require.Len(t, serviceList.Items, 1)
+	})
+
+	t.Run("route deletion cleanup does not wait for deleting child before later GVKs", func(t *testing.T) {
+		cl := newClient()
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false})
+		require.NoError(t, err)
+		require.False(t, requeue)
+
+		serviceList := &unstructured.UnstructuredList{}
+		serviceList.SetGroupVersionKind(gvks[1])
+		require.NoError(t, cl.List(ctx, serviceList))
+		require.Empty(t, serviceList.Items)
+	})
+
+	t.Run("route deletion cleanup retries when orphan delete conflicts", func(t *testing.T) {
+		cl := fake.NewClientBuilder().
+			WithScheme(runtime.NewScheme()).
+			WithObjects(deletingRoute.DeepCopy(), service.DeepCopy()).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					if obj.GetName() == service.GetName() {
+						return apierrors.NewConflict(
+							schema.GroupResource{Group: "configuration.konghq.com", Resource: "kongservices"},
+							obj.GetName(),
+							assert.AnError,
+						)
+					}
+					return c.Delete(ctx, obj, opts...)
+				},
+			}).
+			Build()
+
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false})
+		require.NoError(t, err)
+		require.True(t, requeue)
+
+		serviceList := &unstructured.UnstructuredList{}
+		serviceList.SetGroupVersionKind(gvks[1])
+		require.NoError(t, cl.List(ctx, serviceList))
+		require.Len(t, serviceList.Items, 1)
+	})
 }
 
 // Minimal fake converter for HTTPRoute
@@ -2253,4 +2345,108 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStripHybridRouteAnnotations(t *testing.T) {
+	tests := []struct {
+		name string
+		in   map[string]string
+		want map[string]string
+	}{
+		{
+			name: "removes hybrid-routes keys, keeps others",
+			in: map[string]string{
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/r1,ns/r2",
+				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns/t1",
+				consts.GatewayOperatorHybridGatewaysAnnotation:        "ns/gw",
+				"unrelated": "keep",
+			},
+			want: map[string]string{
+				consts.GatewayOperatorHybridGatewaysAnnotation: "ns/gw",
+				"unrelated": "keep",
+			},
+		},
+		{
+			name: "no annotations is a no-op",
+			in:   nil,
+			want: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			obj := &unstructured.Unstructured{}
+			obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"})
+			if tt.in != nil {
+				obj.SetAnnotations(tt.in)
+			}
+			stripHybridRouteAnnotations(obj)
+			assert.Equal(t, tt.want, obj.GetAnnotations())
+		})
+	}
+}
+
+func TestReconcileSharedRouteAnnotations(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	upstreamGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"}
+
+	root := gwtypes.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "route-a",
+			Namespace: "ns",
+		},
+	}
+	routeKey := client.ObjectKeyFromObject(&root).String()
+
+	// Desired KongUpstream (without the hybrid-routes annotation, as applied by enforceState).
+	desired := newUnstructured("ns", "up-1", upstreamGVK, nil)
+
+	// One shared upstream already exists with another Route recorded; the absent upstream is not
+	// created here but is reported back via the missing return value so the reconciler can requeue.
+	existing := newUnstructured("ns", "up-1", upstreamGVK, nil)
+	existing.SetAnnotations(map[string]string{
+		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/other-route",
+	})
+
+	missingDesired := newUnstructured("ns", "up-missing", upstreamGVK, nil)
+
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(&existing).Build()
+	fakeConv := &fakeHTTPRouteConverter{
+		root:    root,
+		desired: []unstructured.Unstructured{desired, missingDesired},
+	}
+
+	annotationsMissing, err := reconcileSharedRouteAnnotations[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+	require.NoError(t, err)
+	assert.True(t, annotationsMissing, "absent desired upstream must be reported missing so the reconciler requeues")
+
+	got := &unstructured.Unstructured{}
+	got.SetGroupVersionKind(upstreamGVK)
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "up-1"}, got))
+	assert.Equal(t, "ns/other-route,"+routeKey, got.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
+
+	// The missing upstream must not have been created.
+	missing := &unstructured.Unstructured{}
+	missing.SetGroupVersionKind(upstreamGVK)
+	err = cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "up-missing"}, missing)
+	assert.True(t, apierrors.IsNotFound(err))
+}
+
+func TestRequeueOnConflict(t *testing.T) {
+	logger := logr.Discard()
+	conflict := apierrors.NewConflict(
+		schema.GroupResource{Group: "configuration.konghq.com", Resource: "kongservices"},
+		"svc",
+		assert.AnError,
+	)
+
+	result, handled := requeueOnConflict(fmt.Errorf("wrapped conflict: %w", conflict), logger, "conflict")
+	require.True(t, handled)
+	assert.Equal(t, ctrlconsts.RequeueWithoutBackoff, result.RequeueAfter)
+
+	result, handled = requeueOnConflict(assert.AnError, logger, "conflict")
+	require.False(t, handled)
+	assert.Empty(t, result)
 }

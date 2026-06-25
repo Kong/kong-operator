@@ -148,3 +148,43 @@ func routeHostNamesString[T gwtypes.SupportedRoute](route T) []string {
 		return string(h)
 	})
 }
+
+// deduplicateOutputStore collapses objects that share the same type, namespace and name, keeping
+// the first occurrence.
+//
+// The translate() loop iterates over (parentRef × rule) and appends the generated Kong resources on
+// every iteration. The KongUpstream/KongService/KongTarget names are derived from
+// (route, controlPlaneRef, rule.BackendRefs) and deliberately exclude the parentRef and the rule
+// index (see namegen.hashElementsForServiceLikeName / hashForHTTPRouteRuleServiceLikeName, hashed
+// over rule.BackendRefs). As a result the exact same service-like object is produced more than once
+// when:
+//
+//  1. Multiple rules of the same Route reference the same backend: the name hash is over
+//     rule.BackendRefs, so rules with identical backends collapse onto the same
+//     KongUpstream/KongService/KongTargets (only the per-match KongRoutes differ).
+//  2. A Route has multiple parentRefs that resolve to the same ControlPlane: since the names omit
+//     the parentRef, each parent re-generates the same service-like resources for every rule.
+//
+// These shared resources are intentional (one shared backend -> one shared KongService/KongUpstream),
+// but because we append once per (parentRef, rule) the output store must be deduplicated before it is
+// applied and before it is compared against the live set during orphan cleanup. Note this is a
+// distinct axis from target merging within a single rule (one KongTarget per unique endpoint across a
+// rule's backendRefs), which is handled in target.TargetsForBackendRefs.
+func deduplicateOutputStore(objects []client.Object) []client.Object {
+	if len(objects) < 2 {
+		return objects
+	}
+
+	seen := make(map[string]struct{}, len(objects))
+	deduplicated := make([]client.Object, 0, len(objects))
+	for _, obj := range objects {
+		key := fmt.Sprintf("%T/%s/%s", obj, obj.GetNamespace(), obj.GetName())
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		deduplicated = append(deduplicated, obj)
+	}
+
+	return deduplicated
+}
