@@ -183,13 +183,9 @@ type httpRoutePriorityClass struct {
 }
 
 func httpRouteMatchPriorities(httpRoute *gwtypes.HTTPRoute) map[httpRouteMatchPriorityKey]int64 {
-	type routeAndClass struct {
-		class httpRoutePriorityClass
-	}
-
 	classes := make([]httpRoutePriorityClass, 0)
 	classSet := make(map[httpRoutePriorityClass]struct{})
-	matchCountByClass := make(map[routeAndClass]int)
+	matchCountByClass := make(map[httpRoutePriorityClass]int)
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, match := range rule.Matches {
 			class := calculateHTTPRoutePriorityClass(match)
@@ -197,7 +193,7 @@ func httpRouteMatchPriorities(httpRoute *gwtypes.HTTPRoute) map[httpRouteMatchPr
 				classSet[class] = struct{}{}
 				classes = append(classes, class)
 			}
-			matchCountByClass[routeAndClass{class: class}]++
+			matchCountByClass[class]++
 		}
 	}
 
@@ -207,15 +203,18 @@ func httpRouteMatchPriorities(httpRoute *gwtypes.HTTPRoute) map[httpRouteMatchPr
 		rankByClass[class] = int64(rank)
 	}
 
+	// priorityClassSize bounds the number of matches that can share a single
+	// specificity class without their offsets overflowing into the adjacent
+	// class' range. Gateway API caps the matches per HTTPRoute well below this,
+	// so the assumption holds in practice.
 	const priorityClassSize = int64(1 << 10)
-	seenByClass := make(map[routeAndClass]int)
+	seenByClass := make(map[httpRoutePriorityClass]int)
 	priorities := make(map[httpRouteMatchPriorityKey]int64)
 	for ruleIndex, rule := range httpRoute.Spec.Rules {
 		for matchIndex, match := range rule.Matches {
 			class := calculateHTTPRoutePriorityClass(match)
-			key := routeAndClass{class: class}
-			offset := matchCountByClass[key] - 1 - seenByClass[key]
-			seenByClass[key]++
+			offset := matchCountByClass[class] - 1 - seenByClass[class]
+			seenByClass[class]++
 			priorities[httpRouteMatchPriorityKey{
 				ruleIndex:  ruleIndex,
 				matchIndex: matchIndex,
@@ -234,10 +233,7 @@ func priorityForHeaderOnlyHTTPRouteMatch(
 		return nil
 	}
 	priority := headerOnlyRegexPriority(
-		priorities[httpRouteMatchPriorityKey{
-			ruleIndex:  ruleIndex,
-			matchIndex: matchIndex,
-		}],
+		priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex),
 		priorities,
 	)
 	return &priority
