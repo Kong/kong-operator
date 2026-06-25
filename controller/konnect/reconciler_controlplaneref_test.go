@@ -857,3 +857,95 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 		})
 	}
 }
+
+func TestEntityHasCrossNamespaceRefs(t *testing.T) {
+	const entNamespace = "default"
+
+	kongCert := func(spec configurationv1alpha1.KongCertificateSpec) func() bool {
+		return func() bool {
+			return entityHasCrossNamespaceRefs(&configurationv1alpha1.KongCertificate{
+				ObjectMeta: metav1.ObjectMeta{Namespace: entNamespace},
+				Spec:       spec,
+			})
+		}
+	}
+	kongSvc := func(apiSpec configurationv1alpha1.KongServiceAPISpec) func() bool {
+		return func() bool {
+			return entityHasCrossNamespaceRefs(&configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{Namespace: entNamespace},
+				Spec:       configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: apiSpec},
+			})
+		}
+	}
+
+	tests := []struct {
+		name     string
+		run      func() bool
+		expected bool
+	}{
+		{
+			name:     "KongCertificate without secret refs",
+			run:      kongCert(configurationv1alpha1.KongCertificateSpec{}),
+			expected: false,
+		},
+		{
+			name: "KongCertificate with same-namespace SecretRef (nil namespace)",
+			run: kongCert(configurationv1alpha1.KongCertificateSpec{
+				SecretRef: &commonv1alpha1.NamespacedRef{Name: "s"},
+			}),
+			expected: false,
+		},
+		{
+			name: "KongCertificate with same-namespace SecretRef (explicit namespace)",
+			run: kongCert(configurationv1alpha1.KongCertificateSpec{
+				SecretRef: &commonv1alpha1.NamespacedRef{Name: "s", Namespace: new(entNamespace)},
+			}),
+			expected: false,
+		},
+		{
+			name: "KongCertificate with cross-namespace SecretRef",
+			run: kongCert(configurationv1alpha1.KongCertificateSpec{
+				SecretRef: &commonv1alpha1.NamespacedRef{Name: "s", Namespace: new("other")},
+			}),
+			expected: true,
+		},
+		{
+			name: "KongCertificate with cross-namespace SecretRefAlt",
+			run: kongCert(configurationv1alpha1.KongCertificateSpec{
+				SecretRef:    &commonv1alpha1.NamespacedRef{Name: "s"},
+				SecretRefAlt: &commonv1alpha1.NamespacedRef{Name: "s-alt", Namespace: new("other")},
+			}),
+			expected: true,
+		},
+		{
+			name: "KongService with cross-namespace CACertificateRef",
+			run: kongSvc(configurationv1alpha1.KongServiceAPISpec{
+				CACertificateRefs: []commonv1alpha1.NamespacedRef{
+					{Name: "ca", Namespace: new("other")},
+				},
+			}),
+			expected: true,
+		},
+		{
+			name: "KongService with cross-namespace ClientCertificateRef",
+			run: kongSvc(configurationv1alpha1.KongServiceAPISpec{
+				ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cc", Namespace: new("other")},
+			}),
+			expected: true,
+		},
+		{
+			name: "KongService with only same-namespace refs",
+			run: kongSvc(configurationv1alpha1.KongServiceAPISpec{
+				CACertificateRefs:    []commonv1alpha1.NamespacedRef{{Name: "ca"}},
+				ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cc", Namespace: new(entNamespace)},
+			}),
+			expected: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.run())
+		})
+	}
+}
