@@ -56,7 +56,7 @@ import (
 // CoreV1 Service - Reconciler
 // -----------------------------------------------------------------------------
 
-// CoreV1ServiceReconciler reconciles Service resources
+// CoreV1ServiceReconciler reconciles Service resources.
 type CoreV1ServiceReconciler struct {
 	client.Client
 
@@ -92,7 +92,7 @@ func (r *CoreV1ServiceReconciler) SetLogger(l logr.Logger) {
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=services/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("CoreV1Service", req.NamespacedName)
 
@@ -159,7 +159,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // DiscoveryV1 EndpointSlice - Reconciler
 // -----------------------------------------------------------------------------
 
-// DiscoveryV1EndpointSliceReconciler reconciles EndpointSlice resources
+// DiscoveryV1EndpointSliceReconciler reconciles EndpointSlice resources.
 type DiscoveryV1EndpointSliceReconciler struct {
 	client.Client
 
@@ -193,7 +193,7 @@ func (r *DiscoveryV1EndpointSliceReconciler) SetLogger(l logr.Logger) {
 
 //+kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=list;watch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *DiscoveryV1EndpointSliceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("DiscoveryV1EndpointSlice", req.NamespacedName)
 
@@ -240,7 +240,7 @@ func (r *DiscoveryV1EndpointSliceReconciler) Reconcile(ctx context.Context, req 
 // NetV1 Ingress - Reconciler
 // -----------------------------------------------------------------------------
 
-// NetV1IngressReconciler reconciles Ingress resources
+// NetV1IngressReconciler reconciles Ingress resources.
 type NetV1IngressReconciler struct {
 	client.Client
 
@@ -301,10 +301,10 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// listClassless finds and reconciles all objects without ingress class information
+// listClassless finds and reconciles all objects without ingress class information.
 func (r *NetV1IngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &netv1.IngressList{}
-	if err := r.Client.List(ctx, resourceList); err != nil {
+	if err := r.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "Failed to list classless ingresses")
 		return nil
 	}
@@ -330,7 +330,7 @@ func (r *NetV1IngressReconciler) SetLogger(l logr.Logger) {
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("NetV1Ingress", req.NamespacedName)
 
@@ -442,7 +442,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 // NetV1 IngressClass - Reconciler
 // -----------------------------------------------------------------------------
 
-// NetV1IngressClassReconciler reconciles IngressClass resources
+// NetV1IngressClassReconciler reconciles IngressClass resources.
 type NetV1IngressClassReconciler struct {
 	client.Client
 
@@ -476,7 +476,7 @@ func (r *NetV1IngressClassReconciler) SetLogger(l logr.Logger) {
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressclasses,verbs=get;list;watch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("NetV1IngressClass", req.NamespacedName)
 
@@ -523,7 +523,7 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // KongV1 KongPlugin - Reconciler
 // -----------------------------------------------------------------------------
 
-// KongV1KongPluginReconciler reconciles KongPlugin resources
+// KongV1KongPluginReconciler reconciles KongPlugin resources.
 type KongV1KongPluginReconciler struct {
 	client.Client
 
@@ -559,7 +559,7 @@ func (r *KongV1KongPluginReconciler) SetLogger(l logr.Logger) {
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("KongV1KongPlugin", req.NamespacedName)
 
@@ -626,7 +626,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 // KongV1 KongClusterPlugin - Reconciler
 // -----------------------------------------------------------------------------
 
-// KongV1KongClusterPluginReconciler reconciles KongClusterPlugin resources
+// KongV1KongClusterPluginReconciler reconciles KongClusterPlugin resources.
 type KongV1KongClusterPluginReconciler struct {
 	client.Client
 
@@ -671,10 +671,10 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 		Complete(r)
 }
 
-// listClassless finds and reconciles all objects without ingress class information
+// listClassless finds and reconciles all objects without ingress class information.
 func (r *KongV1KongClusterPluginReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongClusterPluginList{}
-	if err := r.Client.List(ctx, resourceList); err != nil {
+	if err := r.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "Failed to list classless kongclusterplugins")
 		return nil
 	}
@@ -700,7 +700,7 @@ func (r *KongV1KongClusterPluginReconciler) SetLogger(l logr.Logger) {
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("KongV1KongClusterPlugin", req.NamespacedName)
 
@@ -787,7 +787,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 // KongV1 KongConsumer - Reconciler
 // -----------------------------------------------------------------------------
 
-// KongV1KongConsumerReconciler reconciles KongConsumer resources
+// KongV1KongConsumerReconciler reconciles KongConsumer resources.
 type KongV1KongConsumerReconciler struct {
 	client.Client
 
@@ -849,10 +849,10 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Complete(r)
 }
 
-// listClassless finds and reconciles all objects without ingress class information
+// listClassless finds and reconciles all objects without ingress class information.
 func (r *KongV1KongConsumerReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongConsumerList{}
-	if err := r.Client.List(ctx, resourceList); err != nil {
+	if err := r.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "Failed to list classless kongconsumers")
 		return nil
 	}
@@ -878,7 +878,7 @@ func (r *KongV1KongConsumerReconciler) SetLogger(l logr.Logger) {
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("KongV1KongConsumer", req.NamespacedName)
 
@@ -980,7 +980,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 // KongV1Beta1 KongConsumerGroup - Reconciler
 // -----------------------------------------------------------------------------
 
-// KongV1Beta1KongConsumerGroupReconciler reconciles KongConsumerGroup resources
+// KongV1Beta1KongConsumerGroupReconciler reconciles KongConsumerGroup resources.
 type KongV1Beta1KongConsumerGroupReconciler struct {
 	client.Client
 
@@ -1042,10 +1042,10 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) SetupWithManager(mgr ctrl.Manag
 		Complete(r)
 }
 
-// listClassless finds and reconciles all objects without ingress class information
+// listClassless finds and reconciles all objects without ingress class information.
 func (r *KongV1Beta1KongConsumerGroupReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.KongConsumerGroupList{}
-	if err := r.Client.List(ctx, resourceList); err != nil {
+	if err := r.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "Failed to list classless kongconsumergroups")
 		return nil
 	}
@@ -1071,7 +1071,7 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) SetLogger(l logr.Logger) {
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumergroups,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumergroups/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("KongV1Beta1KongConsumerGroup", req.NamespacedName)
 
@@ -1173,7 +1173,7 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 // KongV1Alpha1 IngressClassParameters - Reconciler
 // -----------------------------------------------------------------------------
 
-// KongV1Alpha1IngressClassParametersReconciler reconciles IngressClassParameters resources
+// KongV1Alpha1IngressClassParametersReconciler reconciles IngressClassParameters resources.
 type KongV1Alpha1IngressClassParametersReconciler struct {
 	client.Client
 
@@ -1207,7 +1207,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) SetLogger(l logr.Logger) 
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=ingressclassparameterses,verbs=get;list;watch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("KongV1Alpha1IngressClassParameters", req.NamespacedName)
 
@@ -1254,7 +1254,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 // IncubatorV1Alpha1 KongServiceFacade - Reconciler
 // -----------------------------------------------------------------------------
 
-// IncubatorV1Alpha1KongServiceFacadeReconciler reconciles KongServiceFacade resources
+// IncubatorV1Alpha1KongServiceFacadeReconciler reconciles KongServiceFacade resources.
 type IncubatorV1Alpha1KongServiceFacadeReconciler struct {
 	client.Client
 
@@ -1312,10 +1312,10 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) SetupWithManager(mgr ctrl
 		Complete(r)
 }
 
-// listClassless finds and reconciles all objects without ingress class information
+// listClassless finds and reconciles all objects without ingress class information.
 func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &incubatorv1alpha1.KongServiceFacadeList{}
-	if err := r.Client.List(ctx, resourceList); err != nil {
+	if err := r.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "Failed to list classless kongservicefacades")
 		return nil
 	}
@@ -1341,7 +1341,7 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) SetLogger(l logr.Logger) 
 //+kubebuilder:rbac:groups=incubator.ingress-controller.konghq.com,resources=kongservicefacades,verbs=get;list;watch
 //+kubebuilder:rbac:groups=incubator.ingress-controller.konghq.com,resources=kongservicefacades/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("IncubatorV1Alpha1KongServiceFacade", req.NamespacedName)
 
@@ -1424,7 +1424,7 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Con
 // KongV1Alpha1 KongVault - Reconciler
 // -----------------------------------------------------------------------------
 
-// KongV1Alpha1KongVaultReconciler reconciles KongVault resources
+// KongV1Alpha1KongVaultReconciler reconciles KongVault resources.
 type KongV1Alpha1KongVaultReconciler struct {
 	client.Client
 
@@ -1485,10 +1485,10 @@ func (r *KongV1Alpha1KongVaultReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-// listClassless finds and reconciles all objects without ingress class information
+// listClassless finds and reconciles all objects without ingress class information.
 func (r *KongV1Alpha1KongVaultReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1alpha1.KongVaultList{}
-	if err := r.Client.List(ctx, resourceList); err != nil {
+	if err := r.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "Failed to list classless kongvaults")
 		return nil
 	}
@@ -1514,7 +1514,7 @@ func (r *KongV1Alpha1KongVaultReconciler) SetLogger(l logr.Logger) {
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongvaults,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongvaults/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *KongV1Alpha1KongVaultReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("KongV1Alpha1KongVault", req.NamespacedName)
 
@@ -1596,7 +1596,7 @@ func (r *KongV1Alpha1KongVaultReconciler) Reconcile(ctx context.Context, req ctr
 // KongV1Alpha1 KongCustomEntity - Reconciler
 // -----------------------------------------------------------------------------
 
-// KongV1Alpha1KongCustomEntityReconciler reconciles KongCustomEntity resources
+// KongV1Alpha1KongCustomEntityReconciler reconciles KongCustomEntity resources.
 type KongV1Alpha1KongCustomEntityReconciler struct {
 	client.Client
 
@@ -1654,10 +1654,10 @@ func (r *KongV1Alpha1KongCustomEntityReconciler) SetupWithManager(mgr ctrl.Manag
 		Complete(r)
 }
 
-// listClassless finds and reconciles all objects without ingress class information
+// listClassless finds and reconciles all objects without ingress class information.
 func (r *KongV1Alpha1KongCustomEntityReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1alpha1.KongCustomEntityList{}
-	if err := r.Client.List(ctx, resourceList); err != nil {
+	if err := r.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "Failed to list classless kongcustomentities")
 		return nil
 	}
@@ -1683,7 +1683,7 @@ func (r *KongV1Alpha1KongCustomEntityReconciler) SetLogger(l logr.Logger) {
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcustomentities,verbs=get;list;watch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcustomentities/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *KongV1Alpha1KongCustomEntityReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("KongV1Alpha1KongCustomEntity", req.NamespacedName)
 

@@ -217,6 +217,12 @@ type DataPlaneServicePort struct {
 	// +optional
 	Name string `json:"name,omitempty"`
 
+	// The IP protocol for this port. Supports "TCP" and "UDP". Defaults to "TCP".
+	// +optional
+	// +kubebuilder:validation:Enum=TCP;UDP
+	// +kubebuilder:default=TCP
+	Protocol corev1.Protocol `json:"protocol,omitempty"`
+
 	// The port that will be exposed by this service.
 	Port int32 `json:"port"`
 
