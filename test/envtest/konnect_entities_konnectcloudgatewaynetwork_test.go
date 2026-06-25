@@ -105,6 +105,17 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 			return n.GetKonnectID() == networkID && conditionsContainProgrammed(n.GetConditions(), metav1.ConditionTrue)
 		}, "Did not see KonnectCloudGatewayNetwork get Programmed and Konnect ID set.")
 
+		t.Log("Allowing SDK get calls from update reconciliations")
+		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID).Return(
+			&sdkkonnectops.GetNetworkResponse{
+				Network: &sdkkonnectcomp.Network{
+					ID:    networkID,
+					Name:  networkName,
+					State: sdkkonnectcomp.NetworkStateReady,
+				},
+			}, nil,
+		).Maybe()
+
 		t.Log("Setting up SDK expectations on deletion")
 		sdk.CloudGatewaysSDK.EXPECT().DeleteNetwork(mock.Anything, networkID, mock.Anything).Return(&sdkkonnectops.DeleteNetworkResponse{}, nil)
 
