@@ -138,14 +138,14 @@ linters:
       # upstream k8s types (int32, no omitempty) and have no meaningful zero value.
       - linters:
           - kubeapilinter
-        path: api/eventgateway/.*
+        path: api/(eventgateway|aigateway)/.*
         text: 'requiredfields: field .*(MaxReplicas|Port) should have the omitempty tag'
 
       # NOTE: HorizontalScaling.MaxReplicas mirrors upstream k8s autoscaling/v2 which
       # does not add a minimum marker. Zero is not a valid value by convention.
       - linters:
           - kubeapilinter
-        path: api/eventgateway/.*
+        path: api/(eventgateway|aigateway)/.*
         text: 'requiredfields: field HorizontalScaling.MaxReplicas has a valid zero value'
 
       # TODO: remove this.

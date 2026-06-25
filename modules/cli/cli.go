@@ -85,6 +85,9 @@ func New(m metadata.Info) *CLI {
 	// controllers for Event Gateway APIs
 	flagSet.BoolVar(&cfg.KEGDataPlaneControllerEnabled, "enable-controller-kegdataplane", false, "Enable the KEG (Kong Event Gateway) DataPlane controller.")
 
+	// controllers for AI Gateway APIs
+	flagSet.BoolVar(&cfg.AIGatewayDataPlaneControllerEnabled, "enable-controller-aigatewaydataplane", false, "Enable the AI Gateway DataPlane controller.")
+
 	// feature gates
 	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", "Comma-separated list of feature gates to enable. Valid values: mcp-server.")
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
