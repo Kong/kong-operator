@@ -131,7 +131,7 @@ func gatewayLinkStatusMatches(
 			}
 		}
 	case gatewayapi.TCPProtocolType:
-		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tcp route: %v", err)
 		} else {
@@ -139,7 +139,7 @@ func gatewayLinkStatusMatches(
 				check(verifyLinked, string(mgrconsts.GetControllerName()))
 		}
 	case gatewayapi.UDPProtocolType:
-		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting udp route: %v", err)
 		} else {
@@ -224,7 +224,7 @@ func verifyProgrammedConditionStatus(t *testing.T,
 			}
 		}
 	case gatewayapi.TCPProtocolType:
-		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tcp route: %v", err)
 		} else {
@@ -238,7 +238,7 @@ func verifyProgrammedConditionStatus(t *testing.T,
 			return parentStatusContainsProgrammedCondition(route.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 		}
 	case gatewayapi.UDPProtocolType:
-		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		route, err := c.GatewayV1().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting udp route: %v", err)
 		} else {

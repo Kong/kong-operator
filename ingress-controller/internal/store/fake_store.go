@@ -16,7 +16,6 @@ import (
 	"k8s.io/cli-runtime/pkg/printers"
 	"k8s.io/client-go/tools/cache"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -273,9 +272,9 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeFor[*netv1.Ingress]():                                netv1.SchemeGroupVersion.WithKind("Ingress"),
 		reflect.TypeFor[*netv1.IngressClass]():                           netv1.SchemeGroupVersion.WithKind("IngressClass"),
 		reflect.TypeFor[*gatewayapi.HTTPRoute]():                         schema.GroupVersion(gatewayv1.GroupVersion).WithKind("HTTPRoute"),
-		reflect.TypeFor[*gatewayapi.UDPRoute]():                          schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("UDPRoute"),
-		reflect.TypeFor[*gatewayapi.TCPRoute]():                          schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("TCPRoute"),
-		reflect.TypeFor[*gatewayapi.TLSRoute]():                          schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("TLSRoute"),
+		reflect.TypeFor[*gatewayapi.UDPRoute]():                          schema.GroupVersion(gatewayv1.GroupVersion).WithKind("UDPRoute"),
+		reflect.TypeFor[*gatewayapi.TCPRoute]():                          schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TCPRoute"),
+		reflect.TypeFor[*gatewayapi.TLSRoute]():                          schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TLSRoute"),
 		reflect.TypeFor[*gatewayapi.GRPCRoute]():                         schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GRPCRoute"),
 		reflect.TypeFor[*gatewayapi.ReferenceGrant]():                    schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"),
 		reflect.TypeFor[*gatewayapi.Gateway]():                           schema.GroupVersion(gatewayv1.GroupVersion).WithKind("Gateway"),
