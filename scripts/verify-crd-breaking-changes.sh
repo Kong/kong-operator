@@ -46,6 +46,21 @@ if [[ -z "${CRDIFY_BIN}" ]]; then
 	exit 1
 fi
 
+ACK_CRD_BREAKING_CHANGE="${ACK_CRD_BREAKING_CHANGE:-false}"
+readonly ACK_CRD_BREAKING_CHANGE
+
+ACK_CRD_BREAKING_CHANGE_LABEL="${ACK_CRD_BREAKING_CHANGE_LABEL:-ack_crd_breaking_change}"
+readonly ACK_CRD_BREAKING_CHANGE_LABEL
+
+case "${ACK_CRD_BREAKING_CHANGE}" in
+	true|false)
+		;;
+	*)
+		echo "ACK_CRD_BREAKING_CHANGE must be true or false"
+		exit 1
+		;;
+esac
+
 resolve_base_revision() {
 	local candidate
 
@@ -133,5 +148,19 @@ while IFS= read -r basename; do
 		status=1
 	fi
 done < "${union_basenames}"
+
+if [[ "${status}" -ne 0 && "${ACK_CRD_BREAKING_CHANGE}" == "true" ]]; then
+	echo "::warning title=CRD breaking changes acknowledged::Breaking CRD changes were detected, but label '${ACK_CRD_BREAKING_CHANGE_LABEL}' acknowledges them, so this job will not block merging."
+
+	if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+		{
+			echo "### CRD breaking changes acknowledged"
+			echo
+			echo "Breaking CRD changes were detected, but label \`${ACK_CRD_BREAKING_CHANGE_LABEL}\` acknowledges them, so this job will not block merging."
+		} >> "${GITHUB_STEP_SUMMARY}"
+	fi
+
+	exit 0
+fi
 
 exit "${status}"

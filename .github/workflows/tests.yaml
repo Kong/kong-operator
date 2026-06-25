@@ -162,6 +162,10 @@ jobs:
   verify:
     needs: [check-docs-only]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     uses: ./.github/workflows/__verify.yaml
     secrets: inherit
 

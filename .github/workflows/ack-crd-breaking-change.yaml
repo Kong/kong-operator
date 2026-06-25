@@ -1,0 +1,54 @@
+name: ack CRD breaking change
+
+on:
+  pull_request:
+    types:
+      - labeled
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  rerun-failed-tests:
+    if: ${{ github.event.label.name == 'ack_crd_breaking_change' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rerun failed CRD breaking-change check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          run_ids="$(gh run list \
+            --repo "${GITHUB_REPOSITORY}" \
+            --workflow tests.yaml \
+            --limit 50 \
+            --json conclusion,createdAt,databaseId,event,headSha,status \
+            --jq '[.[] | select(.headSha == env.HEAD_SHA and .event == "pull_request" and .status == "completed" and .conclusion == "failure")] | sort_by(.createdAt) | reverse | .[].databaseId')"
+
+          crd_job_id=""
+          for candidate_run_id in ${run_ids}; do
+            crd_job_id="$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${candidate_run_id}/jobs?filter=latest" \
+              --jq '.jobs[] | select(.name == "verify / crd-breaking-changes" and .conclusion == "failure") | .id' | head -n 1)"
+
+            if [[ -n "${crd_job_id}" ]]; then
+              break
+            fi
+          done
+
+          if [[ -z "${crd_job_id}" ]]; then
+            echo "No failed CRD breaking-change check found for ${HEAD_SHA}."
+            exit 0
+          fi
+
+          # Re-running a job also re-runs dependent jobs, so the aggregate required
+          # `passed` job is recalculated after crd-breaking-changes succeeds.
+          echo "Rerunning failed CRD breaking-change job ${crd_job_id}."
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/actions/jobs/${crd_job_id}/rerun"
