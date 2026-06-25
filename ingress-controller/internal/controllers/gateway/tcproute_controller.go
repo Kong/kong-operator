@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
@@ -84,8 +84,8 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   gatewayv1alpha2.GroupVersion.Group,
-					Version: gatewayv1alpha2.GroupVersion.Version,
+					Group:   gatewayv1.GroupVersion.Group,
+					Version: gatewayv1.GroupVersion.Version,
 					Kind:    "TCPRoute",
 				}),
 				&handler.EnqueueRequestForObject{},
@@ -261,7 +261,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, obj cl
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("GatewayV1Alpha2TCPRoute", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1TCPRoute", req.NamespacedName)
 
 	tcproute := new(gatewayapi.TCPRoute)
 	if err := r.Get(ctx, req.NamespacedName, tcproute); err != nil {

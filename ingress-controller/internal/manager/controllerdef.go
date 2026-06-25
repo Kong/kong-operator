@@ -8,7 +8,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -396,18 +395,15 @@ func setupControllers(
 				},
 			},
 		},
-		// ---------------------------------------------------------------------------
-		// Gateway API Controllers - Alpha APIs
-		// ---------------------------------------------------------------------------
 		{
-			Enabled: c.GatewayAPIUDPRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature),
+			Enabled: c.GatewayAPIUDPRouteController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/UDPRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.GroupVersion.Group,
-					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "udproutes",
 				}),
 				Controller: &gateway.UDPRouteReconciler{
@@ -422,14 +418,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.GatewayAPITCPRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature),
+			Enabled: c.GatewayAPITCPRouteController,
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TCPRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1alpha2.GroupVersion.Group,
-					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "tcproutes",
 				}),
 				Controller: &gateway.TCPRouteReconciler{
@@ -443,6 +439,9 @@ func setupControllers(
 				},
 			},
 		},
+		// ---------------------------------------------------------------------------
+		// Gateway API Controllers - Alpha APIs
+		// ---------------------------------------------------------------------------
 		{
 			Enabled: c.GatewayAPIBackendTLSRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature) &&
 				c.GatewayAPIGatewayController &&
