@@ -68,6 +68,8 @@
   [#4599](https://github.com/Kong/kong-operator/pull/4599)
 - Bump sigs.k8s.io/gateway-api from v1.5.1 to v1.6.0-rc.1.
   [#4639](https://github.com/Kong/kong-operator/pull/4639)
+- Enable UDPRoute for on-prem gateway
+  [#4429](https://github.com/Kong/kong-operator/pull/4429)
 
 ### Fixes
 
