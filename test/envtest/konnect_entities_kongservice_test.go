@@ -641,8 +641,13 @@ func TestKongService(t *testing.T) {
 			if !ok {
 				return false
 			}
-			return c.Status == metav1.ConditionFalse && c.Reason == "FailedToCreate"
-		}, "KongService should get the Programmed condition set to status=False due to network error")
+			// The cleanup finalizer must be present even though the Konnect create
+			// failed: it is added before the create (finalizer-first), so the entity
+			// can always be cleaned up. The previous behaviour (finalizer added only
+			// after a successful create) would leave no finalizer here.
+			return c.Status == metav1.ConditionFalse && c.Reason == "FailedToCreate" &&
+				objectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer)(ks)
+		}, "KongService should get Programmed=False on network error and still carry the cleanup finalizer")
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})

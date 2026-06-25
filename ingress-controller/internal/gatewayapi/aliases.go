@@ -102,21 +102,21 @@ type (
 
 	PolicyAncestorStatus = gatewayv1.PolicyAncestorStatus
 	PolicyStatus         = gatewayv1alpha2.PolicyStatus
-	TCPRoute             = gatewayv1alpha2.TCPRoute
-	TCPRouteList         = gatewayv1alpha2.TCPRouteList
-	TCPRouteRule         = gatewayv1alpha2.TCPRouteRule
-	TCPRouteSpec         = gatewayv1alpha2.TCPRouteSpec
-	TCPRouteStatus       = gatewayv1alpha2.TCPRouteStatus
+	TCPRoute             = gatewayv1.TCPRoute
+	TCPRouteList         = gatewayv1.TCPRouteList
+	TCPRouteRule         = gatewayv1.TCPRouteRule
+	TCPRouteSpec         = gatewayv1.TCPRouteSpec
+	TCPRouteStatus       = gatewayv1.TCPRouteStatus
 	TLSRoute             = gatewayv1.TLSRoute
 	TLSRouteList         = gatewayv1.TLSRouteList
 	TLSRouteRule         = gatewayv1.TLSRouteRule
 	TLSRouteSpec         = gatewayv1.TLSRouteSpec
 	TLSRouteStatus       = gatewayv1.TLSRouteStatus
-	UDPRoute             = gatewayv1alpha2.UDPRoute
-	UDPRouteList         = gatewayv1alpha2.UDPRouteList
-	UDPRouteRule         = gatewayv1alpha2.UDPRouteRule
-	UDPRouteSpec         = gatewayv1alpha2.UDPRouteSpec
-	UDPRouteStatus       = gatewayv1alpha2.UDPRouteStatus
+	UDPRoute             = gatewayv1.UDPRoute
+	UDPRouteList         = gatewayv1.UDPRouteList
+	UDPRouteRule         = gatewayv1.UDPRouteRule
+	UDPRouteSpec         = gatewayv1.UDPRouteSpec
+	UDPRouteStatus       = gatewayv1.UDPRouteStatus
 
 	BackendTLSPolicy            = gatewayv1alpha3.BackendTLSPolicy
 	BackendTLSPolicyList        = gatewayv1alpha3.BackendTLSPolicyList

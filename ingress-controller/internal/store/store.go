@@ -35,7 +35,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -769,9 +768,9 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &gatewayapi.HTTPRoute{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GRPCRoute"):
 		return &gatewayapi.GRPCRoute{}, nil
-	case schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("TCPRoute"):
+	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TCPRoute"):
 		return &gatewayapi.TCPRoute{}, nil
-	case schema.GroupVersion(gatewayv1alpha2.GroupVersion).WithKind("UDPRoute"):
+	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("UDPRoute"):
 		return &gatewayapi.UDPRoute{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TLSRoute"):
 		return &gatewayapi.TLSRoute{}, nil

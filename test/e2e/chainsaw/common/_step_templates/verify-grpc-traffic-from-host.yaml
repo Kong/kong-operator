@@ -1,0 +1,49 @@
+# Template for verifying gRPC traffic from the host to the gateway.
+#
+# Required bindings:
+#   - gateway_name: Name of the Gateway.
+#   - gateway_namespace: Namespace of the Gateway.
+#   - grpc_host: The :authority/SNI hostname to send with the gRPC request.
+#   - listener_https_port: HTTPS port to test.
+#   - request_message: Payload sent to grpcbin DummyUnary.
+#   - insecure_tls: Whether to skip TLS verification.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-grpc-traffic-from-host
+spec:
+  try:
+    - script:
+        env:
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+        content: |
+          bash ../../common/scripts/proxy_ip_address.sh
+        outputs:
+          - name: proxy_ip
+            value: (json_parse($stdout).proxy_ip_address)
+        check:
+          (json_parse($stdout).proxy_ip_address != null): true
+          (json_parse($stdout).proxy_ip_address != ''): true
+
+    - script:
+        env:
+          - name: PROXY_IP
+            value: ($proxy_ip)
+          - name: GRPC_HOST
+            value: ($grpc_host)
+          - name: PROXY_PORT
+            value: (to_string($listener_https_port))
+          - name: REQUEST_MESSAGE
+            value: ($request_message)
+          - name: INSECURE_TLS
+            value: ($insecure_tls)
+          - name: USE_TLS
+            value: 'true'
+        content: |
+          bash ../../common/scripts/host_connectivity_test_grpc.sh
+        check:
+          (json_parse($stdout).success): true
+

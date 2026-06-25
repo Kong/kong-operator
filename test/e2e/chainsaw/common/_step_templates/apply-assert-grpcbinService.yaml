@@ -1,0 +1,91 @@
+# Template for creating and asserting a grpcbin backend service.
+#
+# Required bindings:
+#   - grpcbin_name: Service/Deployment name (and app label/selector).
+#   - grpcbin_namespace: Namespace where the backend will be created.
+#   - grpcbin_image: Container image for the grpcbin backend.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: create-grpcbin-backend
+spec:
+  try:
+    # 1. Apply the Deployment.
+    - apply:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ($grpcbin_name)
+            namespace: ($grpcbin_namespace)
+            labels:
+              app: ($grpcbin_name)
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ($grpcbin_name)
+            template:
+              metadata:
+                labels:
+                  app: ($grpcbin_name)
+              spec:
+                containers:
+                  - name: grpcbin
+                    image: ($grpcbin_image)
+                    ports:
+                      - containerPort: 9000
+                        name: grpc
+
+    # 2. Apply the Service.
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ($grpcbin_name)
+            namespace: ($grpcbin_namespace)
+            annotations:
+              konghq.com/protocol: grpc
+          spec:
+            selector:
+              app: ($grpcbin_name)
+            ports:
+              - name: grpc
+                protocol: TCP
+                port: 80
+                targetPort: 9000
+
+    # 3. Assert Deployment readiness.
+    - assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ($grpcbin_name)
+            namespace: ($grpcbin_namespace)
+          status:
+            (conditions[?type == 'Available']):
+              - status: 'True'
+            readyReplicas: 1
+            replicas: 1
+
+    # 4. Assert Service existence and configuration.
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ($grpcbin_name)
+            namespace: ($grpcbin_namespace)
+            annotations:
+              konghq.com/protocol: grpc
+          spec:
+            selector:
+              app: ($grpcbin_name)
+            ports:
+              - name: grpc
+                protocol: TCP
+                port: 80
+                targetPort: 9000
+

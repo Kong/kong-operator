@@ -1,0 +1,124 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: grpcroute-onprem
+spec:
+  description: |
+    Validates that an operator-managed on-prem Gateway supports GRPCRoute by:
+    1. Creating a GatewayConfiguration and GatewayClass for on-prem mode.
+    2. Creating an HTTPS Gateway listener whose SupportedKinds includes GRPCRoute.
+    3. Attaching a GRPCRoute to that listener and verifying AttachedRoutes increments.
+    4. Verifying end-to-end gRPC traffic to a grpcbin backend.
+    5. Deleting the GRPCRoute and verifying AttachedRoutes decrements.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_name
+      value: (join('-', [($namespace), 'gateway']))
+    - name: cert_secret_name
+      value: grpcroute-onprem-tls
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: grpcbin_image
+      value: 'kong/grpcbin:latest'
+    - name: grpc_route_name
+      value: grpcroute-onprem
+    - name: grpcbin_name
+      value: grpcbin
+    - name: grpc_host
+      value: (join('.', ['grpc', ($namespace), 'example.com']))
+    - name: listener_https_port
+      value: 443
+    - name: request_message
+      value: kong
+    - name: insecure_tls
+      value: 'true'
+
+  steps:
+    - name: Create-tls-secret
+      description: Create a TLS Secret for the HTTPS Gateway listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+      bindings:
+        - name: sni_hostname
+          value: ($grpc_host)
+
+    - name: Create-gateway-configuration
+      description: Create an on-prem GatewayConfiguration with a gRPC-capable DataPlane proxy listener.
+      try:
+        - apply:
+            file: 01-gatewayconfiguration.yaml
+        - assert:
+            file: 01-gatewayconfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create a GatewayClass pointing at the on-prem GatewayConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-grpcbin-backend
+      description: Create the grpcbin Deployment and Service backend.
+      use:
+        template: ../../common/_step_templates/apply-assert-grpcbinService.yaml
+      bindings:
+        - name: grpcbin_namespace
+          value: ($gateway_namespace)
+
+    - name: Create-gateway
+      description: Create an operator-managed HTTPS Gateway and verify GRPCRoute is advertised as supported.
+      try:
+        - apply:
+            file: 02-gateway.yaml
+        - assert:
+            file: 02-assert-gateway-without-grpcroute.yaml
+
+    - name: Create-grpcroute
+      description: Create a GRPCRoute attached to the Gateway.
+      try:
+        - apply:
+            file: 03-grpcroute.yaml
+        - assert:
+            file: 03-assert-gateway-with-grpcroute.yaml
+
+    - name: Verify-grpc-traffic
+      description: Verify end-to-end gRPC traffic through the Gateway.
+      use:
+        template: ../../common/_step_templates/verify-grpc-traffic-from-host.yaml
+      bindings:
+        - name: grpc_host
+          value: ($grpc_host)
+        - name: request_message
+          value: ($request_message)
+        - name: insecure_tls
+          value: ($insecure_tls)
+
+    - name: Delete-grpcroute
+      description: Delete the GRPCRoute and verify the Gateway listener detaches it.
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: GRPCRoute
+              namespace: ($gateway_namespace)
+              name: ($grpc_route_name)
+        - assert:
+            file: 02-assert-gateway-without-grpcroute.yaml
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-grpcroute-onprem
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
+

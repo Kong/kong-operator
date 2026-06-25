@@ -66,9 +66,21 @@
   because for underlying `KonnectGatewayControlPlane` these fields
   have been always immutable.
   [#4599](https://github.com/Kong/kong-operator/pull/4599)
+- Bump sigs.k8s.io/gateway-api from v1.5.1 to v1.6.0-rc.1.
+  [#4639](https://github.com/Kong/kong-operator/pull/4639)
 
 ### Fixes
 
+- Konnect: prevent orphaned and duplicate Konnect entities when reconciliation
+  races with the cached client. The cleanup finalizer is now added before the entity
+  is created in Konnect, and the freshly created Konnect ID is kept in an in-memory
+  store until the cached status reflects it. This lets deletion recover a missing
+  Konnect ID (falling back to probing Konnect by Kubernetes UID, or by name for the
+  tag-less Cloud Gateway types `KonnectCloudGatewayNetwork` and
+  `KonnectCloudGatewayTransitGateway`) so an entity can still be cleaned up after an
+  operator restart, and prevents creating a duplicate entity when a stale cached
+  status has not yet caught up to the persisted Konnect ID.
+  [#4650](https://github.com/Kong/kong-operator/pull/4650)
 - Hybridgateway: merge duplicate `KongTarget`s when multiple `backendRef`s in
   an `HTTPRoute` or `TLSRoute` rule resolve to the same pod IP and port.
   Previously one target per backendRef per endpoint was created, causing Konnect
@@ -107,6 +119,12 @@
 - Prevent recreating consumer credentials on every Konnect sync when running in
   "KIC in Konnect" mode with on prem `ControlPlane`.
   [#4622](https://github.com/Kong/kong-operator/pull/4622)
+- Hybridgateway: merge `HTTPRoute` filters that map to the same Kong plugin type
+  (for example a `URLRewrite` and a `RequestHeaderModifier`, both of which
+  translate to `request-transformer`) into a single `KongPlugin` per rule. This
+  avoids attaching two plugins of the same type to the same route, which Konnect
+  rejects with a `unique-plugin-per-entity` constraint error.
+  [#4658](https://github.com/Kong/kong-operator/pull/4658)
 
 ## [v2.2.0]
 

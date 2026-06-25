@@ -12,6 +12,118 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
+// Kong plugin type names produced from HTTPRoute filters.
+const (
+	pluginRequestTransformer  = "request-transformer"
+	pluginResponseTransformer = "response-transformer"
+	pluginRedirect            = "redirect"
+	pluginPreFunction         = "pre-function"
+)
+
+type kongPluginConfig struct {
+	name   string
+	config json.RawMessage
+}
+
+// ruleKongPluginConfig is a KongPlugin configuration together with the filters that produced it.
+// The contributing filters are used to derive a stable KongPlugin name.
+type ruleKongPluginConfig struct {
+	kongPluginConfig
+
+	filters []gwtypes.HTTPRouteFilter
+}
+
+// translateRuleFilters translates all non-ExtensionRef filters of a rule into KongPlugin
+// configurations, merging filters that map to the same Kong plugin type into a single
+// configuration. This is required because Kong enforces a unique-plugin-per-entity constraint:
+// a route cannot have two plugins of the same type bound to it. The most common case is a rule
+// combining a URLRewrite and a RequestHeaderModifier filter, both of which translate to a
+// request-transformer plugin.
+//
+// The order in which plugin types are first encountered is preserved to keep the output
+// deterministic.
+func translateRuleFilters(rule gwtypes.HTTPRouteRule) ([]ruleKongPluginConfig, error) {
+	order := []string{}
+	byName := map[string]*ruleKongPluginConfig{}
+
+	for _, filter := range rule.Filters {
+		// ExtensionRef filters reference user-managed KongPlugins and are handled by the caller.
+		if filter.Type == gatewayv1.HTTPRouteFilterExtensionRef {
+			continue
+		}
+
+		confs, err := translateFromFilter(rule, filter)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, conf := range confs {
+			existing, ok := byName[conf.name]
+			if !ok {
+				order = append(order, conf.name)
+				byName[conf.name] = &ruleKongPluginConfig{
+					kongPluginConfig: conf,
+					filters:          []gwtypes.HTTPRouteFilter{filter},
+				}
+				continue
+			}
+
+			merged, err := mergePluginConfig(conf.name, existing.config, conf.config)
+			if err != nil {
+				return nil, err
+			}
+			existing.config = merged
+			existing.filters = append(existing.filters, filter)
+		}
+	}
+
+	result := make([]ruleKongPluginConfig, 0, len(order))
+	for _, name := range order {
+		result = append(result, *byName[name])
+	}
+	return result, nil
+}
+
+// mergePluginConfig merges two KongPlugin JSON configurations of the same Kong plugin type.
+// Both transformer plugins carry a transformerData config and are mergeable. Today only
+// request-transformer is actually produced by more than one filter type within a rule
+// (RequestHeaderModifier + URLRewrite); response-transformer comes from a single, non-repeatable
+// filter and is included defensively in case a future filter also maps to it. Any other same-type
+// collision is treated as an error rather than silently dropping a configuration.
+func mergePluginConfig(pluginName string, a, b json.RawMessage) (json.RawMessage, error) {
+	switch pluginName {
+	case pluginRequestTransformer, pluginResponseTransformer:
+		var da, db transformerData
+		if err := json.Unmarshal(a, &da); err != nil {
+			return nil, fmt.Errorf("unmarshaling %q config: %w", pluginName, err)
+		}
+		if err := json.Unmarshal(b, &db); err != nil {
+			return nil, fmt.Errorf("unmarshaling %q config: %w", pluginName, err)
+		}
+		merged, err := json.Marshal(mergeTransformerData(da, db))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling merged %q config: %w", pluginName, err)
+		}
+		return merged, nil
+	default:
+		return nil, fmt.Errorf("cannot merge multiple %q plugins generated for the same rule", pluginName)
+	}
+}
+
+// mergeTransformerData combines two transformer plugin configurations by appending their header
+// operations. The URI replacement is only set by URLRewrite filters (at most one per rule), so the
+// first non-empty value wins.
+func mergeTransformerData(a, b transformerData) transformerData {
+	a.Add.Headers = append(a.Add.Headers, b.Add.Headers...)
+	a.Append.Headers = append(a.Append.Headers, b.Append.Headers...)
+	a.Remove.Headers = append(a.Remove.Headers, b.Remove.Headers...)
+	a.Replace.Headers = append(a.Replace.Headers, b.Replace.Headers...)
+	if a.Replace.URI == "" {
+		a.Replace.URI = b.Replace.URI
+	}
+	return a
+}
+
 // translateFromFilter translates a HTTPRouteFilter into one or more KongPlugin resources.
 // The generated KongPlugin(s) are filled with the pluginName and json config only leaving to the caller
 // the responsibility to set metadata (name, namespace, labels, annotations) as needed.
@@ -29,18 +141,12 @@ import (
 // Returns:
 //   - []KongPlugin: Slice of translated KongPlugin resources.
 //   - error: Any error encountered during translation.
-
-type kongPluginConfig struct {
-	name   string
-	config json.RawMessage
-}
-
 func translateFromFilter(rule gwtypes.HTTPRouteRule, filter gwtypes.HTTPRouteFilter) ([]kongPluginConfig, error) {
 	pluginConfs := []kongPluginConfig{}
 
 	switch filter.Type {
 	case gatewayv1.HTTPRouteFilterRequestHeaderModifier:
-		pConf := kongPluginConfig{name: "request-transformer"}
+		pConf := kongPluginConfig{name: pluginRequestTransformer}
 
 		config, err := translateRequestModifier(filter)
 		if err != nil {
@@ -53,7 +159,7 @@ func translateFromFilter(rule gwtypes.HTTPRouteRule, filter gwtypes.HTTPRouteFil
 		pConf.config = configJSON
 		pluginConfs = append(pluginConfs, pConf)
 	case gatewayv1.HTTPRouteFilterResponseHeaderModifier:
-		pData := kongPluginConfig{name: "response-transformer"}
+		pData := kongPluginConfig{name: pluginResponseTransformer}
 
 		config, err := translateResponseModifier(filter)
 		if err != nil {
@@ -76,10 +182,10 @@ func translateFromFilter(rule gwtypes.HTTPRouteRule, filter gwtypes.HTTPRouteFil
 		// otherwise we can use the standard redirect plugin.
 		if rr.Path != nil && rr.Path.Type == gatewayv1.PrefixMatchHTTPPathModifier {
 			config, err = translateRequestRedirectPreFunction(filter, rule)
-			pluginName = "pre-function"
+			pluginName = pluginPreFunction
 		} else {
 			config, err = translateRequestRedirect(filter)
-			pluginName = "redirect"
+			pluginName = pluginRedirect
 		}
 
 		// From here on
@@ -94,7 +200,7 @@ func translateFromFilter(rule gwtypes.HTTPRouteRule, filter gwtypes.HTTPRouteFil
 		pData.config = configJSON
 		pluginConfs = append(pluginConfs, pData)
 	case gatewayv1.HTTPRouteFilterURLRewrite:
-		pData := kongPluginConfig{name: "request-transformer"}
+		pData := kongPluginConfig{name: pluginRequestTransformer}
 
 		path := getPathPrefixMatchValue(rule)
 
