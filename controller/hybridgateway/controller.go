@@ -313,7 +313,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	}
 
 	// Phase 5: Orphan Cleanup.
-	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
+	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 	if err != nil {
 		if result, ok := requeueOnConflict(err, logger, "Orphan cleanup conflicted, requeueing"); ok {
 			return result, nil
@@ -442,5 +442,5 @@ func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	// fully disappear before releasing the root finalizer. Generated resources
 	// have their own cleanup/finalizer flows; keeping the Gateway API object in
 	// deletion until every child finishes can block immediate same-name re-creates.
-	return cleanOrphanedResourcesWithoutWaitingForDeletes[t, tPtr](ctx, r.Client, logger, conv)
+	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: false})
 }

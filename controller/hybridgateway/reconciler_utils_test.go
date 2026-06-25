@@ -532,7 +532,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 		gvks                 []schema.GroupVersionKind
 		desired              []unstructured.Unstructured // what the converter reports as desired
 		existing             []unstructured.Unstructured // what's in the cluster
-		noWait               bool                        // true → cleanOrphanedResourcesWithoutWaitingForDeletes
+		noWait               bool                        // true → orphanCleanupOptions{waitForDeletes: false}
 		runUntilDone         bool                        // loop until requeue=false
 		outputStoreErr       error
 		interceptorFn        *interceptor.Funcs
@@ -624,7 +624,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 				serviceGVK: {"svc1"},
 			},
 		},
-		// --- gating: noWait=false (cleanOrphanedResources, waitForDeletedResources=true) ---
+		// --- gating: noWait=false (orphanCleanupOptions{waitForDeletes: true}) ---
 		{
 			// After deleting the orphan in GVK1, the function returns immediately without
 			// processing GVK2. A second call is needed to clean GVK2 orphans.
@@ -648,7 +648,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 				serviceGVK: {"svc-orphan"},
 			},
 		},
-		// --- gating: noWait=true (cleanOrphanedResourcesWithoutWaitingForDeletes, waitForDeletedResources=false) ---
+		// --- gating: noWait=true (orphanCleanupOptions{waitForDeletes: false}) ---
 		{
 			// With noWait=true, GVK2 is processed even when GVK1 had orphans to delete.
 			name:        "noWait=true: orphan deleted in GVK1 continues to GVK2 in same pass",
@@ -734,11 +734,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 							outputStoreErr: tt.outputStoreErr,
 						},
 					}
-					if tt.noWait {
-						requeue, err = cleanOrphanedResourcesWithoutWaitingForDeletes(ctx, cl, logger, conv)
-					} else {
-						requeue, err = cleanOrphanedResources(ctx, cl, logger, conv)
-					}
+					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: !tt.noWait})
 				} else {
 					conv := &fakeHTTPRouteConverter{
 						gvks:           tt.gvks,
@@ -746,11 +742,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 						desired:        tt.desired,
 						outputStoreErr: tt.outputStoreErr,
 					}
-					if tt.noWait {
-						requeue, err = cleanOrphanedResourcesWithoutWaitingForDeletes(ctx, cl, logger, conv)
-					} else {
-						requeue, err = cleanOrphanedResources(ctx, cl, logger, conv)
-					}
+					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: !tt.noWait})
 				}
 				if !tt.runUntilDone || !requeue || err != nil {
 					break
@@ -820,7 +812,7 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 
 	t.Run("normal cleanup waits for deleting child before later GVKs", func(t *testing.T) {
 		cl := newClient()
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: true})
 		require.NoError(t, err)
 		require.True(t, requeue)
 
@@ -832,7 +824,7 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 
 	t.Run("route deletion cleanup does not wait for deleting child before later GVKs", func(t *testing.T) {
 		cl := newClient()
-		requeue, err := cleanOrphanedResourcesWithoutWaitingForDeletes[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false})
 		require.NoError(t, err)
 		require.False(t, requeue)
 
@@ -860,7 +852,7 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 			}).
 			Build()
 
-		requeue, err := cleanOrphanedResourcesWithoutWaitingForDeletes[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false})
 		require.NoError(t, err)
 		require.True(t, requeue)
 
