@@ -12,9 +12,9 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
+	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -119,12 +119,30 @@ func ServiceForRuleWithName[
 	// Resolve service attributes once, outside the switch — future route types only add a case above.
 	protocol := resolveProtocolFromBackendRefs(ctx, cl, namespace, backendRefs, defaultProtocol, logger)
 	path := resolvePathFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
-	tlsVerify := resolveTLSVerifyFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
-	tlsVerifyDepth := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
-	connectTimeout := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
-	readTimeout := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
-	writeTimeout := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
-	retries := resolveRetriesFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	tlsVerify, err := resolveTLSVerifyFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	tlsVerifyDepth, err := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	connectTimeout, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	readTimeout, err := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	writeTimeout, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	retries, err := resolveRetriesFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, fmt.Sprintf("Generating KongService for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
@@ -174,6 +192,37 @@ func ServiceForRuleWithName[
 	}
 
 	return &service, kongCertificate, kongReferenceGrant, nil
+}
+
+// ValidateBackendRefAnnotations validates the konghq.com/* annotations on the backend Services
+// referenced by backendRefs in the given namespace. It returns an error wrapping
+// [hgerrors.ErrMalformedAnnotation] if any annotation value fails to parse, and nil otherwise.
+func ValidateBackendRefAnnotations(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	backendRefs []gwtypes.BackendRef,
+	logger logr.Logger,
+) error {
+	if _, err := resolveTLSVerifyFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	if _, err := resolveRetriesFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+		return err
+	}
+	return nil
 }
 
 // clientCertRefName returns the cert's metadata.name or "" when cert is nil.
@@ -277,7 +326,7 @@ func extractProtocolFromBackendRef(
 	backendRef gwtypes.BackendRef,
 ) (string, bool) {
 
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return "", false
 	}
 
@@ -335,7 +384,7 @@ func extractPathFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) (string, bool) {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return "", false
 	}
 
@@ -369,13 +418,17 @@ func resolveTLSVerifyFromBackendRefs(
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
 	logger logr.Logger,
-) *bool {
+) (*bool, error) {
 	for _, backendRef := range backendRefs {
-		if v := extractTLSVerifyFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
-			return v
+		v, err := extractTLSVerifyFromBackendRef(ctx, cl, logger, namespace, backendRef)
+		if err != nil {
+			return nil, err
+		}
+		if v != nil {
+			return v, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // extractTLSVerifyFromBackendRef returns the tls-verify value from the konghq.com/tls-verify
@@ -386,9 +439,9 @@ func extractTLSVerifyFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) *bool {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return nil
+) (*bool, error) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil, nil
 	}
 
 	bRefNamespace := namespace
@@ -400,22 +453,21 @@ func extractTLSVerifyFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for tls-verify annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return nil
+		return nil, nil
 	}
 
 	v, err := metadata.ExtractTLSVerify(svc.GetAnnotations())
 	if err != nil {
-		log.Error(logger, err, "Failed to parse tls-verify annotation, ignoring annotation value",
-			"service", fmt.Sprintf("%s/%s", svc.GetNamespace(), svc.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a valid boolean")
+		return nil, fmt.Errorf("%w: konghq.com/tls-verify on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, svc.GetNamespace(), svc.GetName(), err)
 	}
 	if v == nil {
-		return nil
+		return nil, nil
 	}
 
 	log.Debug(logger, "Using tls-verify from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "tls-verify", *v)
-	return v
+	return v, nil
 }
 
 // resolveTLSVerifyDepthFromBackendRefs returns the tls-verify-depth value taken from
@@ -426,13 +478,17 @@ func resolveTLSVerifyDepthFromBackendRefs(
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
 	logger logr.Logger,
-) *int64 {
+) (*int64, error) {
 	for _, backendRef := range backendRefs {
-		if v := extractTLSVerifyDepthFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
-			return v
+		v, err := extractTLSVerifyDepthFromBackendRef(ctx, cl, logger, namespace, backendRef)
+		if err != nil {
+			return nil, err
+		}
+		if v != nil {
+			return v, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // extractTLSVerifyDepthFromBackendRef returns the tls-verify-depth value from the
@@ -443,9 +499,9 @@ func extractTLSVerifyDepthFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) *int64 {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return nil
+) (*int64, error) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil, nil
 	}
 
 	bRefNamespace := namespace
@@ -457,22 +513,21 @@ func extractTLSVerifyDepthFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for tls-verify-depth annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return nil
+		return nil, nil
 	}
 
 	v, err := metadata.ExtractTLSVerifyDepth(svc.GetAnnotations())
 	if err != nil {
-		log.Error(logger, err, "Failed to parse tls-verify-depth annotation, ignoring annotation value",
-			"service", fmt.Sprintf("%s/%s", svc.GetNamespace(), svc.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
+		return nil, fmt.Errorf("%w: konghq.com/tls-verify-depth on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, svc.GetNamespace(), svc.GetName(), err)
 	}
 	if v == nil {
-		return nil
+		return nil, nil
 	}
 
 	log.Debug(logger, "Using tls-verify-depth from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "tls-verify-depth", *v)
-	return v
+	return v, nil
 }
 
 // resolveConnectTimeoutFromBackendRefs returns the connect-timeout value taken from
@@ -483,13 +538,17 @@ func resolveConnectTimeoutFromBackendRefs(
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
 	logger logr.Logger,
-) *int64 {
+) (*int64, error) {
 	for _, backendRef := range backendRefs {
-		if v := extractConnectTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
-			return v
+		v, err := extractConnectTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef)
+		if err != nil {
+			return nil, err
+		}
+		if v != nil {
+			return v, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // extractConnectTimeoutFromBackendRef returns the connect-timeout value from the
@@ -500,9 +559,9 @@ func extractConnectTimeoutFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) *int64 {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return nil
+) (*int64, error) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil, nil
 	}
 
 	bRefNamespace := namespace
@@ -514,22 +573,21 @@ func extractConnectTimeoutFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for connect-timeout annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return nil
+		return nil, nil
 	}
 
 	v, err := metadata.ExtractConnectTimeout(svc.GetAnnotations())
 	if err != nil {
-		log.Error(logger, err, "Failed to parse connect-timeout annotation, ignoring annotation value",
-			"service", fmt.Sprintf("%s/%s", svc.GetNamespace(), svc.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
+		return nil, fmt.Errorf("%w: konghq.com/connect-timeout on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, svc.GetNamespace(), svc.GetName(), err)
 	}
 	if v == nil {
-		return nil
+		return nil, nil
 	}
 
 	log.Debug(logger, "Using connect-timeout from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "connect-timeout", *v)
-	return v
+	return v, nil
 }
 
 // resolveReadTimeoutFromBackendRefs returns the read-timeout value taken from
@@ -540,13 +598,17 @@ func resolveReadTimeoutFromBackendRefs(
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
 	logger logr.Logger,
-) *int64 {
+) (*int64, error) {
 	for _, backendRef := range backendRefs {
-		if v := extractReadTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
-			return v
+		v, err := extractReadTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef)
+		if err != nil {
+			return nil, err
+		}
+		if v != nil {
+			return v, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // extractReadTimeoutFromBackendRef returns the read-timeout value from the
@@ -557,9 +619,9 @@ func extractReadTimeoutFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) *int64 {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return nil
+) (*int64, error) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil, nil
 	}
 
 	bRefNamespace := namespace
@@ -571,22 +633,21 @@ func extractReadTimeoutFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for read-timeout annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return nil
+		return nil, nil
 	}
 
 	v, err := metadata.ExtractReadTimeout(svc.GetAnnotations())
 	if err != nil {
-		log.Error(logger, err, "Failed to parse read-timeout annotation, ignoring annotation value",
-			"service", fmt.Sprintf("%s/%s", svc.GetNamespace(), svc.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
+		return nil, fmt.Errorf("%w: konghq.com/read-timeout on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, svc.GetNamespace(), svc.GetName(), err)
 	}
 	if v == nil {
-		return nil
+		return nil, nil
 	}
 
 	log.Debug(logger, "Using read-timeout from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "read-timeout", *v)
-	return v
+	return v, nil
 }
 
 // resolveWriteTimeoutFromBackendRefs returns the write-timeout value taken from
@@ -597,13 +658,17 @@ func resolveWriteTimeoutFromBackendRefs(
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
 	logger logr.Logger,
-) *int64 {
+) (*int64, error) {
 	for _, backendRef := range backendRefs {
-		if v := extractWriteTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
-			return v
+		v, err := extractWriteTimeoutFromBackendRef(ctx, cl, logger, namespace, backendRef)
+		if err != nil {
+			return nil, err
+		}
+		if v != nil {
+			return v, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // extractWriteTimeoutFromBackendRef returns the write-timeout value from the
@@ -614,9 +679,9 @@ func extractWriteTimeoutFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) *int64 {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return nil
+) (*int64, error) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil, nil
 	}
 
 	bRefNamespace := namespace
@@ -628,22 +693,21 @@ func extractWriteTimeoutFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for write-timeout annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return nil
+		return nil, nil
 	}
 
 	v, err := metadata.ExtractWriteTimeout(svc.GetAnnotations())
 	if err != nil {
-		log.Error(logger, err, "Failed to parse write-timeout annotation, ignoring annotation value",
-			"service", fmt.Sprintf("%s/%s", svc.GetNamespace(), svc.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
+		return nil, fmt.Errorf("%w: konghq.com/write-timeout on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, svc.GetNamespace(), svc.GetName(), err)
 	}
 	if v == nil {
-		return nil
+		return nil, nil
 	}
 
 	log.Debug(logger, "Using write-timeout from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "write-timeout", *v)
-	return v
+	return v, nil
 }
 
 // resolveRetriesFromBackendRefs returns the retries value taken from
@@ -654,13 +718,17 @@ func resolveRetriesFromBackendRefs(
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
 	logger logr.Logger,
-) *int64 {
+) (*int64, error) {
 	for _, backendRef := range backendRefs {
-		if v := extractRetriesFromBackendRef(ctx, cl, logger, namespace, backendRef); v != nil {
-			return v
+		v, err := extractRetriesFromBackendRef(ctx, cl, logger, namespace, backendRef)
+		if err != nil {
+			return nil, err
+		}
+		if v != nil {
+			return v, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // extractRetriesFromBackendRef returns the retries value from the konghq.com/retries
@@ -671,9 +739,9 @@ func extractRetriesFromBackendRef(
 	logger logr.Logger,
 	namespace string,
 	backendRef gwtypes.BackendRef,
-) *int64 {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
-		return nil
+) (*int64, error) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+		return nil, nil
 	}
 
 	bRefNamespace := namespace
@@ -685,20 +753,19 @@ func extractRetriesFromBackendRef(
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(backendRef.Name)}, svc); err != nil {
 		log.Debug(logger, "Failed to fetch backend Service for retries annotation check",
 			"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "error", err)
-		return nil
+		return nil, nil
 	}
 
 	v, err := metadata.ExtractRetries(svc.GetAnnotations())
 	if err != nil {
-		log.Error(logger, err, "Failed to parse retries annotation, ignoring annotation value",
-			"service", fmt.Sprintf("%s/%s", svc.GetNamespace(), svc.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in versions from KO 2.3, please fix the annotation value to be a non-negative integer")
+		return nil, fmt.Errorf("%w: konghq.com/retries on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, svc.GetNamespace(), svc.GetName(), err)
 	}
 	if v == nil {
-		return nil
+		return nil, nil
 	}
 
 	log.Debug(logger, "Using retries from backend Service annotation",
 		"service", fmt.Sprintf("%s/%s", bRefNamespace, backendRef.Name), "retries", *v)
-	return v
+	return v, nil
 }

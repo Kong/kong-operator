@@ -12,6 +12,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
+	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
@@ -114,15 +115,13 @@ func RoutesForHTTPRouteRule(
 
 	stripPath, err := metadata.ExtractStripPath(httpRoute.Annotations)
 	if err != nil {
-		log.Error(logger, err, fmt.Sprintf("Failed to extract strip path annotation, defaulting to %t", stripPath),
-			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
+		return nil, fmt.Errorf("%w: konghq.com/strip-path on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
 	}
 	preserveHost, err := metadata.ExtractPreserveHost(httpRoute.Annotations)
 	if err != nil {
-		log.Error(logger, err, fmt.Sprintf("Failed to extract preserve host annotation, defaulting to %t", preserveHost),
-			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
+		return nil, fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
 	}
 
 	for i, match := range rule.Matches {
