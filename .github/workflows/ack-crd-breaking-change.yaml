@@ -28,7 +28,7 @@ jobs:
             --json conclusion,createdAt,databaseId,event,headSha,status \
             --jq '[.[] | select(.headSha == env.HEAD_SHA and .event == "pull_request" and .status == "completed" and .conclusion == "failure")] | sort_by(.createdAt) | reverse | .[].databaseId')"
 
-          run_id=""
+          crd_job_id=""
           for candidate_run_id in ${run_ids}; do
             crd_job_id="$(gh api \
               -H "Accept: application/vnd.github+json" \
@@ -36,20 +36,19 @@ jobs:
               --jq '.jobs[] | select(.name == "verify / crd-breaking-changes" and .conclusion == "failure") | .id' | head -n 1)"
 
             if [[ -n "${crd_job_id}" ]]; then
-              run_id="${candidate_run_id}"
               break
             fi
           done
 
-          if [[ -z "${run_id}" ]]; then
+          if [[ -z "${crd_job_id}" ]]; then
             echo "No failed CRD breaking-change check found for ${HEAD_SHA}."
             exit 0
           fi
 
-          # Rerun failed jobs for this run, not just the matrix job, so the aggregate
-          # required `passed` job is recalculated after crd-breaking-changes succeeds.
-          echo "Rerunning failed jobs in tests workflow run ${run_id}."
+          # Re-running a job also re-runs dependent jobs, so the aggregate required
+          # `passed` job is recalculated after crd-breaking-changes succeeds.
+          echo "Rerunning failed CRD breaking-change job ${crd_job_id}."
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
-            "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/rerun-failed-jobs"
+            "repos/${GITHUB_REPOSITORY}/actions/jobs/${crd_job_id}/rerun"
