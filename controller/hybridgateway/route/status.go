@@ -62,10 +62,10 @@ func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[
 		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for %s %s: %w", routeKind, routeObject.GetName(), err)
 	}
 
-	// todo: Validate the implementation-specific konghq.com/* annotations once (route-level and
-	//	backend-Service-level). A malformed value is surfaced via the KongConfigurationValid
-	//	condition and halts state enforcement until the user fixes the annotation.
-	//	The condition is set only while invalid; a valid Route carries no such condition.
+	// Validate the implementation-specific konghq.com/* annotations once (route-level and
+	// backend-Service-level). A malformed value is surfaced via the KongConfigurationValid
+	// condition and halts state enforcement until the user fixes the annotation.
+	// The condition is set only while invalid; a valid Route carries no such condition.
 	var invalidConfigCond *metav1.Condition
 	if annotationErr := validateAnnotations(ctx, logger, cl, routeObject); annotationErr != nil {
 		log.Debug(logger, "HTTPRoute has malformed Kong annotations", "error", annotationErr)
