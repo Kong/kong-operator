@@ -1,5 +1,0 @@
-# Description text changes do not affect CRD validation compatibility.
-# scripts/verify-crd-breaking-changes.sh still rejects description removals.
-validations:
-  - name: description
-    enforcement: None

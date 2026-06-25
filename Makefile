@@ -323,7 +323,7 @@ verify.go-fix: go-fix verify.diff
 
 .PHONY: verify.crd-breaking-changes
 verify.crd-breaking-changes: crdify
-	CRDIFY_BIN="$${CRDIFY_BIN:-$(CRDIFY)}" YQ_BIN="$${YQ_BIN:-$(YQ)}" ./scripts/verify-crd-breaking-changes.sh
+	CRDIFY_BIN="$${CRDIFY_BIN:-$(CRDIFY)}" ./scripts/verify-crd-breaking-changes.sh
 
 # ------------------------------------------------------------------------------
 # Build - Generators
