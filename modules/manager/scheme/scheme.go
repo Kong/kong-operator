@@ -8,6 +8,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
@@ -39,6 +40,7 @@ func Get() *runtime.Scheme {
 	utilruntime.Must(konnectv1alpha2.AddToScheme(scheme))
 
 	utilruntime.Must(eventgatewayv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(aigatewayv1alpha1.AddToScheme(scheme))
 
 	utilruntime.Must(certmanagerv1.AddToScheme(scheme))
 

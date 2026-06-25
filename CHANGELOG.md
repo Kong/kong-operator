@@ -59,6 +59,8 @@
   [#4610](https://github.com/Kong/kong-operator/pull/4610)
 - API: add PrintColumns for KongTarget upstream and target fields.
   [#4576](https://github.com/Kong/kong-operator/pull/4576)
+- AI Gateway: introduce `AIGatewayDataPlane` CRD
+  [#4690](https://github.com/Kong/kong-operator/pull/4690)
 
 ### Changed
 
