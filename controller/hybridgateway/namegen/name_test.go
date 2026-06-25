@@ -573,6 +573,79 @@ func TestNewKongPluginName(t *testing.T) {
 	}
 }
 
+func TestNewKongPluginNameForFilters(t *testing.T) {
+	headerModifier := gatewayv1.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Set: []gatewayv1.HTTPHeader{{Name: "X-Test", Value: "test-value"}},
+		},
+	}
+	urlRewrite := gatewayv1.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterURLRewrite,
+		URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			Path: &gatewayv1.HTTPPathModifier{
+				Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+				ReplacePrefixMatch: new("/echo"),
+			},
+		},
+	}
+
+	const ns, pluginName = "default", "request-transformer"
+
+	tests := []struct {
+		name    string
+		filters []gatewayv1.HTTPRouteFilter
+		// want is the name to compare against; wantEqual decides whether the generated name must
+		// equal it or differ from it.
+		want      string
+		wantEqual bool
+	}{
+		{
+			// Critical: renaming an existing single-filter plugin would momentarily leave two
+			// plugins of the same type on a route, reintroducing the unique-plugin-per-entity error.
+			name:      "single filter is backward compatible with NewKongPluginName",
+			filters:   []gatewayv1.HTTPRouteFilter{headerModifier},
+			want:      NewKongPluginName(headerModifier, ns, pluginName),
+			wantEqual: true,
+		},
+		{
+			name:      "merged name differs from the URLRewrite single-filter name",
+			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite, headerModifier},
+			want:      NewKongPluginName(urlRewrite, ns, pluginName),
+			wantEqual: false,
+		},
+		{
+			name:      "merged name differs from the RequestHeaderModifier single-filter name",
+			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite, headerModifier},
+			want:      NewKongPluginName(headerModifier, ns, pluginName),
+			wantEqual: false,
+		},
+		{
+			name:      "merged name changes when filter order changes",
+			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite, headerModifier},
+			want:      NewKongPluginNameForFilters([]gatewayv1.HTTPRouteFilter{headerModifier, urlRewrite}, ns, pluginName),
+			wantEqual: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewKongPluginNameForFilters(tt.filters, ns, pluginName)
+
+			// The name must be deterministic and carry the readable namespace.pluginType prefix.
+			again := NewKongPluginNameForFilters(tt.filters, ns, pluginName)
+			assert.Equal(t, got, again)
+			assert.True(t, strings.HasPrefix(got, "default.request-transformer."))
+
+			if tt.wantEqual {
+				assert.Equal(t, tt.want, got)
+			} else {
+				assert.NotEqual(t, tt.want, got)
+			}
+		})
+	}
+}
+
 func TestNewKongPluginBindingName(t *testing.T) {
 	tests := []struct {
 		name     string

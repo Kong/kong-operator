@@ -3,7 +3,6 @@ package gatewayapi
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -33,17 +32,17 @@ var GRPCRouteTypeMeta = metav1.TypeMeta{
 }
 
 var TCPRouteTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1alpha2.GroupVersion.String(),
+	APIVersion: gatewayv1.GroupVersion.String(),
 	Kind:       "TCPRoute",
 }
 
 var TLSRouteTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1alpha2.GroupVersion.String(),
+	APIVersion: gatewayv1.GroupVersion.String(),
 	Kind:       "TLSRoute",
 }
 
 var UDPRouteTypeMeta = metav1.TypeMeta{
-	APIVersion: gatewayv1alpha2.GroupVersion.String(),
+	APIVersion: gatewayv1.GroupVersion.String(),
 	Kind:       "UDPRoute",
 }
 

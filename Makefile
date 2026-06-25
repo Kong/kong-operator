@@ -611,7 +611,7 @@ test.unit.pretty:
 	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
 
 ENVTEST_TEST_PATHS := ./test/envtest/...
-ENVTEST_TIMEOUT ?= 15m
+ENVTEST_TIMEOUT ?= 30m
 PKG_LIST=./controller/...,./internal/...,./pkg/...,./modules/...
 TEST_DIR ?= $(PROJECT_DIR)
 

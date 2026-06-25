@@ -74,6 +74,20 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 			},
 		}, nil)
 
+		// Networks are immutable, so the enforcement reconcile "updates" by reading
+		// the network back via GetNetwork. Whether this read fires before the delete
+		// is reconcile-timing dependent, so allow it optionally with .Maybe() to keep
+		// the test from flaking on a benign, idempotent call.
+		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID).Return(
+			&sdkkonnectops.GetNetworkResponse{
+				Network: &sdkkonnectcomp.Network{
+					ID:    networkID,
+					Name:  networkName,
+					State: sdkkonnectcomp.NetworkStateInitializing,
+				},
+			}, nil,
+		).Maybe()
+
 		t.Log("Creating KonnectAPIAuthConfiguration")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 
@@ -90,6 +104,17 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		watchFor(t, ctx, w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
 			return n.GetKonnectID() == networkID && conditionsContainProgrammed(n.GetConditions(), metav1.ConditionTrue)
 		}, "Did not see KonnectCloudGatewayNetwork get Programmed and Konnect ID set.")
+
+		t.Log("Allowing SDK get calls from update reconciliations")
+		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID).Return(
+			&sdkkonnectops.GetNetworkResponse{
+				Network: &sdkkonnectcomp.Network{
+					ID:    networkID,
+					Name:  networkName,
+					State: sdkkonnectcomp.NetworkStateReady,
+				},
+			}, nil,
+		).Maybe()
 
 		t.Log("Setting up SDK expectations on deletion")
 		sdk.CloudGatewaysSDK.EXPECT().DeleteNetwork(mock.Anything, networkID, mock.Anything).Return(&sdkkonnectops.DeleteNetworkResponse{}, nil)

@@ -807,16 +807,16 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 // again on that basis would produce a duplicate Konnect entity. The in-memory
 // store records the Konnect ID as soon as the entity is created, so:
 //   - if the cached status lacks the ID but the store has it, restore and persist
-//     it. ApplyStatusPatchIfNotEmpty writes through to the API server and refreshes
-//     ent from the response, so the rest of the loop runs on a consistent object.
-//     Re-persisting is idempotent and also heals the case where the post-create
-//     status write failed.
-//   - once the status carries the ID, the bridge entry has served its purpose and
-//     is dropped.
+//     it, then return. A stale cached object can otherwise continue into update
+//     logic with the recovered ID, causing nondeterministic Konnect updates before
+//     the cache has observed the status write. Re-persisting is idempotent and
+//     also heals the case where the post-create status write failed.
+//   - once the cached status carries the ID, the bridge entry has served its
+//     purpose and is dropped.
 //
 // It returns stop=true when the caller should return the provided result/error (a
-// conflict requeue or a persist error); otherwise reconciliation continues with a
-// consistent ent.
+// conflict requeue, a persist error, or a successful pending-ID recovery);
+// otherwise reconciliation continues.
 func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 	ctx context.Context,
 	ent TEnt,
@@ -832,9 +832,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 				}
 				return ctrl.Result{}, true, fmt.Errorf("failed to persist recovered Konnect ID for %s: %w", pendingKey, err)
 			}
+			return ctrl.Result{}, true, nil
 		}
-	}
-	if ent.GetKonnectStatus().GetKonnectID() != "" {
+	} else {
 		r.pendingKonnectIDs.Delete(pendingKey)
 	}
 	return ctrl.Result{}, false, nil

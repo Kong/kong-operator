@@ -1,0 +1,76 @@
+---
+# Assert the HTTPRoute combining URLRewrite + RequestHeaderModifier is accepted and fully
+# programmed. KongPluginBindingProgrammed=True is the key signal: under the unique-plugin-per-entity
+# bug the second request-transformer binding would fail and this condition would be False.
+#
+# Required bindings:
+#   - test_name: The test name label to match (used for labels)
+#   - http_route_name: Name of the HTTPRoute resource
+#   - http_route_namespace: Namespace of the HTTPRoute resource
+#   - gateway_name: Name of the Gateway parent resource
+#   - httpbin_deployment_name: Name of the httpbin backend service
+#   - httpbin_deployment_namespace: Namespace of the httpbin backend service
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  (labels."chainsaw/test" == ($test_name)): true
+  name: ($http_route_name)
+  namespace: ($http_route_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - backendRefs:
+        - name: ($httpbin_deployment_name)
+          namespace: ($httpbin_deployment_namespace)
+          port: 80
+      matches:
+        - path:
+            type: PathPrefix
+            value: /get
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /anything
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+            - name: X-Merge-Set
+              value: "foo"
+            add:
+            - name: X-Merge-Add
+              value: "bar"
+            remove:
+            - X-Merge-Remove
+status:
+  parents:
+    - parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: ($gateway_name)
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
+      (conditions[?type == 'KongPluginBindingProgrammed']):
+        - status: "True"
+          reason: KongPluginBindingProgrammed
