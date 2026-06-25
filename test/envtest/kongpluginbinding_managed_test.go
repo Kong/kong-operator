@@ -137,7 +137,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		}),
 	).Return(nil, nil).Maybe()
 
-	assertKongPluginFinalizerState := func(t *testing.T, expected bool, message string) {
+	assertKongPluginContainsFinalizerInUse := func(t *testing.T, expected bool, message string) {
 		t.Helper()
 		require.EventuallyWithT(t,
 			func(c *assert.CollectT) {
