@@ -228,7 +228,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		assertKongPluginFinalizerState(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
+		assertKongPluginContainsFinalizerInUse(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
 
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kongPluginBinding, kongService)
 		kongPluginBinding = waitForKongPluginBinding(t, "KongPluginBinding wasn't recreated",
@@ -259,7 +259,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		)
 		delete(kongService.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongService))
-		assertKongPluginFinalizerState(t, false, "KongPlugin wasn't updated to get plugin-in-use finalizer removed")
+		assertKongPluginContainsFinalizerInUse(t, false, "KongPlugin wasn't updated to get plugin-in-use finalizer removed")
 
 		t.Logf(
 			"checking that managed KongPluginBinding %s gets deleted",
@@ -311,7 +311,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		assertKongPluginFinalizerState(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
+		assertKongPluginContainsFinalizerInUse(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
 
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kongPluginBinding, kongRoute)
 		kongPluginBinding = waitForKongPluginBinding(t, "KongPluginBinding wasn't recreated",
@@ -342,7 +342,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		)
 		delete(kongRoute.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
-		assertKongPluginFinalizerState(t, false, "KongPlugin wasn't updated to get plugin-in-use finalizer removed")
+		assertKongPluginContainsFinalizerInUse(t, false, "KongPlugin wasn't updated to get plugin-in-use finalizer removed")
 
 		t.Logf(
 			"checking that managed KongPluginBinding %s gets deleted",
@@ -408,7 +408,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		assertKongPluginFinalizerState(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
+		assertKongPluginContainsFinalizerInUse(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
 
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
@@ -548,7 +548,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		assertKongPluginFinalizerState(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
+		assertKongPluginContainsFinalizerInUse(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
 
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
@@ -751,7 +751,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
-		assertKongPluginFinalizerState(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
+		assertKongPluginContainsFinalizerInUse(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
 
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
