@@ -5096,7 +5096,7 @@ used instead. This is to allow reusing the same KongUpstreamPolicy for multiple 
 | `kind` _string_ | `KongUpstreamPolicy`
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongUpstreamPolicySpec](#configuration-konghq-com-v1beta1-types-kongupstreampolicyspec)_ | Spec contains the configuration of the Kong upstream. |
-| `status` _sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus_ | Status defines the current state of KongUpstreamPolicy |
+| `status` _sigs.k8s.io/gateway-api/apis/v1.PolicyStatus_ | Status defines the current state of KongUpstreamPolicy |
 
 ### Types
 
