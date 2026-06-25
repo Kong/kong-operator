@@ -2,7 +2,7 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -59,7 +59,7 @@ type KongUpstreamPolicy struct {
 	Spec KongUpstreamPolicySpec `json:"spec,omitempty"`
 
 	// Status defines the current state of KongUpstreamPolicy
-	Status gatewayv1alpha2.PolicyStatus `json:"status,omitempty"`
+	Status gatewayv1.PolicyStatus `json:"status,omitempty"`
 }
 
 // KongUpstreamPolicyList contains a list of KongUpstreamPolicy.

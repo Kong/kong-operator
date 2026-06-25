@@ -189,10 +189,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 			oldParentRefs := udpRoute.Spec.ParentRefs
 			assert.Eventually(t, func() bool {
-				udpRoute, err := gatewayClient.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
+				udpRoute, err := gatewayClient.GatewayV1().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
 				assert.NoError(t, err)
 				udpRoute.Spec.ParentRefs = nil
-				_, err = gatewayClient.GatewayV1alpha2().UDPRoutes(namespace).Update(ctx, udpRoute, metav1.UpdateOptions{})
+				_, err = gatewayClient.GatewayV1().UDPRoutes(namespace).Update(ctx, udpRoute, metav1.UpdateOptions{})
 				return err == nil
 			}, time.Minute, time.Second)
 
@@ -212,10 +212,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 			t.Log("putting the parentRefs back")
 			assert.Eventually(t, func() bool {
-				udpRoute, err := gatewayClient.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
+				udpRoute, err := gatewayClient.GatewayV1().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
 				assert.NoError(t, err)
 				udpRoute.Spec.ParentRefs = oldParentRefs
-				_, err = gatewayClient.GatewayV1alpha2().UDPRoutes(namespace).Update(ctx, udpRoute, metav1.UpdateOptions{})
+				_, err = gatewayClient.GatewayV1().UDPRoutes(namespace).Update(ctx, udpRoute, metav1.UpdateOptions{})
 				return err == nil
 			}, time.Minute, time.Second)
 
@@ -326,7 +326,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 			t.Log("adding an additional backendRef to the UDPRoute")
 			assert.Eventually(t, func() bool {
-				udpRoute, err := gatewayClient.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
+				udpRoute, err := gatewayClient.GatewayV1().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
 				assert.NoError(t, err)
 				udpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
 					{
@@ -343,7 +343,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 					},
 				}
 
-				_, err = gatewayClient.GatewayV1alpha2().UDPRoutes(namespace).Update(ctx, udpRoute, metav1.UpdateOptions{})
+				_, err = gatewayClient.GatewayV1().UDPRoutes(namespace).Update(ctx, udpRoute, metav1.UpdateOptions{})
 				return err == nil
 			}, consts.IngressWait, consts.WaitTick)
 

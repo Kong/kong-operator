@@ -1017,3 +1017,188 @@ func TestTranslateURLRewrite(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslateRuleFilters(t *testing.T) {
+	prefix := new(gatewayv1.PathMatchPathPrefix)
+
+	requestHeaderModifier := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Add: []gatewayv1.HTTPHeader{{Name: "X-Api-Version", Value: "v2"}},
+		},
+	}
+	urlRewrite := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterURLRewrite,
+		URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			Path: &gatewayv1.HTTPPathModifier{
+				Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+				ReplacePrefixMatch: new("/echo"),
+			},
+		},
+	}
+	responseHeaderModifier := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+		ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Add: []gatewayv1.HTTPHeader{{Name: "X-Backend", Value: "echo"}},
+		},
+	}
+	extensionRef := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterExtensionRef,
+		ExtensionRef: &gatewayv1.LocalObjectReference{
+			Group: "configuration.konghq.com",
+			Kind:  "KongPlugin",
+			Name:  "rate-limiting",
+		},
+	}
+
+	secondHeaderModifier := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Add: []gatewayv1.HTTPHeader{{Name: "X-Second", Value: "2"}},
+		},
+	}
+
+	newRule := func(filters ...gwtypes.HTTPRouteFilter) gwtypes.HTTPRouteRule {
+		return gwtypes.HTTPRouteRule{
+			Matches: []gatewayv1.HTTPRouteMatch{
+				{Path: &gatewayv1.HTTPPathMatch{Type: prefix, Value: new("/echo/v2")}},
+			},
+			Filters: filters,
+		}
+	}
+
+	// wantConf is the expected outcome for one generated KongPlugin: its plugin type, the number
+	// of filters that contributed to it, and its merged configuration.
+	type wantConf struct {
+		name        string
+		filterCount int
+		config      transformerData
+	}
+
+	tests := []struct {
+		name    string
+		filters []gwtypes.HTTPRouteFilter
+		want    []wantConf
+	}{
+		{
+			name:    "URLRewrite and RequestHeaderModifier merge into a single request-transformer",
+			filters: []gwtypes.HTTPRouteFilter{urlRewrite, requestHeaderModifier},
+			want: []wantConf{{
+				name:        "request-transformer",
+				filterCount: 2,
+				// URLRewrite contributes the URI rewrite, RequestHeaderModifier the header append.
+				config: transformerData{
+					Append:  transformerTargetSlice{Headers: []string{"X-Api-Version:v2"}},
+					Replace: transformerTargetSliceReplace{URI: `/echo$(uri_captures[1])`},
+				},
+			}},
+		},
+		{
+			name:    "different plugin types are kept separate",
+			filters: []gwtypes.HTTPRouteFilter{requestHeaderModifier, responseHeaderModifier},
+			want: []wantConf{
+				{
+					name:        "request-transformer",
+					filterCount: 1,
+					config:      transformerData{Append: transformerTargetSlice{Headers: []string{"X-Api-Version:v2"}}},
+				},
+				{
+					name:        "response-transformer",
+					filterCount: 1,
+					config:      transformerData{Append: transformerTargetSlice{Headers: []string{"X-Backend:echo"}}},
+				},
+			},
+		},
+		{
+			name:    "ExtensionRef filters are skipped",
+			filters: []gwtypes.HTTPRouteFilter{extensionRef, requestHeaderModifier},
+			want: []wantConf{{
+				name:        "request-transformer",
+				filterCount: 1,
+				config:      transformerData{Append: transformerTargetSlice{Headers: []string{"X-Api-Version:v2"}}},
+			}},
+		},
+		{
+			// Future-proofing: the Gateway API forbids repeating these filters today, but the
+			// merge engine must not rely on that. If the API ever makes a filter repeatable (or
+			// adds a new filter that maps to an already-generated plugin type), multiple
+			// contributors of the same Kong plugin type must collapse into a single plugin rather
+			// than collide on the route.
+			name:    "multiple filters mapping to the same plugin type collapse into one",
+			filters: []gwtypes.HTTPRouteFilter{requestHeaderModifier, secondHeaderModifier},
+			want: []wantConf{{
+				name:        "request-transformer",
+				filterCount: 2,
+				config:      transformerData{Append: transformerTargetSlice{Headers: []string{"X-Api-Version:v2", "X-Second:2"}}},
+			}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			confs, err := translateRuleFilters(newRule(tt.filters...))
+			require.NoError(t, err)
+			require.Len(t, confs, len(tt.want))
+
+			for i, w := range tt.want {
+				assert.Equal(t, w.name, confs[i].name)
+				assert.Len(t, confs[i].filters, w.filterCount, "all contributing filters must be recorded so the name is stable")
+
+				var data transformerData
+				require.NoError(t, json.Unmarshal(confs[i].config, &data))
+				assert.Equal(t, w.config, data)
+			}
+		})
+	}
+}
+
+func TestMergePluginConfig(t *testing.T) {
+	tests := []struct {
+		name       string
+		pluginName string
+		a, b       transformerData
+		wantErr    bool
+		want       transformerData
+	}{
+		{
+			name:       "merges request-transformer header lists and keeps the first uri",
+			pluginName: "request-transformer",
+			a:          transformerData{Add: transformerTargetSlice{Headers: []string{"a:1"}}, Replace: transformerTargetSliceReplace{URI: "/echo"}},
+			b:          transformerData{Add: transformerTargetSlice{Headers: []string{"b:2"}}, Replace: transformerTargetSliceReplace{URI: "/other"}},
+			want:       transformerData{Add: transformerTargetSlice{Headers: []string{"a:1", "b:2"}}, Replace: transformerTargetSliceReplace{URI: "/echo"}},
+		},
+		{
+			name:       "merges response-transformer header lists",
+			pluginName: "response-transformer",
+			a:          transformerData{Append: transformerTargetSlice{Headers: []string{"X-A:1"}}},
+			b:          transformerData{Append: transformerTargetSlice{Headers: []string{"X-B:2"}}},
+			want:       transformerData{Append: transformerTargetSlice{Headers: []string{"X-A:1", "X-B:2"}}},
+		},
+		{
+			name:       "returns an error for non-mergeable plugin types",
+			pluginName: "rate-limiting",
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			aJSON, err := json.Marshal(tt.a)
+			require.NoError(t, err)
+			bJSON, err := json.Marshal(tt.b)
+			require.NoError(t, err)
+
+			merged, err := mergePluginConfig(tt.pluginName, aJSON, bJSON)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "cannot merge multiple")
+				return
+			}
+			require.NoError(t, err)
+
+			var got transformerData
+			require.NoError(t, json.Unmarshal(merged, &got))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
