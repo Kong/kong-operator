@@ -175,11 +175,10 @@ type httpRouteMatchPriorityKey struct {
 }
 
 type httpRoutePriorityClass struct {
-	pathType        gatewayv1.PathMatchType
-	pathLength      int
-	hasMethodMatch  bool
-	headerCount     int
-	queryParamCount int
+	pathType       gatewayv1.PathMatchType
+	pathLength     int
+	hasMethodMatch bool
+	headerCount    int
 }
 
 func httpRouteMatchPriorities(httpRoute *gwtypes.HTTPRoute) map[httpRouteMatchPriorityKey]int64 {
@@ -229,24 +228,26 @@ func priorityForHeaderOnlyHTTPRouteMatch(
 	priorities map[httpRouteMatchPriorityKey]int64,
 	ruleIndex, matchIndex int,
 ) *int64 {
-	if match.Path != nil || len(match.Headers) == 0 {
+	if !isHeaderOnlyDefaultPathHTTPRouteMatch(match) {
 		return nil
 	}
-	priority := headerOnlyRegexPriority(
-		priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex),
-		priorities,
-	)
+	priority := priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex)
 	return &priority
 }
 
-func headerOnlyRegexPriority(priority int64, priorities map[httpRouteMatchPriorityKey]int64) int64 {
-	var maxPriority int64
-	for _, p := range priorities {
-		if p > maxPriority {
-			maxPriority = p
-		}
+func isHeaderOnlyDefaultPathHTTPRouteMatch(match gatewayv1.HTTPRouteMatch) bool {
+	if len(match.Headers) == 0 {
+		return false
 	}
-	return -(maxPriority - priority + 1)
+	if match.Path == nil {
+		return true
+	}
+
+	pathType := gatewayv1.PathMatchPathPrefix
+	if match.Path.Type != nil {
+		pathType = *match.Path.Type
+	}
+	return pathType == gatewayv1.PathMatchPathPrefix && match.Path.Value != nil && *match.Path.Value == "/"
 }
 
 func priorityForHTTPRouteMatch(priorities map[httpRouteMatchPriorityKey]int64, ruleIndex, matchIndex int) int64 {
@@ -269,7 +270,6 @@ func calculateHTTPRoutePriorityClass(match gatewayv1.HTTPRouteMatch) httpRoutePr
 	}
 	class.hasMethodMatch = match.Method != nil
 	class.headerCount = countEffectiveHTTPHeaderMatches(match.Headers)
-	class.queryParamCount = countEffectiveHTTPQueryParamMatches(match.QueryParams)
 	return class
 }
 
@@ -286,7 +286,7 @@ func compareHTTPRoutePriorityClass(a, b httpRoutePriorityClass) int {
 	if c := a.headerCount - b.headerCount; c != 0 {
 		return c
 	}
-	return a.queryParamCount - b.queryParamCount
+	return 0
 }
 
 func comparePathTypePriority(a, b gatewayv1.PathMatchType) int {
@@ -326,18 +326,6 @@ func countEffectiveHTTPHeaderMatches(headers []gatewayv1.HTTPHeaderMatch) int {
 		seenHeaders[name] = struct{}{}
 	}
 	return len(seenHeaders)
-}
-
-func countEffectiveHTTPQueryParamMatches(queryParams []gatewayv1.HTTPQueryParamMatch) int {
-	seenQueryParams := make(map[string]struct{}, len(queryParams))
-	for _, queryParam := range queryParams {
-		name := string(queryParam.Name)
-		if _, ok := seenQueryParams[name]; ok {
-			continue
-		}
-		seenQueryParams[name] = struct{}{}
-	}
-	return len(seenQueryParams)
 }
 
 // needsCaptureGroup checks if the given HTTPRoute rule requires a capture group

@@ -143,9 +143,9 @@
 - Hybridgateway: order overlapping header-only `HTTPRoute` matches by Gateway API
   specificity. Header-only matches are translated to `KongRoute`s with a catch-all
   regex path so Kong's `regex_priority` becomes effective, and a per-match priority
-  derived from path/method/header/query specificity keeps more specific matches
-  ahead of less specific ones while staying below path-based routes. This enables
-  the `HTTPRouteHeaderMatching` Gateway API conformance test for the hybrid gateway.
+  derived from method and header specificity keeps more specific header matches
+  ahead of less specific ones. This enables the `HTTPRouteHeaderMatching` Gateway API
+  conformance test for the hybrid gateway.
   [#4640](https://github.com/Kong/kong-operator/pull/4640)
 
 ## [v2.2.0]
