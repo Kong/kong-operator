@@ -501,6 +501,12 @@ spec:
                           maxLength: 253
                           minLength: 1
                           type: string
+                        condition:
+                          description: |-
+                            CEL expression evaluated against the connection's auth context.
+                            If omitted or empty, the alias is active for all connections.
+                          maxLength: 253
+                          type: string
                         conflict:
                           description: |-
                             How to handle conflicts where an alias shadows a physical topic.
@@ -510,12 +516,6 @@ spec:
                           enum:
                           - warn
                           - ignore
-                          maxLength: 253
-                          type: string
-                        match:
-                          description: |-
-                            CEL expression evaluated against the connection's auth context.
-                            If omitted or empty, the alias is active for all connections.
                           maxLength: 253
                           type: string
                         topic:

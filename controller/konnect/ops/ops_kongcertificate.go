@@ -107,9 +107,9 @@ func updateCertificate(
 
 	_, err = sdk.UpsertCertificate(ctx,
 		sdkkonnectops.UpsertCertificateRequest{
-			ControlPlaneID: cpID,
-			CertificateID:  cert.GetKonnectStatus().GetKonnectID(),
-			Certificate:    input,
+			ControlPlaneID:     cpID,
+			CertificateID:      cert.GetKonnectStatus().GetKonnectID(),
+			CertificateRequest: input,
 		},
 	)
 
@@ -223,7 +223,9 @@ func fetchTLSDataFromSecret(ctx context.Context, cl client.Client, parentNamespa
 	return string(certBytes), string(keyBytes), nil
 }
 
-func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, cert *configurationv1alpha1.KongCertificate) (sdkkonnectcomp.Certificate, error) {
+func kongCertificateToCertificateInput(
+	ctx context.Context, cl client.Client, cert *configurationv1alpha1.KongCertificate,
+) (sdkkonnectcomp.CertificateRequest, error) {
 	var certData, keyData, certAltData, keyAltData string
 
 	// Check the certificate data type.
@@ -232,21 +234,21 @@ func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, ce
 		secretRef := cert.Spec.SecretRef
 		if secretRef == nil {
 			// This should not happen due to validation, but just in case.
-			return sdkkonnectcomp.Certificate{}, fmt.Errorf("secretRef is nil")
+			return sdkkonnectcomp.CertificateRequest{}, fmt.Errorf("secretRef is nil")
 		}
 
 		var err error
 		parentNamespace := cert.GetNamespace()
 		certData, keyData, err = fetchTLSDataFromSecret(ctx, cl, parentNamespace, secretRef)
 		if err != nil {
-			return sdkkonnectcomp.Certificate{}, err
+			return sdkkonnectcomp.CertificateRequest{}, err
 		}
 
 		// Optional alternative cert/key.
 		if cert.Spec.SecretRefAlt != nil {
 			certAltData, keyAltData, err = fetchTLSDataFromSecret(ctx, cl, parentNamespace, cert.Spec.SecretRefAlt)
 			if err != nil {
-				return sdkkonnectcomp.Certificate{}, err
+				return sdkkonnectcomp.CertificateRequest{}, err
 			}
 		}
 	} else {
@@ -257,7 +259,7 @@ func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, ce
 		keyAltData = cert.Spec.KeyAlt
 	}
 
-	input := sdkkonnectcomp.Certificate{
+	input := sdkkonnectcomp.CertificateRequest2{
 		Cert: certData,
 		Key:  keyData,
 		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
@@ -269,7 +271,7 @@ func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, ce
 		input.KeyAlt = new(keyAltData)
 	}
 
-	return input, nil
+	return sdkkonnectcomp.CreateCertificateRequestCertificateRequest2(input), nil
 }
 
 func getKongCertificateForUID(

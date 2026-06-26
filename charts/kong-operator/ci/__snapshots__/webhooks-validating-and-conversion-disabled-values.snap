@@ -2100,110 +2100,206 @@ spec:
                         maxLength: 1000
                         type: string
                       config:
-                        description: The configuration of the schema validation policy.
+                        description: The configuration of the policy.
                         properties:
-                          failureMode:
-                            description: |-
-                              Describes how to handle a failure in a policy applied to consumed records.
-                              * `error` - the batch is not delivered to the client.
-                              Use sparingly: erroring on a batch causes clients to get stuck on the
-                              problematic offset and requires manual intervention to skip it.
-                              * `skip` - the record is not delivered to the client.
-                              * `passthrough` - passes the record to the client even though policy
-                              execution failed.
-                              * `mark` - passes the record to the client but marks it with a
-                              `kong/policy-failure-<id>` header whose value is the reason for the policy
-                              failure (truncated to 512 characters).
-
-                              **Requires a minimum runtime version of `1.2`**.
-                            enum:
-                            - error
-                            - skip
-                            - passthrough
-                            - mark
-                            maxLength: 253
-                            type: string
-                          keyValidationAction:
-                            description: |-
-                              Deprecated. Use `failure_mode`.
-
-                              Defines a behavior when record key is not valid.
-                              * mark - marks a record with kong/server header and client ID value
-                              to help to identify the clients violating schema.
-                              * skip - skips delivering a record.
-                            enum:
-                            - mark
-                            - skip
-                            maxLength: 253
-                            type: string
-                          schemaRegistry:
-                            description: A reference to a schema Registry.
+                          confluentSchemaRegistry:
+                            description: SchemaRegistry configuration.
                             properties:
-                              id:
-                                description: ID configuration.
-                                type: object
-                              name:
-                                description: Name configuration.
+                              failureMode:
+                                description: |-
+                                  Describes how to handle a failure in a policy applied to consumed records.
+                                  * `error` - the batch is not delivered to the client.
+                                  Use sparingly: erroring on a batch causes clients to get stuck on the
+                                  problematic offset and requires manual intervention to skip it.
+                                  * `skip` - the record is not delivered to the client.
+                                  * `passthrough` - passes the record to the client even though policy
+                                  execution failed.
+                                  * `mark` - passes the record to the client but marks it with a
+                                  `kong/policy-failure-<id>` header whose value is the reason for the policy
+                                  failure (truncated to 512 characters).
+
+                                  **Requires a minimum runtime version of `1.2`**.
+                                enum:
+                                - error
+                                - skip
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                type: string
+                              keyValidationAction:
+                                description: |-
+                                  Deprecated. Use `failure_mode`.
+
+                                  Defines a behavior when record key is not valid.
+                                  * mark - marks a record with kong/server header and client ID value
+                                  to help to identify the clients violating schema.
+                                  * skip - skips delivering a record.
+                                enum:
+                                - mark
+                                - skip
+                                maxLength: 253
+                                type: string
+                              schemaRegistry:
+                                description: A reference to a schema Registry.
                                 properties:
+                                  id:
+                                    description: ID configuration.
+                                    type: object
                                   name:
-                                    description: The unique name of the schema registry.
-                                    maxLength: 255
+                                    description: Name configuration.
+                                    properties:
+                                      name:
+                                        description: The unique name of the schema registry.
+                                        maxLength: 255
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - id
+                                    - name
                                     minLength: 1
                                     type: string
                                 required:
-                                - name
+                                - type
                                 type: object
-                              type:
-                                description: Type designates the type of configuration.
+                              validateKey:
+                                description: |-
+                                  If true, validate the record key.
+
+                                  **Requires a minimum runtime version of `1.2`**.
                                 enum:
-                                - id
-                                - name
-                                minLength: 1
+                                - Enabled
+                                - Disabled
                                 type: string
-                            required:
-                            - type
+                              validateValue:
+                                description: |-
+                                  If true, validate the record value.
+
+                                  **Requires a minimum runtime version of `1.2`**.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              valueValidationAction:
+                                description: |-
+                                  Deprecated. Use `failure_mode`.
+
+                                  Defines a behavior when record value is not valid.
+                                  * mark - marks a record with kong/server header and client ID value
+                                  to help to identify the clients violating schema.
+                                  * skip - skips delivering a record.
+                                enum:
+                                - mark
+                                - skip
+                                maxLength: 253
+                                type: string
+                            type: object
+                          json:
+                            description: JSON configuration.
+                            properties:
+                              failureMode:
+                                description: |-
+                                  Describes how to handle a failure in a policy applied to consumed records.
+                                  * `error` - the batch is not delivered to the client.
+                                  Use sparingly: erroring on a batch causes clients to get stuck on the
+                                  problematic offset and requires manual intervention to skip it.
+                                  * `skip` - the record is not delivered to the client.
+                                  * `passthrough` - passes the record to the client even though policy
+                                  execution failed.
+                                  * `mark` - passes the record to the client but marks it with a
+                                  `kong/policy-failure-<id>` header whose value is the reason for the policy
+                                  failure (truncated to 512 characters).
+
+                                  **Requires a minimum runtime version of `1.2`**.
+                                enum:
+                                - error
+                                - skip
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                type: string
+                              keyValidationAction:
+                                description: |-
+                                  Deprecated. Use `failure_mode`.
+
+                                  Defines a behavior when record key is not valid.
+                                  * mark - marks a record with kong/server header and client ID value
+                                  to help to identify the clients violating schema.
+                                  * skip - skips delivering a record.
+                                enum:
+                                - mark
+                                - skip
+                                maxLength: 253
+                                type: string
+                              schemaRegistry:
+                                description: A reference to a schema Registry.
+                                properties:
+                                  id:
+                                    description: ID configuration.
+                                    type: object
+                                  name:
+                                    description: Name configuration.
+                                    properties:
+                                      name:
+                                        description: The unique name of the schema registry.
+                                        maxLength: 255
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - id
+                                    - name
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              validateKey:
+                                description: |-
+                                  If true, validate the record key.
+
+                                  **Requires a minimum runtime version of `1.2`**.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              validateValue:
+                                description: |-
+                                  If true, validate the record value.
+
+                                  **Requires a minimum runtime version of `1.2`**.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              valueValidationAction:
+                                description: |-
+                                  Deprecated. Use `failure_mode`.
+
+                                  Defines a behavior when record value is not valid.
+                                  * mark - marks a record with kong/server header and client ID value
+                                  to help to identify the clients violating schema.
+                                  * skip - skips delivering a record.
+                                enum:
+                                - mark
+                                - skip
+                                maxLength: 253
+                                type: string
                             type: object
                           type:
-                            description: |-
-                              How to validate the schema and parse the record.
-                              * confluent_schema_registry - validates against confluent schema registry.
-                              * json - simple JSON parsing without the schema.
+                            description: Type designates the type of configuration.
                             enum:
-                            - confluent_schema_registry
+                            - confluentSchemaRegistry
                             - json
-                            maxLength: 253
                             minLength: 1
-                            type: string
-                          validateKey:
-                            description: |-
-                              If true, validate the record key.
-
-                              **Requires a minimum runtime version of `1.2`**.
-                            enum:
-                            - Enabled
-                            - Disabled
-                            type: string
-                          validateValue:
-                            description: |-
-                              If true, validate the record value.
-
-                              **Requires a minimum runtime version of `1.2`**.
-                            enum:
-                            - Enabled
-                            - Disabled
-                            type: string
-                          valueValidationAction:
-                            description: |-
-                              Deprecated. Use `failure_mode`.
-
-                              Defines a behavior when record value is not valid.
-                              * mark - marks a record with kong/server header and client ID value
-                              to help to identify the clients violating schema.
-                              * skip - skips delivering a record.
-                            enum:
-                            - mark
-                            - skip
-                            maxLength: 253
                             type: string
                         required:
                         - type
@@ -4168,6 +4264,12 @@ spec:
                           maxLength: 253
                           minLength: 1
                           type: string
+                        condition:
+                          description: |-
+                            CEL expression evaluated against the connection's auth context.
+                            If omitted or empty, the alias is active for all connections.
+                          maxLength: 253
+                          type: string
                         conflict:
                           description: |-
                             How to handle conflicts where an alias shadows a physical topic.
@@ -4177,12 +4279,6 @@ spec:
                           enum:
                           - warn
                           - ignore
-                          maxLength: 253
-                          type: string
-                        match:
-                          description: |-
-                            CEL expression evaluated against the connection's auth context.
-                            If omitted or empty, the alias is active for all connections.
                           maxLength: 253
                           type: string
                         topic:
@@ -36485,6 +36581,14 @@ spec:
                     x-kubernetes-validations:
                     - message: name is immutable
                       rule: self == oldSelf
+                  notificationsDeveloperPiiVisibilityEnabled:
+                    description: |-
+                      When enabled, portal registration notifications include the registering
+                      developer's identifying information (such as name and email).
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   rbacEnabled:
                     description: |-
                       Whether the portal resources are protected by Role Based Access Control

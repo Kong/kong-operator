@@ -36,6 +36,12 @@ var PortalSDKOpsBoolFields = []PortalSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "notifications_developer_pii_visibility_enabled",
+		Path: []string{
+			"notifications_developer_pii_visibility_enabled",
+		},
+	},
+	{
 		Label: "rbac_enabled",
 		Path: []string{
 			"rbac_enabled",
