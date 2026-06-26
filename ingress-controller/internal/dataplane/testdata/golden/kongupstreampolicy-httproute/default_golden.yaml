@@ -47,6 +47,7 @@ services:
     - ~/httpbin-with-test$
     - /httpbin-with-test/
     preserve_host: true
+    regex_priority: 1
     strip_path: true
     tags:
     - k8s-name:httpbin
