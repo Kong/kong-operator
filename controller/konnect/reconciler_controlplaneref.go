@@ -137,6 +137,34 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	return ctrl.Result{}, nil
 }
 
+// entityHasCrossNamespaceRefs reports whether ent has any cross-namespace
+// reference (Secret, KongCACertificate, KongCertificate/ClientCertificate) whose
+// shared ResolvedRefs condition is owned by a dedicated handler. The
+// control-plane-ref handler must not remove the ResolvedRefs condition while any
+// such reference exists, otherwise it would clobber what those handlers set
+// (they run later in Reconcile).
+func entityHasCrossNamespaceRefs[
+	T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	ns := ent.GetNamespace()
+	isCross := func(n *string) bool { return n != nil && *n != "" && *n != ns }
+
+	for _, r := range getSecretRefs(ent) {
+		if isCross(r.Namespace) {
+			return true
+		}
+	}
+	for _, r := range getKongCACertificateRefs(ent) {
+		if isCross(r.Namespace) {
+			return true
+		}
+	}
+	if r, ok := getKongCertificateRef(ent).Get(); ok && isCross(r.Namespace) {
+		return true
+	}
+	return false
+}
+
 func conditionMessageReferenceKonnectAPIAuthConfigurationInvalid(apiAuthRef types.NamespacedName) string {
 	return fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is invalid", apiAuthRef)
 }
@@ -162,11 +190,17 @@ func ensureKongReferenceGrant[
 	if cpRef.Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
 		toNamespace == "" ||
 		toNamespace == fromNamespace {
-		if res, errStatus := patch.StatusWithoutCondition(
-			ctx, cl, ent,
-			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
+		// The ControlPlane ref doesn't require a grant. Only remove the shared
+		// ResolvedRefs condition if no other cross-namespace reference of this
+		// entity still justifies it, otherwise we'd clobber the condition that
+		// the secret/certificate ref handlers set (they run later in Reconcile).
+		if !entityHasCrossNamespaceRefs(ent) {
+			if res, errStatus := patch.StatusWithoutCondition(
+				ctx, cl, ent,
+				configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+			); errStatus != nil || !res.IsZero() {
+				return res, errStatus
+			}
 		}
 		return ctrl.Result{}, nil
 	}

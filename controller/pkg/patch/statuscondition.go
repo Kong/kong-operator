@@ -101,11 +101,11 @@ func StatusWithoutCondition[T interface {
 	ent T,
 	conditionType string,
 ) (res ctrl.Result, err error) {
+	old := ent.DeepCopyObject().(T)
 	if !k8sutils.RemoveCondition(kcfgconsts.ConditionType(conditionType), ent) {
 		return ctrl.Result{}, nil
 	}
 
-	old := ent.DeepCopyObject().(T)
 	if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
 		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil

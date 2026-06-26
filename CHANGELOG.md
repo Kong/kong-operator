@@ -134,6 +134,10 @@
   avoids attaching two plugins of the same type to the same route, which Konnect
   rejects with a `unique-plugin-per-entity` constraint error.
   [#4658](https://github.com/Kong/kong-operator/pull/4658)
+- Fix the issue that the `ResolvedRef` condition for cross-namespace reference
+  is not removed when a resource is updated to remove the cross-namespace
+  reference.
+  [#4663](https://github.com/Kong/kong-operator/pull/4663)
 
 ## [v2.2.0]
 

@@ -288,3 +288,128 @@ func TestPatchStatusWithCondition(t *testing.T) {
 		})
 	}
 }
+
+func TestPatchStatusWithoutCondition(t *testing.T) {
+	const removedConditionType = kcfgdataplane.ReadyType
+
+	otherCondition := metav1.Condition{
+		Type:               "OtherCondition",
+		Status:             metav1.ConditionTrue,
+		Reason:             string(kcfgkonnect.KonnectExtensionAppliedReason),
+		Message:            "unrelated condition that must be preserved",
+		ObservedGeneration: 1,
+	}
+	removedCondition := metav1.Condition{
+		Type:               string(removedConditionType),
+		Status:             metav1.ConditionFalse,
+		Reason:             string(kcfgdataplane.DependenciesNotReadyReason),
+		Message:            "stale condition that must be removed",
+		ObservedGeneration: 1,
+	}
+
+	newDataPlane := func(conditions ...metav1.Condition) *operatorv1beta1.DataPlane {
+		return &operatorv1beta1.DataPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "dp1",
+				Generation: 1,
+			},
+			Status: operatorv1beta1.DataPlaneStatus{
+				Conditions: conditions,
+			},
+		}
+	}
+
+	tests := []struct {
+		name string
+		obj  *operatorv1beta1.DataPlane
+		// removedAbsent asserts the condition is gone after the call.
+		removedAbsent bool
+		// remainingTypes lists condition types that must still be present after the call.
+		remainingTypes  []string
+		expectedResult  ctrl.Result
+		expectedError   bool
+		interceptorFunc interceptor.Funcs
+	}{
+		{
+			name:           "condition present is removed and other conditions are preserved",
+			obj:            newDataPlane(otherCondition, removedCondition),
+			removedAbsent:  true,
+			remainingTypes: []string{otherCondition.Type},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name:           "condition absent is a no-op without error",
+			obj:            newDataPlane(otherCondition),
+			removedAbsent:  true,
+			remainingTypes: []string{otherCondition.Type},
+			expectedResult: ctrl.Result{},
+		},
+		{
+			name:           "conflict triggers requeue",
+			obj:            newDataPlane(removedCondition),
+			expectedResult: ctrl.Result{Requeue: true},
+			interceptorFunc: interceptor.Funcs{
+				SubResourcePatch: func(ctx context.Context, client client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+					return &apierrors.StatusError{
+						ErrStatus: metav1.Status{
+							Status: metav1.StatusFailure,
+							Reason: metav1.StatusReasonConflict,
+						},
+					}
+				},
+			},
+		},
+		{
+			name:          "other error is returned",
+			obj:           newDataPlane(removedCondition),
+			expectedError: true,
+			interceptorFunc: interceptor.Funcs{
+				SubResourcePatch: func(ctx context.Context, client client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+					return &apierrors.StatusError{
+						ErrStatus: metav1.Status{
+							Status: metav1.StatusFailure,
+							Reason: metav1.StatusReason("unknown"),
+						},
+					}
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			cl := fake.NewClientBuilder().
+				WithObjects(tt.obj).
+				WithStatusSubresource(tt.obj).
+				WithScheme(scheme.Get()).
+				WithInterceptorFuncs(tt.interceptorFunc).
+				Build()
+
+			result, err := StatusWithoutCondition(
+				ctx, cl, tt.obj, string(removedConditionType),
+			)
+
+			assert.Equal(t, tt.expectedResult, result)
+			if tt.expectedError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			// Re-read from the client (not the in-memory object) so the test
+			// catches the empty-patch no-op bug rather than just the in-memory mutation.
+			persisted := &operatorv1beta1.DataPlane{}
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(tt.obj), persisted))
+
+			if tt.removedAbsent {
+				_, ok := k8sutils.GetCondition(removedConditionType, persisted)
+				assert.Falsef(t, ok, "condition %s should have been removed", removedConditionType)
+			}
+			for _, condType := range tt.remainingTypes {
+				_, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(condType), persisted)
+				assert.Truef(t, ok, "condition %s should have been preserved", condType)
+			}
+		})
+	}
+}
