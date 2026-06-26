@@ -56,6 +56,9 @@ func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType)
 		if gwType == standardGateway {
 			skipped = append(skipped, tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName)
 		}
+		if gwType == hybridGateway {
+			skipped = append(skipped, tests.HTTPRouteHeaderMatching.ShortName)
+		}
 	case consts.RouterFlavorExpressions:
 		skipped = append(skipped, skippedTestsForExpressionsRouter...)
 	}
