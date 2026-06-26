@@ -188,7 +188,9 @@ func TestPluginForFilter(t *testing.T) {
 				WithRuntimeObjects(objects...).
 				Build()
 
-			plugins, err := PluginsForFilter(ctx, logger, fakeClient, tt.httpRoute, tt.rule, tt.filter, tt.parentRef)
+			rule := tt.rule
+			rule.Filters = append(rule.Filters, tt.filter)
+			plugins, err := PluginsForRule(ctx, logger, fakeClient, tt.httpRoute, rule, tt.parentRef)
 
 			if tt.expectedError {
 				require.Error(t, err)

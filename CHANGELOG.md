@@ -56,6 +56,12 @@
 - Prevent recreating consumer credentials on every Konnect sync when running in
   "KIC in Konnect" mode with on prem `ControlPlane`.
   [#4623](https://github.com/Kong/kong-operator/pull/4622) [#4624](https://github.com/Kong/kong-operator/pull/4624)
+- Hybridgateway: merge `HTTPRoute` filters that map to the same Kong plugin type
+  (for example a `URLRewrite` and a `RequestHeaderModifier`, both of which
+  translate to `request-transformer`) into a single `KongPlugin` per rule. This
+  avoids attaching two plugins of the same type to the same route, which Konnect
+  rejects with a `unique-plugin-per-entity` constraint error.
+  [#4658](https://github.com/Kong/kong-operator/pull/4658)
 
 ## [v2.1.7]
 
