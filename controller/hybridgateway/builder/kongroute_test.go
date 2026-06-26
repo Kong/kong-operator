@@ -93,7 +93,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
 				assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
-				assert.Equal(t, new(int64(8)), route.Spec.RegexPriority)
+				assert.Equal(t, new(KongHTTPRoutePathRegexPriorityOffset+8), route.Spec.RegexPriority)
 				assert.Empty(t, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
 			},
@@ -108,7 +108,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
 				assert.Equal(t, []string{"~/api$"}, route.Spec.Paths)
-				assert.Equal(t, new(int64(9)), route.Spec.RegexPriority)
+				assert.Equal(t, new(KongHTTPRoutePathRegexPriorityOffset+9), route.Spec.RegexPriority)
 				assert.Empty(t, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
 			},
@@ -239,7 +239,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
 				assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
-				assert.Equal(t, new(int64(8)), route.Spec.RegexPriority)
+				assert.Equal(t, new(KongHTTPRoutePathRegexPriorityOffset+8), route.Spec.RegexPriority)
 				assert.Equal(t, []string{"GET"}, route.Spec.Methods)
 				require.NotNil(t, route.Spec.Headers)
 				assert.Equal(t, []string{"Bearer token"}, route.Spec.Headers["Authorization"])
