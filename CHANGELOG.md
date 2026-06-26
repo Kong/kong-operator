@@ -87,6 +87,16 @@
   enforce-time gate delays `KongService` creation until its `KongUpstream` and
   all desired `KongTarget`s are Programmed.
   [#4577](https://github.com/Kong/kong-operator/pull/4577)
+- Konnect: prevent orphaned and duplicate Konnect entities when reconciliation
+  races with the cached client. The cleanup finalizer is now added before the entity
+  is created in Konnect, and the freshly created Konnect ID is kept in an in-memory
+  store until the cached status reflects it. This lets deletion recover a missing
+  Konnect ID (falling back to probing Konnect by Kubernetes UID, or by name for the
+  tag-less Cloud Gateway types `KonnectCloudGatewayNetwork` and
+  `KonnectCloudGatewayTransitGateway`) so an entity can still be cleaned up after an
+  operator restart, and prevents creating a duplicate entity when a stale cached
+  status has not yet caught up to the persisted Konnect ID.
+  [#4650](https://github.com/Kong/kong-operator/pull/4650)
 
 ## [v2.2.0]
 
