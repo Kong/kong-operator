@@ -129,6 +129,9 @@ type Config struct {
 	// Controllers for Event Gateway APIs.
 	KEGDataPlaneControllerEnabled bool
 
+	// Controllers for AI Gateway APIs.
+	AIGatewayDataPlaneControllerEnabled bool
+
 	// FeatureGates holds the set of feature gates enabled via the --feature-gates flag.
 	FeatureGates FeatureGates
 

@@ -1176,4 +1176,5 @@ lint.api: download.kube-api-linter
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
 		./api/common/v1alpha1/... \
-		./api/eventgateway/v1alpha1/...
+		./api/eventgateway/v1alpha1/... \
+		./api/aigateway/v1alpha1/...
