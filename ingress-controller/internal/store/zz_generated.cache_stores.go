@@ -46,6 +46,14 @@ type CacheStores struct {
 	KongServiceFacade              cache.Store
 	KongVault                      cache.Store
 	KongCustomEntity               cache.Store
+	KongServiceV1Alpha1            cache.Store
+	KongRouteV1Alpha1              cache.Store
+	KongUpstreamV1Alpha1           cache.Store
+	KongTargetV1Alpha1             cache.Store
+	KongCertificateV1Alpha1        cache.Store
+	KongCACertificateV1Alpha1      cache.Store
+	KongSNIV1Alpha1                cache.Store
+	KongPluginBindingV1Alpha1      cache.Store
 
 	l *sync.RWMutex
 }
@@ -76,6 +84,14 @@ func NewCacheStores() CacheStores {
 		KongServiceFacade:              cache.NewStore(namespacedKeyFunc),
 		KongVault:                      cache.NewStore(clusterWideKeyFunc),
 		KongCustomEntity:               cache.NewStore(namespacedKeyFunc),
+		KongServiceV1Alpha1:            cache.NewStore(namespacedKeyFunc),
+		KongRouteV1Alpha1:              cache.NewStore(namespacedKeyFunc),
+		KongUpstreamV1Alpha1:           cache.NewStore(namespacedKeyFunc),
+		KongTargetV1Alpha1:             cache.NewStore(namespacedKeyFunc),
+		KongCertificateV1Alpha1:        cache.NewStore(namespacedKeyFunc),
+		KongCACertificateV1Alpha1:      cache.NewStore(namespacedKeyFunc),
+		KongSNIV1Alpha1:                cache.NewStore(namespacedKeyFunc),
+		KongPluginBindingV1Alpha1:      cache.NewStore(namespacedKeyFunc),
 
 		l: &sync.RWMutex{},
 	}
@@ -133,6 +149,22 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.KongVault.Get(obj)
 	case *kongv1alpha1.KongCustomEntity:
 		return c.KongCustomEntity.Get(obj)
+	case *kongv1alpha1.KongService:
+		return c.KongServiceV1Alpha1.Get(obj)
+	case *kongv1alpha1.KongRoute:
+		return c.KongRouteV1Alpha1.Get(obj)
+	case *kongv1alpha1.KongUpstream:
+		return c.KongUpstreamV1Alpha1.Get(obj)
+	case *kongv1alpha1.KongTarget:
+		return c.KongTargetV1Alpha1.Get(obj)
+	case *kongv1alpha1.KongCertificate:
+		return c.KongCertificateV1Alpha1.Get(obj)
+	case *kongv1alpha1.KongCACertificate:
+		return c.KongCACertificateV1Alpha1.Get(obj)
+	case *kongv1alpha1.KongSNI:
+		return c.KongSNIV1Alpha1.Get(obj)
+	case *kongv1alpha1.KongPluginBinding:
+		return c.KongPluginBindingV1Alpha1.Get(obj)
 	}
 	return nil, false, fmt.Errorf("%T is not a supported cache object type", obj)
 }
@@ -190,6 +222,22 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.KongVault.Add(obj)
 	case *kongv1alpha1.KongCustomEntity:
 		return c.KongCustomEntity.Add(obj)
+	case *kongv1alpha1.KongService:
+		return c.KongServiceV1Alpha1.Add(obj)
+	case *kongv1alpha1.KongRoute:
+		return c.KongRouteV1Alpha1.Add(obj)
+	case *kongv1alpha1.KongUpstream:
+		return c.KongUpstreamV1Alpha1.Add(obj)
+	case *kongv1alpha1.KongTarget:
+		return c.KongTargetV1Alpha1.Add(obj)
+	case *kongv1alpha1.KongCertificate:
+		return c.KongCertificateV1Alpha1.Add(obj)
+	case *kongv1alpha1.KongCACertificate:
+		return c.KongCACertificateV1Alpha1.Add(obj)
+	case *kongv1alpha1.KongSNI:
+		return c.KongSNIV1Alpha1.Add(obj)
+	case *kongv1alpha1.KongPluginBinding:
+		return c.KongPluginBindingV1Alpha1.Add(obj)
 	}
 	return fmt.Errorf("cannot add unsupported kind %q to the store", obj.GetObjectKind().GroupVersionKind())
 }
@@ -247,6 +295,22 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.KongVault.Delete(obj)
 	case *kongv1alpha1.KongCustomEntity:
 		return c.KongCustomEntity.Delete(obj)
+	case *kongv1alpha1.KongService:
+		return c.KongServiceV1Alpha1.Delete(obj)
+	case *kongv1alpha1.KongRoute:
+		return c.KongRouteV1Alpha1.Delete(obj)
+	case *kongv1alpha1.KongUpstream:
+		return c.KongUpstreamV1Alpha1.Delete(obj)
+	case *kongv1alpha1.KongTarget:
+		return c.KongTargetV1Alpha1.Delete(obj)
+	case *kongv1alpha1.KongCertificate:
+		return c.KongCertificateV1Alpha1.Delete(obj)
+	case *kongv1alpha1.KongCACertificate:
+		return c.KongCACertificateV1Alpha1.Delete(obj)
+	case *kongv1alpha1.KongSNI:
+		return c.KongSNIV1Alpha1.Delete(obj)
+	case *kongv1alpha1.KongPluginBinding:
+		return c.KongPluginBindingV1Alpha1.Delete(obj)
 	}
 	return fmt.Errorf("cannot delete unsupported kind %q from the store", obj.GetObjectKind().GroupVersionKind())
 }
@@ -277,6 +341,14 @@ func (c CacheStores) ListAllStores() []cache.Store {
 		c.KongServiceFacade,
 		c.KongVault,
 		c.KongCustomEntity,
+		c.KongServiceV1Alpha1,
+		c.KongRouteV1Alpha1,
+		c.KongUpstreamV1Alpha1,
+		c.KongTargetV1Alpha1,
+		c.KongCertificateV1Alpha1,
+		c.KongCACertificateV1Alpha1,
+		c.KongSNIV1Alpha1,
+		c.KongPluginBindingV1Alpha1,
 	}
 }
 
@@ -306,5 +378,13 @@ func (c CacheStores) SupportedTypes() []client.Object {
 		&incubatorv1alpha1.KongServiceFacade{},
 		&kongv1alpha1.KongVault{},
 		&kongv1alpha1.KongCustomEntity{},
+		&kongv1alpha1.KongService{},
+		&kongv1alpha1.KongRoute{},
+		&kongv1alpha1.KongUpstream{},
+		&kongv1alpha1.KongTarget{},
+		&kongv1alpha1.KongCertificate{},
+		&kongv1alpha1.KongCACertificate{},
+		&kongv1alpha1.KongSNI{},
+		&kongv1alpha1.KongPluginBinding{},
 	}
 }

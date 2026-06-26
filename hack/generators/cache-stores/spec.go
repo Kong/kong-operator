@@ -108,4 +108,45 @@ var supportedTypes = []cacheStoreSupportedType{
 		Type:    "KongCustomEntity",
 		Package: "kongv1alpha1",
 	},
+	// v1alpha1 Kong Gateway entity types (KIC standalone support)
+	{
+		Type:       "KongService",
+		Package:    "kongv1alpha1",
+		StoreField: "KongServiceV1Alpha1",
+	},
+	{
+		Type:       "KongRoute",
+		Package:    "kongv1alpha1",
+		StoreField: "KongRouteV1Alpha1",
+	},
+	{
+		Type:       "KongUpstream",
+		Package:    "kongv1alpha1",
+		StoreField: "KongUpstreamV1Alpha1",
+	},
+	{
+		Type:       "KongTarget",
+		Package:    "kongv1alpha1",
+		StoreField: "KongTargetV1Alpha1",
+	},
+	{
+		Type:       "KongCertificate",
+		Package:    "kongv1alpha1",
+		StoreField: "KongCertificateV1Alpha1",
+	},
+	{
+		Type:       "KongCACertificate",
+		Package:    "kongv1alpha1",
+		StoreField: "KongCACertificateV1Alpha1",
+	},
+	{
+		Type:       "KongSNI",
+		Package:    "kongv1alpha1",
+		StoreField: "KongSNIV1Alpha1",
+	},
+	{
+		Type:       "KongPluginBinding",
+		Package:    "kongv1alpha1",
+		StoreField: "KongPluginBindingV1Alpha1",
+	},
 }
