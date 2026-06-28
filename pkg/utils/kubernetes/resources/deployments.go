@@ -1,7 +1,9 @@
 package resources
 
 import (
+	"encoding/json"
 	"fmt"
+	"maps"
 	"sync"
 
 	"github.com/samber/lo"
@@ -113,6 +115,9 @@ func GenerateNewDeploymentForDataPlane(
 		},
 	}
 
+	addDataPlaneDeploymentMetadata(deployment, dataplane)
+	deployment.Labels["app"] = dataplane.Name
+
 	dpOpts := dataplane.Spec.Deployment
 	switch {
 	// When the replicas are set and scaling is unset then set the replicas
@@ -156,6 +161,38 @@ func GenerateNewDeploymentForDataPlane(
 
 	wrapped := Deployment(*deployment)
 	return &wrapped, nil
+}
+
+func addDataPlaneDeploymentMetadata(
+	deployment *appsv1.Deployment,
+	dataplane *operatorv1beta1.DataPlane,
+) {
+	if deployment.Annotations == nil {
+		deployment.Annotations = make(map[string]string)
+	}
+
+	if len(dataplane.Spec.Deployment.Annotations) > 0 {
+		maps.Copy(deployment.Annotations, dataplane.Spec.Deployment.Annotations)
+	}
+	deployment.Annotations[consts.AnnotationLastAppliedDeploymentAnnotations] = encodeMapForAnnotation(dataplane.Spec.Deployment.Annotations)
+
+	if len(dataplane.Spec.Deployment.Labels) > 0 {
+		maps.Copy(deployment.Labels, dataplane.Spec.Deployment.Labels)
+	}
+	deployment.Annotations[consts.AnnotationLastAppliedDeploymentLabels] = encodeMapForAnnotation(dataplane.Spec.Deployment.Labels)
+}
+
+func encodeMapForAnnotation(input map[string]string) string {
+	if input == nil {
+		input = map[string]string{}
+	}
+
+	encoded, err := json.Marshal(input)
+	if err != nil {
+		return "{}"
+	}
+
+	return string(encoded)
 }
 
 // VolumesFromPodTemplateSpecOrNil returns volumes from a PodTemplateSpec,

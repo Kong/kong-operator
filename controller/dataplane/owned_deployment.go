@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -12,6 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -394,8 +396,9 @@ func reconcileDataPlaneDeployment(
 		// Keep track of this for logging purposes
 		originalReplicaCount := existing.Spec.Replicas
 
-		// ensure that object metadata is up to date
-		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, desired.ObjectMeta)
+		// ensure that object metadata is up to date while preserving externally-managed labels/annotations
+		metaUpdated := ensureDataPlaneDeploymentObjectMetaUpdated(&existing.ObjectMeta, desired.ObjectMeta)
+		updated = updated || metaUpdated
 
 		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes
 		opts := []cmp.Option{
@@ -462,4 +465,73 @@ func reconcileDataPlaneDeployment(
 
 	log.Debug(logger, "deployment for DataPlane created", "deployment", desired.Name)
 	return op.Created, desired, nil
+}
+
+func ensureDataPlaneDeploymentObjectMetaUpdated(existingMeta *metav1.ObjectMeta, desiredMeta metav1.ObjectMeta) bool {
+	var updated bool
+
+	if existingMeta.Annotations == nil {
+		existingMeta.Annotations = map[string]string{}
+	}
+	if existingMeta.Labels == nil {
+		existingMeta.Labels = map[string]string{}
+	}
+
+	previousManagedAnnotations := parseManagedMap(existingMeta.Annotations[consts.AnnotationLastAppliedDeploymentAnnotations])
+	desiredManagedAnnotations := parseManagedMap(desiredMeta.Annotations[consts.AnnotationLastAppliedDeploymentAnnotations])
+	for key := range previousManagedAnnotations {
+		if _, stillManaged := desiredManagedAnnotations[key]; stillManaged {
+			continue
+		}
+		if _, exists := existingMeta.Annotations[key]; exists {
+			delete(existingMeta.Annotations, key)
+			updated = true
+		}
+	}
+
+	previousManagedLabels := parseManagedMap(existingMeta.Annotations[consts.AnnotationLastAppliedDeploymentLabels])
+	desiredManagedLabels := parseManagedMap(desiredMeta.Annotations[consts.AnnotationLastAppliedDeploymentLabels])
+	for key := range previousManagedLabels {
+		if _, stillManaged := desiredManagedLabels[key]; stillManaged {
+			continue
+		}
+		if _, exists := existingMeta.Labels[key]; exists {
+			delete(existingMeta.Labels, key)
+			updated = true
+		}
+	}
+
+	for key, val := range desiredMeta.Annotations {
+		if currentVal, ok := existingMeta.Annotations[key]; !ok || currentVal != val {
+			existingMeta.Annotations[key] = val
+			updated = true
+		}
+	}
+
+	for key, val := range desiredMeta.Labels {
+		if currentVal, ok := existingMeta.Labels[key]; !ok || currentVal != val {
+			existingMeta.Labels[key] = val
+			updated = true
+		}
+	}
+
+	if !cmp.Equal(existingMeta.OwnerReferences, desiredMeta.OwnerReferences) {
+		existingMeta.OwnerReferences = desiredMeta.OwnerReferences
+		updated = true
+	}
+
+	return updated
+}
+
+func parseManagedMap(encoded string) map[string]string {
+	if encoded == "" {
+		return map[string]string{}
+	}
+
+	parsed := map[string]string{}
+	if err := json.Unmarshal([]byte(encoded), &parsed); err != nil {
+		return map[string]string{}
+	}
+
+	return parsed
 }

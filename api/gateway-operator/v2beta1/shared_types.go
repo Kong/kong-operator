@@ -33,6 +33,20 @@ type DeploymentOptions struct {
 	//
 	// +optional
 	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
+
+	// Annotations are custom annotations that are propagated to the DataPlane
+	// Deployment metadata by the operator.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Labels are custom labels that are propagated to the DataPlane Deployment
+	// metadata by the operator.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // Scaling defines the scaling options for the deployment.
