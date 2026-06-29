@@ -1,0 +1,437 @@
+# HTTPRoute overlapping backends test scenario.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-overlapping-backends
+spec:
+  description: |
+    Validates that the hybrid gateway controller correctly handles an HTTPRoute
+    whose backendRef Services overlap on the same underlying pods. This is the
+    steady-state condition for a blue-green deployment where the active and
+    preview services both select the current stable ReplicaSet.
+
+    The test covers four scenarios end-to-end:
+
+    Initial state — two backendRefs, same pods (steps 6-9):
+      Both services resolve to the same pod IP. The controller must merge the
+      duplicate endpoints into a single KongTarget instead of creating two with
+      identical host:port. Exactly 1 KongTarget must be Programmed=True.
+
+    Scenario A — remove one overlapping backendRef (steps 10-10b):
+      The HTTPRoute is updated to a single backendRef. The controller must still
+      produce exactly 1 KongTarget and traffic must continue to flow.
+
+    Scenario B — re-add the overlapping backendRef (step 11-11a):
+      The second backendRef (selecting the same pods) is added back. The
+      controller must again merge the endpoints into 1 KongTarget.
+
+    Scenario C — second service moves to a different deployment (steps 12-13b):
+      The preview service selector is updated to select a new deployment with
+      distinct pod IPs. The controller must now produce 2 KongTargets (one per
+      endpoint) with correctly distributed weights, both Programmed=True.
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+    exec: 300s
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: namespace
+      value: ($namespace)
+    - name: konnect_api_auth_name
+      value: konnect-api-auth-dev-1
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_class_name
+      value: (join('-', [($test_name), 'gateway-class']))
+    - name: gateway_configuration_name
+      value: (join('-', [($test_name), 'gateway-configuration']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_name
+      value: (join('-', [($namespace), 'gateway']))
+    - name: http_route_namespace
+      value: ($namespace)
+    - name: http_route_name
+      value: (join('-', [($namespace), 'overlapping-backends']))
+    - name: httproute_name
+      value: ($http_route_name)
+    - name: listener_http_port
+      value: 80
+    - name: target_weight
+      value: ""
+    - name: host_header
+      value: ""
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: echo_active_service_name
+      value: echo-active
+    - name: echo_preview_service_name
+      value: echo-preview
+
+  steps:
+    # Step 1a: Create the secret for Konnect authentication.
+    - name: 1a-create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    # Step 1b: Create KonnectAPIAuthConfiguration.
+    - name: 1b-create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 2: Create GatewayConfiguration.
+    - name: 2-create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 3: Create GatewayClass.
+    - name: 3-create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 4: Create Gateway.
+    - name: 4-create-gateway
+      description: Create Gateway for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway-http-only.yaml
+
+    # Step 5a: Create the active service + deployment via the standard echo template.
+    # Using echo_deployment_name = echo_active_service_name so the template creates
+    # both the deployment and the active service with the same name/selector.
+    - name: 5a-create-active-service
+      description: Create the echo deployment and active service using the standard template.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+      bindings:
+        - name: echo_deployment_name
+          value: ($echo_active_service_name)
+        - name: echo_deployment_namespace
+          value: ($namespace)
+        - name: echo_deployment_replicas
+          value: 1
+
+    # Step 5b: Create the preview service pointing to the same deployment.
+    # Both services now select the same pods, reproducing the blue-green steady state.
+    - name: 5b-create-preview-service
+      description: Create preview service with the same pod selector as the active service.
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: ($echo_preview_service_name)
+                namespace: ($namespace)
+              spec:
+                selector:
+                  app: ($echo_active_service_name)
+                ports:
+                  - name: http
+                    port: 1027
+                    protocol: TCP
+                    targetPort: 1027
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: ($echo_preview_service_name)
+                namespace: ($namespace)
+
+    # Step 6: Create HTTPRoute with two backendRefs (active weight=100, preview weight=0).
+    - name: 6-create-httproute
+      description: Create HTTPRoute referencing both services — both select the same pods.
+      try:
+        - apply:
+            file: 06-httproute.yaml
+        - assert:
+            file: 06-assert-httproute.yaml
+
+    # Step 7: Assert exactly 1 KongTarget is created — both backendRefs resolve
+    # to the same pod IP so the duplicate endpoint must be merged.
+    - name: 7-verify-kong-target-count
+      description: Verify exactly 1 KongTarget is created (duplicate endpoints merged).
+      bindings:
+        - name: expected_kong_target_count
+          value: "1"
+        - name: target_weight
+          value: ""
+      use:
+        template: ../../common/_step_templates/verify-kongTarget-count.yaml
+
+    # Step 8: Assert Kong resources.
+    - name: 8a-assert-kong-upstream
+      description: Assert KongUpstream is created and programmed.
+      use:
+        template: ../../common/_step_templates/assert-kongUpstream.yaml
+
+    - name: 8b-assert-kong-target
+      description: Assert the single merged KongTarget is Programmed.
+      bindings:
+        - name: resource_type
+          value: kongupstreams.configuration.konghq.com
+        - name: target_weight
+          value: 1
+      use:
+        template: ../../common/_step_templates/assert-kongTarget.yaml
+
+    # Step 9: Verify HTTP traffic flows through the single merged target.
+    - name: 9-verify-http-traffic
+      description: Verify traffic is routed correctly through the merged KongTarget.
+      bindings:
+        - name: route_path
+          value: /echo
+        - name: http_method
+          value: GET
+        - name: listener_http_port
+          value: "80"
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
+
+    # -------------------------------------------------------------------------
+    # Scenario A: remove one overlapping backendRef → single service → 1 KongTarget.
+    # -------------------------------------------------------------------------
+
+    # Step 10: Update HTTPRoute to a single backendRef (remove preview service).
+    - name: 10-remove-overlapping-backendref
+      description: Remove preview backendRef — single active service only. Expect 1 KongTarget.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($http_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($http_route_namespace)
+              - name: RESOURCE_TYPES
+                value: "kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
+            content: |
+              bash ../../common/scripts/get_kong_resources.sh
+            outputs:
+              - name: old_resources
+                value: (json_parse($stdout))
+        - apply:
+            file: 11-httproute-single-backend.yaml
+        - script:
+            env:
+              - name: RESOURCES_JSON
+                value: (to_string($old_resources))
+            content: |
+              bash ../../common/scripts/wait_for_kong_resources_deletion.sh
+        - assert:
+            file: 11-assert-httproute.yaml
+
+    - name: 10a-verify-kong-target-count-single
+      description: Verify exactly 1 KongTarget after removing the overlapping backendRef.
+      bindings:
+        - name: expected_kong_target_count
+          value: "1"
+        - name: target_weight
+          value: ""
+      use:
+        template: ../../common/_step_templates/verify-kongTarget-count.yaml
+
+    - name: 10b-verify-http-traffic-single
+      description: Verify traffic still flows with a single backendRef.
+      bindings:
+        - name: route_path
+          value: /echo
+        - name: http_method
+          value: GET
+        - name: listener_http_port
+          value: "80"
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
+
+    # -------------------------------------------------------------------------
+    # Scenario B: start fresh from 1 backendRef, add overlapping second back →
+    # back to 2 overlapping backendRefs → 1 merged KongTarget.
+    # Reuses the same 06-httproute.yaml (weight 100:0) applied back.
+    # -------------------------------------------------------------------------
+
+    - name: 11-re-add-overlapping-backendref
+      description: Re-add preview backendRef selecting the same pods. Expect count stays 1.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($http_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($http_route_namespace)
+              - name: RESOURCE_TYPES
+                value: "kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
+            content: |
+              bash ../../common/scripts/get_kong_resources.sh
+            outputs:
+              - name: old_resources
+                value: (json_parse($stdout))
+        - apply:
+            file: 06-httproute.yaml
+        - script:
+            env:
+              - name: RESOURCES_JSON
+                value: (to_string($old_resources))
+            content: |
+              bash ../../common/scripts/wait_for_kong_resources_deletion.sh
+        - assert:
+            file: 06-assert-httproute.yaml
+
+    - name: 11a-verify-kong-target-count-re-overlapping
+      description: Verify exactly 1 KongTarget after re-adding the overlapping backendRef.
+      bindings:
+        - name: expected_kong_target_count
+          value: "1"
+        - name: target_weight
+          value: ""
+      use:
+        template: ../../common/_step_templates/verify-kongTarget-count.yaml
+
+    # -------------------------------------------------------------------------
+    # Scenario C: second service moves to a different deployment (distinct pods)
+    # → endpoints diverge → 2 KongTargets with distributed weights.
+    # -------------------------------------------------------------------------
+
+    # Step 12a: Create second deployment + its own service via the standard echo template.
+    - name: 12a-create-echo2-service
+      description: Create a second echo deployment with its own service for the diverged-backends scenario.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+      bindings:
+        - name: echo_deployment_name
+          value: echo2
+        - name: echo_deployment_namespace
+          value: ($namespace)
+        - name: echo_deployment_replicas
+          value: 1
+
+    # Step 12b: Retarget the preview service selector to the new deployment.
+    - name: 12b-retarget-preview-service
+      description: Update preview service selector to point to echo2 pods (distinct from active).
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: ($echo_preview_service_name)
+                namespace: ($namespace)
+              spec:
+                selector:
+                  app: echo2
+                ports:
+                  - name: http
+                    port: 1027
+                    protocol: TCP
+                    targetPort: 1027
+
+    # Step 13: Update HTTPRoute — now both backendRefs select distinct pods → 2 KongTargets.
+    - name: 13-update-httproute-diverged-backends
+      description: Apply HTTPRoute with diverged backends (distinct pod IPs). Expect 2 KongTargets.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($http_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($http_route_namespace)
+              - name: RESOURCE_TYPES
+                value: "kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
+            content: |
+              bash ../../common/scripts/get_kong_resources.sh
+            outputs:
+              - name: old_resources
+                value: (json_parse($stdout))
+        - apply:
+            file: 13-httproute-diverged-backends.yaml
+        - script:
+            env:
+              - name: RESOURCES_JSON
+                value: (to_string($old_resources))
+            content: |
+              bash ../../common/scripts/wait_for_kong_resources_deletion.sh
+        - assert:
+            file: 13-assert-httproute.yaml
+
+    - name: 13a-verify-kong-target-count-diverged
+      description: Verify exactly 2 KongTargets when backends select distinct pods.
+      bindings:
+        - name: expected_kong_target_count
+          value: "2"
+        - name: target_weight
+          value: ""
+      use:
+        template: ../../common/_step_templates/verify-kongTarget-count.yaml
+
+    - name: 13b-verify-http-traffic-diverged
+      description: Verify traffic flows when backends have distinct endpoints.
+      bindings:
+        - name: route_path
+          value: /echo
+        - name: http_method
+          value: GET
+        - name: listener_http_port
+          value: "80"
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
+
+  catch:
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        name: ($http_route_name)
+        namespace: ($http_route_namespace)
+        showEvents: true
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongTarget
+        namespace: ($namespace)
+        showEvents: true
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongUpstream
+        namespace: ($namespace)
+        showEvents: true

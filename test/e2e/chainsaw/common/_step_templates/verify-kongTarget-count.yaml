@@ -1,0 +1,30 @@
+# Template for verifying the count of KongTarget resources for a specific HTTPRoute.
+#
+# Required bindings:
+#   - namespace: Namespace where to look for KongTargets.
+#   - http_route_name: Name of the HTTPRoute.
+#   - http_route_namespace: Namespace of the HTTPRoute.
+#   - expected_kong_target_count: Expected number of KongTargets.
+#   - target_weight: Filter by specific weight. Use "" (empty string) to count all targets for the HTTPRoute regardless of weight.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-kong-target-count
+spec:
+  try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: HTTP_ROUTE_NAME
+            value: ($http_route_name)
+          - name: HTTP_ROUTE_NAMESPACE
+            value: ($http_route_namespace)
+          - name: EXPECTED_COUNT
+            value: ($expected_kong_target_count)
+          - name: TARGET_WEIGHT
+            value: ($target_weight)
+        content: |
+          bash ../../common/scripts/kongTarget_count.sh
+        check:
+          (to_string(json_parse($stdout).count) == $expected_kong_target_count): true
