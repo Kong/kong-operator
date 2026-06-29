@@ -146,6 +146,10 @@
   derived from method and header specificity keeps more specific header matches
   ahead of less specific ones. This enables the `HTTPRouteHeaderMatching` Gateway API
   conformance test for the hybrid gateway.
+  Generated header-only priorities stay below `1 << 20` (`1048576`), while generated
+  path-based priorities start at that value. Use custom `KongRoute` priorities below
+  or above that boundary depending on whether they should sort before or after
+  generated path-based routes.
   [#4640](https://github.com/Kong/kong-operator/pull/4640)
 
 ## [v2.2.0]
