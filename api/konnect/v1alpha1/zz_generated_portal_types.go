@@ -144,6 +144,13 @@ type PortalAPISpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
 	Name string `json:"name,omitzero"`
 
+	// When enabled, portal registration notifications include the registering
+	// developer's identifying information (such as name and email).
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	NotificationsDeveloperPiiVisibilityEnabled string `json:"notificationsDeveloperPiiVisibilityEnabled,omitzero"`
+
 	// Whether the portal resources are protected by Role Based Access Control
 	// (RBAC).
 	// If enabled, developers view or register for APIs until unless assigned to

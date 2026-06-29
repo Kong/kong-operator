@@ -912,7 +912,8 @@ failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime v
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+- [EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)
+- [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)
 - [EventGatewayParsedRecordDecryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldsconfig)
 
 #### ConsumeKeyValidationAction
@@ -929,7 +930,8 @@ to help to identify the clients violating schema.
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+- [EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)
+- [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)
 
 #### ConsumeValueValidationAction
 
@@ -945,7 +947,8 @@ to help to identify the clients violating schema.
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+- [EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)
+- [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)
 
 
 
@@ -1370,7 +1373,7 @@ messages against a schema registry.
 | Field | Description |
 | --- | --- |
 | `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
-| `config` _[EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)_ | The configuration of the schema validation policy. |
+| `config` _[EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)_ | The configuration of the policy. |
 | `description` _string_ | A human-readable description of the policy. |
 | `enabled` _string_ | Whether the policy is enabled. |
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
@@ -1383,8 +1386,46 @@ _Appears in:_
 #### EventGatewayConsumeSchemaValidationPolicyConfig
 
 
-EventGatewayConsumeSchemaValidationPolicyConfig The configuration of the
-schema validation policy.
+EventGatewayConsumeSchemaValidationPolicyConfig represents a union type for EventGatewayConsumeSchemaValidationPolicyConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayConsumeSchemaValidationPolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigtype)_ | Type designates the type of configuration. |
+| `confluentSchemaRegistry` _[EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)_ | SchemaRegistry configuration. |
+| `json` _[EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)_ | JSON configuration. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicy)
+
+#### EventGatewayConsumeSchemaValidationPolicyConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayConsumeSchemaValidationPolicyConfigType represents the type of EventGatewayConsumeSchemaValidationPolicyConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `confluentSchemaRegistry` |  |
+| `json` |  |
+
+#### EventGatewayConsumeSchemaValidationPolicyJSONConfig
+
+
+EventGatewayConsumeSchemaValidationPolicyJSONConfig The configuration of the
+consume schema validation policy when using JSON parsing without schema.
 
 
 
@@ -1392,46 +1433,105 @@ schema validation policy.
 | --- | --- |
 | `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
-| `schemaRegistry` _[EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)_ | A reference to a schema Registry. |
-| `type` _[SchemaValidationType](#configuration-konghq-com-v1alpha1-types-schemavalidationtype)_ | How to validate the schema and parse the record. * confluent_schema_registry - validates against confluent schema registry. * json - simple JSON parsing without the schema. |
+| `schemaRegistry` _[EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfigschemaregistry)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicy)
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
 
-#### EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry
+#### EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry
 
 
-EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry represents a union type for schema_registry.
+EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
 Only one of the fields should be set based on the Type.
 
 
 
 | Field | Description |
 | --- | --- |
-| `type` _[EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistrytype)_ | Type designates the type of configuration. |
+| `type` _[EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfigschemaregistrytype)_ | Type designates the type of configuration. |
 | `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
 | `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+- [EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)
 
-#### EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType
+#### EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType
 
 _Underlying type:_ `string`
 
-EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistryType represents the type of schema_registry.
+EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType represents the type of schema_registry.
 
 
 
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)
+- [EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfigschemaregistry)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `id` |  |
+| `name` |  |
+
+#### EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig
+
+
+EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig The
+configuration of the consume schema validation policy when using a schema
+registry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+| `schemaRegistry` _[EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfigschemaregistry)_ | A reference to a schema Registry. |
+| `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+
+#### EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry
+
+
+EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfigschemaregistrytype)_ | Type designates the type of configuration. |
+| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
+| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)
+
+#### EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType
+
+_Underlying type:_ `string`
+
+EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType represents the type of schema_registry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfigschemaregistry)
 
 Allowed values:
 
@@ -4400,7 +4500,8 @@ SchemaRegistryReferenceByID is a type alias.
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)
+- [EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfigschemaregistry)
+- [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
 
@@ -4417,24 +4518,10 @@ SchemaRegistryReferenceByName Reference a schema registry by its unique name.
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigschemaregistry)
+- [EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfigschemaregistry)
+- [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
-
-#### SchemaValidationType
-
-_Underlying type:_ `string`
-
-SchemaValidationType How to validate the schema and parse the record.
-* confluent_schema_registry - validates against confluent schema registry.
-* json - simple JSON parsing without the schema.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
 
 
 
@@ -5022,8 +5109,8 @@ The original topic name remains accessible.<br /><br />**Requires a minimum runt
 | Field | Description |
 | --- | --- |
 | `alias` _string_ | The client-visible topic name. |
+| `condition` _string_ | CEL expression evaluated against the connection's auth context. If omitted or empty, the alias is active for all connections. |
 | `conflict` _[VirtualClusterTopicAliasConflict](#configuration-konghq-com-v1alpha1-types-virtualclustertopicaliasconflict)_ | How to handle conflicts where an alias shadows a physical topic. * warn - activate the alias but log a warning and set the conflict metric to 1. * ignore - activate the alias silently. |
-| `match` _string_ | CEL expression evaluated against the connection's auth context. If omitted or empty, the alias is active for all connections. |
 | `topic` _string_ | The namespace-visible topic name this alias resolves to. |
 
 _Appears in:_
