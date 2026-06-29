@@ -21,9 +21,12 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	_ "github.com/kong/kong-operator/v2/controller/hybridgateway/builder" // Used by function under test.
-	_ "github.com/kong/kong-operator/v2/controller/hybridgateway/utils"   // Used by function under test.
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
+	_ "github.com/kong/kong-operator/v2/controller/hybridgateway/utils" // Used by function under test.
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -2316,6 +2319,47 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			},
 		},
 		{
+			name: "Two backend refs with overlapping endpoints should merge into a single target with summed weight",
+			httpRoute: createTestHTTPRoute("test-route", "test-namespace", []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("service1", "test-namespace", nil, ptr.To[int32](80)),
+				createTestHTTPBackendRef("service2", "test-namespace", nil, ptr.To[int32](80)),
+			}),
+			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
+			upstreamName: "test-upstream",
+			validBackendRefs: []validBackendRef{
+				createTestvalidBackendRef("service1", "test-namespace", ptr.To[int32](30), []string{"10.0.0.1"}),
+				createTestvalidBackendRef("service2", "test-namespace", ptr.To[int32](70), []string{"10.0.0.1"}), // Same IP.
+			},
+			expectedTargets: 1,
+			expectedError:   false,
+			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
+				require.Len(t, targets, 1)
+				assert.Equal(t, "10.0.0.1:8080", targets[0].Spec.Target)
+				assert.Equal(t, 100, targets[0].Spec.Weight) // 30 + 70
+			},
+		},
+		{
+			name: "Two backend refs with partially overlapping endpoints should merge only the duplicate",
+			httpRoute: createTestHTTPRoute("test-route", "test-namespace", []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("service1", "test-namespace", nil, ptr.To[int32](80)),
+				createTestHTTPBackendRef("service2", "test-namespace", nil, ptr.To[int32](80)),
+			}),
+			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
+			upstreamName: "test-upstream",
+			validBackendRefs: []validBackendRef{
+				createTestvalidBackendRef("service1", "test-namespace", ptr.To[int32](40), []string{"10.0.0.1", "10.0.0.2"}),
+				createTestvalidBackendRef("service2", "test-namespace", ptr.To[int32](60), []string{"10.0.0.2", "10.0.0.3"}), // 10.0.0.2 overlaps.
+			},
+			expectedTargets: 3, // 10.0.0.1 (40), 10.0.0.2 (40+60=100), 10.0.0.3 (60).
+			expectedError:   false,
+			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
+				require.Len(t, targets, 3)
+				tgt := findTargetByAddress(targets, "10.0.0.2:8080")
+				require.NotNil(t, tgt, "merged target for 10.0.0.2 should exist")
+				assert.Equal(t, 100, tgt.Spec.Weight) // 40 + 60
+			},
+		},
+		{
 			name: "Backend ref with custom port should use correct target port",
 			httpRoute: createTestHTTPRoute("test-route", "test-namespace", []gwtypes.HTTPBackendRef{
 				createTestHTTPBackendRef("service1", "test-namespace", nil, ptr.To[int32](8080)),
@@ -2632,6 +2676,67 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			},
 		},
 		{
+			name: "Two backend refs resolving to the same pod IP should produce one merged KongTarget",
+			httpRoute: createTestHTTPRoute("test-route", "test-namespace", []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("service-a", "", ptr.To[int32](50), ptr.To[int32](80)),
+				createTestHTTPBackendRef("service-b", "", ptr.To[int32](50), ptr.To[int32](80)),
+			}),
+			backendRefs: []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("service-a", "", ptr.To[int32](50), ptr.To[int32](80)),
+				createTestHTTPBackendRef("service-b", "", ptr.To[int32](50), ptr.To[int32](80)),
+			},
+			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
+			upstreamName: "test-upstream",
+			fqdn:         false,
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "service-a", Namespace: "test-namespace"},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
+						Type:  corev1.ServiceTypeClusterIP,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "service-b", Namespace: "test-namespace"},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
+						Type:  corev1.ServiceTypeClusterIP,
+					},
+				},
+			},
+			endpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-a-slice",
+						Namespace: "test-namespace",
+						Labels:    map[string]string{"kubernetes.io/service-name": "service-a"},
+					},
+					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
+					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.0.1"}, true)},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-b-slice",
+						Namespace: "test-namespace",
+						Labels:    map[string]string{"kubernetes.io/service-name": "service-b"},
+					},
+					// Both services select the same underlying pods.
+					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
+					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.0.1"}, true)},
+				},
+			},
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{},
+			expectedTargets: 1,
+			expectedError:   false,
+			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
+				require.Len(t, targets, 1)
+				tgt := targets[0]
+				assert.Equal(t, "10.0.0.1:8080", tgt.Spec.Target)
+				// Weight should be the sum of both per-endpoint weights.
+				assert.Positive(t, tgt.Spec.Weight)
+			},
+		},
+		{
 			name: "Cross-namespace backend refs with ReferenceGrant should work",
 			httpRoute: createTestHTTPRoute("test-route", "frontend-ns", []gwtypes.HTTPBackendRef{
 				createTestHTTPBackendRef("backend-service", "backend-ns", nil, ptr.To[int32](80)),
@@ -2841,4 +2946,319 @@ func findTargetByAddress(targets []configurationv1alpha1.KongTarget, address str
 		}
 	}
 	return nil
+}
+
+// TestKongTargetMergeScenarios validates additional merge scenarios beyond the two lifecycle
+// transitions already covered by TestKongTargetMergeLifecycle.
+func TestKongTargetMergeScenarios(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	route := createGlobalTestHTTPRoute("test-route", "test-namespace", nil)
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	const upstream = "test-upstream"
+
+	t.Run("single backendRef then overlapping second added: count stays 1, weight is summed", func(t *testing.T) {
+		// Reconcile 1: one service, one endpoint.
+		singleRefs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](100), []string{"10.0.0.1"}),
+		}
+		targets1, err := createTargetsFromValidBackendRefs(ctx, logger, createTestFakeClient(), route, pRef, upstream, singleRefs)
+		require.NoError(t, err)
+		require.Len(t, targets1, 1)
+		assert.Equal(t, 100, targets1[0].Spec.Weight)
+
+		// Reconcile 2: second service added, resolves to the same pod IP.
+		overlappingRefs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](60), []string{"10.0.0.1"}),
+			createTestvalidBackendRef("service-b", "test-namespace", ptr.To[int32](40), []string{"10.0.0.1"}),
+		}
+		targets2, err := createTargetsFromValidBackendRefs(ctx, logger, createTestFakeClient(), route, pRef, upstream, overlappingRefs)
+		require.NoError(t, err)
+		require.Len(t, targets2, 1)
+		tgt := targets2[0]
+		assert.Equal(t, "10.0.0.1:8080", tgt.Spec.Target)
+		assert.Equal(t, 100, tgt.Spec.Weight) // 60 + 40
+		// Name is derived from the first backendRef that contributed the endpoint.
+		assert.Equal(t, namegen.NewKongTargetName(upstream, "10.0.0.1", 8080, overlappingRefs[0].backendRef), tgt.Name)
+	})
+
+	t.Run("two overlapping backendRefs, remove one: count stays 1, weight reduces", func(t *testing.T) {
+		// Reconcile 1: two services, same pod IP.
+		overlappingRefs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](60), []string{"10.0.0.1"}),
+			createTestvalidBackendRef("service-b", "test-namespace", ptr.To[int32](40), []string{"10.0.0.1"}),
+		}
+		targets1, err := createTargetsFromValidBackendRefs(ctx, logger, createTestFakeClient(), route, pRef, upstream, overlappingRefs)
+		require.NoError(t, err)
+		require.Len(t, targets1, 1)
+		assert.Equal(t, 100, targets1[0].Spec.Weight) // 60 + 40
+
+		// Reconcile 2: second backendRef removed.
+		singleRefs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](100), []string{"10.0.0.1"}),
+		}
+		targets2, err := createTargetsFromValidBackendRefs(ctx, logger, createTestFakeClient(), route, pRef, upstream, singleRefs)
+		require.NoError(t, err)
+		require.Len(t, targets2, 1)
+		tgt := targets2[0]
+		assert.Equal(t, "10.0.0.1:8080", tgt.Spec.Target)
+		assert.Equal(t, 100, tgt.Spec.Weight)
+		// Name is derived from the (sole) contributing backendRef.
+		assert.Equal(t, namegen.NewKongTargetName(upstream, "10.0.0.1", 8080, singleRefs[0].backendRef), tgt.Name)
+	})
+
+	t.Run("second backendRef moved to different pod: overlap resolves to 2 targets with distributed weights", func(t *testing.T) {
+		// Reconcile 1: two services, same pod IP.
+		overlappingRefs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](50), []string{"10.0.0.1"}),
+			createTestvalidBackendRef("service-b", "test-namespace", ptr.To[int32](50), []string{"10.0.0.1"}),
+		}
+		targets1, err := createTargetsFromValidBackendRefs(ctx, logger, createTestFakeClient(), route, pRef, upstream, overlappingRefs)
+		require.NoError(t, err)
+		require.Len(t, targets1, 1)
+
+		// Reconcile 2: service-b now selects a different deployment (distinct pod IP).
+		divergedRefs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](50), []string{"10.0.0.1"}),
+			createTestvalidBackendRef("service-b", "test-namespace", ptr.To[int32](50), []string{"10.0.0.2"}),
+		}
+		targets2, err := createTargetsFromValidBackendRefs(ctx, logger, createTestFakeClient(), route, pRef, upstream, divergedRefs)
+		require.NoError(t, err)
+		require.Len(t, targets2, 2)
+
+		tA := findTargetByAddress(targets2, "10.0.0.1:8080")
+		tB := findTargetByAddress(targets2, "10.0.0.2:8080")
+		require.NotNil(t, tA)
+		require.NotNil(t, tB)
+		assert.Positive(t, tA.Spec.Weight)
+		assert.Positive(t, tB.Spec.Weight)
+		assert.NotEqual(t, tA.Name, tB.Name)
+	})
+}
+
+// TestKongTargetMergeLifecycle validates the two critical lifecycle transitions for the
+// duplicate-endpoint merge logic:
+//
+//  1. Overlap disappears (the two Services now select distinct pods): the merged KongTarget
+//     keeps its stable name but its weight is reduced; a new target is created for the
+//     new pod IP — no DELETE/CREATE churn on the original target.
+//
+//  2. Overlap is introduced on an already-existing in-cluster target: the new merged
+//     result has the same name as the existing target (so the reconciler issues an
+//     UPDATE, not a CREATE that would hit the Konnect uniqueness constraint).
+func TestKongTargetMergeLifecycle(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	route := createGlobalTestHTTPRoute("test-route", "test-namespace", nil)
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	const upstream = "test-upstream"
+
+	t.Run("overlap disappears: merged target keeps stable name, new target created for diverged IP", func(t *testing.T) {
+		// Reconcile 1: both services select the same pod → one merged target.
+		overlapRefs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](50), []string{"10.0.0.1"}),
+			createTestvalidBackendRef("service-b", "test-namespace", ptr.To[int32](50), []string{"10.0.0.1"}),
+		}
+		targets1, err := createTargetsFromValidBackendRefs(ctx, logger, createTestFakeClient(), route, pRef, upstream, overlapRefs)
+		require.NoError(t, err)
+		require.Len(t, targets1, 1)
+		mergedName := targets1[0].Name
+		// Name must equal what NewKongTargetName produces for the first contributing backendRef.
+		assert.Equal(t, namegen.NewKongTargetName(upstream, "10.0.0.1", 8080, overlapRefs[0].backendRef), mergedName)
+
+		// Reconcile 2: services now select distinct pods.
+		splitRefs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](50), []string{"10.0.0.1"}),
+			createTestvalidBackendRef("service-b", "test-namespace", ptr.To[int32](50), []string{"10.0.0.2"}),
+		}
+		targets2, err := createTargetsFromValidBackendRefs(ctx, logger, createTestFakeClient(), route, pRef, upstream, splitRefs)
+		require.NoError(t, err)
+		require.Len(t, targets2, 2)
+
+		// The target for 10.0.0.1 must keep the same name — the reconciler will UPDATE
+		// (not DELETE+CREATE) it, avoiding any downtime or Konnect constraint issues.
+		t1 := findTargetByAddress(targets2, "10.0.0.1:8080")
+		require.NotNil(t, t1)
+		assert.Equal(t, mergedName, t1.Name, "stable name must be preserved after overlap disappears")
+
+		// A brand-new target for the newly diverged pod IP is created with its own stable name.
+		t2 := findTargetByAddress(targets2, "10.0.0.2:8080")
+		require.NotNil(t, t2)
+		assert.Equal(t, namegen.NewKongTargetName(upstream, "10.0.0.2", 8080, splitRefs[1].backendRef), t2.Name)
+		assert.NotEqual(t, mergedName, t2.Name)
+	})
+
+	t.Run("overlap introduced on existing in-cluster target: same name returned, weight summed", func(t *testing.T) {
+		// service-a and service-b both resolve to the same pod IP; service-a is listed first,
+		// so it determines the merged target's name.
+		refs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](30), []string{"10.0.0.1"}),
+			createTestvalidBackendRef("service-b", "test-namespace", ptr.To[int32](70), []string{"10.0.0.1"}),
+		}
+
+		// Pre-create the KongTarget that service-a already produced in a previous reconcile.
+		existingName := namegen.NewKongTargetName(upstream, "10.0.0.1", 8080, refs[0].backendRef)
+		existing := &configurationv1alpha1.KongTarget{}
+		existing.Name = existingName
+		existing.Namespace = "test-namespace"
+		existing.Spec.Target = "10.0.0.1:8080"
+		existing.Spec.Weight = 100
+		// Set a hybrid-routes annotation so VerifyAndUpdate does not error.
+		existing.Annotations = map[string]string{
+			"gateway-operator.konghq.com/httproutes": "test-namespace/test-route",
+		}
+
+		cl := createTestFakeClient(existing)
+		targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, route, pRef, upstream, refs)
+		require.NoError(t, err)
+		require.Len(t, targets, 1)
+
+		tgt := targets[0]
+		// Same name as the in-cluster object → reconciler issues UPDATE, not CREATE.
+		assert.Equal(t, existingName, tgt.Name)
+		// Weight is the sum of both per-endpoint contributions.
+		assert.Equal(t, 100, tgt.Spec.Weight) // 30 + 70
+	})
+}
+
+// TestKongTargetNameReuseByAddress verifies that an existing KongTarget's name is reused for a given
+// (upstream, address) instead of minting a new one — keeping one CR per address across reconciles and
+// upgrades without changing the naming scheme — and that, when duplicates already exist for an address,
+// the Programmed one's name is preferred (so the broken state converges and the readiness gate cannot
+// deadlock).
+func TestKongTargetNameReuseByAddress(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	route := createGlobalTestHTTPRoute("test-route", "test-namespace", nil)
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	const upstream = "test-upstream"
+
+	// newExistingTarget builds an in-cluster KongTarget owned by the route for a given address/name,
+	// with an optional Programmed condition. The hybrid-routes annotation lets VerifyAndUpdate accept it.
+	newExistingTarget := func(name, target string, programmed bool) *configurationv1alpha1.KongTarget {
+		tgt := &configurationv1alpha1.KongTarget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        name,
+				Namespace:   "test-namespace",
+				Labels:      metadata.BuildLabels(route, pRef),
+				Annotations: map[string]string{"gateway-operator.konghq.com/httproutes": "test-namespace/test-route"},
+			},
+		}
+		tgt.Spec.Target = target
+		tgt.Spec.UpstreamRef = commonv1alpha1.NameRef{Name: upstream}
+		status := metav1.ConditionFalse
+		if programmed {
+			status = metav1.ConditionTrue
+		}
+		tgt.Status.Conditions = []metav1.Condition{{
+			Type:               "Programmed",
+			Status:             status,
+			Reason:             "Test",
+			LastTransitionTime: metav1.Now(),
+		}}
+		return tgt
+	}
+
+	t.Run("reuses pre-existing target name for the same address", func(t *testing.T) {
+		cl := createTestFakeClient(newExistingTarget("legacy-target-name", "10.0.0.1:8080", true))
+		refs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](100), []string{"10.0.0.1"}),
+		}
+		targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, route, pRef, upstream, refs)
+		require.NoError(t, err)
+		require.Len(t, targets, 1)
+		assert.Equal(t, "legacy-target-name", targets[0].Name, "must reuse the existing target name")
+	})
+
+	t.Run("prefers the Programmed name when duplicates exist for an address", func(t *testing.T) {
+		// Mirrors the broken cluster state: two targets for the same address under the same upstream,
+		// the weight-0 (preview) one Programmed and the weight-1 (stable) one rejected.
+		programmedDup := newExistingTarget("zzz-preview-name", "10.0.0.1:8080", true) // larger name, Programmed
+		failedDup := newExistingTarget("aaa-stable-name", "10.0.0.1:8080", false)     // smaller name, not Programmed
+		cl := createTestFakeClient(programmedDup, failedDup)
+
+		refs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](100), []string{"10.0.0.1"}),
+		}
+		targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, route, pRef, upstream, refs)
+		require.NoError(t, err)
+		require.Len(t, targets, 1)
+		// Despite "aaa-stable-name" sorting first, the Programmed target's name must win so the desired
+		// target equals the live one (UPDATE, correcting weight) and the failed duplicate becomes an orphan.
+		assert.Equal(t, "zzz-preview-name", targets[0].Name)
+	})
+
+	t.Run("mints a fresh name when no target exists for the address", func(t *testing.T) {
+		cl := createTestFakeClient()
+		refs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](100), []string{"10.0.0.2"}),
+		}
+		targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, route, pRef, upstream, refs)
+		require.NoError(t, err)
+		require.Len(t, targets, 1)
+		assert.Equal(t, namegen.NewKongTargetName(upstream, "10.0.0.2", 8080, refs[0].backendRef), targets[0].Name)
+	})
+
+	t.Run("ignores targets scoped to a different upstream", func(t *testing.T) {
+		other := newExistingTarget("other-upstream-target", "10.0.0.3:8080", true)
+		other.Spec.UpstreamRef = commonv1alpha1.NameRef{Name: "other-upstream"}
+		cl := createTestFakeClient(other)
+		refs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](100), []string{"10.0.0.3"}),
+		}
+		targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, route, pRef, upstream, refs)
+		require.NoError(t, err)
+		require.Len(t, targets, 1)
+		assert.Equal(t, namegen.NewKongTargetName(upstream, "10.0.0.3", 8080, refs[0].backendRef), targets[0].Name)
+	})
+
+	t.Run("tie-breaks two non-programmed duplicates by smaller name", func(t *testing.T) {
+		// Both targets are not Programmed for the same address — smaller name must win so the
+		// selection is deterministic and does not flip on every reconcile.
+		dup1 := newExistingTarget("bbb-failed-name", "10.0.0.4:8080", false)
+		dup2 := newExistingTarget("aaa-failed-name", "10.0.0.4:8080", false)
+		cl := createTestFakeClient(dup1, dup2)
+
+		refs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](100), []string{"10.0.0.4"}),
+		}
+		targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, route, pRef, upstream, refs)
+		require.NoError(t, err)
+		require.Len(t, targets, 1)
+		assert.Equal(t, "aaa-failed-name", targets[0].Name)
+	})
+
+	t.Run("tie-breaks two Programmed duplicates by smaller name", func(t *testing.T) {
+		// Both targets are Programmed for the same address — smaller name must win.
+		dup1 := newExistingTarget("zzz-prog-name", "10.0.0.5:8080", true)
+		dup2 := newExistingTarget("aaa-prog-name", "10.0.0.5:8080", true)
+		cl := createTestFakeClient(dup1, dup2)
+
+		refs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](100), []string{"10.0.0.5"}),
+		}
+		targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, route, pRef, upstream, refs)
+		require.NoError(t, err)
+		require.Len(t, targets, 1)
+		assert.Equal(t, "aaa-prog-name", targets[0].Name)
+	})
+
+	t.Run("list KongTargets error is propagated", func(t *testing.T) {
+		cl := createTestFakeClientWithInterceptors(interceptor.Funcs{
+			List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if _, ok := list.(*configurationv1alpha1.KongTargetList); ok {
+					return fmt.Errorf("simulated KongTarget list error")
+				}
+				return client.List(ctx, list, opts...)
+			},
+		})
+
+		refs := []validBackendRef{
+			createTestvalidBackendRef("service-a", "test-namespace", ptr.To[int32](100), []string{"10.0.0.6"}),
+		}
+		_, err := createTargetsFromValidBackendRefs(ctx, logger, cl, route, pRef, upstream, refs)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to list existing KongTargets")
+		assert.Contains(t, err.Error(), "simulated KongTarget list error")
+	})
 }

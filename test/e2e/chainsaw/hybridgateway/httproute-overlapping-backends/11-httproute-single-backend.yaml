@@ -1,0 +1,25 @@
+---
+# Scenario A: Remove the preview backendRef — single active service only.
+# Tests that removing one overlapping backendRef still results in 1 KongTarget.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($httproute_name)
+  namespace: ($http_route_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /echo
+          method: GET
+      backendRefs:
+        - name: ($echo_active_service_name)
+          port: 1027
+          weight: 1

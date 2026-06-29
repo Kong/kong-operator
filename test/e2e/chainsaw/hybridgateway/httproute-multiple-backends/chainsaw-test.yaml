@@ -33,6 +33,7 @@ spec:
     assert: 300s
     cleanup: 120s
     delete: 120s
+    exec: 300s
 
   steps:
     # Step 1: Create prerequisite resources
@@ -330,8 +331,36 @@ spec:
     - name: update-httproute-different-ports
       description: Update HTTPRoute to reference same service with different ports
       try:
+        # Capture the current KongTargets so we can wait for them to be deleted after the update.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($kong_namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($httproute_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($kong_namespace)
+              - name: RESOURCE_TYPES
+                value: "kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
+            content: |
+              bash ../../common/scripts/get_kong_resources.sh
+            outputs:
+              - name: old_resources
+                value: (json_parse($stdout))
         - apply:
             file: 04-httproute-different-ports.yaml
+        # Wait for the old KongTargets (from the weighted step) to be deleted before
+        # checking the new count. Without this wait the count check sees old + new targets.
+        - script:
+            env:
+              - name: RESOURCES_JSON
+                value: (to_string($old_resources))
+            content: |
+              bash ../../common/scripts/wait_for_kong_resources_deletion.sh
         - assert:
             file: 04-assert-httproute-different-ports.yaml
       catch:
@@ -356,13 +385,7 @@ spec:
         - name: managedby_namespace
           value: ($kong_namespace)
       try:
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify there are 2 KongTarget resources with different ports
+        # Verify there are exactly 2 KongTarget resources (one per port).
         - script:
             env:
               - name: KONG_NAMESPACE
@@ -391,8 +414,33 @@ spec:
     - name: update-httproute-cross-namespace
       description: Update HTTPRoute to reference backend in different namespace
       try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($kong_namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($httproute_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($kong_namespace)
+              - name: RESOURCE_TYPES
+                value: "kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
+            content: |
+              bash ../../common/scripts/get_kong_resources.sh
+            outputs:
+              - name: old_resources
+                value: (json_parse($stdout))
         - apply:
             file: 06-httproute-cross-namespace.yaml
+        - script:
+            env:
+              - name: RESOURCES_JSON
+                value: (to_string($old_resources))
+            content: |
+              bash ../../common/scripts/wait_for_kong_resources_deletion.sh
         - assert:
             file: 06-assert-httproute-cross-namespace.yaml
       catch:
@@ -429,12 +477,6 @@ spec:
         - name: weight
           value: 1
       try:
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
         # Verify there are 2 KongTarget resources
         - script:
             env:
