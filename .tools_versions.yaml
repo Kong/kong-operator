@@ -42,7 +42,7 @@ shellcheck: "0.11.0"
 # TODO: Make this work.
 #
 # todo: datasource=git-tags depName=vuln registryUrl=https://go.googlesource.com
-govulncheck: "1.1.4"
+govulncheck: "1.5.0"
 # renovate: datasource=github-releases depName=jlandowner/helm-chartsnap
 chartsnap: "0.6.0"
 # renovate: datasource=github-releases depName=stackrox/kube-linter
