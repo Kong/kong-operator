@@ -27,7 +27,16 @@ excludeVulns="$(jq -nc '[
   "GO-2026-4771",
 
   # Memory-safety vulnerability in github.com/jackc/pgx/v5.
-  "GO-2026-4772"
+  "GO-2026-4772",
+
+  # Race condition in docker cp / PUT /containers/{id}/archive in github.com/docker/docker.
+  # docker/docker is an indirect dependency pulled in by kubernetes-testing-framework and
+  # go-containerregistry. There is no fixed version of github.com/docker/docker for these CVEs
+  # (the fix only exists in the separate github.com/moby/moby/v2 module).
+  # The affected docker cp and archive code paths are not used by the operator.
+  "GO-2026-5617",
+  "GO-2026-5668",
+  "GO-2026-5746"
 
 ]')"
 export excludeVulns
