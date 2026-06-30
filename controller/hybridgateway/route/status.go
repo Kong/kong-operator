@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,9 +17,11 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
 	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -59,6 +60,17 @@ func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[
 	resolvedRefsCond, err := buildResolvedRefsCondition(ctx, logger, cl, routeObject)
 	if err != nil {
 		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for %s %s: %w", routeKind, routeObject.GetName(), err)
+	}
+
+	// Validate the implementation-specific konghq.com/* annotations once (route-level and
+	// backend-Service-level). A malformed value is surfaced via the KongConfigurationValid
+	// condition and halts state enforcement until the user fixes the annotation.
+	// The condition is set only while invalid; a valid Route carries no such condition.
+	var invalidConfigCond *metav1.Condition
+	if annotationErr := validateAnnotations(ctx, logger, cl, routeObject); annotationErr != nil {
+		log.Debug(logger, "HTTPRoute has malformed Kong annotations", "error", annotationErr)
+		invalidConfigCond = BuildKongConfigurationInvalidCondition(routeObject, annotationErr)
+		stop = true
 	}
 
 	for _, pRef := range gwtypes.GetSpecParentRefs(*routeObject) {
@@ -105,7 +117,13 @@ func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[
 			return false, stop, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
 		}
 
+		// Combine all conditions. The KongConfigurationValid condition is appended only when the
+		// Kong configuration is invalid; when valid it is omitted so SetStatusConditions removes
+		// any stale instance.
 		programmedConditions = append(programmedConditions, *acceptedCondition, *resolvedRefsCond)
+		if invalidConfigCond != nil {
+			programmedConditions = append(programmedConditions, *invalidConfigCond)
+		}
 
 		log.Debug(logger, "Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
 		if SetStatusConditions(routeObject, pRef, vars.ControllerName(), programmedConditions...) {
@@ -712,6 +730,43 @@ func buildResolvedRefsCondition[T gwtypes.SupportedRoute, TPtr gwtypes.Supported
 	return SetConditionMeta(*cond, route), nil
 }
 
+// validateAnnotations validates the implementation-specific konghq.com/* annotations.
+// It returns an error wrapping [hybridgatewayerrors.ErrMalformedAnnotation] on the first malformed value,
+// or nil if all are valid.
+func validateAnnotations[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	route TPtr) error {
+	switch r := any(route).(type) {
+	case *gwtypes.HTTPRoute:
+		if _, err := metadata.ExtractStripPath(route.GetAnnotations()); err != nil {
+			return fmt.Errorf("%w: konghq.com/strip-path on %s/%s: %w",
+				hybridgatewayerrors.ErrMalformedAnnotation, route.GetNamespace(), route.GetName(), err)
+		}
+		if _, err := metadata.ExtractPreserveHost(route.GetAnnotations()); err != nil {
+			return fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
+				hybridgatewayerrors.ErrMalformedAnnotation, route.GetNamespace(), route.GetName(), err)
+		}
+		for _, rule := range r.Spec.Rules {
+			backendRefs := utils.HTTPBackendRefsToBackendRefs(rule.BackendRefs)
+			if err := service.ValidateBackendRefAnnotations(ctx, cl, route.GetNamespace(), backendRefs, logger); err != nil {
+				return err
+			}
+		}
+	case *gwtypes.TLSRoute:
+		for _, rule := range r.Spec.Rules {
+			if err := service.ValidateBackendRefAnnotations(ctx, cl, route.GetNamespace(), rule.BackendRefs, logger); err != nil {
+				return err
+			}
+		}
+	// Should be unreachable.
+	default:
+		return fmt.Errorf("unsupported route type %T", r)
+	}
+	return nil
+}
+
 // backendRefResolvedCondition returns the ResolvedRefs condition of the route according to the status of the given backendRef in the route.
 //
 // Parameters:
@@ -744,14 +799,14 @@ func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 	}
 
 	// BackendRef group/kind (default to core/Service when unset).
-	bRefGroup, bRefKind := backendRefGroupKind(bRef.Group, bRef.Kind)
+	bRefGroup, bRefKind := utils.BackendRefGroupKind(bRef.Group, bRef.Kind)
 	bRefGK := string(bRefKind)
 	if bRefGroup != "" {
 		bRefGK = fmt.Sprintf("%s/%s", string(bRefGroup), string(bRefKind))
 	}
 
 	// Check if the group kind is supported for the reference.
-	if !IsBackendRefSupported(bRef.Group, bRef.Kind) {
+	if !utils.IsBackendRefSupported(bRef.Group, bRef.Kind) {
 		log.Debug(logger, "Unsupported BackendRef group/kind", "group", bRef.Group, "kind", bRef.Kind)
 		cond.Reason = string(gwtypes.RouteReasonInvalidKind)
 		cond.Status = metav1.ConditionFalse
@@ -1174,6 +1229,24 @@ func SetConditionMeta[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T
 	return &cond
 }
 
+// BuildKongConfigurationInvalidCondition builds the implementation-specific
+// KongConfigurationValid condition reporting malformed Kong configuration.
+// The returned condition has Status=False and the given error's text as its message.
+//
+// This condition is only set when configuration is invalid; callers omit it entirely when
+// everything parses, so SetStatusConditions removes any previously-set instance.
+func BuildKongConfigurationInvalidCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	route TPtr, configErr error,
+) *metav1.Condition {
+	cond := metav1.Condition{
+		Type:    routeconst.ConditionTypeKongConfigurationValid,
+		Status:  metav1.ConditionFalse,
+		Reason:  routeconst.ConditionReasonInvalidKongConfiguration,
+		Message: configErr.Error(),
+	}
+	return SetConditionMeta(cond, route)
+}
+
 // FilterOutGVKByKind returns a new slice of GVKs with the specified kind removed.
 // It matches Kind == kindToFilter and filters those out.
 func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter string) []schema.GroupVersionKind {
@@ -1184,25 +1257,6 @@ func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter str
 		}
 	}
 	return filtered
-}
-
-// backendRefGroupKind returns the effective group and kind for a BackendRef,
-// applying Gateway API defaults: kind defaults to "Service" and group defaults
-// to "" (core) when nil or empty.
-func backendRefGroupKind(group *gwtypes.Group, kind *gwtypes.Kind) (gwtypes.Group, gwtypes.Kind) {
-	g := lo.FromPtr(group)
-	k := lo.FromPtr(kind)
-	if k == "" {
-		k = "Service"
-	}
-	return g, k
-}
-
-// IsBackendRefSupported returns true if the BackendRef group and kind are supported by Gateway API.
-// Only core "Service" is supported.
-func IsBackendRefSupported(group *gwtypes.Group, kind *gwtypes.Kind) bool {
-	g, k := backendRefGroupKind(group, kind)
-	return (g == "" || g == "core") && k == "Service"
 }
 
 // IsExtensionRefSupported returns true if the ExtensionRef group and kind are supported by the Kong Gateway API implementation.
@@ -1225,7 +1279,7 @@ func IsExtensionRefSupported(group gwtypes.Group, kind gwtypes.Kind) bool {
 // Returns:
 //   - bool: true if the reference is permitted by the grant, false otherwise
 func IsRouteReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwtypes.BackendRef, routeKind string, fromNamespace string) bool {
-	bRefGroup, bRefKind := backendRefGroupKind(backendRef.Group, backendRef.Kind)
+	bRefGroup, bRefKind := utils.BackendRefGroupKind(backendRef.Group, backendRef.Kind)
 
 	for _, from := range grantSpec.From {
 		if from.Group != gwtypes.GroupName || string(from.Kind) != routeKind || fromNamespace != string(from.Namespace) {

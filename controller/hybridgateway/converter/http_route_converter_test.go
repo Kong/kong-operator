@@ -25,6 +25,8 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	routebuilder "github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
+	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -983,6 +985,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				routeNames := map[string]struct{}{}
 				serviceNames := map[string]struct{}{}
 				headersByRoute := map[string]int{}
+				priorityByHeaders := map[string]int64{}
 
 				for _, obj := range store {
 					route, ok := obj.(*configurationv1alpha1.KongRoute)
@@ -991,8 +994,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					}
 
 					routeNames[route.Name] = struct{}{}
-					assert.Empty(t, route.Spec.Paths)
+					assert.Equal(t, []string{routebuilder.KongHTTPRouteHeaderOnlyRegexPath}, route.Spec.Paths)
 					assert.Empty(t, route.Spec.Methods)
+					require.NotNil(t, route.Spec.RegexPriority)
 					require.NotNil(t, route.Spec.ServiceRef)
 					require.NotNil(t, route.Spec.ServiceRef.NamespacedRef)
 
@@ -1001,6 +1005,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 
 					headersKey := canonicalHeaderMatchSet(route.Spec.Headers)
 					headersByRoute[headersKey]++
+					priorityByHeaders[headersKey] = *route.Spec.RegexPriority
 				}
 
 				expectedHeaders := map[string]int{
@@ -1016,6 +1021,8 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				assert.Len(t, routeNames, 7)
 				assert.Len(t, serviceNames, 1)
 				assert.Equal(t, expectedHeaders, headersByRoute)
+				assert.Greater(t, priorityByHeaders["color=orange&version=two"], priorityByHeaders["version=two"])
+				assert.Greater(t, priorityByHeaders["version=two"], priorityByHeaders["color=blue"])
 			},
 		},
 		{
@@ -1441,6 +1448,53 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				conditions := route.Status.Parents[0].Conditions
 				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue)
 				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionResolvedRefs), metav1.ConditionTrue)
+				// Well-formed configuration: the dedicated condition is absent.
+				assertConditionAbsent(t, conditions, routeconst.ConditionTypeKongConfigurationValid)
+			},
+		},
+		{
+			name: "malformed route annotation sets KongConfigurationValid false and stop",
+			setup: func() (*httpRouteConverter, *gwtypes.HTTPRoute) {
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef(""),
+				}, nil)
+				route.Annotations = map[string]string{"konghq.com/strip-path": "not-a-bool"}
+				gateway := baseGateway()
+				objects := baseObjects(gateway, route)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+			},
+			wantUpdated: true,
+			wantStop:    true,
+			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents, 1)
+				conditions := route.Status.Parents[0].Conditions
+				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue)
+				assertConditionStatus(t, conditions, routeconst.ConditionTypeKongConfigurationValid, metav1.ConditionFalse)
+				assertConditionReason(t, conditions, routeconst.ConditionTypeKongConfigurationValid, routeconst.ConditionReasonInvalidKongConfiguration)
+			},
+		},
+		{
+			name: "malformed backend service annotation sets KongConfigurationValid false and stop",
+			setup: func() (*httpRouteConverter, *gwtypes.HTTPRoute) {
+				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{
+					newBackendRef(""),
+				}, nil)
+				gateway := baseGateway()
+				badService := newService("default")
+				badService.Annotations = map[string]string{"konghq.com/tls-verify": "maybe"}
+				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace(), badService, route)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
+				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+			},
+			wantUpdated: true,
+			wantStop:    true,
+			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents, 1)
+				conditions := route.Status.Parents[0].Conditions
+				assertConditionStatus(t, conditions, string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue)
+				assertConditionStatus(t, conditions, routeconst.ConditionTypeKongConfigurationValid, metav1.ConditionFalse)
+				assertConditionReason(t, conditions, routeconst.ConditionTypeKongConfigurationValid, routeconst.ConditionReasonInvalidKongConfiguration)
 			},
 		},
 		{
@@ -2064,6 +2118,26 @@ func assertConditionStatus(t *testing.T, conditions []metav1.Condition, conditio
 		}
 	}
 	t.Fatalf("condition %s not found", conditionType)
+}
+
+func assertConditionReason(t *testing.T, conditions []metav1.Condition, conditionType, reason string) {
+	t.Helper()
+	for _, cond := range conditions {
+		if cond.Type == conditionType {
+			assert.Equal(t, reason, cond.Reason)
+			return
+		}
+	}
+	t.Fatalf("condition %s not found", conditionType)
+}
+
+func assertConditionAbsent(t *testing.T, conditions []metav1.Condition, conditionType string) {
+	t.Helper()
+	for _, cond := range conditions {
+		if cond.Type == conditionType {
+			t.Fatalf("condition %s should be absent but was present with status %s", conditionType, cond.Status)
+		}
+	}
 }
 
 func newHTTPRouteForTranslation(hostnames []string, backendRefs []gwtypes.HTTPBackendRef, filters []gwtypes.HTTPRouteFilter) *gwtypes.HTTPRoute {

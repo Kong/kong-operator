@@ -63,11 +63,17 @@ func ensureKongReferenceGrantForParentRef[
 		ref.NamespacedRef == nil ||
 		ref.NamespacedRef.Namespace == nil ||
 		*ref.NamespacedRef.Namespace == ent.GetNamespace() {
-		if res, errStatus := patch.StatusWithoutCondition(
-			ctx, cl, ent,
-			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
+		// The parent ref doesn't require a grant. Only remove the shared
+		// ResolvedRefs condition if no other cross-namespace reference of this
+		// entity still justifies it, otherwise we'd clobber the condition that
+		// the secret ref handler sets (it runs later in Reconcile).
+		if !parentRefEntityHasCrossNamespaceRefs(ent) {
+			if res, errStatus := patch.StatusWithoutCondition(
+				ctx, cl, ent,
+				configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+			); errStatus != nil || !res.IsZero() {
+				return res, errStatus
+			}
 		}
 		return ctrl.Result{}, nil
 	}
@@ -120,6 +126,25 @@ func ensureKongReferenceGrantForParentRef[
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// parentRefEntityHasCrossNamespaceRefs reports whether a parent-ref entity has a
+// cross-namespace sensitive-data secret ref. Such refs are the only cross-namespace
+// reference type a parent-ref entity carries, and the secret ref handler owns the
+// shared ResolvedRefs condition for them. The parent-ref handler must not remove
+// ResolvedRefs while one exists, otherwise it would clobber what that handler sets.
+func parentRefEntityHasCrossNamespaceRefs(ent client.Object) bool {
+	g, ok := any(ent).(sensitiveDataSecretRefsGetter)
+	if !ok {
+		return false
+	}
+	ns := ent.GetNamespace()
+	for _, r := range g.GetSensitiveDataSecretRefs() {
+		if n := r.Ref.Namespace; n != nil && *n != "" && *n != ns {
+			return true
+		}
+	}
+	return false
 }
 
 type parentRefHandler[

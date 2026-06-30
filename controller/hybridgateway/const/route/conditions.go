@@ -46,4 +46,14 @@ const (
 	ConditionReasonKongCertificateProgrammed = "KongCertificateProgrammed"
 	// ConditionReasonKongCertificateNotProgrammed is used when the KongCertificate resource is not programmed.
 	ConditionReasonKongCertificateNotProgrammed = "KongCertificateNotProgrammed"
+
+	// ConditionTypeKongConfigurationValid is an implementation-specific condition set on a Route to
+	// report malformed Kong configuration.
+	//
+	// The condition is only present when the configuration is invalid; it is removed once every
+	// value parses, so a healthy Route carries no KongConfigurationValid condition.
+	ConditionTypeKongConfigurationValid = "KongConfigurationValid"
+	// ConditionReasonInvalidKongConfiguration is used when a piece of Kong configuration supplied
+	// through metadata fails to parse (invalid bool, invalid integer, negative integer, etc.).
+	ConditionReasonInvalidKongConfiguration = "InvalidKongConfiguration"
 )

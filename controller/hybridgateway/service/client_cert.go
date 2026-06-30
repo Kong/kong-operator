@@ -11,8 +11,8 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -107,7 +107,7 @@ func extractClientCertFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) (secretName string, svc *corev1.Service, ok bool) {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return "", nil, false
 	}
 

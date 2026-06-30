@@ -66,8 +66,11 @@
   because for underlying `KonnectGatewayControlPlane` these fields
   have been always immutable.
   [#4599](https://github.com/Kong/kong-operator/pull/4599)
-- Bump sigs.k8s.io/gateway-api from v1.5.1 to v1.6.0-rc.1.
+- Bump sigs.k8s.io/gateway-api from v1.5.1 to v1.6.0.
   [#4639](https://github.com/Kong/kong-operator/pull/4639)
+  [#4713](https://github.com/Kong/kong-operator/pull/4713)
+- Hybridgateway: treat malformed annotations as errors
+  [#4530](https://github.com/Kong/kong-operator/pull/4530)
 
 ### Fixes
 
@@ -134,6 +137,21 @@
   avoids attaching two plugins of the same type to the same route, which Konnect
   rejects with a `unique-plugin-per-entity` constraint error.
   [#4658](https://github.com/Kong/kong-operator/pull/4658)
+- Fix the issue that the `ResolvedRef` condition for cross-namespace reference
+  is not removed when a resource is updated to remove the cross-namespace
+  reference.
+  [#4663](https://github.com/Kong/kong-operator/pull/4663)
+- Hybridgateway: order overlapping header-only `HTTPRoute` matches by Gateway API
+  specificity. Header-only matches are translated to `KongRoute`s with a catch-all
+  regex path so Kong's `regex_priority` becomes effective, and a per-match priority
+  derived from method and header specificity keeps more specific header matches
+  ahead of less specific ones. This enables the `HTTPRouteHeaderMatching` Gateway API
+  conformance test for the hybrid gateway.
+  Generated header-only priorities stay below `1 << 20` (`1048576`), while generated
+  path-based priorities start at that value. Use custom `KongRoute` priorities below
+  or above that boundary depending on whether they should sort before or after
+  generated path-based routes.
+  [#4640](https://github.com/Kong/kong-operator/pull/4640)
 
 ## [v2.2.0]
 

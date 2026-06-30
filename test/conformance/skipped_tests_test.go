@@ -33,8 +33,7 @@ var skippedTestsShared = []string{
 
 var skippedTestsForExpressionsRouter = []string{}
 
-var skippedTestsForTraditionalCompatibleRouter = []string{
-	// HTTPRoute
+var skippedTestsForStandardTraditionalCompatibleRouter = []string{
 	tests.HTTPRouteHeaderMatching.ShortName,
 }
 
@@ -55,8 +54,8 @@ func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType)
 
 	switch routerFlavor {
 	case consts.RouterFlavorTraditionalCompatible:
-		skipped = append(skipped, skippedTestsForTraditionalCompatibleRouter...)
 		if gwType == standardGateway {
+			skipped = append(skipped, skippedTestsForStandardTraditionalCompatibleRouter...)
 			skipped = append(skipped, tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName)
 		}
 	case consts.RouterFlavorExpressions:

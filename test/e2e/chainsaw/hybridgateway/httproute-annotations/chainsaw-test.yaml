@@ -17,6 +17,11 @@ spec:
     regression in propagation surfaces as a failed assertion. It then patches
     the HTTPRoute to flip them back and re-asserts the KongRoute spec to
     verify that subsequent annotation changes are reconciled.
+    Finally it sets a malformed konghq.com/strip-path value and verifies the
+    controller treats it as an error (issue #4233): the HTTPRoute gets a dedicated
+    implementation-specific KongConfigurationValid condition set to False with reason
+    InvalidKongConfiguration (Accepted stays True), and fixing the annotation removes
+    the condition again and reconciles the KongRoute.
 
   bindings:
     - name: test_name
@@ -294,6 +299,90 @@ spec:
             - "/echo/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+
+    # ---------------------------------------------------------------------------
+    # Phase 5: Set a malformed konghq.com/strip-path value.
+    # ---------------------------------------------------------------------------
+    - name: Patch-httproute-malformed-annotation
+      description: Patch HTTPRoute with a malformed konghq.com/strip-path value.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/strip-path: "not-a-bool"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (conditions[?type == 'Accepted'] | [0]):
+                      type: Accepted
+                      status: "True"
+                    (conditions[?type == 'KongConfigurationValid'] | [0]):
+                      type: KongConfigurationValid
+                      status: "False"
+                      reason: InvalidKongConfiguration
+
+    # ---------------------------------------------------------------------------
+    # Phase 6: Fix the annotation back to a valid value.
+    # The HTTPRoute change re-triggers reconciliation, translation succeeds, the
+    # KongConfigurationValid condition is removed (only present while invalid), and the
+    # KongRoute reflects strip_path=true.
+    # ---------------------------------------------------------------------------
+    - name: Fix-httproute-malformed-annotation
+      description: Patch the malformed konghq.com/strip-path back to a valid boolean.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/strip-path: "true"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    # The condition is removed once the configuration is valid again.
+                    (length(conditions[?type == 'KongConfigurationValid'])): 0
+
+    - name: Assert-kong-route-recovered-after-fix
+      description: Assert KongRoute reflects strip_path=true after the annotation is fixed.
+      use:
+        template: ../../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value:
+            - "~/echo$"
+            - "/echo/"
+        - name: strip_path
+          value: true
         - name: preserve_host
           value: true
         - name: resource_type
