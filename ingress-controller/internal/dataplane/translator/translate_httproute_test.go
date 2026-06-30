@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -37,6 +38,14 @@ type testCaseIngressRulesFromHTTPRoutes struct {
 	routes       []*gatewayapi.HTTPRoute
 	storeObjects store.FakeObjects
 	expected     func(routes []*gatewayapi.HTTPRoute) ingressRules
+}
+
+// ingressRulesCmpOpts ignores RegexPriority since the assigned values depend on the
+// relative specificity of all the matches in a test case, which is not what these
+// translation tests exercise.
+var ingressRulesCmpOpts = []cmp.Option{
+	cmp.AllowUnexported(SecretNameToSNIs{}, kongstate.ServiceBackend{}),
+	cmpopts.IgnoreFields(kong.Route{}, "RegexPriority"),
 }
 
 func TestValidateHTTPRoute(t *testing.T) {
@@ -1543,7 +1552,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			p.ingressRulesFromHTTPRoutesWithCombinedService(tt.routes, &ingressRules)
 			// verify that we receive the expected values
 			expectedIngressRules := tt.expected(tt.routes)
-			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, cmp.AllowUnexported(SecretNameToSNIs{}, kongstate.ServiceBackend{})))
+			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, ingressRulesCmpOpts...))
 		})
 	}
 }
@@ -2112,7 +2121,7 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 			p.ingressRulesFromHTTPRoutesWithCombinedService(tc.routes, &ingressRules)
 			// verify that we receive the expected values
 			expectedIngressRules := tc.expected(tc.routes)
-			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, cmp.AllowUnexported(SecretNameToSNIs{}, kongstate.ServiceBackend{})))
+			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, ingressRulesCmpOpts...))
 		})
 	}
 }
@@ -2213,7 +2222,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 
 				// verify that we receive the expected values
 				expectedIngressRules := tt.expected(tt.routes)
-				assert.Equal(t, expectedIngressRules, ingressRules)
+				assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, ingressRulesCmpOpts...))
 			}
 		}
 

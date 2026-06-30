@@ -44,7 +44,10 @@ type TranslateHTTPRouteToKongstateServiceOptions struct {
 	SupportRedirectPlugin                   bool
 }
 
-const invalidBackendRefsServiceHostSuffix = ".invalid"
+const (
+	invalidBackendRefsServiceHostSuffix = ".invalid"
+	kongHTTPRouteHeaderOnlyRegexPath    = KongPathRegexPrefix + "/(.*)"
+)
 
 // HostForKongService returns the upstream host for a translated Kong service.
 // Services created from invalid backendRefs use a distinct host to avoid
@@ -66,12 +69,14 @@ func TranslateHTTPRoutesToKongstateServices(
 ) HTTPRoutesTranslationResult {
 	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, options.CombinedServicesFromDifferentHTTPRoutes)
 
-	// When feature flag expression routes is enabled, we need first split the matches and assign priorities to them
-	// to set proper priorities to the translated Kong routes for satisfying the specification of priorities of HTTPRoute matches:
+	// We need first split the matches and assign priorities to them to preserve
+	// the specification of HTTPRoute match priority where Kong route priority supports it:
 	// https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
-	var ruleToSplitMatchesWithPriorities splitHTTPRouteMatchesWithPrioritiesGroupedByRule
+	var ruleToMatchesWithPriorities splitHTTPRouteMatchesWithPrioritiesGroupedByRule
 	if options.ExpressionRoutes {
-		ruleToSplitMatchesWithPriorities = groupHTTPRouteMatchesWithPrioritiesByRule(logger, routes)
+		ruleToMatchesWithPriorities = groupHTTPRouteMatchesWithPrioritiesByRule(logger, routes)
+	} else {
+		ruleToMatchesWithPriorities = groupTraditionalHTTPRouteMatchesWithPrioritiesByRule(routes)
 	}
 
 	kongstateServiceCache := map[string]kongstate.Service{}
@@ -87,11 +92,9 @@ func TranslateHTTPRoutesToKongstateServices(
 		})
 
 		var matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority
-		if options.ExpressionRoutes {
-			for _, ruleMeta := range rulesMeta {
-				ruleKey := ruleMeta.getRuleKey()
-				matchesWithPriorities = append(matchesWithPriorities, ruleToSplitMatchesWithPriorities[ruleKey]...)
-			}
+		for _, ruleMeta := range rulesMeta {
+			ruleKey := ruleMeta.getRuleKey()
+			matchesWithPriorities = append(matchesWithPriorities, ruleToMatchesWithPriorities[ruleKey]...)
 		}
 		service, err := translateHTTPRouteRulesMetaToKongstateService(
 			logger, storer, serviceName, rulesMeta,
@@ -289,7 +292,7 @@ func translateHTTPRouteRulesMetaToKongstateService(
 		}
 		service.Routes = routes
 	} else {
-		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta, options)
+		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta, matchesWithPriorities, options)
 		if err != nil {
 			return kongstate.Service{}, err
 		}
@@ -332,13 +335,113 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 	})
 }
 
+func groupTraditionalHTTPRouteMatchesWithPrioritiesByRule(
+	routes []*gatewayapi.HTTPRoute,
+) splitHTTPRouteMatchesWithPrioritiesGroupedByRule {
+	splitMatches := []SplitHTTPRouteMatch{}
+	for _, route := range routes {
+		for ruleIndex, rule := range route.Spec.Rules {
+			optionalNamedRouteRule := string(lo.FromPtr(rule.Name))
+			// Rules without matches translate to catch-all routes that keep the Kong route
+			// default regex_priority, so they are excluded from priority assignment to not
+			// occupy a precedence class.
+			for matchIndex, match := range rule.Matches {
+				splitMatches = append(splitMatches, SplitHTTPRouteMatch{
+					Source:                 route,
+					Match:                  *match.DeepCopy(),
+					OptionalNamedRouteRule: optionalNamedRouteRule,
+					RuleIndex:              ruleIndex,
+					MatchIndex:             matchIndex,
+				})
+			}
+		}
+	}
+
+	matchesWithPriorities := assignTraditionalRoutePriorityToSplitHTTPRouteMatches(splitMatches)
+
+	ret := splitHTTPRouteMatchesWithPrioritiesGroupedByRule{}
+	for _, matchWithPriority := range matchesWithPriorities {
+		sourceRoute := matchWithPriority.Match.Source
+		ruleKey := fmt.Sprintf("%s/%s.%d", sourceRoute.Namespace, sourceRoute.Name, matchWithPriority.Match.RuleIndex)
+		ret[ruleKey] = append(ret[ruleKey], matchWithPriority)
+	}
+	return ret
+}
+
+// traditionalMatchPriorityClassSize is the size of the priority range reserved for each Gateway
+// API precedence class by assignTraditionalRoutePriorityToSplitHTTPRouteMatches. It must exceed
+// the largest possible within-route offset, i.e. the maximum number of matches in one HTTPRoute
+// (16 rules with 64 matches each), minus one.
+const traditionalMatchPriorityClassSize = 1 << 10
+
+// assignTraditionalRoutePriorityToSplitHTTPRouteMatches assigns the priorities translated to the
+// regex_priority of Kong routes generated from the given split matches.
+//
+// The Gateway API precedence class of each match (encoded from its path type and length, method,
+// header and query parameter counts) is ranked across all HTTPRoutes, and matches sharing both
+// the HTTPRoute and the class are additionally ordered by their rule and match indexes, since
+// within one HTTPRoute earlier rules must win ties. The priority of a match is
+// classRank*traditionalMatchPriorityClassSize + withinRouteOffset.
+//
+// A match's priority deliberately depends only on the set of precedence classes present and on
+// the match's own HTTPRoute, so that adding or removing an HTTPRoute whose match shapes are
+// already present does not renumber Kong routes translated from other HTTPRoutes. The trade-off
+// is that ties between equally specific matches of different HTTPRoutes are not broken by
+// creation timestamp as the Gateway API specifies; they keep the data plane's unspecified
+// relative order, as they did before priorities were introduced.
+//
+// Matches in the lowest present class with no within-route tie get priority 0, which is
+// translated to an unset regex_priority, so configurations where all matches share the same
+// specificity are unaffected.
+func assignTraditionalRoutePriorityToSplitHTTPRouteMatches(
+	splitMatches []SplitHTTPRouteMatch,
+) []SplitHTTPRouteMatchToKongRoutePriority {
+	type routeAndClass struct {
+		namespace string
+		name      string
+		class     RoutePriorityType
+	}
+
+	classes := make([]RoutePriorityType, len(splitMatches))
+	classSet := make(map[RoutePriorityType]struct{}, len(splitMatches))
+	matchCountByRouteAndClass := make(map[routeAndClass]int, len(splitMatches))
+	for i, match := range splitMatches {
+		class := calculateHTTPRouteMatchPriorityTraits(match).EncodeToPriority()
+		classes[i] = class
+		classSet[class] = struct{}{}
+		matchCountByRouteAndClass[routeAndClass{match.Source.Namespace, match.Source.Name, class}]++
+	}
+
+	rankByClass := make(map[RoutePriorityType]RoutePriorityType, len(classSet))
+	for rank, class := range slices.Sorted(maps.Keys(classSet)) {
+		rankByClass[class] = RoutePriorityType(rank)
+	}
+
+	// splitMatches are appended in rule and match order within each HTTPRoute, so earlier
+	// matches of a route get larger within-route offsets, thus higher priorities.
+	seenByRouteAndClass := make(map[routeAndClass]int, len(matchCountByRouteAndClass))
+	matchesWithPriorities := make([]SplitHTTPRouteMatchToKongRoutePriority, 0, len(splitMatches))
+	for i, match := range splitMatches {
+		key := routeAndClass{match.Source.Namespace, match.Source.Name, classes[i]}
+		offset := matchCountByRouteAndClass[key] - 1 - seenByRouteAndClass[key]
+		seenByRouteAndClass[key]++
+		matchesWithPriorities = append(matchesWithPriorities, SplitHTTPRouteMatchToKongRoutePriority{
+			Match:    match,
+			Priority: rankByClass[classes[i]]*traditionalMatchPriorityClassSize + RoutePriorityType(offset),
+		})
+	}
+	return matchesWithPriorities
+}
+
 // translateHTTPRouteRulesMetaToKongstateRoutes translate the matches and filters under the rules sharing the same backends
 // to list of kongstate.Route.
 func translateHTTPRouteRulesMetaToKongstateRoutes(
 	rulesMeta []httpRouteRuleMeta,
+	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
 	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) ([]kongstate.Route, error) {
 	rulesGroupedByFilter := groupRulesByFilter(rulesMeta)
+	prioritiesByMatch := httpRouteMatchPrioritiesByRuleMatch(matchesWithPriorities)
 	routes := make([]kongstate.Route, 0)
 
 	for _, rulesWithSameFilter := range rulesGroupedByFilter {
@@ -370,6 +473,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 					objectInfo,
 					hostnames,
 					tags,
+					nil,
 					options,
 				)
 				if err != nil {
@@ -388,6 +492,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 			routeName := translateToKongRouteName(matchGroup, parentRoute.GetNamespace(), parentRoute.GetName())
 			// Since the grouped matches here are from the same HTTPRoute, it is OK to use the hostnames from the first HTTPRoute.
 			hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)
+			regexPriority := regexPriorityForHTTPRouteMatchGroup(matchGroup, prioritiesByMatch)
 
 			routesFromMatchGroup, err := GenerateKongRoutesFromHTTPRouteMatches(
 				routeName,
@@ -396,6 +501,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 				objectInfo,
 				hostnames,
 				tags,
+				regexPriority,
 				options,
 			)
 			if err != nil {
@@ -409,6 +515,62 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 		return *routes[i].Name < *routes[j].Name
 	})
 	return routes, nil
+}
+
+type httpRouteMatchPriorityKey struct {
+	Namespace   string
+	Name        string
+	RuleNumber  int
+	MatchNumber int
+}
+
+func httpRouteMatchPrioritiesByRuleMatch(
+	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
+) map[httpRouteMatchPriorityKey]int {
+	priorities := make(map[httpRouteMatchPriorityKey]int, len(matchesWithPriorities))
+	for _, matchWithPriority := range matchesWithPriorities {
+		sourceRoute := matchWithPriority.Match.Source
+		key := httpRouteMatchPriorityKey{
+			Namespace:   sourceRoute.Namespace,
+			Name:        sourceRoute.Name,
+			RuleNumber:  matchWithPriority.Match.RuleIndex,
+			MatchNumber: matchWithPriority.Match.MatchIndex,
+		}
+		priority := int(matchWithPriority.Priority)
+		if priority > priorities[key] {
+			priorities[key] = priority
+		}
+	}
+	return priorities
+}
+
+func regexPriorityForHTTPRouteMatchGroup(
+	matchGroup httpRouteMatchMetaList,
+	prioritiesByMatch map[httpRouteMatchPriorityKey]int,
+) *int {
+	var regexPriority int
+	for _, matchMeta := range matchGroup {
+		if priority := regexPriorityForHTTPRouteMatchMeta(matchMeta, prioritiesByMatch); priority > regexPriority {
+			regexPriority = priority
+		}
+	}
+	if regexPriority == 0 {
+		return nil
+	}
+	return new(regexPriority)
+}
+
+func regexPriorityForHTTPRouteMatchMeta(
+	matchMeta httpRouteMatchMeta,
+	prioritiesByMatch map[httpRouteMatchPriorityKey]int,
+) int {
+	key := httpRouteMatchPriorityKey{
+		Namespace:   matchMeta.parentRoute.Namespace,
+		Name:        matchMeta.parentRoute.Name,
+		RuleNumber:  matchMeta.RuleNumber,
+		MatchNumber: matchMeta.MatchNumber,
+	}
+	return prioritiesByMatch[key]
 }
 
 // extractUniqueHTTPRoutes extracts unique HTTPRoutes in a grouped list of HTTPRouteRuleMeta.
@@ -583,7 +745,7 @@ type httpRouteMatchMeta struct {
 }
 
 // getKey computes a key from an HTTPRouteMatch. Two HTTPRouteMatches will generate the same key if their
-// parent HTTPRoute, methods, headers, and query parameters are identical.
+// parent HTTPRoute, path presence, methods, headers, and query parameters are identical.
 // HTTPRouteMatches with the same key can be combined into a single Kong route.
 func (m httpRouteMatchMeta) getKey() string {
 	// Per the HTTPHeader definition at https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPHeader
@@ -631,12 +793,14 @@ func (m httpRouteMatchMeta) getKey() string {
 	keySource := struct {
 		Namespace string
 		Name      string
+		HasPath   bool
 		Method    *gatewayapi.HTTPMethod
 		Headers   []gatewayapi.HTTPHeaderMatch
 		Query     []gatewayapi.HTTPQueryParamMatch
 	}{
 		Namespace: m.parentRoute.Namespace,
 		Name:      m.parentRoute.Name,
+		HasPath:   m.Match.Path != nil,
 		Method:    m.Match.Method,
 		Headers:   headers,
 		Query:     queryParams,
@@ -719,6 +883,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []*string,
 	tags []*string,
+	regexPriority *int,
 	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) ([]kongstate.Route, error) {
 	if len(matches) == 0 {
@@ -743,6 +908,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 
 	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames, options.Protocols)
 	r.Tags = tags
+	r.RegexPriority = regexPriority
 
 	// convert header matching from HTTPRoute to Route format
 	headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(matches[0].Headers)
@@ -895,12 +1061,7 @@ func getRoutesFromMatches(
 			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
 			// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
 			// For exact matches, we transform the path into a regular expression that terminates after the value
-			if match.Path != nil {
-				paths := generateKongRoutePathFromHTTPRouteMatch(match)
-				for _, p := range paths {
-					matchRoute.Paths = append(matchRoute.Paths, new(p))
-				}
-			}
+			addPathsFromHTTPRouteMatch(matchRoute, match)
 
 			// configure method matching information about the route if method
 			// matching was defined.
@@ -912,7 +1073,7 @@ func getRoutesFromMatches(
 				}
 			}
 			path := ""
-			if match.Path.Value != nil {
+			if match.Path != nil && match.Path.Value != nil {
 				path = *match.Path.Value
 			}
 
@@ -931,11 +1092,7 @@ func getRoutesFromMatches(
 			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
 			// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
 			// For exact matches, we transform the path into a regular expression that terminates after the value.
-			if match.Path != nil {
-				for _, path := range generateKongRoutePathFromHTTPRouteMatch(match) {
-					route.Paths = append(route.Paths, new(path))
-				}
-			}
+			addPathsFromHTTPRouteMatch(route, match)
 
 			if match.Method != nil {
 				method := string(*match.Method)
@@ -947,6 +1104,19 @@ func getRoutesFromMatches(
 		}
 	}
 	return routes, nil
+}
+
+func addPathsFromHTTPRouteMatch(route *kongstate.Route, match gatewayapi.HTTPRouteMatch) {
+	if match.Path == nil {
+		if route.RegexPriority != nil && len(match.Headers) > 0 {
+			route.Paths = append(route.Paths, new(kongHTTPRouteHeaderOnlyRegexPath))
+		}
+		return
+	}
+
+	for _, path := range generateKongRoutePathFromHTTPRouteMatch(match) {
+		route.Paths = append(route.Paths, new(path))
+	}
 }
 
 func generateKongRoutePathFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) []string {
