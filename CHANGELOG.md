@@ -70,6 +70,8 @@
   [#4639](https://github.com/Kong/kong-operator/pull/4639)
 - Hybridgateway: treat malformed annotations as errors
   [#4530](https://github.com/Kong/kong-operator/pull/4530)
+- Conformance: enable GRPCExactMethodMatching
+  [#4673](https://github.com/Kong/kong-operator/pull/4673)
 
 ### Fixes
 
