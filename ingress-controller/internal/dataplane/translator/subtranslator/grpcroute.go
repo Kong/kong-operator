@@ -150,10 +150,23 @@ func GenerateKongRoutesFromGRPCRouteRule(
 // by kong.Route{}.
 // The hostname field is optional. If not specified, the configured value will be obtained from parentRefs.
 func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []*string {
+	hostnames := getEffectiveHostnamesForGRPCRoute(grpcroute, storer)
+	if len(hostnames) == 0 {
+		return nil
+	}
+	return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {
+		return new(string(h))
+	})
+}
+
+// getEffectiveHostnamesForGRPCRoute returns the hostnames that should be used to
+// match traffic for a GRPCRoute. The hostname field is optional in the GRPCRoute
+// spec; if specified, those hostnames are used directly. If not specified, the
+// hostnames are inherited from the listeners of the Gateways referenced in the
+// GRPCRoute's parentRefs (honoring sectionName when set).
+func getEffectiveHostnamesForGRPCRoute(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []gatewayapi.Hostname {
 	if len(grpcroute.Spec.Hostnames) > 0 {
-		return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
-			return new(string(h))
-		})
+		return grpcroute.Spec.Hostnames
 	}
 
 	// If no hostnames are specified, we will use the hostname from the Gateway
@@ -205,9 +218,7 @@ func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRout
 		}
 	}
 
-	return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {
-		return new(string(h))
-	})
+	return hostnames
 }
 
 func generateTagsForGRPCRoute(grpcroute *gatewayapi.GRPCRoute) []*string {
