@@ -183,25 +183,25 @@ func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
 	protocol = strings.ToLower(protocol)
 	switch protocol {
 	case "http":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTP
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsHTTP)
 	case "https":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTPS
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsHTTPS)
 	case "grpc":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolGrpc
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsGrpc)
 	case "grpcs":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolGrpcs
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsGrpcs)
 	case "ws":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolWs
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsWs)
 	case "wss":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolWss
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsWss)
 	case "tls":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTLS
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsTLS)
 	case "tcp":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTCP
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsTCP)
 	case "tls_passthrough":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolTLSPassthrough
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsTLSPassthrough)
 	case "udp":
-		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolUDP
+		b.service.Spec.Protocol = sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsUDP)
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported protocol: %s", protocol))
 	}
