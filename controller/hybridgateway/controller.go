@@ -3,6 +3,7 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +26,10 @@ import (
 const (
 	// ControllerName is the name used for logging and event recording in the hybrid gateway controller.
 	ControllerName = "hybridgateway"
+
+	// requeueWhileWaiting is a short safety requeue used when we intentionally
+	// wait for prerequisites (e.g., Programmed dependencies) before proceeding.
+	requeueWhileWaiting = time.Second
 )
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;create;update;patch;delete
@@ -196,7 +201,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	)
 
 	// Phase 3: State Enforcement.
-	stateChanged, err := enforceState(ctx, r.Client, logger, conv)
+	stateChanged, waiting, err := enforceState(ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record state enforcement failure event.
 		r.eventRecorder.Event(
@@ -220,7 +225,29 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Phase 4: Orphan Cleanup.
+	// If we are intentionally waiting for prerequisites (e.g., Programmed deps),
+	// schedule a short requeue as a safety net in case watch events are delayed.
+	if waiting {
+		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
+	}
+
+	// Phase 4.5: Readiness gate before orphan cleanup.
+	// For converters that opt in (currently HTTPRoute), defer deleting orphaned resources
+	// until all desired resources are Programmed. This prevents removing stale resources
+	// before their replacements are live in the data plane, which would otherwise open a
+	// traffic gap when a spec change rotates the desired resource names.
+	if checker, ok := any(conv).(converter.DesiredStateReadinessChecker); ok {
+		ready, err := checker.DesiredResourcesReady(ctx, logger)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if !ready {
+			log.Debug(logger, "Desired resources not ready yet, deferring orphan cleanup")
+			return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
+		}
+	}
+
+	// Phase 5: Orphan Cleanup.
 	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record orphan cleanup failure event.
