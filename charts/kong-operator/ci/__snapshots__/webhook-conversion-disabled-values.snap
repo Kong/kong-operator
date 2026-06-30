@@ -31619,6 +31619,13 @@ spec:
                                   description: The port that will be exposed by this service.
                                   format: int32
                                   type: integer
+                                protocol:
+                                  default: TCP
+                                  description: The IP protocol for this port. Supports "TCP" and "UDP". Defaults to "TCP".
+                                  enum:
+                                  - TCP
+                                  - UDP
+                                  type: string
                                 targetPort:
                                   anyOf:
                                   - type: integer
