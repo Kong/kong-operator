@@ -134,20 +134,51 @@ func (c *Client) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeR
 
 // ListAllNodes call ListNodes() repeatedly to get all nodes in a control plane.
 func (c *Client) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
-	nodes := []*NodeItem{}
-	var nextCursor string
-	for {
+	// Safety bounds for ListAllNodes pagination.
+	// These cap work even when the remote endpoint is broken and
+	// keeps returning HasNextPage:true (with the same or rotating cursors).
+	const (
+		// maxListNodesPages caps how many paginated requests ListAllNodes will
+		// follow before giving up, regardless of HasNextPage.
+		maxListNodesPages = 100_000
+		// maxListNodesAccumulated caps the total number of nodes accumulated
+		// across pages, to bound memory growth.
+		maxListNodesAccumulated = 1_000_000
+	)
+
+	var (
+		nodes       = []*NodeItem{}
+		seenCursors = make(map[string]struct{})
+		nextCursor  string
+	)
+	for page := 0; ; page++ {
+		if page >= maxListNodesPages {
+			return nil, fmt.Errorf("listing all nodes aborted: exceeded maximum of %d pages", maxListNodesPages)
+		}
+
 		resp, err := c.listNodes(ctx, nextCursor)
 		if err != nil {
 			return nil, err
 		}
+
 		nodes = append(nodes, resp.Items...)
-		if resp.Page == nil || !resp.Page.HasNextPage {
+		if len(nodes) > maxListNodesAccumulated {
+			return nil, fmt.Errorf("listing all nodes aborted: accumulated nodes exceeded ceiling of %d ", maxListNodesAccumulated)
+		}
+
+		if resp.Page == nil || !resp.Page.HasNextPage || resp.Page.NextCursor == "" {
 			return nodes, nil
 		}
-		// if konnect returns that there is a next page, the nodes are not all
-		// listed and we should start listing from the returned NextCursor.
+
 		nextCursor = resp.Page.NextCursor
+		if nextCursor == "" {
+			return nil, fmt.Errorf("listing all nodes aborted: endpoint reported HasNextPage but returned an empty cursor")
+		}
+		// Detect repeated/identical cursors that would otherwise loop forever.
+		if _, dup := seenCursors[nextCursor]; dup {
+			return nil, fmt.Errorf("listing all nodes aborted: endpoint returned a repeated pagination cursor")
+		}
+		seenCursors[nextCursor] = struct{}{}
 	}
 }
 
