@@ -21,19 +21,19 @@ func TestCreatePortalCustomization(t *testing.T) {
 	sdk := sdkmocks.NewMockPortalCustomizationSDK(t)
 	customization := testPortalCustomization()
 
-	expectedRequest, err := customization.Spec.APISpec.ToCreatePortalCustomization()
+	expectedRequest, err := customization.Spec.APISpec.ToCreatePortalCustomizationV3()
 	require.NoError(t, err)
 
 	sdk.EXPECT().
 		ReplacePortalCustomization(
 			mock.Anything,
 			"portal-1",
-			mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomization) bool {
+			mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomizationV3) bool {
 				return reflect.DeepEqual(req, expectedRequest)
 			}),
 		).
 		Return(&sdkkonnectops.ReplacePortalCustomizationResponse{
-			PortalCustomization: &sdkkonnectcomp.PortalCustomization{},
+			PortalCustomizationV3: &sdkkonnectcomp.PortalCustomizationV3{},
 		}, nil).
 		Once()
 
@@ -46,14 +46,14 @@ func TestUpdatePortalCustomization(t *testing.T) {
 	sdk := sdkmocks.NewMockPortalCustomizationSDK(t)
 	customization := testPortalCustomization()
 
-	expectedRequest, err := customization.Spec.APISpec.ToUpdatePortalCustomization()
+	expectedRequest, err := customization.Spec.APISpec.ToUpdatePortalCustomizationV3()
 	require.NoError(t, err)
 
 	sdk.EXPECT().
 		ReplacePortalCustomization(
 			mock.Anything,
 			"portal-1",
-			mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomization) bool {
+			mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomizationV3) bool {
 				return reflect.DeepEqual(req, expectedRequest)
 			}),
 		).
@@ -72,8 +72,8 @@ func TestDeletePortalCustomization(t *testing.T) {
 		ReplacePortalCustomization(
 			mock.Anything,
 			"portal-1",
-			mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomization) bool {
-				return reflect.DeepEqual(req, &sdkkonnectcomp.PortalCustomization{})
+			mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomizationV3) bool {
+				return reflect.DeepEqual(req, &sdkkonnectcomp.PortalCustomizationV3{})
 			}),
 		).
 		Return(&sdkkonnectops.ReplacePortalCustomizationResponse{}, nil).

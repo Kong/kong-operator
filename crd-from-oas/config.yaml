@@ -351,7 +351,7 @@ apiGroupVersions:
             # Designates the field on the object to compare when using a fallback
             # because this type in Konnect doesn't support tags or labels.
             matchFields:
-              - objectField: Spec.APISpec.AllowedIps 
+              - objectField: Spec.APISpec.AllowedIps
                 responseField: AllowedIps
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalsIPAllowListSDK
@@ -396,9 +396,9 @@ apiGroupVersions:
             interface: github.com/Kong/sdk-konnect-go.PortalCustomizationSDK
             fieldName: PortalCustomization
           create:
-            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3
           update:
-            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3
           delete:
             asPUT: true
         reconciler: {}
