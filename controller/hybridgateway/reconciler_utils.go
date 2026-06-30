@@ -5,11 +5,13 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/managedfields"
@@ -18,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 const (
@@ -57,21 +60,35 @@ func translate[t converter.RootObject](conv converter.APIConverter[t], ctx conte
 //
 // The function uses server-side apply with the "gateway-operator" field manager to ensure
 // proper ownership and conflict resolution when multiple controllers manage the same resources.
-func enforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
+func enforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (applied bool, waiting bool, err error) {
 	logger = logger.WithValues("phase", "state-enforcement")
 	log.Debug(logger, "Starting state enforcement")
 
 	// Get the desired state from the converter.
 	desiredObjects, err := conv.GetOutputStore(ctx, logger)
 	if err != nil {
-		return false, fmt.Errorf("failed to get desired objects from converter: %w", err)
+		return false, false, fmt.Errorf("failed to get desired objects from converter: %w", err)
 	}
 	if len(desiredObjects) == 0 {
 		log.Debug(logger, "No desired objects to enforce")
-		return false, nil
+		return false, false, nil
 	}
 
 	log.Debug(logger, "Retrieved desired objects for enforcement", "objectCount", len(desiredObjects))
+
+	// Build lookup maps once so that per-object gating checks are O(1) instead of O(n).
+	desiredUpstreamNames := make(map[string]struct{}, len(desiredObjects))
+	desiredTargetsByUpstream := make(map[string][]unstructured.Unstructured, len(desiredObjects))
+	for _, obj := range desiredObjects {
+		switch obj.GetKind() {
+		case "KongUpstream":
+			desiredUpstreamNames[obj.GetName()] = struct{}{}
+		case "KongTarget":
+			if upName, _, _ := unstructured.NestedString(obj.Object, "spec", "upstreamRef", "name"); upName != "" {
+				desiredTargetsByUpstream[upName] = append(desiredTargetsByUpstream[upName], obj)
+			}
+		}
+	}
 
 	var (
 		objectsCreated = 0
@@ -89,6 +106,107 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			objectsSkipped++
 			continue
 		}
+
+		// Best-effort dependency gating: avoid creating dependent resources before
+		// their prerequisites are Programmed in Konnect. This reduces transient
+		// 404s during conformance and prevents noisy reconciliation errors like
+		// "can't create target without a Konnect Upstream ID".
+		switch desired.GetKind() {
+		case "KongService":
+			if host, _, _ := unstructured.NestedString(desired.Object, "spec", "host"); host != "" && desiredHasUpstreamNamed(desiredUpstreamNames, host) {
+				var up configurationv1alpha1.KongUpstream
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: host}, &up); err != nil {
+					log.Debug(logger, "Upstream not found yet for service, waiting", "upstream", host)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &up) {
+					log.Debug(logger, "Upstream not Programmed yet for service, waiting", "upstream", host)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+				targetsReady, err := upstreamTargetsProgrammed(ctx, cl, desiredTargetsByUpstream[host])
+				if err != nil {
+					return false, false, fmt.Errorf("failed to check upstream targets readiness for service %s: %w", desired.GetName(), err)
+				}
+				if !targetsReady {
+					log.Debug(logger, "Upstream targets not Programmed yet for service, waiting", "service", desired.GetName(), "upstream", host)
+					objectsSkipped++
+					stopAtKind = "KongTarget"
+					continue
+				}
+			}
+		case "KongTarget":
+			upstreamName, _, _ := unstructured.NestedString(desired.Object, "spec", "upstreamRef", "name")
+			if upstreamName != "" {
+				var up configurationv1alpha1.KongUpstream
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: upstreamName}, &up); err != nil {
+					log.Debug(logger, "Upstream not found yet for target, waiting", "upstream", upstreamName)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &up) {
+					log.Debug(logger, "Upstream not Programmed yet for target, waiting", "upstream", upstreamName)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+			}
+		case "KongRoute":
+			svcName, _, _ := unstructured.NestedString(desired.Object, "spec", "serviceRef", "namespacedRef", "name")
+			if svcName != "" {
+				var svc configurationv1alpha1.KongService
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: svcName}, &svc); err != nil {
+					log.Debug(logger, "Service not found yet for route, waiting", "service", svcName)
+					objectsSkipped++
+					stopAtKind = "KongService"
+					continue
+				}
+				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &svc) {
+					log.Debug(logger, "Service not Programmed yet for route, waiting", "service", svcName)
+					objectsSkipped++
+					stopAtKind = "KongService"
+					continue
+				}
+			}
+		case "KongPluginBinding":
+			if routeName, _, _ := unstructured.NestedString(desired.Object, "spec", "targets", "routeRef", "name"); routeName != "" {
+				var route configurationv1alpha1.KongRoute
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: routeName}, &route); err != nil {
+					log.Debug(logger, "Route not found yet for plugin binding, waiting", "route", routeName)
+					objectsSkipped++
+					stopAtKind = "KongRoute"
+					continue
+				}
+				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &route) {
+					log.Debug(logger, "Route not Programmed yet for plugin binding, waiting", "route", routeName)
+					objectsSkipped++
+					stopAtKind = "KongRoute"
+					continue
+				}
+			}
+			if svcName, _, _ := unstructured.NestedString(desired.Object, "spec", "targets", "serviceRef", "name"); svcName != "" {
+				if kind, _, _ := unstructured.NestedString(desired.Object, "spec", "targets", "serviceRef", "kind"); kind == "KongService" {
+					var svc configurationv1alpha1.KongService
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: svcName}, &svc); err != nil {
+						log.Debug(logger, "Service not found yet for plugin binding, waiting", "service", svcName)
+						objectsSkipped++
+						stopAtKind = "KongService"
+						continue
+					}
+					if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &svc) {
+						log.Debug(logger, "Service not Programmed yet for plugin binding, waiting", "service", svcName)
+						objectsSkipped++
+						stopAtKind = "KongService"
+						continue
+					}
+				}
+			}
+		}
+
 		log.Debug(logger, "Processing desired object", "index", i, "kind", desired.GetKind(), "name", desired.GetName())
 		// Get the existing object by name from the API server.
 		existing := &unstructured.Unstructured{}
@@ -103,15 +221,15 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		namespacedNameExisting := client.ObjectKeyFromObject(existing)
 
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				// Object doesn't exist, create it using server-side apply.
 				log.Debug(logger, "Creating new object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
 				// Set field manager for server-side apply
 				if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
-					if errors.IsConflict(err) {
-						return false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+					if apierrors.IsConflict(err) {
+						return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 					}
-					return false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+					return false, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
 				objectsCreated++
 				log.Debug(logger, "Successfully created object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
@@ -119,7 +237,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 				continue
 			} else {
 				// Other error getting the object.
-				return false, fmt.Errorf("failed to get object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				return false, false, fmt.Errorf("failed to get object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
 		}
 
@@ -134,16 +252,16 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// Object exists, check if we need to update it.
 		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, FieldManager, "")
 		if err != nil {
-			return false, fmt.Errorf("failed to extract managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
+			return false, false, fmt.Errorf("failed to extract managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
 		}
 		if managedFieldsObj == nil {
 			// No managed fields for our field manager, we should update.
 			log.Debug(logger, "No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
 			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
-				if errors.IsConflict(err) {
-					return false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				if apierrors.IsConflict(err) {
+					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
-				return false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				return false, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
 			objectsUpdated++
 			log.Debug(logger, "Successfully applied desired state (no managed fields)", "kind", existing.GetKind(), "obj", namespacedNameExisting)
@@ -153,13 +271,13 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// Convert desired resource to unstructured.
 		desiredU, err := utils.ToUnstructured(&desired, cl.Scheme())
 		if err != nil {
-			return false, fmt.Errorf("failed to convert to unstructured desired obj for kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+			return false, false, fmt.Errorf("failed to convert to unstructured desired obj for kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 		}
 
 		// Compare the two states.
 		compare, err := managedfields.Compare(managedFieldsObj, pruneDesiredObj(desiredU))
 		if err != nil {
-			return false, fmt.Errorf("failed to compare managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
+			return false, false, fmt.Errorf("failed to compare managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
 		}
 
 		if compare.IsSame() {
@@ -168,10 +286,10 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			log.Info(logger, "Changes detected for obj, applying desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting, "changes", compare.String())
 			// Changes detected, apply the desired state using server-side apply.
 			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
-				if errors.IsConflict(err) {
-					return false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				if apierrors.IsConflict(err) {
+					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
-				return false, fmt.Errorf("failed to update object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				return false, false, fmt.Errorf("failed to update object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
 			objectsUpdated++
 			log.Debug(logger, "Successfully applied changes to object", "kind", existing.GetKind(), "obj", namespacedNameExisting)
@@ -188,7 +306,32 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	stateChanged := (objectsCreated + objectsUpdated) > 0
 	// Return true also if any resources were skipped to ensure requeue for proper ordering
 	waitingForSkipped := objectsSkipped > 0
-	return stateChanged && waitingForSkipped, nil
+	return stateChanged, waitingForSkipped, nil
+}
+
+// desiredHasUpstreamNamed reports whether the pre-built upstream name set contains the given name.
+func desiredHasUpstreamNamed(desiredUpstreamNames map[string]struct{}, name string) bool {
+	_, ok := desiredUpstreamNames[name]
+	return ok
+}
+
+// upstreamTargetsProgrammed reports whether every KongTarget in the pre-filtered targets slice is present
+// in the cluster and Programmed.
+func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, targets []unstructured.Unstructured) (bool, error) {
+	for i := range targets {
+		d := &targets[i]
+		var tgt configurationv1alpha1.KongTarget
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: d.GetNamespace(), Name: d.GetName()}, &tgt); err != nil {
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to get KongTarget %s/%s: %w", d.GetNamespace(), d.GetName(), err)
+		}
+		if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &tgt) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.
@@ -325,7 +468,7 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			}
 
 			log.Info(logger, "Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
-			if err := cl.Delete(ctx, &item); err != nil && !errors.IsNotFound(err) {
+			if err := cl.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
 				return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 			}
 			orphansForGVK++
@@ -451,7 +594,7 @@ func removeFinalizerIfNotManaged[t converter.RootObject](ctx context.Context, cl
 
 	// Patch the object.
 	if err := cl.Patch(ctx, obj, patch); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Object was already deleted, this is fine.
 			log.Trace(logger, "Object already deleted, finalizer removal not needed")
 			return false, nil

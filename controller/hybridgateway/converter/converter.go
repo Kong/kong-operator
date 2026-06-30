@@ -41,6 +41,18 @@ type OrphanedResourceHandler interface {
 	HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error)
 }
 
+// DesiredStateReadinessChecker is an optional interface that converters can implement to
+// defer orphan cleanup until the resources they desire are ready (Programmed in Konnect).
+// When a converter implements it and DesiredResourcesReady returns false, the reconciler
+// requeues without deleting orphaned resources. This ensures stale resources are pruned
+// only after their replacements are live, avoiding a data-plane gap during a cutover
+// (e.g. when a spec change rotates the desired KongUpstream/KongService/KongRoute names).
+type DesiredStateReadinessChecker interface {
+	// DesiredResourcesReady reports whether all desired resources produced by the converter
+	// are Programmed. Resource kinds without a Programmed condition are ignored.
+	DesiredResourcesReady(ctx context.Context, logger logr.Logger) (ready bool, err error)
+}
+
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {

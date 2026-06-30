@@ -20,6 +20,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
@@ -85,6 +86,326 @@ func TestPruneDesiredObj(t *testing.T) {
 				_, hasSpec := u.Object["spec"]
 				assert.False(t, hasSpec)
 			}
+		})
+	}
+}
+
+func TestEnforceState_DependencyGating(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+
+	// Prepare Scheme with needed types.
+	s := scheme.Get()
+
+	ns := "ns"
+
+	// Case 1: Target waits for missing Upstream.
+	t.Run("target waits for missing upstream", func(t *testing.T) {
+		// Desired contains a KongTarget referencing upstream "u1".
+		targetGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongTarget"}
+		desired := newUnstructured(ns, "t1", targetGVK, map[string]string{})
+		_ = unstructured.SetNestedField(desired.Object, map[string]any{
+			"upstreamRef": map[string]any{"name": "u1"},
+		}, "spec")
+
+		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
+		cl := fake.NewClientBuilder().WithScheme(s).Build()
+
+		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		assert.False(t, applied)
+		assert.True(t, waiting)
+	})
+
+	// Case 2: Route waits for not-Programmed Service.
+	t.Run("route waits for not programmed service", func(t *testing.T) {
+		routeGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"}
+		desired := newUnstructured(ns, "r1", routeGVK, nil)
+		_ = unstructured.SetNestedField(desired.Object, map[string]any{
+			"serviceRef": map[string]any{"namespacedRef": map[string]any{"name": "svc1"}},
+		}, "spec")
+
+		// Existing KongService with Programmed=False.
+		svc := &configurationv1alpha1.KongService{}
+		svc.SetName("svc1")
+		svc.SetNamespace(ns)
+		// Default conditions include Programmed Unknown; ensure it's not True.
+
+		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
+		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(svc).Build()
+
+		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		assert.False(t, applied)
+		assert.True(t, waiting)
+	})
+
+	// Case 3: PluginBinding waits for not-Programmed Route.
+	t.Run("pluginbinding waits for not programmed route", func(t *testing.T) {
+		kpbGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongPluginBinding"}
+		desired := newUnstructured(ns, "b1", kpbGVK, nil)
+		_ = unstructured.SetNestedField(desired.Object, map[string]any{
+			"routeRef": map[string]any{"name": "route1"},
+		}, "spec", "targets")
+
+		route := &configurationv1alpha1.KongRoute{}
+		route.SetName("route1")
+		route.SetNamespace(ns)
+		// Programmed not True by default.
+
+		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
+		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(route).Build()
+
+		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		require.NoError(t, err)
+		assert.False(t, applied)
+		assert.True(t, waiting)
+	})
+
+}
+
+func TestTranslate(t *testing.T) {
+	tests := []struct {
+		name          string
+		translateRet  int
+		translateErr  error
+		expectedCount int
+		expectError   bool
+	}{
+		{
+			name:          "returns translated count",
+			translateRet:  3,
+			expectedCount: 3,
+		},
+		{
+			name:         "propagates translate error",
+			translateErr: assert.AnError,
+			expectError:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conv := &fakeHTTPRouteConverter{translateRet: tt.translateRet, translateErr: tt.translateErr}
+
+			count, err := translate[gwtypes.HTTPRoute](conv, t.Context(), logr.Discard())
+
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedCount, count)
+		})
+	}
+}
+
+func TestEnforceStatus(t *testing.T) {
+	tests := []struct {
+		name           string
+		statusUpdated  bool
+		statusStop     bool
+		statusErr      error
+		expectedUpdate bool
+		expectedStop   bool
+		expectError    bool
+	}{
+		{
+			name:           "returns converter status result",
+			statusUpdated:  true,
+			statusStop:     true,
+			expectedUpdate: true,
+			expectedStop:   true,
+		},
+		{
+			name:        "propagates status error",
+			statusErr:   assert.AnError,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conv := &fakeHTTPRouteConverter{statusUpdated: tt.statusUpdated, statusStop: tt.statusStop, statusErr: tt.statusErr}
+
+			updated, stop, err := enforceStatus[gwtypes.HTTPRoute](t.Context(), logr.Discard(), conv)
+
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedUpdate, updated)
+			assert.Equal(t, tt.expectedStop, stop)
+		})
+	}
+}
+
+func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+	kongServiceGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+
+	makeDesiredService := func(name string, host any) unstructured.Unstructured {
+		u := newUnstructured("default", name, kongServiceGVK, nil)
+		_ = unstructured.SetNestedField(u.Object, host, "spec", "host")
+		_ = unstructured.SetNestedField(u.Object, int64(80), "spec", "port")
+		_ = unstructured.SetNestedField(u.Object, "httproute", "spec", "protocol")
+		return u
+	}
+
+	tests := []struct {
+		name            string
+		scheme          *runtime.Scheme
+		desired         []unstructured.Unstructured
+		outputStoreErr  error
+		preexisting     []client.Object
+		setupClient     func(t *testing.T, cl client.Client)
+		interceptor     *interceptor.Funcs
+		wantApplied     bool
+		wantWaiting     bool
+		wantErrContains string
+	}{
+		{
+			name:            "returns error when output store retrieval fails",
+			scheme:          scheme.Get(),
+			desired:         nil,
+			outputStoreErr:  assert.AnError,
+			wantApplied:     false,
+			wantWaiting:     false,
+			wantErrContains: "failed to get desired objects from converter",
+		},
+		{
+			name:        "returns without changes for empty desired list",
+			scheme:      scheme.Get(),
+			desired:     nil,
+			wantApplied: false,
+			wantWaiting: false,
+		},
+		{
+			name:        "creates object when not found",
+			scheme:      scheme.Get(),
+			desired:     []unstructured.Unstructured{makeDesiredService("svc-create", "create.example")},
+			wantApplied: true,
+			wantWaiting: false,
+		},
+		{
+			name:    "returns get error for existing lookup failures",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-get-err", "err.example")},
+			interceptor: &interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if key.Name == "svc-get-err" {
+						return assert.AnError
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			},
+			wantApplied:     false,
+			wantWaiting:     false,
+			wantErrContains: "failed to get object kind KongService obj default/svc-get-err",
+		},
+		{
+			name:    "waits when existing object is marked for deletion",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-deleting", "deleting.example")},
+			preexisting: []client.Object{func() client.Object {
+				u := makeDesiredService("svc-deleting", "old.example")
+				ts := metav1.Now()
+				u.SetDeletionTimestamp(&ts)
+				u.SetFinalizers([]string{"test-finalizer"})
+				return &u
+			}()},
+			wantApplied: false,
+			wantWaiting: true,
+		},
+		{
+			name:    "applies update when managed fields are missing for field manager",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-no-managed", "new.example")},
+			preexisting: []client.Object{func() client.Object {
+				u := makeDesiredService("svc-no-managed", "old.example")
+				return &u
+			}()},
+			wantApplied: true,
+			wantWaiting: false,
+		},
+		{
+			name:    "returns extract managed fields error for unsupported group",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{newUnstructured("default", "bad-group", schema.GroupVersionKind{Group: "invalid.group", Version: "v1", Kind: "Bad"}, nil)},
+			preexisting: []client.Object{func() client.Object {
+				u := newUnstructured("default", "bad-group", schema.GroupVersionKind{Group: "invalid.group", Version: "v1", Kind: "Bad"}, nil)
+				return &u
+			}()},
+			wantApplied:     false,
+			wantWaiting:     false,
+			wantErrContains: "failed to extract managed fields",
+		},
+		{
+			name:   "returns conversion error for invalid desired payload",
+			scheme: scheme.Get(),
+			desired: []unstructured.Unstructured{func() unstructured.Unstructured {
+				u := makeDesiredService("svc-convert", "ok.example")
+				u.Object["spec"] = map[string]any{"host": make(chan int), "port": int64(80), "protocol": "httproute"}
+				return u
+			}()},
+			wantApplied:     false,
+			wantWaiting:     false,
+			wantErrContains: "failed to create object kind KongService obj default/svc-convert",
+		},
+		{
+			name:    "returns conflict error during create apply",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-create-conflict", "conflict.example")},
+			interceptor: &interceptor.Funcs{
+				Apply: func(ctx context.Context, c client.WithWatch, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
+					return k8serrors.NewConflict(schema.GroupResource{Group: "configuration.konghq.com", Resource: "kongservices"}, "svc-create-conflict", assert.AnError)
+				},
+			},
+			wantErrContains: "conflict during create of object kind KongService obj default/svc-create-conflict",
+		},
+		{
+			name:        "returns update error when apply fails on diff",
+			scheme:      scheme.Get(),
+			desired:     []unstructured.Unstructured{makeDesiredService("svc-update-err", "new.example")},
+			preexisting: []client.Object{func() client.Object { u := makeDesiredService("svc-update-err", "old.example"); return &u }()},
+			interceptor: &interceptor.Funcs{
+				Apply: func(ctx context.Context, c client.WithWatch, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
+					return assert.AnError
+				},
+			},
+			wantErrContains: "failed to create object kind KongService obj default/svc-update-err",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(tt.scheme)
+			if len(tt.preexisting) > 0 {
+				builder = builder.WithObjects(tt.preexisting...)
+			}
+			if tt.interceptor != nil {
+				builder = builder.WithInterceptorFuncs(*tt.interceptor)
+			}
+			cl := builder.Build()
+
+			if tt.setupClient != nil {
+				tt.setupClient(t, cl)
+			}
+
+			conv := &fakeHTTPRouteConverter{desired: tt.desired, outputStoreErr: tt.outputStoreErr}
+			applied, waiting, err := enforceState(ctx, cl, logger, conv)
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantApplied, applied)
+			assert.Equal(t, tt.wantWaiting, waiting)
 		})
 	}
 }
@@ -279,12 +600,21 @@ func TestCleanOrphanedResources(t *testing.T) {
 // Minimal fake converter for HTTPRoute
 
 type fakeHTTPRouteConverter struct {
-	desired []unstructured.Unstructured
-	gvks    []schema.GroupVersionKind
-	root    gwtypes.HTTPRoute
+	desired        []unstructured.Unstructured
+	gvks           []schema.GroupVersionKind
+	root           gwtypes.HTTPRoute
+	outputStoreErr error
+	translateRet   int
+	translateErr   error
+	statusUpdated  bool
+	statusStop     bool
+	statusErr      error
 }
 
 func (f *fakeHTTPRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error) {
+	if f.outputStoreErr != nil {
+		return nil, f.outputStoreErr
+	}
 	return f.desired, nil
 }
 func (f *fakeHTTPRouteConverter) GetOutputStoreLen(ctx context.Context, logger logr.Logger) int {
@@ -293,6 +623,12 @@ func (f *fakeHTTPRouteConverter) GetOutputStoreLen(ctx context.Context, logger l
 func (f *fakeHTTPRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind { return f.gvks }
 func (f *fakeHTTPRouteConverter) GetRootObject() gwtypes.HTTPRoute           { return f.root }
 func (f *fakeHTTPRouteConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
+	if f.translateErr != nil {
+		return 0, f.translateErr
+	}
+	if f.translateRet != 0 {
+		return f.translateRet, nil
+	}
 	return len(f.desired), nil
 }
 func (f *fakeHTTPRouteConverter) ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error) {
@@ -303,7 +639,10 @@ func (f *fakeHTTPRouteConverter) UpdateSharedRouteStatus([]unstructured.Unstruct
 }
 
 func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	return false, false, nil
+	if f.statusErr != nil {
+		return false, false, f.statusErr
+	}
+	return f.statusUpdated, f.statusStop, nil
 }
 
 func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (bool, error) {
@@ -1369,6 +1708,365 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				assert.Equal(t, tt.expectedHasFinalizer, slices.Contains(updated.GetFinalizers(), finalizerconst.HybridGatewayFinalizer), "finalizer presence mismatch")
 
 			}
+		})
+	}
+}
+
+func TestDesiredHasUpstreamNamed(t *testing.T) {
+	upstream := func(name string) unstructured.Unstructured {
+		u := unstructured.Unstructured{}
+		u.SetName(name)
+		u.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"})
+		return u
+	}
+	notUpstream := func(name string) unstructured.Unstructured {
+		u := unstructured.Unstructured{}
+		u.SetName(name)
+		u.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"})
+		return u
+	}
+
+	tests := []struct {
+		name    string
+		desired []unstructured.Unstructured
+		search  string
+		want    bool
+	}{
+		{
+			name:    "empty list returns false",
+			desired: nil,
+			search:  "u1",
+			want:    false,
+		},
+		{
+			name:    "matching upstream returns true",
+			desired: []unstructured.Unstructured{upstream("u1"), upstream("u2")},
+			search:  "u1",
+			want:    true,
+		},
+		{
+			name:    "name present under different kind returns false",
+			desired: []unstructured.Unstructured{notUpstream("u1")},
+			search:  "u1",
+			want:    false,
+		},
+		{
+			name:    "name not in list returns false",
+			desired: []unstructured.Unstructured{upstream("u2")},
+			search:  "u1",
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			names := make(map[string]struct{}, len(tt.desired))
+			for _, obj := range tt.desired {
+				if obj.GetKind() == "KongUpstream" {
+					names[obj.GetName()] = struct{}{}
+				}
+			}
+			assert.Equal(t, tt.want, desiredHasUpstreamNamed(names, tt.search))
+		})
+	}
+}
+
+func TestUpstreamTargetsProgrammed(t *testing.T) {
+	ctx := t.Context()
+	s := scheme.Get()
+	ns := "ns"
+
+	programmedCondition := metav1.Condition{
+		Type:               "Programmed",
+		Status:             metav1.ConditionTrue,
+		Reason:             "Programmed",
+		LastTransitionTime: metav1.Now(),
+	}
+
+	makeDesiredTarget := func(name, upstreamName string) unstructured.Unstructured {
+		u := unstructured.Unstructured{}
+		u.SetName(name)
+		u.SetNamespace(ns)
+		u.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongTarget"})
+		_ = unstructured.SetNestedField(u.Object, map[string]any{"name": upstreamName}, "spec", "upstreamRef")
+		return u
+	}
+
+	makeTarget := func(name string, programmed bool) *configurationv1alpha1.KongTarget {
+		tgt := &configurationv1alpha1.KongTarget{}
+		tgt.SetName(name)
+		tgt.SetNamespace(ns)
+		if programmed {
+			tgt.Status.Conditions = []metav1.Condition{programmedCondition}
+		}
+		return tgt
+	}
+
+	tests := []struct {
+		name            string
+		targets         []unstructured.Unstructured // pre-filtered targets for the upstream under test
+		existing        []client.Object
+		wantReady       bool
+		wantErrContains string
+		interceptorFn   *interceptor.Funcs
+	}{
+		{
+			name:      "nil targets returns ready",
+			targets:   nil,
+			wantReady: true,
+		},
+		{
+			name:      "empty targets slice returns ready",
+			targets:   []unstructured.Unstructured{},
+			wantReady: true,
+		},
+		{
+			name:      "target not in cluster returns not ready",
+			targets:   []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			existing:  nil,
+			wantReady: false,
+		},
+		{
+			name:      "target in cluster but not Programmed returns not ready",
+			targets:   []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			existing:  []client.Object{makeTarget("t1", false)},
+			wantReady: false,
+		},
+		{
+			name:      "target in cluster and Programmed returns ready",
+			targets:   []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			existing:  []client.Object{makeTarget("t1", true)},
+			wantReady: true,
+		},
+		{
+			name: "multiple targets all Programmed returns ready",
+			targets: []unstructured.Unstructured{
+				makeDesiredTarget("t1", "my-upstream"),
+				makeDesiredTarget("t2", "my-upstream"),
+			},
+			existing:  []client.Object{makeTarget("t1", true), makeTarget("t2", true)},
+			wantReady: true,
+		},
+		{
+			name: "multiple targets, one not Programmed returns not ready",
+			targets: []unstructured.Unstructured{
+				makeDesiredTarget("t1", "my-upstream"),
+				makeDesiredTarget("t2", "my-upstream"),
+			},
+			existing:  []client.Object{makeTarget("t1", true), makeTarget("t2", false)},
+			wantReady: false,
+		},
+		{
+			name:    "Get error for existing target is propagated",
+			targets: []unstructured.Unstructured{makeDesiredTarget("t1", "my-upstream")},
+			interceptorFn: &interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*configurationv1alpha1.KongTarget); ok {
+						return assert.AnError
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			},
+			wantReady:       false,
+			wantErrContains: "failed to get KongTarget",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(s)
+			if len(tt.existing) > 0 {
+				builder = builder.WithObjects(tt.existing...)
+			}
+			if tt.interceptorFn != nil {
+				builder = builder.WithInterceptorFuncs(*tt.interceptorFn)
+			}
+			cl := builder.Build()
+
+			ready, err := upstreamTargetsProgrammed(ctx, cl, tt.targets)
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantReady, ready)
+		})
+	}
+}
+
+func TestEnforceState_UpstreamGating(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+	s := scheme.Get()
+	ns := "ns"
+
+	programmedCondition := metav1.Condition{
+		Type:               "Programmed",
+		Status:             metav1.ConditionTrue,
+		Reason:             "Programmed",
+		LastTransitionTime: metav1.Now(),
+	}
+
+	svcGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+	tgtGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongTarget"}
+	upGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"}
+	routeGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"}
+	kpbGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongPluginBinding"}
+
+	makeObj := func(name string, gvk schema.GroupVersionKind, spec map[string]any) unstructured.Unstructured {
+		u := newUnstructured(ns, name, gvk, nil)
+		if spec != nil {
+			_ = unstructured.SetNestedField(u.Object, spec, "spec")
+		}
+		return u
+	}
+
+	tests := []struct {
+		name        string
+		desired     []unstructured.Unstructured
+		existing    []client.Object
+		wantApplied bool
+		wantWaiting bool
+		wantErr     bool
+	}{
+		{
+			// The service is gated (waiting=true) but the upstream prerequisite itself is
+			// still created in the same pass (applied=true): the loop skips the service
+			// but processes the upstream object that follows it.
+			name: "KongService waits when its host upstream is missing from cluster",
+			desired: []unstructured.Unstructured{
+				makeObj("svc1", svcGVK, map[string]any{"host": "upstream1"}),
+				makeObj("upstream1", upGVK, nil),
+			},
+			existing:    nil,
+			wantApplied: true,
+			wantWaiting: true,
+		},
+		{
+			// Upstream exists but isn't Programmed yet. The service is gated; the
+			// upstream is updated (no managed-fields yet → apply), so applied=true.
+			name: "KongService waits when its host upstream is not Programmed",
+			desired: []unstructured.Unstructured{
+				makeObj("svc1", svcGVK, map[string]any{"host": "upstream1"}),
+				makeObj("upstream1", upGVK, nil),
+			},
+			existing: func() []client.Object {
+				up := &configurationv1alpha1.KongUpstream{}
+				up.SetName("upstream1")
+				up.SetNamespace(ns)
+				return []client.Object{up}
+			}(),
+			wantApplied: true,
+			wantWaiting: true,
+		},
+		{
+			// Upstream is Programmed but targets are not yet. The service is gated on
+			// targets; the target itself is still processed in the same pass (applied=true).
+			name: "KongService waits when upstream is Programmed but targets are not",
+			desired: []unstructured.Unstructured{
+				makeObj("svc1", svcGVK, map[string]any{"host": "upstream1"}),
+				makeObj("upstream1", upGVK, nil),
+				makeObj("tgt1", tgtGVK, map[string]any{"upstreamRef": map[string]any{"name": "upstream1"}}),
+			},
+			existing: func() []client.Object {
+				up := &configurationv1alpha1.KongUpstream{}
+				up.SetName("upstream1")
+				up.SetNamespace(ns)
+				up.Status.Conditions = []metav1.Condition{programmedCondition}
+				// KongTarget exists but is not Programmed.
+				tgt := &configurationv1alpha1.KongTarget{}
+				tgt.SetName("tgt1")
+				tgt.SetNamespace(ns)
+				return []client.Object{up, tgt}
+			}(),
+			wantApplied: true,
+			wantWaiting: true,
+		},
+		{
+			name: "KongService skips upstream gate when host is not a desired upstream (external)",
+			desired: []unstructured.Unstructured{
+				makeObj("svc1", svcGVK, map[string]any{"host": "external.example.com"}),
+			},
+			existing:    nil,
+			wantApplied: true, // proceeds immediately, no upstream to wait for
+			wantWaiting: false,
+		},
+		{
+			name: "KongTarget waits when upstream exists but is not Programmed",
+			desired: []unstructured.Unstructured{
+				makeObj("tgt1", tgtGVK, map[string]any{"upstreamRef": map[string]any{"name": "upstream1"}}),
+			},
+			existing: func() []client.Object {
+				up := &configurationv1alpha1.KongUpstream{}
+				up.SetName("upstream1")
+				up.SetNamespace(ns)
+				return []client.Object{up}
+			}(),
+			wantApplied: false,
+			wantWaiting: true,
+		},
+		{
+			name: "KongRoute waits when service is missing",
+			desired: []unstructured.Unstructured{
+				makeObj("r1", routeGVK, map[string]any{
+					"serviceRef": map[string]any{"namespacedRef": map[string]any{"name": "svc1"}},
+				}),
+			},
+			existing:    nil,
+			wantApplied: false,
+			wantWaiting: true,
+		},
+		{
+			name: "KongPluginBinding waits when route is missing",
+			desired: []unstructured.Unstructured{
+				makeObj("b1", kpbGVK, map[string]any{
+					"targets": map[string]any{"routeRef": map[string]any{"name": "r1"}},
+				}),
+			},
+			existing:    nil,
+			wantApplied: false,
+			wantWaiting: true,
+		},
+		{
+			name: "KongPluginBinding waits when referenced KongService is not Programmed",
+			desired: []unstructured.Unstructured{
+				makeObj("b1", kpbGVK, map[string]any{
+					"targets": map[string]any{
+						"serviceRef": map[string]any{"name": "svc1", "kind": "KongService"},
+					},
+				}),
+			},
+			existing: func() []client.Object {
+				svc := &configurationv1alpha1.KongService{}
+				svc.SetName("svc1")
+				svc.SetNamespace(ns)
+				return []client.Object{svc}
+			}(),
+			wantApplied: false,
+			wantWaiting: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(s)
+			if len(tt.existing) > 0 {
+				builder = builder.WithObjects(tt.existing...)
+			}
+			cl := builder.Build()
+
+			fakeConv := &fakeHTTPRouteConverter{desired: tt.desired}
+			applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantApplied, applied)
+			assert.Equal(t, tt.wantWaiting, waiting)
 		})
 	}
 }

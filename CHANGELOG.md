@@ -74,6 +74,12 @@
   the transition, both old and new entries may be present in Konnect
   simultaneously as creation and orphan cleanup are not synchronized.
   [#4509](https://github.com/Kong/kong-operator/pull/4509)
+- Hybridgateway: prevent traffic drops when an `HTTPRoute` spec change rotates
+  resource names. A cleanup-time gate defers orphan deletion until every desired
+  `KongRoute` is confirmed bound to its new `KongService` in Konnect, and an
+  enforce-time gate delays `KongService` creation until its `KongUpstream` and
+  all desired `KongTarget`s are Programmed.
+  [#4577](https://github.com/Kong/kong-operator/pull/4577)
 
 ## [v2.1.7]
 
