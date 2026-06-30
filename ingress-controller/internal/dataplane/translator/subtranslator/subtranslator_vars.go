@@ -17,6 +17,10 @@ const (
 	// be given before timing out by default.
 	DefaultServiceTimeout = 60000
 
+	// maxKongServiceTimeout is the largest timeout Kong accepts for Service
+	// connect, read, and write timeouts.
+	maxKongServiceTimeout = 2147483646
+
 	// DefaultRetries indicates the number of times a connection should be
 	// retried by default.
 	DefaultRetries = 5

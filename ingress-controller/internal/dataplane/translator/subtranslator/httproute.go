@@ -145,7 +145,10 @@ func groupRulesFromHTTPRoutesByKongServiceName(
 				cache.addRule(ruleMeta)
 			}
 		}
-		return cache.ruleGroups
+		// Rules are grouped by backendRefs only. Split a group into per-timeout services
+		// only when its rules carry more than one distinct backendRequest timeout, so that
+		// enabling backendRequest timeouts does not rename existing Kong services.
+		return splitServiceGroupsByBackendRequestTimeout(cache.ruleGroups)
 	}
 
 	// Otherwise, we still group rules in the same HTTPRoute sharing the same backends,
@@ -299,28 +302,41 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	return service, nil
 }
 
+// effectiveBackendRequestTimeout returns the Kong service timeout (in milliseconds) that a
+// rule's backendRequest timeout maps to, and whether that timeout differs from the default
+// service timeout. A zero duration maps to maxKongServiceTimeout (Kong's largest accepted
+// timeout). Rules with no timeout, an unparsable timeout, or a timeout equal to the default
+// report differsFromDefault=false so that they neither alter the service nor force a split.
+// Grouping (getBackendRequestTimeoutKey) and application (applyTimeoutToServiceFromHTTPRouteRule)
+// both rely on this so they stay in sync.
+func effectiveBackendRequestTimeout(rule gatewayapi.HTTPRouteRule) (timeoutMS int, differsFromDefault bool) {
+	if rule.Timeouts == nil || rule.Timeouts.BackendRequest == nil {
+		return DefaultServiceTimeout, false
+	}
+	duration, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+	// We ignore the error here because the rule.Timeouts.BackendRequest is validated
+	// to be a strict subset of Golang time.ParseDuration so it should never happen.
+	if err != nil {
+		return DefaultServiceTimeout, false
+	}
+	if duration == 0 {
+		timeoutMS = maxKongServiceTimeout
+	} else {
+		timeoutMS = int(duration.Milliseconds())
+	}
+	return timeoutMS, timeoutMS != DefaultServiceTimeout
+}
+
 // applyTimeoutToServiceFromHTTPRouteRule applies timeout on the translated Kong service from the timeout settings in the rule.
 func applyTimeoutToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gatewayapi.HTTPRouteRule) {
-	if rule.Timeouts == nil {
+	timeoutMS, differsFromDefault := effectiveBackendRequestTimeout(rule)
+	// If the backendRequest timeout is unset or equal to the default timeout, we don't need to apply it to the service.
+	if !differsFromDefault {
 		return
 	}
-	backendRequestTimeout := DefaultServiceTimeout
-	if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
-		duration, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
-		// We ignore the error here because the rule.Timeouts.BackendRequest is validated
-		// to be a strict subset of Golang time.ParseDuration so it should never happen
-		if err != nil {
-			return
-		}
-		backendRequestTimeout = int(duration.Milliseconds())
-	}
-	// if the backendRequestTimeout is the same as the default timeout, we don't need to apply it to the service.
-	if backendRequestTimeout == DefaultServiceTimeout {
-		return
-	}
-	svc.ReadTimeout = new(backendRequestTimeout)
-	svc.ConnectTimeout = new(backendRequestTimeout)
-	svc.WriteTimeout = new(backendRequestTimeout)
+	svc.ReadTimeout = new(timeoutMS)
+	svc.ConnectTimeout = new(timeoutMS)
+	svc.WriteTimeout = new(timeoutMS)
 }
 
 // getHTTPRouteHostnamesAsSliceOfStringPointers translates the hostnames defined
@@ -449,6 +465,27 @@ func groupRulesByBackendRefs(ruleEntries []httpRouteRuleMeta) map[string][]httpR
 	return groupSliceByKeyFn(ruleEntries, httpRouteRuleMeta.getHTTPBackendRefsKey)
 }
 
+// splitServiceGroupsByBackendRequestTimeout splits each Kong service group whose rules carry
+// more than one distinct backendRequest timeout into separate groups, one per timeout, since a
+// Kong service can only hold a single timeout. Groups with a single (or no) distinct timeout keep
+// their original service name, so enabling backendRequest timeouts does not rename existing Kong
+// services. When a split happens, every resulting group is suffixed with its timeout
+// (".timeout.<ms>"); the default-timeout group keeps the original name as it carries no suffix.
+func splitServiceGroupsByBackendRequestTimeout(groups map[string][]httpRouteRuleMeta) map[string][]httpRouteRuleMeta {
+	result := make(map[string][]httpRouteRuleMeta, len(groups))
+	for serviceName, rulesMeta := range groups {
+		rulesByTimeout := groupSliceByKeyFn(rulesMeta, httpRouteRuleMeta.getBackendRequestTimeoutKey)
+		if len(rulesByTimeout) <= 1 {
+			result[serviceName] = rulesMeta
+			continue
+		}
+		for timeoutKey, rules := range rulesByTimeout {
+			result[serviceName+backendRequestTimeoutServiceNameSuffix(timeoutKey)] = rules
+		}
+	}
+	return result
+}
+
 // groupRulesByFilter groups the rules by their filters.
 // The filters are grouped by deep equality, key being the numeric index.
 // The elements in the groups have the order of the original slice, but the groups themselves are not ordered.
@@ -481,7 +518,7 @@ type httpRouteRuleMeta struct {
 // getHTTPBackendRefsKey computes a key from a list of backendRefs.
 // The order of backedRefs is not important.
 func (m httpRouteRuleMeta) getHTTPBackendRefsKey() string {
-	return getSortedItemsString(m.Rule.BackendRefs)
+	return getSortedItemsString(m.Rule.BackendRefs) + ";backendRequestTimeout=" + m.getBackendRequestTimeoutKey()
 }
 
 func (m httpRouteRuleMeta) getRuleKey() string {
@@ -492,6 +529,28 @@ func (m httpRouteRuleMeta) getRuleKey() string {
 // The order of the filters is not important.
 func (m httpRouteRuleMeta) getFiltersKey() string {
 	return getSortedItemsString(m.Rule.Filters)
+}
+
+// getBackendRequestTimeoutKey returns a canonical key identifying the rule's effective
+// backendRequest timeout. Rules that map to the default service timeout (including rules
+// with no timeout) return an empty key, so they group together regardless of how the
+// timeout is spelled (e.g. "500ms" and "0.5s" share the same key).
+func (m httpRouteRuleMeta) getBackendRequestTimeoutKey() string {
+	timeoutMS, differsFromDefault := effectiveBackendRequestTimeout(m.Rule)
+	if !differsFromDefault {
+		return ""
+	}
+	return strconv.Itoa(timeoutMS)
+}
+
+// backendRequestTimeoutServiceNameSuffix returns the Kong service name suffix used to
+// disambiguate services split by backendRequest timeout. The empty (default) timeout key
+// yields no suffix so that services keep their original names when no split is needed.
+func backendRequestTimeoutServiceNameSuffix(timeoutKey string) string {
+	if timeoutKey == "" {
+		return ""
+	}
+	return ".timeout." + timeoutKey
 }
 
 // getKongServiceNameByBackendRefs generates service name based on rule's backendRefs and the namespace of the parent HTTPRoute
