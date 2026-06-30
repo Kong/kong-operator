@@ -16,6 +16,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
@@ -281,4 +282,84 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 		},
 		results[0].Spec.Protocols,
 	)
+}
+
+func TestRoutesForHTTPRouteRule_MalformedAnnotations(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	pRef := &gwtypes.ParentReference{
+		Name:      "test-gateway",
+		Namespace: (*gatewayv1.Namespace)(new("test-namespace")),
+	}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	rule := gwtypes.HTTPRouteRule{
+		Matches: []gatewayv1.HTTPRouteMatch{{
+			Path: &gatewayv1.HTTPPathMatch{
+				Type:  new(gatewayv1.PathMatchPathPrefix),
+				Value: new("/test"),
+			},
+		}},
+	}
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	tests := []struct {
+		name        string
+		annotations map[string]string
+	}{
+		{
+			name: "strip-path",
+			annotations: map[string]string{
+				"konghq.com/strip-path": "not-a-bool",
+			},
+		},
+		{
+			name: "preserve-host",
+			annotations: map[string]string{
+				"konghq.com/preserve-host": "not-a-bool",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-route",
+					Namespace:   "test-namespace",
+					Annotations: tt.annotations,
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}},
+					},
+				},
+			}
+
+			routes, err := RoutesForHTTPRouteRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, nil, "test-service", nil)
+			require.Error(t, err)
+			assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+			assert.Nil(t, routes)
+			assert.Contains(t, err.Error(), tt.name)
+			assert.Contains(t, err.Error(), "test-namespace/test-route")
+		})
+	}
 }
