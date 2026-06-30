@@ -66,8 +66,9 @@
   because for underlying `KonnectGatewayControlPlane` these fields
   have been always immutable.
   [#4599](https://github.com/Kong/kong-operator/pull/4599)
-- Bump sigs.k8s.io/gateway-api from v1.5.1 to v1.6.0-rc.1.
+- Bump sigs.k8s.io/gateway-api from v1.5.1 to v1.6.0.
   [#4639](https://github.com/Kong/kong-operator/pull/4639)
+  [#4713](https://github.com/Kong/kong-operator/pull/4713)
 - Hybridgateway: treat malformed annotations as errors
   [#4530](https://github.com/Kong/kong-operator/pull/4530)
 
