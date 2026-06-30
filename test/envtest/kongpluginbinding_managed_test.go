@@ -184,27 +184,6 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		return found
 	}
 
-	assertMatchingKongPluginBindings := func(
-		t *testing.T,
-		message string,
-		matchingFields client.MatchingFields,
-		assertions func(*assert.CollectT, []configurationv1alpha1.KongPluginBinding),
-	) {
-		t.Helper()
-
-		assert.EventuallyWithT(t,
-			func(c *assert.CollectT) {
-				var list configurationv1alpha1.KongPluginBindingList
-				if !assert.NoError(c, clientNamespaced.List(ctx, &list, matchingFields)) {
-					return
-				}
-				assertions(c, list.Items)
-			},
-			waitTime, tickTime,
-			message,
-		)
-	}
-
 	// The stale-cache reconcile (driven by pendingKonnectIDs after any CreatePlugin call) reaches
 	// ops.Update which calls UpsertPlugin. Register a single optional expectation here to absorb
 	// those calls across all subtests. No subtest has a strict UpsertPlugin expectation, so there
@@ -594,16 +573,17 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongRoute.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
 
-		assertMatchingKongPluginBindings(t,
-			"KongPluginBinding bound to Consumer and Service doesn't exist but it should",
+		eventually.AssertMatchingKongPluginBindings(t, ctx, clientNamespaced,
 			client.MatchingFields{
 				index.IndexFieldKongPluginBindingKongPluginReference:   managedPluginReference,
 				index.IndexFieldKongPluginBindingKongServiceReference:  kongService.Name,
 				index.IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
 			},
+			waitTime, tickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				assert.Len(c, bindings, 1)
 			},
+			"KongPluginBinding bound to Consumer and Service doesn't exist but it should",
 		)
 
 		eventually.WaitForObjectToNotExist(
@@ -620,12 +600,12 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongService.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongService))
 
-		assertMatchingKongPluginBindings(t,
-			"KongConsumer bound KongPluginBinding wasn't created",
+		eventually.AssertMatchingKongPluginBindings(t, ctx, clientNamespaced,
 			client.MatchingFields{
 				index.IndexFieldKongPluginBindingKongPluginReference:   managedPluginReference,
 				index.IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
 			},
+			waitTime, tickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				if !assert.Len(c, bindings, 1) {
 					return
@@ -637,6 +617,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 					assert.Equal(c, kongConsumer.Name, targets.ConsumerReference.Name)
 				}
 			},
+			"KongConsumer bound KongPluginBinding wasn't created",
 		)
 
 		t.Logf(
@@ -649,15 +630,16 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongConsumer.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongConsumer))
 
-		assertMatchingKongPluginBindings(t,
-			"KongConsumer bound KongPluginBinding wasn't deleted",
+		eventually.AssertMatchingKongPluginBindings(t, ctx, clientNamespaced,
 			client.MatchingFields{
 				index.IndexFieldKongPluginBindingKongPluginReference:   managedPluginReference,
 				index.IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
 			},
+			waitTime, tickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				assert.Empty(c, bindings)
 			},
+			"KongConsumer bound KongPluginBinding wasn't deleted",
 		)
 
 		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
@@ -778,16 +760,17 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongRoute.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
 
-		assertMatchingKongPluginBindings(t,
-			"KongPluginBinding bound to ConsumerGroup and Service doesn't exist but it should",
+		eventually.AssertMatchingKongPluginBindings(t, ctx, clientNamespaced,
 			client.MatchingFields{
 				index.IndexFieldKongPluginBindingKongPluginReference:        managedPluginReference,
 				index.IndexFieldKongPluginBindingKongServiceReference:       kongService.Name,
 				index.IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
 			},
+			waitTime, tickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				assert.Len(c, bindings, 1)
 			},
+			"KongPluginBinding bound to ConsumerGroup and Service doesn't exist but it should",
 		)
 
 		eventually.WaitForObjectToNotExist(
@@ -804,12 +787,12 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongService.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongService))
 
-		assertMatchingKongPluginBindings(t,
-			"KongConsumerGroup bound KongPluginBinding wasn't created",
+		eventually.AssertMatchingKongPluginBindings(t, ctx, clientNamespaced,
 			client.MatchingFields{
 				index.IndexFieldKongPluginBindingKongPluginReference:        managedPluginReference,
 				index.IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
 			},
+			waitTime, tickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				if !assert.Len(c, bindings, 1) {
 					return
@@ -821,6 +804,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 					assert.Equal(c, kongConsumerGroup.Name, targets.ConsumerGroupReference.Name)
 				}
 			},
+			"KongConsumerGroup bound KongPluginBinding wasn't created",
 		)
 
 		t.Logf(
@@ -833,15 +817,16 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongConsumerGroup.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongConsumerGroup))
 
-		assertMatchingKongPluginBindings(t,
-			"KongConsumerGroup bound KongPluginBinding wasn't deleted",
+		eventually.AssertMatchingKongPluginBindings(t, ctx, clientNamespaced,
 			client.MatchingFields{
 				index.IndexFieldKongPluginBindingKongPluginReference:        managedPluginReference,
 				index.IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
 			},
+			waitTime, tickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				assert.Empty(c, bindings)
 			},
+			"KongConsumerGroup bound KongPluginBinding wasn't deleted",
 		)
 
 		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
