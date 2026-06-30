@@ -194,6 +194,10 @@ func ensureKongReferenceGrant[
 		// ResolvedRefs condition if no other cross-namespace reference of this
 		// entity still justifies it, otherwise we'd clobber the condition that
 		// the secret/certificate ref handlers set (they run later in Reconcile).
+
+		// TODO: Unify the place of setting `ResolvedRefs` condition for entities
+		// having multiple references to other resources, so that we don't have to check for each of them here:
+		// https://github.com/Kong/kong-operator/issues/4711
 		if !entityHasCrossNamespaceRefs(ent) {
 			if res, errStatus := patch.StatusWithoutCondition(
 				ctx, cl, ent,

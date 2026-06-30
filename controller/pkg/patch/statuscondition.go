@@ -101,6 +101,10 @@ func StatusWithoutCondition[T interface {
 	ent T,
 	conditionType string,
 ) (res ctrl.Result, err error) {
+	// If the condition is not set, return without patching.
+	if !k8sutils.HasCondition(kcfgconsts.ConditionType(conditionType), ent) {
+		return ctrl.Result{}, nil
+	}
 	old := ent.DeepCopyObject().(T)
 	if !k8sutils.RemoveCondition(kcfgconsts.ConditionType(conditionType), ent) {
 		return ctrl.Result{}, nil
