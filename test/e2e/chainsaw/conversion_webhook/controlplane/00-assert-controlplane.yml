@@ -2,7 +2,7 @@ apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
 metadata:
   name: ($dataplane_name)
-  namespace: ($kong_namespace)
+  namespace: ($namespace)
 status:
   (conditions[?type == 'Ready']):
     - status: 'True'
@@ -12,7 +12,7 @@ apiVersion: gateway-operator.konghq.com/v2beta1
 kind: ControlPlane
 metadata:
   name: ($controlplane_name)
-  namespace: ($kong_namespace)
+  namespace: ($namespace)
 spec:
   configDump:
     dumpSensitive: disabled

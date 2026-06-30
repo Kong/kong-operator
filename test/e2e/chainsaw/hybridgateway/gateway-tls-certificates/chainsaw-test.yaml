@@ -8,12 +8,6 @@ spec:
     This test validates that the hybrid gateway controller correctly
     processes Gateway TLS listeners and creates KongCertificate and KongSNI
     resources from the referenced TLS secrets.
-  
-  timeouts:
-    apply: 120s
-    assert: 120s
-    delete: 120s
-    exec: 120s
 
   bindings:
     # Common bindings.
@@ -21,6 +15,8 @@ spec:
       value: ($namespace)
     - name: konnect_token
       value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
     - name: sni_hostname
       value: (join('.', ['*', ($test_name), 'example.com']))
     - name: fqdn
@@ -35,6 +31,14 @@ spec:
       value: 80
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
     - name: gateway_image
       value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
     - name: gateway_name
@@ -49,6 +53,8 @@ spec:
       value: (join('-', [($test_name), 'echo']))
     - name: echo_deployment_namespace
       value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
     - name: http_method
       value: "GET"
 
@@ -59,11 +65,17 @@ spec:
       use:
         template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
 
-    # Step 2: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
+    # Step 2a: Create the secret for Konnect authentication.
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    # Step 2b: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
     - name: Create-konnect-api-auth
       description: Create KonnectAPIAuthConfiguration for the test.
       use:
-        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
     # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
     - name: Create-gateway-configuration
@@ -136,6 +148,8 @@ spec:
             - "/echo/"
         - name: strip_path
           value: false
+        - name: preserve_host
+          value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
     
@@ -167,6 +181,9 @@ spec:
       description: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
       use:
         template: ../../common/_step_templates/verify-gateway-tls-fingerprint.yaml
+      bindings:
+         - name: proxy_port
+           value: "443"
 
     # Step 16: Verify that the dataplane is configured, traffic can be routed, and TLS certificates are working.
     # The verification is done by sending an HTTPS request to the gateway and checking the response from the host.
@@ -204,6 +221,9 @@ spec:
       description: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
       use:
         template: ../../common/_step_templates/verify-gateway-tls-fingerprint.yaml
+      bindings:
+        - name: proxy_port
+          value: "443"
 
     # Step 20: Verify that traffic continues to work after certificate rotation.
     # The verification is done by sending an HTTPS request to the gateway and checking the response from the host.
@@ -228,100 +248,17 @@ spec:
           value: "/echo"
         - name: insecure
           value: "true"
-  # Global catch block - runs on any step failure to help debug.
+
   catch:
-    - describe:
-        apiVersion: gateway.networking.k8s.io/v1
-        kind: GatewayClass
-        name: (join('-', [($test_name), 'gateway-class']))
-        showEvents: true
-    
-    - describe:
-        apiVersion: gateway-operator.konghq.com/v2beta1
-        kind: GatewayConfiguration
-        name: (join('-', [($test_name), 'gateway-configuration']))
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: gateway-operator.konghq.com/v1alpha1
-        kind: KonnectAPIAuthConfiguration
-        name: (join('-', [($test_name), 'konnect-api-auth']))
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: gateway-operator.konghq.com/v1beta1
-        kind: KonnectGatewayControlPlane
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: gateway.networking.k8s.io/v1
-        kind: Gateway
-        name: (join('-', [($test_name), 'gateway']))
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: apps/v1
-        kind: Deployment
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: v1
-        kind: Pod
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: gateway.networking.k8s.io/v1
-        kind: HTTPRoute
-        name: (join('-', [($test_name), 'echo-route']))
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongService
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongRoute
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongUpstream
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongCertificate
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongSNI
-        namespace: ($namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: v1
-        kind: Secret
-        name: ($cert_secret_name)
-        namespace: ($cert_secret_namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: v1
-        kind: Service
-        name: (join('-', [($test_name), 'echo']))
-        namespace: ($namespace)
-        showEvents: true
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-gateway-tls-certificates
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

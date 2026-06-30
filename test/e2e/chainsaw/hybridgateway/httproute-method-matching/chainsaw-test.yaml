@@ -17,10 +17,20 @@ spec:
       value: ($namespace)
     - name: konnect_api_auth_name
       value: konnect-api-auth-dev-1
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
     - name: konnect_token
       value: (env('KONNECT_TOKEN'))
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
     - name: gateway_class_name
       value: (join('-', [($test_name), 'gateway-class']))
     - name: gateway_configuration_name
@@ -62,18 +72,18 @@ spec:
     - name: host_header
       value: ""
 
-  timeouts:
-    apply: 120s
-    assert: 120s
-    cleanup: 120s
-    delete: 120s
-
   steps:
-  # Step 2: Create KonnectAPIAuthConfiguration.
+  # Step 2a: Create the secret for Konnect authentication.
+  - name: Create-auth-secret
+    description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+    use:
+      template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+  # Step 2b: Create KonnectAPIAuthConfiguration.
   - name: create-konnect-api-auth
     description: Create KonnectAPIAuthConfiguration for the test
     use:
-      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+      template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
   # Step 3: Create GatewayConfiguration.
   - name: create-gateway-configuration
@@ -496,7 +506,7 @@ spec:
 
   # Step 14d: Update HTTPRoute to accept both GET and POST.
   - name: step-14d-update-httproute-update-test
-    description: Update HTTPRoute to accept both GET and POST methods
+    description: Update HTTPRoute to accept both GET and POST methods and verify status.
     try:
       - apply:
           file: 14-httproute-update-test-updated.yaml
@@ -505,8 +515,6 @@ spec:
     bindings:
       - name: httproute_name
         value: ($httproute_name_update_test)
-
-  # Step 14e: Verify GET method still works after update.
   - name: step-14e-verify-get-on-update-test-updated-returns-200
     description: Verify GET method on /update-test still returns 200 after update
     use:
@@ -531,3 +539,17 @@ spec:
         value: "/status/200"
       - name: expected_status
         value: "200"
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-httproute-method-matching
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

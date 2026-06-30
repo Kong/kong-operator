@@ -1,0 +1,15 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($gateway_namespace)
+status:
+  # Gateway-level conditions
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  # Listener-level conditions
+  (listeners[?name == 'https']):
+    - (conditions[?type == 'ResolvedRefs']):
+        - status: 'True'
+          reason: ResolvedRefs

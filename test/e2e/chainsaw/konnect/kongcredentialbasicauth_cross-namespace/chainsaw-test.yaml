@@ -1,0 +1,721 @@
+# KongCredentialBasicAuth cross-namespace test.
+#
+# KongCredentialBasicAuth has no direct CPRef — it inherits the CP through consumerRef -> KongConsumer.
+# consumerRef is a LocalObjectReference (no namespace field), so the credential is always
+# co-located with its consumer. The only cross-namespace axis is the consumer's CPRef.
+#
+# Scenario A: All resources in the same namespace — baseline, no grants needed.
+#
+# Scenario B: KongConsumer+KongCredentialBasicAuth in test namespace, CP+Auth in cp_namespace.
+#   The consumer's CPRef crosses namespaces. Only a Consumer->CP grant is needed.
+#   The credential follows the consumer: it is not Programmed until the consumer is.
+#
+# Scenario C: Consumer+credential in test namespace, CP in cp_namespace, AuthConfig in auth_namespace.
+#   Both Consumer->CP AND CP->AuthConfig grants required.
+#   Intermediate assertion: after only the Consumer->CP grant is added, the consumer
+#   resolves the ref but is still not Programmed (CP not Programmed); credential also stays blocked.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongcredentialbasicauth-cross-namespace
+spec:
+  description: |
+    Tests that KongCredentialBasicAuth correctly inherits cross-namespace CPRef state from its KongConsumer.
+
+    The credential has no CPRef of its own — it reaches the CP via consumerRef -> KongConsumer.
+    consumerRef is always same-namespace (LocalObjectReference).
+
+    Scenario A: All resources in the same namespace. No grants needed; baseline sanity check.
+
+    Scenario B: KongConsumer+KongCredentialBasicAuth in test namespace, CP+Auth in cp_namespace.
+    Consumer has a cross-namespace CPRef. The credential is not Programmed until the
+    Consumer->CP grant is created and the consumer becomes Programmed.
+
+    Scenario C: Consumer+credential in test namespace, CP in cp_namespace, AuthConfig in auth_namespace.
+    Both Consumer->CP AND CP->AuthConfig grants are required.
+    Includes an intermediate assertion showing that after only the Consumer->CP grant is added,
+    the consumer has ResolvedRefs=True but ControlPlaneRefValid=False/NotProgrammed (because the
+    CP is still blocked by the missing CP->AuthConfig grant), and the credential remains blocked.
+
+  bindings:
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: cp_namespace
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_namespace
+      value: (join('-', [$namespace, 'auth']))
+    - name: cp0_name
+      value: (join('-', [$namespace, 'cp0']))
+    - name: auth0_name
+      value: (join('-', [$namespace, 'auth0-konnect-api-auth']))
+    - name: consumer0_name
+      value: (join('-', [$namespace, 'consumer0']))
+    - name: credential0_name
+      value: (join('-', [$namespace, 'basicauth0']))
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_name
+      value: (join('-', [$namespace, 'konnect-api-auth']))
+    - name: consumer_name
+      value: (join('-', [$namespace, 'consumer']))
+    - name: credential_name
+      value: (join('-', [$namespace, 'basicauth']))
+    # Scenario C resource names (consumer+credential in test namespace, CP in cp_namespace, AuthConfig in auth_namespace).
+    - name: cp2_name
+      value: (join('-', [$namespace, 'cp2']))
+    - name: auth2_name
+      value: (join('-', [$namespace, 'auth2-konnect-api-auth']))
+    - name: consumer2_name
+      value: (join('-', [$namespace, 'consumer2']))
+    - name: credential2_name
+      value: (join('-', [$namespace, 'basicauth2']))
+
+  steps:
+    # =========================================================================
+    # Scenario A: All resources in the same namespace. No grants needed.
+    # =========================================================================
+
+    - name: 1-create-auth-config-same-ns
+      description: Create KonnectAPIAuthConfiguration in the test namespace.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth0']))
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-control-plane-same-ns
+      description: Create KonnectGatewayControlPlane in the test namespace.
+      bindings:
+        - name: cp_name
+          value: ($cp0_name)
+        - name: cp_namespace
+          value: ($namespace)
+        - name: auth_name
+          value: ($auth0_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 3-create-consumer-and-credential-same-ns
+      description: Create KongConsumer and KongCredentialBasicAuth in the test namespace (no grants needed).
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer0_name)
+                namespace: ($namespace)
+              username: ($consumer0_name)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp0_name)
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential0_name)
+                namespace: ($namespace)
+              spec:
+                consumerRef:
+                  name: ($consumer0_name)
+                username: (join('-', [$namespace, 'user0']))
+                password: test-password-0
+
+    - name: 4-assert-programmed-same-ns
+      description: Assert consumer and credential are Programmed (no grants needed).
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongConsumerRefValid']):
+                  - status: 'True'
+                    reason: Valid
+
+    - name: 5-cleanup-scenario-a
+      description: Delete credential0, consumer0, and CP0 in order.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              name: ($credential0_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              name: ($consumer0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential0_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer0_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp0_name)
+                namespace: ($namespace)
+
+    # =========================================================================
+    # Scenario B: Consumer+credential in test namespace, CP+Auth in cp_namespace.
+    # =========================================================================
+
+    - name: 6-create-cp-namespace
+      description: Create separate namespace for CP and AuthConfig.
+      bindings:
+        - name: namespace_name
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 7-create-auth-config
+      description: Create KonnectAPIAuthConfiguration in cp_namespace.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+        - name: namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 8-create-control-plane
+      description: Create KonnectGatewayControlPlane in cp_namespace.
+      bindings:
+        - name: cp_namespace
+          value: ($cp_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 9-create-consumer-and-credential-no-grant
+      description: Create consumer with cross-namespace CPRef and credential (no grant yet).
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              username: ($consumer_name)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+                    namespace: ($cp_namespace)
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential_name)
+                namespace: ($namespace)
+              spec:
+                consumerRef:
+                  name: ($consumer_name)
+                username: (join('-', [$namespace, 'user']))
+                password: test-password
+
+    - name: 10-assert-not-programmed-no-grant
+      description: Assert consumer ResolvedRefs=False and credential not Programmed (no grant yet).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'KongConsumerRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 11-create-consumer-to-cp-grant
+      description: Create KongReferenceGrant in cp_namespace allowing KongConsumer from test namespace to reference CP.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'consumer-to-cp']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongConsumer
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 12-assert-programmed
+      description: Assert consumer and credential are both Programmed after the grant is in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongConsumerRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.id != null): true
+
+    - name: 13-cleanup-scenario-b
+      description: Delete credential, consumer, grant, and CP in order.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              name: ($credential_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              name: ($consumer_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'consumer-to-cp']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($cp_namespace)
+
+    # =========================================================================
+    # Scenario C: Consumer+credential in test namespace, CP in cp_namespace,
+    # AuthConfig in auth_namespace. Both Consumer->CP AND CP->AuthConfig grants required.
+    # =========================================================================
+
+    - name: 14-create-auth-namespace
+      description: Create separate namespace for AuthConfig.
+      bindings:
+        - name: namespace_name
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 15-create-auth2-cross-ns
+      description: Create KonnectAPIAuthConfiguration in auth_namespace.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth2']))
+        - name: namespace
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 16-create-cp2-cross-ns-auth
+      description: Create CP2 in cp_namespace with cross-namespace authRef to auth_namespace (no grant yet).
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              spec:
+                createControlPlaneRequest:
+                  name: ($cp2_name)
+                konnect:
+                  authRef:
+                    name: ($auth2_name)
+                    namespace: ($auth_namespace)
+
+    - name: 17-assert-cp2-auth-grant-missing
+      description: Assert CP2 has APIAuthResolvedRef=False/RefNotPermitted (no CP->AuthConfig grant yet).
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 18-create-consumer2-and-credential2-no-grant
+      description: Create consumer2 with cross-namespace CPRef and credential2 (no Consumer->CP grant yet).
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer2_name)
+                namespace: ($namespace)
+              username: ($consumer2_name)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp2_name)
+                    namespace: ($cp_namespace)
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential2_name)
+                namespace: ($namespace)
+              spec:
+                consumerRef:
+                  name: ($consumer2_name)
+                username: (join('-', [$namespace, 'user2']))
+                password: test-password-2
+
+    - name: 19-assert-negative-no-consumer-grant
+      description: Assert consumer2 ResolvedRefs=False and credential2 not Programmed (no Consumer->CP grant).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KongConsumerRefValid']):
+                  - status: 'False'
+                    reason: Invalid
+
+    - name: 20-create-consumer2-to-cp2-grant
+      description: Create KongReferenceGrant in cp_namespace allowing consumer2 to reference CP2.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'consumer2-to-cp2']))
+        - name: kong_reference_grant_namespace
+          value: ($cp_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongConsumer
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 21-assert-consumer2-cp-not-programmed-credential2-blocked
+      description: |
+        Assert consumer2 ResolvedRefs=True (Consumer->CP grant resolved) but
+        ControlPlaneRefValid=False/NotProgrammed because CP2 is still not Programmed
+        (CP->AuthConfig grant still missing). credential2 remains not Programmed.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'False'
+                    reason: NotProgrammed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+
+    - name: 22-create-cp2-to-auth2-grant
+      description: Create KongReferenceGrant in auth_namespace allowing CP2 to reference auth2.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cp2-to-auth2']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              namespace: ($cp_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 23-assert-cp2-consumer2-credential2-programmed
+      description: Assert CP2, consumer2, and credential2 are all Programmed after both grants are in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential2_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KongConsumerRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'ControlPlaneRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (konnect.id != null): true
+
+    - name: 24-cleanup-scenario-c
+      description: |
+        Delete credential2 and consumer2 in order; wait for each to be gone.
+        Delete Consumer->CP grant after consumer2 is gone.
+        Delete CP2, then delete CP->Auth grant after CP2 is fully deprovisioned.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              name: ($credential2_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              name: ($consumer2_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCredentialBasicAuth
+              metadata:
+                name: ($credential2_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongConsumer
+              metadata:
+                name: ($consumer2_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'consumer2-to-cp2']))
+              namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp2_name)
+              namespace: ($cp_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp2_name)
+                namespace: ($cp_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cp2-to-auth2']))
+              namespace: ($auth_namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: kongcredentialbasicauth-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: (join(',', [$cp_namespace, $auth_namespace]))
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -3,6 +3,7 @@
 # Required bindings:
 #   - test_name: Test name used to compose the configuration name.
 #   - namespace: Namespace where the configuration will be created.
+#   - konnect_api_auth_namespace: Namespace where the referenced KonnectAPIAuthConfiguration is in.
 #   - gateway_image: Kong Gateway image to use (e.g., "kong/kong-gateway:3.12").
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
@@ -22,6 +23,7 @@ spec:
               authRef:
                 # Reference the AuthConfig created by the previous template
                 name: (join('-', [($test_name), 'konnect-api-auth']))
+                namespace: ($konnect_api_auth_namespace)
             dataPlaneOptions:
               deployment:
                 podTemplateSpec:

@@ -1,13 +1,8 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ($kong_namespace)
----
 apiVersion: konnect.konghq.com/v1alpha1
 kind: KonnectAPIAuthConfiguration
 metadata:
   name: ($konnect_api_auth_name)
-  namespace: ($kong_namespace)
+  namespace: ($namespace)
 status:
   conditions:
     - type: APIAuthValid
@@ -17,7 +12,7 @@ apiVersion: konnect.konghq.com/v1alpha2
 kind: KonnectGatewayControlPlane
 metadata:
   name: ($konnect_gateway_controlplane_name)
-  namespace: ($kong_namespace)
+  namespace: ($namespace)
 spec:
   createControlPlaneRequest:
     name: ($konnect_gateway_controlplane_name)
@@ -41,4 +36,3 @@ status:
   (konnectEndpoints.telemetry != null): true
   (organizationID != null): true
   (serverURL != null): true
----

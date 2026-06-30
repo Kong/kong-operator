@@ -3,6 +3,7 @@
 # Required bindings:
 #   - echo_deployment_name: Service/Deployment name (and app label/selector).
 #   - echo_deployment_namespace: Namespace where the service and deployment will be created.
+#   - echo_deployment_replicas: Number of replicas for the Deployment. Default: 1.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
@@ -51,7 +52,7 @@ spec:
             name: ($echo_deployment_name)
             namespace: ($echo_deployment_namespace)
           spec:
-            replicas: 1
+            replicas: ($echo_deployment_replicas)
             selector:
               matchLabels:
                 app: ($echo_deployment_name)
@@ -108,8 +109,8 @@ spec:
             name: ($echo_deployment_name)
             namespace: ($echo_deployment_namespace)
           status:
-            availableReplicas: 1
-            readyReplicas: 1
+            availableReplicas: ($echo_deployment_replicas)
+            readyReplicas: ($echo_deployment_replicas)
 
     # 4. Assert Service existence and configuration.
     - assert:

@@ -1,0 +1,14 @@
+---
+# Assert KonnectGatewayControlPlane has APIAuthResolvedRef=False due to
+# missing KongReferenceGrant for cross-namespace KonnectAPIAuthConfiguration.
+#
+# Required bindings:
+#   - gateway_namespace: Namespace of the KonnectGatewayControlPlane.
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  namespace: ($gateway_namespace)
+status:
+  (conditions[?type == 'APIAuthResolvedRef']):
+    - status: 'False'
+      reason: RefNotPermitted
