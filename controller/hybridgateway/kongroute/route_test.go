@@ -499,7 +499,7 @@ func TestRoutesForHTTPRouteRule_MalformedAnnotations(t *testing.T) {
 				},
 			}
 
-			routes, err := RoutesForHTTPRouteRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, nil, "test-service", nil)
+			routes, err := RoutesForHTTPRouteRule(ctx, logger, fakeClient, httpRoute, rule, 0, pRef, cpRef, nil, "test-service", nil)
 			require.Error(t, err)
 			assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
 			assert.Nil(t, routes)
