@@ -35,6 +35,7 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] Major/Minor only:
   - [ ] Update `renovate.json` config which targets the latest release branch (e.g. `release/2.1.x`) to update the `matchBaseBranches` field to the new release branch (e.g. `release/2.2.x`).
   - [ ] Update `.github/workflows/charts-sync.yaml` workflow by replacing the old release branch (e.g. `release/2.1.x`) with the new one (e.g. `release/2.2.x`) in the `branches` section.
+  - [ ] Remove `.github/workflows/charts-sync.yaml` from the old release branch (e.g. `release/2.1.x`) if it exists.
   - [ ] Update `.github/workflows/govulncheck-cron.yaml` workflow by adding the new release branch (e.g. `release/2.2.x`) to the `branches` section.
 
 ## Conformance tests report
