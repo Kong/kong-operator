@@ -24,11 +24,11 @@ const (
 	// KongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
 	// as a regex.
 	KongHeaderRegexPrefix = "~*"
-	// KongHTTPRouteHeaderOnlyRegexPath is a catch-all regex path used to make regex_priority effective
-	// for HTTPRoute matches that only match on headers.
-	KongHTTPRouteHeaderOnlyRegexPath = KongPathRegexPrefix + "/(.*)"
+	// KongHTTPRouteDefaultPathRegexPath is a catch-all regex path used to make regex_priority effective
+	// for HTTPRoute matches that otherwise use the default root path.
+	KongHTTPRouteDefaultPathRegexPath = KongPathRegexPrefix + "/(.*)"
 	// KongHTTPRoutePathRegexPriorityOffset reserves lower regex_priority values for synthetic
-	// catch-all regex routes used by default path header-only matches.
+	// catch-all regex routes used by default-path method/header matches.
 	KongHTTPRoutePathRegexPriorityOffset int64 = 1 << 20
 )
 
@@ -70,6 +70,11 @@ func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch, setC
 	// Method
 	if match.Method != nil {
 		b.route.Spec.Methods = append(b.route.Spec.Methods, string(*match.Method))
+		if len(b.route.Spec.Paths) == 0 {
+			// Gateway API treats an omitted path as PathPrefix "/". Materialize it so
+			// Kong's traditional router prioritizes method-only matches over header-only matches.
+			b.route.Spec.Paths = append(b.route.Spec.Paths, "/")
+		}
 	}
 
 	// Headers
@@ -98,16 +103,11 @@ func (b *KongRouteBuilder) WithRegexPriority(priority *int64) *KongRouteBuilder 
 	return b
 }
 
-// WithHeaderOnlyRegexPath adds a catch-all regex path when needed so Kong can use
-// regex_priority to order overlapping HTTPRoute matches that only specify headers
-// and otherwise use the default root path.
-func (b *KongRouteBuilder) WithHeaderOnlyRegexPath() *KongRouteBuilder {
-	if len(b.route.Spec.Headers) == 0 {
-		return b
-	}
-
+// WithDefaultPathRegexPath replaces the default root path with a catch-all regex
+// path so regex_priority can order default-path HTTPRoute matches.
+func (b *KongRouteBuilder) WithDefaultPathRegexPath() *KongRouteBuilder {
 	if len(b.route.Spec.Paths) == 0 || (len(b.route.Spec.Paths) == 1 && b.route.Spec.Paths[0] == "/") {
-		b.route.Spec.Paths = []string{KongHTTPRouteHeaderOnlyRegexPath}
+		b.route.Spec.Paths = []string{KongHTTPRouteDefaultPathRegexPath}
 	}
 	return b
 }

@@ -35,15 +35,13 @@ var skippedTestsForExpressionsRouter = []string{}
 
 var skippedTestsForStandardTraditionalCompatibleRouter = []string{
 	tests.HTTPRouteHeaderMatching.ShortName,
+	tests.HTTPRouteMethodMatching.ShortName,
 }
 
 var skippedTestsForHybrid = []string{
 
-	// Core profile.
-	tests.HTTPRouteMethodMatching.ShortName,
-	tests.HTTPRouteQueryParamMatching.ShortName,
-
 	// Extended profile.
+	tests.HTTPRouteQueryParamMatching.ShortName,
 	tests.HTTPRouteRewriteHost.ShortName,
 	tests.HTTPRouteRewritePath.ShortName,
 }

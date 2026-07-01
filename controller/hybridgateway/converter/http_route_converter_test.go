@@ -994,7 +994,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					}
 
 					routeNames[route.Name] = struct{}{}
-					assert.Equal(t, []string{routebuilder.KongHTTPRouteHeaderOnlyRegexPath}, route.Spec.Paths)
+					assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, route.Spec.Paths)
 					assert.Empty(t, route.Spec.Methods)
 					require.NotNil(t, route.Spec.RegexPriority)
 					require.NotNil(t, route.Spec.ServiceRef)
