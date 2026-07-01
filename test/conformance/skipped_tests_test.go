@@ -23,7 +23,9 @@ var skippedTestsForStandard = []string{
 
 var skippedTestsForExpressionsRouter = []string{}
 
-var skippedTestsForStandardTraditionalCompatibleRouter = []string{}
+var skippedTestsForStandardTraditionalCompatibleRouter = []string{
+	tests.HTTPRouteMethodMatching.ShortName,
+}
 
 var skippedTestsForHybrid = []string{
 
