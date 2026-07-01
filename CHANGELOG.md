@@ -154,6 +154,11 @@
   or above that boundary depending on whether they should sort before or after
   generated path-based routes.
   [#4640](https://github.com/Kong/kong-operator/pull/4640)
+- Hybridgateway: translate method-only `HTTPRoute` matches with the default root
+  path and avoid promoting method-less header-only matches above them, enabling
+  the `HTTPRouteMethodMatching` Gateway API conformance test for the hybrid
+  gateway.
+  [#4715](https://github.com/Kong/kong-operator/pull/4715)
 
 ## [v2.2.0]
 
