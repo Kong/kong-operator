@@ -1,0 +1,30 @@
+# Template for creating and asserting a KongReferenceGrant.
+#
+# Required bindings:
+#   - kong_reference_grant_name: Name of the KongReferenceGrant to create.
+#   - kong_reference_grant_namespace: Namespace where the KongReferenceGrant will be created.
+#   - from: Array of from entries defining what can reference (e.g., [{ group: "configuration.konghq.com", kind: "KongCertificate", namespace: "kong" }]).
+#   - to: Array of to entries defining what can be referenced (e.g., [{ group: "core", kind: "Secret", name: "my-secret" }]).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kongreferencegrant
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongReferenceGrant
+          metadata:
+            name: ($kong_reference_grant_name)
+            namespace: ($kong_reference_grant_namespace)
+          spec:
+            from: ($from)
+            to: ($to)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongReferenceGrant
+          metadata:
+            name: ($kong_reference_grant_name)
+            namespace: ($kong_reference_grant_namespace)

@@ -1,0 +1,16 @@
+---
+# Assert Gateway has KonnectGatewayControlPlaneProgrammed=False.
+# This validates that without a KongReferenceGrant, the cross-namespace
+# auth reference prevents the KonnectGatewayControlPlane from being programmed.
+#
+# Required bindings:
+#   - gateway_name: Name of the Gateway.
+#   - gateway_namespace: Namespace of the Gateway.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($gateway_namespace)
+status:
+  (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+    - status: 'False'

@@ -26,6 +26,8 @@ spec:
         env:
           - name: PROXY_IP
             value: ($proxy_ip)
+          - name: PROXY_PORT
+            value: ($proxy_port)
           - name: SNI_HOSTNAME
             value: ($sni_hostname)
           - name: SECRET_NAME

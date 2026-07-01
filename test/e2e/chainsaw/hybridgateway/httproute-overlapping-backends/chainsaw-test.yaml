@@ -30,13 +30,6 @@ spec:
       distinct pod IPs. The controller must now produce 2 KongTargets (one per
       endpoint) with correctly distributed weights, both Programmed=True.
 
-  timeouts:
-    apply: 120s
-    assert: 300s
-    cleanup: 120s
-    delete: 120s
-    exec: 300s
-
   bindings:
     - name: test_name
       value: ($namespace)
@@ -75,7 +68,7 @@ spec:
     - name: httproute_name
       value: ($http_route_name)
     - name: listener_http_port
-      value: 80
+      value: "80"
     - name: target_weight
       value: ""
     - name: host_header
@@ -210,8 +203,6 @@ spec:
           value: /echo
         - name: http_method
           value: GET
-        - name: listener_http_port
-          value: "80"
       use:
         template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
 
@@ -270,8 +261,6 @@ spec:
           value: /echo
         - name: http_method
           value: GET
-        - name: listener_http_port
-          value: "80"
       use:
         template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
 
@@ -413,25 +402,18 @@ spec:
           value: /echo
         - name: http_method
           value: GET
-        - name: listener_http_port
-          value: "80"
       use:
         template: ../../common/_step_templates/verify-http-traffic-from-cluster.yaml
 
   catch:
-    - describe:
-        apiVersion: gateway.networking.k8s.io/v1
-        kind: HTTPRoute
-        name: ($http_route_name)
-        namespace: ($http_route_namespace)
-        showEvents: true
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongTarget
-        namespace: ($namespace)
-        showEvents: true
-    - describe:
-        apiVersion: configuration.konghq.com/v1alpha1
-        kind: KongUpstream
-        namespace: ($namespace)
-        showEvents: true
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-httproute-overlapping-backends
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

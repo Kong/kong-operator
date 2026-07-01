@@ -1,0 +1,20 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCertificate
+metadata:
+  namespace: ($gateway_namespace)
+  (labels."gateway-operator.konghq.com/managed-by"): 'Gateway'
+  (labels."gateway-operator.konghq.com/listener-port"): (to_string($listener_https_port))
+  (annotations."gateway-operator.konghq.com/hybrid-gateways"): (join('/', [($gateway_namespace), ($gateway_name)]))
+  ownerReferences:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      name: ($gateway_name)
+      controller: true
+spec:
+  secretRef:
+    name: ($cert_secret_name)
+    namespace: ($cert_secret_namespace)
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($konnectgatewaycontrolplane_name)

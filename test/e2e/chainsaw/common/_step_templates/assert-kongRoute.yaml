@@ -23,6 +23,28 @@ spec:
         outputs:
           - name: kong_service_name
             value: (json_parse($stdout).name)
+    - script:
+        env:
+         - name: NAMESPACE
+           value: ($namespace)
+         - name: RESOURCE_TYPE
+           value: kongroutes.configuration.konghq.com
+         - name: GATEWAY_NAME
+           value: ($gateway_name)
+         - name: GATEWAY_NAMESPACE
+           value: ($gateway_namespace)
+         - name: HTTP_ROUTE_NAME
+           value: ($http_route_name)
+         - name: HTTP_ROUTE_NAMESPACE
+           value: ($http_route_namespace)
+         - name: EXPECTED_SERVICE_NAME
+           value: ($kong_service_name)
+         - name: REQUIRED_CONDITION_TYPE
+           value: Programmed
+         - name: REQUIRED_CONDITION_STATUS
+           value: "True"
+        content: |
+          bash ../../common/scripts/kongResource_name.sh
     - assert:
         resource:
           apiVersion: configuration.konghq.com/v1alpha1
@@ -30,11 +52,12 @@ spec:
           metadata:
             namespace: ($namespace)
             (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
-            (annotations."gateway-operator.konghq.com/hybrid-routes" | contains(@, join('/', [($http_route_namespace), ($http_route_name)]))): true
+            (contains(annotations."gateway-operator.konghq.com/hybrid-routes" || '', join('/', [($http_route_namespace), ($http_route_name)]))): true
             (annotations."gateway-operator.konghq.com/hybrid-gateways" == join('/', [($gateway_namespace), ($gateway_name)])): true
           spec:
             paths: ($route_paths)
             strip_path: ($strip_path)
+            preserve_host: ($preserve_host)
             serviceRef:
               namespacedRef:
                 name: ($kong_service_name)

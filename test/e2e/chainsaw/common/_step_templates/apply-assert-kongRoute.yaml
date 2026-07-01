@@ -1,0 +1,41 @@
+# Template for creating and asserting a KongRoute attached to a KongService.
+#
+# Required bindings:
+#   - kong_route_name: Name of the KongRoute to create.
+#   - kong_route_namespace: Namespace where the KongRoute will be created.
+#   - kong_service_name: Name of the KongService to attach the route to.
+#   - route_paths: List of paths the KongRoute should match (e.g. ["/echo"]).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kong-route
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongRoute
+          metadata:
+            name: ($kong_route_name)
+            namespace: ($kong_route_namespace)
+          spec:
+            name: ($kong_route_name)
+            paths: ($route_paths)
+            protocols:
+              - https
+            serviceRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($kong_service_name)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongRoute
+          metadata:
+            name: ($kong_route_name)
+            namespace: ($kong_route_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (konnect.id != null): true

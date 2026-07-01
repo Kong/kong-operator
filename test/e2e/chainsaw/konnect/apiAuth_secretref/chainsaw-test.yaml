@@ -13,12 +13,6 @@ spec:
     3. Secret deletion is blocked by finalizers and unblocked when reference is removed
     4. Finalizer is removed from old secret when reference is updated to new secret
     5. Complex scenarios with multiple reference changes work correctly
-  
-  timeouts:
-    apply: 120s
-    assert: 120s
-    delete: 120s
-    exec: 120s
 
   bindings:
     # Common bindings.
@@ -348,3 +342,17 @@ spec:
               kind: Secret
               name: (join('-', [($auth_secret_name_3), 'final']))
               namespace: ($auth_secret_namespace)
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnect-apiAuth_secretref
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

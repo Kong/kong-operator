@@ -1,0 +1,29 @@
+---
+# HTTPRoute with multiple path matches in a single rule
+# This tests that multiple path match conditions in one rule work correctly
+# Tests: Exact match to /put and PathPrefix match to /anything
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($httproute_name)
+  namespace: ($http_route_namespace)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: ($gateway_name)
+  rules:
+  - matches:
+      - path:
+          type: Exact
+          value: /put
+        method: PUT
+      - path:
+          type: PathPrefix
+          value: /anything
+        method: PUT
+    backendRefs:
+      - name: ($httpbin_service_name)
+        port: ($httpbin_service_port)

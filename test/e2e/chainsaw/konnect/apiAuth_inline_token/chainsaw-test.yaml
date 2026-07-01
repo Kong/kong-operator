@@ -8,12 +8,6 @@ spec:
     This test validates that the KonnectAPIAuthConfiguration controller correctly
     handles inline token configuration. The test ensures that:
     1. KonnectAPIAuthConfiguration with inline token is properly created and ready
-  
-  timeouts:
-    apply: 120s
-    assert: 120s
-    delete: 120s
-    exec: 120s
 
   bindings:
     # Common bindings.
@@ -34,3 +28,17 @@ spec:
       description: Create KonnectAPIAuthConfiguration with inline token and verify it's ready.
       use:
         template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnect-apiAuth_inline_token
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

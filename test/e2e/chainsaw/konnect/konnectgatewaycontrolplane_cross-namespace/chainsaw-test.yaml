@@ -1,0 +1,281 @@
+# KonnectGatewayControlPlane cross-namespace KonnectAPIAuthConfigurationRef test.
+#
+# This exercises the direct KonnectAPIAuthConfigurationRef path in GetAPIAuthRefNN.
+# The KonnectGatewayControlPlane itself carries the authRef, making it the simplest
+# cross-namespace reference case.
+#
+# Scenario A: CP and AuthConfig in the same namespace — baseline, no grant needed.
+#
+# Scenario B: CP in ns-A, AuthConfig in ns-B.
+#   A single CP->AuthConfig grant is required.
+#
+# Scenario D: starting from Scenario B (Programmed=True), deleting the
+#   KongReferenceGrant reverts the CP to APIAuthResolvedRef=False/RefNotPermitted.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnectgatewaycontrolplane-cross-namespace
+spec:
+  description: |
+    Scenario A: KonnectGatewayControlPlane and KonnectAPIAuthConfiguration in the same namespace.
+    No grant needed; baseline sanity check.
+
+    Scenario B: KonnectGatewayControlPlane (ns-A) -> KonnectAPIAuthConfiguration (ns-B).
+    A single CP->AuthConfig grant in ns-B is required.
+    Includes a negative assertion that the CP fails before the grant is added.
+
+    Scenario D: starting from Scenario B (Programmed=True), deleting the
+    KongReferenceGrant reverts the CP to APIAuthResolvedRef=False/RefNotPermitted
+    immediately, validating that the KongReferenceGrant watch is in place.
+
+  bindings:
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Namespace bindings.
+    - name: auth_namespace
+      value: (join('-', [$namespace, 'auth']))
+    # Scenario A resource names (both in test namespace).
+    - name: cp0_name
+      value: (join('-', [$namespace, 'cp0']))
+    - name: auth0_name
+      value: (join('-', [$namespace, 'auth0-konnect-api-auth']))
+    # Scenario B resource names (CP in test namespace, AuthConfig in auth_namespace).
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_name
+      value: (join('-', [$namespace, 'konnect-api-auth']))
+
+  steps:
+    # =========================================================================
+    # Scenario A: CP and AuthConfig in the same namespace. No grant needed.
+    # =========================================================================
+
+    - name: 1-create-auth-config-same-ns
+      description: Create KonnectAPIAuthConfiguration in the test namespace.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth0']))
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-and-assert-cp-same-ns
+      description: Create KonnectGatewayControlPlane with same-namespace authRef; assert it becomes Programmed.
+      bindings:
+        - name: cp_name
+          value: ($cp0_name)
+        - name: cp_namespace
+          value: ($namespace)
+        - name: auth_name
+          value: ($auth0_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 3-cleanup-scenario-a
+      description: Delete CP0. Auth config has no Konnect finalizer; chainsaw cleans it up at namespace teardown.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp0_name)
+                namespace: ($namespace)
+
+    # =========================================================================
+    # Scenario B: CP in test namespace, AuthConfig in auth_namespace.
+    # A single CP->AuthConfig grant is required.
+    # =========================================================================
+
+    - name: 4-create-auth-namespace
+      description: Create namespace for KonnectAPIAuthConfiguration.
+      bindings:
+        - name: namespace_name
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 5-create-auth-config-cross-ns
+      description: Create KonnectAPIAuthConfiguration in auth_namespace.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+        - name: namespace
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 6-create-cp-no-grant
+      description: Create KonnectGatewayControlPlane with cross-namespace authRef (no grant yet).
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+              spec:
+                createControlPlaneRequest:
+                  name: ($cp_name)
+                konnect:
+                  authRef:
+                    name: ($auth_name)
+                    namespace: ($auth_namespace)
+
+    - name: 7-assert-cp-auth-grant-missing
+      description: Assert CP has APIAuthResolvedRef=False/RefNotPermitted because no grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 8-create-cp-to-auth-grant
+      description: Create KongReferenceGrant in auth_namespace allowing CP from test namespace to reference the AuthConfig.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cp-to-auth']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 9-assert-cp-programmed
+      description: Assert CP is Programmed after the CP->AuthConfig grant is in place.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (id != null): true
+
+    # =========================================================================
+     # Scenario D: deleting the grant reverts the CP to ResolvedRefs=False/RefNotPermitted.
+     # =========================================================================
+
+    - name: 10-delete-cp-to-auth-grant
+      description: Delete the KongReferenceGrant to verify the CP reverts to RefNotPermitted.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cp-to-auth']))
+              namespace: ($auth_namespace)
+
+    - name: 11-assert-cp-reverts-to-not-permitted
+      description: Assert CP transitions back to APIAuthResolvedRef=False/RefNotPermitted after grant deletion.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 12-recreate-cp-to-auth-grant
+      description: Recreate the grant so the CP can be deprovisioned cleanly during cleanup.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'cp-to-auth']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 13-cleanup-scenario-b
+      description: |
+        Delete CP in order; wait for it to be gone before deleting the grant.
+        The CP needs the CP->AuthConfig grant during Konnect deprovisioning.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'cp-to-auth']))
+              namespace: ($auth_namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnectgatewaycontrolplane-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($auth_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

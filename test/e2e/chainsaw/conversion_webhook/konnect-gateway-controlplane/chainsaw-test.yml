@@ -8,18 +8,12 @@ spec:
     This test validates that the v1alpha1 KonnectGatewayControlPlane is converted to v2alpha1.
 
   bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'konnect-gateway-controlplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: test_name
+      value: ($namespace)
     - name: konnect_api_auth_name
-      value: (join('-', ['kong', 'konnect-api-auth', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: (join('-', [($test_name), 'konnect-api-auth']))
     - name: konnect_gateway_controlplane_name
-      value: (join('-', ['kong', 'konnect-gateway-controlplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-
-  timeouts:
-    apply: 120s
-    assert: 300s
-    cleanup: 120s
-    delete: 120s
+      value: (join('-', [($test_name), 'konnect-gateway-controlplane']))
 
   steps:
     - name: create-konnect-resources
@@ -29,9 +23,17 @@ spec:
             file: 00-konnect-gateway-controlplane.yml
         - assert:
             file: 00-assert-konnect-gateway-controlplane.yml
-      catch:
-        - description: Get KonnectGatewayControlPlane resource status
-          get:
-            apiVersion: konnect.konghq.com/v1alpha2
-            kind: KonnectGatewayControlPlane
-            namespace: ($kong_namespace)
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: conversion-webhook-konnect-gateway-controlplane
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
