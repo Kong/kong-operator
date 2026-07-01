@@ -514,6 +514,45 @@ func TestEventGatewayTLSListenerPolicyConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestFetchKongIdentityPrincipal_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec FetchKongIdentityPrincipal
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestFetchKongIdentityPrincipalFetchBy_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec FetchKongIdentityPrincipalFetchBy
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestFetchKongIdentityPrincipalOauthBearer_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec FetchKongIdentityPrincipalOauthBearer
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestForwardToClusterByPortMappingConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 

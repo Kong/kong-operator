@@ -2933,19 +2933,19 @@ func TestGenerateSDKOps_DuplicateRequestTypeUsesOpSpecificMethods(t *testing.T) 
 	opsConfig := &config.EntityOpsConfig{
 		Ops: map[string]*config.OpConfig{
 			"create": {
-				Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization",
+				Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3",
 			},
 			"update": {
-				Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization",
+				Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3",
 			},
 		},
 	}
 
 	content, err := g.generateSDKOps("PortalCustomization", schema, opsConfig)
 	require.NoError(t, err)
-	assert.Contains(t, content, "func (s *PortalCustomizationAPISpec) ToCreatePortalCustomization()")
-	assert.Contains(t, content, "func (s *PortalCustomizationAPISpec) ToUpdatePortalCustomization()")
-	assert.NotContains(t, content, "func (s *PortalCustomizationAPISpec) ToPortalCustomization()")
+	assert.Contains(t, content, "func (s *PortalCustomizationAPISpec) ToCreatePortalCustomizationV3()")
+	assert.Contains(t, content, "func (s *PortalCustomizationAPISpec) ToUpdatePortalCustomizationV3()")
+	assert.NotContains(t, content, "func (s *PortalCustomizationAPISpec) ToPortalCustomizationV3()")
 }
 
 func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
@@ -4555,8 +4555,8 @@ func TestGenerateEntityOpsFile_GetForUIDSingletonNoIDWithoutMatchStrategy(t *tes
 	}
 	opsConfig := &config.EntityOpsConfig{
 		Ops: map[string]*config.OpConfig{
-			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
-			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3"},
 			"delete": {AsPUT: true},
 		},
 		SDK: &config.OpSDKConfig{
@@ -4574,7 +4574,7 @@ func TestGenerateEntityOpsFile_GetForUIDSingletonNoIDWithoutMatchStrategy(t *tes
 	assert.Contains(t, res.File.Content, "singleton sub-resource without a persistent Konnect")
 	assert.Contains(t, res.File.Content, `return "", EntityWithMatchingUIDNotFoundError{Entity: obj}`)
 	assert.NotContains(t, res.File.Content, "sdk.GetPortalCustomization(ctx, parentID)")
-	assert.Contains(t, res.TestFile.Content, "expectedRequest := &sdkkonnectcomp.PortalCustomization{}")
+	assert.Contains(t, res.TestFile.Content, "expectedRequest := &sdkkonnectcomp.PortalCustomizationV3{}")
 	assert.Contains(t, res.TestFile.Content, "DeletePortalCustomization")
 }
 
@@ -5273,8 +5273,8 @@ func TestGenerateOpsDelete_AsPUTUsesUpdateMethod(t *testing.T) {
 	}
 	opsConfig := &config.EntityOpsConfig{
 		Ops: map[string]*config.OpConfig{
-			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
-			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomization"},
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3"},
 			"delete": {AsPUT: true},
 		},
 	}
@@ -5287,12 +5287,12 @@ func TestGenerateOpsDelete_AsPUTUsesUpdateMethod(t *testing.T) {
 	assert.Equal(t, "zz_generated_ops_portalcustomization.go", file.Name)
 	assert.Equal(t, "GetPortalCustomizationSDK", info.SDKGetter)
 	assert.Contains(t, file.Content, `sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"`)
-	assert.Contains(t, file.Content, "obj.Spec.APISpec.ToCreatePortalCustomization()")
-	assert.Contains(t, file.Content, "obj.Spec.APISpec.ToUpdatePortalCustomization()")
+	assert.Contains(t, file.Content, "obj.Spec.APISpec.ToCreatePortalCustomizationV3()")
+	assert.Contains(t, file.Content, "obj.Spec.APISpec.ToUpdatePortalCustomizationV3()")
 	assert.Contains(t, file.Content, "func deletePortalCustomization(")
 	assert.Contains(t, file.Content, "parentID := obj.GetPortalID()")
 	assert.Contains(t, file.Content, `CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: DeleteOp}`)
-	assert.Contains(t, file.Content, "req := &sdkkonnectcomp.PortalCustomization{}")
+	assert.Contains(t, file.Content, "req := &sdkkonnectcomp.PortalCustomizationV3{}")
 	assert.Contains(t, file.Content, "sdk.ReplacePortalCustomization(ctx, parentID, *req)")
 	assert.NotContains(t, file.Content, "SetKonnectID")
 	assert.NotContains(t, file.Content, "obj.GetKonnectStatus().GetKonnectID()")
