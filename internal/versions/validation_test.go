@@ -111,6 +111,49 @@ func Test_versionFromImage(t *testing.T) {
 				return v
 			},
 		},
+		// Regression: image references whose registry host carries a port
+		// number contain more than one ':', but the tag is always after the
+		// last one. See https://github.com/Kong/kong-operator/issues/... .
+		{
+			Tag: "registry.example.com:5000/kong/kong-gateway:3.3.0",
+			Expected: func(t *testing.T) semver.Version {
+				v, err := semver.Parse("3.3.0")
+				require.NoError(t, err)
+				return v
+			},
+		},
+		{
+			Tag: "registry.example.com:5000/kong/kong-gateway:3.10",
+			Expected: func(t *testing.T) semver.Version {
+				v, err := semver.Parse("3.10.0")
+				require.NoError(t, err)
+				return v
+			},
+		},
+		{
+			Tag: "registry.example.com:5000/kong/kong-gateway:3.3-alpine@sha256:abc123def456",
+			Expected: func(t *testing.T) semver.Version {
+				v, err := semver.Parse("3.3.0")
+				require.NoError(t, err)
+				return v
+			},
+		},
+		{
+			// Registry with port but no tag: the last ':' is inside the host,
+			// what follows it contains '/'. Must be rejected as "no tag".
+			Tag:           "registry.example.com:5000/kong/kong-gateway",
+			ExpectedError: ErrExpectedSemverVersion,
+		},
+		{
+			// No colon at all — no tag can exist.
+			Tag:           "kong/kong-gateway",
+			ExpectedError: ErrExpectedSemverVersion,
+		},
+		{
+			// Trailing colon with empty tag — invalid.
+			Tag:           "kong/kong-gateway:",
+			ExpectedError: ErrExpectedSemverVersion,
+		},
 	}
 
 	for _, tc := range testcases {

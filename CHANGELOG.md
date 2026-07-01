@@ -76,6 +76,13 @@
 
 ### Fixes
 
+- Version parser: accept DataPlane image references whose registry host contains
+  a port (e.g. `registry.example.com:5000/kong/kong-gateway:3.10`). The tag is
+  now split at the last `:` instead of every `:`, so a host-port colon is no
+  longer misread as the tag separator. Without this fix, DataPlane Deployment
+  provisioning silently failed with
+  `expected "<image>:<tag>" format, got: <full-ref>`.
+  [#XXXX](https://github.com/Kong/kong-operator/pull/XXXX)
 - Konnect: prevent orphaned and duplicate Konnect entities when reconciliation
   races with the cached client. The cleanup finalizer is now added before the entity
   is created in Konnect, and the freshly created Konnect ID is kept in an in-memory
