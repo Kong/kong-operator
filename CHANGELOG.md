@@ -49,7 +49,7 @@
 
 ## [v2.1.8]
 
-> Release date: TBD
+> Release date: 2026-07-1
 
 ### Fixes
 
