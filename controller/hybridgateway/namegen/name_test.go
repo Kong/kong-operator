@@ -330,6 +330,43 @@ func TestNewKongServiceName_Equality(t *testing.T) {
 	}
 }
 
+func TestNewKongServiceName_BackendRequestTimeout(t *testing.T) {
+	backendNS := gatewayv1.Namespace("gateway-conformance-infra")
+	port := gatewayv1.PortNumber(8080)
+	route := testRoute("gateway-conformance-infra", "backend-request-timeout")
+	cp := testControlPlaneRef("same-namespace")
+
+	ruleWith := func(timeout *gatewayv1.Duration) gatewayv1.HTTPRouteRule {
+		rule := gatewayv1.HTTPRouteRule{
+			BackendRefs: []gatewayv1.HTTPBackendRef{testBackendRef("infra-backend-v1", &backendNS, &port)},
+		}
+		if timeout != nil {
+			rule.Timeouts = &gatewayv1.HTTPRouteTimeouts{BackendRequest: timeout}
+		}
+		return rule
+	}
+
+	d500ms := gatewayv1.Duration("500ms")
+	d0s := gatewayv1.Duration("0s")
+	dHalfS := gatewayv1.Duration("0.5s")
+
+	noTimeout := NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(nil))
+	timeout500ms := NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(&d500ms))
+	timeout0s := NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(&d0s))
+	timeoutHalfS := NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(&dHalfS))
+
+	// Same backends but different timeouts must produce distinct KongServices (the conformance
+	// case: /backend-timeout=500ms and /disable-backend-timeout=0s share infra-backend-v1).
+	assert.NotEqual(t, timeout500ms, timeout0s)
+	// A rule with a timeout differs from the same rule without one.
+	assert.NotEqual(t, noTimeout, timeout500ms)
+	assert.NotEqual(t, noTimeout, timeout0s)
+	// Backward compatibility: a rule without a backendRequest timeout keeps the original name.
+	assert.Equal(t, noTimeout, NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(nil)))
+	// Equivalent durations normalize to the same name (no spurious split).
+	assert.Equal(t, timeout500ms, timeoutHalfS)
+}
+
 func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 	port := func(value gatewayv1.PortNumber) *gatewayv1.PortNumber { return &value }
 	backendRef := func(name string, namespace *gatewayv1.Namespace, portNumber *gatewayv1.PortNumber) gatewayv1.HTTPBackendRef {

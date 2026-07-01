@@ -1919,7 +1919,7 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			result, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, nil, logger)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
@@ -2320,7 +2320,7 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result, err := resolveReadTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			result, err := resolveReadTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, nil, logger)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
@@ -2720,7 +2720,7 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			result, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, nil, logger)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
@@ -3285,4 +3285,104 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestServiceForRule_BackendRequestTimeout(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	upstreamName := "test-upstream"
+	port80 := gatewayv1.PortNumber(80)
+
+	backendRef := gatewayv1.HTTPBackendRef{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}}
+	timeout500ms := gatewayv1.Duration("500ms")
+	timeout0s := gatewayv1.Duration("0s")
+
+	tests := []struct {
+		name            string
+		backendRequest  *gatewayv1.Duration
+		annotations     map[string]string
+		expectedConnect *int64
+		expectedRead    *int64
+		expectedWrite   *int64
+	}{
+		{
+			name:            "backendRequest timeout applies to connect/read/write",
+			backendRequest:  &timeout500ms,
+			expectedConnect: new(int64(500)),
+			expectedRead:    new(int64(500)),
+			expectedWrite:   new(int64(500)),
+		},
+		{
+			name:            "zero backendRequest timeout maps to Kong max (no timeout)",
+			backendRequest:  &timeout0s,
+			expectedConnect: new(namegen.MaxKongServiceTimeout),
+			expectedRead:    new(namegen.MaxKongServiceTimeout),
+			expectedWrite:   new(namegen.MaxKongServiceTimeout),
+		},
+		{
+			name:           "backend Service annotation overrides backendRequest timeout",
+			backendRequest: &timeout500ms,
+			annotations:    map[string]string{"konghq.com/read-timeout": "30000"},
+			// Annotation wins for read; the other two fall back to the route's backendRequest timeout.
+			expectedConnect: new(int64(500)),
+			expectedRead:    new(int64(30000)),
+			expectedWrite:   new(int64(500)),
+		},
+		{
+			name:            "no backendRequest timeout and no annotation leaves fields unset",
+			backendRequest:  nil,
+			expectedConnect: nil,
+			expectedRead:    nil,
+			expectedWrite:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
+				},
+			}
+			rule := gwtypes.HTTPRouteRule{
+				BackendRefs: []gatewayv1.HTTPBackendRef{backendRef},
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/test")}},
+				},
+			}
+			if tt.backendRequest != nil {
+				rule.Timeouts = &gatewayv1.HTTPRouteTimeouts{BackendRequest: tt.backendRequest}
+			}
+			svc := corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: tt.annotations}}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&svc).Build()
+
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			require.NoError(t, err)
+			require.NotNil(t, service)
+			assertInt64Ptr(t, tt.expectedConnect, service.Spec.ConnectTimeout, "ConnectTimeout")
+			assertInt64Ptr(t, tt.expectedRead, service.Spec.ReadTimeout, "ReadTimeout")
+			assertInt64Ptr(t, tt.expectedWrite, service.Spec.WriteTimeout, "WriteTimeout")
+		})
+	}
+}
+
+func assertInt64Ptr(t *testing.T, expected, got *int64, field string) {
+	t.Helper()
+	if expected == nil {
+		assert.Nil(t, got, field)
+		return
+	}
+	require.NotNil(t, got, field)
+	assert.Equal(t, *expected, *got, field)
 }
