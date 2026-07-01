@@ -36,7 +36,20 @@ func MapTLSRouteForClientCertSecret(cl client.Client) func(ctx context.Context, 
 	}
 }
 
-// routesForClientCertSecret finds all routes (HTTPRoute or TLSRoute) whose backend Services
+// MapTCPRouteForClientCertSecret returns a handler.MapFunc that, given a Secret, lists all
+// Services in the same namespace that reference it via the konghq.com/client-cert annotation,
+// then returns reconcile.Requests for all TCPRoutes backed by those Services.
+func MapTCPRouteForClientCertSecret(cl client.Client) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		secret, ok := obj.(*corev1.Secret)
+		if !ok {
+			return nil
+		}
+		return routesForClientCertSecret(ctx, cl, secret.Namespace, secret.Name, kindTCPRoute)
+	}
+}
+
+// routesForClientCertSecret finds all routes whose backend Services
 // carry konghq.com/client-cert: <secretName>, and returns reconcile.Requests for them.
 func routesForClientCertSecret(ctx context.Context, cl client.Client, secretNamespace, secretName, routeKind string) []reconcile.Request {
 	svcList := &corev1.ServiceList{}
@@ -56,6 +69,8 @@ func routesForClientCertSecret(ctx context.Context, cl client.Client, secretName
 			routeRequests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case kindTLSRoute:
 			routeRequests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		case kindTCPRoute:
+			routeRequests, err = listTCPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		}
 		if err != nil {
 			continue
