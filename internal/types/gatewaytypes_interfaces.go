@@ -4,7 +4,7 @@ import "sigs.k8s.io/controller-runtime/pkg/client"
 
 // SupportedRoute defines a supported route type.
 type SupportedRoute interface {
-	HTTPRoute | TLSRoute | GRPCRoute
+	HTTPRoute | TLSRoute | TCPRoute | GRPCRoute
 }
 
 // SupportedRoutePtr defines a pointer of a supported route type.
@@ -16,7 +16,7 @@ type SupportedRoutePtr[T SupportedRoute] interface {
 
 // SupportedRouteList defines a list of supported route.
 type SupportedRouteList interface {
-	HTTPRouteList | TLSRouteList
+	HTTPRouteList | TLSRouteList | TCPRouteList
 }
 
 // SupportedRouteListPtr defines a pointer of a supported route list.
@@ -28,7 +28,7 @@ type SupportedRouteListPtr[T SupportedRouteList] interface {
 
 // SupportedRouteRule defines a rule in a supported route.
 type SupportedRouteRule interface {
-	HTTPRouteRule | TLSRouteRule
+	HTTPRouteRule | TLSRouteRule | TCPRouteRule
 }
 
 // SupportedBackendRef defines a supported backendRef type.
@@ -43,6 +43,8 @@ func GetSpecParentRefs[T SupportedRoute](route T) []ParentReference {
 		return r.Spec.ParentRefs
 	case TLSRoute:
 		return r.Spec.ParentRefs
+	case TCPRoute:
+		return r.Spec.ParentRefs
 	case GRPCRoute:
 		return r.Spec.ParentRefs
 	}
@@ -56,6 +58,8 @@ func GetSpecHostnames[T SupportedRoute](route T) []Hostname {
 		return r.Spec.Hostnames
 	case TLSRoute:
 		return r.Spec.Hostnames
+	case TCPRoute:
+		return []Hostname{}
 	}
 	return []Hostname{}
 }
