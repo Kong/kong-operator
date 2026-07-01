@@ -3,6 +3,7 @@ package conformance
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -145,13 +146,8 @@ func runConformance(
 		},
 	}
 	opts.Mode = mode
-	opts.ConformanceProfiles = []suite.ConformanceProfileName{
-		suite.GatewayHTTPConformanceProfileName,
-		suite.GatewayGRPCConformanceProfileName,
-		suite.GatewayTLSConformanceProfileName,
-		suite.GatewayUDPConformanceProfileName,
-	}
-	opts.SupportedFeatures = supportedFeatures
+	opts.ConformanceProfiles = conformanceProfiles(gwType)
+	opts.SupportedFeatures = conformanceSupportedFeatures(gwType, supportedFeatures)
 	opts.SkipTests = skipped
 	opts.CleanupBaseResources = cleanupResources
 	opts.GatewayClassName = gwc.Name
@@ -175,6 +171,29 @@ func runConformance(
 
 	t.Log("running the Gateway API conformance test suite")
 	conformance.RunConformanceWithOptions(t, opts)
+}
+
+func conformanceProfiles(gwType gatewayType) []suite.ConformanceProfileName {
+	profiles := []suite.ConformanceProfileName{
+		suite.GatewayHTTPConformanceProfileName,
+		suite.GatewayGRPCConformanceProfileName,
+		suite.GatewayTLSConformanceProfileName,
+		suite.GatewayUDPConformanceProfileName,
+	}
+	if gwType == hybridGateway {
+		profiles = append(profiles, suite.GatewayTCPConformanceProfileName)
+	}
+	return profiles
+}
+
+func conformanceSupportedFeatures(gwType gatewayType, supportedFeatures []features.FeatureName) []features.FeatureName {
+	if gwType == hybridGateway {
+		return supportedFeatures
+	}
+
+	return slices.DeleteFunc(slices.Clone(supportedFeatures), func(feature features.FeatureName) bool {
+		return feature == features.SupportTCPRoute
+	})
 }
 
 // conformanceCleanupTimeout bounds how long the post-test Hook waits for
