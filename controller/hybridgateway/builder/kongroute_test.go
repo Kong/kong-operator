@@ -165,9 +165,10 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				Method: &method,
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
-				assert.Empty(t, route.Spec.Paths)
+				assert.Equal(t, []string{"/"}, route.Spec.Paths)
 				assert.Equal(t, []string{"GET"}, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
+				assert.Nil(t, route.Spec.RegexPriority)
 			},
 		},
 		{
