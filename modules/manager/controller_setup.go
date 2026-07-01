@@ -912,12 +912,24 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "tlsroutes",
 		}
+		tcpRouteGVR := schema.GroupVersionResource{
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
+			Resource: "tcproutes",
+		}
 		hasTLSRoute, err := checker.CRDExists(tlsRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
 		}
 		if hasTLSRoute {
 			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain))
+		}
+		hasTCPRoute, err := checker.CRDExists(tcpRouteGVR)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tcpRouteGVR.String(), err)
+		}
+		if hasTCPRoute {
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain))
 		}
 	}
 

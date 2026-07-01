@@ -68,6 +68,9 @@
 
 - EventGateway CRDs: added `EventGatewaySchemaRegistry` CRD and reconciliation logic.
   [#5017](https://github.com/Kong/kong-operator/pull/5017)
+- Hybridgateway: add controller and translator support for Gateway API `TCPRoute` resources.
+  [#4727](https://github.com/Kong/kong-operator/pull/4727)
+  [#5018](https://github.com/Kong/kong-operator/pull/5018)
 
 ### Changed
 
@@ -155,9 +158,6 @@
 - Konnect: allow root Konnect entities to reference `KonnectAPIAuthConfiguration`
   resources across namespaces using `authRef.namespace` and `KongReferenceGrant`.
   [#4839](https://github.com/Kong/kong-operator/pull/4839)
-- Hybridgateway: add controller plumbing for Gateway API `TCPRoute` resources,
-  preparing hybrid gateway mode for TCPRoute translation support.
-  [#4335](https://github.com/Kong/kong-operator/issues/4335)
 - API: expose `trafficDistribution` and `internalTrafficPolicy` in `DataPlane`,
   `GatewayConfiguration` and `KegDataPlane` `ServiceOptions`. Both fields are
   propagated to the managed Kubernetes Service during reconciliation.

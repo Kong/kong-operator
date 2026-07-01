@@ -3,6 +3,7 @@ package upstream
 import (
 	"context"
 	"maps"
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -324,6 +325,49 @@ func TestUpstreamForRule_NewUpstream(t *testing.T) {
 	expectedAnnotation := "test-namespace/test-route"
 	actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 	assert.Equal(t, expectedAnnotation, actualAnnotation)
+}
+
+func TestUpstreamForTCPRouteRule(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	tcpRoute := &gwtypes.TCPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "TCPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+	port := gwtypes.PortNumber(80)
+	rule := gwtypes.TCPRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "test-service",
+				Port: &port,
+			},
+		}},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+
+	upstream, err := UpstreamForRule(ctx, logger, client, tcpRoute, rule, pRef, cp)
+	require.NoError(t, err)
+	require.NotNil(t, upstream)
+	assert.True(t, strings.HasPrefix(upstream.Name, "tcp.test-namespace-test-service-80.1."))
+	assert.Equal(t, "test-namespace/test-route", upstream.Annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation])
 }
 
 func TestUpstreamForRule_WithUpstreamPolicy(t *testing.T) {

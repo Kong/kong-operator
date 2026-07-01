@@ -106,6 +106,16 @@ func ServiceForRuleWithName[
 		backendRefs = tlsRule.BackendRefs
 		defaultProtocol = "tcp"
 
+	case *gwtypes.TCPRoute:
+		tcpRule, ok := any(rule).(gwtypes.TCPRouteRule)
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		serviceName = namegen.NewKongServiceNameForTCPRouteRule(r, cp, tcpRule)
+		namespace = r.Namespace
+		backendRefs = tcpRule.BackendRefs
+		defaultProtocol = "tcp"
+
 	// TODO: add other types of routes and rules when we support them.
 
 	// Should be unreachable.

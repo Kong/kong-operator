@@ -56,6 +56,7 @@ type (
 	TCPRoute               = gatewayv1.TCPRoute
 	TCPRouteList           = gatewayv1.TCPRouteList
 	TCPRouteSpec           = gatewayv1.TCPRouteSpec
+	TCPRouteStatus         = gatewayv1.TCPRouteStatus
 	TCPRouteRule           = gatewayv1.TCPRouteRule
 	GRPCRoute              = gatewayv1.GRPCRoute
 	GRPCRouteList          = gatewayv1.GRPCRouteList
@@ -75,6 +76,7 @@ const (
 	HTTPSProtocolType                     = gatewayv1.HTTPSProtocolType
 	TLSProtocolType                       = gatewayv1.TLSProtocolType
 	UDPProtocolType                       = gatewayv1.UDPProtocolType
+	TCPProtocolType                       = gatewayv1.TCPProtocolType
 	HTTPRouteFilterExtensionRef           = gatewayv1.HTTPRouteFilterExtensionRef
 	HTTPRouteFilterRequestHeaderModifier  = gatewayv1.HTTPRouteFilterRequestHeaderModifier
 	ListenerConditionProgrammed           = gatewayv1.ListenerConditionProgrammed

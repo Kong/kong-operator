@@ -3245,6 +3245,50 @@ func TestTargetsForBackendRefs(t *testing.T) {
 }
 
 // Helper function to find a target by its address.
+func TestTargetsForTCPRouteBackendRefs(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	port := int32(80)
+	backendPort := gwtypes.PortNumber(80)
+
+	tcpRoute := &gwtypes.TCPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "TCPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+	backendRefs := []gwtypes.BackendRef{{
+		BackendObjectReference: gwtypes.BackendObjectReference{
+			Name: "test-service",
+			Port: &backendPort,
+		},
+	}}
+	service := createTestService("test-service", "test-namespace", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{{
+		Name:       "tcp",
+		Port:       port,
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt(8080),
+	}})
+	endpointSlice := createTestEndpointSlice("test-service-slice", []discoveryv1.EndpointPort{
+		createTestEndpointPort("tcp", 8080, corev1.ProtocolTCP),
+	}, []discoveryv1.Endpoint{
+		createTestEndpoint([]string{"10.0.0.2"}, true),
+	})
+	endpointSlice.Namespace = "test-namespace"
+	endpointSlice.Labels = map[string]string{discoveryv1.LabelServiceName: "test-service"}
+
+	cl := createTestFakeClient(service, &endpointSlice)
+	targets, err := TargetsForBackendRefs(ctx, logger, cl, tcpRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
+	require.NoError(t, err)
+	require.Len(t, targets, 1)
+	assert.Equal(t, "10.0.0.2:8080", targets[0].Spec.Target)
+	assert.Equal(t, "test-namespace/test-route", targets[0].Annotations["gateway-operator.konghq.com/hybrid-routes-TCPRoute"])
+}
+
 func findTargetByAddress(targets []configurationv1alpha1.KongTarget, address string) *configurationv1alpha1.KongTarget {
 	for i := range targets {
 		if targets[i].Spec.Target == address {

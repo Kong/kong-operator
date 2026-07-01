@@ -78,8 +78,7 @@ func NewConverter[t RootObject](obj t, cl client.Client, fqdnMode bool, clusterD
 	case gwtypes.TLSRoute:
 		return newTLSRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	case gwtypes.TCPRoute:
-		// TODO: Add TCPRoute conversion support: https://github.com/Kong/kong-operator/issues/4335
-		return nil, fmt.Errorf("TCPRoute conversion is not supported yet")
+		return newTCPRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	case gwtypes.Gateway:
 		return newGatewayConverter(&o, cl).(APIConverter[t]), nil
 	default:
