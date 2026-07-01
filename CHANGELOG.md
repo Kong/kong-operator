@@ -53,6 +53,9 @@
 
 ### Added
 
+- Hybridgateway: add controller plumbing for Gateway API `TCPRoute` resources,
+  preparing hybrid gateway mode for TCPRoute translation support.
+  [#4335](https://github.com/Kong/kong-operator/issues/4335)
 - API: expose `trafficDistribution` and `internalTrafficPolicy` in `DataPlane`,
   `GatewayConfiguration` and `KegDataPlane` `ServiceOptions`. Both fields are
   propagated to the managed Kubernetes Service during reconciliation.

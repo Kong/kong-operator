@@ -57313,7 +57313,6 @@ rules:
   - gatewayclasses
   - grpcroutes
   - referencegrants
-  - tcproutes
   - udproutes
   verbs:
   - get
@@ -57374,6 +57373,7 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - tcproutes
   - tlsroutes
   verbs:
   - get
