@@ -265,6 +265,17 @@ jobs:
         with:
           install: false
 
+      - name: Run make generate
+        if: ${{ inputs.regenerate-manifests }}
+        run: |
+          make \
+            generate.api \
+            generate.api-from-oas \
+            generate.crds \
+            generate.crd-kustomize \
+            generate.docs \
+            generate.cli-arguments-docs
+
       # Generated manifests are part of the release PR.
       - name: Generate manifests
         if: ${{ inputs.regenerate-manifests }}
