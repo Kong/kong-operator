@@ -26,9 +26,6 @@ var skippedTestsShared = []string{
 	tests.GatewayListenerUnsupportedProtocol.ShortName,
 	tests.GatewayInvalidParametersRef.ShortName,
 	tests.HTTPRouteNoBackendRefs.ShortName,
-
-	// failed after bumping gateway api to v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4661
-	// tests.HTTPRouteWeight.ShortName,
 }
 
 var skippedTestsForExpressionsRouter = []string{}

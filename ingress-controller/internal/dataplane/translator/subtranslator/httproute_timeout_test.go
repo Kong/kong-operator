@@ -68,6 +68,27 @@ func TestGroupRulesCombinedKeepsServiceNameForUniformTimeout(t *testing.T) {
 	}
 }
 
+func TestGroupRulesCombinedUniformTimeoutKeepsBaseName(t *testing.T) {
+	timeout := gatewayapi.Duration("500ms")
+	// Same backends across two HTTPRoutes, all rules carrying the same (non-default) timeout.
+	withTimeout := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+		httpRouteWithBackendTimeout("route-a", &timeout),
+		httpRouteWithBackendTimeout("route-b", &timeout),
+	}, true)
+	// The same backends with no timeout at all - this is the pre-feature (baseline) name.
+	noTimeout := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+		httpRouteWithBackendTimeout("route-a", nil),
+		httpRouteWithBackendTimeout("route-b", nil),
+	}, true)
+
+	require.Len(t, withTimeout, 1)
+	require.Len(t, noTimeout, 1)
+	// A uniform (non-default) timeout must not change the KongService name: enabling/setting the
+	// same timeout on all rules sharing a backend must reuse the exact base name, so no rename.
+	require.Equal(t, onlyServiceName(t, noTimeout), onlyServiceName(t, withTimeout),
+		"uniform timeout must produce the same KongService name as no timeout")
+}
+
 func TestGroupRulesCombinedSplitsConflictingTimeouts(t *testing.T) {
 	timeout500ms := gatewayapi.Duration("500ms")
 	timeout1s := gatewayapi.Duration("1s")
@@ -106,6 +127,16 @@ func TestGroupRulesCombinedDoesNotSplitEquivalentTimeouts(t *testing.T) {
 	// 500ms and 0.5s are the same effective timeout => must not split.
 	require.Len(t, groups, 1)
 	require.Equal(t, 0, countServiceNamesWithTimeoutSuffix(groups))
+}
+
+// onlyServiceName returns the single service name in groups, failing if there is not exactly one.
+func onlyServiceName(t *testing.T, groups map[string][]httpRouteRuleMeta) string {
+	t.Helper()
+	require.Len(t, groups, 1)
+	for name := range groups {
+		return name
+	}
+	return ""
 }
 
 // hasServiceNameWithSuffix reports whether any service name ends with the given suffix.

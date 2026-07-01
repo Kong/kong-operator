@@ -365,6 +365,18 @@ func TestNewKongServiceName_BackendRequestTimeout(t *testing.T) {
 	assert.Equal(t, noTimeout, NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(nil)))
 	// Equivalent durations normalize to the same name (no spurious split).
 	assert.Equal(t, timeout500ms, timeoutHalfS)
+
+	// Split only when the timeout differs: two rules on the same backend with the same timeout
+	// but different matches must map to the SAME KongService (they merge), so no needless split.
+	ruleMatchA := ruleWith(&d500ms)
+	ruleMatchA.Matches = testPathMatch("/a")
+	ruleMatchB := ruleWith(&d500ms)
+	ruleMatchB.Matches = testPathMatch("/b")
+	assert.Equal(t,
+		NewKongServiceNameForHTTPRouteRule(route, cp, ruleMatchA),
+		NewKongServiceNameForHTTPRouteRule(route, cp, ruleMatchB),
+		"same backend + same timeout must not split into different KongServices",
+	)
 }
 
 func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
