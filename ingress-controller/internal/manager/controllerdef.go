@@ -176,8 +176,7 @@ func setupControllers(
 				DataplaneClient:   dataplaneClient,
 				CacheSyncTimeout:  c.CacheSyncTimeout,
 				ReferenceIndexers: referenceIndexers,
-				// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4578
-				// StatusQueue:       kubernetesStatusQueue,
+				StatusQueue:       kubernetesStatusQueue,
 			},
 		},
 		{
@@ -219,8 +218,7 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
 				ReferenceIndexers:          referenceIndexers,
-				// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4578
-				// StatusQueue:       kubernetesStatusQueue,
+				StatusQueue:                kubernetesStatusQueue,
 			},
 		},
 		// KongUpstreamPolicy controller.
