@@ -75,6 +75,14 @@ func UpstreamForRule[
 		upstreamName = namegen.NewKongUpstreamNameForTLSRouteRule(r, cp, tlsRule)
 		namespace = r.Namespace
 		backendRefs = tlsRule.BackendRefs
+	case *gwtypes.TCPRoute:
+		tcpRule, ok := any(rule).(gwtypes.TCPRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		upstreamName = namegen.NewKongUpstreamNameForTCPRouteRule(r, cp, tcpRule)
+		namespace = r.Namespace
+		backendRefs = tcpRule.BackendRefs
 	// TODO: add other types of rules when we support them.
 
 	// Should be unreachable.
