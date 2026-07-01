@@ -70,6 +70,11 @@ func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch, setC
 	// Method
 	if match.Method != nil {
 		b.route.Spec.Methods = append(b.route.Spec.Methods, string(*match.Method))
+		if len(b.route.Spec.Paths) == 0 {
+			// Gateway API treats an omitted path as PathPrefix "/". Materialize it so
+			// Kong's traditional router prioritizes method-only matches over header-only matches.
+			b.route.Spec.Paths = append(b.route.Spec.Paths, "/")
+		}
 	}
 
 	// Headers

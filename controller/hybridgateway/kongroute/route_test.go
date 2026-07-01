@@ -429,6 +429,73 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 	)
 }
 
+func TestRoutesForRule_MethodOnlyMatch(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{
+					{Name: "test-gateway"},
+				},
+			},
+		},
+	}
+
+	method := gatewayv1.HTTPMethodGet
+	rule := gwtypes.HTTPRouteRule{
+		Matches: []gatewayv1.HTTPRouteMatch{{
+			Method: &method,
+		}},
+	}
+
+	pRef := &gwtypes.ParentReference{
+		Name:      "test-gateway",
+		Namespace: (*gatewayv1.Namespace)(new("test-namespace")),
+	}
+
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, 0, pRef, cpRef, nil, "test-service", []string{"example.com"})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+
+	assert.Equal(t, []string{"GET"}, results[0].Spec.Methods)
+	assert.Equal(t, []string{"/"}, results[0].Spec.Paths)
+	assert.Nil(t, results[0].Spec.Headers)
+	assert.Nil(t, results[0].Spec.RegexPriority)
+	assert.Equal(t, []string{"example.com"}, results[0].Spec.Hosts)
+}
+
 func TestRoutesForHTTPRouteRule_MalformedAnnotations(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
