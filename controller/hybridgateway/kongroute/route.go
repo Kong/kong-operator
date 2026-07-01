@@ -117,7 +117,6 @@ func RoutesForHTTPRouteRule(
 	// Check filters to determine if we need capture groups in paths.
 	setCaptureGroup := needsCaptureGroup(rule)
 	priorities := httpRouteMatchPriorities(httpRoute)
-	hasDefaultPathMethodOnlyMatch := hasDefaultPathMethodOnlyHTTPRouteMatch(httpRoute)
 
 	stripPath, err := metadata.ExtractStripPath(httpRoute.Annotations)
 	if err != nil {
@@ -147,10 +146,8 @@ func RoutesForHTTPRouteRule(
 			WithPreserveHost(preserveHost).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
-		if priority := priorityForHeaderOnlyHTTPRouteMatch(
-			match, priorities, ruleIndex, i, hasDefaultPathMethodOnlyMatch,
-		); priority != nil {
-			routeBuilder.WithRegexPriority(priority).WithHeaderOnlyRegexPath()
+		if priority := priorityForDefaultPathHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
+			routeBuilder.WithRegexPriority(priority).WithDefaultPathRegexPath()
 		}
 
 		newRoute, buildErr := routeBuilder.Build()
@@ -226,47 +223,16 @@ func httpRouteMatchPriorities(httpRoute *gwtypes.HTTPRoute) map[httpRouteMatchPr
 	return priorities
 }
 
-func priorityForHeaderOnlyHTTPRouteMatch(
+func priorityForDefaultPathHTTPRouteMatch(
 	match gatewayv1.HTTPRouteMatch,
 	priorities map[httpRouteMatchPriorityKey]int64,
 	ruleIndex, matchIndex int,
-	hasDefaultPathMethodOnlyMatch bool,
 ) *int64 {
-	if !isHeaderOnlyDefaultPathHTTPRouteMatch(match) {
-		return nil
-	}
-	if hasDefaultPathMethodOnlyMatch && match.Method == nil {
-		// Keep method-less header routes below default-path method-only routes:
-		// adding the synthetic path would give both routes the same Kong match
-		// weight, after which Kong's header-count tie breaker would pick the
-		// header route instead of the Gateway API method-precedence route.
+	if !isDefaultPathHTTPRouteMatch(match) || (match.Method == nil && len(match.Headers) == 0) {
 		return nil
 	}
 	priority := priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex)
 	return &priority
-}
-
-func isHeaderOnlyDefaultPathHTTPRouteMatch(match gatewayv1.HTTPRouteMatch) bool {
-	if len(match.Headers) == 0 {
-		return false
-	}
-	return isDefaultPathHTTPRouteMatch(match)
-}
-
-func hasDefaultPathMethodOnlyHTTPRouteMatch(httpRoute *gwtypes.HTTPRoute) bool {
-	for _, rule := range httpRoute.Spec.Rules {
-		if slices.ContainsFunc(rule.Matches, isDefaultPathMethodOnlyHTTPRouteMatch) {
-			return true
-		}
-	}
-	return false
-}
-
-func isDefaultPathMethodOnlyHTTPRouteMatch(match gatewayv1.HTTPRouteMatch) bool {
-	return match.Method != nil &&
-		len(match.Headers) == 0 &&
-		len(match.QueryParams) == 0 &&
-		isDefaultPathHTTPRouteMatch(match)
 }
 
 func isDefaultPathHTTPRouteMatch(match gatewayv1.HTTPRouteMatch) bool {
@@ -290,7 +256,10 @@ func priorityForHTTPRouteMatch(priorities map[httpRouteMatchPriorityKey]int64, r
 
 func calculateHTTPRoutePriorityClass(match gatewayv1.HTTPRouteMatch) httpRoutePriorityClass {
 	class := httpRoutePriorityClass{}
-	if match.Path != nil {
+	if isDefaultPathHTTPRouteMatch(match) {
+		class.pathType = gatewayv1.PathMatchPathPrefix
+		class.pathLength = len("/")
+	} else if match.Path != nil {
 		class.pathType = gatewayv1.PathMatchPathPrefix
 		if match.Path.Type != nil {
 			class.pathType = *match.Path.Type
