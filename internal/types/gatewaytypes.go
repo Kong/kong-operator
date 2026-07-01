@@ -56,6 +56,10 @@ type (
 	GRPCRoute              = gatewayv1.GRPCRoute
 	GRPCRouteList          = gatewayv1.GRPCRouteList
 	GRPCRouteSpec          = gatewayv1.GRPCRouteSpec
+	TCPRoute               = gatewayv1.TCPRoute
+	TCPRouteList           = gatewayv1.TCPRouteList
+	TCPRouteSpec           = gatewayv1.TCPRouteSpec
+	TCPRouteStatus         = gatewayv1.TCPRouteStatus
 )
 
 var GroupVersion = gatewayv1.GroupVersion

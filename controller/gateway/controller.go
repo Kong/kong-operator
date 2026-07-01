@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
@@ -132,6 +133,10 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			&gatewayv1.HTTPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByHTTPRoute),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Watches(
+			&gatewayv1.TLSRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
+		).
 		// watch Namespaces so that managed routes have correct status reflected in Gateway's
 		// status in status.listeners.attachedRoutes
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
@@ -189,6 +194,23 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	} else {
 		log.Info(mgr.GetLogger(), "GRPCRoute CRD not found in cluster, skipping watch for GRPCRoute resources")
+	}
+
+	tcpRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupName,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "tcproutes",
+	}
+	tcpRouteExist, err := crdChecker.CRDExists(tcpRouteGVR)
+	if err != nil {
+		return err
+	}
+	if tcpRouteExist {
+		blder.Watches(
+			&gatewayv1alpha2.TCPRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTCPRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		)
 	}
 
 	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.
