@@ -56,6 +56,15 @@ func generateKongPathFromGRPCMethodMatch(methodMatch *gatewayapi.GRPCMethodMatch
 		service = *matchService
 	}
 
+	// Kong routes gRPC using a regex path (KongPathRegexPrefix), so for an Exact
+	// match the service and method must be treated as literals, not patterns.
+	// A fully-qualified gRPC service name is dot-separated
+	// (e.g. "gateway_api_conformance.echo_basic.grpcecho.GrpcEcho") and the dot
+	// "." is a regex metacharacter that would match any char. Other regex
+	// metacharacters ( . + * ? ( ) | [ ] { } ^ $ \ ) may also appear, so we run
+	// both parts through regexp.QuoteMeta to escape them. We also anchor the
+	// method with a trailing "$" so e.g. "/svc/Echo" does not also match
+	// "/svc/EchoTwo".
 	if matchType == gatewayapi.GRPCMethodMatchExact {
 		if matchService != nil {
 			service = regexp.QuoteMeta(service)
