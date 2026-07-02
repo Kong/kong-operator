@@ -103,9 +103,11 @@ func findOrphanedControlPlanes(
 	// We need to query control planes with two different label filters:
 	// 1. Control planes created by integration tests (with `operator-test-id` label)
 	// 2. Control planes managed by KO (with `k8s-kind:KonnectGatewayControlPlane` label)
+	// 3. Control planes created by tests (with `created_in_tests` label)
 	labelFilters := []string{
 		deploy.KonnectTestIDLabel,
 		fmt.Sprintf("%s:%s", ops.KubernetesKindLabelKey, k8sKindKonnectGatewayControlPlane),
+		deploy.KonnectCreatedInTestsLabel,
 	}
 
 	seenCPIDs := make(map[string]struct{})

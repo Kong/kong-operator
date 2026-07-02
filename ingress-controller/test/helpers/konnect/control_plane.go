@@ -18,7 +18,6 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 	testhelpers "github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
@@ -55,9 +54,11 @@ func CreateTestControlPlane(ctx context.Context, t *testing.T, token ...string) 
 					Name:        uuid.NewString(),
 					Description: new(generateTestKonnectControlPlaneDescription(t)),
 					Labels: map[string]string{
-						test.KonnectControlPlaneLabelCreatedInTests: "true",
+						deploy.KonnectCreatedInTestsLabel: "true",
 						// Add test ID label so that Konnect cleanup workflow can find
 						// and clean up the control plane after the test finishes.
+						// NOTE: for some reason this label is not always applied
+						// to the control plane in Konnect.
 						deploy.KonnectTestIDLabel: testID,
 					},
 					ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
