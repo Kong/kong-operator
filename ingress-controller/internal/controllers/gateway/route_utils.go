@@ -509,6 +509,12 @@ func existsMatchingListenerInStatus[T gatewayapi.RouteT](route T, listener gatew
 					Group: gatewayv1.GroupVersion.Group,
 					Kind:  "GRPCRoute",
 				}
+			case *gatewayapi.UDPRoute:
+				gvk = schema.GroupVersionKind{
+					Group: gatewayv1.GroupVersion.Group,
+					Kind:  "UDPRoute",
+				}
+
 			default:
 				gvk = route.GetObjectKind().GroupVersionKind()
 			}
