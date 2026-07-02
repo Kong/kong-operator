@@ -11,6 +11,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -104,10 +105,13 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	t.Logf("deploying ingress %s", ingress.Name)
 	require.NoError(t, ctrlClient.Create(ctx, ingress))
 
+	kongVersion, err := testenv.GetDependencyVersion("envtests.kong-ee")
+	require.NoError(t, err)
+
 	RunManager(ctx, t, restConfig,
 		AdminAPIOptFns(
 			mocks.WithConfigPostError(formatErrBody(t, ns.Name, ingress, service)),
-			mocks.WithVersion("3.14.0"),
+			mocks.WithVersion(kongVersion),
 		),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),

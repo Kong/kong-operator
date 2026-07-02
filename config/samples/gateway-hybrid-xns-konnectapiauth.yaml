@@ -35,6 +35,7 @@ spec:
         spec:
           containers:
           - name: proxy
+            # renovate: datasource=docker versioning=docker
             image: kong/kong-gateway:3.14
 ---
 kind: GatewayClass
