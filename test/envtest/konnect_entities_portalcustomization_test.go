@@ -101,19 +101,19 @@ func TestPortalCustomization(t *testing.T) {
 
 		customizationWatch := setupWatch[konnectv1alpha1.PortalCustomizationList](t, ctx, cl, client.InNamespace(ns.Name))
 		customization := testEnvtestPortalCustomization(ns.Name, portal.GetName(), initialCSS, initialLayout, initialRobots)
-		expectedCreateRequest, err := customization.Spec.APISpec.ToCreatePortalCustomization()
+		expectedCreateRequest, err := customization.Spec.APISpec.ToCreatePortalCustomizationV3()
 		require.NoError(t, err)
 
 		sdk.PortalCustomizationSDK.EXPECT().
 			ReplacePortalCustomization(
 				mock.Anything,
 				portalID,
-				mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomization) bool {
+				mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomizationV3) bool {
 					return reflect.DeepEqual(req, expectedCreateRequest)
 				}),
 			).
 			Return(&sdkkonnectops.ReplacePortalCustomizationResponse{
-				PortalCustomization: &sdkkonnectcomp.PortalCustomization{},
+				PortalCustomizationV3: &sdkkonnectcomp.PortalCustomizationV3{},
 			}, nil)
 
 		t.Log("Creating PortalCustomization")
@@ -142,14 +142,14 @@ func TestPortalCustomization(t *testing.T) {
 		customizationToPatch.Spec.APISpec.Css = new(updatedCSS)
 		customizationToPatch.Spec.APISpec.Layout = updatedLayout
 		customizationToPatch.Spec.APISpec.Robots = new(updatedRobots)
-		expectedUpdateRequest, err := customizationToPatch.Spec.APISpec.ToUpdatePortalCustomization()
+		expectedUpdateRequest, err := customizationToPatch.Spec.APISpec.ToUpdatePortalCustomizationV3()
 		require.NoError(t, err)
 
 		sdk.PortalCustomizationSDK.EXPECT().
 			ReplacePortalCustomization(
 				mock.Anything,
 				portalID,
-				mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomization) bool {
+				mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomizationV3) bool {
 					return reflect.DeepEqual(req, expectedUpdateRequest)
 				}),
 			).
@@ -180,8 +180,8 @@ func TestPortalCustomization(t *testing.T) {
 			ReplacePortalCustomization(
 				mock.Anything,
 				portalID,
-				mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomization) bool {
-					return reflect.DeepEqual(req, &sdkkonnectcomp.PortalCustomization{})
+				mock.MatchedBy(func(req *sdkkonnectcomp.PortalCustomizationV3) bool {
+					return reflect.DeepEqual(req, &sdkkonnectcomp.PortalCustomizationV3{})
 				}),
 			).
 			Return(&sdkkonnectops.ReplacePortalCustomizationResponse{}, nil)
