@@ -107,7 +107,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	RunManager(ctx, t, restConfig,
 		AdminAPIOptFns(
 			mocks.WithConfigPostError(formatErrBody(t, ns.Name, ingress, service)),
-			mocks.WithVersion("3.12.0"),
+			mocks.WithVersion("3.14.0"),
 		),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),

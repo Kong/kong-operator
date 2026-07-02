@@ -31,7 +31,7 @@ spec:
       podTemplateSpec:
         spec:
           containers:
-            - image: kong/kong-gateway:3.12
+            - image: kong/kong-gateway:3.14
               name: proxy
   konnect:
     authRef:

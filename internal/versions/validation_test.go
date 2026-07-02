@@ -80,17 +80,17 @@ func Test_versionFromImage(t *testing.T) {
 			ExpectedError: kgoerrors.ErrInvalidSemverVersion,
 		},
 		{
-			Tag: "kong/kong-gateway:3.12",
+			Tag: "kong/kong-gateway:3.14",
 			Expected: func(t *testing.T) semver.Version {
-				v, err := semver.Parse("3.12.0")
+				v, err := semver.Parse("3.14.0")
 				require.NoError(t, err)
 				return v
 			},
 		},
 		{
-			Tag: "kong/kong-gateway:3.12@sha256:8f0089833902c555bf02dee1a59d3fe1f9fed11745eb7dd75e9bf844755147c9",
+			Tag: "kong/kong-gateway:3.14@sha256:8f0089833902c555bf02dee1a59d3fe1f9fed11745eb7dd75e9bf844755147c9",
 			Expected: func(t *testing.T) semver.Version {
-				v, err := semver.Parse("3.12.0")
+				v, err := semver.Parse("3.14.0")
 				require.NoError(t, err)
 				return v
 			},
