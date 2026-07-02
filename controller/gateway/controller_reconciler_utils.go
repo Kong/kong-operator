@@ -685,11 +685,16 @@ func generateDataPlaneNetworkPolicy(
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_STREAM_LISTEN env: %w", err)
 		}
-		// Since currently we only support TLS (TCP SSL) listeners, we only extract SSL ports here.
-		// For TCPRoute and UDPRoute, we also need to extract TCP endpoints and UDP endpoints.
-		streamListenPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
-			return intstr.FromInt(ep.Port)
-		})
+		// Include both plain-TCP entries (TCPRoute) and SSL entries (TLSRoute) — the
+		// NetworkPolicy must allow ingress on every port Kong is listening on for stream.
+		streamListenPorts = append(
+			lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+				return intstr.FromInt(ep.Port)
+			}),
+			lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+				return intstr.FromInt(ep.Port)
+			})...,
+		)
 	}
 
 	// Construct the policy to allow the KO pod to access DataPlane admin APIs.

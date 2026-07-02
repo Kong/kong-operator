@@ -4762,6 +4762,60 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 				},
 			},
 		},
+		{
+			// Regression test for the on-prem TCPRoute path: a KONG_STREAM_LISTEN
+			// entry without the `ssl` flag must be reflected in the DP NetworkPolicy
+			// too, otherwise metallb-routed TCP traffic to the DP pod is dropped and
+			// EchoResponds times out (see CI failure ktf-diag-440076529).
+			name: "dataplane with plain-TCP stream listen",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8888 reuseport",
+				})
+			},
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(8888)),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "dataplane with mixed TCP and TLS stream listeners",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8888 reuseport,0.0.0.0:9443 ssl reuseport",
+				})
+			},
+			// Plain-TCP endpoints come first, then SSL — matches the order in
+			// generateDataPlaneNetworkPolicy.
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(8888)),
+						},
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(9443)),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
