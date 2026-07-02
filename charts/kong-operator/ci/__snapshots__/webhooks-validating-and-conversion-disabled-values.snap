@@ -12451,7 +12451,6 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -12508,7 +12507,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -12541,7 +12539,6 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -12598,7 +12595,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -12892,7 +12888,6 @@ spec:
                       Configures whether or not ACL policies are enforced on the gateway.
                       - `enforce_on_gateway` means the gateway enforces its own ACL policies for
                       this virtual cluster
-
                       and does not forward ACL-related commands to the backend cluster.
                       Note that if there are no ACL policies configured, all access is denied.
                       - `passthrough` tells the gateway to forward all ACL-related commands.
@@ -13047,15 +13042,12 @@ spec:
                                 Methods to mediate authentication:
                                 * passthrough - pass authentication from the client through proxy to the
                                 backend cluster without any kind of
-
                                 validation
                                 * validate_forward - pass authentication from the client through proxy to
                                 the backend cluster.
-
                                 Proxy does the validation before forwarding it to the client.
                                 * terminate - terminate authentication at the proxy level and originate
                                 authentication to the backend cluster
-
                                 using the configuration defined at BackendCluster's authentication.
                                 SASL auth is not originated if authentication on the backend_cluster is not
                                 configured.
@@ -13448,10 +13440,8 @@ spec:
                         description: |-
                           * hide_prefix - the configured prefix is hidden from clients for topics and
                           IDs when reading.
-
                           Created resources are written with the prefix on the backend cluster.
                           * enforce_prefix - the configured prefix remains visible to clients.
-
                           Created resources must include the prefix or the request will fail.
                         enum:
                         - hide_prefix
@@ -44119,6 +44109,17 @@ spec:
                   css:
                     maxLength: 253
                     type: string
+                  js:
+                    description: Js is a type alias.
+                    properties:
+                      custom:
+                        maxLength: 253
+                        type: string
+                      scripts:
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   layout:
                     maxLength: 253
                     type: string
@@ -44250,6 +44251,20 @@ spec:
                           - visibility
                           type: object
                         type: array
+                    type: object
+                  portalLayout:
+                    description: PortalLayout is a type alias.
+                    properties:
+                      footer:
+                        description: Footer is a type alias.
+                        properties:
+                          snippetName:
+                            description: |-
+                              The unique name of a snippet in the portal to render in place of the default
+                              footer.
+                            maxLength: 512
+                            type: string
+                        type: object
                     type: object
                   robots:
                     maxLength: 253
@@ -45695,6 +45710,12 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
+                  createDefaultContent:
+                    description: Use to create the portal page default content upon creation of this portal
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   defaultAPIVisibility:
                     description: |-
                       The default visibility of APIs in the portal.
@@ -45805,6 +45826,12 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     type: object
+                  mcpServerEnabled:
+                    description: Whether the portal has the MCP server enabled
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   name:
                     description: |-
                       The name of the portal, used to distinguish it from other portals.

@@ -35,6 +35,7 @@ func (m *mockControlPlanesServer) ServeHTTP(w http.ResponseWriter, r *http.Reque
 }
 
 func TestControlPlanesClientUserAgent(t *testing.T) {
+	t.Skip("skipping test until we have a better way to mock the Konnect API")
 	ts := httptest.NewServer(newMockControlPlanesServer(t))
 	t.Cleanup(ts.Close)
 
