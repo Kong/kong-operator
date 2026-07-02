@@ -39,7 +39,7 @@ spec:
     - name: konnect_auth_namespace
       value: ($namespace)
     - name: gateway_image
-      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.14')
+      value: (env('GATEWAY_IMAGE'))
     - name: gateway_name
       value: (join('-', [($test_name), 'gateway']))
     - name: gateway_namespace

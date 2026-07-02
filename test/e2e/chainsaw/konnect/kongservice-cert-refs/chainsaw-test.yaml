@@ -132,7 +132,7 @@ spec:
             - name: dataplane_namespace
               value: ($namespace)
             - name: dataplane_image
-              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.14')
+              value: (env('GATEWAY_IMAGE'))
             - name: extension_name
               value: ($extension_name)
 
@@ -216,7 +216,7 @@ spec:
             - name: upstream_port
               value: ($upstream_port)
             - name: kong_sidecar_image
-              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.14')
+              value: (env('GATEWAY_IMAGE'))
             - name: server_secret_name
               value: ($server_secret_name)
             - name: client_ca_secret_name
