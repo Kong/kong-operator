@@ -1,0 +1,64 @@
+---
+# UDP echo backend for the third UDPRoute. This route attaches to a different
+# listener so it wins arbitration there and causes a real DataPlane config
+# change, refreshing object reports for the already-attached second route.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ($echo_third_name)
+  namespace: ($gateway_namespace)
+spec:
+  selector:
+    app: ($echo_third_name)
+  ports:
+    - name: udp
+      protocol: UDP
+      port: (to_number($echo_pod_port))
+      targetPort: (to_number($echo_pod_port))
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ($echo_third_name)
+  namespace: ($gateway_namespace)
+  labels:
+    app: ($echo_third_name)
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ($echo_third_name)
+  template:
+    metadata:
+      labels:
+        app: ($echo_third_name)
+    spec:
+      containers:
+        - name: echo
+          image: ($echo_image)
+          env:
+            - name: POD_NAME
+              value: ($echo_third_name)
+          ports:
+            - containerPort: (to_number($echo_pod_port))
+              protocol: UDP
+              name: udp
+---
+# Third UDPRoute attached to the second listener. It is not in conflict with
+# the first two routes and should be pushed to the DataPlane.
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: ($udp_route_third_name)
+  namespace: ($gateway_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+      sectionName: udp-extra
+  rules:
+    - backendRefs:
+        - name: ($echo_third_name)
+          port: (to_number($echo_pod_port))
+

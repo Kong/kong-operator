@@ -89,14 +89,14 @@
   - drop all capabilities (except for `NET_BIND_SERVICE` to allow binding to ports < 1024)
   - run as non-root user
   - read-only root filesystem
-  This change enforces patching of `Deployment`s, which causes
-  a rolling restart of the underlying `Pod`s when updating operator to this version.
-  For `DataPlane`, the same hardening is available but opt-in: set
-  `spec.deployment.hardened: Enabled` (or for Gateway-managed `DataPlane`s,
-  `spec.dataPlaneOptions.deployment.hardened: Enabled` on the `GatewayConfiguration`)
-  to enable it. Note that, after operator upgrade, `DataPlane`s' `Deployment`s
-  will be rolled out regardless and `Pod`s will be recreated.
-  [#4953](https://github.com/Kong/kong-operator/pull/4953)
+    This change enforces patching of `Deployment`s, which causes
+    a rolling restart of the underlying `Pod`s when updating operator to this version.
+    For `DataPlane`, the same hardening is available but opt-in: set
+    `spec.deployment.hardened: Enabled` (or for Gateway-managed `DataPlane`s,
+    `spec.dataPlaneOptions.deployment.hardened: Enabled` on the `GatewayConfiguration`)
+    to enable it. Note that, after operator upgrade, `DataPlane`s' `Deployment`s
+    will be rolled out regardless and `Pod`s will be recreated.
+    [#4953](https://github.com/Kong/kong-operator/pull/4953)
 - Add timeouts to `ControlPlane`'s health check server
   [#5023](https://github.com/Kong/kong-operator/pull/5023)
 - HybridGateway: use the shared server-side apply `TypeConverterProvider` /
@@ -160,7 +160,7 @@
   - `EventGatewayVirtualClusterConsumePolicy`
   - `EventGatewayVirtualClusterPolicy`
   - `EventGatewayVirtualClusterProducePolicy`
-  [#4824](https://github.com/Kong/kong-operator/pull/4824)
+    [#4824](https://github.com/Kong/kong-operator/pull/4824)
 
 ### Added
 
@@ -180,35 +180,35 @@
   [#4576](https://github.com/Kong/kong-operator/pull/4576)
 - AIGateway:
   - introduce `AIGatewayDataPlane` CRD with reconciler
-  [#4690](https://github.com/Kong/kong-operator/pull/4690), [#4797](https://github.com/Kong/kong-operator/pull/4797)
+    [#4690](https://github.com/Kong/kong-operator/pull/4690), [#4797](https://github.com/Kong/kong-operator/pull/4797)
   - introduce `KonnectAIGateway` CRD with reconciler
-  [#4760](https://github.com/Kong/kong-operator/pull/4760), [#4792](https://github.com/Kong/kong-operator/pull/4792), [#4848](https://github.com/Kong/kong-operator/pull/4848)
+    [#4760](https://github.com/Kong/kong-operator/pull/4760), [#4792](https://github.com/Kong/kong-operator/pull/4792), [#4848](https://github.com/Kong/kong-operator/pull/4848)
   - introduce `AIGatewayDataPlaneCertificate` CRD with reconciler
-  [#4772](https://github.com/Kong/kong-operator/pull/4772)
+    [#4772](https://github.com/Kong/kong-operator/pull/4772)
   - introduce `AIGatewayPolicy` CRD with reconciler. Configurations can be
     sourced from a key in a Kubernetes `Secret`. The value in secret should
     be valid JSON or YAML format.
-  [#4781](https://github.com/Kong/kong-operator/pull/4781)
-  [#4856](https://github.com/Kong/kong-operator/pull/4856)
+    [#4781](https://github.com/Kong/kong-operator/pull/4781)
+    [#4856](https://github.com/Kong/kong-operator/pull/4856)
   - introduce `AIGatewayAgent` CRD with reconciler.
-  [#4776](https://github.com/Kong/kong-operator/pull/4776)
+    [#4776](https://github.com/Kong/kong-operator/pull/4776)
   - introduce `AIGatewayModelProvider` CRD with reconciler. Credentials can be sourced
     from a Kubernetes `Secret`s.
     [#4793](https://github.com/Kong/kong-operator/pull/4793)
     [#4798](https://github.com/Kong/kong-operator/pull/4798)
   - introduce `AIGatewayConsumer` and `AIGatewayConsumerCredential` CRDs with
-  reconcilers. Credentials are modelled as a separate resource referencing the
-  consumer, mirroring the Konnect API hierarchy.
-  [#4804](https://github.com/Kong/kong-operator/pull/4804)
+    reconcilers. Credentials are modelled as a separate resource referencing the
+    consumer, mirroring the Konnect API hierarchy.
+    [#4804](https://github.com/Kong/kong-operator/pull/4804)
   - introduce `AIGatewayConsumerGroup` CRD with reconciler.
-  [#4822](https://github.com/Kong/kong-operator/pull/4822)
+    [#4822](https://github.com/Kong/kong-operator/pull/4822)
   - allow `AIGatewayConsumer` resources to reference `AIGatewayConsumerGroup`
     resources.
-  [#4910](https://github.com/Kong/kong-operator/pull/4910)
+    [#4910](https://github.com/Kong/kong-operator/pull/4910)
   - introduce `AIGatewayIdentityProvider` CRD with reconciler.
-  [#4852](https://github.com/Kong/kong-operator/pull/4852)
+    [#4852](https://github.com/Kong/kong-operator/pull/4852)
   - introduce `AIGatewayMCPServer` CRD with reconciler.
-  [#4836](https://github.com/Kong/kong-operator/pull/4836)
+    [#4836](https://github.com/Kong/kong-operator/pull/4836)
   - `KonnectAIGateway` now supports `spec.source: Mirror`, referencing an
     existing Konnect AI Gateway by ID (`spec.mirror.konnect.id`) instead of
     creating one. `Origin` (the default) is unchanged.
@@ -475,7 +475,7 @@
   - `X-Kic-Konnect-Sync-Serial-Number` for serial number of config sync round.
   - `X-Kic-Konnect-Sync-Start-Timestamp` for the timestamp of starting the config sync round.
   - `X-Kic-Konnect-Sync-Round-Id` for the ID to mark the config sync round.
-  [#4062](https://github.com/Kong/kong-operator/pull/4062)
+    [#4062](https://github.com/Kong/kong-operator/pull/4062)
 - Hybridgateway: support `konghq.com/upstream-policy` service annotation to set `KongUpstream` specs
   [#4040](https://github.com/Kong/kong-operator/pull/4040)
 - Add `spec.konnect.configUploadConcurrency` to set the concurrency of uploading
@@ -515,7 +515,7 @@
   - `--leader-election-lease-duration`
   - `--leader-election-renew-deadline`
   - `--leader-election-retry-period`
-  [#3345](https://github.com/Kong/kong-operator/pull/3345)
+    [#3345](https://github.com/Kong/kong-operator/pull/3345)
 - Support `Gateway.spec.infrastructure.labels` and `Gateway.spec.infrastructure.annotations`.
   Labels and annotations set on a Gateway's infrastructure are now propagated to the
   DataPlane's ingress `Service` metadata and `Deployment` pod template metadata.
@@ -810,8 +810,8 @@
   - For `HTTPRoute`, protocol now matches the attached Gateway listener protocol (and when `parentRef.sectionName` is set, it must match that specific listener). When `parentRef.sectionName` is not specified it binds to all `Gateway`s listeners.
   - For `Ingress`, default protocol relies on Kong Gateway, can be set explicitly via `konghq.com/protocols: "http"` (or `https`)
     annotation on particular `Ingress`.
-  [#4067](https://github.com/Kong/kong-operator/pull/4067)
-  [#4245](https://github.com/Kong/kong-operator/pull/4245)
+    [#4067](https://github.com/Kong/kong-operator/pull/4067)
+    [#4245](https://github.com/Kong/kong-operator/pull/4245)
 
 ## [v2.1.5]
 
@@ -1055,7 +1055,7 @@
   - Enhanced metadata labeling and reconciliation logic for HTTPRoute; added resource ownership tracking via watches.
   - Added generated schema in zz_generated_schema.go for resource types.
   - Improved and extended unit tests for hybridgateway components.
-  [2355](https://github.com/Kong/kong-operator/pull/2355)
+    [2355](https://github.com/Kong/kong-operator/pull/2355)
 - Hybrid Gateway: add Konnect specific fields to `GatewayConfiguration` CRD.
   [#2390](https://github.com/Kong/kong-operator/pull/2390)
   [#2405](https://github.com/Kong/kong-operator/pull/2405)
@@ -1082,7 +1082,7 @@
     - Handling of mixed-type slices
     - Deeply nested pruning scenarios
     - Preservation of non-map elements in slices
-  [#2413](https://github.com/Kong/kong-operator/pull/2413)
+      [#2413](https://github.com/Kong/kong-operator/pull/2413)
 - Entity Adoption support: support adopting an existing entity from Konnect to
   a Kubernetes custom resource for managing the existing entity by KO.
   - Add adoption options to the CRDs supporting adopting entities from Konnect.
@@ -1095,8 +1095,8 @@
       If they differ, adoption fails and the operator does not take ownership until
       the spec is aligned.
     - `override`: The operator overrides the remote entity with the spec in the CR.
-    [#2421](https://github.com/Kong/kong-operator/pull/2421)
-    [#2424](https://github.com/Kong/kong-operator/pull/2424)
+      [#2421](https://github.com/Kong/kong-operator/pull/2421)
+      [#2424](https://github.com/Kong/kong-operator/pull/2424)
   - Implement the general handling process of adopting an existing entity and
     adoption procedure for `KongService`s in `match` and `override` mode.
     [#2424](https://github.com/Kong/kong-operator/pull/2424)
@@ -1121,7 +1121,7 @@
   - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
   - Improved event mapping and indexing logic for efficient reconciliation.
   - Added unit tests for new watch and index logic.
-  [#2419](https://github.com/Kong/kong-operator/pull/2419)
+    [#2419](https://github.com/Kong/kong-operator/pull/2419)
 - Provision hybrid Gateway: implement support for provisioning hybrid Gateways with
   gateway api `Gateway` and `GatewayConfiguration` resources.
   [#2457](https://github.com/Kong/kong-operator/pull/2457)
@@ -1495,11 +1495,11 @@
   - `failed` for configuration in the last failed application.
   - `fallback` for configuration applied in the last fallback procedure.
   - `raw-error` for raw errors returned from the dataplane in the last failed
-     application.
+    application.
   - `diff-report` for summaries of differences between the last applied
-     configuration and the confiugration in the dataplane before that application.
-     It requires the `ControlPlane` set `spec.configDump.dumpSensitive` to `enabled`.
-  [#1894](https://github.com/Kong/kong-operator/pull/1894)
+    configuration and the confiugration in the dataplane before that application.
+    It requires the `ControlPlane` set `spec.configDump.dumpSensitive` to `enabled`.
+    [#1894](https://github.com/Kong/kong-operator/pull/1894)
 - Introduce the flag `--watch-namespaces` to specify which namespaces the operator
   should watch for configuration resources.
   The default value is `""` which makes the operator watch all namespaces.
@@ -1588,7 +1588,7 @@
     for simplified logging).
   - `--validate-images` (or `GATEWAY_OPERATOR_VALIDATE_IMAGES` env var) to enable ControlPlane and DataPlane image
     validation (it's set by default to `true`).
-  [#1435](https://github.com/kong/kong-operator/pull/1435)
+    [#1435](https://github.com/kong/kong-operator/pull/1435)
 - Add support for `-enforce-config` for `ControlPlane`'s `ValidatingWebhookConfiguration`.
   This allows to use operator's `ControlPlane` resources in AKS clusters.
   [#1512](https://github.com/kong/kong-operator/pull/1512)
@@ -1727,7 +1727,7 @@
 - Added prometheus metrics for Konnect entity operations in the metrics server:
   - `gateway_operator_konnect_entity_operation_count` for number of operations.
   - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.
-  [#953](https://github.com/kong/kong-operator/pull/953)
+    [#953](https://github.com/kong/kong-operator/pull/953)
 - Added support for `KonnectCloudGatewayNetwork` CRD which can manage Konnect
   Cloud Gateway Network entities.
   [#1136](https://github.com/kong/kong-operator/pull/1136)
@@ -1959,8 +1959,8 @@
   - `KongRoute` [#644](https://github.com/kong/kong-operator/pull/644)
   - `KongConsumer` [#676](https://github.com/kong/kong-operator/pull/676)
   - `KongConsumerGroup` [#684](https://github.com/kong/kong-operator/pull/684)
-  These `KongPluginBinding`s are taken by the `KongPluginBinding` reconciler
-  to create the corresponding plugin objects in Konnect.
+    These `KongPluginBinding`s are taken by the `KongPluginBinding` reconciler
+    to create the corresponding plugin objects in Konnect.
 - `KongConsumer` associated with `ConsumerGroups` is now reconciled in Konnect by removing/adding
   the consumer from/to the consumer groups.
   [#592](https://github.com/kong/kong-operator/pull/592)
@@ -2354,8 +2354,8 @@ Due to [golang proxy caching modules indefinitely][goproxy] we needed to retract
   which controls how operator manages `DataPlane` `Deployment`'s during and after
   a rollout. This can currently take 1 value:
   - `ScaleDownOnPromotionScaleUpOnRollout` which will scale down the `DataPlane`
-  preview deployment to 0 replicas before a rollout is triggered via a spec change.
-  [kong/kong-operator-archive#1000](https://github.com/kong/kong-operator-archive/pull/1000)
+    preview deployment to 0 replicas before a rollout is triggered via a spec change.
+    [kong/kong-operator-archive#1000](https://github.com/kong/kong-operator-archive/pull/1000)
 - Added admission webhook validation on of `DataPlane` spec updates when the
   Blue Green promotion is in progress.
   [kong/kong-operator-archive#1051](https://github.com/kong/kong-operator-archive/pull/1051)
@@ -2373,7 +2373,7 @@ Due to [golang proxy caching modules indefinitely][goproxy] we needed to retract
   [kong/kong-operator-archive#944](https://github.com/kong/kong-operator-archive/pull/944)
 - Added annotation `gateway-operator.konghq.com/last-applied-annotations` to
   resources (e.g, Ingress `Services`s) owned by `DataPlane`s to store last
-   applied annotations to the owned resource. If an annotation is present in the
+  applied annotations to the owned resource. If an annotation is present in the
   `gateway-operator.konghq.com/last-applied-annotations` annotation of an
   ingress `Service` but not present in the current specification of ingress
   `Service` annotations of the owning `DataPlane`, the annotation will be removed
@@ -2407,10 +2407,10 @@ Due to [golang proxy caching modules indefinitely][goproxy] we needed to retract
   Users who want to enable those can use the command line flags:
   - `-enable-controller-controlplane` and
   - `-enable-controller-gateway`
-  At this time, the Gateway API and `ControlPlane` resources that these
-  flags are considered a feature preview, and are not supported. Use these
-  only in non-production scenarios until these features are graduated to GA.
-  [kong/kong-operator-archive#1026](https://github.com/kong/kong-operator-archive/pull/1026)
+    At this time, the Gateway API and `ControlPlane` resources that these
+    flags are considered a feature preview, and are not supported. Use these
+    only in non-production scenarios until these features are graduated to GA.
+    [kong/kong-operator-archive#1026](https://github.com/kong/kong-operator-archive/pull/1026)
 - Bump `ControlPlane` default version to `v2.11.1` and remove support for older versions.
   To satisfy this change, use `Programmed` condition instead of `Ready` in Gateway
   Listeners status conditions to make `ControlPlane` be able to attach routes

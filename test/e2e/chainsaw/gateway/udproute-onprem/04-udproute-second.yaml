@@ -1,0 +1,64 @@
+---
+# UDP echo backend for the newer (loser) UDPRoute. Distinct POD_NAME so the
+# traffic verification step can tell which route is actually serving traffic.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ($echo_newer_name)
+  namespace: ($gateway_namespace)
+spec:
+  selector:
+    app: ($echo_newer_name)
+  ports:
+    - name: udp
+      protocol: UDP
+      port: (to_number($echo_pod_port))
+      targetPort: (to_number($echo_pod_port))
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ($echo_newer_name)
+  namespace: ($gateway_namespace)
+  labels:
+    app: ($echo_newer_name)
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ($echo_newer_name)
+  template:
+    metadata:
+      labels:
+        app: ($echo_newer_name)
+    spec:
+      containers:
+        - name: echo
+          image: ($echo_image)
+          env:
+            - name: POD_NAME
+              value: ($echo_newer_name)
+          ports:
+            - containerPort: (to_number($echo_pod_port))
+              protocol: UDP
+              name: udp
+---
+# Second UDPRoute attached to the same listener as the first.
+# Per GEP-2645 the older route (created first) wins arbitration in the
+# DataPlane; both routes still report Accepted=True at the status layer
+# and both count toward listener.AttachedRoutes.
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: ($udp_route_second_name)
+  namespace: ($gateway_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+      sectionName: udp
+  rules:
+    - backendRefs:
+        - name: ($echo_newer_name)
+          port: (to_number($echo_pod_port))

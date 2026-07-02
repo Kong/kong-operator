@@ -1,0 +1,57 @@
+# Template for creating and asserting a Gateway with a UDP (L4) listener.
+#
+# Required bindings:
+#   - gateway_name: Name of the gateway to create.
+#   - test_name: Test name used to compose the gateway class name.
+#   - namespace: Namespace where the gateway will be created.
+#   - listener_udp_port: UDP listener port (e.g., 9999).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-gateway-udp-listener
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: Gateway
+          metadata:
+            name: ($gateway_name)
+            namespace: ($namespace)
+          spec:
+            gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+            listeners:
+            - name: udp
+              protocol: UDP
+              port: (to_number($listener_udp_port))
+              allowedRoutes:
+                kinds:
+                - group: gateway.networking.k8s.io
+                  kind: UDPRoute
+    - assert:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: Gateway
+          metadata:
+            name: ($gateway_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Accepted']):
+              - status: 'True'
+                reason: Accepted
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (conditions[?type == 'DataPlaneReady']):
+              - status: 'True'
+                reason: Ready
+            (listeners[?name == 'udp']):
+              - (conditions[?type == 'Accepted']):
+                  - status: 'True'
+                    reason: Accepted
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                supportedKinds:
+                  - group: gateway.networking.k8s.io
+                    kind: UDPRoute
