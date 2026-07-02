@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPortalCustomizationAPISpec_ToCreatePortalCustomization(t *testing.T) {
+func TestPortalCustomizationAPISpec_ToCreatePortalCustomizationV3(t *testing.T) {
 	spec := &PortalCustomizationAPISpec{
 		Css: new("test-value"),
 		Layout: "test-value",
 		Robots: new("test-value"),
 	}
-	result, err := spec.ToCreatePortalCustomization()
+	result, err := spec.ToCreatePortalCustomizationV3()
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
@@ -30,13 +30,13 @@ func TestPortalCustomizationAPISpec_ToCreatePortalCustomization(t *testing.T) {
 	require.Equal(t, "test-value", payload["robots"])
 }
 
-func TestPortalCustomizationAPISpec_ToUpdatePortalCustomization(t *testing.T) {
+func TestPortalCustomizationAPISpec_ToUpdatePortalCustomizationV3(t *testing.T) {
 	spec := &PortalCustomizationAPISpec{
 		Css: new("test-value"),
 		Layout: "test-value",
 		Robots: new("test-value"),
 	}
-	result, err := spec.ToUpdatePortalCustomization()
+	result, err := spec.ToUpdatePortalCustomizationV3()
 	require.NoError(t, err)
 	require.NotNil(t, result)
 

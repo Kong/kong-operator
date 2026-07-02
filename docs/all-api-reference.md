@@ -2823,7 +2823,7 @@ EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVi
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ | The name of the virtual cluster. |
 | `namespace` _[VirtualClusterNamespace](#configuration-konghq-com-v1alpha1-types-virtualclusternamespace)_ | Namespace allows to implement multitenancy using a single backend cluster. It allows to either hide or enforce a static prefix on resources (topics, consumer group IDs, transaction IDs). |
-| `topicAliases` _[VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `topicAliases` _[VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -3128,6 +3128,79 @@ EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtu
 _Appears in:_
 
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
+
+#### FetchKongIdentityPrincipal
+
+
+FetchKongIdentityPrincipal Fetches principal metadata from Kong Identity
+after successful authentication.
+The principal is looked up by a custom key matched against the authenticated
+identity.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | Kong Identity directory to use for principal lookup. |
+| `failureMode` _[FetchKongIdentityPrincipalFailureMode](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipalfailuremode)_ | Behavior when the Kong Identity principal lookup fails. * `error` - fail the authentication if the principal lookup fails. * `ignore` - proceed without principal metadata if the lookup fails.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `fetchBy` _[FetchKongIdentityPrincipalFetchBy](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipalfetchby)_ | Defines how to look up the principal in Kong Identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationClientCertificate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclientcertificate)
+- [VirtualClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslplain)
+- [VirtualClusterAuthenticationSaslScram](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslscram)
+
+#### FetchKongIdentityPrincipalFailureMode
+
+_Underlying type:_ `string`
+
+FetchKongIdentityPrincipalFailureMode Behavior when the Kong Identity
+principal lookup fails.
+* `error` - fail the authentication if the principal lookup fails.
+* `ignore` - proceed without principal metadata if the lookup fails.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+
+_Appears in:_
+
+- [FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)
+- [FetchKongIdentityPrincipalOauthBearer](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipaloauthbearer)
+
+#### FetchKongIdentityPrincipalFetchBy
+
+
+FetchKongIdentityPrincipalFetchBy Defines how to look up the principal in
+Kong Identity.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _string_ | The metadata key in Kong Identity to match the authenticated identity against. Value for the lookup is a `username` in case of `sasl_plain` or `sasl_scram`. In case of `client_certificate` it's a principal mapped by the listener TLSServer policy. |
+
+_Appears in:_
+
+- [FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)
+
+#### FetchKongIdentityPrincipalOauthBearer
+
+
+FetchKongIdentityPrincipalOauthBearer Fetches principal metadata from Kong
+Identity after successful OAUTHBEARER authentication.
+The principal is looked up by the iss and sub claims from the JWT token.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | Kong Identity directory to use for principal lookup. |
+| `failureMode` _[FetchKongIdentityPrincipalFailureMode](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipalfailuremode)_ | Behavior when the Kong Identity principal lookup fails. * `error` - fail the authentication if the principal lookup fails. * `ignore` - proceed without principal metadata if the lookup fails.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationOauthBearer](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)
 
 #### ForwardToClusterByPortMappingConfig
 
@@ -5017,6 +5090,9 @@ authentication scheme for the virtual cluster.<br /><br />**Requires a minimum r
 
 
 
+| Field | Description |
+| --- | --- |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -5051,6 +5127,7 @@ for the virtual cluster.
 | Field | Description |
 | --- | --- |
 | `claimsMapping` _[VirtualClusterAuthenticationClaimsMapping](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipalOauthBearer](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipaloauthbearer)_ | Fetches principal metadata from Kong Identity after successful OAUTHBEARER authentication. The principal is looked up by the iss and sub claims from the JWT token.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `jwks` _[VirtualClusterAuthenticationJWKS](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationjwks)_ | JSON Web Key Set configuration for verifying token signatures. |
 | `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of<br /><br />validation * validate_forward - pass authentication from the client through proxy to the backend cluster.<br /><br />Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster<br /><br />using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
 | `validate` _[VirtualClusterAuthenticationValidate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)_ | Validation rules. |
@@ -5086,6 +5163,7 @@ the virtual cluster containing principals with username and password.
 
 | Field | Description |
 | --- | --- |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `mediation` _string_ | The mediation type for SASL/PLAIN authentication. |
 | `principals` _[VirtualClusterAuthenticationPrincipal](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)_ | List of principals to be able to authenticate with, used with `terminate` mediation. |
 
@@ -5104,6 +5182,7 @@ the virtual cluster.
 | Field | Description |
 | --- | --- |
 | `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -5364,8 +5443,8 @@ _Appears in:_
 #### VirtualClusterTopicAlias
 
 
-VirtualClusterTopicAlias **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />A topic alias maps an alias name to a namespace-visible topic name.
+VirtualClusterTopicAlias A topic alias maps an alias name to a
+namespace-visible topic name.
 Clients can produce to, consume from, and discover the topic under the alias
 name.
 The original topic name remains accessible.<br /><br />**Requires a minimum runtime version of `1.2`**.
