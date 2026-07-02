@@ -75,6 +75,8 @@
   [#4713](https://github.com/Kong/kong-operator/pull/4713)
 - Hybridgateway: treat malformed annotations as errors
   [#4530](https://github.com/Kong/kong-operator/pull/4530)
+- Conformance: enable GRPCRoute conformance tests for on-prem.
+  [#4673](https://github.com/Kong/kong-operator/pull/4673)
 
 ### Fixes
 

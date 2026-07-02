@@ -49,11 +49,14 @@ var commonSupportedFeatures = []features.FeatureName{
 
 // GetSupportedFeatures returns the supported features for the given router type.
 func GetSupportedFeatures(routerType consts.RouterFlavor) ([]features.FeatureName, error) {
+	// Return a clone so callers cannot mutate the package-level slices
+	// (e.g. via slices.Sort), which are shared across all callers and would
+	// otherwise cause data races.
 	switch routerType {
 	case consts.RouterFlavorTraditionalCompatible:
-		return traditionalCompatibleRouterSupportedFeatures, nil
+		return slices.Clone(traditionalCompatibleRouterSupportedFeatures), nil
 	case consts.RouterFlavorExpressions:
-		return expressionsRouterSupportedFeatures, nil
+		return slices.Clone(expressionsRouterSupportedFeatures), nil
 	default:
 		return nil, errors.New("unsupported router type")
 	}

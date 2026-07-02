@@ -2,6 +2,7 @@ package subtranslator
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -33,6 +34,38 @@ func getGRPCMatchDefaults() (
 			gatewayapi.GRPCMethodMatchExact:             "",
 			gatewayapi.GRPCMethodMatchRegularExpression: ".+",
 		}
+}
+
+func generateKongPathFromGRPCMethodMatch(methodMatch *gatewayapi.GRPCMethodMatch) *string {
+	serviceMap, methodMap := getGRPCMatchDefaults()
+	var method, service string
+	matchMethod := methodMatch.Method
+	matchService := methodMatch.Service
+	matchType := gatewayapi.GRPCMethodMatchExact
+	if methodMatch.Type != nil {
+		matchType = *methodMatch.Type
+	}
+	if matchMethod == nil {
+		method = methodMap[matchType]
+	} else {
+		method = *matchMethod
+	}
+	if matchService == nil {
+		service = serviceMap[matchType]
+	} else {
+		service = *matchService
+	}
+
+	if matchType == gatewayapi.GRPCMethodMatchExact {
+		if matchService != nil {
+			service = regexp.QuoteMeta(service)
+		}
+		if matchMethod != nil {
+			method = regexp.QuoteMeta(method) + "$"
+		}
+	}
+
+	return new(KongPathRegexPrefix + fmt.Sprintf("/%s/%s", service, method))
 }
 
 func GenerateKongRoutesFromGRPCRouteRule(
@@ -93,30 +126,8 @@ func GenerateKongRoutesFromGRPCRouteRule(
 				Hosts:     getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute, storer),
 			},
 		}
-
 		if match.Method != nil {
-			serviceMap, methodMap := getGRPCMatchDefaults()
-			var method, service string
-			matchMethod := match.Method.Method
-			matchService := match.Method.Service
-			var matchType gatewayapi.GRPCMethodMatchType
-			if match.Method.Type == nil {
-				matchType = gatewayapi.GRPCMethodMatchExact
-			} else {
-				matchType = *match.Method.Type
-			}
-			if matchMethod == nil {
-				method = methodMap[matchType]
-			} else {
-				method = *matchMethod
-			}
-			if matchService == nil {
-				service = serviceMap[matchType]
-			} else {
-				service = *matchService
-			}
-			path := new(KongPathRegexPrefix + fmt.Sprintf("/%s/%s", service, method))
-			r.Paths = append(r.Paths, path)
+			r.Paths = append(r.Paths, generateKongPathFromGRPCMethodMatch(match.Method))
 		}
 
 		r.Headers = map[string][]string{}
@@ -139,10 +150,23 @@ func GenerateKongRoutesFromGRPCRouteRule(
 // by kong.Route{}.
 // The hostname field is optional. If not specified, the configured value will be obtained from parentRefs.
 func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []*string {
+	hostnames := getEffectiveHostnamesForGRPCRoute(grpcroute, storer)
+	if len(hostnames) == 0 {
+		return nil
+	}
+	return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {
+		return new(string(h))
+	})
+}
+
+// getEffectiveHostnamesForGRPCRoute returns the hostnames that should be used to
+// match traffic for a GRPCRoute. The hostname field is optional in the GRPCRoute
+// spec; if specified, those hostnames are used directly. If not specified, the
+// hostnames are inherited from the listeners of the Gateways referenced in the
+// GRPCRoute's parentRefs (honoring sectionName when set).
+func getEffectiveHostnamesForGRPCRoute(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []gatewayapi.Hostname {
 	if len(grpcroute.Spec.Hostnames) > 0 {
-		return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
-			return new(string(h))
-		})
+		return grpcroute.Spec.Hostnames
 	}
 
 	// If no hostnames are specified, we will use the hostname from the Gateway
@@ -194,9 +218,7 @@ func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRout
 		}
 	}
 
-	return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {
-		return new(string(h))
-	})
+	return hostnames
 }
 
 func generateTagsForGRPCRoute(grpcroute *gatewayapi.GRPCRoute) []*string {
