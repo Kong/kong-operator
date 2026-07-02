@@ -139,6 +139,45 @@ func onlyServiceName(t *testing.T, groups map[string][]httpRouteRuleMeta) string
 	return ""
 }
 
+func TestGroupRulesCombinedSuffixedNameRespectsLengthLimit(t *testing.T) {
+	// Build a base service name that is valid on its own but close to maxKongServiceNameLength,
+	// so appending ".timeout.<ms>" would push it over the limit unless the final name is trimmed.
+	ns := strings.Repeat("n", 63)
+	backends := []gatewayapi.HTTPBackendRef{
+		{BackendRef: gatewayapi.BackendRef{BackendObjectReference: gatewayapi.BackendObjectReference{Name: gatewayapi.ObjectName(strings.Repeat("a", 200))}}},
+		{BackendRef: gatewayapi.BackendRef{BackendObjectReference: gatewayapi.BackendObjectReference{Name: gatewayapi.ObjectName(strings.Repeat("b", 95))}}},
+	}
+	routeWith := func(name string, timeout gatewayapi.Duration) *gatewayapi.HTTPRoute {
+		return &gatewayapi.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+			Spec: gatewayapi.HTTPRouteSpec{
+				Rules: []gatewayapi.HTTPRouteRule{{
+					BackendRefs: backends,
+					Timeouts:    &gatewayapi.HTTPRouteTimeouts{BackendRequest: &timeout},
+				}},
+			},
+		}
+	}
+
+	// Sanity: the base name (no suffix) is valid, but base+suffix would exceed the limit.
+	base := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{routeWith("route-a", gatewayapi.Duration("500ms"))}, true)
+	baseName := onlyServiceName(t, base)
+	require.LessOrEqual(t, len(baseName), maxKongServiceNameLength)
+	require.Greater(t, len(baseName)+len(".timeout.500"), maxKongServiceNameLength,
+		"test setup: base+suffix must exceed the limit to exercise the trim path")
+
+	// Same backends, conflicting timeouts -> split; every resulting name must respect the limit.
+	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+		routeWith("route-a", gatewayapi.Duration("500ms")),
+		routeWith("route-b", gatewayapi.Duration("1s")),
+	}, true)
+	require.Len(t, groups, 2)
+	for name := range groups {
+		require.LessOrEqualf(t, len(name), maxKongServiceNameLength,
+			"split KongService name must respect the length limit, got %d chars", len(name))
+	}
+}
+
 // hasServiceNameWithSuffix reports whether any service name ends with the given suffix.
 func hasServiceNameWithSuffix(groups map[string][]httpRouteRuleMeta, suffix string) bool {
 	for name := range groups {

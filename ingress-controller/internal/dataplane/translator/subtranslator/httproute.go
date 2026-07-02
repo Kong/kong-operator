@@ -480,7 +480,10 @@ func splitServiceGroupsByBackendRequestTimeout(groups map[string][]httpRouteRule
 			continue
 		}
 		for timeoutKey, rules := range rulesByTimeout {
-			result[serviceName+backendRequestTimeoutServiceNameSuffix(timeoutKey)] = rules
+			// All rules in the group share the same backendRefs, so any of them produces the same
+			// base name; use the first to build the length-safe suffixed name.
+			splitName := rules[0].kongServiceNameByBackendRefsWithSuffix(backendRequestTimeoutServiceNameSuffix(timeoutKey))
+			result[splitName] = rules
 		}
 	}
 	return result
@@ -571,10 +574,19 @@ func backendRequestTimeoutServiceNameSuffix(timeoutKey string) string {
 //
 // We do not want to generate a too long service name, so we trim the name if the length generated name exceeds the limit (511 chars).
 func (m httpRouteRuleMeta) getKongServiceNameByBackendRefs() string {
+	return m.kongServiceNameByBackendRefsWithSuffix("")
+}
+
+// kongServiceNameByBackendRefsWithSuffix builds the Kong service name from the rule's backendRefs
+// (see getKongServiceNameByBackendRefs) and appends the given suffix (e.g. ".timeout.<ms>"). The
+// maxKongServiceNameLength limit is enforced on the final, suffixed name, so a base name close to
+// the limit cannot become an invalid (overlong) Kong service/host name once a suffix is added.
+func (m httpRouteRuleMeta) kongServiceNameByBackendRefsWithSuffix(suffix string) string {
 	backendRefs := m.Rule.BackendRefs
 	// The host of service cannot end with `.`, so we append a `_` for rules with empty backends.
+	// This name (and the short suffix) is always well within the limit, so no trimming is needed.
 	if len(backendRefs) == 0 {
-		return fmt.Sprintf("httproute.%s.svc._", m.parentRoute.Namespace)
+		return fmt.Sprintf("httproute.%s.svc._%s", m.parentRoute.Namespace, suffix)
 	}
 
 	backendNames := make([]string, 0, len(backendRefs))
@@ -602,9 +614,10 @@ func (m httpRouteRuleMeta) getKongServiceNameByBackendRefs() string {
 	// Sort the backend names to guarantee that the same set of backend {namespace, name, port, weight}
 	// generates the same name.
 	sort.Strings(backendNames)
-	name := fmt.Sprintf("httproute.%s.svc.%s", m.parentRoute.Namespace, strings.Join(backendNames, "_"))
+	name := fmt.Sprintf("httproute.%s.svc.%s%s", m.parentRoute.Namespace, strings.Join(backendNames, "_"), suffix)
 	// If the length of the generated service name exceeds the limit, we trim the service name by only keeping the first backend
 	// and append the `combined.<hash>` suffix to prevent conflicts, where hash is the SHA256 digest of the original name.
+	// The hash is computed over the full suffixed name, so distinct suffixes (e.g. different timeouts) still yield distinct names.
 	if len(name) > maxKongServiceNameLength {
 		hash := sha256.Sum256([]byte(name))
 		// We have already returned when there are no backends in the rule, so it is safe to use backendNames[0].
