@@ -1,0 +1,274 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: udproute-onprem
+spec:
+  description: |
+    Validates that an operator-managed on-prem Gateway supports UDPRoute by:
+    1. Creating a GatewayConfiguration and GatewayClass for on-prem mode.
+    2. Creating a Gateway with a UDP listener whose SupportedKinds includes UDPRoute.
+    3. Attaching a UDPRoute (kong/go-echo backend) and verifying AttachedRoutes
+       increments to 1, the UDPRoute is Accepted/ResolvedRefs=True, and UDP
+       traffic reaches the older backend.
+    4. Attaching a second UDPRoute to the same listener and verifying GEP-2645
+       listener AttachedRoutes=2 behavior.
+    5. Attaching a third UDPRoute to a different listener so it is pushed to
+       the DataPlane and refreshes object reports for the second route. Then
+       verify all routes report Accepted=True at the K8s status layer and UDP
+       traffic still flows to the older same-listener winner.
+    6. Deleting the winner (older) UDPRoute and verifying AttachedRoutes drops
+       to 1, the loser remains attached, and UDP traffic now reaches the
+       newer backend (the loser is promoted to winner).
+    7. Deleting the remaining UDPRoutes and verifying AttachedRoutes decrement to 0.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_name
+      value: (join('-', [($namespace), 'gateway']))
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: udp_route_name
+      value: udproute-onprem
+    - name: udp_route_second_name
+      value: udproute-onprem-second
+    - name: udp_route_third_name
+      value: udproute-onprem-third
+    - name: echo_older_name
+      value: udp-echo-older
+    - name: echo_newer_name
+      value: udp-echo-newer
+    - name: echo_third_name
+      value: udp-echo-third
+    - name: echo_image
+      value: kong/go-echo:0.5.0
+    - name: echo_pod_port
+      value: "1026"
+    - name: listener_udp_port
+      value: "9999"
+    - name: listener_udp_extra_port
+      value: "9998"
+
+  steps:
+    - name: Create-gateway-configuration
+      description: Create an on-prem GatewayConfiguration (no Konnect auth).
+      try:
+        - apply:
+            file: 01-gatewayconfiguration.yaml
+        - assert:
+            file: 01-gatewayconfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create a GatewayClass pointing at the on-prem GatewayConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-gateway
+      description: Create an operator-managed UDP Gateway and verify UDPRoute is advertised as supported.
+      try:
+        - apply:
+            file: 02-gateway.yaml
+        - assert:
+            file: 02-assert-gateway-without-udproute.yaml
+
+    - name: Create-udproute
+      description: Create the first UDPRoute (older, GEP-2645 winner) with its own go-echo backend.
+      try:
+        - apply:
+            file: 03-udproute.yaml
+        - assert:
+            file: 03-assert-gateway-with-udproute.yaml
+
+    - name: Verify-udp-traffic-reaches-older
+      description: |
+        With only the older route attached, UDP traffic to the listener must
+        reach the echo-older backend.
+      try:
+        - script:
+            env:
+              - name: RESOURCE_NAME
+                value: ($gateway_name)
+              - name: RESOURCE_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              bash ../../common/scripts/proxy_ip_address.sh
+            outputs:
+              - name: proxy
+                value: (json_parse($stdout))
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy.proxy_ip_address)
+              - name: PROXY_PORT
+                value: ($listener_udp_port)
+              - name: EXPECTED_POD
+                value: ($echo_older_name)
+            content: |
+              bash ../../common/scripts/verify_udp_response.sh
+
+    - name: Create-second-udproute
+      description: |
+        Create a second UDPRoute attached to the same listener with its own
+        distinct backend (echo-newer). Per GEP-2645, the older route wins
+        arbitration; both routes count toward listener.AttachedRoutes.
+      try:
+        - apply:
+            file: 04-udproute-second.yaml
+        - assert:
+            file: 04-assert-gateway-with-two-udproutes.yaml
+
+    - name: Create-third-udproute
+      description: |
+        Create a third UDPRoute attached to a different listener. This route is
+        pushed to the DataPlane and causes a config/report refresh, allowing the
+        second same-listener route to receive status even though it lost
+        arbitration.
+      try:
+        - apply:
+            file: 05-udproute-third.yaml
+        - assert:
+            file: 05-assert-gateway-with-three-udproutes.yaml
+
+    - name: Verify-udp-traffic-still-reaches-older
+      description: |
+        With both same-listener routes attached, UDP traffic to the original
+        listener must continue reaching the older backend — proving the loser
+        is suppressed at the DataPlane.
+      try:
+        - script:
+            env:
+              - name: RESOURCE_NAME
+                value: ($gateway_name)
+              - name: RESOURCE_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              bash ../../common/scripts/proxy_ip_address.sh
+            outputs:
+              - name: proxy
+                value: (json_parse($stdout))
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy.proxy_ip_address)
+              - name: PROXY_PORT
+                value: ($listener_udp_port)
+              - name: EXPECTED_POD
+                value: ($echo_older_name)
+            content: |
+              bash ../../common/scripts/verify_udp_response.sh
+
+    - name: Verify-udp-traffic-reaches-third
+      description: |
+        The third route is attached to the extra listener and must receive UDP
+        traffic on the extra listener port.
+      try:
+        - script:
+            env:
+              - name: RESOURCE_NAME
+                value: ($gateway_name)
+              - name: RESOURCE_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              bash ../../common/scripts/proxy_ip_address.sh
+            outputs:
+              - name: proxy
+                value: (json_parse($stdout))
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy.proxy_ip_address)
+              - name: PROXY_PORT
+                value: ($listener_udp_extra_port)
+              - name: EXPECTED_POD
+                value: ($echo_third_name)
+            content: |
+              bash ../../common/scripts/verify_udp_response.sh
+
+    - name: Delete-winner-udproute
+      description: |
+        Delete the original (older, winner) UDPRoute. The remaining (loser)
+        UDPRoute is now the sole attached route and gets promoted to winner;
+        the original listener's AttachedRoutes drops to 1.
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: UDPRoute
+              namespace: ($gateway_namespace)
+              name: ($udp_route_name)
+        - assert:
+            file: 06-assert-gateway-after-winner-deleted.yaml
+
+    - name: Verify-udp-traffic-reaches-newer
+      description: |
+        After deleting the older route, the newer route is promoted to winner;
+        UDP traffic must now reach the echo-newer backend.
+      try:
+        - script:
+            env:
+              - name: RESOURCE_NAME
+                value: ($gateway_name)
+              - name: RESOURCE_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              bash ../../common/scripts/proxy_ip_address.sh
+            outputs:
+              - name: proxy
+                value: (json_parse($stdout))
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy.proxy_ip_address)
+              - name: PROXY_PORT
+                value: ($listener_udp_port)
+              - name: EXPECTED_POD
+                value: ($echo_newer_name)
+            content: |
+              bash ../../common/scripts/verify_udp_response.sh
+
+    - name: Delete-loser-udproute
+      description: Delete the same-listener loser and verify only the third route remains attached.
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: UDPRoute
+              namespace: ($gateway_namespace)
+              name: ($udp_route_second_name)
+        - assert:
+            file: 07-assert-gateway-after-loser-deleted.yaml
+
+    - name: Delete-third-udproute
+      description: Delete the third UDPRoute and verify both Gateway listeners detach all routes.
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: UDPRoute
+              namespace: ($gateway_namespace)
+              name: ($udp_route_third_name)
+        - assert:
+            file: 02-assert-gateway-without-udproute.yaml
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-udproute-onprem
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

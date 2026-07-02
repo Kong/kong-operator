@@ -1,0 +1,97 @@
+---
+# Listener counts both same-listener UDPRoutes per spec, regardless of GEP-2645
+# arbitration outcome. The extra listener is still unused at this point.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($gateway_namespace)
+status:
+  (conditions[?type == 'Accepted']):
+    - status: 'True'
+      reason: Accepted
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'DataPlaneReady']):
+    - status: 'True'
+      reason: Ready
+  (listeners[?name == 'udp']):
+    - attachedRoutes: 2
+      (conditions[?type == 'Accepted']):
+        - status: 'True'
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: 'True'
+          reason: ResolvedRefs
+      (conditions[?type == 'Programmed']):
+        - status: 'True'
+          reason: Programmed
+      (supportedKinds[?kind == 'UDPRoute']):
+        - group: gateway.networking.k8s.io
+          kind: UDPRoute
+  (listeners[?name == 'udp-extra']):
+    - attachedRoutes: 0
+      (conditions[?type == 'Accepted']):
+        - status: 'True'
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: 'True'
+          reason: ResolvedRefs
+      (conditions[?type == 'Programmed']):
+        - status: 'True'
+          reason: Programmed
+      (supportedKinds[?kind == 'UDPRoute']):
+        - group: gateway.networking.k8s.io
+          kind: UDPRoute
+---
+# Winner UDPRoute (older creationTimestamp) is Accepted.
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: ($udp_route_name)
+  namespace: ($gateway_namespace)
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        sectionName: udp
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: 'True'
+          reason: Accepted
+      (conditions[?type == 'Programmed']):
+        - status: 'True'
+          reason: ConfiguredInGateway
+      (conditions[?type == 'ResolvedRefs']):
+        - status: 'True'
+          reason: ResolvedRefs
+---
+# Loser UDPRoute (newer creationTimestamp on the same listener) is Accepted too.
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: ($udp_route_second_name)
+  namespace: ($gateway_namespace)
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        sectionName: udp
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: 'True'
+          reason: Accepted
+      (conditions[?type == 'Programmed']):
+        # Loser UDPRoute won't be pushed to DataPlane, configuration won't be changed, status won't be reported
+        # Will be True until DataPlane's configuration change. (This case will be simulated by creating a third UDPRoute
+        # attached to a different listener.)
+        - status: Unknown
+          reason: Unknown
+      (conditions[?type == 'ResolvedRefs']):
+        - status: 'True'
+          reason: ResolvedRefs
