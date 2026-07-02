@@ -81,6 +81,9 @@ jobs:
           --set env.enable_controller_kegdataplane=true \
           --wait
 
+    - name: DNS lookup for us.control-plane.konghq.tech
+      run: dig us.control-plane.konghq.tech
+
     - name: run chainsaw e2e tests
       id: chainsaw-tests
       env:
