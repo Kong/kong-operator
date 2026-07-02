@@ -3,6 +3,7 @@ package namegen
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -10,6 +11,31 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
+
+// MaxKongServiceTimeout is the largest timeout Kong accepts for Service connect, read, and
+// write timeouts. Kong has no "disable" value, so a zero-duration backendRequest timeout
+// (which the Gateway API defines as "no timeout") is mapped to this as the closest emulation.
+const MaxKongServiceTimeout int64 = 2147483646
+
+// BackendRequestTimeoutMilliseconds returns the Kong service timeout (in milliseconds) derived
+// from an HTTPRoute rule's spec.timeouts.backendRequest, or nil when the rule sets no
+// backendRequest timeout (or it cannot be parsed). A zero duration maps to MaxKongServiceTimeout
+// per the Gateway API semantics where "0s" disables the timeout.
+func BackendRequestTimeoutMilliseconds(rule gatewayv1.HTTPRouteRule) *int64 {
+	if rule.Timeouts == nil || rule.Timeouts.BackendRequest == nil {
+		return nil
+	}
+	duration, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+	// The value is CEL-validated to a strict subset of time.ParseDuration, so this should not happen.
+	if err != nil {
+		return nil
+	}
+	ms := duration.Milliseconds()
+	if duration == 0 {
+		ms = MaxKongServiceTimeout
+	}
+	return &ms
+}
 
 const (
 	// httpProcolPrefix is the prefix used for HTTP-related resources.
@@ -178,6 +204,20 @@ func hashForHTTPRouteRuleServiceLikeName(route *gwtypes.HTTPRoute, rule gatewayv
 			Filters:        rule.Filters,
 		}
 		hash = utils.Hash32(zeroBackendRuleIdentity)
+	}
+
+	// Fold the backendRequest timeout into the hash so rules sharing the same backends but
+	// requesting different timeouts map to distinct KongServices (a KongService can only carry a
+	// single timeout). Rules without a backendRequest timeout keep the original hash, so enabling
+	// the feature does not rename existing KongServices.
+	if timeoutMS := BackendRequestTimeoutMilliseconds(rule); timeoutMS != nil {
+		hash = utils.Hash32(struct {
+			Base                    string
+			BackendRequestTimeoutMS int64
+		}{
+			Base:                    hash,
+			BackendRequestTimeoutMS: *timeoutMS,
+		})
 	}
 
 	return hash
