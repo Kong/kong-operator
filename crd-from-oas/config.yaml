@@ -233,6 +233,21 @@ apiGroupVersions:
           path: github.com/kong/kong-operator/v2/api/common/v1alpha1
           alias: commonv1alpha1
     types:
+      # AI Gateway APIs
+      - path: /v1/ai-gateways
+        name: AIGatewayControlPlane
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewaysSDK
+            fieldName: AIGateways
+          listCallStylePositional: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayRequest
+          delete: {}
+        reconciler: {}
+
       # Event Gateway APIs
       - path: /v1/event-gateways
         name: KonnectEventGateway

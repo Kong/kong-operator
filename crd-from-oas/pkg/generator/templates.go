@@ -2166,6 +2166,8 @@ func get{{.Entity}}ForUID(
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 		Tags: new(UIDLabelForObject(obj)),
 	})
+{{- else if .ListCallStylePositional}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
 {{- else}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		Tags: new(UIDLabelForObject(obj)),
@@ -2204,6 +2206,8 @@ func get{{.Entity}}ForUID(
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 	})
+{{- else if .ListCallStylePositional}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
 {{- else}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
 {{- end}}
@@ -2249,6 +2253,8 @@ func get{{.Entity}}ForUID(
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 	})
+{{- else if .ListCallStylePositional}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
 {{- else}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
 {{- end}}
@@ -2316,6 +2322,8 @@ func get{{.Entity}}ForUID(
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 	})
+{{- else if .ListCallStylePositional}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
 {{- else}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
 {{- end}}
@@ -2351,6 +2359,8 @@ func get{{.Entity}}ForUID(
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 	})
+{{- else if .ListCallStylePositional}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
 {{- else}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
 {{- end}}

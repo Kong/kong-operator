@@ -21,6 +21,8 @@ func reconciliationWatchOptionsForEntity[
 	ent TEnt,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	switch any(ent).(type) {
+	case *konnectv1alpha1.AIGatewayControlPlane:
+		return AIGatewayControlPlaneReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return EventGatewayBackendClusterReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:

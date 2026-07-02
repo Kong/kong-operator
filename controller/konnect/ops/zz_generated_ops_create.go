@@ -27,6 +27,8 @@ func CreateGeneratedOps[
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
+	case *konnectv1alpha1.AIGatewayControlPlane:
+		return createAIGatewayControlPlane(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return createEventGatewayBackendCluster(ctx, cl, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:

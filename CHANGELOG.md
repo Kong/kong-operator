@@ -61,8 +61,11 @@
   [#4610](https://github.com/Kong/kong-operator/pull/4610)
 - API: add PrintColumns for KongTarget upstream and target fields.
   [#4576](https://github.com/Kong/kong-operator/pull/4576)
-- AI Gateway: introduce `AIGatewayDataPlane` CRD
+- AIGateway:
+  - introduce `AIGatewayDataPlane` CRD
   [#4690](https://github.com/Kong/kong-operator/pull/4690)
+  - introduce `AIGatewayControlPlane` CRD with reconciler
+  [#4760](https://github.com/Kong/kong-operator/pull/4760)
 - GRPCRoute: enable GRPCRoute for on-prem gateway
   [#4364](https://github.com/Kong/kong-operator/pull/4364)
 
