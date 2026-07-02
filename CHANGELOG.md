@@ -2,7 +2,9 @@
 
 ## Table of Contents
 
+- [v2.2.1](#v221)
 - [v2.2.0](#v220)
+- [v2.1.8](#v218)
 - [v2.1.7](#v217)
 - [v2.1.6](#v216)
 - [v2.1.5](#v215)
@@ -59,6 +61,8 @@
   [#4610](https://github.com/Kong/kong-operator/pull/4610)
 - API: add PrintColumns for KongTarget upstream and target fields.
   [#4576](https://github.com/Kong/kong-operator/pull/4576)
+- AI Gateway: introduce `AIGatewayDataPlane` CRD
+  [#4690](https://github.com/Kong/kong-operator/pull/4690)
 
 ### Changed
 
@@ -66,8 +70,9 @@
   because for underlying `KonnectGatewayControlPlane` these fields
   have been always immutable.
   [#4599](https://github.com/Kong/kong-operator/pull/4599)
-- Bump sigs.k8s.io/gateway-api from v1.5.1 to v1.6.0-rc.1.
+- Bump sigs.k8s.io/gateway-api from v1.5.1 to v1.6.0.
   [#4639](https://github.com/Kong/kong-operator/pull/4639)
+  [#4713](https://github.com/Kong/kong-operator/pull/4713)
 - Hybridgateway: treat malformed annotations as errors
   [#4530](https://github.com/Kong/kong-operator/pull/4530)
 - Conformance: enable GRPCRoute conformance tests for on-prem.
@@ -132,6 +137,78 @@
 - Prevent recreating consumer credentials on every Konnect sync when running in
   "KIC in Konnect" mode with on prem `ControlPlane`.
   [#4622](https://github.com/Kong/kong-operator/pull/4622)
+- Hybridgateway: merge `HTTPRoute` filters that map to the same Kong plugin type
+  (for example a `URLRewrite` and a `RequestHeaderModifier`, both of which
+  translate to `request-transformer`) into a single `KongPlugin` per rule. This
+  avoids attaching two plugins of the same type to the same route, which Konnect
+  rejects with a `unique-plugin-per-entity` constraint error.
+  [#4658](https://github.com/Kong/kong-operator/pull/4658)
+- Fix the issue that the `ResolvedRef` condition for cross-namespace reference
+  is not removed when a resource is updated to remove the cross-namespace
+  reference.
+  [#4663](https://github.com/Kong/kong-operator/pull/4663)
+- Hybridgateway: order overlapping header-only `HTTPRoute` matches by Gateway API
+  specificity. Header-only matches are translated to `KongRoute`s with a catch-all
+  regex path so Kong's `regex_priority` becomes effective, and a per-match priority
+  derived from method and header specificity keeps more specific header matches
+  ahead of less specific ones. This enables the `HTTPRouteHeaderMatching` Gateway API
+  conformance test for the hybrid gateway.
+  Generated header-only priorities stay below `1 << 20` (`1048576`), while generated
+  path-based priorities start at that value. Use custom `KongRoute` priorities below
+  or above that boundary depending on whether they should sort before or after
+  generated path-based routes.
+  [#4640](https://github.com/Kong/kong-operator/pull/4640)
+
+## [v2.2.1]
+
+> Release date: 2026-07-01
+
+### Fixes
+
+- HTTPRoute: traditional route translation now treats header match names
+  case-insensitively and ignores later equivalent duplicates, aligning with
+  Gateway API matching semantics.
+  [#4597](https://github.com/Kong/kong-operator/pull/4597)
+- Hybridgateway: release Gateway API route finalizers once generated Kong
+  resource delete requests have been issued, so immediate same-name route
+  re-creates are not blocked by child resource finalizers.
+  [#4465](https://github.com/Kong/kong-operator/pull/4465) [#4543](https://github.com/Kong/kong-operator/pull/4543)
+- Hybridgateway: use route-scoped `KongService` names for `HTTPRoute` rules
+  whose backendRefs resolve to no valid targets. This avoids Konnect name
+  conflicts with valid backend services while keeping normally generated service
+  names unchanged.
+  [#4437](https://github.com/Kong/kong-operator/pull/4437) [#4559](https://github.com/Kong/kong-operator/pull/4559)
+- Prevent recreating consumer credentials on every Konnect sync when running in
+  "KIC in Konnect" mode with on prem `ControlPlane`.
+  [#4622](https://github.com/Kong/kong-operator/pull/4622)
+- Hybridgateway: fix `KongTarget` stuck in `Programmed=False` when multiple
+  backendRef Services in an HTTPRoute or TLSRoute rule resolve to the same pod
+  IP and port. The operator now creates one `KongTarget` per unique endpoint
+  address across all backendRefs in a rule, merging duplicate endpoints and
+  summing their weights, instead of attempting to create one per backendRef per
+  endpoint which violated Konnect's upstream/target uniqueness constraint.
+  **Note:** the `KongTarget` naming scheme has changed and the backendRef is no
+  longer part of the name hash. All existing `KongTarget` resources will be
+  orphaned and recreated on the first reconciliation after upgrading. During
+  the transition, both old and new entries may be present in Konnect
+  simultaneously as creation and orphan cleanup are not synchronized.
+  [#4509](https://github.com/Kong/kong-operator/pull/4509)
+- Hybridgateway: prevent traffic drops when an `HTTPRoute` spec change rotates
+  resource names. A cleanup-time gate defers orphan deletion until every desired
+  `KongRoute` is confirmed bound to its new `KongService` in Konnect, and an
+  enforce-time gate delays `KongService` creation until its `KongUpstream` and
+  all desired `KongTarget`s are Programmed.
+  [#4577](https://github.com/Kong/kong-operator/pull/4577)
+- Konnect: prevent orphaned and duplicate Konnect entities when reconciliation
+  races with the cached client. The cleanup finalizer is now added before the entity
+  is created in Konnect, and the freshly created Konnect ID is kept in an in-memory
+  store until the cached status reflects it. This lets deletion recover a missing
+  Konnect ID (falling back to probing Konnect by Kubernetes UID, or by name for the
+  tag-less Cloud Gateway types `KonnectCloudGatewayNetwork` and
+  `KonnectCloudGatewayTransitGateway`) so an entity can still be cleaned up after an
+  operator restart, and prevents creating a duplicate entity when a stale cached
+  status has not yet caught up to the persisted Konnect ID.
+  [#4650](https://github.com/Kong/kong-operator/pull/4650)
 - Hybridgateway: merge `HTTPRoute` filters that map to the same Kong plugin type
   (for example a `URLRewrite` and a `RequestHeaderModifier`, both of which
   translate to `request-transformer`) into a single `KongPlugin` per rule. This
@@ -434,6 +511,40 @@
   the transition, both old and new entries may be present in Konnect
   simultaneously as creation and orphan cleanup are not synchronized.
   [#4509](https://github.com/Kong/kong-operator/pull/4509)
+
+## [v2.1.8]
+
+> Release date: 2026-07-01
+
+### Fixes
+
+- Prevent recreating consumer credentials on every Konnect sync when running in
+  "KIC in Konnect" mode with on prem `ControlPlane`.
+  [#4623](https://github.com/Kong/kong-operator/pull/4622) [#4624](https://github.com/Kong/kong-operator/pull/4624)
+- Hybridgateway: merge `HTTPRoute` filters that map to the same Kong plugin type
+  (for example a `URLRewrite` and a `RequestHeaderModifier`, both of which
+  translate to `request-transformer`) into a single `KongPlugin` per rule. This
+  avoids attaching two plugins of the same type to the same route, which Konnect
+  rejects with a `unique-plugin-per-entity` constraint error.
+  [#4658](https://github.com/Kong/kong-operator/pull/4658)
+- Hybridgateway: fix `KongTarget` stuck in `Programmed=False` when multiple
+  backendRef Services in an HTTPRoute or TLSRoute rule resolve to the same pod
+  IP and port. The operator now creates one `KongTarget` per unique endpoint
+  address across all backendRefs in a rule, merging duplicate endpoints and
+  summing their weights, instead of attempting to create one per backendRef per
+  endpoint which violated Konnect's upstream/target uniqueness constraint.
+  **Note:** the `KongTarget` naming scheme has changed and the backendRef is no
+  longer part of the name hash. All existing `KongTarget` resources will be
+  orphaned and recreated on the first reconciliation after upgrading. During
+  the transition, both old and new entries may be present in Konnect
+  simultaneously as creation and orphan cleanup are not synchronized.
+  [#4509](https://github.com/Kong/kong-operator/pull/4509)
+- Hybridgateway: prevent traffic drops when an `HTTPRoute` spec change rotates
+  resource names. A cleanup-time gate defers orphan deletion until every desired
+  `KongRoute` is confirmed bound to its new `KongService` in Konnect, and an
+  enforce-time gate delays `KongService` creation until its `KongUpstream` and
+  all desired `KongTarget`s are Programmed.
+  [#4577](https://github.com/Kong/kong-operator/pull/4577)
 
 ## [v2.1.7]
 
@@ -2355,7 +2466,9 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
 [v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
+[v2.1.8]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.1.8
 [v2.1.7]: https://github.com/Kong/kong-operator/compare/v2.1.6..v2.1.7
 [v2.1.6]: https://github.com/Kong/kong-operator/compare/v2.1.5..v2.1.6
 [v2.1.5]: https://github.com/Kong/kong-operator/compare/v2.1.4..v2.1.5

@@ -69,7 +69,7 @@ jobs:
     # Restore-only, reusing the shared `go-build-*` cache written by the `build` job in
     # tests.yaml. We never save here to avoid creating additional caches.
     - name: Restore go build cache
-      uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v4
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v4
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -86,7 +86,7 @@ jobs:
 
     - name: Restore lint cache
       if: ${{ matrix.lint-cache }}
-      uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v4
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v4
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}

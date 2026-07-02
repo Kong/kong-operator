@@ -101,7 +101,7 @@ jobs:
       with:
         egress-policy: audit
     - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-    - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@ca46236c6ce584ae24bc6283ba8dcf4b3ec8a066 # v5.0.4
+    - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@3db98c0363e2fa5df3e1c4c471777a7c10b24cc9 # v5.0.5
 
   ossf-scorecard:
     runs-on: ubuntu-latest
@@ -343,7 +343,7 @@ jobs:
 
     - name: Go cache (restore only for non-main branches)
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
