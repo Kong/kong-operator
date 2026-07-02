@@ -45,6 +45,7 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 					{
 						Address: "0.0.0.0",
 						Port:    8001,
+						Options: []string{"reuseport", "backlog=16384"},
 					},
 				},
 			},
@@ -57,6 +58,7 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 					{
 						Address: "0.0.0.0",
 						Port:    8443,
+						Options: []string{"http2", "reuseport", "backlog=16384"},
 					},
 				},
 			},
@@ -69,12 +71,14 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 					{
 						Address: "0.0.0.0",
 						Port:    8001,
+						Options: []string{"reuseport", "backlog=16384"},
 					},
 				},
 				SSLEndpoints: []*proxyListenEndpoint{
 					{
 						Address: "0.0.0.0",
 						Port:    8443,
+						Options: []string{"http2", "reuseport", "backlog=16384"},
 					},
 				},
 			},
@@ -87,10 +91,24 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 					{
 						Address: "0.0.0.0",
 						Port:    6443,
+						Options: []string{"http2"},
 					},
 					{
 						Address: "0.0.0.0",
 						Port:    8443,
+						Options: []string{"http2", "reuseport", "backlog=16384"},
+					},
+				},
+			},
+		},
+		{
+			Name:            "ipv6 stream ssl no options",
+			KongProxyListen: "[::]:16384 ssl",
+			Expected: kongListenConfig{
+				SSLEndpoints: []*proxyListenEndpoint{
+					{
+						Address: "::",
+						Port:    16384,
 					},
 				},
 			},
@@ -587,6 +605,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 	testCases := []struct {
 		name            string
 		listeners       []gwtypes.Listener
+		existingEnv     []corev1.EnvVar
 		expectedEnvs    []corev1.EnvVar
 		expectedPortMap map[int]int
 		expectedError   error
@@ -716,6 +735,122 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			},
 		},
 		{
+			name: "user-configured IPv6 stream listen address is preserved",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(445),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "[::]:16384 ssl reuseport",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "445:16384",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "[::]:16384 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				445: 16384,
+			},
+		},
+		{
+			name: "user-configured IPv4 stream listen address is preserved",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8899),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "127.0.0.1:8899 ssl reuseport",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8899:8899",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "127.0.0.1:8899 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8899: 8899,
+			},
+		},
+		{
+			name: "user drops reuseport from stream listen",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8899),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "[::]:8899 ssl",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8899:8899",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "[::]:8899 ssl",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8899: 8899,
+			},
+		},
+		{
+			name: "user-configured extra stream listen options are preserved",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8899),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport backlog=16384",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8899:8899",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport backlog=16384",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8899: 8899,
+			},
+		},
+		{
 			name: "unsupported protocol TCP in listeners",
 			listeners: []gwtypes.Listener{
 				{
@@ -748,6 +883,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name: consts.DataPlaneProxyContainerName,
+										Env:  tc.existingEnv,
 									},
 								},
 							},
