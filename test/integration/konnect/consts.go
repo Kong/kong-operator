@@ -3,6 +3,6 @@ package konnect
 import "time"
 
 const (
-	waitTime = 60 * time.Second
+	waitTime = 120 * time.Second
 	tickTime = 1 * time.Second
 )
