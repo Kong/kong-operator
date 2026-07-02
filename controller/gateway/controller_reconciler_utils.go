@@ -631,12 +631,14 @@ func generateDataPlaneNetworkPolicy(
 	podLabels map[string]string,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
-		protocolTCP       = corev1.ProtocolTCP
-		adminAPISSLPorts  = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneAdminAPIPort)}
-		proxyPorts        = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneProxyPort)}
-		proxySSLPorts     = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneProxySSLPort)}
-		metricsPorts      = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneMetricsPort)}
-		streamListenPorts = []intstr.IntOrString{}
+		protocolTCP          = corev1.ProtocolTCP
+		protocolUDP          = corev1.ProtocolUDP
+		adminAPISSLPorts     = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneAdminAPIPort)}
+		proxyPorts           = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneProxyPort)}
+		proxySSLPorts        = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneProxySSLPort)}
+		metricsPorts         = []intstr.IntOrString{intstr.FromInt(consts.DataPlaneMetricsPort)}
+		streamListenPorts    []intstr.IntOrString
+		streamUDPListenPorts []intstr.IntOrString
 		// The label keys to match Kong operator pod.
 		// To not create new NetworkPolicy on upgrade of , we just keep the keys marking the application
 		// and remove the keys related to versions such as `version`,`pod-template-hash`,`helm.sh/chart`.
@@ -685,9 +687,10 @@ func generateDataPlaneNetworkPolicy(
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_STREAM_LISTEN env: %w", err)
 		}
-		// Since currently we only support TLS (TCP SSL) listeners, we only extract SSL ports here.
-		// For TCPRoute and UDPRoute, we also need to extract TCP endpoints and UDP endpoints.
 		streamListenPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+			return intstr.FromInt(ep.Port)
+		})
+		streamUDPListenPorts = lo.Map(kongListenConfig.UDPEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
 		})
 	}
@@ -755,6 +758,15 @@ func generateDataPlaneNetworkPolicy(
 			}),
 		}
 		ingressRules = append(ingressRules, allowStreamIngress)
+	}
+
+	if len(streamUDPListenPorts) > 0 {
+		allowStreamUDPIngress := networkingv1.NetworkPolicyIngressRule{
+			Ports: lo.Map(streamUDPListenPorts, func(port intstr.IntOrString, _ int) networkingv1.NetworkPolicyPort {
+				return networkingv1.NetworkPolicyPort{Protocol: &protocolUDP, Port: &port}
+			}),
+		}
+		ingressRules = append(ingressRules, allowStreamUDPIngress)
 	}
 
 	return &networkingv1.NetworkPolicy{
@@ -840,9 +852,9 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
-		// TCPRoutes ad UDPRoutes are not supported yet
+		gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
+		// TCPRoutes are not supported yet
 		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
-		// gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
 	}
 }
 
@@ -1079,6 +1091,15 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 				)
 			}
 			count += countAttachedGRPCRoutes(g, listener, grpcRoutes)
+		case "UDPRoute":
+			udpRoutes, err := gatewayutils.ListUDPRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list UDPRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
+			}
+			count += countAttachedUDPRoutes(g, listener, udpRoutes)
 		// Unsupported route kinds. Should be unreachable.
 		default:
 			return 0, fmt.Errorf("unsupported route kind: %s", k)
@@ -1125,6 +1146,25 @@ func countAttachedGRPCRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener
 			return string(parentRef.Name) == gateway.Name &&
 				(parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
 				listenerHostnameIntersectsRouteHostnames(listener.Hostname, r.Spec.Hostnames)
+		})
+	})
+	return int32(count)
+}
+
+// countAttachedUDPRoutes counts the number of attached UDPRoutes for a given listener.
+// UDPRoute is an L4 protocol with no hostnames, so only ParentRef name, SectionName and Port are evaluated.
+//
+// Per the Gateway API spec, Listener.Status.AttachedRoutes counts every Route
+// whose ParentRef targets the listener — including UDPRoutes that lose GEP-2645
+// arbitration in the ingress-controller's translator. Losers still get
+// Accepted=True at the route status layer; only their dataplane config is
+// suppressed. Do not filter them out here.
+func countAttachedUDPRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener, udpRoutes []gwtypes.UDPRoute) int32 {
+	count := lo.CountBy(udpRoutes, func(r gwtypes.UDPRoute) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return string(parentRef.Name) == gateway.Name &&
+				(parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+				(parentRef.Port == nil || *parentRef.Port == listener.Port)
 		})
 	})
 	return int32(count)
@@ -1285,6 +1325,25 @@ func setDataPlaneDeploymentListenPorts(
 	assignedPortNumber := consts.DataPlaneAssignedPortStart
 	assignedPortMax := consts.DataPlaneAssignedPortStart + 1024
 
+	assignStreamPort := func(i int, portNumber int) {
+		_, occupied := kongPortOccupied[portNumber]
+		if isKnownPort(portNumber) || occupied {
+			for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
+				if _, occupied := kongPortOccupied[assignedPortNumber]; !occupied {
+					listenerPortToKongListenPort[portNumber] = assignedPortNumber
+					kongPortOccupied[assignedPortNumber] = struct{}{}
+					break
+				}
+			}
+			if assignedPortNumber >= assignedPortMax {
+				errs = errors.Join(errs, fmt.Errorf("listener %d's port %d already occupied and no available ports can be assigned", i, portNumber))
+			}
+		} else {
+			listenerPortToKongListenPort[portNumber] = portNumber
+			kongPortOccupied[portNumber] = struct{}{}
+		}
+	}
+
 	for i, l := range listeners {
 		switch l.Protocol {
 		case gatewayv1.HTTPProtocolType:
@@ -1297,28 +1356,17 @@ func setDataPlaneDeploymentListenPorts(
 			// https://github.com/Kong/kong-operator/issues/3511
 			// Assign another port if the listener's port is already allocated on Kong DP.
 			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
-			_, occupied := kongPortOccupied[portNumber]
-			if isKnownPort(portNumber) || occupied {
-				for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
-					if _, occupied := kongPortOccupied[assignedPortNumber]; !occupied {
-						listenerPortToKongListenPort[portNumber] = assignedPortNumber
-						kongPortOccupied[assignedPortNumber] = struct{}{}
-						break
-					}
-				}
-				// Although it should not happen where no ports can be assigned for the listener,
-				// we attach an error if the case really happens.
-				if assignedPortNumber >= assignedPortMax {
-					errs = errors.Join(errs, fmt.Errorf("listener %d's port %d already occupied and no available ports can be assigned", i, portNumber))
-				}
-
-			} else {
-				listenerPortToKongListenPort[portNumber] = portNumber
-				kongPortOccupied[portNumber] = struct{}{}
-			}
+			assignStreamPort(i, portNumber)
 			streamPorts = append(streamPorts, streamListenPort{
 				kongPort: listenerPortToKongListenPort[portNumber],
 				protocol: gatewayv1.TLSProtocolType,
+			})
+		case gatewayv1.UDPProtocolType:
+			portNumber := int(l.Port)
+			assignStreamPort(i, portNumber)
+			streamPorts = append(streamPorts, streamListenPort{
+				kongPort: listenerPortToKongListenPort[portNumber],
+				protocol: gatewayv1.UDPProtocolType,
 			})
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
@@ -1429,8 +1477,9 @@ func setDataPlaneIngressServicePorts(
 			name = fmt.Sprintf("%s-%s", l.Protocol, uuid.NewString()[:6])
 		}
 		port := operatorv1beta1.DataPlaneServicePort{
-			Name: name,
-			Port: l.Port,
+			Name:     name,
+			Port:     l.Port,
+			Protocol: corev1.ProtocolTCP,
 		}
 		switch l.Protocol {
 		case gatewayv1.HTTPSProtocolType:
@@ -1444,6 +1493,14 @@ func setDataPlaneIngressServicePorts(
 				continue
 			}
 			port.TargetPort = intstr.FromInt(targetPort)
+		case gatewayv1.UDPProtocolType:
+			targetPort, ok := servicePortMap[int(l.Port)]
+			if !ok {
+				errs = errors.Join(errs, fmt.Errorf("no target port assigned listener %s on port %d", l.Name, l.Port))
+				continue
+			}
+			port.TargetPort = intstr.FromInt(targetPort)
+			port.Protocol = corev1.ProtocolUDP
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 			continue
@@ -1597,14 +1654,15 @@ type proxyListenEndpoint struct {
 	Address string
 	Port    int
 	// Options holds the listen flags following the address (e.g. "reuseport",
-	// "backlog=16384"), in their original order, excluding the "ssl" token which is
-	// represented by the endpoint landing in SSLEndpoints.
+	// "backlog=16384"), in their original order, excluding the "ssl"/"udp" tokens
+	// which are represented by the endpoint landing in SSLEndpoints/UDPEndpoints.
 	Options []string
 }
 
 type kongListenConfig struct {
 	Endpoints    []*proxyListenEndpoint
 	SSLEndpoints []*proxyListenEndpoint
+	UDPEndpoints []*proxyListenEndpoint
 }
 
 // streamListenPort is a stream (TLS/TCP/UDP) listener's resolved Kong port together
@@ -1676,19 +1734,23 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 		if err != nil {
 			return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
 		}
-		// Split the trailing flags: "ssl" selects the SSL endpoint bucket, everything
-		// else is preserved as options in original order.
+		// Split the trailing flags: "ssl"/"udp" select the SSL/UDP endpoint bucket,
+		// everything else is preserved as options in original order.
 		var (
 			ssl     bool
+			udp     bool
 			options []string
 		)
 		if i >= 0 {
 			for f := range strings.FieldsSeq(s[i+1:]) {
-				if f == "ssl" {
+				switch f {
+				case "ssl":
 					ssl = true
-					continue
+				case "udp":
+					udp = true
+				default:
+					options = append(options, f)
 				}
-				options = append(options, f)
 			}
 		}
 		endpoint := &proxyListenEndpoint{
@@ -1696,9 +1758,12 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 			Port:    p,
 			Options: options,
 		}
-		if ssl {
+		switch {
+		case ssl:
 			kongListenConfig.SSLEndpoints = append(kongListenConfig.SSLEndpoints, endpoint)
-		} else {
+		case udp:
+			kongListenConfig.UDPEndpoints = append(kongListenConfig.UDPEndpoints, endpoint)
+		default:
 			kongListenConfig.Endpoints = append(kongListenConfig.Endpoints, endpoint)
 		}
 	}

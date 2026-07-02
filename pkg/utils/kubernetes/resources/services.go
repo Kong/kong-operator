@@ -179,9 +179,13 @@ func ServicePortsFromDataPlaneIngressOpt(dataplane *operatorv1beta1.DataPlane) S
 				targetPort = p.TargetPort
 			}
 			if _, ok := alreadyUsedPorts[p.Port]; !ok {
+				protocol := p.Protocol
+				if protocol == "" {
+					protocol = corev1.ProtocolTCP
+				}
 				newPorts = append(newPorts, corev1.ServicePort{
 					Name:       p.Name,
-					Protocol:   corev1.ProtocolTCP, // Currently, only TCP protocol supported.
+					Protocol:   protocol,
 					Port:       p.Port,
 					TargetPort: targetPort,
 					NodePort:   p.NodePort,
