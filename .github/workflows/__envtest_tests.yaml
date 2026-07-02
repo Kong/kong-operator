@@ -38,7 +38,7 @@ jobs:
       with:
         install: false
 
-    - uses: Kong/kong-license@62d5e200998d4b19ed6b78591332a092536c63f5 # master @ 20260330
+    - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
       id: license
       with:
         op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}

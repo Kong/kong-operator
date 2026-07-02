@@ -396,9 +396,9 @@ apiGroupVersions:
             interface: github.com/Kong/sdk-konnect-go.PortalCustomizationSDK
             fieldName: PortalCustomization
           create:
-            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3
           update:
-            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3
           delete:
             asPUT: true
         reconciler: {}

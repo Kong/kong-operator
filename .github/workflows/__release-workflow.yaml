@@ -178,7 +178,7 @@ jobs:
       - name: Get Kong Enterprise License
         if: steps.check-op-service-account-token.outputs.provided == 'true'
         id: get-license
-        uses: Kong/kong-license@62d5e200998d4b19ed6b78591332a092536c63f5 # master @ 20260330
+        uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
         with:
           # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password.
           op-token: ${{ secrets.op-service-account-token }}
@@ -264,6 +264,17 @@ jobs:
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: false
+
+      - name: Run make generate
+        if: ${{ inputs.regenerate-manifests }}
+        run: |
+          make \
+            generate.api \
+            generate.api-from-oas \
+            generate.crds \
+            generate.crd-kustomize \
+            generate.docs \
+            generate.cli-arguments-docs
 
       # Generated manifests are part of the release PR.
       - name: Generate manifests

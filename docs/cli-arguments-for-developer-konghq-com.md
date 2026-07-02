@@ -124,6 +124,10 @@ rows:
     type: '`bool`'
     description: "Enable the AIGateway controller. (Experimental)."
     default: '`false`'
+  - flag: '`--enable-controller-aigatewaydataplane`'
+    type: '`bool`'
+    description: "Enable the AI Gateway DataPlane controller."
+    default: '`false`'
   - flag: '`--enable-controller-controlplane`'
     type: '`bool`'
     description: "Enable the ControlPlane controller."

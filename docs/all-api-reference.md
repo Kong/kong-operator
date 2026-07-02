@@ -2,6 +2,7 @@
 
 ## Packages
 
+- [aigateway.konghq.com/v1alpha1](#aigateway-konghq-com-v1alpha1)
 - [configuration.konghq.com/v1](#configuration-konghq-com-v1)
 - [configuration.konghq.com/v1alpha1](#configuration-konghq-com-v1alpha1)
 - [configuration.konghq.com/v1beta1](#configuration-konghq-com-v1beta1)
@@ -12,6 +13,264 @@
 - [incubator.ingress-controller.konghq.com/v1alpha1](#incubator-ingress-controller-konghq-com-v1alpha1)
 - [konnect.konghq.com/v1alpha1](#konnect-konghq-com-v1alpha1)
 - [konnect.konghq.com/v1alpha2](#konnect-konghq-com-v1alpha2)
+
+## aigateway.konghq.com/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the aigateway.konghq.com v1alpha1 API group.
+
+- [AIGatewayDataPlane](#aigateway-konghq-com-v1alpha1-aigatewaydataplane)
+
+### AIGatewayDataPlane
+
+
+AIGatewayDataPlane is the Schema for the AIGateway data planes API.
+It manages an AI Gateway binary Deployment that connects to Konnect via
+a referenced AIGatewayControlPlane resource.
+
+<!-- ai_gateway_data_plane description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `aigateway.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayDataPlane`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)_ | Spec defines the desired state of AIGatewayDataPlane. |
+| `status` _[AIGatewayDataPlaneStatus](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanestatus)_ | Status defines the observed state of AIGatewayDataPlane. |
+
+### Types
+
+In this section you will find types that the CRDs rely on.
+#### AIGatewayDataPlaneSpec
+
+
+AIGatewayDataPlaneSpec defines the desired state of AIGatewayDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controlPlaneRef` _[ControlPlaneRef](#aigateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this AIGatewayDataPlane connects to. The type field identifies which kind of control plane is being referenced. Currently only konnectNamespacedRef is supported, which references a KonnectAIGateway resource in the same namespace. |
+| `deployment` _[DeploymentOptions](#aigateway-konghq-com-v1alpha1-types-deploymentoptions)_ | Deployment configures the AI Gateway Deployment: image, replicas, resources, extra env vars, volume mounts, etc. |
+| `network` _[NetworkOptions](#aigateway-konghq-com-v1alpha1-types-networkoptions)_ | Network configures how the AI Gateway pod is exposed to clients. |
+
+_Appears in:_
+
+- [AIGatewayDataPlane](#aigateway-konghq-com-v1alpha1-aigatewaydataplane)
+
+#### AIGatewayDataPlaneStatus
+
+
+AIGatewayDataPlaneStatus defines the observed state of AIGatewayDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the AIGatewayDataPlane. |
+| `readyReplicas` _int32_ | ReadyReplicas indicates how many replicas have reported to be ready. |
+| `replicas` _int32_ | Replicas indicates how many replicas have been set for the AIGatewayDataPlane. |
+
+_Appears in:_
+
+- [AIGatewayDataPlane](#aigateway-konghq-com-v1alpha1-aigatewaydataplane)
+
+#### ControlPlaneRef
+
+
+ControlPlaneRef identifies the control plane this DataPlane connects to.
+The Type field determines which sub-field is active.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ControlPlaneRefType](#aigateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced. Currently only konnectNamespacedRef is supported. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#aigateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a AIGatewayControlPlane resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+
+_Appears in:_
+
+- [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
+
+#### ControlPlaneRefType
+
+_Underlying type:_ `string`
+
+ControlPlaneRefType identifies the kind of control plane being referenced.
+
+
+
+
+_Appears in:_
+
+- [ControlPlaneRef](#aigateway-konghq-com-v1alpha1-types-controlplaneref)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a AIGatewayControlPlane<br />resource in the same namespace as the DataPlane.<br /> |
+
+#### DeploymentOptions
+
+
+DeploymentOptions specifies options for the Deployment managed by the AIGatewayDataPlane controller.
+
+
+
+| Field | Description |
+| --- | --- |
+| `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
+| `scaling` _[Scaling](#aigateway-konghq-com-v1alpha1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
+| `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).<br /><br />Note: environment variables set here take precedence over strongly-typed fields in Spec.Config. Using raw env vars is discouraged and intended for advanced use cases only. |
+
+_Appears in:_
+
+- [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
+
+#### HorizontalScaling
+
+
+HorizontalScaling defines horizontal scaling options for the deployment.
+It holds all the options from the HorizontalPodAutoscalerSpec besides the
+ScaleTargetRef which is being controlled by the Operator.
+
+
+
+| Field | Description |
+| --- | --- |
+| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
+| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less than minReplicas. |
+| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
+| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
+
+_Appears in:_
+
+- [Scaling](#aigateway-konghq-com-v1alpha1-types-scaling)
+
+#### KonnectNamespacedRef
+
+
+KonnectNamespacedRef is a reference to a AIGatewayControlPlane resource in the same namespace.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the AIGatewayControlPlane resource. |
+
+_Appears in:_
+
+- [ControlPlaneRef](#aigateway-konghq-com-v1alpha1-types-controlplaneref)
+
+#### LabelName
+
+_Underlying type:_ `string`
+
+LabelName is a label key with constraints matching Kubernetes label key requirements.
+
+
+
+
+_Appears in:_
+
+- [ServiceOptions](#aigateway-konghq-com-v1alpha1-types-serviceoptions)
+
+#### LabelValue
+
+_Underlying type:_ `string`
+
+LabelValue is a label value with constraints matching Kubernetes label value requirements.
+
+
+
+
+_Appears in:_
+
+- [ServiceOptions](#aigateway-konghq-com-v1alpha1-types-serviceoptions)
+
+#### NetworkOptions
+
+
+NetworkOptions defines network-related options for an AIGatewayDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `services` _[Services](#aigateway-konghq-com-v1alpha1-types-services)_ | Services configures the Kubernetes Services that expose the AI Gateway pod to clients. |
+
+_Appears in:_
+
+- [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
+
+#### Scaling
+
+
+Scaling defines the scaling options for the deployment.
+
+
+
+| Field | Description |
+| --- | --- |
+| `horizontal` _[HorizontalScaling](#aigateway-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
+
+_Appears in:_
+
+- [DeploymentOptions](#aigateway-konghq-com-v1alpha1-types-deploymentoptions)
+
+#### ServiceOptions
+
+
+ServiceOptions contains Service configuration for the AIGatewayDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type determines how the Service is exposed. Defaults to ClusterIP. |
+| `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with the Service resource. |
+| `labels` _[LabelValue](#aigateway-konghq-com-v1alpha1-types-labelvalue)_ | Labels are propagated to the AIGatewayDataPlane's HTTP Service. |
+| `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core)_ | ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's externally-facing addresses. |
+| `trafficDistribution` _*string_ | TrafficDistribution offers a way to express preferences for how traffic is distributed to Service endpoints. Implementations can use this field as a hint, but are not required to guarantee strict adherence. If the field is not set, the implementation will apply its default routing strategy.<br /><br />"PreferSameZone" prioritizes endpoints in the same zone as the client. "PreferSameNode" prioritizes endpoints on the same node as the client.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution |
+| `internalTrafficPolicy` _[ServiceInternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceinternaltrafficpolicy-v1-core)_ | InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP. If set to "Local", the proxy will assume that pods only want to talk to endpoints of the service on the same node as the pod, dropping the traffic if there are no local endpoints. The default value, "Cluster", uses the standard behavior of routing to all endpoints evenly.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#internal-traffic-policy |
+| `ports` _[ServicePort](#aigateway-konghq-com-v1alpha1-types-serviceport)_ | Ports defines the list of ports that are exposed by the service. |
+
+_Appears in:_
+
+- [Services](#aigateway-konghq-com-v1alpha1-types-services)
+
+#### ServicePort
+
+
+ServicePort contains information on a service port.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _*string_ | The name of this port within the service. |
+| `port` _int32_ | The port that will be exposed by this service. |
+| `targetPort` _*k8s.io/apimachinery/pkg/util/intstr.IntOrString_ | Number or name of the port to access on the pods targeted by the service. |
+| `nodePort` _*int32_ | The port on each node on which this service is exposed when type is NodePort or LoadBalancer. |
+
+_Appears in:_
+
+- [ServiceOptions](#aigateway-konghq-com-v1alpha1-types-serviceoptions)
+
+#### Services
+
+
+Services configures the Kubernetes Services created for an AI Gateway pod.
+
+
+
+| Field | Description |
+| --- | --- |
+| `ingress` _[ServiceOptions](#aigateway-konghq-com-v1alpha1-types-serviceoptions)_ | Ingress is the Service that exposes the Ingress listener to clients. |
+
+_Appears in:_
+
+- [NetworkOptions](#aigateway-konghq-com-v1alpha1-types-networkoptions)
 
 ## configuration.konghq.com/v1
 
@@ -2564,7 +2823,7 @@ EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVi
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ | The name of the virtual cluster. |
 | `namespace` _[VirtualClusterNamespace](#configuration-konghq-com-v1alpha1-types-virtualclusternamespace)_ | Namespace allows to implement multitenancy using a single backend cluster. It allows to either hide or enforce a static prefix on resources (topics, consumer group IDs, transaction IDs). |
-| `topicAliases` _[VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `topicAliases` _[VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -2869,6 +3128,79 @@ EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtu
 _Appears in:_
 
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
+
+#### FetchKongIdentityPrincipal
+
+
+FetchKongIdentityPrincipal Fetches principal metadata from Kong Identity
+after successful authentication.
+The principal is looked up by a custom key matched against the authenticated
+identity.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | Kong Identity directory to use for principal lookup. |
+| `failureMode` _[FetchKongIdentityPrincipalFailureMode](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipalfailuremode)_ | Behavior when the Kong Identity principal lookup fails. * `error` - fail the authentication if the principal lookup fails. * `ignore` - proceed without principal metadata if the lookup fails.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `fetchBy` _[FetchKongIdentityPrincipalFetchBy](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipalfetchby)_ | Defines how to look up the principal in Kong Identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationClientCertificate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclientcertificate)
+- [VirtualClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslplain)
+- [VirtualClusterAuthenticationSaslScram](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslscram)
+
+#### FetchKongIdentityPrincipalFailureMode
+
+_Underlying type:_ `string`
+
+FetchKongIdentityPrincipalFailureMode Behavior when the Kong Identity
+principal lookup fails.
+* `error` - fail the authentication if the principal lookup fails.
+* `ignore` - proceed without principal metadata if the lookup fails.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+
+_Appears in:_
+
+- [FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)
+- [FetchKongIdentityPrincipalOauthBearer](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipaloauthbearer)
+
+#### FetchKongIdentityPrincipalFetchBy
+
+
+FetchKongIdentityPrincipalFetchBy Defines how to look up the principal in
+Kong Identity.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _string_ | The metadata key in Kong Identity to match the authenticated identity against. Value for the lookup is a `username` in case of `sasl_plain` or `sasl_scram`. In case of `client_certificate` it's a principal mapped by the listener TLSServer policy. |
+
+_Appears in:_
+
+- [FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)
+
+#### FetchKongIdentityPrincipalOauthBearer
+
+
+FetchKongIdentityPrincipalOauthBearer Fetches principal metadata from Kong
+Identity after successful OAUTHBEARER authentication.
+The principal is looked up by the iss and sub claims from the JWT token.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | Kong Identity directory to use for principal lookup. |
+| `failureMode` _[FetchKongIdentityPrincipalFailureMode](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipalfailuremode)_ | Behavior when the Kong Identity principal lookup fails. * `error` - fail the authentication if the principal lookup fails. * `ignore` - proceed without principal metadata if the lookup fails.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationOauthBearer](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)
 
 #### ForwardToClusterByPortMappingConfig
 
@@ -4758,6 +5090,9 @@ authentication scheme for the virtual cluster.<br /><br />**Requires a minimum r
 
 
 
+| Field | Description |
+| --- | --- |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -4792,6 +5127,7 @@ for the virtual cluster.
 | Field | Description |
 | --- | --- |
 | `claimsMapping` _[VirtualClusterAuthenticationClaimsMapping](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipalOauthBearer](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipaloauthbearer)_ | Fetches principal metadata from Kong Identity after successful OAUTHBEARER authentication. The principal is looked up by the iss and sub claims from the JWT token.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `jwks` _[VirtualClusterAuthenticationJWKS](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationjwks)_ | JSON Web Key Set configuration for verifying token signatures. |
 | `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of<br /><br />validation * validate_forward - pass authentication from the client through proxy to the backend cluster.<br /><br />Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster<br /><br />using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
 | `validate` _[VirtualClusterAuthenticationValidate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)_ | Validation rules. |
@@ -4827,6 +5163,7 @@ the virtual cluster containing principals with username and password.
 
 | Field | Description |
 | --- | --- |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `mediation` _string_ | The mediation type for SASL/PLAIN authentication. |
 | `principals` _[VirtualClusterAuthenticationPrincipal](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)_ | List of principals to be able to authenticate with, used with `terminate` mediation. |
 
@@ -4845,6 +5182,7 @@ the virtual cluster.
 | Field | Description |
 | --- | --- |
 | `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -5105,8 +5443,8 @@ _Appears in:_
 #### VirtualClusterTopicAlias
 
 
-VirtualClusterTopicAlias **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />A topic alias maps an alias name to a namespace-visible topic name.
+VirtualClusterTopicAlias A topic alias maps an alias name to a
+namespace-visible topic name.
 Clients can produce to, consume from, and discover the topic under the alias
 name.
 The original topic name remains accessible.<br /><br />**Requires a minimum runtime version of `1.2`**.
