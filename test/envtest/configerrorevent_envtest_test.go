@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/dataplane"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 )
 
 func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
@@ -104,10 +105,13 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	t.Logf("deploying ingress %s", ingress.Name)
 	require.NoError(t, ctrlClient.Create(ctx, ingress))
 
+	kongVersion, err := testenv.GetDependencyVersion("envtests.kong-ee")
+	require.NoError(t, err)
+
 	RunManager(ctx, t, restConfig,
 		AdminAPIOptFns(
 			mocks.WithConfigPostError(formatErrBody(t, ns.Name, ingress, service)),
-			mocks.WithVersion("3.12.0"),
+			mocks.WithVersion(kongVersion),
 		),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
