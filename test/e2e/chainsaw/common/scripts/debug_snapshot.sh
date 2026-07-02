@@ -165,7 +165,7 @@ for ns in ${ALL_NAMESPACES}; do
     echo ""
   } >> "${DESCRIBED_FILE}"
 
-  safe_kubectl "${DESCRIBED_FILE}" describe gateways,gatewayclasses,tlsroutes,httproutes,referencegrants -n "${ns}"
+  safe_kubectl "${DESCRIBED_FILE}" describe gateways,gatewayclasses,tlsroutes,httproutes,udproute,referencegrants -n "${ns}"
 
   {
     echo ""

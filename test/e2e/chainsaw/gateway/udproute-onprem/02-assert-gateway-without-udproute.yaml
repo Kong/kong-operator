@@ -1,0 +1,43 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($gateway_namespace)
+status:
+  (conditions[?type == 'Accepted']):
+    - status: 'True'
+      reason: Accepted
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'DataPlaneReady']):
+    - status: 'True'
+      reason: Ready
+  (listeners[?name == 'udp']):
+    - attachedRoutes: 0
+      (conditions[?type == 'Accepted']):
+        - status: 'True'
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: 'True'
+          reason: ResolvedRefs
+      (conditions[?type == 'Programmed']):
+        - status: 'True'
+          reason: Programmed
+      (supportedKinds[?kind == 'UDPRoute']):
+        - group: gateway.networking.k8s.io
+          kind: UDPRoute
+  (listeners[?name == 'udp-extra']):
+    - attachedRoutes: 0
+      (conditions[?type == 'Accepted']):
+        - status: 'True'
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: 'True'
+          reason: ResolvedRefs
+      (conditions[?type == 'Programmed']):
+        - status: 'True'
+          reason: Programmed
+      (supportedKinds[?kind == 'UDPRoute']):
+        - group: gateway.networking.k8s.io
+          kind: UDPRoute
