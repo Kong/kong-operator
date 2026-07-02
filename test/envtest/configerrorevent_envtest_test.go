@@ -11,7 +11,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -29,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/dataplane"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 )
 
 func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {

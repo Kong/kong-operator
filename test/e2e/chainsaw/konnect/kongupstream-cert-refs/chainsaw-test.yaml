@@ -348,6 +348,10 @@ spec:
               value: ($upstream_port)
             - name: target_weight
               value: 100
+            # Use the service hostname so Kong's upstream SSL certificate hostname
+            # verification matches the server cert's CN (pod IP would not match).
+            - name: target_address
+              value: (join(':', [($upstream_host), (to_string($upstream_port))]))
 
     # Step 9: Verify HTTPS proxy call FAILS (4xx) because DataPlane has no client cert.
     - name: Verify-https-fails-without-cert-refs
