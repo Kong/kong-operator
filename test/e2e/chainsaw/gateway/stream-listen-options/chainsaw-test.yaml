@@ -1,0 +1,98 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: stream-listen-options
+spec:
+  description: |
+    Verifies how the operator generates the KONG_STREAM_LISTEN env on the
+    DataPlane proxy Deployment for a TLS listener:
+    1. Default: with no user value, the operator generates
+       "0.0.0.0:<port> ssl reuseport".
+    2. Custom options: a user-set IPv6 address and extra options
+       ("[::]:<port> ssl reuseport backlog=16384") are preserved; the operator
+       only enforces the port and the ssl token.
+    3. Removal of options: dropping reuseport from the user value
+       ("[::]:<port> ssl") is honored — the operator does not force it back.
+
+    Note: TCP/UDP stream listeners are not yet accepted by the gateway
+    controller, so only the TLS protocol is exercised here.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_name
+      value: (join('-', [($namespace), 'gateway']))
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.14')
+    - name: listener_tls_port
+      value: 8899
+    - name: sni_hostname
+      value: '*.example.com'
+
+  steps:
+    - name: Create-gateway-configuration
+      description: Create an on-prem GatewayConfiguration with no custom KONG_STREAM_LISTEN.
+      try:
+        - apply:
+            file: 01-gatewayconfiguration.yaml
+        - assert:
+            file: 01-gatewayconfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create a GatewayClass pointing at the on-prem GatewayConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-gateway
+      description: Create an operator-managed Gateway with a TLS passthrough listener.
+      try:
+        - apply:
+            file: 02-gateway.yaml
+        - assert:
+            file: 02-assert-gateway.yaml
+
+    - name: Assert-default-stream-listen
+      description: The generated DataPlane proxy uses the default KONG_STREAM_LISTEN.
+      try:
+        - assert:
+            file: assert-dataplane-stream-listen.yaml
+      bindings:
+        - name: expected_stream_listen
+          value: "0.0.0.0:8899 ssl reuseport"
+
+    - name: Set-custom-stream-listen-options
+      description: Set an IPv6 address and extra options; verify they are preserved.
+      try:
+        - apply:
+            file: 03-gatewayconfiguration-custom-options.yaml
+        - assert:
+            file: assert-dataplane-stream-listen.yaml
+      bindings:
+        - name: expected_stream_listen
+          value: "[::]:8899 ssl reuseport backlog=16384"
+
+    - name: Remove-reuseport-option
+      description: Drop reuseport from the user value; verify the operator honors the removal.
+      try:
+        - apply:
+            file: 04-gatewayconfiguration-no-reuseport.yaml
+        - assert:
+            file: assert-dataplane-stream-listen.yaml
+      bindings:
+        - name: expected_stream_listen
+          value: "[::]:8899 ssl"
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-stream-listen-options
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
