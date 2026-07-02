@@ -83,7 +83,7 @@
   preserving the bind address (e.g. `[::]` for IPv6) and any listen options
   (`reuseport`, `backlog=...`) set on the `GatewayConfiguration` DataPlane pod
   template. Defaults to `0.0.0.0` and `reuseport` when unset.
-  [#4744](https://github.com/Kong/kong-operator/pull/4744)
+  [#4755](https://github.com/Kong/kong-operator/pull/4755)
 - Konnect: prevent orphaned and duplicate Konnect entities when reconciliation
   races with the cached client. The cleanup finalizer is now added before the entity
   is created in Konnect, and the freshly created Konnect ID is kept in an in-memory
