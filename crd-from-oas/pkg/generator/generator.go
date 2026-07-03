@@ -2125,7 +2125,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		Schema:                    schema,
 		APIGroup:                  g.config.APIGroup,
 		APIVersion:                g.config.APIVersion,
-		NeedsJSONImport:           schemaUsesJSON(g, schema, g.parsed),
+		NeedsJSONImport:           schemaUsesJSONInCRDTypeFile(g, schema),
 		HasUnionTypes:             hasUnionTypes,
 		ObjectRefImport:           objectRefImport,
 		HasRootReconciler:         hasRootReconciler,
@@ -3796,6 +3796,7 @@ type sdkOpsRootUnionVariant struct {
 	UpdateTargetFieldName string
 	UpdateVariantTypeName string
 	UpdateConstructorName string
+	UpdateDirectUnion     bool
 
 	// For operations-wrapped requests: constructors live in components, not operations.
 	// WrappedCreateConstructorName and WrappedUpdateConstructorName use the
@@ -3985,10 +3986,19 @@ func (g *Generator) generateRootUnionSDKOps(
 	}
 
 	wrappedCreateBodyTypeName := ""
+	createMethodTypeName := ""
+	updateMethodTypeName := ""
 	for _, method := range rootUnionMethods {
 		if method.IsCreate && method.IsOperationsWrapped {
 			wrappedCreateBodyTypeName = method.BodyTypeName
-			break
+			continue
+		}
+		if method.IsCreate && createMethodTypeName == "" {
+			createMethodTypeName = method.TypeName
+			continue
+		}
+		if !method.IsCreate && updateMethodTypeName == "" {
+			updateMethodTypeName = method.TypeName
 		}
 	}
 
@@ -4016,18 +4026,31 @@ func (g *Generator) generateRootUnionSDKOps(
 		updateTargetFieldName := ""
 		updateVariantTypeName := ""
 		updateConstructorName := ""
+		updateDirectUnion := false
+		fieldName := fixInitialisms(variantNames[i])
 		if hasUpdateMethod && !isOperationsWrapped {
 			updatePayloadProp, err := findRootUnionUpdatePayloadProperty(variant.Properties)
 			if err != nil {
-				return "", fmt.Errorf("failed to infer update payload property for %s variant %q: %w", entityName, variantRefName, err)
+				// Heuristic: when a root-union update variant exposes multiple required
+				// $ref payload members, the SDK update request is typically the union
+				// itself rather than a wrapper around a nested payload field. In that
+				// shape there is no single payload property to target, so we rebuild the
+				// selected variant directly via the update constructor.
+				if updateMethodTypeName == "" {
+					return "", fmt.Errorf("failed to infer update payload property for %s variant %q: %w", entityName, variantRefName, err)
+				}
+				updateVariantTypeName = fixInitialisms(variantRefName)
+				updateConstructorName = "Create" + updateMethodTypeName + fieldName
+				updateDirectUnion = true
+			} else {
+				if updatePayloadProp == nil {
+					return "", fmt.Errorf("failed to infer update payload property for %s variant %q: no ref payload property found", entityName, variantRefName)
+				}
+				updatePayloadJSONName = updatePayloadProp.Name
+				updateTargetFieldName = goFieldName(updatePayloadProp.Name)
+				updateVariantTypeName = fixInitialisms(strings.Replace(updatePayloadProp.RefName, "Create", "Update", 1))
+				updateConstructorName = "Create" + goFieldName(updatePayloadProp.Name) + updateVariantTypeName
 			}
-			if updatePayloadProp == nil {
-				return "", fmt.Errorf("failed to infer update payload property for %s variant %q: no ref payload property found", entityName, variantRefName)
-			}
-			updatePayloadJSONName = updatePayloadProp.Name
-			updateTargetFieldName = goFieldName(updatePayloadProp.Name)
-			updateVariantTypeName = fixInitialisms(strings.Replace(updatePayloadProp.RefName, "Create", "Update", 1))
-			updateConstructorName = "Create" + goFieldName(updatePayloadProp.Name) + updateVariantTypeName
 		}
 
 		// For operations-wrapped: compute wrapped constructor names using disc value.
@@ -4036,18 +4059,21 @@ func (g *Generator) generateRootUnionSDKOps(
 			discPascal := fixInitialisms(pascalFromKebab(discValue))
 			wrappedCreateConstructorName = "Create" + wrappedCreateBodyTypeName + discPascal
 		}
-
-		fieldName := fixInitialisms(variantNames[i])
+		createConstructorName := "Create" + fixInitialisms(variantRefName)
+		if createMethodTypeName != "" {
+			createConstructorName = "Create" + createMethodTypeName + fieldName
+		}
 		variants = append(variants, sdkOpsRootUnionVariant{
 			FieldName:                    fieldName,
 			JSONName:                     discValue,
 			TypeConstName:                fmt.Sprintf("%sType%s", rootUnionTypeName, fieldName),
 			CreateVariantTypeName:        fixInitialisms(variantRefName),
-			CreateConstructorName:        "Create" + fixInitialisms(variantRefName),
+			CreateConstructorName:        createConstructorName,
 			UpdatePayloadJSONName:        updatePayloadJSONName,
 			UpdateTargetFieldName:        updateTargetFieldName,
 			UpdateVariantTypeName:        updateVariantTypeName,
 			UpdateConstructorName:        updateConstructorName,
+			UpdateDirectUnion:            updateDirectUnion,
 			WrappedCreateConstructorName: wrappedCreateConstructorName,
 		})
 	}
@@ -4601,7 +4627,7 @@ func goFieldName(name string) string {
 			}
 		}
 	}
-	return strings.Join(parts, "")
+	return fixGoFieldInitialisms(strings.Join(parts, ""))
 }
 
 // fixInitialisms corrects common initialisms in PascalCase type names to follow
@@ -4611,6 +4637,21 @@ func fixInitialisms(name string) string {
 	for i, word := range words {
 		upper := strings.ToUpper(word)
 		if isCommonAcronym(upper) {
+			words[i] = upper
+		}
+	}
+	return strings.Join(words, "")
+}
+
+// fixGoFieldInitialisms is narrower than fixInitialisms: it also normalizes AI
+// for generated Kubernetes field names, but intentionally does not add AI to
+// isCommonAcronym because that helper is also used for SDK type/constructor
+// naming where the upstream SDK still uses "Ai" in some identifiers.
+func fixGoFieldInitialisms(name string) string {
+	words := splitPascalCase(name)
+	for i, word := range words {
+		upper := strings.ToUpper(word)
+		if upper == "AI" || isCommonAcronym(upper) {
 			words[i] = upper
 		}
 	}
@@ -4752,6 +4793,18 @@ func schemaUsesJSON(g *Generator, schema *parser.Schema, parsed *parser.ParsedSp
 	return schemaUsesJSONRecursive(g, schema, parsed, make(map[string]bool))
 }
 
+func schemaUsesJSONInCRDTypeFile(g *Generator, schema *parser.Schema) bool {
+	if schema == nil {
+		return false
+	}
+	for _, prop := range schema.Properties {
+		if propertyUsesJSONDirect(g, prop) {
+			return true
+		}
+	}
+	return false
+}
+
 func schemaUsesJSONRecursive(g *Generator, schema *parser.Schema, parsed *parser.ParsedSpec, seenRefs map[string]bool) bool {
 	for _, prop := range schema.Properties {
 		if propertyUsesJSON(g, prop, parsed, seenRefs) {
@@ -4765,6 +4818,40 @@ func schemaUsesJSONRecursive(g *Generator, schema *parser.Schema, parsed *parser
 	}
 	for _, variant := range schema.AnyOf {
 		if propertyUsesJSON(g, variant, parsed, seenRefs) {
+			return true
+		}
+	}
+	return false
+}
+
+func propertyUsesJSONDirect(g *Generator, prop *parser.Property) bool {
+	if prop == nil || skipProperty(prop) {
+		return false
+	}
+	if strings.Contains(g.goType(prop), "apiextensionsv1.JSON") {
+		return true
+	}
+	if prop.RefName != "" {
+		return false
+	}
+	for _, variant := range prop.OneOf {
+		if propertyUsesJSONDirect(g, variant) {
+			return true
+		}
+	}
+	for _, variant := range prop.AnyOf {
+		if propertyUsesJSONDirect(g, variant) {
+			return true
+		}
+	}
+	if propertyUsesJSONDirect(g, prop.Items) {
+		return true
+	}
+	if propertyUsesJSONDirect(g, prop.AdditionalProperties) {
+		return true
+	}
+	for _, nested := range prop.Properties {
+		if propertyUsesJSONDirect(g, nested) {
 			return true
 		}
 	}

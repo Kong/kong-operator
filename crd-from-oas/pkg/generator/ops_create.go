@@ -48,6 +48,11 @@ type opsCreateFuncData struct {
 	// SingletonNoID is true when the create response schema has no "id" field.
 	// Generated code skips the SetKonnectID call entirely for these entities.
 	SingletonNoID bool
+	RespRootUnion *opsCreateRootUnionResponseData
+}
+
+type opsCreateRootUnionResponseData struct {
+	VariantFieldNames []string
 }
 
 // generateOpsCreateFuncBody renders the create<Entity> function body (no file header).
@@ -98,6 +103,22 @@ func (g *Generator) generateOpsCreateFuncBody(
 	// entities with multiple parent dependencies in the URL path.
 	createFullyWrapped := len(parents) >= 2
 
+	var respRootUnion *opsCreateRootUnionResponseData
+	if schema.SuccessResponseRef != "" {
+		variantFieldNames, err := ParseSDKUnionMemberFieldNames(
+			"github.com/Kong/sdk-konnect-go/models/components",
+			schema.SuccessResponseRef,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("entity %q: inspect create response union %q: %w", entityName, schema.SuccessResponseRef, err)
+		}
+		if len(variantFieldNames) > 0 {
+			respRootUnion = &opsCreateRootUnionResponseData{
+				VariantFieldNames: variantFieldNames,
+			}
+		}
+	}
+
 	return &opsCreateFuncData{
 		Entity:               entityName,
 		APIAlias:             g.config.APIGroupPackageAlias,
@@ -116,6 +137,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		CreateFullyWrapped:   createFullyWrapped,
 		RespIDIsPointer:      schema.RespIDIsPointer,
 		SingletonNoID:        isSingletonNoID(schema),
+		RespRootUnion:        respRootUnion,
 	}, nil
 }
 

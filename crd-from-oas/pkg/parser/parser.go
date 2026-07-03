@@ -164,11 +164,29 @@ func (p *Parser) ParsePaths(targetPaths []string) (*ParsedSpec, error) {
 		p.collectReferencedSchemas(schema, referencedSchemas)
 	}
 
-	// Parse all referenced component schemas
-	for name := range referencedSchemas {
-		if schemaRef, ok := p.doc.Components.Schemas[name]; ok && schemaRef.Value != nil {
+	// Parse all referenced component schemas, recursively collecting any nested refs
+	// discovered while parsing earlier referenced components.
+	parsedSchemas := make(map[string]bool, len(referencedSchemas))
+	for {
+		progressed := false
+		for name := range referencedSchemas {
+			if parsedSchemas[name] {
+				continue
+			}
+			parsedSchemas[name] = true
+			progressed = true
+
+			schemaRef, ok := p.doc.Components.Schemas[name]
+			if !ok || schemaRef.Value == nil {
+				continue
+			}
+
 			schema := p.parseSchema(name, schemaRef.Value)
 			result.Schemas[name] = schema
+			p.collectReferencedSchemas(schema, referencedSchemas)
+		}
+		if !progressed {
+			break
 		}
 	}
 

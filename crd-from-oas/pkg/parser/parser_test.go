@@ -238,6 +238,85 @@ func TestParsePaths_MultiplePaths(t *testing.T) {
 	assert.True(t, hasTeam)
 }
 
+func TestParsePaths_CollectsTransitiveReferencedSchemas(t *testing.T) {
+	doc := &openapi3.T{
+		Paths: openapi3.NewPaths(
+			openapi3.WithPath("/v1/ai-gateways/{gatewayId}/models", &openapi3.PathItem{
+				Post: &openapi3.Operation{
+					OperationID: "create-ai-gateway-model",
+					RequestBody: &openapi3.RequestBodyRef{
+						Value: &openapi3.RequestBody{
+							Content: openapi3.Content{
+								"application/json": &openapi3.MediaType{
+									Schema: &openapi3.SchemaRef{
+										Value: &openapi3.Schema{
+											Type: &openapi3.Types{"object"},
+											Properties: openapi3.Schemas{
+												"acls": {
+													Ref:   "#/components/schemas/AIGatewayACLS",
+													Value: &openapi3.Schema{},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+		),
+		Components: &openapi3.Components{
+			Schemas: openapi3.Schemas{
+				"AIGatewayACLS": {
+					Value: &openapi3.Schema{
+						OneOf: openapi3.SchemaRefs{
+							{Ref: "#/components/schemas/AIGatewayAllowACL"},
+							{Ref: "#/components/schemas/AIGatewayDenyACL"},
+						},
+					},
+				},
+				"AIGatewayAllowACL": {
+					Value: &openapi3.Schema{
+						Type:     &openapi3.Types{"object"},
+						Required: []string{"allow"},
+						Properties: openapi3.Schemas{
+							"allow": {
+								Value: &openapi3.Schema{
+									Type:  &openapi3.Types{"array"},
+									Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+								},
+							},
+						},
+					},
+				},
+				"AIGatewayDenyACL": {
+					Value: &openapi3.Schema{
+						Type:     &openapi3.Types{"object"},
+						Required: []string{"deny"},
+						Properties: openapi3.Schemas{
+							"deny": {
+								Value: &openapi3.Schema{
+									Type:  &openapi3.Types{"array"},
+									Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	parser := NewParser(doc)
+	result, err := parser.ParsePaths([]string{"/v1/ai-gateways/{gatewayId}/models"})
+
+	require.NoError(t, err)
+	require.Contains(t, result.Schemas, "AIGatewayACLS")
+	require.Contains(t, result.Schemas, "AIGatewayAllowACL")
+	require.Contains(t, result.Schemas, "AIGatewayDenyACL")
+}
+
 func TestParsePaths_PathNotFound(t *testing.T) {
 	doc := &openapi3.T{
 		Paths: openapi3.NewPaths(),

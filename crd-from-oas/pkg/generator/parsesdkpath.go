@@ -85,6 +85,45 @@ func ParseSDKRequestBodyInfo(importPath, typeName string) (sdkRequestBodyInfo, e
 	return sdkRequestBodyInfo{}, fmt.Errorf("type %q not found in %q", typeName, importPath)
 }
 
+// ParseSDKUnionMemberFieldNames returns the struct field names tagged as union
+// members on an SDK type. It returns an empty slice when the type is not a
+// union wrapper.
+func ParseSDKUnionMemberFieldNames(importPath, typeName string) ([]string, error) {
+	dir, err := resolveGoPackageDir(importPath)
+	if err != nil {
+		return nil, err
+	}
+
+	pkgs, err := loadSDKPackages(importPath, dir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Syntax {
+			for _, decl := range file.Decls {
+				genDecl, ok := decl.(*ast.GenDecl)
+				if !ok || genDecl.Tok != token.TYPE {
+					continue
+				}
+				for _, spec := range genDecl.Specs {
+					typeSpec, ok := spec.(*ast.TypeSpec)
+					if !ok || typeSpec.Name.Name != typeName {
+						continue
+					}
+					structType, ok := typeSpec.Type.(*ast.StructType)
+					if !ok {
+						return nil, fmt.Errorf("type %q in %q is not a struct", typeName, importPath)
+					}
+					return extractSDKUnionMemberFieldNames(structType), nil
+				}
+			}
+		}
+	}
+
+	return nil, nil
+}
+
 func loadSDKPackages(importPath, dir string) ([]*packages.Package, error) {
 	config := &packages.Config{
 		Mode: packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedSyntax,
@@ -227,6 +266,23 @@ func extractSDKRequestBodyInfo(structType *ast.StructType) (sdkRequestBodyInfo, 
 	}
 
 	return sdkRequestBodyInfo{}, fmt.Errorf("request body field not found")
+}
+
+func extractSDKUnionMemberFieldNames(structType *ast.StructType) []string {
+	var names []string
+	for _, field := range structType.Fields.List {
+		if field.Tag == nil {
+			continue
+		}
+		tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+		if tag.Get("union") != "member" {
+			continue
+		}
+		for _, name := range field.Names {
+			names = append(names, name.Name)
+		}
+	}
+	return names
 }
 
 func sdkFieldTypeName(expr ast.Expr) (string, bool, error) {
