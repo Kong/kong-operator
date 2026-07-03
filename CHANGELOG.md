@@ -2,7 +2,9 @@
 
 ## Table of Contents
 
+- [v2.2.1](#v221)
 - [v2.2.0](#v220)
+- [v2.1.8](#v218)
 - [v2.1.7](#v217)
 - [v2.1.6](#v216)
 - [v2.1.5](#v215)
@@ -49,7 +51,20 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## 2.2.1
+## Unreleased
+
+### Fixes
+
+- Gateway: stop overwriting the user-configured `KONG_STREAM_LISTEN` for TLS
+  listeners. The operator now enforces only the listen port and the `ssl` token,
+  preserving the bind address (e.g. `[::]` for IPv6) and any listen options
+  (`reuseport`, `backlog=...`) set on the `GatewayConfiguration` DataPlane pod
+  template. Multiple bind addresses (dual-stack, e.g.
+  `0.0.0.0:<port> ssl reuseport, [::]:<port> ssl reuseport`) are preserved for each
+  listener port. Defaults to `0.0.0.0` and `reuseport` when unset.
+  [#4755](https://github.com/Kong/kong-operator/pull/4755)
+
+## [v2.2.1]
 
 > Release date: 2026-07-01
 
@@ -389,6 +404,18 @@
   Users are suggested to block network access to debug endpoints (which are disabled
   by default) if plugin configuration can contain sensitive information.
   [#4467](https://github.com/Kong/kong-operator/pull/4467)
+- Hybridgateway: fix `KongTarget` stuck in `Programmed=False` when multiple
+  backendRef Services in an HTTPRoute or TLSRoute rule resolve to the same pod
+  IP and port. The operator now creates one `KongTarget` per unique endpoint
+  address across all backendRefs in a rule, merging duplicate endpoints and
+  summing their weights, instead of attempting to create one per backendRef per
+  endpoint which violated Konnect's upstream/target uniqueness constraint.
+  **Note:** the `KongTarget` naming scheme has changed and the backendRef is no
+  longer part of the name hash. All existing `KongTarget` resources will be
+  orphaned and recreated on the first reconciliation after upgrading. During
+  the transition, both old and new entries may be present in Konnect
+  simultaneously as creation and orphan cleanup are not synchronized.
+  [#4509](https://github.com/Kong/kong-operator/pull/4509)
 
 ## [v2.1.8]
 
@@ -2344,6 +2371,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
 [v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
 [v2.1.8]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.1.8
 [v2.1.7]: https://github.com/Kong/kong-operator/compare/v2.1.6..v2.1.7

@@ -1289,8 +1289,8 @@ func setDataPlaneDeploymentListenPorts(
 		consts.DataPlaneAdminAPIPort: {},
 	}
 
-	// Extract listeners with TLS ports.
-	tlsPorts := []int{}
+	// Extract stream (TLS/TCP/UDP) listeners with the Kong port they map to.
+	var streamPorts []streamListenPort
 	var errs error
 	// assignedPortNumber and assignedPortMax defines the interval of ports to assign to listen on Kong stream proxy
 	// if the specified port in the listener is already occupied on Kong DataPlane.
@@ -1307,7 +1307,6 @@ func setDataPlaneDeploymentListenPorts(
 			portNumber := int(l.Port)
 			// TODO: support multiple listeners using the same port:
 			// https://github.com/Kong/kong-operator/issues/3511
-			tlsPorts = append(tlsPorts, portNumber)
 			// Assign another port if the listener's port is already allocated on Kong DP.
 			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
 			_, occupied := kongPortOccupied[portNumber]
@@ -1329,6 +1328,10 @@ func setDataPlaneDeploymentListenPorts(
 				listenerPortToKongListenPort[portNumber] = portNumber
 				kongPortOccupied[portNumber] = struct{}{}
 			}
+			streamPorts = append(streamPorts, streamListenPort{
+				kongPort: listenerPortToKongListenPort[portNumber],
+				protocol: gatewayv1.TLSProtocolType,
+			})
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 		}
@@ -1338,13 +1341,40 @@ func setDataPlaneDeploymentListenPorts(
 		return nil, errs
 	}
 
-	// Configure env `KONG_STREAM_LISTEN` if there are TLS listeners.
-	// To make the value of the env stable when listener not changed, we sort the ports here.
-	if len(tlsPorts) > 0 {
-		sort.Ints(tlsPorts)
-		streamListenEnvs := make([]string, 0, len(tlsPorts))
-		for _, portNumber := range tlsPorts {
-			streamListenEnvs = append(streamListenEnvs, fmt.Sprintf("0.0.0.0:%d ssl reuseport", listenerPortToKongListenPort[portNumber]))
+	// Configure env `KONG_STREAM_LISTEN` if there are stream listeners.
+	if len(streamPorts) > 0 {
+		// The controller enforces only the Kong port (its remapping logic) and the
+		// protocol token (e.g. `ssl` for TLS). The bind address and any other listen
+		// options (`reuseport`, `backlog=...`, ...) are taken from the user-configured
+		// KONG_STREAM_LISTEN when present, otherwise sensible defaults are used. This
+		// lets users pick an IPv6 address (`[::]`) or drop `reuseport`, and matches how
+		// KONG_PROXY_LISTEN/KONG_ADMIN_LISTEN are user-overridable.
+		//
+		// One template is derived per user-configured SSL endpoint, so a dual-stack
+		// value like "0.0.0.0:X ssl reuseport, [::]:Y ssl reuseport" produces both
+		// bind addresses (with their own options) for every generated Kong port.
+		templates := []streamListenTemplate{{address: "0.0.0.0", options: []string{"reuseport"}}}
+		if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
+			if cfg, err := parseKongListenEnv(streamListen); err == nil && len(cfg.SSLEndpoints) > 0 {
+				templates = templates[:0]
+				for _, ep := range cfg.SSLEndpoints {
+					address := ep.Address
+					if address == "" {
+						address = "0.0.0.0"
+					}
+					templates = append(templates, streamListenTemplate{address: address, options: ep.Options})
+				}
+			}
+		}
+		// Sort by the Kong port to keep the env value stable when listeners do not change.
+		sort.Slice(streamPorts, func(i, j int) bool { return streamPorts[i].kongPort < streamPorts[j].kongPort })
+		streamListenEnvs := make([]string, 0, len(streamPorts)*len(templates))
+		for _, sp := range streamPorts {
+			tokens := streamListenProtocolTokens(sp.protocol)
+			for _, tmpl := range templates {
+				streamListenEnvs = append(streamListenEnvs,
+					renderStreamListenEntry(tmpl, sp.kongPort, tokens))
+			}
 		}
 		k8sutils.SetContainerEnv(container, corev1.EnvVar{
 			Name:  "KONG_STREAM_LISTEN",
@@ -1574,11 +1604,56 @@ func conditionMessage(oldStr, newStr string) string {
 type proxyListenEndpoint struct {
 	Address string
 	Port    int
+	// Options holds the listen flags following the address (e.g. "reuseport",
+	// "backlog=16384"), in their original order, excluding the "ssl" token which is
+	// represented by the endpoint landing in SSLEndpoints.
+	Options []string
 }
 
 type kongListenConfig struct {
 	Endpoints    []*proxyListenEndpoint
 	SSLEndpoints []*proxyListenEndpoint
+}
+
+// streamListenPort is a stream (TLS/TCP/UDP) listener's resolved Kong port together
+// with the Gateway protocol it serves, used to render KONG_STREAM_LISTEN.
+type streamListenPort struct {
+	kongPort int
+	protocol gatewayv1.ProtocolType
+}
+
+// streamListenTemplate holds the user-controlled parts of a KONG_STREAM_LISTEN entry:
+// the bind address and the listen options. The controller supplies the port and the
+// protocol token itself.
+type streamListenTemplate struct {
+	address string
+	options []string
+}
+
+// streamListenProtocolTokens returns the KONG_STREAM_LISTEN tokens the controller
+// enforces for a stream listener of the given protocol: TLS -> "ssl"; UDP -> "udp";
+// TCP -> none. Rendering is otherwise identical across protocols, so future TCPRoute
+// and UDPRoute support only needs to collect their ports (see streamListenPort) —
+// no separate render path is required.
+func streamListenProtocolTokens(p gatewayv1.ProtocolType) []string {
+	switch p {
+	case gatewayv1.TLSProtocolType:
+		return []string{"ssl"}
+	case gatewayv1.UDPProtocolType:
+		return []string{"udp"}
+	default: // TCP and anything else: no extra token.
+		return nil
+	}
+}
+
+// renderStreamListenEntry builds a single KONG_STREAM_LISTEN entry from the
+// controller-owned port and protocol tokens followed by the user-preserved options.
+func renderStreamListenEntry(tmpl streamListenTemplate, port int, tokens []string) string {
+	parts := make([]string, 0, 1+len(tokens)+len(tmpl.options))
+	parts = append(parts, net.JoinHostPort(tmpl.address, strconv.Itoa(port)))
+	parts = append(parts, tokens...)
+	parts = append(parts, tmpl.options...)
+	return strings.Join(parts, " ")
 }
 
 // parseKongListenEnv parses the provided kong listen string and returns
@@ -1605,25 +1680,34 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 		if err != nil {
 			return kongListenConfig, fmt.Errorf("failed parsing host %s: %w", hostPort, err)
 		}
-		flags := s[i+1:]
-		if strings.Contains(flags, "ssl") {
-			p, err := strconv.Atoi(port)
-			if err != nil {
-				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
+		p, err := strconv.Atoi(port)
+		if err != nil {
+			return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
+		}
+		// Split the trailing flags: "ssl" selects the SSL endpoint bucket, everything
+		// else is preserved as options in original order.
+		var (
+			ssl     bool
+			options []string
+		)
+		if i >= 0 {
+			for f := range strings.FieldsSeq(s[i+1:]) {
+				if f == "ssl" {
+					ssl = true
+					continue
+				}
+				options = append(options, f)
 			}
-			kongListenConfig.SSLEndpoints = append(kongListenConfig.SSLEndpoints, &proxyListenEndpoint{
-				Address: host,
-				Port:    p,
-			})
+		}
+		endpoint := &proxyListenEndpoint{
+			Address: host,
+			Port:    p,
+			Options: options,
+		}
+		if ssl {
+			kongListenConfig.SSLEndpoints = append(kongListenConfig.SSLEndpoints, endpoint)
 		} else {
-			p, err := strconv.Atoi(port)
-			if err != nil {
-				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
-			}
-			kongListenConfig.Endpoints = append(kongListenConfig.Endpoints, &proxyListenEndpoint{
-				Address: host,
-				Port:    p,
-			})
+			kongListenConfig.Endpoints = append(kongListenConfig.Endpoints, endpoint)
 		}
 	}
 
