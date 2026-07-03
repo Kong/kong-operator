@@ -10,6 +10,7 @@ import (
 )
 
 type generatedMockSDKWrapper struct {
+	AIGatewaysSDK                                *mocks.MockAIGatewaysSDK
 	EventGatewayBackendClustersSDK               *mocks.MockEventGatewayBackendClustersSDK
 	EventGatewayDataPlaneCertificatesSDK         *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	EventGatewayListenersSDK                     *mocks.MockEventGatewayListenersSDK
@@ -31,6 +32,7 @@ type generatedMockSDKWrapper struct {
 
 func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 	return generatedMockSDKWrapper{
+		AIGatewaysSDK:                                mocks.NewMockAIGatewaysSDK(t),
 		EventGatewayBackendClustersSDK:               mocks.NewMockEventGatewayBackendClustersSDK(t),
 		EventGatewayDataPlaneCertificatesSDK:         mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		EventGatewayListenersSDK:                     mocks.NewMockEventGatewayListenersSDK(t),
@@ -49,6 +51,11 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		PortalPagesSDK:                               mocks.NewMockPortalPagesSDK(t),
 		PortalTeamsSDK:                               mocks.NewMockPortalTeamsSDK(t),
 	}
+}
+
+// GetAIGatewaysSDK returns the SDK to operate AIGatewayControlPlane.
+func (m generatedMockSDKWrapper) GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK {
+	return m.AIGatewaysSDK
 }
 
 // GetEventGatewayBackendClustersSDK returns the SDK to operate EventGatewayBackendCluster.

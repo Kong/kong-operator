@@ -13,13 +13,14 @@ import (
 func TestKonnectAPIAuthReferencingTypesOnlyIncludeSupportedEntities(t *testing.T) {
 	t.Parallel()
 
-	require.Len(t, konnectAPIAuthReferencingTypes, 5)
+	require.Len(t, konnectAPIAuthReferencingTypes, 6)
 	for _, ent := range konnectAPIAuthReferencingTypes {
 		switch ent.(type) {
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork,
 			*konnectv1alpha2.KonnectGatewayControlPlane,
 			*konnectv1alpha2.KonnectExtension,
 			*konnectv1alpha1.KonnectEventGateway,
+			*konnectv1alpha1.AIGatewayControlPlane,
 			*konnectv1alpha1.Portal:
 		default:
 			t.Fatalf("unexpected KonnectAPIAuthConfiguration referencing type %T", ent)
@@ -30,7 +31,7 @@ func TestKonnectAPIAuthReferencingTypesOnlyIncludeSupportedEntities(t *testing.T
 func TestKonnectAPIAuthReferencingTypeListsOnlyIncludeSupportedEntities(t *testing.T) {
 	t.Parallel()
 
-	require.Len(t, konnectAPIAuthReferencingTypeListsWithIndexes, 5)
+	require.Len(t, konnectAPIAuthReferencingTypeListsWithIndexes, 6)
 	for objList := range konnectAPIAuthReferencingTypeListsWithIndexes {
 		assertSupportedKonnectAPIAuthReferencingListType(t, objList)
 	}
@@ -44,6 +45,7 @@ func assertSupportedKonnectAPIAuthReferencingListType(t *testing.T, objList clie
 		*konnectv1alpha2.KonnectGatewayControlPlaneList,
 		*konnectv1alpha2.KonnectExtensionList,
 		*konnectv1alpha1.KonnectEventGatewayList,
+		*konnectv1alpha1.AIGatewayControlPlaneList,
 		*konnectv1alpha1.PortalList:
 	default:
 		t.Fatalf("unexpected KonnectAPIAuthConfiguration referencing list type %T", objList)

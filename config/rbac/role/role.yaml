@@ -446,6 +446,7 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
+  - aigatewaycontrolplanes
   - konnectapiauthconfigurations
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
@@ -468,6 +469,8 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
+  - aigatewaycontrolplanes/finalizers
+  - aigatewaycontrolplanes/status
   - konnectapiauthconfigurations/finalizers
   - konnectapiauthconfigurations/status
   - konnectcloudgatewaydataplanegroupconfigurations/finalizers
