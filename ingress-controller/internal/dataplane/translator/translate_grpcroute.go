@@ -83,7 +83,7 @@ func (t *Translator) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes 
 	// after they are translated, register the success event in the translator.
 	translatedGRPCRoutes := []*gatewayapi.GRPCRoute{}
 	for _, grpcRoute := range grpcRoutes {
-		splitGRPCRouteMatches = append(splitGRPCRouteMatches, subtranslator.SplitGRPCRoute(grpcRoute)...)
+		splitGRPCRouteMatches = append(splitGRPCRouteMatches, subtranslator.SplitGRPCRoute(grpcRoute, t.storer)...)
 		translatedGRPCRoutes = append(translatedGRPCRoutes, grpcRoute)
 	}
 

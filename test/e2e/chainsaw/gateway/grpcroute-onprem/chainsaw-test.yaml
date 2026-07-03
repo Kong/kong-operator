@@ -23,7 +23,7 @@ spec:
     - name: cert_secret_namespace
       value: ($namespace)
     - name: gateway_image
-      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.14')
     - name: grpcbin_image
       value: 'kong/grpcbin:latest'
     - name: grpc_route_name

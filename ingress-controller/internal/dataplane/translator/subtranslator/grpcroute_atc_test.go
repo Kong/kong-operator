@@ -8,11 +8,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
@@ -196,11 +198,61 @@ func TestSplitGRPCRoute(t *testing.T) {
 				},
 			},
 		},
+		{
+			TypeMeta: grpcRouteTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "grpcroute-no-spec-hostname-inherits-from-listener",
+			},
+			Spec: gatewayapi.GRPCRouteSpec{
+				CommonRouteSpec: gatewayapi.CommonRouteSpec{
+					ParentRefs: []gatewayapi.ParentReference{{
+						Name: gatewayapi.ObjectName("test-gateway"),
+					}},
+				},
+				Rules: []gatewayapi.GRPCRouteRule{
+					{
+						Matches: []gatewayapi.GRPCRouteMatch{
+							{
+								Method: &gatewayapi.GRPCMethodMatch{
+									Service: new("pets"),
+									Method:  new("list"),
+								},
+							},
+						},
+						BackendRefs: namesToBackendRefs([]string{"listpets"}),
+					},
+				},
+			},
+		},
+	}
+
+	// gatewayWithListenerHostnames is the Gateway referenced by
+	// testGRPCRoutes[4], providing the listener hostnames the route inherits
+	// when it specifies no hostnames of its own.
+	gatewayWithListenerHostnames := &gatewayapi.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+		Spec: gatewayapi.GatewaySpec{
+			Listeners: []gatewayapi.Listener{
+				{
+					Name:     "listener-bar",
+					Hostname: new(gatewayapi.Hostname("bar.com")),
+				},
+				{
+					Name:     "listener-wildcard",
+					Hostname: new(gatewayapi.Hostname("*.bar.com")),
+				},
+			},
+		},
 	}
 
 	testCases := []struct {
 		name                 string
 		grpcRoute            *gatewayapi.GRPCRoute
+		storerObjects        store.FakeObjects
 		expectedSplitMatches []SplitGRPCRouteMatch
 	}{
 		{
@@ -290,11 +342,33 @@ func TestSplitGRPCRoute(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:          "no spec hostname inherits hostnames from attached gateway listeners",
+			grpcRoute:     testGRPCRoutes[4],
+			storerObjects: store.FakeObjects{Gateways: []*gatewayapi.Gateway{gatewayWithListenerHostnames}},
+			expectedSplitMatches: []SplitGRPCRouteMatch{
+				{
+					Source:     testGRPCRoutes[4],
+					Hostname:   "bar.com",
+					Match:      testGRPCRoutes[4].Spec.Rules[0].Matches[0],
+					RuleIndex:  0,
+					MatchIndex: 0,
+				},
+				{
+					Source:     testGRPCRoutes[4],
+					Hostname:   "*.bar.com",
+					Match:      testGRPCRoutes[4].Spec.Rules[0].Matches[0],
+					RuleIndex:  0,
+					MatchIndex: 0,
+				},
+			},
+		},
 	}
 
 	for i, tc := range testCases {
 		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
-			splitMatches := SplitGRPCRoute(tc.grpcRoute)
+			storer := lo.Must(store.NewFakeStore(tc.storerObjects))
+			splitMatches := SplitGRPCRoute(tc.grpcRoute, storer)
 			require.Len(t, splitMatches, len(tc.expectedSplitMatches), "should have same number of split matches with expected")
 			for i, splitGRPCRoute := range tc.expectedSplitMatches {
 				require.Truef(t, reflect.DeepEqual(splitGRPCRoute, splitMatches[i]),

@@ -32,7 +32,9 @@ jobs:
         - gateway
         - hybridgateway
         - konnect
-        - eventgateway
+        # TODO: fix eventgateway suite and re-enable it in the matrix once they are stable again.
+        # TODO: https://github.com/Kong/kong-operator/issues/4757
+        # - eventgateway
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -81,6 +83,9 @@ jobs:
           --set env.enable_controller_konnect=true \
           --set env.enable_controller_kegdataplane=true \
           --wait
+
+    - name: DNS lookup for us.control-plane.konghq.tech
+      run: dig us.control-plane.konghq.tech
 
     - name: run chainsaw e2e tests
       id: chainsaw-tests

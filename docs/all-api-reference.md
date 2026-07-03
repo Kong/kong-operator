@@ -2606,11 +2606,11 @@ produce schema validation policy when using JSON parsing without schema.
 | Field | Description |
 | --- | --- |
 | `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 | `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 
 _Appears in:_
 
@@ -2666,11 +2666,11 @@ registry.
 | Field | Description |
 | --- | --- |
 | `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 | `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 
 _Appears in:_
 
@@ -2816,14 +2816,14 @@ EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVi
 
 | Field | Description |
 | --- | --- |
-| `aclMode` _[VirtualClusterACLMode](#configuration-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
+| `aclMode` _[VirtualClusterACLMode](#configuration-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
 | `authentication` _[VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)_ | How to handle authentication from clients.<br /><br />It tries to authenticate with every rule sequentially one by one. It succeeds on the first match, and fails if no rule matches. |
 | `description` _string_ | A human-readable description of the virtual cluster. |
 | `dnsLabel` _[VirtualClusterDNSLabel](#configuration-konghq-com-v1alpha1-types-virtualclusterdnslabel)_ | The DNS label used in the bootstrap server URL to identify the virtual cluster when using SNI routing. The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-', must start and end with an alphanumeric character. |
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ | The name of the virtual cluster. |
 | `namespace` _[VirtualClusterNamespace](#configuration-konghq-com-v1alpha1-types-virtualclusternamespace)_ | Namespace allows to implement multitenancy using a single backend cluster. It allows to either hide or enforce a static prefix on resources (topics, consumer group IDs, transaction IDs). |
-| `topicAliases` _[VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `topicAliases` _[VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -3128,6 +3128,79 @@ EventGatewayVirtualClusterStatus defines the observed state of EventGatewayVirtu
 _Appears in:_
 
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
+
+#### FetchKongIdentityPrincipal
+
+
+FetchKongIdentityPrincipal Fetches principal metadata from Kong Identity
+after successful authentication.
+The principal is looked up by a custom key matched against the authenticated
+identity.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | Kong Identity directory to use for principal lookup. |
+| `failureMode` _[FetchKongIdentityPrincipalFailureMode](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipalfailuremode)_ | Behavior when the Kong Identity principal lookup fails. * `error` - fail the authentication if the principal lookup fails. * `ignore` - proceed without principal metadata if the lookup fails.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `fetchBy` _[FetchKongIdentityPrincipalFetchBy](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipalfetchby)_ | Defines how to look up the principal in Kong Identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationClientCertificate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclientcertificate)
+- [VirtualClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslplain)
+- [VirtualClusterAuthenticationSaslScram](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationsaslscram)
+
+#### FetchKongIdentityPrincipalFailureMode
+
+_Underlying type:_ `string`
+
+FetchKongIdentityPrincipalFailureMode Behavior when the Kong Identity
+principal lookup fails.
+* `error` - fail the authentication if the principal lookup fails.
+* `ignore` - proceed without principal metadata if the lookup fails.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+
+_Appears in:_
+
+- [FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)
+- [FetchKongIdentityPrincipalOauthBearer](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipaloauthbearer)
+
+#### FetchKongIdentityPrincipalFetchBy
+
+
+FetchKongIdentityPrincipalFetchBy Defines how to look up the principal in
+Kong Identity.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _string_ | The metadata key in Kong Identity to match the authenticated identity against. Value for the lookup is a `username` in case of `sasl_plain` or `sasl_scram`. In case of `client_certificate` it's a principal mapped by the listener TLSServer policy. |
+
+_Appears in:_
+
+- [FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)
+
+#### FetchKongIdentityPrincipalOauthBearer
+
+
+FetchKongIdentityPrincipalOauthBearer Fetches principal metadata from Kong
+Identity after successful OAUTHBEARER authentication.
+The principal is looked up by the iss and sub claims from the JWT token.<br /><br />**Requires a minimum runtime version of `1.2`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | Kong Identity directory to use for principal lookup. |
+| `failureMode` _[FetchKongIdentityPrincipalFailureMode](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipalfailuremode)_ | Behavior when the Kong Identity principal lookup fails. * `error` - fail the authentication if the principal lookup fails. * `ignore` - proceed without principal metadata if the lookup fails.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+
+_Appears in:_
+
+- [VirtualClusterAuthenticationOauthBearer](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationoauthbearer)
 
 #### ForwardToClusterByPortMappingConfig
 
@@ -4692,7 +4765,8 @@ _Underlying type:_ `string`
 
 ProduceKeyValidationAction Defines a behavior when record key is not valid.
 * reject - rejects a batch for topic partition. Only available for produce.
-* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+* mark - marks a record with kong/server header and client ID value
+to help to identify the clients violating schema.
 
 
 
@@ -4709,7 +4783,8 @@ _Underlying type:_ `string`
 ProduceValueValidationAction Defines a behavior when record value is not
 valid.
 * reject - rejects a batch for topic partition. Only available for produce.
-* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+* mark - marks a record with kong/server header and client ID value
+to help to identify the clients violating schema.
 
 
 
@@ -4954,7 +5029,8 @@ _Underlying type:_ `string`
 VirtualClusterACLMode Configures whether or not ACL policies are enforced on
 the gateway.
 - `enforce_on_gateway` means the gateway enforces its own ACL policies for
-this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster.
+this virtual cluster
+and does not forward ACL-related commands to the backend cluster.
 Note that if there are no ACL policies configured, all access is denied.
 - `passthrough` tells the gateway to forward all ACL-related commands.
 
@@ -5017,6 +5093,9 @@ authentication scheme for the virtual cluster.<br /><br />**Requires a minimum r
 
 
 
+| Field | Description |
+| --- | --- |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -5051,8 +5130,9 @@ for the virtual cluster.
 | Field | Description |
 | --- | --- |
 | `claimsMapping` _[VirtualClusterAuthenticationClaimsMapping](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipalOauthBearer](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipaloauthbearer)_ | Fetches principal metadata from Kong Identity after successful OAUTHBEARER authentication. The principal is looked up by the iss and sub claims from the JWT token.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `jwks` _[VirtualClusterAuthenticationJWKS](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationjwks)_ | JSON Web Key Set configuration for verifying token signatures. |
-| `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of<br /><br />validation * validate_forward - pass authentication from the client through proxy to the backend cluster.<br /><br />Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster<br /><br />using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
+| `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of validation * validate_forward - pass authentication from the client through proxy to the backend cluster. Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
 | `validate` _[VirtualClusterAuthenticationValidate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)_ | Validation rules. |
 
 _Appears in:_
@@ -5086,6 +5166,7 @@ the virtual cluster containing principals with username and password.
 
 | Field | Description |
 | --- | --- |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `mediation` _string_ | The mediation type for SASL/PLAIN authentication. |
 | `principals` _[VirtualClusterAuthenticationPrincipal](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)_ | List of principals to be able to authenticate with, used with `terminate` mediation. |
 
@@ -5104,6 +5185,7 @@ the virtual cluster.
 | Field | Description |
 | --- | --- |
 | `algorithm` _string_ | The algorithm used for SASL/SCRAM authentication. |
+| `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -5213,7 +5295,7 @@ consumer group IDs, transaction IDs).
 | Field | Description |
 | --- | --- |
 | `additional` _[VirtualClusterNamespaceAdditionalProperties](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)_ |  |
-| `mode` _string_ | * hide_prefix - the configured prefix is hidden from clients for topics and IDs when reading.<br /><br />Created resources are written with the prefix on the backend cluster. * enforce_prefix - the configured prefix remains visible to clients.<br /><br />Created resources must include the prefix or the request will fail. |
+| `mode` _string_ | * hide_prefix - the configured prefix is hidden from clients for topics and IDs when reading. Created resources are written with the prefix on the backend cluster. * enforce_prefix - the configured prefix remains visible to clients. Created resources must include the prefix or the request will fail. |
 | `prefix` _string_ | The namespace is differentiated by this chosen prefix. For example, if the prefix is set to "analytics_" the topic named "analytics_user_clicks" is available to the clients of the virtual cluster. Topics without the prefix will be ignored unless added via `additional.topics`. |
 
 _Appears in:_
@@ -5364,8 +5446,8 @@ _Appears in:_
 #### VirtualClusterTopicAlias
 
 
-VirtualClusterTopicAlias **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />A topic alias maps an alias name to a namespace-visible topic name.
+VirtualClusterTopicAlias A topic alias maps an alias name to a
+namespace-visible topic name.
 Clients can produce to, consume from, and discover the topic under the alias
 name.
 The original topic name remains accessible.<br /><br />**Requires a minimum runtime version of `1.2`**.
@@ -9252,6 +9334,21 @@ _Appears in:_
 
 - [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
 
+#### Footer
+
+
+Footer is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `snippetName` _string_ | The unique name of a snippet in the portal to render in place of the default footer. |
+
+_Appears in:_
+
+- [PortalLayout](#konnect-konghq-com-v1alpha1-types-portallayout)
+
 #### GatewayDescription
 
 _Underlying type:_ `string`
@@ -9290,6 +9387,22 @@ IdentityProviderType Specifies the type of identity provider.
 _Appears in:_
 
 - [PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)
+
+#### Js
+
+
+Js is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `custom` _*string_ |  |
+| `scripts` _[]string_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -10125,12 +10238,14 @@ PortalAPISpec defines the API spec fields for Portal.
 | `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
 | `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
 | `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `createDefaultContent` _string_ | Use to create the portal page default content upon creation of this portal |
 | `defaultAPIVisibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
 | `defaultApplicationAuthStrategyIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
 | `defaultPageVisibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
 | `description` _*string_ | A description of the portal. |
 | `displayName` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
 | `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `mcpServerEnabled` _string_ | Whether the portal has the MCP server enabled |
 | `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
 | `notificationsDeveloperPiiVisibilityEnabled` _string_ | When enabled, portal registration notifications include the registering developer's identifying information (such as name and email). |
 | `rbacEnabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
@@ -10240,8 +10355,10 @@ PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
 | Field | Description |
 | --- | --- |
 | `css` _*string_ |  |
+| `js` _[Js](#konnect-konghq-com-v1alpha1-types-js)_ |  |
 | `layout` _string_ |  |
 | `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
+| `portalLayout` _[PortalLayout](#konnect-konghq-com-v1alpha1-types-portallayout)_ |  |
 | `robots` _*string_ |  |
 | `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ |  |
 | `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
@@ -10460,6 +10577,21 @@ PortalIdentityProviderRequestStatus defines the observed state of PortalIdentity
 _Appears in:_
 
 - [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
+
+#### PortalLayout
+
+
+PortalLayout is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `footer` _[Footer](#konnect-konghq-com-v1alpha1-types-footer)_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
 
 #### PortalMenuItem
 

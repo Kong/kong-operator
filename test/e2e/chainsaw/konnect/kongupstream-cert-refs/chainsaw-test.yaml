@@ -139,7 +139,7 @@ spec:
             - name: dataplane_namespace
               value: ($namespace)
             - name: dataplane_image
-              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.14')
             - name: extension_name
               value: ($extension_name)
 
@@ -223,7 +223,7 @@ spec:
             - name: upstream_port
               value: ($upstream_port)
             - name: kong_sidecar_image
-              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+              value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.14')
             - name: server_secret_name
               value: ($server_secret_name)
             - name: client_ca_secret_name
@@ -348,6 +348,10 @@ spec:
               value: ($upstream_port)
             - name: target_weight
               value: 100
+            # Use the service hostname so Kong's upstream SSL certificate hostname
+            # verification matches the server cert's CN (pod IP would not match).
+            - name: target_address
+              value: (join(':', [($upstream_host), (to_string($upstream_port))]))
 
     # Step 9: Verify HTTPS proxy call FAILS (4xx) because DataPlane has no client cert.
     - name: Verify-https-fails-without-cert-refs
