@@ -408,11 +408,7 @@ func pathParamToFieldName(param string) string {
 	if param == "" {
 		return ""
 	}
-	name := strings.ToUpper(param[:1]) + param[1:]
-	if strings.HasSuffix(name, "Id") {
-		name = name[:len(name)-2] + "ID"
-	}
-	return name
+	return fixInitialisms(strings.ToUpper(param[:1]) + param[1:])
 }
 
 // pascalFromKebab converts a kebab-case or space-separated identifier to

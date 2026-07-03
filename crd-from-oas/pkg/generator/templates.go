@@ -1047,6 +1047,14 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	switch variant {
 {{- range $.Variants}}
 	case "{{.FieldName}}":
+		{{- if .UpdateDirectUnion}}
+		var member {{$importAlias}}.{{.UpdateVariantTypeName}}
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into {{.UpdateVariantTypeName}}: %w", err)
+		}
+		target := {{$importAlias}}.{{.UpdateConstructorName}}(member)
+		return &target, nil
+		{{- else}}
 		configPayload, ok := selected["{{.UpdatePayloadJSONName}}"]
 		if !ok || configPayload == nil {
 			return nil, fmt.Errorf("{{$.EntityName}} config payload missing {{.UpdatePayloadJSONName}}")
@@ -1062,6 +1070,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		unionValue := {{$importAlias}}.{{.UpdateConstructorName}}(member)
 		target.{{.UpdateTargetFieldName}} = &unionValue
 		return &target, nil
+		{{- end}}
 {{- end}}
 	default:
 		return nil, fmt.Errorf("unsupported {{$.EntityName}} config variant %q", variant)
@@ -1330,6 +1339,15 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 			{{if .Create.CreateReqBodyPointer}}expectedRequest{{else}}*expectedRequest{{end}},
 {{- end}}
 		).
+{{- if .Create.RespRootUnion}}
+		Return(&sdkkonnectops.{{.Create.ResponseType}}{
+			{{.Create.RespField}}: &sdkkonnectcomp.{{.Create.RespField}}{
+				{{index .Create.RespRootUnion.VariantFieldNames 0}}: &sdkkonnectcomp.{{index .Create.RespRootUnion.VariantFieldNames 0}}{
+					ID: {{if .Create.RespIDIsPointer}}&expectedID{{else}}expectedID{{end}},
+				},
+			},
+		}, nil).
+{{- else}}
 		Return(&sdkkonnectops.{{.Create.ResponseType}}{
 			{{.Create.RespField}}: &sdkkonnectcomp.{{.Create.RespField}}{
 {{- if not .Create.SingletonNoID}}
@@ -1337,6 +1355,7 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- end}}
 			},
 		}, nil).
+{{- end}}
 		Once()
 
 	require.NoError(t, create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj))
@@ -1814,6 +1833,31 @@ func create{{.Entity}}(
 	if resp == nil || resp.{{.RespField}} == nil {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
+{{- else if .RespRootUnion}}
+	if resp == nil || resp.{{.RespField}} == nil {
+		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	var id string
+{{- range .RespRootUnion.VariantFieldNames}}
+	if id == "" && resp.{{$.RespField}}.{{.}} != nil {
+		switch extractedID := any(resp.{{$.RespField}}.{{.}}.GetID()).(type) {
+		case string:
+			if extractedID != "" {
+				id = extractedID
+			}
+		case *string:
+			if extractedID != nil && *extractedID != "" {
+				id = *extractedID
+			}
+		}
+	}
+{{- end}}
+	if id == "" {
+		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	obj.SetKonnectID(id)
 {{- else if .RespIDIsPointer}}
 	if resp == nil || resp.{{.RespField}} == nil || resp.{{.RespField}}.ID == nil || *resp.{{.RespField}}.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)

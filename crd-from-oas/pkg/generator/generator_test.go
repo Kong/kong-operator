@@ -1144,6 +1144,44 @@ func TestGenerateCRDType_WithRootUnionGeneratesSafeUnmarshal(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGenerateCRDType_DoesNotImportAPIExtensionsForReferencedJSONOnly(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"ReferencedJSONSchema": {
+				Name: "ReferencedJSONSchema",
+				Properties: []*parser.Property{
+					{
+						Name: "payload",
+						Type: "object",
+						AdditionalProperties: &parser.Property{
+							Type:                 "object",
+							AdditionalProperties: &parser.Property{Type: "string"},
+						},
+					},
+				},
+			},
+		},
+	}
+	g.parsed = parsed
+
+	schema := &parser.Schema{
+		Name: "CreateExample",
+		Properties: []*parser.Property{
+			{Name: "config", RefName: "ReferencedJSONSchema"},
+		},
+	}
+
+	content, err := g.generateCRDType("CreateExample", schema)
+	require.NoError(t, err)
+
+	assert.NotContains(t, content, `apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"`)
+}
+
 func TestGenerateEntityFiles_GeneratesUnionTypeTests(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroup:   "konnect.konghq.com",
@@ -3039,6 +3077,59 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	assert.NotContains(t, content, "target.DcrConfig = &unionValue")
 }
 
+func TestGenerateSDKOps_RootUnionUsesDirectUpdateConstructorForUnionRequests(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				Name:    "AIGatewayModelAPI",
+				RefName: "AIGatewayModelAPI",
+				Properties: []*parser.Property{
+					{Name: "formats", RefName: "AIGatewayModelFormat", Required: true},
+					{Name: "config", RefName: "AIGatewayModelAPIConfig", Required: true},
+					{Name: "capabilities", RefName: "Capabilities", Required: true},
+				},
+			},
+			{
+				Name:    "AIGatewayModelModel",
+				RefName: "AIGatewayModelModel",
+				Properties: []*parser.Property{
+					{Name: "formats", RefName: "AIGatewayModelFormat", Required: true},
+					{Name: "config", RefName: "AIGatewayModelModelConfig", Required: true},
+					{Name: "capabilities", RefName: "AIGatewayModelModelCapabilities", Required: true},
+				},
+			},
+		},
+		Properties: []*parser.Property{
+			{Name: "api", Type: "object"},
+			{Name: "model", Type: "object"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"api":   "AIGatewayModelAPI",
+			"model": "AIGatewayModelModel",
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayModelRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayModel", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "CreateCreateAIGatewayModelRequestAPI")
+	assert.Contains(t, content, "CreateCreateAIGatewayModelRequestModel")
+	assert.Contains(t, content, "CreateUpdateAIGatewayModelRequestAPI")
+	assert.Contains(t, content, "CreateUpdateAIGatewayModelRequestModel")
+	assert.NotContains(t, content, `configPayload, ok := selected["config"]`)
+	assert.NotContains(t, content, "target.Config = &unionValue")
+}
+
 func TestGenerateSDKOps_RootUnionUsesWrappedOperationsBodyMetadata(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{
@@ -4025,6 +4116,41 @@ func TestGenerateOpsCreate_NonRootEntity(t *testing.T) {
 	assert.Contains(t, file.Content, "resp.IdentityProvider.ID == nil")
 	assert.Contains(t, file.Content, "*resp.IdentityProvider.ID")
 	assert.Contains(t, file.Content, "obj.SetKonnectID(*resp.IdentityProvider.ID)")
+}
+
+func TestGenerateOpsCreate_RootUnionResponseExtractsVariantID(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-ai-gateway-model",
+		Tags:               []string{"AI Gateway Models"},
+		SuccessResponseRef: "AIGatewayModel",
+		OneOf: []*parser.Property{
+			{RefName: "AIGatewayModelAPI"},
+			{RefName: "AIGatewayModelModel"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest"},
+		},
+	}
+
+	file, info, err := g.generateOpsCreate("AIGatewayModel", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Contains(t, file.Content, "if resp == nil || resp.AIGatewayModel == nil {")
+	assert.Contains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelAPI != nil")
+	assert.Contains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelAPI.GetID()")
+	assert.Contains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelModel != nil")
+	assert.Contains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelModel.GetID()")
+	assert.Contains(t, file.Content, "obj.SetKonnectID(id)")
+	assert.NotContains(t, file.Content, "resp.AIGatewayModel.ID")
 }
 
 func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
@@ -5379,10 +5505,26 @@ func TestPathParamToFieldName(t *testing.T) {
 		{"id", "ID"},
 		{"gatewayId", "GatewayID"},
 		{"certificateId", "CertificateID"},
+		{"modelIdOrName", "ModelIDOrName"},
 		{"fooId", "FooID"},
 	}
 	for _, tc := range tests {
 		assert.Equal(t, tc.want, pathParamToFieldName(tc.param), "param=%q", tc.param)
+	}
+}
+
+func TestGoFieldName_FixesCamelCaseInitialisms(t *testing.T) {
+	tests := []struct {
+		name string
+		want string
+	}{
+		{"aiGatewayRef", "AIGatewayRef"},
+		{"modelIdOrName", "ModelIDOrName"},
+		{"apiSpec", "APISpec"},
+	}
+
+	for _, tc := range tests {
+		assert.Equal(t, tc.want, goFieldName(tc.name), "name=%q", tc.name)
 	}
 }
 
