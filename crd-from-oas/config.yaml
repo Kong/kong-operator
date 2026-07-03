@@ -11,6 +11,35 @@ apiGroupVersions:
           path: github.com/kong/kong-operator/v2/api/common/v1alpha1
           alias: commonv1alpha1
     types:
+      # AI Gateway APIs
+      - path: /v1/ai-gateways/{gatewayId}/data-plane-certificates
+        name: AIGatewayDataPlaneCertificate
+        secretReferences:
+          - path: spec.apiSpec.cert
+            type: Secret
+            key: tls.crt
+        ops:
+          sdk:
+          # AIGatewayDataPlaneClientCertificate is named struct in SDK
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayDataPlaneCertificatesSDK
+            fieldName: AIGatewayDataPlaneCertificates
+          requireClient: true
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Cert
+                responseField: Cert
+              - objectField: Spec.APISpec.Title
+                responseField: Title
+              - objectField: Spec.APISpec.Description
+                responseField: Description
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayDataPlaneCertificateRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: AIGatewayControlPlane
+            group: konnect.konghq.com
+
       # Event Gateway APIs
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: EventGatewayDataPlaneCertificate

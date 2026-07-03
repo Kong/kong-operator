@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - aigateway.konghq.com_aigatewaydataplanes.yaml
+  - configuration.konghq.com_aigatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaybackendclusters.yaml
   - configuration.konghq.com_eventgatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaylistenerpolicies.yaml
