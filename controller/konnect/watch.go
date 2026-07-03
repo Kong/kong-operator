@@ -310,6 +310,7 @@ type WatchableEntityType interface {
 		konnectv1alpha1.PortalTeam |
 		konnectv1alpha1.PortalIdentityProviderRequest |
 		konnectv1alpha1.AIGatewayControlPlane |
+		konnectv1alpha1.AIGatewayModel |
 		konnectv1alpha1.KonnectEventGateway |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayListener |

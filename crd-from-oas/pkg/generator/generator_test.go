@@ -4317,6 +4317,23 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 	assert.Contains(t, res.TestFile.Content, "obj.SetPortalID(parentID)")
 }
 
+func TestBuildOpsControllerRootUnionFixture_AIGatewayModelUsesValidFixture(t *testing.T) {
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{RefName: "AIGatewayModelAPI"},
+			{RefName: "AIGatewayModelModel"},
+		},
+	}
+
+	fixture := buildOpsControllerRootUnionFixture("AIGatewayModel", schema, "konnectv1alpha1")
+	require.NotNil(t, fixture)
+	assert.Equal(t, "AIGatewayModelConfigTypeAPI", fixture.TypeConstName)
+	assert.Equal(t, "API", fixture.VariantField)
+	assert.Contains(t, fixture.VariantValue, "AIGatewayModelAPI{DisplayName:")
+	assert.Contains(t, fixture.VariantValue, "Capabilities: []string{\"llm/v1/chat\"}")
+	assert.Contains(t, fixture.VariantValue, "AIGatewayTargetConfigTypeAnthropic")
+}
+
 func TestGenerateEntityOpsFile_ControllerOpsTestsUseSafeNamedRefLiterals(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",

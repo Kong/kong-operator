@@ -11,6 +11,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
 		&AIGatewayControlPlane{},
 		&AIGatewayControlPlaneList{},
+		&AIGatewayModel{},
+		&AIGatewayModelList{},
 		&KonnectEventGateway{},
 		&KonnectEventGatewayList{},
 		&Portal{},
