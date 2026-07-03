@@ -181,7 +181,7 @@ func kongServiceToSDKServiceInput(
 		s.Port = new(svc.Spec.Port)
 	}
 	if svc.Spec.Protocol != "" {
-		s.Protocol = new(svc.Spec.Protocol)
+		s.Protocol = (*sdkkonnectcomp.ServiceProtocol)(&svc.Spec.Protocol)
 	}
 	if svc.Status.Konnect != nil {
 		if svc.Status.Konnect.CertificateID != "" {
@@ -226,12 +226,14 @@ func getKongServiceForUID(
 // for adopting in match mode.
 func serviceMatch(konnectService *sdkkonnectcomp.ServiceOutput, svc *configurationv1alpha1.KongService) bool {
 	spec := svc.Spec
+	specProtocol := sdkkonnectcomp.ServiceProtocol(spec.Protocol)
 	if spec.URL != nil {
 		parsedURL, err := url.Parse(*spec.URL)
 		if err != nil {
 			return false
 		}
 		spec.Protocol = sdkkonnectcomp.Protocol(parsedURL.Scheme)
+		specProtocol = sdkkonnectcomp.ServiceProtocol(spec.Protocol)
 		spec.Host = parsedURL.Hostname()
 		spec.Port, _ = strconv.ParseInt(parsedURL.Port(), 10, 64)
 		spec.Path = new(parsedURL.Path)
@@ -239,6 +241,6 @@ func serviceMatch(konnectService *sdkkonnectcomp.ServiceOutput, svc *configurati
 	return equalWithDefault(konnectService.Name, spec.Name, "") &&
 		konnectService.Host == spec.Host &&
 		equalWithDefault(konnectService.Port, &spec.Port, 80) &&
-		equalWithDefault(konnectService.Protocol, &spec.Protocol, "http") &&
+		equalWithDefault(konnectService.Protocol, &specProtocol, sdkkonnectcomp.ServiceProtocol(sdkkonnectcomp.ProtocolsHTTP)) &&
 		equalWithDefault(konnectService.Path, spec.Path, "/")
 }

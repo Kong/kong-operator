@@ -544,6 +544,21 @@ _Appears in:_
 
 - [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
 
+#### Footer
+
+
+Footer is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `snippetName` _string_ | The unique name of a snippet in the portal to render in place of the default footer. |
+
+_Appears in:_
+
+- [PortalLayout](#konnect-konghq-com-v1alpha1-types-portallayout)
+
 #### GatewayDescription
 
 _Underlying type:_ `string`
@@ -582,6 +597,22 @@ IdentityProviderType Specifies the type of identity provider.
 _Appears in:_
 
 - [PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)
+
+#### Js
+
+
+Js is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `custom` _*string_ |  |
+| `scripts` _[]string_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -1416,12 +1447,14 @@ PortalAPISpec defines the API spec fields for Portal.
 | `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
 | `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
 | `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `createDefaultContent` _string_ | Use to create the portal page default content upon creation of this portal |
 | `defaultAPIVisibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
 | `defaultApplicationAuthStrategyIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
 | `defaultPageVisibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
 | `description` _*string_ | A description of the portal. |
 | `displayName` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
 | `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `mcpServerEnabled` _string_ | Whether the portal has the MCP server enabled |
 | `name` _string_ | The name of the portal, used to distinguish it from other portals. Name must be unique. |
 | `notificationsDeveloperPiiVisibilityEnabled` _string_ | When enabled, portal registration notifications include the registering developer's identifying information (such as name and email). |
 | `rbacEnabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
@@ -1531,8 +1564,10 @@ PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
 | Field | Description |
 | --- | --- |
 | `css` _*string_ |  |
+| `js` _[Js](#konnect-konghq-com-v1alpha1-types-js)_ |  |
 | `layout` _string_ |  |
 | `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
+| `portalLayout` _[PortalLayout](#konnect-konghq-com-v1alpha1-types-portallayout)_ |  |
 | `robots` _*string_ |  |
 | `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ |  |
 | `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
@@ -1751,6 +1786,21 @@ PortalIdentityProviderRequestStatus defines the observed state of PortalIdentity
 _Appears in:_
 
 - [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
+
+#### PortalLayout
+
+
+PortalLayout is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `footer` _[Footer](#konnect-konghq-com-v1alpha1-types-footer)_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
 
 #### PortalMenuItem
 
