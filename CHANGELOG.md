@@ -63,6 +63,8 @@
   [#4576](https://github.com/Kong/kong-operator/pull/4576)
 - AI Gateway: introduce `AIGatewayDataPlane` CRD
   [#4690](https://github.com/Kong/kong-operator/pull/4690)
+- GRPCRoute: enable GRPCRoute for on-prem gateway
+  [#4364](https://github.com/Kong/kong-operator/pull/4364)
 
 ### Changed
 
@@ -158,6 +160,8 @@
   or above that boundary depending on whether they should sort before or after
   generated path-based routes.
   [#4640](https://github.com/Kong/kong-operator/pull/4640)
+- Fix routes become unaccepted and removed from DataPlane unexpectedly
+  [#4521](https://github.com/Kong/kong-operator/pull/4521)
 
 ## [v2.2.1]
 
