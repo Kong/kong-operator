@@ -130,6 +130,10 @@ type TypeConfig struct {
 	OpsGetForUID *GetForUIDConfig `yaml:"-"`
 	// OpsSDK holds SDK interface and field name for SDK factory generation.
 	OpsSDK *OpSDKConfig `yaml:"-"`
+	// OpsListCallStylePositional indicates that the SDK list method for this
+	// entity uses positional (pageSize *int64, pageNumber *int64) arguments
+	// instead of a request struct. The generator emits nil, nil for both.
+	OpsListCallStylePositional bool `yaml:"-"`
 	// SecretReferences lists sensitive field paths whose values can be provided
 	// either inline or sourced from a Kubernetes Secret. Each entry causes the
 	// OAS-derived string field at Path to become a SensitiveDataSource struct
@@ -338,6 +342,9 @@ type typeOpsYAML struct {
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool `yaml:"useUIDTagFilter,omitempty"`
+	// ListCallStylePositional indicates that the SDK list method uses positional
+	// (pageSize *int64, pageNumber *int64) args instead of a request struct.
+	ListCallStylePositional bool `yaml:"listCallStylePositional,omitempty"`
 	// GetForUID holds custom field-matching configuration for generated
 	// getForUID logic.
 	GetForUID *GetForUIDConfig `yaml:"getForUID,omitempty"`
@@ -381,6 +388,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.OpsRequireClient = raw.Ops.RequireClient
 		tc.OpsSkipGetForUID = raw.Ops.SkipGetForUID
 		tc.OpsUseUIDTagFilter = raw.Ops.UseUIDTagFilter
+		tc.OpsListCallStylePositional = raw.Ops.ListCallStylePositional
 		tc.OpsGetForUID = raw.Ops.GetForUID
 		tc.OpsSDK = raw.Ops.SDK
 	}
@@ -400,6 +408,9 @@ type EntityOpsConfig struct {
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool
+	// ListCallStylePositional indicates that the SDK list method uses positional
+	// (pageSize *int64, pageNumber *int64) args instead of a request struct.
+	ListCallStylePositional bool
 	// GetForUID holds custom field-matching configuration for generated
 	// getForUID logic.
 	GetForUID *GetForUIDConfig
@@ -511,12 +522,13 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		}
 		requireClient := tc.OpsRequireClient || len(tc.SecretReferences) > 0
 		result[entityName] = &EntityOpsConfig{
-			Ops:             tc.Ops,
-			RequireClient:   requireClient,
-			SkipGetForUID:   tc.OpsSkipGetForUID,
-			UseUIDTagFilter: tc.OpsUseUIDTagFilter,
-			GetForUID:       tc.OpsGetForUID,
-			SDK:             tc.OpsSDK,
+			Ops:                     tc.Ops,
+			RequireClient:           requireClient,
+			SkipGetForUID:           tc.OpsSkipGetForUID,
+			UseUIDTagFilter:         tc.OpsUseUIDTagFilter,
+			ListCallStylePositional: tc.OpsListCallStylePositional,
+			GetForUID:               tc.OpsGetForUID,
+			SDK:                     tc.OpsSDK,
 		}
 	}
 	return result

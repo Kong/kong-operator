@@ -2,6 +2,31 @@
 
 package v1alpha1
 
+// AIGatewayEntityIdentifier Identifier for an AI Gateway entity.
+// In some cases, this may be the entity name or ID.
+type AIGatewayEntityIdentifier string
+
+// AIGatewayProxyURL Proxy URL associated with reaching the data-planes
+// connected to a control-plane.
+type AIGatewayProxyURL struct {
+	// Hostname of the proxy URL.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// Port of the proxy URL.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// Protocol of the proxy URL.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Protocol string `json:"protocol,omitzero"`
+}
+
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL map[string]string
 
@@ -247,6 +272,22 @@ type PortalSAMLIdentityProviderConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	IdpMetadataXML SAMLIdentityProviderMetadata `json:"idpMetadataXML,omitzero"`
 }
+
+// PublicLabelsValue is the value type for PublicLabels.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=63
+// +kubebuilder:validation:Pattern=`^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`
+type PublicLabelsValue string
+
+// PublicLabels Public labels store information about an entity that can be used
+// for filtering a list of objects.
+//
+// Public labels are intended to store **PUBLIC** metadata.
+//
+// Keys must be of length 1-63 characters, and cannot start with "kong",
+// "konnect", "mesh", "kic", or "_".
+type PublicLabels map[string]PublicLabelsValue
 
 // PublishedStatus Whether the resource is visible on a given portal.
 // Defaults to unpublished.

@@ -10,7 +10,8 @@ import (
 // SupportedGeneratedKonnectEntityType is the generated subset of
 // constraints.SupportedKonnectEntityType.
 type SupportedGeneratedKonnectEntityType interface {
-	configurationv1alpha1.EventGatewayBackendCluster |
+	konnectv1alpha1.AIGatewayControlPlane |
+		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewayListener |
 		configurationv1alpha1.EventGatewayListenerPolicy |

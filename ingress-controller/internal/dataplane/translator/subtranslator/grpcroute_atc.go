@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/atc"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
@@ -123,7 +124,10 @@ func headerMatcherFromGRPCHeaderMatches(headerMatches []gatewayapi.GRPCHeaderMat
 
 // SplitGRPCRoute splits a GRPCRoute by hostname and match into multiple matches.
 // Each split match contains at most 1 hostname, and 1 rule with 1 match.
-func SplitGRPCRoute(grpcroute *gatewayapi.GRPCRoute) []SplitGRPCRouteMatch {
+// Hostnames are the effective hostnames of the GRPCRoute: the ones defined in
+// the spec, or - when none are specified - the ones inherited from the listeners
+// of the Gateways referenced in the GRPCRoute's parentRefs.
+func SplitGRPCRoute(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []SplitGRPCRouteMatch {
 	splitMatches := []SplitGRPCRouteMatch{}
 	splitGRPCRouteByMatch := func(hostname string) {
 		for ruleIndex, rule := range grpcroute.Spec.Rules {
@@ -149,13 +153,17 @@ func SplitGRPCRoute(grpcroute *gatewayapi.GRPCRoute) []SplitGRPCRouteMatch {
 		}
 	}
 
-	// split GRPCRoute by matches if no hostname specified in spec.
-	if len(grpcroute.Spec.Hostnames) == 0 {
+	// Resolve effective hostnames: spec hostnames or, when none are set,
+	// the hostnames inherited from the attached Gateway listeners.
+	hostnames := getEffectiveHostnamesForGRPCRoute(grpcroute, storer)
+
+	// split GRPCRoute by matches if no effective hostname is resolved.
+	if len(hostnames) == 0 {
 		splitGRPCRouteByMatch("")
 		return splitMatches
 	}
 	// split by hostname, then split further by rule and match.
-	for _, hostname := range grpcroute.Spec.Hostnames {
+	for _, hostname := range hostnames {
 		splitGRPCRouteByMatch(string(hostname))
 	}
 	return splitMatches

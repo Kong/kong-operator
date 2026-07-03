@@ -479,6 +479,19 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 					return nil
 				},
 			)
+			clientBuilder = clientBuilder.WithIndex(
+				&konnectv1alpha1.AIGatewayControlPlane{},
+				index.IndexFieldAIGatewayControlPlaneOnAPIAuthConfiguration,
+				func(obj client.Object) []string {
+					cp := obj.(*konnectv1alpha1.AIGatewayControlPlane)
+					ns := cp.GetNamespace()
+					authRef := cp.Spec.KonnectConfiguration.APIAuthConfigurationRef
+					if authRef.Name != "" {
+						return []string{ns + "/" + authRef.Name}
+					}
+					return nil
+				},
+			)
 
 			cl := clientBuilder.Build()
 

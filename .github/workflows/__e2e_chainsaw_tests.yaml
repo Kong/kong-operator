@@ -31,7 +31,9 @@ jobs:
         suite:
         - hybridgateway
         - konnect
-        - eventgateway
+        # TODO: fix eventgateway suite and re-enable it in the matrix once they are stable again.
+        # TODO: https://github.com/Kong/kong-operator/issues/4757
+        # - eventgateway
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4

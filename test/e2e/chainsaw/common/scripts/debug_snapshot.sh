@@ -128,7 +128,7 @@ for ns in ${ALL_NAMESPACES}; do
 
   # Event Gateway resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Event Gateway Resources" \
-    "kegdataplanes.eventgateway.konghq.com,eventgatewaybackendclusters.configuration.konghq.com,eventgatewayvirtualclusters.configuration.konghq.com,eventgatewaylisteners.configuration.konghq.com,eventgatewaylistenerpolicies.configuration.konghq.com,eventgatewayvirtualclusterconsumepolicies.configuration.konghq.com"
+    "eventgatewaydataplanecertificates.configuration.konghq.com,kegdataplanes.eventgateway.konghq.com,eventgatewaybackendclusters.configuration.konghq.com,eventgatewayvirtualclusters.configuration.konghq.com,eventgatewaylisteners.configuration.konghq.com,eventgatewaylistenerpolicies.configuration.konghq.com,eventgatewayvirtualclusterconsumepolicies.configuration.konghq.com"
 
   # Core Kubernetes resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Core Kubernetes Resources" \

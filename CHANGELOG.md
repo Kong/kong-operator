@@ -61,8 +61,13 @@
   [#4610](https://github.com/Kong/kong-operator/pull/4610)
 - API: add PrintColumns for KongTarget upstream and target fields.
   [#4576](https://github.com/Kong/kong-operator/pull/4576)
-- AI Gateway: introduce `AIGatewayDataPlane` CRD
+- AIGateway:
+  - introduce `AIGatewayDataPlane` CRD
   [#4690](https://github.com/Kong/kong-operator/pull/4690)
+  - introduce `AIGatewayControlPlane` CRD with reconciler
+  [#4760](https://github.com/Kong/kong-operator/pull/4760)
+- GRPCRoute: enable GRPCRoute for on-prem gateway
+  [#4364](https://github.com/Kong/kong-operator/pull/4364)
 
 ### Changed
 
@@ -75,6 +80,8 @@
   [#4713](https://github.com/Kong/kong-operator/pull/4713)
 - Hybridgateway: treat malformed annotations as errors
   [#4530](https://github.com/Kong/kong-operator/pull/4530)
+- Conformance: enable GRPCRoute conformance tests for on-prem.
+  [#4673](https://github.com/Kong/kong-operator/pull/4673)
 
 ### Fixes
 
@@ -156,6 +163,8 @@
   or above that boundary depending on whether they should sort before or after
   generated path-based routes.
   [#4640](https://github.com/Kong/kong-operator/pull/4640)
+- Fix routes become unaccepted and removed from DataPlane unexpectedly
+  [#4521](https://github.com/Kong/kong-operator/pull/4521)
 
 ## [v2.2.1]
 
