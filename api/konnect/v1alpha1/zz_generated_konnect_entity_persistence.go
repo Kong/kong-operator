@@ -2,6 +2,11 @@
 
 package v1alpha1
 
+// PersistsKonnectID reports whether AIGatewayControlPlane persists a Konnect ID in status.
+func (*AIGatewayControlPlane) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether KonnectEventGateway persists a Konnect ID in status.
 func (*KonnectEventGateway) PersistsKonnectID() bool {
 	return true

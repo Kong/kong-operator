@@ -27,6 +27,8 @@ func UpdateGeneratedOps[
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
+	case *konnectv1alpha1.AIGatewayControlPlane:
+		return updateAIGatewayControlPlane(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return updateEventGatewayBackendCluster(ctx, cl, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:

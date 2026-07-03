@@ -11,11 +11,13 @@ import (
 )
 
 var generatedKonnectAPIAuthReferencingTypes = []constraints.EntityWithKonnectAPIAuthConfigurationRef{
+	&konnectv1alpha1.AIGatewayControlPlane{},
 	&konnectv1alpha1.KonnectEventGateway{},
 	&konnectv1alpha1.Portal{},
 }
 
 var generatedKonnectAPIAuthReferencingTypeListsWithIndexes = map[client.ObjectList]string{
-	&konnectv1alpha1.KonnectEventGatewayList{}: index.IndexFieldKonnectEventGatewayOnAPIAuthConfiguration,
-	&konnectv1alpha1.PortalList{}:              index.IndexFieldPortalOnAPIAuthConfiguration,
+	&konnectv1alpha1.AIGatewayControlPlaneList{}: index.IndexFieldAIGatewayControlPlaneOnAPIAuthConfiguration,
+	&konnectv1alpha1.KonnectEventGatewayList{}:   index.IndexFieldKonnectEventGatewayOnAPIAuthConfiguration,
+	&konnectv1alpha1.PortalList{}:                index.IndexFieldPortalOnAPIAuthConfiguration,
 }

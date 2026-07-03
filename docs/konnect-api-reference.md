@@ -9,6 +9,7 @@
 
 Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1alpha1 API group.
 
+- [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
@@ -24,6 +25,21 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
 - [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
 - [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
+
+### AIGatewayControlPlane
+
+
+AIGatewayControlPlane is the Schema for the aigatewaycontrolplanes API.
+
+<!-- ai_gateway_control_plane description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayControlPlane`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanespec)_ |  |
+| `status` _[AIGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanestatus)_ |  |
 
 ### KonnectAPIAuthConfiguration
 
@@ -256,6 +272,92 @@ PortalTeam is the Schema for the portalteams API.
 ### Types
 
 In this section you will find types that the CRDs rely on.
+#### AIGatewayControlPlaneAPISpec
+
+
+AIGatewayControlPlaneAPISpec defines the API spec fields for AIGatewayControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `description` _string_ | The description of the AI Gateway. |
+| `displayName` _string_ | The display name for this AI Gateway. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | The name for this AI Gateway. |
+| `proxyUrls` _[AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
+
+_Appears in:_
+
+- [AIGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanespec)
+
+#### AIGatewayControlPlaneSpec
+
+
+AIGatewayControlPlaneSpec defines the desired state of AIGatewayControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
+
+#### AIGatewayControlPlaneStatus
+
+
+AIGatewayControlPlaneStatus defines the observed state of AIGatewayControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
+
+#### AIGatewayEntityIdentifier
+
+_Underlying type:_ `string`
+
+AIGatewayEntityIdentifier Identifier for an AI Gateway entity.
+In some cases, this may be the entity name or ID.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
+
+#### AIGatewayProxyURL
+
+
+AIGatewayProxyURL Proxy URL associated with reaching the data-planes
+connected to a control-plane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Hostname of the proxy URL. |
+| `port` _int_ | Port of the proxy URL. |
+| `protocol` _string_ | Protocol of the proxy URL. |
+
+_Appears in:_
+
+- [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
+
 
 
 #### AWSTransitGateway
@@ -2001,6 +2103,34 @@ Allowed values:
 | `Manual` | ManualSecretProvisioning is the method used to provision the certificate manually.<br /> |
 | `Automatic` | AutomaticSecretProvisioning is the method used to provision the certificate automatically.<br /> |
 
+#### PublicLabels
+
+_Underlying type:_ `[map[string]PublicLabelsValue](#map[string]publiclabelsvalue)`
+
+PublicLabels Public labels store information about an entity that can be used
+for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong",
+"konnect", "mesh", "kic", or "_".
+
+
+
+
+_Appears in:_
+
+- [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
+
+#### PublicLabelsValue
+
+_Underlying type:_ `string`
+
+PublicLabelsValue is the value type for PublicLabels.
+
+
+
+
+_Appears in:_
+
+- [PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)
+
 #### PublishedStatus
 
 _Underlying type:_ `string`
@@ -2287,6 +2417,7 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 
 _Appears in:_
 
+- [AIGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanespec)
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
@@ -2325,6 +2456,7 @@ KonnectEntityStatus represents the status of a Konnect entity.
 
 _Appears in:_
 
+- [AIGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanestatus)
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
