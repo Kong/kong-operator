@@ -62,7 +62,8 @@
   template. Multiple bind addresses (dual-stack, e.g.
   `0.0.0.0:<port> ssl reuseport, [::]:<port> ssl reuseport`) are preserved for each
   listener port. Defaults to `0.0.0.0` and `reuseport` when unset.
-  [#4755](https://github.com/Kong/kong-operator/pull/4755)
+  [#4755](https://github.com/Kong/kong-operator/pull/4755) [#4767](https://github.com/Kong/kong-operator/pull/4767)
+- Gateway:
 
 ## [v2.2.1]
 
