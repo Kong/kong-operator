@@ -1,0 +1,29 @@
+# GatewayConfiguration setting a custom KONG_STREAM_LISTEN: an IPv6 bind address
+# plus extra listen options (reuseport, backlog). The operator must preserve the
+# address and options while enforcing the port and the ssl token.
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: (join('-', [($test_name), 'gateway-configuration']))
+  namespace: ($namespace)
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+            - name: proxy
+              image: ($gateway_image)
+              env:
+                - name: KONG_STREAM_LISTEN
+                  value: "[::]:8899 ssl reuseport backlog=16384"
+              readinessProbe:
+                failureThreshold: 3
+                initialDelaySeconds: 1
+                periodSeconds: 1
+                successThreshold: 1
+                timeoutSeconds: 1
+                httpGet:
+                  path: /status/ready
+                  port: 8100
+                  scheme: HTTP

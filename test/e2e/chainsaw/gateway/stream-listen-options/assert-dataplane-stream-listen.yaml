@@ -1,0 +1,16 @@
+# Asserts the KONG_STREAM_LISTEN env of the operator-generated DataPlane proxy
+# container against the expected value.
+#
+# Required bindings:
+#   - namespace: Namespace where the DataPlane Deployment lives.
+#   - expected_stream_listen: Expected KONG_STREAM_LISTEN value.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ($namespace)
+  labels:
+    gateway-operator.konghq.com/managed-by: dataplane
+spec:
+  template:
+    spec:
+      (containers[?name == 'proxy'] | [0].env[?name == 'KONG_STREAM_LISTEN'] | [0].value): ($expected_stream_listen)
