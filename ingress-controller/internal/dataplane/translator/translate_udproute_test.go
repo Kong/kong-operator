@@ -3,6 +3,7 @@ package translator
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
@@ -335,6 +336,100 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 								{Port: new(81)},
 							},
 							Protocols: kong.StringSlice("udp"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "two UDPRoutes on the same listener — only the older one wins",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "udp-gw"},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{{
+							Name:     "udp",
+							Protocol: gatewayapi.UDPProtocolType,
+							Port:     9999,
+						}},
+					},
+				},
+			},
+			udpRoutes: []*gatewayapi.UDPRoute{
+				{
+					TypeMeta: udpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "default",
+						Name:              "older",
+						CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+					},
+					Spec: gatewayapi.UDPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayv1.ParentReference{{
+								Name: gatewayv1.ObjectName("udp-gw"),
+							}},
+						},
+						Rules: []gatewayapi.UDPRouteRule{{
+							BackendRefs: []gatewayv1.BackendRef{{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: "svc-older",
+									Kind: new(gatewayv1.Kind("Service")),
+									Port: new(gatewayv1.PortNumber(53)),
+								},
+							}},
+						}},
+					},
+				},
+				{
+					TypeMeta: udpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "default",
+						Name:              "newer",
+						CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
+					},
+					Spec: gatewayapi.UDPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayv1.ParentReference{{
+								Name: gatewayv1.ObjectName("udp-gw"),
+							}},
+						},
+						Rules: []gatewayapi.UDPRouteRule{{
+							BackendRefs: []gatewayv1.BackendRef{{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: "svc-newer",
+									Kind: new(gatewayv1.Kind("Service")),
+									Port: new(gatewayv1.PortNumber(53)),
+								},
+							}},
+						}},
+					},
+				},
+			},
+			services: []*corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-older"}},
+				{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-newer"}},
+			},
+			expectedKongServices: []kongstate.Service{
+				{
+					Service: kong.Service{
+						Name:     new("udproute.default.older.0"),
+						Protocol: new("udp"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("svc-older").
+							WithNamespace("default").
+							WithPortNumber(53).
+							MustBuild(),
+					},
+				},
+			},
+			expectedKongRoutes: map[string][]kongstate.Route{
+				"udproute.default.older.0": {
+					{
+						Route: kong.Route{
+							Name:         new("udproute.default.older.0.0"),
+							Destinations: []*kong.CIDRPort{{Port: new(9999)}},
+							Protocols:    kong.StringSlice("udp"),
 						},
 					},
 				},

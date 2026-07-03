@@ -75,6 +75,8 @@
   [#4713](https://github.com/Kong/kong-operator/pull/4713)
 - Hybridgateway: treat malformed annotations as errors
   [#4530](https://github.com/Kong/kong-operator/pull/4530)
+- Enable UDPRoute for on-prem gateway
+  [#4429](https://github.com/Kong/kong-operator/pull/4429)
 
 ### Fixes
 
