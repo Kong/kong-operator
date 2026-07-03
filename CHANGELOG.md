@@ -84,7 +84,9 @@
   listeners. The operator now enforces only the listen port and the `ssl` token,
   preserving the bind address (e.g. `[::]` for IPv6) and any listen options
   (`reuseport`, `backlog=...`) set on the `GatewayConfiguration` DataPlane pod
-  template. Defaults to `0.0.0.0` and `reuseport` when unset.
+  template. Multiple bind addresses (dual-stack, e.g.
+  `0.0.0.0:<port> ssl reuseport, [::]:<port> ssl reuseport`) are preserved for each
+  listener port. Defaults to `0.0.0.0` and `reuseport` when unset.
   [#4755](https://github.com/Kong/kong-operator/pull/4755)
 - Konnect: prevent orphaned and duplicate Konnect entities when reconciliation
   races with the cached client. The cleanup finalizer is now added before the entity

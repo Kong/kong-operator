@@ -13,6 +13,9 @@ spec:
        only enforces the port and the ssl token.
     3. Removal of options: dropping reuseport from the user value
        ("[::]:<port> ssl") is honored — the operator does not force it back.
+    4. Dual-stack: a user value with both IPv4 and IPv6 bind addresses
+       ("0.0.0.0:<port> ssl reuseport, [::]:<port> ssl reuseport") is preserved
+       for the listener port.
 
     Note: TCP/UDP stream listeners are not yet accepted by the gateway
     controller, so only the TLS protocol is exercised here.
@@ -83,6 +86,17 @@ spec:
       bindings:
         - name: expected_stream_listen
           value: "[::]:8899 ssl"
+
+    - name: Set-dual-stack-stream-listen
+      description: Set both IPv4 and IPv6 bind addresses; verify both are preserved.
+      try:
+        - apply:
+            file: 05-gatewayconfiguration-dual-stack.yaml
+        - assert:
+            file: assert-dataplane-stream-listen.yaml
+      bindings:
+        - name: expected_stream_listen
+          value: "0.0.0.0:8899 ssl reuseport,[::]:8899 ssl reuseport"
 
   catch:
     - description: Capture debug snapshot

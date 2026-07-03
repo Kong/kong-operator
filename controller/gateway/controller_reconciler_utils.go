@@ -1337,21 +1337,32 @@ func setDataPlaneDeploymentListenPorts(
 		// KONG_STREAM_LISTEN when present, otherwise sensible defaults are used. This
 		// lets users pick an IPv6 address (`[::]`) or drop `reuseport`, and matches how
 		// KONG_PROXY_LISTEN/KONG_ADMIN_LISTEN are user-overridable.
-		tmpl := streamListenTemplate{address: "0.0.0.0", options: []string{"reuseport"}}
+		//
+		// One template is derived per user-configured SSL endpoint, so a dual-stack
+		// value like "0.0.0.0:X ssl reuseport, [::]:Y ssl reuseport" produces both
+		// bind addresses (with their own options) for every generated Kong port.
+		templates := []streamListenTemplate{{address: "0.0.0.0", options: []string{"reuseport"}}}
 		if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
 			if cfg, err := parseKongListenEnv(streamListen); err == nil && len(cfg.SSLEndpoints) > 0 {
-				if cfg.SSLEndpoints[0].Address != "" {
-					tmpl.address = cfg.SSLEndpoints[0].Address
+				templates = templates[:0]
+				for _, ep := range cfg.SSLEndpoints {
+					address := ep.Address
+					if address == "" {
+						address = "0.0.0.0"
+					}
+					templates = append(templates, streamListenTemplate{address: address, options: ep.Options})
 				}
-				tmpl.options = cfg.SSLEndpoints[0].Options
 			}
 		}
 		// Sort by the Kong port to keep the env value stable when listeners do not change.
 		sort.Slice(streamPorts, func(i, j int) bool { return streamPorts[i].kongPort < streamPorts[j].kongPort })
-		streamListenEnvs := make([]string, 0, len(streamPorts))
+		streamListenEnvs := make([]string, 0, len(streamPorts)*len(templates))
 		for _, sp := range streamPorts {
-			streamListenEnvs = append(streamListenEnvs,
-				renderStreamListenEntry(tmpl, sp.kongPort, streamListenProtocolTokens(sp.protocol)))
+			tokens := streamListenProtocolTokens(sp.protocol)
+			for _, tmpl := range templates {
+				streamListenEnvs = append(streamListenEnvs,
+					renderStreamListenEntry(tmpl, sp.kongPort, tokens))
+			}
 		}
 		k8sutils.SetContainerEnv(container, corev1.EnvVar{
 			Name:  "KONG_STREAM_LISTEN",

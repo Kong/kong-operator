@@ -851,6 +851,70 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			},
 		},
 		{
+			name: "user-configured dual-stack stream listen is preserved",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8899),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport, [::]:8899 ssl reuseport",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8899:8899",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport,[::]:8899 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8899: 8899,
+			},
+		},
+		{
+			name: "dual-stack stream listen applies to every port in order",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tls-1",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8899),
+				},
+				{
+					Name:     "tls-2",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(9999),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport, [::]:8899 ssl",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8899:8899,9999:9999",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport,[::]:8899 ssl,0.0.0.0:9999 ssl reuseport,[::]:9999 ssl",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8899: 8899,
+				9999: 9999,
+			},
+		},
+		{
 			name: "unsupported protocol TCP in listeners",
 			listeners: []gwtypes.Listener{
 				{
