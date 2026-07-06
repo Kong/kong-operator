@@ -134,6 +134,9 @@ type TypeConfig struct {
 	// entity uses positional (pageSize *int64, pageNumber *int64) arguments
 	// instead of a request struct. The generator emits nil, nil for both.
 	OpsListCallStylePositional bool `yaml:"-"`
+	// OpsResponseStatusFields configures fields to copy from the SDK create
+	// response into the CRD status struct.
+	OpsResponseStatusFields []ResponseStatusFieldConfig `yaml:"-"`
 	// SecretReferences lists sensitive field paths whose values can be provided
 	// either inline or sourced from a Kubernetes Secret. Each entry causes the
 	// OAS-derived string field at Path to become a SensitiveDataSource struct
@@ -331,6 +334,30 @@ type GetForUIDRootUnionCase struct {
 	MatchFields []GetForUIDMatchField `yaml:"matchFields,omitempty"`
 }
 
+// ResponseStatusFieldConfig configures one field to copy from the SDK create
+// response into the CRD status struct. It also causes a new Go struct type
+// to be emitted for the field's type.
+type ResponseStatusFieldConfig struct {
+	// StatusField is the Go field name on the status struct, e.g. "Endpoints".
+	// It also becomes the suffix of the generated struct type name: {EntityName}{StatusField}.
+	StatusField string `yaml:"statusField"`
+	// StatusJSON is the json tag for the status field, e.g. "endpoints".
+	StatusJSON string `yaml:"statusJSON"`
+	// Fields lists the scalar sub-fields of the new status struct.
+	Fields []ResponseStatusSubField `yaml:"fields"`
+}
+
+// ResponseStatusSubField is one scalar field in a response-derived status struct.
+type ResponseStatusSubField struct {
+	// Name is the Go field name, e.g. "Configuration".
+	Name string `yaml:"name"`
+	// JSON is the json tag, e.g. "configuration".
+	JSON string `yaml:"json"`
+	// RespPath is the Go path on the response entity (e.g. "Endpoints.Configuration")
+	// relative to resp.{RespField} (where RespField comes from schema.SuccessResponseRef).
+	RespPath string `yaml:"respPath"`
+}
+
 type typeOpsYAML struct {
 	// RequireClient indicates that generated ops for this entity need a
 	// controller-runtime client to fetch cluster data such as Secrets.
@@ -350,6 +377,9 @@ type typeOpsYAML struct {
 	GetForUID *GetForUIDConfig `yaml:"getForUID,omitempty"`
 	// SDK holds the SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig `yaml:"sdk,omitempty"`
+	// ResponseStatusFields configures fields to copy from the SDK create response
+	// into the CRD status struct.
+	ResponseStatusFields []ResponseStatusFieldConfig `yaml:"responseStatusFields,omitempty"`
 	// Operations maps operation names (e.g. "create", "update") to SDK type configs.
 	Operations map[string]*OpConfig `yaml:",inline"`
 }
@@ -391,6 +421,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.OpsListCallStylePositional = raw.Ops.ListCallStylePositional
 		tc.OpsGetForUID = raw.Ops.GetForUID
 		tc.OpsSDK = raw.Ops.SDK
+		tc.OpsResponseStatusFields = raw.Ops.ResponseStatusFields
 	}
 
 	return nil
@@ -416,6 +447,9 @@ type EntityOpsConfig struct {
 	GetForUID *GetForUIDConfig
 	// SDK holds SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig
+	// ResponseStatusFields configures fields to copy from the SDK create response
+	// into the CRD status struct.
+	ResponseStatusFields []ResponseStatusFieldConfig
 }
 
 // NameOverrides returns a mapping from OpenAPI path to the custom CRD type name
@@ -529,6 +563,7 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 			ListCallStylePositional: tc.OpsListCallStylePositional,
 			GetForUID:               tc.OpsGetForUID,
 			SDK:                     tc.OpsSDK,
+			ResponseStatusFields:    tc.OpsResponseStatusFields,
 		}
 	}
 	return result

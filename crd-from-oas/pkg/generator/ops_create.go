@@ -47,8 +47,9 @@ type opsCreateFuncData struct {
 	RespIDIsPointer    bool
 	// SingletonNoID is true when the create response schema has no "id" field.
 	// Generated code skips the SetKonnectID call entirely for these entities.
-	SingletonNoID bool
-	RespRootUnion *opsCreateRootUnionResponseData
+	SingletonNoID        bool
+	RespRootUnion        *opsCreateRootUnionResponseData
+	ResponseStatusFields []config.ResponseStatusFieldConfig
 }
 
 type opsCreateRootUnionResponseData struct {
@@ -138,6 +139,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		RespIDIsPointer:      schema.RespIDIsPointer,
 		SingletonNoID:        isSingletonNoID(schema),
 		RespRootUnion:        respRootUnion,
+		ResponseStatusFields: opsConfig.ResponseStatusFields,
 	}, nil
 }
 

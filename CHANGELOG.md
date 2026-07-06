@@ -65,7 +65,7 @@
   - introduce `AIGatewayDataPlane` CRD
   [#4690](https://github.com/Kong/kong-operator/pull/4690)
   - introduce `AIGatewayControlPlane` CRD with reconciler
-  [#4760](https://github.com/Kong/kong-operator/pull/4760)
+  [#4760](https://github.com/Kong/kong-operator/pull/4760), [#4792](https://github.com/Kong/kong-operator/pull/4792)
   - introduce `AIGatewayDataPlaneCertificate` CRD with reconciler
   [#4772](https://github.com/Kong/kong-operator/pull/4772)
 - GRPCRoute: enable GRPCRoute for on-prem gateway

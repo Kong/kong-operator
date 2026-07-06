@@ -275,6 +275,16 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayRequest
           delete: {}
+          responseStatusFields:
+            - statusField: Endpoints
+              statusJSON: endpoints
+              fields:
+                - name: Configuration
+                  json: configuration
+                  respPath: Endpoints.Configuration
+                - name: Telemetry
+                  json: telemetry
+                  respPath: Endpoints.Telemetry
         reconciler: {}
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
