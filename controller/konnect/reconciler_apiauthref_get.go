@@ -44,7 +44,7 @@ type portalRefAccessor interface {
 
 type aiGatewayRefAccessor interface {
 	objectWithParentRef
-	GetAiGatewayRef() commonv1alpha1.ObjectRef
+	GetAIGatewayControlPlaneRef() commonv1alpha1.ObjectRef
 }
 
 func getAPIAuthRef[
