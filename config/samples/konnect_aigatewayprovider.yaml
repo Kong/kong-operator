@@ -1,0 +1,116 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.tech
+---
+kind: AIGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+    labels:
+      app: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+kind: AIGatewayProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-anthropic
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: anthropic
+    anthropic:
+      name: anthropic-provider
+      displayName: Anthropic
+      config:
+        auth:
+          headers:
+            - name: x-api-key
+              value: sk-ant-xxxxxxxxxxxxxxxxxxxx
+---
+kind: AIGatewayProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-azure
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: azure
+    azure:
+      name: azure-provider
+      displayName: Azure
+      config:
+        instance: my-azure-instance
+        auth:
+          type: basic
+          basic:
+            headers:
+              - name: api-key
+                value: xxxxxxxxxxxxxxxxxxxx
+---
+kind: AIGatewayProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-gemini
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: gemini
+    gemini:
+      name: gemini-provider
+      displayName: Gemini
+      config:
+        projectID: my-gcp-project
+        auth:
+          type: basic
+          basic:
+            headers:
+              - name: x-goog-api-key
+                value: xxxxxxxxxxxxxxxxxxxx
+---
+kind: AIGatewayProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-openai
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: openai
+    openai:
+      name: openai-provider
+      displayName: OpenAI
+      config:
+        auth:
+          headers:
+            - name: Authorization
+              value: Bearer sk-xxxxxxxxxxxxxxxxxxxx
