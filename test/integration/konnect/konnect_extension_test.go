@@ -462,53 +462,71 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 		conditions.CheckKonnectExtensionStatus(ctx, cl, p.konnectExtension, p.konnectControlPlane.GetKonnectID(), ""),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	t.Logf("Creating a DataPlane using the KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
-	dataPlane := builder.NewDataPlaneBuilder().
-		WithObjectMeta(metav1.ObjectMeta{
-			Namespace: p.namespace,
-			Name:      "test-konnect-extension",
-		}).
-		WithPodTemplateSpec(&corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{
-					{
-						Name:  consts.DataPlaneProxyContainerName,
-						Image: helpers.GetDefaultDataPlaneImage(),
-						Env: []corev1.EnvVar{
-							{
-								Name:  "KONG_LOG_LEVEL",
-								Value: "debug",
-							},
-						},
-						ReadinessProbe: &corev1.Probe{
-							InitialDelaySeconds: 1,
-							PeriodSeconds:       1,
-						},
-					},
-				},
-			},
-		}).
-		WithExtensions(
-			[]commonv1alpha1.ExtensionRef{
-				{
-					Group: konnectv1alpha1.GroupVersion.Group,
-					Kind:  "KonnectExtension",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: p.konnectExtension.Name,
-					},
-				},
-			},
-		).Build()
-	require.NoError(t, p.client.Create(ctx, dataPlane))
-	t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, dataPlane))
-
 	dpName := k8stypes.NamespacedName{
-		Namespace: dataPlane.Namespace,
-		Name:      dataPlane.Name,
+		Namespace: p.namespace,
+		Name:      "test-konnect-extension",
 	}
 
-	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dpName, integration.GetClients().OperatorClient), waitTime, tickTime)
+	// A hybrid DataPlane's Konnect config sync occasionally stalls and never
+	// completes for a freshly-provisioned data plane (see the constants in
+	// consts.go). A healthy one is ready within ~20s, so if readiness does not
+	// happen within dataPlaneReadinessAttemptTimeout we delete and recreate the
+	// DataPlane to establish a fresh control-plane session, retrying up to
+	// dataPlaneReadinessMaxAttempts times.
+	t.Logf("Creating a DataPlane using the KonnectExtension %s/%s and waiting for it to become provisioned", p.konnectExtension.Namespace, p.konnectExtension.Name)
+	isReady := testutils.DataPlaneIsReady(t, ctx, dpName, integration.GetClients().OperatorClient)
+	var ready bool
+	for attempt := 1; attempt <= dataPlaneReadinessMaxAttempts; attempt++ {
+		dataPlane := builder.NewDataPlaneBuilder().
+			WithObjectMeta(metav1.ObjectMeta{
+				Namespace: dpName.Namespace,
+				Name:      dpName.Name,
+			}).
+			WithPodTemplateSpec(&corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  consts.DataPlaneProxyContainerName,
+							Image: helpers.GetDefaultDataPlaneImage(),
+							Env: []corev1.EnvVar{
+								{
+									Name:  "KONG_LOG_LEVEL",
+									Value: "debug",
+								},
+							},
+							ReadinessProbe: &corev1.Probe{
+								InitialDelaySeconds: 1,
+								PeriodSeconds:       1,
+							},
+						},
+					},
+				},
+			}).
+			WithExtensions(
+				[]commonv1alpha1.ExtensionRef{
+					{
+						Group: konnectv1alpha1.GroupVersion.Group,
+						Kind:  "KonnectExtension",
+						NamespacedRef: commonv1alpha1.NamespacedRef{
+							Name: p.konnectExtension.Name,
+						},
+					},
+				},
+			).Build()
+		require.NoError(t, p.client.Create(ctx, dataPlane))
+
+		if pollUntilTrue(isReady, dataPlaneReadinessAttemptTimeout, tickTime) {
+			ready = true
+			t.Cleanup(object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, dataPlane))
+			break
+		}
+
+		t.Logf("DataPlane %s not ready after %s (attempt %d/%d); recreating to establish a fresh Konnect control-plane session",
+			dpName, dataPlaneReadinessAttemptTimeout, attempt, dataPlaneReadinessMaxAttempts)
+		object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, dataPlane)()
+	}
+	require.Truef(t, ready, "DataPlane %s did not become ready within %d attempts of %s each",
+		dpName, dataPlaneReadinessMaxAttempts, dataPlaneReadinessAttemptTimeout)
 
 	t.Logf("verifying dataplane %s has ingress service", dpName)
 	var dpIngressService corev1.Service
@@ -555,5 +573,21 @@ func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) deploy.O
 				},
 			},
 		}
+	}
+}
+
+// pollUntilTrue polls check until it returns true or the timeout elapses. Unlike
+// require/assert.Eventually it does not fail the test on timeout; it returns
+// false so the caller can react (e.g. recreate a resource and retry).
+func pollUntilTrue(check func() bool, timeout, tick time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for {
+		if check() {
+			return true
+		}
+		if !time.Now().Before(deadline) {
+			return false
+		}
+		time.Sleep(tick)
 	}
 }
