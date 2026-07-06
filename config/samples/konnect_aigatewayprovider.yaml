@@ -1,14 +1,14 @@
-# kind: KonnectAPIAuthConfiguration
-# apiVersion: konnect.konghq.com/v1alpha1
-# metadata:
-#   name: konnect-api-auth
-#   namespace: default
-# spec:
-#   type: token
-#   token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-#   # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
-#   serverURL: us.api.konghq.tech
-# ---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.tech
+---
 kind: AIGatewayControlPlane
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
@@ -86,7 +86,6 @@ spec:
       name: gemini-provider
       displayName: Gemini
       config:
-        projectID: my-gcp-project
         auth:
           type: basic
           basic:
