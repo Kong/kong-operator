@@ -63,6 +63,9 @@ func getAPIAuthRef[
 	if obj, ok := any(ent).(portalRefAccessor); ok {
 		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.Portal](ctx, cl, obj, obj.GetParentRef())
 	}
+	if obj, ok := any(ent).(aiGatewayRefAccessor); ok {
+		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.AIGatewayControlPlane](ctx, cl, obj, obj.GetParentRef())
+	}
 	if obj, ok := any(ent).(eventGatewayRefAccessor); ok {
 		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.KonnectEventGateway](ctx, cl, obj, obj.GetParentRef())
 	}

@@ -29,6 +29,8 @@ func CreateGeneratedOps[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.AIGatewayControlPlane:
 		return createAIGatewayControlPlane(ctx, sdk.GetAIGatewaysSDK(), ent)
+	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
+		return createAIGatewayDataPlaneCertificate(ctx, cl, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:
 		return createAIGatewayModel(ctx, sdk.GetAIGatewayModelsSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:

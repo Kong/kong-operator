@@ -125,6 +125,7 @@ rules:
   - apiGroups:
       - configuration.konghq.com
     resources:
+      - aigatewaydataplanecertificates
       - eventgatewaybackendclusters
       - eventgatewaylistenerpolicies
       - eventgatewaylisteners
@@ -148,6 +149,8 @@ rules:
   - apiGroups:
       - configuration.konghq.com
     resources:
+      - aigatewaydataplanecertificates/finalizers
+      - aigatewaydataplanecertificates/status
       - eventgatewaybackendclusters/finalizers
       - eventgatewaybackendclusters/status
       - eventgatewaydataplanecertificates/finalizers
