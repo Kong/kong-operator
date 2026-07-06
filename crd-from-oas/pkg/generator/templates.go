@@ -475,7 +475,8 @@ import (
 {{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}}){{if .BoolFields}}
+{{end}})
+{{- if .BoolFields}}
 
 // {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type {{$.EntityName}}SDKOpsBoolField struct {
@@ -576,7 +577,9 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}{{if .ConstFields}}
+{{- end}}
+{{- if .ConstFields}}
+
 // {{$.EntityName}}SDKOpsConstFields lists const discriminators that were stripped
 // from the CRD structs but are required by the Konnect SDK request types.
 var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
@@ -592,7 +595,8 @@ var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
 	},
 {{- end}}
 }
-{{end}}
+{{- end}}
+
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -839,7 +843,8 @@ import (
 {{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}}){{if .BoolFields}}
+{{end}})
+{{- if .BoolFields}}
 
 // {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type {{$.EntityName}}SDKOpsBoolField struct {
@@ -940,7 +945,9 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}{{if .ConstFields}}
+{{- end}}
+{{- if .ConstFields}}
+
 // {{$.EntityName}}SDKOpsConstFields lists const discriminators that were stripped
 // from the CRD structs but are required by the Konnect SDK request types.
 var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
@@ -956,7 +963,8 @@ var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
 	},
 {{- end}}
 }
-{{end}}
+{{- end}}
+
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {

@@ -1455,6 +1455,9 @@ func (g *Generator) collectNamedRefsFromProperty(prop *parser.Property, refs map
 
 func collectUnionMemberDiscriminators(parsed *parser.ParsedSpec) map[string]map[string]struct{} {
 	unionMemberDiscriminators := make(map[string]map[string]struct{})
+	if parsed == nil || parsed.RequestBodies == nil && parsed.Schemas == nil {
+		return unionMemberDiscriminators
+	}
 
 	for _, schema := range parsed.RequestBodies {
 		collectSchemaUnionMemberDiscriminators(schema, unionMemberDiscriminators)
@@ -4484,7 +4487,7 @@ func (g *Generator) collectSDKOpsConstFieldsFromProperty(
 	visited, seen map[string]struct{},
 	fields *[]sdkOpsConstField,
 ) {
-	if prop == nil || skipProperty(prop) {
+	if g == nil || g.parsed == nil || prop == nil || skipProperty(prop) {
 		return
 	}
 

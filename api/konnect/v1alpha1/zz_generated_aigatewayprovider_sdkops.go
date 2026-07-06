@@ -8,6 +8,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
+
 // AIGatewayProviderSDKOpsConstFields lists const discriminators that were stripped
 // from the CRD structs but are required by the Konnect SDK request types.
 var AIGatewayProviderSDKOpsConstFields = []sdkOpsConstField{
