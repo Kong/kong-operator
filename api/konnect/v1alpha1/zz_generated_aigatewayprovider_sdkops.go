@@ -299,308 +299,137 @@ func (s *AIGatewayProviderAPISpec) ToUpdateAIGatewayProviderRequest() (*sdkkonne
 	}
 	switch variant {
 	case "Anthropic":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderAnthropic
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderAnthropic: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestAnthropic(member)
 		return &target, nil
 	case "Azure":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderAzure
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderAzure: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestAzure(member)
 		return &target, nil
 	case "Bedrock":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderBedrock
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderBedrock: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestBedrock(member)
 		return &target, nil
 	case "Cerebras":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderCerebras
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderCerebras: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestCerebras(member)
 		return &target, nil
 	case "Cohere":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderCohere
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderCohere: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestCohere(member)
 		return &target, nil
 	case "Dashscope":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderDashscope
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderDashscope: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestDashscope(member)
 		return &target, nil
 	case "Databricks":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderDatabricks
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderDatabricks: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestDatabricks(member)
 		return &target, nil
 	case "Deepseek":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderDeepseek
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderDeepseek: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestDeepseek(member)
 		return &target, nil
 	case "Gemini":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderGemini
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderGemini: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestGemini(member)
 		return &target, nil
 	case "Huggingface":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderHuggingface
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderHuggingface: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestHuggingface(member)
 		return &target, nil
 	case "Kimi":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderKimi
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderKimi: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestKimi(member)
 		return &target, nil
 	case "Llama2":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderLlama2
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderLlama2: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestLlama2(member)
 		return &target, nil
 	case "Mistral":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderMistral
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderMistral: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestMistral(member)
 		return &target, nil
 	case "Ollama":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderOllama
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderOllama: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestOllama(member)
 		return &target, nil
 	case "Openai":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderOpenai
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderOpenai: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestOpenai(member)
 		return &target, nil
 	case "Vercel":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderVercel
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderVercel: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestVercel(member)
 		return &target, nil
 	case "Vllm":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderVllm
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderVllm: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestVllm(member)
 		return &target, nil
 	case "Xai":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderXai
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderXai: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestXai(member)
 		return &target, nil
 	case "Vertex":
-		configPayload, ok := selected["name"]
-		if !ok || configPayload == nil {
-			return nil, fmt.Errorf("AIGatewayProvider config payload missing name")
+		var member sdkkonnectcomp.AIGatewayProviderVertex
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayProviderVertex: %w", err)
 		}
-		configData, err := json.Marshal(configPayload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AIGatewayProvider name payload: %w", err)
-		}
-		var member sdkkonnectcomp.AIGatewayEntityIdentifier
-		if err := json.Unmarshal(configData, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayEntityIdentifier: %w", err)
-		}
-		unionValue := sdkkonnectcomp.CreateNameAIGatewayEntityIdentifier(member)
-		target.Name = &unionValue
+		target := sdkkonnectcomp.CreateUpdateAIGatewayProviderRequestVertex(member)
 		return &target, nil
 	default:
 		return nil, fmt.Errorf("unsupported AIGatewayProvider config variant %q", variant)

@@ -3995,6 +3995,7 @@ func (g *Generator) generateRootUnionSDKOps(
 	wrappedCreateBodyTypeName := ""
 	createMethodTypeName := ""
 	updateMethodTypeName := ""
+	updateMethodImportPath := ""
 	for _, method := range rootUnionMethods {
 		if method.IsCreate && method.IsOperationsWrapped {
 			wrappedCreateBodyTypeName = method.BodyTypeName
@@ -4006,7 +4007,22 @@ func (g *Generator) generateRootUnionSDKOps(
 		}
 		if !method.IsCreate && updateMethodTypeName == "" {
 			updateMethodTypeName = method.TypeName
+			updateMethodImportPath = method.ImportPath
 		}
+	}
+
+	// Determine whether the SDK update request type is itself a discriminated
+	// union (like the create request) rather than a struct wrapping a nested
+	// payload field. Introspecting the SDK type is authoritative; guessing from
+	// the OAS shape misclassifies variants whose only required $ref property is a
+	// scalar (e.g. a named string), which the SDK collapses to a plain type.
+	updateSDKTypeIsUnion := false
+	if hasUpdateMethod && !isOperationsWrapped && updateMethodTypeName != "" {
+		memberFields, err := ParseSDKUnionMemberFieldNames(updateMethodImportPath, updateMethodTypeName)
+		if err != nil {
+			return "", fmt.Errorf("failed to inspect SDK update type %s for %s: %w", updateMethodTypeName, entityName, err)
+		}
+		updateSDKTypeIsUnion = len(memberFields) > 0
 	}
 
 	var rawVariantNames []string
@@ -4035,7 +4051,14 @@ func (g *Generator) generateRootUnionSDKOps(
 		updateConstructorName := ""
 		updateDirectUnion := false
 		fieldName := fixInitialisms(variantNames[i])
-		if hasUpdateMethod && !isOperationsWrapped {
+		if hasUpdateMethod && !isOperationsWrapped && updateSDKTypeIsUnion {
+			// The SDK update request is a discriminated union (same shape as
+			// create); rebuild the selected variant directly via its update
+			// constructor instead of targeting a nested payload field.
+			updateVariantTypeName = fixInitialisms(variantRefName)
+			updateConstructorName = "Create" + updateMethodTypeName + fieldName
+			updateDirectUnion = true
+		} else if hasUpdateMethod && !isOperationsWrapped {
 			updatePayloadProp, err := findRootUnionUpdatePayloadProperty(variant.Properties)
 			if err != nil {
 				// Heuristic: when a root-union update variant exposes multiple required
