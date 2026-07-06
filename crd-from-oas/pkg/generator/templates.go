@@ -576,8 +576,23 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
+{{end}}{{if .ConstFields}}
+// {{$.EntityName}}SDKOpsConstFields lists const discriminators that were stripped
+// from the CRD structs but are required by the Konnect SDK request types.
+var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
+{{- range .ConstFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+		Key:   "{{.Key}}",
+		Value: "{{.Value}}",
+	},
+{{- end}}
+}
 {{end}}
-
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -599,6 +614,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 		if err := normalize{{$.EntityName}}SDKOpsBoolFields(pm); err != nil {
 			return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
 		}
+	}
+	{{- end}}
+	{{- if $.ConstFields}}
+	if pm, ok := payload.(map[string]any); ok {
+		injectSDKOpsConstFields(pm, {{$.EntityName}}SDKOpsConstFields)
 	}
 	{{- end}}
 	data, err = json.Marshal(payload)
@@ -920,8 +940,23 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
+{{end}}{{if .ConstFields}}
+// {{$.EntityName}}SDKOpsConstFields lists const discriminators that were stripped
+// from the CRD structs but are required by the Konnect SDK request types.
+var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
+{{- range .ConstFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+		Key:   "{{.Key}}",
+		Value: "{{.Value}}",
+	},
+{{- end}}
+}
 {{end}}
-
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -946,6 +981,9 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
 	}
+	{{- end }}
+	{{- if $.ConstFields}}
+	injectSDKOpsConstFields(payload, {{$.EntityName}}SDKOpsConstFields)
 	{{- end }}
 	return payload, nil
 }
@@ -1767,6 +1805,8 @@ import (
 ` + flattenSensitiveDataHelper + `
 
 ` + renameKeysToSDKHelper + `
+
+` + injectSDKOpsConstFieldsHelper + `
 `
 
 // opsPerEntityFileHeaderTemplate renders the shared file header (preamble,

@@ -223,6 +223,17 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				apiAlias,
 			),
 		}
+	case "AIGatewayProvider":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayProviderConfig",
+			TypeConstName:   "AIGatewayProviderConfigTypeAnthropic",
+			VariantField:    "Anthropic",
+			VariantTypeName: "AIGatewayProviderAnthropic",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.AIGatewayProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: %[1]s.AIGatewayProviderAnthropicConfig{Auth: %[1]s.AIGatewayProviderConfigAuthBasic{Headers: []%[1]s.AIGatewayProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: "test-value"}}}}}`,
+				apiAlias,
+			),
+		}
 	}
 
 	rootUnionTypeName := goFieldName(entityName + "Config")

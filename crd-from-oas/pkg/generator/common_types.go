@@ -340,3 +340,55 @@ func renameKeysToSDK(v any) any {
 	}
 	return v
 }`
+
+// injectSDKOpsConstFieldsHelper re-injects const discriminators (e.g. a nested
+// auth type="basic") that were stripped from the CRD structs because their
+// schema is also used as a discriminated-union member, but are still required
+// by the standalone ($ref) Konnect SDK request types. It runs after
+// renameKeysToSDK, so paths use snake_case segments; "[]" descends into every
+// array element and "{}" into every map value.
+const injectSDKOpsConstFieldsHelper = `// sdkOpsConstField describes a const discriminator to inject at a payload path.
+type sdkOpsConstField struct {
+	Path  []string
+	Key   string
+	Value string
+}
+
+// injectSDKOpsConstFields sets each const discriminator into the payload, only
+// when the key is absent, so user- or union-provided values are never overridden.
+func injectSDKOpsConstFields(payload map[string]any, fields []sdkOpsConstField) {
+	for _, f := range fields {
+		setSDKOpsConstAtPath(payload, f.Path, f.Key, f.Value)
+	}
+}
+
+func setSDKOpsConstAtPath(v any, path []string, key, value string) {
+	if len(path) == 0 {
+		if m, ok := v.(map[string]any); ok {
+			if _, exists := m[key]; !exists {
+				m[key] = value
+			}
+		}
+		return
+	}
+	switch segment := path[0]; segment {
+	case "[]":
+		if items, ok := v.([]any); ok {
+			for _, item := range items {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	case "{}":
+		if object, ok := v.(map[string]any); ok {
+			for _, item := range object {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	default:
+		if object, ok := v.(map[string]any); ok {
+			if child, ok := object[segment]; ok {
+				setSDKOpsConstAtPath(child, path[1:], key, value)
+			}
+		}
+	}
+}`

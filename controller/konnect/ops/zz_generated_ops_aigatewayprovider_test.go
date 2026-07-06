@@ -31,7 +31,7 @@ func testGeneratedAIGatewayProviderForSDKOps() *konnectv1alpha1.AIGatewayProvide
 			APISpec: konnectv1alpha1.AIGatewayProviderAPISpec{
 				AIGatewayProviderConfig: &konnectv1alpha1.AIGatewayProviderConfig{
 					Type: konnectv1alpha1.AIGatewayProviderConfigTypeAnthropic,
-					Anthropic: &konnectv1alpha1.AIGatewayProviderAnthropic{},
+					Anthropic: &konnectv1alpha1.AIGatewayProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: konnectv1alpha1.AIGatewayProviderAnthropicConfig{Auth: konnectv1alpha1.AIGatewayProviderConfigAuthBasic{Headers: []konnectv1alpha1.AIGatewayProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: "test-value"}}}}},
 				},
 			},
 		},

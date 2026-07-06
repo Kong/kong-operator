@@ -9,7 +9,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
 )
-
 func (s *PortalIPAllowListAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {

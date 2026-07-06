@@ -123,7 +123,6 @@ func normalizeEventGatewayBackendClusterSDKOpsBoolField(value any, path []string
 	}
 }
 
-
 func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {

@@ -8,6 +8,145 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
+// AIGatewayProviderSDKOpsConstFields lists const discriminators that were stripped
+// from the CRD structs but are required by the Konnect SDK request types.
+var AIGatewayProviderSDKOpsConstFields = []sdkOpsConstField{
+	{
+		Path: []string{
+			"anthropic",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"cerebras",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"cohere",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"dashscope",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"databricks",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"deepseek",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"huggingface",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"kimi",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"llama2",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"mistral",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"ollama",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"openai",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"vercel",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"vllm",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"xai",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+}
 
 func (s *AIGatewayProviderAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
@@ -26,6 +165,7 @@ func (s *AIGatewayProviderAPISpec) marshalSDKOpsPayload() (map[string]any, error
 	if !ok {
 		return nil, fmt.Errorf("failed to convert AIGatewayProviderAPISpec SDK payload to map")
 	}
+	injectSDKOpsConstFields(payload, AIGatewayProviderSDKOpsConstFields)
 	return payload, nil
 }
 

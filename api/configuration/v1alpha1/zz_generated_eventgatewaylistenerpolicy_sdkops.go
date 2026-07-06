@@ -126,7 +126,6 @@ func normalizeEventGatewayListenerPolicySDKOpsBoolField(value any, path []string
 	}
 }
 
-
 func (s *EventGatewayListenerPolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
