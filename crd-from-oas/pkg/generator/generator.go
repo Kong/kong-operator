@@ -2100,6 +2100,11 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		immediateParentDep = nil
 	}
 
+	var responseStatusFields []config.ResponseStatusFieldConfig
+	if oc := g.config.OpsConfig[entityName]; oc != nil {
+		responseStatusFields = oc.ResponseStatusFields
+	}
+
 	var buf strings.Builder
 	data := struct {
 		EntityName                string
@@ -2120,6 +2125,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		SetParentIDEntityName     string
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
+		ResponseStatusFields      []config.ResponseStatusFieldConfig
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -2139,6 +2145,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		SetParentIDEntityName:     setParentIDEntityName,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
+		ResponseStatusFields:      responseStatusFields,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

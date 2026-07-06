@@ -216,6 +216,17 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              endpoints:
+                description: Endpoints contains the Endpoints returned by the Konnect
+                  API.
+                properties:
+                  configuration:
+                    description: Configuration is returned by the Konnect API.
+                    type: string
+                  telemetry:
+                    description: Telemetry is returned by the Konnect API.
+                    type: string
+                type: object
               id:
                 description: |-
                   ID is the unique identifier of the Konnect entity as assigned by Konnect API.

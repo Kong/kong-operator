@@ -5,6 +5,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 
@@ -31,6 +32,14 @@ func createAIGatewayControlPlane(
 	}
 
 	obj.SetKonnectID(resp.AIGateway.ID)
+	const (
+		protocolHTTPS = "https://"
+		protocolHTTP  = "http://"
+	)
+	obj.Status.Endpoints = &konnectv1alpha1.AIGatewayControlPlaneEndpoints{
+		Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
+		Telemetry: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
+	}
 	return nil
 }
 

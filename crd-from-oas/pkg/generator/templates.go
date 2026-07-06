@@ -151,11 +151,30 @@ type {{.EntityName}}Status struct {
 	// +optional
 	{{.ParentStatusEntityName}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .ParentStatusEntityName}},omitempty"` + "`" + `
 {{end}}{{- else}}{{"\n"}}{{- end}}
+{{- range .ResponseStatusFields}}
+
+	// {{.StatusField}} contains the {{.StatusField}} returned by the Konnect API.
+	//
+	// +optional
+	{{.StatusField}} *{{$.EntityName}}{{.StatusField}} ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
+{{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitzero"` + "`" + `
 }
+{{- range .ResponseStatusFields}}
+
+// {{$.EntityName}}{{.StatusField}} holds the {{.StatusField}} from the Konnect API response.
+type {{$.EntityName}}{{.StatusField}} struct {
+{{- range .Fields}}
+	// {{.Name}} is returned by the Konnect API.
+	//
+	// +optional
+	{{.Name}} string ` + "`" + `json:"{{.JSON}},omitempty"` + "`" + `
+{{- end}}
+}
+{{- end}}
 `
 
 const crdFuncsTemplate = sharedGeneratedFilePreamble + `
@@ -1760,6 +1779,9 @@ package ops
 import (
 	"context"
 	"fmt"
+{{- if .NeedsStringsImport}}
+	"strings"
+{{- end}}
 {{- if .NeedsClientImport}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
@@ -1870,6 +1892,19 @@ func create{{.Entity}}(
 	}
 
 	obj.SetKonnectID(resp.{{.RespField}}.ID)
+{{- end}}
+{{- if .ResponseStatusFields}}
+	const (
+		protocolHTTPS = "https://"
+		protocolHTTP  = "http://"
+	)
+{{- end}}
+{{- range .ResponseStatusFields}}
+	obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
+{{- range .Fields}}
+		{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
+{{- end}}
+	}
 {{- end}}
 	return nil
 }

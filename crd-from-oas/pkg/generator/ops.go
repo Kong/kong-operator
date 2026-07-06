@@ -83,6 +83,7 @@ func (g *Generator) generateEntityOpsFile(
 			deleteNeedsOpsImport ||
 			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
+		needsStringsImport := createData != nil && len(createData.ResponseStatusFields) > 0
 
 		extraImportSet := make(map[string]string)
 		if deleteData != nil && deleteData.DeleteAsUpdate && deleteData.DeletePutReqImportPath != "" &&
@@ -97,17 +98,19 @@ func (g *Generator) generateEntityOpsFile(
 
 		// Render file header.
 		headerData := struct {
-			APIAlias          string
-			APIPackagePath    string
-			NeedsOpsImport    bool
-			NeedsClientImport bool
-			ExtraImports      []opsFileImport
+			APIAlias           string
+			APIPackagePath     string
+			NeedsOpsImport     bool
+			NeedsClientImport  bool
+			NeedsStringsImport bool
+			ExtraImports       []opsFileImport
 		}{
-			APIAlias:          g.config.APIGroupPackageAlias,
-			APIPackagePath:    g.config.APIGroupPackagePath,
-			NeedsOpsImport:    needsOpsImport,
-			NeedsClientImport: needsClientImport,
-			ExtraImports:      extraImports,
+			APIAlias:           g.config.APIGroupPackageAlias,
+			APIPackagePath:     g.config.APIGroupPackagePath,
+			NeedsOpsImport:     needsOpsImport,
+			NeedsClientImport:  needsClientImport,
+			NeedsStringsImport: needsStringsImport,
+			ExtraImports:       extraImports,
 		}
 		var content strings.Builder
 		headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))

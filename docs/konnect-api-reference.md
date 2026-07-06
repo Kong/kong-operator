@@ -364,6 +364,22 @@ _Appears in:_
 
 - [AIGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanespec)
 
+#### AIGatewayControlPlaneEndpoints
+
+
+AIGatewayControlPlaneEndpoints holds the Endpoints from the Konnect API response.
+
+
+
+| Field | Description |
+| --- | --- |
+| `configuration` _string_ | Configuration is returned by the Konnect API. |
+| `telemetry` _string_ | Telemetry is returned by the Konnect API. |
+
+_Appears in:_
+
+- [AIGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanestatus)
+
 #### AIGatewayControlPlaneSpec
 
 
@@ -393,6 +409,7 @@ AIGatewayControlPlaneStatus defines the observed state of AIGatewayControlPlane.
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `endpoints` _[AIGatewayControlPlaneEndpoints](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneendpoints)_ | Endpoints contains the Endpoints returned by the Konnect API. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_

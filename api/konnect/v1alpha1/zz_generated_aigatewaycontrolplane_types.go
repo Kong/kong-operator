@@ -112,8 +112,25 @@ type AIGatewayControlPlaneStatus struct {
 	// +optional
 	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 
+
+	// Endpoints contains the Endpoints returned by the Konnect API.
+	//
+	// +optional
+	Endpoints *AIGatewayControlPlaneEndpoints `json:"endpoints,omitempty"`
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
+}
+
+// AIGatewayControlPlaneEndpoints holds the Endpoints from the Konnect API response.
+type AIGatewayControlPlaneEndpoints struct {
+	// Configuration is returned by the Konnect API.
+	//
+	// +optional
+	Configuration string `json:"configuration,omitempty"`
+	// Telemetry is returned by the Konnect API.
+	//
+	// +optional
+	Telemetry string `json:"telemetry,omitempty"`
 }
