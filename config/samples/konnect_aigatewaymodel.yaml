@@ -46,8 +46,11 @@ spec:
       capabilities:
         - files
       config:
-        model: {}
-        route: {}
+        model:
+          alias: gpt-4o-mini
+        route:
+          paths:
+            - /v1/chat/completions
       labels:
         app: test1
         env: test
@@ -56,4 +59,5 @@ spec:
           provider: openai-provider
           config:
             type: openai
-            openai: {}
+            openai:
+              upstreamURL: https://api.openai.com/v1/chat/completions
