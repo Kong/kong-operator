@@ -13,6 +13,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&AIGatewayControlPlaneList{},
 		&AIGatewayModel{},
 		&AIGatewayModelList{},
+		&AIGatewayPolicy{},
+		&AIGatewayPolicyList{},
 		&AIGatewayProvider{},
 		&AIGatewayProviderList{},
 		&KonnectEventGateway{},

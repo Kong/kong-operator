@@ -13,6 +13,7 @@ type generatedMockSDKWrapper struct {
 	AIGatewaysSDK                                *mocks.MockAIGatewaysSDK
 	AIGatewayDataPlaneCertificatesSDK            *mocks.MockAIGatewayDataPlaneCertificatesSDK
 	AIGatewayModelsSDK                           *mocks.MockAIGatewayModelsSDK
+	AIGatewayPoliciesSDK                         *mocks.MockAIGatewayPoliciesSDK
 	AIGatewayProvidersSDK                        *mocks.MockAIGatewayProvidersSDK
 	EventGatewayBackendClustersSDK               *mocks.MockEventGatewayBackendClustersSDK
 	EventGatewayDataPlaneCertificatesSDK         *mocks.MockEventGatewayDataPlaneCertificatesSDK
@@ -38,6 +39,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		AIGatewaysSDK:                                mocks.NewMockAIGatewaysSDK(t),
 		AIGatewayDataPlaneCertificatesSDK:            mocks.NewMockAIGatewayDataPlaneCertificatesSDK(t),
 		AIGatewayModelsSDK:                           mocks.NewMockAIGatewayModelsSDK(t),
+		AIGatewayPoliciesSDK:                         mocks.NewMockAIGatewayPoliciesSDK(t),
 		AIGatewayProvidersSDK:                        mocks.NewMockAIGatewayProvidersSDK(t),
 		EventGatewayBackendClustersSDK:               mocks.NewMockEventGatewayBackendClustersSDK(t),
 		EventGatewayDataPlaneCertificatesSDK:         mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
@@ -72,6 +74,11 @@ func (m generatedMockSDKWrapper) GetAIGatewayDataPlaneCertificatesSDK() sdkkonne
 // GetAIGatewayModelsSDK returns the SDK to operate AIGatewayModel.
 func (m generatedMockSDKWrapper) GetAIGatewayModelsSDK() sdkkonnectgo.AIGatewayModelsSDK {
 	return m.AIGatewayModelsSDK
+}
+
+// GetAIGatewayPoliciesSDK returns the SDK to operate AIGatewayPolicy.
+func (m generatedMockSDKWrapper) GetAIGatewayPoliciesSDK() sdkkonnectgo.AIGatewayPoliciesSDK {
+	return m.AIGatewayPoliciesSDK
 }
 
 // GetAIGatewayProvidersSDK returns the SDK to operate AIGatewayProvider.
