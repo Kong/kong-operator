@@ -42,6 +42,11 @@ type portalRefAccessor interface {
 	GetPortalRef() commonv1alpha1.ObjectRef
 }
 
+type aiGatewayRefAccessor interface {
+	objectWithParentRef
+	GetAiGatewayRef() commonv1alpha1.ObjectRef
+}
+
 func getAPIAuthRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -52,6 +57,9 @@ func getAPIAuthRef[
 ) (types.NamespacedName, error) {
 	// TODO: make this generic for all root dependent entities.
 
+	if obj, ok := any(ent).(aiGatewayRefAccessor); ok {
+		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.AIGatewayControlPlane](ctx, cl, obj, obj.GetParentRef())
+	}
 	if obj, ok := any(ent).(portalRefAccessor); ok {
 		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.Portal](ctx, cl, obj, obj.GetParentRef())
 	}
