@@ -438,9 +438,8 @@ func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	logger logr.Logger,
 	conv converter.APIConverter[t],
 ) (bool, error) {
-	// Use the existing cleanup logic but do not wait for generated resources to
-	// fully disappear before releasing the root finalizer. Generated resources
-	// have their own cleanup/finalizer flows; keeping the Gateway API object in
-	// deletion until every child finishes can block immediate same-name re-creates.
-	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: false})
+	// Use the existing cleanup logic but with an empty desired set, which will
+	// cause all owned resources to be considered orphans and deleted before the
+	// root finalizer is released.
+	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 }
