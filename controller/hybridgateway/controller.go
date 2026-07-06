@@ -438,8 +438,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	logger logr.Logger,
 	conv converter.APIConverter[t],
 ) (bool, error) {
-	// Use the existing cleanup logic but with an empty desired set, which will
-	// cause all owned resources to be considered orphans and deleted before the
-	// root finalizer is released.
+	// On the deletion path we create a fresh converter but do not run Translate(),
+	// so cleanOrphanedResources() sees no desired output objects. That makes all
+	// owned generated resources orphan candidates, and we wait for their deletion
+	// before releasing the root finalizer.
 	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 }
