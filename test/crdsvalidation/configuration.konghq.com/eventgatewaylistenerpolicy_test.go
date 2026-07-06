@@ -98,7 +98,7 @@ func TestEventGatewayListenerPolicy(t *testing.T) {
 				}(),
 			},
 			{
-				Name: "multiple certificates each independently valid passes",
+				Name: "multiple certificates are not allowed",
 				TestObject: func() *configurationv1alpha1.EventGatewayListenerPolicy {
 					obj := validListenerPolicy(ns.Name)
 					obj.Spec.APISpec.EventGatewayTLSListen.Config.Certificates = []configurationv1alpha1.TLSCertificate{
@@ -113,6 +113,7 @@ func TestEventGatewayListenerPolicy(t *testing.T) {
 					}
 					return obj
 				}(),
+				ExpectedErrorMessage: new("Too many: 2: must have at most 1 item"),
 			},
 			{
 				Name: "inline type without value fails",

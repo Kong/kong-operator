@@ -135,6 +135,7 @@ type Js struct {
 	//
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=20
 	Scripts []string `json:"scripts,omitempty"`
 }
 

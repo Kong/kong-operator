@@ -75,8 +75,14 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	}
 
 	// Handle array types.
-	if prop.Type == "array" && schemaValue.Items != nil {
-		prop.Items = ParseProperty("items", schemaValue.Items, depth+1, visited)
+	if prop.Type == "array" {
+		if schemaValue.MaxItems != nil {
+			maxItems := int64(*schemaValue.MaxItems)
+			prop.MaxItems = &maxItems
+		}
+		if schemaValue.Items != nil {
+			prop.Items = ParseProperty("items", schemaValue.Items, depth+1, visited)
+		}
 	}
 
 	// Handle nested object types.

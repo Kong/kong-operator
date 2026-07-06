@@ -93,7 +93,9 @@ type Generator struct {
 	sensitiveObjectFieldParents map[string]map[string]string
 	// sensitiveLeafSelectors maps entity name → config path → pre-computed
 	// SecretReferenceForTemplate data (including slice/union-aware Go selectors).
-	sensitiveLeafSelectors map[string]map[string]SecretReferenceForTemplate
+	// A path maps to more than one entry when it fans out across a "*" wildcard
+	// union (one entry per matching variant).
+	sensitiveLeafSelectors map[string]map[string][]SecretReferenceForTemplate
 	// ambiguousInlineTypeNames holds inline object type base names that would
 	// collide with another generated package type and therefore need a parent
 	// prefix when emitted.
@@ -237,6 +239,35 @@ func (g *Generator) walkSensitiveLeafPath(
 	// Handle root-level oneOf: entity schema is a discriminated union with no direct
 	// properties — variants are listed in OneOf with a discriminator mapping.
 	if len(schema.Properties) == 0 && len(schema.OneOf) > 0 {
+		containerGoName := entityName + "Config"
+		containerObjectFieldPath := objectFieldPath + "." + containerGoName
+		containerAcc := acc.withUnionContainer(containerGoName)
+
+		// "*" fans out across every variant instead of selecting one by name — used
+		// when a secret leaf lives at the same relative path in multiple (but not
+		// necessarily all) variants, e.g. AIGatewayProvider's per-provider auth config.
+		// Variants where the remaining path doesn't resolve are skipped rather than
+		// failing generation, since a single wildcard path is expected to match only
+		// a subset of variants.
+		if targetJSON == "*" {
+			matched := 0
+			// Map iteration order is randomized; sort variant refs so the fan-out
+			// (and therefore the generated code) is stable across runs.
+			variantRefs := make([]string, 0, len(schema.DiscriminatorMapping))
+			for _, variantRef := range schema.DiscriminatorMapping {
+				variantRefs = append(variantRefs, variantRef)
+			}
+			sort.Strings(variantRefs)
+			for _, variantRef := range variantRefs {
+				if err := g.walkOneOfVariant(entityName, containerObjectFieldPath, schema.OneOf, variantRef, segments, ref, schemas, containerAcc); err == nil {
+					matched++
+				}
+			}
+			if matched == 0 {
+				return fmt.Errorf("wildcard path %q matched no variant of schema %q", ref.Path, schemaGoTypeName)
+			}
+			return nil
+		}
 		// Discriminator mapping keys are OAS snake_case; path segments are camelCase.
 		// Match by converting each key via jsonName().
 		variantRef := ""
@@ -249,31 +280,7 @@ func (g *Generator) walkSensitiveLeafPath(
 		if variantRef == "" {
 			return fmt.Errorf("variant %q not found in discriminator mapping of schema %q", targetJSON, schemaGoTypeName)
 		}
-		variantSchema := schemas[variantRef]
-		if variantSchema == nil {
-			return fmt.Errorf("schema %q not found for variant %q", variantRef, targetJSON)
-		}
-		rawRefNames := make([]string, 0, len(schema.OneOf))
-		for _, v := range schema.OneOf {
-			if v.RefName != "" {
-				rawRefNames = append(rawRefNames, v.RefName)
-			}
-		}
-		cleanFieldNames := extractVariantNames(rawRefNames)
-		variantGoField := ""
-		for i, refName := range rawRefNames {
-			if refName == variantRef {
-				variantGoField = fixInitialisms(cleanFieldNames[i])
-				break
-			}
-		}
-		if variantGoField == "" {
-			return fmt.Errorf("Go field name not found for variant %q in schema %q", targetJSON, schemaGoTypeName)
-		}
-		containerGoName := entityName + "Config"
-		nextObjectFieldPath := objectFieldPath + "." + containerGoName + "." + variantGoField
-		newAcc := acc.withUnionContainer(containerGoName).withUnionVariant(variantGoField)
-		return g.walkSensitiveLeafPath(entityName, fixInitialisms(variantRef), nextObjectFieldPath, variantSchema, segments[1:], ref, schemas, newAcc)
+		return g.walkOneOfVariant(entityName, containerObjectFieldPath, schema.OneOf, variantRef, segments, ref, schemas, containerAcc)
 	}
 
 	// Strip optional array marker from the segment name.
@@ -320,6 +327,24 @@ func (g *Generator) walkSensitiveLeafPath(
 		return fmt.Errorf("cannot navigate through array items of %q in schema %q", lookupJSON, schemaGoTypeName)
 	}
 
+	// Mid-path discriminated union on this property (e.g. a provider's "auth"
+	// field with basic|aws|azure|gcp variants). The next path segment selects
+	// the variant by discriminator value.
+	if len(targetProp.OneOf) > 0 && len(targetProp.DiscriminatorMapping) > 0 {
+		if len(segments) < 2 {
+			return fmt.Errorf("field %q in schema %q is a union and cannot be a secret reference leaf directly", lookupJSON, schemaGoTypeName)
+		}
+		variantSegment := segments[1]
+		variantRef, ok := targetProp.DiscriminatorMapping[variantSegment]
+		if !ok {
+			return fmt.Errorf("variant %q not found in discriminator mapping of field %q in schema %q", variantSegment, lookupJSON, schemaGoTypeName)
+		}
+		unionFieldGoName := goFieldName(targetProp.Name)
+		unionObjectFieldPath := objectFieldPath + "." + unionFieldGoName
+		unionAcc := acc.withUnionContainer(unionFieldGoName)
+		return g.walkOneOfVariant(entityName, unionObjectFieldPath, targetProp.OneOf, variantRef, segments[1:], ref, schemas, unionAcc)
+	}
+
 	if len(segments) == 1 {
 		// Leaf — record against the containing schema.
 		if g.sensitiveSchemaLeaves[schemaGoTypeName] == nil {
@@ -360,14 +385,59 @@ func (g *Generator) walkSensitiveLeafPath(
 	return fmt.Errorf("cannot navigate through non-ref, non-inline field %q", lookupJSON)
 }
 
+// walkOneOfVariant resolves one variant of a discriminated union (root-level or
+// mid-path) identified by variantRef: it derives the variant's Go field name
+// from its sibling ref names, then continues walking the remaining path
+// (segments[1:]) into the variant's schema. objectFieldPath and acc must
+// already include the union container's own selector/guard (the field holding
+// the union itself); this only appends the variant's selector/guard.
+func (g *Generator) walkOneOfVariant(
+	entityName string,
+	objectFieldPath string,
+	variants []*parser.Property,
+	variantRef string,
+	segments []string,
+	ref config.SecretReferenceConfig,
+	schemas map[string]*parser.Schema,
+	acc selectorAccumulator,
+) error {
+	variantSchema := schemas[variantRef]
+	if variantSchema == nil {
+		return fmt.Errorf("schema %q not found for variant %q", variantRef, variantRef)
+	}
+	rawRefNames := make([]string, 0, len(variants))
+	for _, v := range variants {
+		if v.RefName != "" {
+			rawRefNames = append(rawRefNames, v.RefName)
+		}
+	}
+	cleanFieldNames := extractVariantNames(rawRefNames)
+	variantGoField := ""
+	for i, refName := range rawRefNames {
+		if refName == variantRef {
+			variantGoField = fixInitialisms(cleanFieldNames[i])
+			break
+		}
+	}
+	if variantGoField == "" {
+		return fmt.Errorf("Go field name not found for variant %q", variantRef)
+	}
+	nextObjectFieldPath := objectFieldPath + "." + variantGoField
+	newAcc := acc.withUnionVariant(variantGoField)
+	return g.walkSensitiveLeafPath(entityName, fixInitialisms(variantRef), nextObjectFieldPath, variantSchema, segments[1:], ref, schemas, newAcc)
+}
+
+// recordSensitiveLeafSelector appends a selector for the given config path. A
+// single path can resolve to multiple selectors when it fans out across a "*"
+// wildcard union (one selector per matching variant).
 func (g *Generator) recordSensitiveLeafSelector(entityName, path string, acc selectorAccumulator, leafGoField, secretKey string) {
 	if g.sensitiveLeafSelectors == nil {
-		g.sensitiveLeafSelectors = make(map[string]map[string]SecretReferenceForTemplate)
+		g.sensitiveLeafSelectors = make(map[string]map[string][]SecretReferenceForTemplate)
 	}
 	if g.sensitiveLeafSelectors[entityName] == nil {
-		g.sensitiveLeafSelectors[entityName] = make(map[string]SecretReferenceForTemplate)
+		g.sensitiveLeafSelectors[entityName] = make(map[string][]SecretReferenceForTemplate)
 	}
-	g.sensitiveLeafSelectors[entityName][path] = acc.buildTemplate(path, secretKey, leafGoField)
+	g.sensitiveLeafSelectors[entityName][path] = append(g.sensitiveLeafSelectors[entityName][path], acc.buildTemplate(path, secretKey, leafGoField))
 }
 
 // findEntitySchema finds the request body schema for the given entity name.
@@ -557,7 +627,10 @@ type SecretReferenceForTemplate struct {
 	// generated code must use a for-range loop to resolve each element.
 	IsSlice bool
 	// PointerGuards is the list of Go selectors (relative to obj.Spec.APISpec)
-	// that must be nil-checked before accessing the slice. Used only when IsSlice is true.
+	// that must be nil-checked before accessing the leaf: pointer-typed union
+	// container/variant fields encountered while walking to it (e.g. an embedded
+	// union field, or a discriminated variant field). Populated for both slice
+	// and non-slice leaves; empty when the path passes through no such fields.
 	PointerGuards []string
 	// SliceParentSelector is the Go selector of the slice field relative to obj.Spec.APISpec.
 	// Used only when IsSlice is true.
@@ -615,14 +688,21 @@ func (acc selectorAccumulator) buildTemplate(path, secretKey, leafGoField string
 
 	if sliceIdx < 0 {
 		names := make([]string, 0, len(acc.parts)+1)
+		var pointerGuards []string
+		var runningPath []string
 		for _, p := range acc.parts {
 			names = append(names, p.goName)
+			runningPath = append(runningPath, p.goName)
+			if p.isUnionContainer || p.isUnionVariant {
+				pointerGuards = append(pointerGuards, strings.Join(runningPath, "."))
+			}
 		}
 		names = append(names, leafGoField)
 		return SecretReferenceForTemplate{
 			GoFieldSelector: strings.Join(names, "."),
 			SecretKey:       secretKey,
 			Path:            path,
+			PointerGuards:   pointerGuards,
 		}
 	}
 
@@ -652,14 +732,16 @@ func (acc selectorAccumulator) buildTemplate(path, secretKey, leafGoField string
 }
 
 // templateSecretReferences returns the list of SecretReferenceForTemplate for the
-// given entity, ready for use inside Go text/templates.
+// given entity, ready for use inside Go text/templates. A single configured
+// path can expand to more than one entry when it fans out across a "*"
+// wildcard union (one entry per matching variant).
 func (g *Generator) templateSecretReferences(entityName string) []SecretReferenceForTemplate {
 	refs := g.config.SecretReferences[entityName]
-	result := make([]SecretReferenceForTemplate, 0, len(refs))
+	var result []SecretReferenceForTemplate
 	for _, ref := range refs {
 		if selectors, ok := g.sensitiveLeafSelectors[entityName]; ok {
-			if tmpl, ok := selectors[ref.Path]; ok {
-				result = append(result, tmpl)
+			if tmpls, ok := selectors[ref.Path]; ok && len(tmpls) > 0 {
+				result = append(result, tmpls...)
 				continue
 			}
 		}

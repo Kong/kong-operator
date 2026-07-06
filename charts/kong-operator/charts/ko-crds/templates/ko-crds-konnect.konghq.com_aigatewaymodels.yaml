@@ -1530,6 +1530,7 @@ spec:
                               maxLength: 253
                               type: string
                           type: object
+                        maxItems: 1
                         type: array
                       labels:
                         additionalProperties:
@@ -4004,6 +4005,7 @@ spec:
                               maxLength: 253
                               type: string
                           type: object
+                        maxItems: 1
                         type: array
                       labels:
                         additionalProperties:

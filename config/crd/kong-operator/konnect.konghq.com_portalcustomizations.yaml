@@ -72,6 +72,7 @@ spec:
                       scripts:
                         items:
                           type: string
+                        maxItems: 20
                         type: array
                     type: object
                   layout:

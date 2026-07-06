@@ -688,6 +688,9 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 	}
 {{- end}}
 {{- else}}
+{{- range .PointerGuards}}
+	if apiSpec.{{.}} != nil {
+{{- end}}
 	{
 		src := apiSpec.{{.GoFieldSelector}}
 		if src.Type == SensitiveDataSourceTypeSecretRef {
@@ -710,6 +713,9 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 			apiSpec.{{.GoFieldSelector}}.Value = &resolved
 		}
 	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
 {{- end}}
 {{- end}}
 	return &apiSpec, nil
@@ -739,12 +745,18 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 	}
 {{- end}}
 {{- else}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
 	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
 		refs = append(refs, SensitiveDataSecretRef{
 			Ref: *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef,
 			Key: "{{.SecretKey}}",
 		})
 	}
+{{- range .PointerGuards}}
+	}
+{{- end}}
 {{- end}}
 {{- end}}
 	return refs
@@ -1185,6 +1197,9 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 	}
 {{- end}}
 {{- else}}
+{{- range .PointerGuards}}
+	if apiSpec.{{.}} != nil {
+{{- end}}
 	{
 		src := apiSpec.{{.GoFieldSelector}}
 		if src.Type == SensitiveDataSourceTypeSecretRef {
@@ -1207,6 +1222,9 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 			apiSpec.{{.GoFieldSelector}}.Value = &resolved
 		}
 	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
 {{- end}}
 {{- end}}
 	return &apiSpec, nil
@@ -1236,12 +1254,18 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 	}
 {{- end}}
 {{- else}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
 	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
 		refs = append(refs, SensitiveDataSecretRef{
 			Ref: *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef,
 			Key: "{{.SecretKey}}",
 		})
 	}
+{{- range .PointerGuards}}
+	}
+{{- end}}
 {{- end}}
 {{- end}}
 	return refs

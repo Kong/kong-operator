@@ -311,6 +311,38 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/providers
         name: AIGatewayProvider
+        secretReferences:
+          # Basic-auth token: matches the 15 providers whose auth is a direct
+          # (non-union) basic config; skipped for the 4 cloud providers below,
+          # whose auth is itself a discriminated union.
+          - path: spec.apiSpec.*.config.auth.headers[].value
+            type: Secret
+            key: key
+          - path: spec.apiSpec.*.config.auth.params[].value
+            type: Secret
+            key: key
+          # Cloud providers' basic-auth arm: matches when their union-typed
+          # auth field is configured with the "basic" variant.
+          - path: spec.apiSpec.*.config.auth.basic.headers[].value
+            type: Secret
+            key: key
+          - path: spec.apiSpec.*.config.auth.basic.params[].value
+            type: Secret
+            key: key
+          # Cloud-native credentials, one path per provider since each names
+          # its secret field differently.
+          - path: spec.apiSpec.bedrock.config.auth.aws.secretAccessKey
+            type: Secret
+            key: key
+          - path: spec.apiSpec.azure.config.auth.azure.clientSecret
+            type: Secret
+            key: key
+          - path: spec.apiSpec.gemini.config.auth.gcp.serviceAccountJSON
+            type: Secret
+            key: key
+          - path: spec.apiSpec.vertex.config.auth.gcp.serviceAccountJSON
+            type: Secret
+            key: key
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayProvidersSDK
