@@ -41,13 +41,13 @@ func (r *Reconciler) ensureKafkaService(
 	logger logr.Logger,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 ) error {
-	desired, err := buildKafkaService(r.typeConverter, egdp)
+	desired, err := buildKafkaService(r.TypeConverter, egdp)
 	if err != nil {
 		return fmt.Errorf("failed to build Kafka Service for DataPlane %s/%s: %w",
 			egdp.Namespace, egdp.Name, err)
 	}
 
-	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		r.eventRecorder.Eventf(egdp, nil, corev1.EventTypeWarning, "ServiceFailed", "ApplyService",
 			"Failed to apply Kafka Service: %v", err)

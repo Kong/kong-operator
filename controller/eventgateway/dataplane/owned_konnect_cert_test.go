@@ -257,7 +257,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 
 			r := &Reconciler{
 				Client:        cl,
-				typeConverter: managedfields.NewDeducedTypeConverter(),
+				TypeConverter: managedfields.NewDeducedTypeConverter(),
 				eventRecorder: events.NewFakeRecorder(10),
 			}
 

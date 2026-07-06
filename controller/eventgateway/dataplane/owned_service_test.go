@@ -374,7 +374,7 @@ func Test_ensureKafkaService(t *testing.T) {
 			base := fake.NewClientBuilder().WithScheme(scheme).Build()
 			r := &Reconciler{
 				Client:        testcase.buildClient(base),
-				typeConverter: tc,
+				TypeConverter: tc,
 				eventRecorder: recorder,
 			}
 
