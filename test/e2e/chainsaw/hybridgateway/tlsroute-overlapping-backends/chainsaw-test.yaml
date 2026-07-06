@@ -4,6 +4,9 @@ kind: Test
 metadata:
   name: tlsroute-overlapping-backends
 spec:
+  # Skipping this test until fixed and stable.
+  # TODO: https://github.com/Kong/kong-operator/issues/4786
+  skip: true
   description: |
     Validates that the hybrid gateway controller correctly handles a TLSRoute
     whose backendRef Services overlap on the same underlying pods. This mirrors
