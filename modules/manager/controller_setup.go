@@ -151,12 +151,17 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectGatewayControlPlane(),
 			index.OptionsForKonnectAPIAuthConfiguration(),
 			index.OptionsForKonnectCloudGatewayNetwork(),
-			index.OptionsForKegDataPlane(),
 			index.OptionsForKonnectExtension(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
 		)
 
 		indexOptions = append(indexOptions, generatedIndexOptionsForKonnectEntities(cl)...)
+	}
+
+	if cfg.KEGDataPlaneControllerEnabled {
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForKegDataPlane(),
+		)
 	}
 
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
