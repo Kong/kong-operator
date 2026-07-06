@@ -1,0 +1,51 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see: https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.tech
+---
+kind: AIGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+kind: AIGatewayAgent
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: my-ai-agent
+  namespace: default
+spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: my-ai-agent
+    displayName: My AI Agent
+    type: http
+    enabled: Enabled
+    config:
+      url: https://my-upstream-agent.example.com
+      route:
+        paths:
+          - /my-ai-agent
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
