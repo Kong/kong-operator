@@ -11,6 +11,7 @@ import (
 // constraints.SupportedKonnectEntityType.
 type SupportedGeneratedKonnectEntityType interface {
 	konnectv1alpha1.AIGatewayControlPlane |
+		konnectv1alpha1.AIGatewayModel |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewayListener |

@@ -247,6 +247,26 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayRequest
           delete: {}
         reconciler: {}
+      - path: /v1/ai-gateways/{gatewayId}/models
+        name: AIGatewayModel
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayModelsSDK
+            fieldName: AIGatewayModels
+          # List responses are root unions whose wrapper does not expose top-level
+          # GetID/GetLabels accessors, so conflict lookup stays hand-written for now.
+          skipGetForUID: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayModelRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: AIGatewayControlPlane
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
 
       # Event Gateway APIs
       - path: /v1/event-gateways

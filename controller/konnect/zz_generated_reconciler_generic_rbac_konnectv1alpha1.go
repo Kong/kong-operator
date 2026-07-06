@@ -5,6 +5,9 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaycontrolplanes,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaycontrolplanes/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaycontrolplanes/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/finalizers,verbs=update;patch

@@ -447,6 +447,7 @@ rules:
       - konnect.konghq.com
     resources:
       - aigatewaycontrolplanes
+      - aigatewaymodels
       - konnectapiauthconfigurations
       - konnectcloudgatewaydataplanegroupconfigurations
       - konnectcloudgatewaynetworks
@@ -471,6 +472,8 @@ rules:
     resources:
       - aigatewaycontrolplanes/finalizers
       - aigatewaycontrolplanes/status
+      - aigatewaymodels/finalizers
+      - aigatewaymodels/status
       - konnectapiauthconfigurations/finalizers
       - konnectapiauthconfigurations/status
       - konnectcloudgatewaydataplanegroupconfigurations/finalizers

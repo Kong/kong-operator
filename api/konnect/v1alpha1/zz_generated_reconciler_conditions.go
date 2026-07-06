@@ -3,6 +3,22 @@
 package v1alpha1
 
 const (
+	// AIGatewayControlPlaneRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayControlPlane reference is valid and points to an existing
+	// AIGatewayControlPlane.
+	AIGatewayControlPlaneRefValidConditionType = "AIGatewayControlPlaneRefValid"
+
+	// AIGatewayControlPlaneRefReasonValid is the reason used with the AIGatewayControlPlaneRefValid
+	// condition type indicating that the AIGatewayControlPlane reference is valid.
+	AIGatewayControlPlaneRefReasonValid = "Valid"
+	// AIGatewayControlPlaneRefReasonInvalid is the reason used with the AIGatewayControlPlaneRefValid
+	// condition type indicating that the AIGatewayControlPlane reference is invalid.
+	AIGatewayControlPlaneRefReasonInvalid = "Invalid"
+	// AIGatewayControlPlaneRefReasonNotProgrammed is the reason used with the AIGatewayControlPlaneRefValid
+	// condition type indicating that the referenced AIGatewayControlPlane exists but is not
+	// yet programmed in Konnect.
+	AIGatewayControlPlaneRefReasonNotProgrammed = "NotProgrammed"
+
 	// PortalRefValidConditionType is the type of the condition that indicates
 	// whether the Portal reference is valid and points to an existing
 	// Portal.

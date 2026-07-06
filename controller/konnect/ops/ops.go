@@ -280,6 +280,8 @@ func getKonnectIDForUID[
 		return getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
+	case *konnectv1alpha1.AIGatewayModel:
+		return getAIGatewayModelForUID(ctx, sdk.GetAIGatewayModelsSDK(), ent)
 
 	// ---------------------------------------------------------------------
 	// TODO: add other manually maintained Konnect types here

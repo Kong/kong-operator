@@ -2,9 +2,2844 @@
 
 package v1alpha1
 
+import (
+	"encoding/json"
+	"fmt"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+)
+
+// AIGatewayACLS Access control rules.
+// Configure exactly one of `allow` or `deny`.
+type AIGatewayACLS map[string]string
+
+// AIGatewayAllowACL is a type alias.
+type AIGatewayAllowACL struct {
+	// List of Consumers, Consumer Groups, or Authenticated Groups that are
+	// permitted access.
+	//
+	// +required
+	Allow []string `json:"allow,omitempty"`
+}
+
+// AIGatewayAzureEmbeddingsModelConfig Azure-specific configuration for a model.
+type AIGatewayAzureEmbeddingsModelConfig struct {
+	// The Azure OpenAI API version to use.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	APIVersion string `json:"apiVersion,omitzero"`
+	// The Azure deployment ID for the model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	DeploymentID string `json:"deploymentID,omitzero"`
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayBedrockEmbeddingsModelConfig AWS Bedrock-specific configuration for
+// a model.
+type AIGatewayBedrockEmbeddingsModelConfig struct {
+	// S3 bucket prefix for batch inference jobs.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	BatchBucketPrefix string `json:"batchBucketPrefix,omitzero"`
+	// Whether to normalize embedding vectors in the response.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EmbeddingsNormalize string `json:"embeddingsNormalize,omitzero"`
+	// Latency performance configuration for the model invocation.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	PerformanceConfigLatency string `json:"performanceConfigLatency,omitzero"`
+	// The AWS region for the model.
+	// Setting this option overrides the AWS_REGION environment variable.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Region string `json:"region,omitzero"`
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+	// S3 URI for storing video generation outputs.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
+}
+
+// AIGatewayDatabricksEmbeddingsModelConfig Databricks-specific configuration
+// for a model.
+type AIGatewayDatabricksEmbeddingsModelConfig struct {
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+	// The Databricks workspace instance ID.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	WorkspaceInstanceID string `json:"workspaceInstanceID,omitzero"`
+}
+
+// AIGatewayDenyACL is a type alias.
+type AIGatewayDenyACL struct {
+	// List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+	// access.
+	//
+	// +required
+	Deny []string `json:"deny,omitempty"`
+}
+
+// AIGatewayEmbeddingsModelConfig represents a union type for AIGatewayEmbeddingsModelConfig.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayEmbeddingsModelConfig struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=azure;bedrock;databricks;gemini;huggingface;vercel;vertex
+	Type AIGatewayEmbeddingsModelConfigType `json:"type,omitempty"`
+
+	// Azure configuration.
+	//
+	// +optional
+	Azure *AIGatewayAzureEmbeddingsModelConfig `json:"azure,omitempty"`
+	// Bedrock configuration.
+	//
+	// +optional
+	Bedrock *AIGatewayBedrockEmbeddingsModelConfig `json:"bedrock,omitempty"`
+	// Databricks configuration.
+	//
+	// +optional
+	Databricks *AIGatewayDatabricksEmbeddingsModelConfig `json:"databricks,omitempty"`
+	// Gemini configuration.
+	//
+	// +optional
+	Gemini *AIGatewayGeminiEmbeddingsModelConfig `json:"gemini,omitempty"`
+	// Huggingface configuration.
+	//
+	// +optional
+	Huggingface *AIGatewayHuggingfaceEmbeddingsModelConfig `json:"huggingface,omitempty"`
+	// Vercel configuration.
+	//
+	// +optional
+	Vercel *AIGatewayVercelEmbeddingsModelConfig `json:"vercel,omitempty"`
+	// Vertex configuration.
+	//
+	// +optional
+	Vertex *AIGatewayVertexEmbeddingsModelConfig `json:"vertex,omitempty"`
+}
+
+// AIGatewayEmbeddingsModelConfigType represents the type of AIGatewayEmbeddingsModelConfig.
+type AIGatewayEmbeddingsModelConfigType string
+
+// AIGatewayEmbeddingsModelConfigType values.
+const (
+	AIGatewayEmbeddingsModelConfigTypeAzure AIGatewayEmbeddingsModelConfigType = "azure"
+	AIGatewayEmbeddingsModelConfigTypeBedrock AIGatewayEmbeddingsModelConfigType = "bedrock"
+	AIGatewayEmbeddingsModelConfigTypeDatabricks AIGatewayEmbeddingsModelConfigType = "databricks"
+	AIGatewayEmbeddingsModelConfigTypeGemini AIGatewayEmbeddingsModelConfigType = "gemini"
+	AIGatewayEmbeddingsModelConfigTypeHuggingface AIGatewayEmbeddingsModelConfigType = "huggingface"
+	AIGatewayEmbeddingsModelConfigTypeVercel AIGatewayEmbeddingsModelConfigType = "vercel"
+	AIGatewayEmbeddingsModelConfigTypeVertex AIGatewayEmbeddingsModelConfigType = "vertex"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayEmbeddingsModelConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayEmbeddingsModelConfigTypeAzure:
+		if u.Azure != nil {
+			raw, err := json.Marshal(u.Azure)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig azure: %w", err)
+			}
+			m["azure"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeBedrock:
+		if u.Bedrock != nil {
+			raw, err := json.Marshal(u.Bedrock)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig bedrock: %w", err)
+			}
+			m["bedrock"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeDatabricks:
+		if u.Databricks != nil {
+			raw, err := json.Marshal(u.Databricks)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig databricks: %w", err)
+			}
+			m["databricks"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeGemini:
+		if u.Gemini != nil {
+			raw, err := json.Marshal(u.Gemini)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig gemini: %w", err)
+			}
+			m["gemini"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeHuggingface:
+		if u.Huggingface != nil {
+			raw, err := json.Marshal(u.Huggingface)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig huggingface: %w", err)
+			}
+			m["huggingface"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeVercel:
+		if u.Vercel != nil {
+			raw, err := json.Marshal(u.Vercel)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig vercel: %w", err)
+			}
+			m["vercel"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeVertex:
+		if u.Vertex != nil {
+			raw, err := json.Marshal(u.Vertex)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig vertex: %w", err)
+			}
+			m["vertex"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayEmbeddingsModelConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayEmbeddingsModelConfigType(probe.Type)
+	switch probe.Type {
+	case "azure":
+		payload, ok := raw["azure"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAzureEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig azure: %w", err)
+		}
+		u.Azure = &val
+	case "bedrock":
+		payload, ok := raw["bedrock"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayBedrockEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig bedrock: %w", err)
+		}
+		u.Bedrock = &val
+	case "databricks":
+		payload, ok := raw["databricks"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDatabricksEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig databricks: %w", err)
+		}
+		u.Databricks = &val
+	case "gemini":
+		payload, ok := raw["gemini"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayGeminiEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig gemini: %w", err)
+		}
+		u.Gemini = &val
+	case "huggingface":
+		payload, ok := raw["huggingface"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayHuggingfaceEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig huggingface: %w", err)
+		}
+		u.Huggingface = &val
+	case "vercel":
+		payload, ok := raw["vercel"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayVercelEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig vercel: %w", err)
+		}
+		u.Vercel = &val
+	case "vertex":
+		payload, ok := raw["vertex"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayVertexEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig vertex: %w", err)
+		}
+		u.Vertex = &val
+	}
+	return nil
+}
 // AIGatewayEntityIdentifier Identifier for an AI Gateway entity.
 // In some cases, this may be the entity name or ID.
 type AIGatewayEntityIdentifier string
+
+// AIGatewayGeminiEmbeddingsModelConfig Google Gemini-specific configuration for
+// a model.
+type AIGatewayGeminiEmbeddingsModelConfig struct {
+	// The custom API endpoint for the Gemini model.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	APIEndpoint string `json:"apiEndpoint,omitzero"`
+	// The Google Cloud location ID for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LocationID string `json:"locationID,omitzero"`
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayHuggingfaceEmbeddingsModelConfig Hugging Face-specific configuration
+// for a model.
+type AIGatewayHuggingfaceEmbeddingsModelConfig struct {
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+	// Whether to use the Hugging Face inference cache.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	UseCache string `json:"useCache,omitzero"`
+	// Whether to wait for the model to load if it is not ready.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	WaitForModel string `json:"waitForModel,omitzero"`
+}
+
+// AIGatewayModelAPI Configuration for proxying asynchronous requests/responses
+// to/from an AI Gateway model using the files and batches APIs.
+type AIGatewayModelAPI struct {
+	// Access control rules for allowing or denying Consumers, Consumer Groups, or
+	// Authenticated Groups to this model.
+	//
+	// +optional
+	Acls AIGatewayACLS `json:"acls,omitzero"`
+	// List of AI capabilities enabled for this API model.
+	//
+	// +required
+	Capabilities []string `json:"capabilities,omitempty"`
+	// Routing, logging, and load balancing configuration for the model.
+	//
+	// +required
+	Config AIGatewayModelAPIConfig `json:"config,omitzero"`
+	// The display name for this model instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Whether the model is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// List of request/response formats supported by this model.
+	//
+	// +required
+	Formats []AIGatewayModelFormat `json:"formats,omitempty"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model, used as a stable
+	// human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// List of policy references.
+	//
+	// +optional
+	Policies []string `json:"policies,omitempty"`
+	// One or more backend models that this model entry routes to.
+	//
+	// +required
+	Targets []AIGatewayTarget `json:"targets,omitempty"`
+}
+
+// AIGatewayModelAPIConfig Routing, logging, and load balancing configuration
+// for the model.
+type AIGatewayModelAPIConfig struct {
+	// Configuration for a model's load balancer when multiple target models are
+	// configured.
+	//
+	// +optional
+	Balancer *AIGatewayModelAPIConfigBalancer `json:"balancer,omitempty"`
+	// Configuration for AI Gateway logging.
+	//
+	// +optional
+	Logging AIGatewayModelAPIConfigLogging `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	//
+	//
+	// +required
+	Model AIGatewayModelAPIConfigModel `json:"model,omitzero"`
+	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
+	// provider.
+	//
+	// +optional
+	Proxy AIGatewayProxyConfig `json:"proxy,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=allow;always;deny
+	ResponseStreaming string `json:"responseStreaming,omitzero"`
+	// Configuration for an AI Gateway route.
+	//
+	// +required
+	Route AIGatewayRouteConfig `json:"route,omitzero"`
+}
+
+// AIGatewayModelAPIConfigLogging Configuration for AI Gateway logging.
+type AIGatewayModelAPIConfigLogging struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Statistics string `json:"statistics,omitzero"`
+}
+
+// AIGatewayModelAPIConfigModel is a type alias.
+type AIGatewayModelAPIConfigModel struct {
+	// An alias for the model, used to select the target virtual model when passed
+	// in the "model" parameter of the request body.
+	// When not set, this defaults to the AI Gateway model's name.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Alias string `json:"alias,omitzero"`
+}
+
+// AIGatewayModelAPIConfigBalancer represents a union type for balancer.
+// Only one of the fields should be set based on the Algorithm.
+//
+type AIGatewayModelAPIConfigBalancer struct {
+	// Algorithm designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;lowest-usage;priority;round-robin;semantic
+	Algorithm AIGatewayModelAPIConfigBalancerType `json:"algorithm,omitempty"`
+
+	// ConsistentHashing configuration.
+	//
+	// +optional
+	ConsistentHashing *AIGatewayModelBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// LeastConnections configuration.
+	//
+	// +optional
+	LeastConnections *AIGatewayModelBalancerLeastConnectionsConfig `json:"least-connections,omitempty"`
+	// LowestLatency configuration.
+	//
+	// +optional
+	LowestLatency *AIGatewayModelBalancerLowestLatencyConfig `json:"lowest-latency,omitempty"`
+	// LowestUsage configuration.
+	//
+	// +optional
+	LowestUsage *AIGatewayModelBalancerLowestUsageConfig `json:"lowest-usage,omitempty"`
+	// Priority configuration.
+	//
+	// +optional
+	Priority *AIGatewayModelBalancerPriorityConfig `json:"priority,omitempty"`
+	// RoundRobin configuration.
+	//
+	// +optional
+	RoundRobin *AIGatewayModelBalancerRoundRobinConfig `json:"round-robin,omitempty"`
+	// Semantic configuration.
+	//
+	// +optional
+	Semantic *AIGatewayModelBalancerSemanticConfig `json:"semantic,omitempty"`
+}
+
+// AIGatewayModelAPIConfigBalancerType represents the type of balancer.
+type AIGatewayModelAPIConfigBalancerType string
+
+// AIGatewayModelAPIConfigBalancerType values.
+const (
+	AIGatewayModelAPIConfigBalancerTypeConsistentHashing AIGatewayModelAPIConfigBalancerType = "consistent-hashing"
+	AIGatewayModelAPIConfigBalancerTypeLeastConnections AIGatewayModelAPIConfigBalancerType = "least-connections"
+	AIGatewayModelAPIConfigBalancerTypeLowestLatency AIGatewayModelAPIConfigBalancerType = "lowest-latency"
+	AIGatewayModelAPIConfigBalancerTypeLowestUsage AIGatewayModelAPIConfigBalancerType = "lowest-usage"
+	AIGatewayModelAPIConfigBalancerTypePriority AIGatewayModelAPIConfigBalancerType = "priority"
+	AIGatewayModelAPIConfigBalancerTypeRoundRobin AIGatewayModelAPIConfigBalancerType = "round-robin"
+	AIGatewayModelAPIConfigBalancerTypeSemantic AIGatewayModelAPIConfigBalancerType = "semantic"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelAPIConfigBalancer) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Algorithm))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer algorithm: %w", err)
+	}
+	m["algorithm"] = typeBytes
+	switch u.Algorithm {
+	case AIGatewayModelAPIConfigBalancerTypeConsistentHashing:
+		if u.ConsistentHashing != nil {
+			raw, err := json.Marshal(u.ConsistentHashing)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer consistent-hashing: %w", err)
+			}
+			m["consistent-hashing"] = raw
+		}
+	case AIGatewayModelAPIConfigBalancerTypeLeastConnections:
+		if u.LeastConnections != nil {
+			raw, err := json.Marshal(u.LeastConnections)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer least-connections: %w", err)
+			}
+			m["least-connections"] = raw
+		}
+	case AIGatewayModelAPIConfigBalancerTypeLowestLatency:
+		if u.LowestLatency != nil {
+			raw, err := json.Marshal(u.LowestLatency)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer lowest-latency: %w", err)
+			}
+			m["lowest-latency"] = raw
+		}
+	case AIGatewayModelAPIConfigBalancerTypeLowestUsage:
+		if u.LowestUsage != nil {
+			raw, err := json.Marshal(u.LowestUsage)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer lowest-usage: %w", err)
+			}
+			m["lowest-usage"] = raw
+		}
+	case AIGatewayModelAPIConfigBalancerTypePriority:
+		if u.Priority != nil {
+			raw, err := json.Marshal(u.Priority)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer priority: %w", err)
+			}
+			m["priority"] = raw
+		}
+	case AIGatewayModelAPIConfigBalancerTypeRoundRobin:
+		if u.RoundRobin != nil {
+			raw, err := json.Marshal(u.RoundRobin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer round-robin: %w", err)
+			}
+			m["round-robin"] = raw
+		}
+	case AIGatewayModelAPIConfigBalancerTypeSemantic:
+		if u.Semantic != nil {
+			raw, err := json.Marshal(u.Semantic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer semantic: %w", err)
+			}
+			m["semantic"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelAPIConfigBalancer) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer: nil receiver")
+	}
+	var probe struct {
+		Algorithm string `json:"algorithm"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Algorithm = AIGatewayModelAPIConfigBalancerType(probe.Algorithm)
+	switch probe.Algorithm {
+	case "consistent-hashing":
+		payload, ok := raw["consistent-hashing"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerConsistentHashingConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer consistent-hashing: %w", err)
+		}
+		u.ConsistentHashing = &val
+	case "least-connections":
+		payload, ok := raw["least-connections"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerLeastConnectionsConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer least-connections: %w", err)
+		}
+		u.LeastConnections = &val
+	case "lowest-latency":
+		payload, ok := raw["lowest-latency"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerLowestLatencyConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer lowest-latency: %w", err)
+		}
+		u.LowestLatency = &val
+	case "lowest-usage":
+		payload, ok := raw["lowest-usage"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerLowestUsageConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer lowest-usage: %w", err)
+		}
+		u.LowestUsage = &val
+	case "priority":
+		payload, ok := raw["priority"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerPriorityConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer priority: %w", err)
+		}
+		u.Priority = &val
+	case "round-robin":
+		payload, ok := raw["round-robin"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerRoundRobinConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer round-robin: %w", err)
+		}
+		u.RoundRobin = &val
+	case "semantic":
+		payload, ok := raw["semantic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerSemanticConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer semantic: %w", err)
+		}
+		u.Semantic = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelAPIConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelAPIConfig: nil receiver")
+	}
+	type alias AIGatewayModelAPIConfig
+	aux := alias{}
+	aux.Balancer = &AIGatewayModelAPIConfigBalancer{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelAPIConfig: %w", err)
+	}
+	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.LowestUsage == nil && aux.Balancer.Priority == nil && aux.Balancer.RoundRobin == nil && aux.Balancer.Semantic == nil {
+		aux.Balancer = nil
+	}
+	*s = AIGatewayModelAPIConfig(aux)
+	return nil
+}
+
+// AIGatewayModelBalancerConfig represents a union type for AIGatewayModelBalancerConfig.
+// Only one of the fields should be set based on the Algorithm.
+//
+type AIGatewayModelBalancerConfig struct {
+	// Algorithm designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;lowest-usage;priority;round-robin;semantic
+	Algorithm AIGatewayModelBalancerConfigType `json:"algorithm,omitempty"`
+
+	// ConsistentHashing configuration.
+	//
+	// +optional
+	ConsistentHashing *AIGatewayModelBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// LeastConnections configuration.
+	//
+	// +optional
+	LeastConnections *AIGatewayModelBalancerLeastConnectionsConfig `json:"least-connections,omitempty"`
+	// LowestLatency configuration.
+	//
+	// +optional
+	LowestLatency *AIGatewayModelBalancerLowestLatencyConfig `json:"lowest-latency,omitempty"`
+	// LowestUsage configuration.
+	//
+	// +optional
+	LowestUsage *AIGatewayModelBalancerLowestUsageConfig `json:"lowest-usage,omitempty"`
+	// Priority configuration.
+	//
+	// +optional
+	Priority *AIGatewayModelBalancerPriorityConfig `json:"priority,omitempty"`
+	// RoundRobin configuration.
+	//
+	// +optional
+	RoundRobin *AIGatewayModelBalancerRoundRobinConfig `json:"round-robin,omitempty"`
+	// Semantic configuration.
+	//
+	// +optional
+	Semantic *AIGatewayModelBalancerSemanticConfig `json:"semantic,omitempty"`
+}
+
+// AIGatewayModelBalancerConfigType represents the type of AIGatewayModelBalancerConfig.
+type AIGatewayModelBalancerConfigType string
+
+// AIGatewayModelBalancerConfigType values.
+const (
+	AIGatewayModelBalancerConfigTypeConsistentHashing AIGatewayModelBalancerConfigType = "consistent-hashing"
+	AIGatewayModelBalancerConfigTypeLeastConnections AIGatewayModelBalancerConfigType = "least-connections"
+	AIGatewayModelBalancerConfigTypeLowestLatency AIGatewayModelBalancerConfigType = "lowest-latency"
+	AIGatewayModelBalancerConfigTypeLowestUsage AIGatewayModelBalancerConfigType = "lowest-usage"
+	AIGatewayModelBalancerConfigTypePriority AIGatewayModelBalancerConfigType = "priority"
+	AIGatewayModelBalancerConfigTypeRoundRobin AIGatewayModelBalancerConfigType = "round-robin"
+	AIGatewayModelBalancerConfigTypeSemantic AIGatewayModelBalancerConfigType = "semantic"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelBalancerConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Algorithm))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig algorithm: %w", err)
+	}
+	m["algorithm"] = typeBytes
+	switch u.Algorithm {
+	case AIGatewayModelBalancerConfigTypeConsistentHashing:
+		if u.ConsistentHashing != nil {
+			raw, err := json.Marshal(u.ConsistentHashing)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig consistent-hashing: %w", err)
+			}
+			m["consistent-hashing"] = raw
+		}
+	case AIGatewayModelBalancerConfigTypeLeastConnections:
+		if u.LeastConnections != nil {
+			raw, err := json.Marshal(u.LeastConnections)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig least-connections: %w", err)
+			}
+			m["least-connections"] = raw
+		}
+	case AIGatewayModelBalancerConfigTypeLowestLatency:
+		if u.LowestLatency != nil {
+			raw, err := json.Marshal(u.LowestLatency)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig lowest-latency: %w", err)
+			}
+			m["lowest-latency"] = raw
+		}
+	case AIGatewayModelBalancerConfigTypeLowestUsage:
+		if u.LowestUsage != nil {
+			raw, err := json.Marshal(u.LowestUsage)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig lowest-usage: %w", err)
+			}
+			m["lowest-usage"] = raw
+		}
+	case AIGatewayModelBalancerConfigTypePriority:
+		if u.Priority != nil {
+			raw, err := json.Marshal(u.Priority)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig priority: %w", err)
+			}
+			m["priority"] = raw
+		}
+	case AIGatewayModelBalancerConfigTypeRoundRobin:
+		if u.RoundRobin != nil {
+			raw, err := json.Marshal(u.RoundRobin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig round-robin: %w", err)
+			}
+			m["round-robin"] = raw
+		}
+	case AIGatewayModelBalancerConfigTypeSemantic:
+		if u.Semantic != nil {
+			raw, err := json.Marshal(u.Semantic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig semantic: %w", err)
+			}
+			m["semantic"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelBalancerConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig: nil receiver")
+	}
+	var probe struct {
+		Algorithm string `json:"algorithm"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Algorithm = AIGatewayModelBalancerConfigType(probe.Algorithm)
+	switch probe.Algorithm {
+	case "consistent-hashing":
+		payload, ok := raw["consistent-hashing"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerConsistentHashingConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig consistent-hashing: %w", err)
+		}
+		u.ConsistentHashing = &val
+	case "least-connections":
+		payload, ok := raw["least-connections"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerLeastConnectionsConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig least-connections: %w", err)
+		}
+		u.LeastConnections = &val
+	case "lowest-latency":
+		payload, ok := raw["lowest-latency"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerLowestLatencyConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig lowest-latency: %w", err)
+		}
+		u.LowestLatency = &val
+	case "lowest-usage":
+		payload, ok := raw["lowest-usage"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerLowestUsageConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig lowest-usage: %w", err)
+		}
+		u.LowestUsage = &val
+	case "priority":
+		payload, ok := raw["priority"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerPriorityConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig priority: %w", err)
+		}
+		u.Priority = &val
+	case "round-robin":
+		payload, ok := raw["round-robin"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerRoundRobinConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig round-robin: %w", err)
+		}
+		u.RoundRobin = &val
+	case "semantic":
+		payload, ok := raw["semantic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerSemanticConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig semantic: %w", err)
+		}
+		u.Semantic = &val
+	}
+	return nil
+}
+// AIGatewayModelBalancerConsistentHashingConfig is a type alias.
+type AIGatewayModelBalancerConsistentHashingConfig struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// The period of time (in milliseconds) the target will be considered
+	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	FailTimeout int `json:"failTimeout,omitzero"`
+	// Specifies in which cases an upstream response should be failover to the next
+	// target.
+	// Each option in the array is equivalent to the function of
+	// https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+	//
+	// +optional
+	FailoverCriteria []string `json:"failoverCriteria,omitempty"`
+	// The header to use for consistent-hashing.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HashOnHeader string `json:"hashOnHeader,omitzero"`
+	// Number of unsuccessful attempts to communicate with a target that should
+	// occur in the duration defined by `fail_timeout` before the target is
+	// considered unavailable.
+	// The zero value disables the circuit breaker.
+	// What is considered an unsuccessful attempt is defined by
+	// `failover_criteria`.
+	// Note the cases of `error`, `timeout` and `invalid_header` are always
+	// considered unsuccessful attempts, while the cases of `http_403` and
+	// `http_404` are never considered unsuccessful attempts.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	MaxFails int `json:"maxFails,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// The number of retries to execute upon failure to proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	Retries int `json:"retries,omitzero"`
+	// The number of slots in the load balancer algorithm.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=65536
+	Slots int `json:"slots,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	WriteTimeout int `json:"writeTimeout,omitzero"`
+}
+
+// AIGatewayModelBalancerLeastConnectionsConfig is a type alias.
+type AIGatewayModelBalancerLeastConnectionsConfig struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// The period of time (in milliseconds) the target will be considered
+	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	FailTimeout int `json:"failTimeout,omitzero"`
+	// Specifies in which cases an upstream response should be failover to the next
+	// target.
+	// Each option in the array is equivalent to the function of
+	// https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+	//
+	// +optional
+	FailoverCriteria []string `json:"failoverCriteria,omitempty"`
+	// Number of unsuccessful attempts to communicate with a target that should
+	// occur in the duration defined by `fail_timeout` before the target is
+	// considered unavailable.
+	// The zero value disables the circuit breaker.
+	// What is considered an unsuccessful attempt is defined by
+	// `failover_criteria`.
+	// Note the cases of `error`, `timeout` and `invalid_header` are always
+	// considered unsuccessful attempts, while the cases of `http_403` and
+	// `http_404` are never considered unsuccessful attempts.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	MaxFails int `json:"maxFails,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// The number of retries to execute upon failure to proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	Retries int `json:"retries,omitzero"`
+	// The number of slots in the load balancer algorithm.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=65536
+	Slots int `json:"slots,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	WriteTimeout int `json:"writeTimeout,omitzero"`
+}
+
+// AIGatewayModelBalancerLowestLatencyConfig is a type alias.
+type AIGatewayModelBalancerLowestLatencyConfig struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// The period of time (in milliseconds) the target will be considered
+	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	FailTimeout int `json:"failTimeout,omitzero"`
+	// Specifies in which cases an upstream response should be failover to the next
+	// target.
+	// Each option in the array is equivalent to the function of
+	// https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+	//
+	// +optional
+	FailoverCriteria []string `json:"failoverCriteria,omitempty"`
+	// What metrics to use for latency.
+	// Available values are: `tpot` (time-per-output-token) and `e2e`.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=e2e;tpot
+	LatencyStrategy string `json:"latencyStrategy,omitzero"`
+	// Number of unsuccessful attempts to communicate with a target that should
+	// occur in the duration defined by `fail_timeout` before the target is
+	// considered unavailable.
+	// The zero value disables the circuit breaker.
+	// What is considered an unsuccessful attempt is defined by
+	// `failover_criteria`.
+	// Note the cases of `error`, `timeout` and `invalid_header` are always
+	// considered unsuccessful attempts, while the cases of `http_403` and
+	// `http_404` are never considered unsuccessful attempts.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	MaxFails int `json:"maxFails,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// The number of retries to execute upon failure to proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	Retries int `json:"retries,omitzero"`
+	// The number of slots in the load balancer algorithm.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=65536
+	Slots int `json:"slots,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	WriteTimeout int `json:"writeTimeout,omitzero"`
+}
+
+// AIGatewayModelBalancerLowestUsageConfig is a type alias.
+type AIGatewayModelBalancerLowestUsageConfig struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// The period of time (in milliseconds) the target will be considered
+	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	FailTimeout int `json:"failTimeout,omitzero"`
+	// Specifies in which cases an upstream response should be failover to the next
+	// target.
+	// Each option in the array is equivalent to the function of
+	// https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+	//
+	// +optional
+	FailoverCriteria []string `json:"failoverCriteria,omitempty"`
+	// Number of unsuccessful attempts to communicate with a target that should
+	// occur in the duration defined by `fail_timeout` before the target is
+	// considered unavailable.
+	// The zero value disables the circuit breaker.
+	// What is considered an unsuccessful attempt is defined by
+	// `failover_criteria`.
+	// Note the cases of `error`, `timeout` and `invalid_header` are always
+	// considered unsuccessful attempts, while the cases of `http_403` and
+	// `http_404` are never considered unsuccessful attempts.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	MaxFails int `json:"maxFails,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// The number of retries to execute upon failure to proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	Retries int `json:"retries,omitzero"`
+	// The number of slots in the load balancer algorithm.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=65536
+	Slots int `json:"slots,omitzero"`
+	// Methodology to use for token usage calculation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=completion-tokens;cost;llm-accuracy;prompt-tokens;total-tokens
+	TokensCountStrategy string `json:"tokensCountStrategy,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	WriteTimeout int `json:"writeTimeout,omitzero"`
+}
+
+// AIGatewayModelBalancerPriorityConfig is a type alias.
+type AIGatewayModelBalancerPriorityConfig struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// The period of time (in milliseconds) the target will be considered
+	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	FailTimeout int `json:"failTimeout,omitzero"`
+	// Specifies in which cases an upstream response should be failover to the next
+	// target.
+	// Each option in the array is equivalent to the function of
+	// https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+	//
+	// +optional
+	FailoverCriteria []string `json:"failoverCriteria,omitempty"`
+	// Number of unsuccessful attempts to communicate with a target that should
+	// occur in the duration defined by `fail_timeout` before the target is
+	// considered unavailable.
+	// The zero value disables the circuit breaker.
+	// What is considered an unsuccessful attempt is defined by
+	// `failover_criteria`.
+	// Note the cases of `error`, `timeout` and `invalid_header` are always
+	// considered unsuccessful attempts, while the cases of `http_403` and
+	// `http_404` are never considered unsuccessful attempts.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	MaxFails int `json:"maxFails,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// The number of retries to execute upon failure to proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	Retries int `json:"retries,omitzero"`
+	// The number of slots in the load balancer algorithm.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=65536
+	Slots int `json:"slots,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	WriteTimeout int `json:"writeTimeout,omitzero"`
+}
+
+// AIGatewayModelBalancerRoundRobinConfig is a type alias.
+type AIGatewayModelBalancerRoundRobinConfig struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// The period of time (in milliseconds) the target will be considered
+	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	FailTimeout int `json:"failTimeout,omitzero"`
+	// Specifies in which cases an upstream response should be failover to the next
+	// target.
+	// Each option in the array is equivalent to the function of
+	// https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+	//
+	// +optional
+	FailoverCriteria []string `json:"failoverCriteria,omitempty"`
+	// Number of unsuccessful attempts to communicate with a target that should
+	// occur in the duration defined by `fail_timeout` before the target is
+	// considered unavailable.
+	// The zero value disables the circuit breaker.
+	// What is considered an unsuccessful attempt is defined by
+	// `failover_criteria`.
+	// Note the cases of `error`, `timeout` and `invalid_header` are always
+	// considered unsuccessful attempts, while the cases of `http_403` and
+	// `http_404` are never considered unsuccessful attempts.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	MaxFails int `json:"maxFails,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// The number of retries to execute upon failure to proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	Retries int `json:"retries,omitzero"`
+	// The number of slots in the load balancer algorithm.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=65536
+	Slots int `json:"slots,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	WriteTimeout int `json:"writeTimeout,omitzero"`
+}
+
+// AIGatewayModelBalancerSemanticConfig is a type alias.
+type AIGatewayModelBalancerSemanticConfig struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// Embeddings model configuration for this model.
+	//
+	// +required
+	Embeddings AIGatewayModelBalancerSemanticConfigEmbeddings `json:"embeddings,omitzero"`
+	// The period of time (in milliseconds) the target will be considered
+	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	FailTimeout int `json:"failTimeout,omitzero"`
+	// Specifies in which cases an upstream response should be failover to the next
+	// target.
+	// Each option in the array is equivalent to the function of
+	// https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+	//
+	// +optional
+	FailoverCriteria []string `json:"failoverCriteria,omitempty"`
+	// Number of unsuccessful attempts to communicate with a target that should
+	// occur in the duration defined by `fail_timeout` before the target is
+	// considered unavailable.
+	// The zero value disables the circuit breaker.
+	// What is considered an unsuccessful attempt is defined by
+	// `failover_criteria`.
+	// Note the cases of `error`, `timeout` and `invalid_header` are always
+	// considered unsuccessful attempts, while the cases of `http_403` and
+	// `http_404` are never considered unsuccessful attempts.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	MaxFails int `json:"maxFails,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// The number of retries to execute upon failure to proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	Retries int `json:"retries,omitzero"`
+	// The number of slots in the load balancer algorithm.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=65536
+	Slots int `json:"slots,omitzero"`
+	// Configuration for the vector database used by the model.
+	//
+	// +required
+	Vectordb *AIGatewayModelBalancerSemanticConfigVectordb `json:"vectordb,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	WriteTimeout int `json:"writeTimeout,omitzero"`
+}
+
+// AIGatewayModelBalancerSemanticConfigEmbeddings Embeddings model configuration
+// for this model.
+type AIGatewayModelBalancerSemanticConfigEmbeddings struct {
+	// When enabled, request-level auth parameters (such as API keys or bearer
+	// tokens) will override the static values defined for the provider.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	AllowAuthOverride string `json:"allowAuthOverride,omitzero"`
+	// Configuration for an embeddings model.
+	//
+	// +optional
+	Config *AIGatewayModelBalancerSemanticConfigEmbeddingsConfig `json:"config,omitempty"`
+	// The name of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	// Reference to a provider instance.
+	// This is either the provider ID or the provider name.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Provider AIGatewayProviderReference `json:"provider,omitzero"`
+}
+
+// AIGatewayModelBalancerSemanticConfigEmbeddingsConfig represents a union type for config.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=azure;bedrock;databricks;gemini;huggingface;vercel;vertex
+	Type AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType `json:"type,omitempty"`
+
+	// Azure configuration.
+	//
+	// +optional
+	Azure *AIGatewayAzureEmbeddingsModelConfig `json:"azure,omitempty"`
+	// Bedrock configuration.
+	//
+	// +optional
+	Bedrock *AIGatewayBedrockEmbeddingsModelConfig `json:"bedrock,omitempty"`
+	// Databricks configuration.
+	//
+	// +optional
+	Databricks *AIGatewayDatabricksEmbeddingsModelConfig `json:"databricks,omitempty"`
+	// Gemini configuration.
+	//
+	// +optional
+	Gemini *AIGatewayGeminiEmbeddingsModelConfig `json:"gemini,omitempty"`
+	// Huggingface configuration.
+	//
+	// +optional
+	Huggingface *AIGatewayHuggingfaceEmbeddingsModelConfig `json:"huggingface,omitempty"`
+	// Vercel configuration.
+	//
+	// +optional
+	Vercel *AIGatewayVercelEmbeddingsModelConfig `json:"vercel,omitempty"`
+	// Vertex configuration.
+	//
+	// +optional
+	Vertex *AIGatewayVertexEmbeddingsModelConfig `json:"vertex,omitempty"`
+}
+
+// AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType represents the type of config.
+type AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType string
+
+// AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType values.
+const (
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeAzure AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "azure"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeBedrock AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "bedrock"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeDatabricks AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "databricks"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeGemini AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "gemini"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeHuggingface AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "huggingface"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVercel AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vercel"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vertex"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeAzure:
+		if u.Azure != nil {
+			raw, err := json.Marshal(u.Azure)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig azure: %w", err)
+			}
+			m["azure"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeBedrock:
+		if u.Bedrock != nil {
+			raw, err := json.Marshal(u.Bedrock)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig bedrock: %w", err)
+			}
+			m["bedrock"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeDatabricks:
+		if u.Databricks != nil {
+			raw, err := json.Marshal(u.Databricks)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig databricks: %w", err)
+			}
+			m["databricks"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeGemini:
+		if u.Gemini != nil {
+			raw, err := json.Marshal(u.Gemini)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig gemini: %w", err)
+			}
+			m["gemini"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeHuggingface:
+		if u.Huggingface != nil {
+			raw, err := json.Marshal(u.Huggingface)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig huggingface: %w", err)
+			}
+			m["huggingface"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVercel:
+		if u.Vercel != nil {
+			raw, err := json.Marshal(u.Vercel)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vercel: %w", err)
+			}
+			m["vercel"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex:
+		if u.Vertex != nil {
+			raw, err := json.Marshal(u.Vertex)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vertex: %w", err)
+			}
+			m["vertex"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType(probe.Type)
+	switch probe.Type {
+	case "azure":
+		payload, ok := raw["azure"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAzureEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig azure: %w", err)
+		}
+		u.Azure = &val
+	case "bedrock":
+		payload, ok := raw["bedrock"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayBedrockEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig bedrock: %w", err)
+		}
+		u.Bedrock = &val
+	case "databricks":
+		payload, ok := raw["databricks"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDatabricksEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig databricks: %w", err)
+		}
+		u.Databricks = &val
+	case "gemini":
+		payload, ok := raw["gemini"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayGeminiEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig gemini: %w", err)
+		}
+		u.Gemini = &val
+	case "huggingface":
+		payload, ok := raw["huggingface"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayHuggingfaceEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig huggingface: %w", err)
+		}
+		u.Huggingface = &val
+	case "vercel":
+		payload, ok := raw["vercel"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayVercelEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vercel: %w", err)
+		}
+		u.Vercel = &val
+	case "vertex":
+		payload, ok := raw["vertex"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayVertexEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vertex: %w", err)
+		}
+		u.Vertex = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelBalancerSemanticConfigEmbeddings) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddings: nil receiver")
+	}
+	type alias AIGatewayModelBalancerSemanticConfigEmbeddings
+	aux := alias{}
+	aux.Config = &AIGatewayModelBalancerSemanticConfigEmbeddingsConfig{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddings: %w", err)
+	}
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Databricks == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Vercel == nil && aux.Config.Vertex == nil {
+		aux.Config = nil
+	}
+	*s = AIGatewayModelBalancerSemanticConfigEmbeddings(aux)
+	return nil
+}
+
+// AIGatewayModelBalancerSemanticConfigVectordb represents a union type for vectordb.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelBalancerSemanticConfigVectordb struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=pgvector;redis
+	Type AIGatewayModelBalancerSemanticConfigVectordbType `json:"type,omitempty"`
+
+	// PgVector configuration.
+	//
+	// +optional
+	PgVector *AIGatewayModelVectorDBConfigPgVector `json:"pgvector,omitempty"`
+	// Redis configuration.
+	//
+	// +optional
+	Redis *AIGatewayModelVectorDBConfigRedis `json:"redis,omitempty"`
+}
+
+// AIGatewayModelBalancerSemanticConfigVectordbType represents the type of vectordb.
+type AIGatewayModelBalancerSemanticConfigVectordbType string
+
+// AIGatewayModelBalancerSemanticConfigVectordbType values.
+const (
+	AIGatewayModelBalancerSemanticConfigVectordbTypePgVector AIGatewayModelBalancerSemanticConfigVectordbType = "pgvector"
+	AIGatewayModelBalancerSemanticConfigVectordbTypeRedis AIGatewayModelBalancerSemanticConfigVectordbType = "redis"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelBalancerSemanticConfigVectordb) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigVectordb type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelBalancerSemanticConfigVectordbTypePgVector:
+		if u.PgVector != nil {
+			raw, err := json.Marshal(u.PgVector)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigVectordb pgvector: %w", err)
+			}
+			m["pgvector"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigVectordbTypeRedis:
+		if u.Redis != nil {
+			raw, err := json.Marshal(u.Redis)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigVectordb redis: %w", err)
+			}
+			m["redis"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelBalancerSemanticConfigVectordb) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigVectordb: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelBalancerSemanticConfigVectordbType(probe.Type)
+	switch probe.Type {
+	case "pgvector":
+		payload, ok := raw["pgvector"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelVectorDBConfigPgVector
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigVectordb pgvector: %w", err)
+		}
+		u.PgVector = &val
+	case "redis":
+		payload, ok := raw["redis"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelVectorDBConfigRedis
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigVectordb redis: %w", err)
+		}
+		u.Redis = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelBalancerSemanticConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfig: nil receiver")
+	}
+	type alias AIGatewayModelBalancerSemanticConfig
+	aux := alias{}
+	aux.Vectordb = &AIGatewayModelBalancerSemanticConfigVectordb{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfig: %w", err)
+	}
+	if aux.Vectordb != nil && aux.Vectordb.Type == "" && aux.Vectordb.PgVector == nil && aux.Vectordb.Redis == nil {
+		aux.Vectordb = nil
+	}
+	*s = AIGatewayModelBalancerSemanticConfig(aux)
+	return nil
+}
+
+// AIGatewayModelFormat Request and response format supported by this model.
+type AIGatewayModelFormat struct {
+	// The format type.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai
+	Type string `json:"type,omitzero"`
+}
+
+// AIGatewayModelModel Configuration for proxying synchronous requests/responses
+// to/from an AI Gateway model using generative APIs.
+type AIGatewayModelModel struct {
+	// Access control rules for allowing or denying Consumers, Consumer Groups, or
+	// Authenticated Groups to this model.
+	//
+	// +optional
+	Acls AIGatewayACLS `json:"acls,omitzero"`
+	// List of AI capabilities enabled for this model.
+	//
+	// +required
+	Capabilities []string `json:"capabilities,omitempty"`
+	// Routing, logging, and load balancing configuration for the model.
+	//
+	// +required
+	Config AIGatewayModelModelConfig `json:"config,omitzero"`
+	// The display name for this model instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Whether the model is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// List of request/response formats supported by this model.
+	//
+	// +required
+	Formats []AIGatewayModelFormat `json:"formats,omitempty"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model, used as a stable
+	// human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// List of policy references.
+	//
+	// +optional
+	Policies []string `json:"policies,omitempty"`
+	// One or more backend models that this model entry routes to.
+	//
+	// +required
+	Targets []AIGatewayTarget `json:"targets,omitempty"`
+}
+
+// AIGatewayModelModelConfig Routing, logging, and load balancing configuration
+// for the model.
+type AIGatewayModelModelConfig struct {
+	// Configuration for a model's load balancer when multiple target models are
+	// configured.
+	//
+	// +optional
+	Balancer *AIGatewayModelModelConfigBalancer `json:"balancer,omitempty"`
+	// Configuration for AI Gateway logging.
+	//
+	// +optional
+	Logging AIGatewayModelModelConfigLogging `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	//
+	//
+	// +required
+	Model AIGatewayModelModelConfigModel `json:"model,omitzero"`
+	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
+	// provider.
+	//
+	// +optional
+	Proxy AIGatewayProxyConfig `json:"proxy,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=allow;always;deny
+	ResponseStreaming string `json:"responseStreaming,omitzero"`
+	// Configuration for an AI Gateway route.
+	//
+	// +required
+	Route AIGatewayRouteConfig `json:"route,omitzero"`
+}
+
+// AIGatewayModelModelConfigLogging Configuration for AI Gateway logging.
+type AIGatewayModelModelConfigLogging struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Statistics string `json:"statistics,omitzero"`
+}
+
+// AIGatewayModelModelConfigModel is a type alias.
+type AIGatewayModelModelConfigModel struct {
+	// An alias for the model, used to select the target virtual model when passed
+	// in the "model" parameter of the request body.
+	// When not set, this defaults to the AI Gateway model's name.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Alias string `json:"alias,omitzero"`
+	// Display the model name selected in the X-Kong-LLM-Model response header
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	NameHeader string `json:"nameHeader,omitzero"`
+}
+
+// AIGatewayModelModelConfigBalancer represents a union type for balancer.
+// Only one of the fields should be set based on the Algorithm.
+//
+type AIGatewayModelModelConfigBalancer struct {
+	// Algorithm designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;lowest-usage;priority;round-robin;semantic
+	Algorithm AIGatewayModelModelConfigBalancerType `json:"algorithm,omitempty"`
+
+	// ConsistentHashing configuration.
+	//
+	// +optional
+	ConsistentHashing *AIGatewayModelBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// LeastConnections configuration.
+	//
+	// +optional
+	LeastConnections *AIGatewayModelBalancerLeastConnectionsConfig `json:"least-connections,omitempty"`
+	// LowestLatency configuration.
+	//
+	// +optional
+	LowestLatency *AIGatewayModelBalancerLowestLatencyConfig `json:"lowest-latency,omitempty"`
+	// LowestUsage configuration.
+	//
+	// +optional
+	LowestUsage *AIGatewayModelBalancerLowestUsageConfig `json:"lowest-usage,omitempty"`
+	// Priority configuration.
+	//
+	// +optional
+	Priority *AIGatewayModelBalancerPriorityConfig `json:"priority,omitempty"`
+	// RoundRobin configuration.
+	//
+	// +optional
+	RoundRobin *AIGatewayModelBalancerRoundRobinConfig `json:"round-robin,omitempty"`
+	// Semantic configuration.
+	//
+	// +optional
+	Semantic *AIGatewayModelBalancerSemanticConfig `json:"semantic,omitempty"`
+}
+
+// AIGatewayModelModelConfigBalancerType represents the type of balancer.
+type AIGatewayModelModelConfigBalancerType string
+
+// AIGatewayModelModelConfigBalancerType values.
+const (
+	AIGatewayModelModelConfigBalancerTypeConsistentHashing AIGatewayModelModelConfigBalancerType = "consistent-hashing"
+	AIGatewayModelModelConfigBalancerTypeLeastConnections AIGatewayModelModelConfigBalancerType = "least-connections"
+	AIGatewayModelModelConfigBalancerTypeLowestLatency AIGatewayModelModelConfigBalancerType = "lowest-latency"
+	AIGatewayModelModelConfigBalancerTypeLowestUsage AIGatewayModelModelConfigBalancerType = "lowest-usage"
+	AIGatewayModelModelConfigBalancerTypePriority AIGatewayModelModelConfigBalancerType = "priority"
+	AIGatewayModelModelConfigBalancerTypeRoundRobin AIGatewayModelModelConfigBalancerType = "round-robin"
+	AIGatewayModelModelConfigBalancerTypeSemantic AIGatewayModelModelConfigBalancerType = "semantic"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelModelConfigBalancer) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Algorithm))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer algorithm: %w", err)
+	}
+	m["algorithm"] = typeBytes
+	switch u.Algorithm {
+	case AIGatewayModelModelConfigBalancerTypeConsistentHashing:
+		if u.ConsistentHashing != nil {
+			raw, err := json.Marshal(u.ConsistentHashing)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer consistent-hashing: %w", err)
+			}
+			m["consistent-hashing"] = raw
+		}
+	case AIGatewayModelModelConfigBalancerTypeLeastConnections:
+		if u.LeastConnections != nil {
+			raw, err := json.Marshal(u.LeastConnections)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer least-connections: %w", err)
+			}
+			m["least-connections"] = raw
+		}
+	case AIGatewayModelModelConfigBalancerTypeLowestLatency:
+		if u.LowestLatency != nil {
+			raw, err := json.Marshal(u.LowestLatency)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer lowest-latency: %w", err)
+			}
+			m["lowest-latency"] = raw
+		}
+	case AIGatewayModelModelConfigBalancerTypeLowestUsage:
+		if u.LowestUsage != nil {
+			raw, err := json.Marshal(u.LowestUsage)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer lowest-usage: %w", err)
+			}
+			m["lowest-usage"] = raw
+		}
+	case AIGatewayModelModelConfigBalancerTypePriority:
+		if u.Priority != nil {
+			raw, err := json.Marshal(u.Priority)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer priority: %w", err)
+			}
+			m["priority"] = raw
+		}
+	case AIGatewayModelModelConfigBalancerTypeRoundRobin:
+		if u.RoundRobin != nil {
+			raw, err := json.Marshal(u.RoundRobin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer round-robin: %w", err)
+			}
+			m["round-robin"] = raw
+		}
+	case AIGatewayModelModelConfigBalancerTypeSemantic:
+		if u.Semantic != nil {
+			raw, err := json.Marshal(u.Semantic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer semantic: %w", err)
+			}
+			m["semantic"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelModelConfigBalancer) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer: nil receiver")
+	}
+	var probe struct {
+		Algorithm string `json:"algorithm"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Algorithm = AIGatewayModelModelConfigBalancerType(probe.Algorithm)
+	switch probe.Algorithm {
+	case "consistent-hashing":
+		payload, ok := raw["consistent-hashing"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerConsistentHashingConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer consistent-hashing: %w", err)
+		}
+		u.ConsistentHashing = &val
+	case "least-connections":
+		payload, ok := raw["least-connections"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerLeastConnectionsConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer least-connections: %w", err)
+		}
+		u.LeastConnections = &val
+	case "lowest-latency":
+		payload, ok := raw["lowest-latency"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerLowestLatencyConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer lowest-latency: %w", err)
+		}
+		u.LowestLatency = &val
+	case "lowest-usage":
+		payload, ok := raw["lowest-usage"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerLowestUsageConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer lowest-usage: %w", err)
+		}
+		u.LowestUsage = &val
+	case "priority":
+		payload, ok := raw["priority"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerPriorityConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer priority: %w", err)
+		}
+		u.Priority = &val
+	case "round-robin":
+		payload, ok := raw["round-robin"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerRoundRobinConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer round-robin: %w", err)
+		}
+		u.RoundRobin = &val
+	case "semantic":
+		payload, ok := raw["semantic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerSemanticConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer semantic: %w", err)
+		}
+		u.Semantic = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelModelConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelModelConfig: nil receiver")
+	}
+	type alias AIGatewayModelModelConfig
+	aux := alias{}
+	aux.Balancer = &AIGatewayModelModelConfigBalancer{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelModelConfig: %w", err)
+	}
+	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.LowestUsage == nil && aux.Balancer.Priority == nil && aux.Balancer.RoundRobin == nil && aux.Balancer.Semantic == nil {
+		aux.Balancer = nil
+	}
+	*s = AIGatewayModelModelConfig(aux)
+	return nil
+}
+
+// AIGatewayModelVectorDBConfig represents a union type for AIGatewayModelVectorDBConfig.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelVectorDBConfig struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=pgvector;redis
+	Type AIGatewayModelVectorDBConfigType `json:"type,omitempty"`
+
+	// PgVector configuration.
+	//
+	// +optional
+	PgVector *AIGatewayModelVectorDBConfigPgVector `json:"pgvector,omitempty"`
+	// Redis configuration.
+	//
+	// +optional
+	Redis *AIGatewayModelVectorDBConfigRedis `json:"redis,omitempty"`
+}
+
+// AIGatewayModelVectorDBConfigType represents the type of AIGatewayModelVectorDBConfig.
+type AIGatewayModelVectorDBConfigType string
+
+// AIGatewayModelVectorDBConfigType values.
+const (
+	AIGatewayModelVectorDBConfigTypePgVector AIGatewayModelVectorDBConfigType = "pgvector"
+	AIGatewayModelVectorDBConfigTypeRedis AIGatewayModelVectorDBConfigType = "redis"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelVectorDBConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfig type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelVectorDBConfigTypePgVector:
+		if u.PgVector != nil {
+			raw, err := json.Marshal(u.PgVector)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfig pgvector: %w", err)
+			}
+			m["pgvector"] = raw
+		}
+	case AIGatewayModelVectorDBConfigTypeRedis:
+		if u.Redis != nil {
+			raw, err := json.Marshal(u.Redis)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfig redis: %w", err)
+			}
+			m["redis"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelVectorDBConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfig: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelVectorDBConfigType(probe.Type)
+	switch probe.Type {
+	case "pgvector":
+		payload, ok := raw["pgvector"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelVectorDBConfigPgVector
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfig pgvector: %w", err)
+		}
+		u.PgVector = &val
+	case "redis":
+		payload, ok := raw["redis"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelVectorDBConfigRedis
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfig redis: %w", err)
+		}
+		u.Redis = &val
+	}
+	return nil
+}
+// AIGatewayModelVectorDBConfigPgVector is a type alias.
+type AIGatewayModelVectorDBConfigPgVector struct {
+	// the database of the pgvector database
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Database string `json:"database,omitzero"`
+	// the desired dimensionality for the vectors
+	//
+	// +required
+	Dimensions int `json:"dimensions,omitzero"`
+	// the distance metric to use for vector searches
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=cosine;euclidean
+	DistanceMetric string `json:"distanceMetric,omitzero"`
+	// the host of the pgvector database
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// the password of the pgvector database
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Password string `json:"password,omitzero"`
+	// the port of the pgvector database
+	//
+	// +optional
+	Port int `json:"port,omitzero"`
+	//
+	//
+	// +optional
+	SSL AIGatewayModelVectorDBConfigPgVectorSSL `json:"ssl,omitzero"`
+	// the default similarity threshold for accepting semantic search results
+	// (float).
+	// Higher threshold means more results are considered similar.
+	//
+	// +optional
+	Threshold float64 `json:"threshold,omitzero"`
+	// the timeout of the pgvector database
+	//
+	// +optional
+	Timeout float64 `json:"timeout,omitzero"`
+	// the user of the pgvector database
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	User string `json:"user,omitzero"`
+}
+
+// AIGatewayModelVectorDBConfigPgVectorSSL is a type alias.
+type AIGatewayModelVectorDBConfigPgVectorSSL struct {
+	// the path of ssl cert to use for the pgvector database
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Cert string `json:"cert,omitzero"`
+	// the path of ssl cert key to use for the pgvector database
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	CertKey string `json:"certKey,omitzero"`
+	// whether to use ssl for the pgvector database
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// whether ssl is required for the pgvector database
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Required string `json:"required,omitzero"`
+	// whether to verify ssl for the pgvector database
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Verify string `json:"verify,omitzero"`
+	// the ssl version to use for the pgvector database
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=any;tlsv1_2;tlsv1_3
+	Version string `json:"version,omitzero"`
+}
+
+// AIGatewayModelVectorDBConfigRedis Config for connecting to a Cloud Provider's
+// Redis instance.
+type AIGatewayModelVectorDBConfigRedis struct {
+	// Auth related config for connecting to a Cloud Provider's Redis instance.
+	//
+	// +optional
+	CloudAuthentication *AIGatewayModelVectorDBConfigRedisCloudAuthentication `json:"cloudAuthentication,omitempty"`
+	// Cluster configuration for the Redis connection.
+	//
+	// +optional
+	Cluster AIGatewayModelVectorDBConfigRedisCluster `json:"cluster,omitzero"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// If the connection to Redis is proxied (e.g.
+	// Envoy), set it `true`.
+	// Set the `host` and `port` to point to the proxy address.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConnectionIsProxied string `json:"connectionIsProxied,omitzero"`
+	// Database to use for the Redis connection when using the `redis` strategy
+	//
+	// +optional
+	Database int `json:"database,omitzero"`
+	// the desired dimensionality for the vectors
+	//
+	// +required
+	Dimensions int `json:"dimensions,omitzero"`
+	// the distance metric to use for vector searches
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=cosine;euclidean
+	DistanceMetric string `json:"distanceMetric,omitzero"`
+	// A string representing a host name, such as example.com.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// Keepalive configuration for the Redis connection.
+	//
+	// +optional
+	Keepalive AIGatewayModelVectorDBConfigRedisKeepalive `json:"keepalive,omitzero"`
+	// Password to use for Redis connections.
+	// If undefined, no AUTH commands are sent to Redis.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Password string `json:"password,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	SendTimeout int `json:"sendTimeout,omitzero"`
+	// Configuration for Redis Sentinel.
+	//
+	// +optional
+	Sentinel AIGatewayModelVectorDBConfigRedisSentinel `json:"sentinel,omitzero"`
+	// A string representing an SNI (server name indication) value for TLS.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ServerName string `json:"serverName,omitzero"`
+	// If set to true, uses SSL to connect to Redis.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	// If set to true, verifies the validity of the server SSL certificate.
+	// If setting this parameter, also configure `lua_ssl_trusted_certificate` in
+	// `kong.conf` to specify the CA (or server) certificate used by your Redis
+	// server.
+	// You may also need to configure `lua_ssl_verify_depth` accordingly.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// the default similarity threshold for accepting semantic search results
+	// (float).
+	// Higher threshold means more results are considered similar.
+	//
+	// +optional
+	Threshold float64 `json:"threshold,omitzero"`
+	// Username to use for Redis connections.
+	// If undefined, ACL authentication won't be performed.
+	// This requires Redis v6.0.0+.
+	// To be compatible with Redis v5.x.y, you can set it to `default`.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username string `json:"username,omitzero"`
+}
+
+// AIGatewayModelVectorDBConfigRedisCluster Cluster configuration for the Redis
+// connection.
+type AIGatewayModelVectorDBConfigRedisCluster struct {
+	// Maximum retry attempts for redirection.
+	//
+	// +optional
+	MaxRedirections int `json:"maxRedirections,omitzero"`
+	// Cluster addresses to use for Redis connections when the `redis` strategy is
+	// defined.
+	// Defining this field implies using a Redis Cluster.
+	// The minimum length of the array is 1 element.
+	//
+	// +optional
+	Nodes []AIGatewayModelVectorDBConfigRedisClusterNodes `json:"nodes,omitempty"`
+}
+
+// AIGatewayModelVectorDBConfigRedisClusterNodes Cluster addresses to use for
+// Redis connections when the `redis` strategy is defined.
+// Defining this field implies using a Redis Cluster.
+// The minimum length of the array is 1 element.
+type AIGatewayModelVectorDBConfigRedisClusterNodes struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IP string `json:"ip,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// AIGatewayModelVectorDBConfigRedisKeepalive Keepalive configuration for the
+// Redis connection.
+type AIGatewayModelVectorDBConfigRedisKeepalive struct {
+	// Limits the total number of opened connections for a pool.
+	// If the connection pool is full, connection queues above the limit go into
+	// the backlog queue.
+	// If the backlog queue is full, subsequent connect operations fail and return
+	// `nil`.
+	// Queued operations (subject to set timeouts) resume once the number of
+	// connections in the pool is less than `pool_size`.
+	// If latency is high or throughput is low, try increasing this value.
+	// Empirically, this value is larger than `pool_size`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	Backlog int `json:"backlog,omitzero"`
+	// The size limit for every cosocket connection pool associated with every
+	// remote server, per worker process.
+	// If neither `pool_size` nor `backlog` is specified, no pool is created.
+	// If `pool_size` isn't specified but `backlog` is specified, then the pool
+	// uses the default value.
+	// Try to increase (e.g.
+	// 512) this value if latency is high or throughput is low.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	PoolSize int `json:"poolSize,omitzero"`
+}
+
+// AIGatewayModelVectorDBConfigRedisSentinel Configuration for Redis Sentinel.
+type AIGatewayModelVectorDBConfigRedisSentinel struct {
+	// Sentinel master to use for Redis connections.
+	// Defining this value implies using Redis Sentinel.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Master string `json:"master,omitzero"`
+	// Sentinel node addresses to use for Redis connections when the `redis`
+	// strategy is defined.
+	// Defining this field implies using a Redis Sentinel.
+	// The minimum length of the array is 1 element.
+	//
+	// +optional
+	Nodes []AIGatewayModelVectorDBConfigRedisSentinelNodes `json:"nodes,omitempty"`
+	// Sentinel password to authenticate with a Redis Sentinel instance.
+	// If undefined, no AUTH commands are sent to Redis Sentinels.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Password string `json:"password,omitzero"`
+	// Sentinel role to use for Redis connections when the `redis` strategy is
+	// defined.
+	// Defining this value implies using Redis Sentinel.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=any;master;slave
+	Role string `json:"role,omitzero"`
+	// Sentinel username to authenticate with a Redis Sentinel instance.
+	// If undefined, ACL authentication won't be performed.
+	// This requires Redis v6.2.0+.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username string `json:"username,omitzero"`
+}
+
+// AIGatewayModelVectorDBConfigRedisSentinelNodes Sentinel node addresses to use
+// for Redis connections when the `redis` strategy is defined.
+// Defining this field implies using a Redis Sentinel.
+// The minimum length of the array is 1 element.
+type AIGatewayModelVectorDBConfigRedisSentinelNodes struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// AIGatewayModelVectorDBConfigRedisCloudAuthentication represents a union type for cloud_authentication.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelVectorDBConfigRedisCloudAuthentication struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=aws;azure;gcp
+	Type AIGatewayModelVectorDBConfigRedisCloudAuthenticationType `json:"type,omitempty"`
+
+	// AWS configuration.
+	//
+	// +optional
+	AWS *AIGatewayRedisAWSAuthentication `json:"aws,omitempty"`
+	// Azure configuration.
+	//
+	// +optional
+	Azure *AIGatewayRedisAzureAuthentication `json:"azure,omitempty"`
+	// GCP configuration.
+	//
+	// +optional
+	GCP *AIGatewayRedisGCPAuthentication `json:"gcp,omitempty"`
+}
+
+// AIGatewayModelVectorDBConfigRedisCloudAuthenticationType represents the type of cloud_authentication.
+type AIGatewayModelVectorDBConfigRedisCloudAuthenticationType string
+
+// AIGatewayModelVectorDBConfigRedisCloudAuthenticationType values.
+const (
+	AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeAWS AIGatewayModelVectorDBConfigRedisCloudAuthenticationType = "aws"
+	AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeAzure AIGatewayModelVectorDBConfigRedisCloudAuthenticationType = "azure"
+	AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeGCP AIGatewayModelVectorDBConfigRedisCloudAuthenticationType = "gcp"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelVectorDBConfigRedisCloudAuthentication) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeAWS:
+		if u.AWS != nil {
+			raw, err := json.Marshal(u.AWS)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication aws: %w", err)
+			}
+			m["aws"] = raw
+		}
+	case AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeAzure:
+		if u.Azure != nil {
+			raw, err := json.Marshal(u.Azure)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication azure: %w", err)
+			}
+			m["azure"] = raw
+		}
+	case AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeGCP:
+		if u.GCP != nil {
+			raw, err := json.Marshal(u.GCP)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication gcp: %w", err)
+			}
+			m["gcp"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelVectorDBConfigRedisCloudAuthentication) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelVectorDBConfigRedisCloudAuthenticationType(probe.Type)
+	switch probe.Type {
+	case "aws":
+		payload, ok := raw["aws"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayRedisAWSAuthentication
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication aws: %w", err)
+		}
+		u.AWS = &val
+	case "azure":
+		payload, ok := raw["azure"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayRedisAzureAuthentication
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication azure: %w", err)
+		}
+		u.Azure = &val
+	case "gcp":
+		payload, ok := raw["gcp"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayRedisGCPAuthentication
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication gcp: %w", err)
+		}
+		u.GCP = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelVectorDBConfigRedis) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedis: nil receiver")
+	}
+	type alias AIGatewayModelVectorDBConfigRedis
+	aux := alias{}
+	aux.CloudAuthentication = &AIGatewayModelVectorDBConfigRedisCloudAuthentication{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedis: %w", err)
+	}
+	if aux.CloudAuthentication != nil && aux.CloudAuthentication.Type == "" && aux.CloudAuthentication.AWS == nil && aux.CloudAuthentication.Azure == nil && aux.CloudAuthentication.GCP == nil {
+		aux.CloudAuthentication = nil
+	}
+	*s = AIGatewayModelVectorDBConfigRedis(aux)
+	return nil
+}
+
+// AIGatewayProviderReference Reference to a provider instance.
+// This is either the provider ID or the provider name.
+type AIGatewayProviderReference string
+
+// AIGatewayProxyConfig HTTP/HTTPS proxy configuration for outbound requests to
+// the upstream AI provider.
+type AIGatewayProxyConfig struct {
+	// Credentials used to authenticate to the proxy server.
+	//
+	// +optional
+	Auth AIGatewayProxyConfigAuth `json:"auth,omitzero"`
+	// HTTP proxy server to route plaintext outbound requests through.
+	//
+	// +optional
+	HTTPProxy AIGatewayProxyConfigHTTPProxy `json:"httpProxy,omitzero"`
+	// HTTPS proxy server to route TLS outbound requests through.
+	//
+	// +optional
+	HTTPSProxy AIGatewayProxyConfigHTTPSProxy `json:"httpsProxy,omitzero"`
+	// Comma-separated list of hosts that should not be proxied.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	NoProxy string `json:"noProxy,omitzero"`
+	// The proxy scheme to use when connecting to the proxy server.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http
+	ProxyScheme string `json:"proxyScheme,omitzero"`
+}
+
+// AIGatewayProxyConfigAuth Credentials used to authenticate to the proxy
+// server.
+type AIGatewayProxyConfigAuth struct {
+	// The password to use for proxy authentication.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Password string `json:"password,omitzero"`
+	// The username to use for proxy authentication.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username string `json:"username,omitzero"`
+}
+
+// AIGatewayProxyConfigHTTPProxy HTTP proxy server to route plaintext outbound
+// requests through.
+type AIGatewayProxyConfigHTTPProxy struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// AIGatewayProxyConfigHTTPSProxy HTTPS proxy server to route TLS outbound
+// requests through.
+type AIGatewayProxyConfigHTTPSProxy struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
 
 // AIGatewayProxyURL Proxy URL associated with reaching the data-planes
 // connected to a control-plane.
@@ -25,6 +2860,1682 @@ type AIGatewayProxyURL struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Protocol string `json:"protocol,omitzero"`
+}
+
+// AIGatewayRedisAWSAuthentication AWS specific configs for connecting to a
+// Cloud Provider's redis instance.
+type AIGatewayRedisAWSAuthentication struct {
+	// AWS Access Key ID to be used for authentication.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AccessKeyID string `json:"accessKeyID,omitzero"`
+	// The ARN of the IAM role to assume for generating ElastiCache IAM
+	// authentication tokens.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AssumeRoleArn string `json:"assumeRoleArn,omitzero"`
+	// The name of the AWS Elasticache cluster.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	CacheName string `json:"cacheName,omitzero"`
+	// This flag specifies whether the cluster is serverless.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	IsServerless string `json:"isServerless,omitzero"`
+	// The region of the AWS ElastiCache cluster.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Region string `json:"region,omitzero"`
+	// The session name for the temporary credentials when assuming the IAM role.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RoleSessionName string `json:"roleSessionName,omitzero"`
+	// AWS Secret Access Key.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SecretAccessKey string `json:"secretAccessKey,omitzero"`
+}
+
+// AIGatewayRedisAzureAuthentication Azure specific configs for connecting to a
+// Cloud Provider's redis instance.
+type AIGatewayRedisAzureAuthentication struct {
+	// Azure Client ID.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ClientID string `json:"clientID,omitzero"`
+	// Azure Client Secret.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ClientSecret string `json:"clientSecret,omitzero"`
+	// Azure Tenant ID.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	TenantID string `json:"tenantID,omitzero"`
+}
+
+// AIGatewayRedisGCPAuthentication GCP specific configs for connecting to a
+// Cloud Provider's redis instance.
+type AIGatewayRedisGCPAuthentication struct {
+	// GCP Service Account JSON.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ServiceAccountJSON string `json:"serviceAccountJSON,omitzero"`
+}
+
+// AIGatewayRouteConfig Configuration for an AI Gateway route.
+type AIGatewayRouteConfig struct {
+	// One or more lists of values indexed by header name that will cause this
+	// route to match if present in the request.
+	// The `Host` header cannot be used with this attribute: hosts should be
+	// specified using the `hosts` attribute.
+	// When `headers` contains only one value and that value starts with the
+	// special prefix `~*`, the value is interpreted as a regular expression.
+	//
+	// +optional
+	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
+	// A list of domain names that match this route.
+	// Note that the hosts value is case sensitive.
+	//
+	// +optional
+	Hosts []string `json:"hosts,omitempty"`
+	// The status code Kong responds with when all properties of a route match
+	// except the protocol i.e.
+	// if the protocol of the request is `HTTP` instead of `HTTPS`.
+	// `Location` header is injected by Kong if the field is set to 301, 302, 307
+	// or 308.
+	// Note: This config applies only if the route is configured to only accept the
+	// `https` protocol.
+	//
+	// +optional
+	HTTPSRedirectStatusCode int `json:"httpsRedirectStatusCode,omitzero"`
+	// A list of HTTP methods that match this route.
+	//
+	// +optional
+	Methods []string `json:"methods,omitempty"`
+	// A list of paths that match this route.
+	//
+	// +optional
+	Paths []string `json:"paths,omitempty"`
+	// When matching a route via one of the `hosts` domain names, use the request
+	// `Host` header in the upstream request headers.
+	// If set to `false`, the upstream `Host` header will be that of the service's
+	// `host`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	PreserveHost string `json:"preserveHost,omitzero"`
+	// An array of the protocols this route should allow.
+	// See the [route Object](#route-object) section for a list of accepted
+	// protocols.
+	// When set to only `https`, HTTP requests are answered with an upgrade error.
+	// When set to only `http`, HTTPS requests are answered with an error.
+	//
+	// +optional
+	Protocols []string `json:"protocols,omitempty"`
+	// A number used to choose which route resolves a given request when several
+	// routes match it using regexes simultaneously.
+	// When two routes match the path and have the same `regex_priority`, the older
+	// one (lowest `created_at`) is used.
+	// Note that the priority for non-regex routes is different (longer non-regex
+	// routes are matched before shorter ones).
+	//
+	// +optional
+	RegexPriority int `json:"regexPriority,omitzero"`
+	// Whether to enable request body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that receive
+	// data with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RequestBuffering string `json:"requestBuffering,omitzero"`
+	// Whether to enable response body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that send data
+	// with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ResponseBuffering string `json:"responseBuffering,omitzero"`
+	// When matching a route via one of the `paths`, strip the matching prefix from
+	// the upstream request URL.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	StripPath string `json:"stripPath,omitzero"`
+	// An optional set of strings associated with the route for grouping and
+	// filtering.
+	//
+	// +optional
+	Tags []string `json:"tags,omitempty"`
+}
+
+// AIGatewayTarget A target instance a model entry routes requests to.
+type AIGatewayTarget struct {
+	// When enabled, request-level auth parameters (such as API keys or bearer
+	// tokens) will override the static values defined for the provider.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	AllowAuthOverride string `json:"allowAuthOverride,omitzero"`
+	// Configuration for a target model.
+	//
+	// +required
+	Config *AIGatewayTargetConfig `json:"config,omitempty"`
+	// The name of the model defined in the upstream provider that will be
+	// executed.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	// Reference to a provider instance.
+	// This is either the provider ID or the provider name.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Provider AIGatewayProviderReference `json:"provider,omitzero"`
+	// The semantic description of the target, required if using semantic load
+	// balancing.
+	// Specially, setting this to 'CATCHALL' will indicate such target to be used
+	// when no other targets match the semantic threshold.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SemanticDescription string `json:"semanticDescription,omitzero"`
+	// The weight this target gets within the upstream load balancer
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Weight int `json:"weight,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayTarget: nil receiver")
+	}
+	type alias AIGatewayTarget
+	aux := alias{}
+	aux.Config = &AIGatewayTargetConfig{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayTarget: %w", err)
+	}
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Vercel == nil && aux.Config.Vertex == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
+		aux.Config = nil
+	}
+	*s = AIGatewayTarget(aux)
+	return nil
+}
+
+// AIGatewayTargetAnthropicConfig Anthropic-specific configuration for a model.
+type AIGatewayTargetAnthropicConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+	// The Anthropic API version to use.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Version string `json:"version,omitzero"`
+}
+
+// AIGatewayTargetAzureConfig Azure-specific configuration for a model.
+type AIGatewayTargetAzureConfig struct {
+	// The Azure OpenAI API version to use.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	APIVersion string `json:"apiVersion,omitzero"`
+	// The Azure deployment ID for the model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	DeploymentID string `json:"deploymentID,omitzero"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
+type AIGatewayTargetBedrockConfig struct {
+	// S3 bucket prefix for batch inference jobs.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	BatchBucketPrefix string `json:"batchBucketPrefix,omitzero"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Whether to normalize embedding vectors in the response.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EmbeddingsNormalize string `json:"embeddingsNormalize,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Latency performance configuration for the model invocation.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	PerformanceConfigLatency string `json:"performanceConfigLatency,omitzero"`
+	// The AWS region for the model.
+	// Setting this option overrides the AWS_REGION environment variable.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Region string `json:"region,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+	// S3 URI for storing video generation outputs.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
+}
+
+// AIGatewayTargetCerebrasConfig Cerebras-specific configuration for a model.
+type AIGatewayTargetCerebrasConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetCohereConfig Cohere-specific configuration for a model.
+type AIGatewayTargetCohereConfig struct {
+	// Cohere API version. `v1` uses the legacy `/v1/chat` endpoint; `v2` (default)
+	// uses `/v2/chat` and supports tool calling.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	APIVersion string `json:"apiVersion,omitzero"`
+	// The intended downstream use of the embeddings to improve model quality.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=classification;clustering;image;search_document;search_query
+	EmbeddingInputType string `json:"embeddingInputType,omitzero"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+	// Whether to wait for the model to be ready before sending the request.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	WaitForModel string `json:"waitForModel,omitzero"`
+}
+
+// AIGatewayTargetConfig represents a union type for AIGatewayTargetConfig.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayTargetConfig struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;vercel;vertex;vllm;xai
+	Type AIGatewayTargetConfigType `json:"type,omitempty"`
+
+	// Anthropic configuration.
+	//
+	// +optional
+	Anthropic *AIGatewayTargetAnthropicConfig `json:"anthropic,omitempty"`
+	// Azure configuration.
+	//
+	// +optional
+	Azure *AIGatewayTargetAzureConfig `json:"azure,omitempty"`
+	// Bedrock configuration.
+	//
+	// +optional
+	Bedrock *AIGatewayTargetBedrockConfig `json:"bedrock,omitempty"`
+	// Cerebras configuration.
+	//
+	// +optional
+	Cerebras *AIGatewayTargetCerebrasConfig `json:"cerebras,omitempty"`
+	// Cohere configuration.
+	//
+	// +optional
+	Cohere *AIGatewayTargetCohereConfig `json:"cohere,omitempty"`
+	// Dashscope configuration.
+	//
+	// +optional
+	Dashscope *AIGatewayTargetDashscopeConfig `json:"dashscope,omitempty"`
+	// Databricks configuration.
+	//
+	// +optional
+	Databricks *AIGatewayTargetDatabricksConfig `json:"databricks,omitempty"`
+	// Deepseek configuration.
+	//
+	// +optional
+	Deepseek *AIGatewayTargetDeepseekConfig `json:"deepseek,omitempty"`
+	// Gemini configuration.
+	//
+	// +optional
+	Gemini *AIGatewayTargetGeminiConfig `json:"gemini,omitempty"`
+	// Huggingface configuration.
+	//
+	// +optional
+	Huggingface *AIGatewayTargetHuggingfaceConfig `json:"huggingface,omitempty"`
+	// Kimi configuration.
+	//
+	// +optional
+	Kimi *AIGatewayTargetKimiConfig `json:"kimi,omitempty"`
+	// Llama2 configuration.
+	//
+	// +optional
+	Llama2 *AIGatewayTargetLlama2Config `json:"llama2,omitempty"`
+	// Mistral configuration.
+	//
+	// +optional
+	Mistral *AIGatewayTargetMistralConfig `json:"mistral,omitempty"`
+	// Ollama configuration.
+	//
+	// +optional
+	Ollama *AIGatewayTargetOllamaConfig `json:"ollama,omitempty"`
+	// Openai configuration.
+	//
+	// +optional
+	Openai *AIGatewayTargetOpenaiConfig `json:"openai,omitempty"`
+	// Vercel configuration.
+	//
+	// +optional
+	Vercel *AIGatewayTargetVercelConfig `json:"vercel,omitempty"`
+	// Vertex configuration.
+	//
+	// +optional
+	Vertex *AIGatewayTargetVertexConfig `json:"vertex,omitempty"`
+	// Vllm configuration.
+	//
+	// +optional
+	Vllm *AIGatewayTargetVllmConfig `json:"vllm,omitempty"`
+	// Xai configuration.
+	//
+	// +optional
+	Xai *AIGatewayTargetXaiConfig `json:"xai,omitempty"`
+}
+
+// AIGatewayTargetConfigType represents the type of AIGatewayTargetConfig.
+type AIGatewayTargetConfigType string
+
+// AIGatewayTargetConfigType values.
+const (
+	AIGatewayTargetConfigTypeAnthropic AIGatewayTargetConfigType = "anthropic"
+	AIGatewayTargetConfigTypeAzure AIGatewayTargetConfigType = "azure"
+	AIGatewayTargetConfigTypeBedrock AIGatewayTargetConfigType = "bedrock"
+	AIGatewayTargetConfigTypeCerebras AIGatewayTargetConfigType = "cerebras"
+	AIGatewayTargetConfigTypeCohere AIGatewayTargetConfigType = "cohere"
+	AIGatewayTargetConfigTypeDashscope AIGatewayTargetConfigType = "dashscope"
+	AIGatewayTargetConfigTypeDatabricks AIGatewayTargetConfigType = "databricks"
+	AIGatewayTargetConfigTypeDeepseek AIGatewayTargetConfigType = "deepseek"
+	AIGatewayTargetConfigTypeGemini AIGatewayTargetConfigType = "gemini"
+	AIGatewayTargetConfigTypeHuggingface AIGatewayTargetConfigType = "huggingface"
+	AIGatewayTargetConfigTypeKimi AIGatewayTargetConfigType = "kimi"
+	AIGatewayTargetConfigTypeLlama2 AIGatewayTargetConfigType = "llama2"
+	AIGatewayTargetConfigTypeMistral AIGatewayTargetConfigType = "mistral"
+	AIGatewayTargetConfigTypeOllama AIGatewayTargetConfigType = "ollama"
+	AIGatewayTargetConfigTypeOpenai AIGatewayTargetConfigType = "openai"
+	AIGatewayTargetConfigTypeVercel AIGatewayTargetConfigType = "vercel"
+	AIGatewayTargetConfigTypeVertex AIGatewayTargetConfigType = "vertex"
+	AIGatewayTargetConfigTypeVllm AIGatewayTargetConfigType = "vllm"
+	AIGatewayTargetConfigTypeXai AIGatewayTargetConfigType = "xai"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayTargetConfig type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayTargetConfigTypeAnthropic:
+		if u.Anthropic != nil {
+			raw, err := json.Marshal(u.Anthropic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig anthropic: %w", err)
+			}
+			m["anthropic"] = raw
+		}
+	case AIGatewayTargetConfigTypeAzure:
+		if u.Azure != nil {
+			raw, err := json.Marshal(u.Azure)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig azure: %w", err)
+			}
+			m["azure"] = raw
+		}
+	case AIGatewayTargetConfigTypeBedrock:
+		if u.Bedrock != nil {
+			raw, err := json.Marshal(u.Bedrock)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig bedrock: %w", err)
+			}
+			m["bedrock"] = raw
+		}
+	case AIGatewayTargetConfigTypeCerebras:
+		if u.Cerebras != nil {
+			raw, err := json.Marshal(u.Cerebras)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig cerebras: %w", err)
+			}
+			m["cerebras"] = raw
+		}
+	case AIGatewayTargetConfigTypeCohere:
+		if u.Cohere != nil {
+			raw, err := json.Marshal(u.Cohere)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig cohere: %w", err)
+			}
+			m["cohere"] = raw
+		}
+	case AIGatewayTargetConfigTypeDashscope:
+		if u.Dashscope != nil {
+			raw, err := json.Marshal(u.Dashscope)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig dashscope: %w", err)
+			}
+			m["dashscope"] = raw
+		}
+	case AIGatewayTargetConfigTypeDatabricks:
+		if u.Databricks != nil {
+			raw, err := json.Marshal(u.Databricks)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig databricks: %w", err)
+			}
+			m["databricks"] = raw
+		}
+	case AIGatewayTargetConfigTypeDeepseek:
+		if u.Deepseek != nil {
+			raw, err := json.Marshal(u.Deepseek)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig deepseek: %w", err)
+			}
+			m["deepseek"] = raw
+		}
+	case AIGatewayTargetConfigTypeGemini:
+		if u.Gemini != nil {
+			raw, err := json.Marshal(u.Gemini)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig gemini: %w", err)
+			}
+			m["gemini"] = raw
+		}
+	case AIGatewayTargetConfigTypeHuggingface:
+		if u.Huggingface != nil {
+			raw, err := json.Marshal(u.Huggingface)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig huggingface: %w", err)
+			}
+			m["huggingface"] = raw
+		}
+	case AIGatewayTargetConfigTypeKimi:
+		if u.Kimi != nil {
+			raw, err := json.Marshal(u.Kimi)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig kimi: %w", err)
+			}
+			m["kimi"] = raw
+		}
+	case AIGatewayTargetConfigTypeLlama2:
+		if u.Llama2 != nil {
+			raw, err := json.Marshal(u.Llama2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig llama2: %w", err)
+			}
+			m["llama2"] = raw
+		}
+	case AIGatewayTargetConfigTypeMistral:
+		if u.Mistral != nil {
+			raw, err := json.Marshal(u.Mistral)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig mistral: %w", err)
+			}
+			m["mistral"] = raw
+		}
+	case AIGatewayTargetConfigTypeOllama:
+		if u.Ollama != nil {
+			raw, err := json.Marshal(u.Ollama)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig ollama: %w", err)
+			}
+			m["ollama"] = raw
+		}
+	case AIGatewayTargetConfigTypeOpenai:
+		if u.Openai != nil {
+			raw, err := json.Marshal(u.Openai)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig openai: %w", err)
+			}
+			m["openai"] = raw
+		}
+	case AIGatewayTargetConfigTypeVercel:
+		if u.Vercel != nil {
+			raw, err := json.Marshal(u.Vercel)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig vercel: %w", err)
+			}
+			m["vercel"] = raw
+		}
+	case AIGatewayTargetConfigTypeVertex:
+		if u.Vertex != nil {
+			raw, err := json.Marshal(u.Vertex)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig vertex: %w", err)
+			}
+			m["vertex"] = raw
+		}
+	case AIGatewayTargetConfigTypeVllm:
+		if u.Vllm != nil {
+			raw, err := json.Marshal(u.Vllm)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig vllm: %w", err)
+			}
+			m["vllm"] = raw
+		}
+	case AIGatewayTargetConfigTypeXai:
+		if u.Xai != nil {
+			raw, err := json.Marshal(u.Xai)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig xai: %w", err)
+			}
+			m["xai"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayTargetConfig: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayTargetConfigType(probe.Type)
+	switch probe.Type {
+	case "anthropic":
+		payload, ok := raw["anthropic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetAnthropicConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig anthropic: %w", err)
+		}
+		u.Anthropic = &val
+	case "azure":
+		payload, ok := raw["azure"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetAzureConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig azure: %w", err)
+		}
+		u.Azure = &val
+	case "bedrock":
+		payload, ok := raw["bedrock"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetBedrockConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig bedrock: %w", err)
+		}
+		u.Bedrock = &val
+	case "cerebras":
+		payload, ok := raw["cerebras"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetCerebrasConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig cerebras: %w", err)
+		}
+		u.Cerebras = &val
+	case "cohere":
+		payload, ok := raw["cohere"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetCohereConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig cohere: %w", err)
+		}
+		u.Cohere = &val
+	case "dashscope":
+		payload, ok := raw["dashscope"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetDashscopeConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig dashscope: %w", err)
+		}
+		u.Dashscope = &val
+	case "databricks":
+		payload, ok := raw["databricks"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetDatabricksConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig databricks: %w", err)
+		}
+		u.Databricks = &val
+	case "deepseek":
+		payload, ok := raw["deepseek"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetDeepseekConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig deepseek: %w", err)
+		}
+		u.Deepseek = &val
+	case "gemini":
+		payload, ok := raw["gemini"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetGeminiConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig gemini: %w", err)
+		}
+		u.Gemini = &val
+	case "huggingface":
+		payload, ok := raw["huggingface"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetHuggingfaceConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig huggingface: %w", err)
+		}
+		u.Huggingface = &val
+	case "kimi":
+		payload, ok := raw["kimi"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetKimiConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig kimi: %w", err)
+		}
+		u.Kimi = &val
+	case "llama2":
+		payload, ok := raw["llama2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetLlama2Config
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig llama2: %w", err)
+		}
+		u.Llama2 = &val
+	case "mistral":
+		payload, ok := raw["mistral"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetMistralConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig mistral: %w", err)
+		}
+		u.Mistral = &val
+	case "ollama":
+		payload, ok := raw["ollama"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetOllamaConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig ollama: %w", err)
+		}
+		u.Ollama = &val
+	case "openai":
+		payload, ok := raw["openai"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetOpenaiConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig openai: %w", err)
+		}
+		u.Openai = &val
+	case "vercel":
+		payload, ok := raw["vercel"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetVercelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig vercel: %w", err)
+		}
+		u.Vercel = &val
+	case "vertex":
+		payload, ok := raw["vertex"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetVertexConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig vertex: %w", err)
+		}
+		u.Vertex = &val
+	case "vllm":
+		payload, ok := raw["vllm"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetVllmConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig vllm: %w", err)
+		}
+		u.Vllm = &val
+	case "xai":
+		payload, ok := raw["xai"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetXaiConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig xai: %w", err)
+		}
+		u.Xai = &val
+	}
+	return nil
+}
+// AIGatewayTargetDashscopeConfig Alibaba DashScope-specific configuration for a
+// model.
+type AIGatewayTargetDashscopeConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// Whether to use the international DashScope endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	International string `json:"international,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetDatabricksConfig Databricks-specific configuration for a
+// model.
+type AIGatewayTargetDatabricksConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+	// The Databricks workspace instance ID.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	WorkspaceInstanceID string `json:"workspaceInstanceID,omitzero"`
+}
+
+// AIGatewayTargetDeepseekConfig Deepseek-specific configuration for a model.
+type AIGatewayTargetDeepseekConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetGeminiConfig Google Gemini-specific configuration for a model.
+type AIGatewayTargetGeminiConfig struct {
+	// The custom API endpoint for the Gemini model.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	APIEndpoint string `json:"apiEndpoint,omitzero"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// The endpoint ID for the Gemini model.
+	// This must be set when running on Gemini on Vertex Model Garden.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	EndpointID string `json:"endpointID,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The Google Cloud location ID for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LocationID string `json:"locationID,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetHuggingfaceConfig Hugging Face-specific configuration for a
+// model.
+type AIGatewayTargetHuggingfaceConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+	// Whether to use the Hugging Face inference cache.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	UseCache string `json:"useCache,omitzero"`
+	// Whether to wait for the model to load if it is not ready.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	WaitForModel string `json:"waitForModel,omitzero"`
+}
+
+// AIGatewayTargetKimiConfig Kimi (Moonshot AI)-specific configuration for a
+// model.
+type AIGatewayTargetKimiConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// When `true`, requests are sent to `api.moonshot.ai` (international).
+	// When `false`, requests are sent to `api.moonshot.cn` (mainland China).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	International string `json:"international,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetLlama2Config Llama2-specific configuration for a model.
+type AIGatewayTargetLlama2Config struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// The request format to use when communicating with the Llama2 model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=ollama;openai;raw
+	Format string `json:"format,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetMistralConfig Mistral-specific configuration for a model.
+type AIGatewayTargetMistralConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// The request format to use when communicating with the Mistral model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=ollama;openai
+	Format string `json:"format,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetOllamaConfig Ollama-specific configuration for a model.
+type AIGatewayTargetOllamaConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetOpenaiConfig Openai-specific configuration for a model.
+type AIGatewayTargetOpenaiConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetVercelConfig Vercel AI Gateway-specific configuration for a
+// model.
+type AIGatewayTargetVercelConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetVertexConfig Google Vertex-specific configuration for a model.
+type AIGatewayTargetVertexConfig struct {
+	// The custom API endpoint for the Vertex model.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	APIEndpoint string `json:"apiEndpoint,omitzero"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// The endpoint ID for the Vertex model.
+	// This must be set when running on Vertex Model Garden.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	EndpointID string `json:"endpointID,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The Google Cloud location ID for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LocationID string `json:"locationID,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetVllmConfig Vllm-specific configuration for a model.
+type AIGatewayTargetVllmConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetXaiConfig Xai-specific configuration for a model.
+type AIGatewayTargetXaiConfig struct {
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayVercelEmbeddingsModelConfig Vercel AI Gateway-specific configuration
+// for a model.
+type AIGatewayVercelEmbeddingsModelConfig struct {
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayVertexEmbeddingsModelConfig Google Vertex-specific configuration for
+// a model.
+type AIGatewayVertexEmbeddingsModelConfig struct {
+	// The custom API endpoint for the Vertex model.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	APIEndpoint string `json:"apiEndpoint,omitzero"`
+	// The Google Cloud location ID for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LocationID string `json:"locationID,omitzero"`
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
 // CreatePortalCustomDomainSSL is a type alias.
@@ -114,6 +4625,19 @@ type LabelsUpdateValue string
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
 type LabelsUpdate map[string]LabelsUpdateValue
+
+// ManagedByValue is the value type for ManagedBy.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=63
+// +kubebuilder:validation:Pattern=`^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`
+type ManagedByValue string
+
+// ManagedBy Stores information about what manages this entity, such as the tool
+// or system responsible for its lifecycle (for example, `terraform`).
+//
+// Keys must be 1–63 characters long and start with an alphanumeric character.
+type ManagedBy map[string]ManagedByValue
 
 // MinRuntimeVersion The minimum runtime version supported by the API.
 // This is the lowest version of the data plane

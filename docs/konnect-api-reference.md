@@ -10,6 +10,7 @@
 Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1alpha1 API group.
 
 - [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
+- [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
@@ -40,6 +41,21 @@ AIGatewayControlPlane is the Schema for the aigatewaycontrolplanes API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanespec)_ |  |
 | `status` _[AIGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanestatus)_ |  |
+
+### AIGatewayModel
+
+
+AIGatewayModel is the Schema for the aigatewaymodels API.
+
+<!-- ai_gateway_model description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayModel`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayModelSpec](#konnect-konghq-com-v1alpha1-types-aigatewaymodelspec)_ |  |
+| `status` _[AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)_ |  |
 
 ### KonnectAPIAuthConfiguration
 
@@ -272,6 +288,63 @@ PortalTeam is the Schema for the portalteams API.
 ### Types
 
 In this section you will find types that the CRDs rely on.
+#### AIGatewayACLS
+
+_Underlying type:_ `object`
+
+AIGatewayACLS Access control rules.
+Configure exactly one of `allow` or `deny`.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
+- [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+
+
+
+#### AIGatewayAzureEmbeddingsModelConfig
+
+
+AIGatewayAzureEmbeddingsModelConfig Azure-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | The Azure OpenAI API version to use. |
+| `deploymentID` _string_ | The Azure deployment ID for the model. |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
+#### AIGatewayBedrockEmbeddingsModelConfig
+
+
+AIGatewayBedrockEmbeddingsModelConfig AWS Bedrock-specific configuration for
+a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `batchBucketPrefix` _string_ | S3 bucket prefix for batch inference jobs. |
+| `embeddingsNormalize` _string_ | Whether to normalize embedding vectors in the response. |
+| `performanceConfigLatency` _string_ | Latency performance configuration for the model invocation. |
+| `region` _string_ | The AWS region for the model. Setting this option overrides the AWS_REGION environment variable. |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+| `videoOutputS3URI` _string_ | S3 URI for storing video generation outputs. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
 #### AIGatewayControlPlaneAPISpec
 
 
@@ -326,6 +399,53 @@ _Appears in:_
 
 - [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
 
+#### AIGatewayDatabricksEmbeddingsModelConfig
+
+
+AIGatewayDatabricksEmbeddingsModelConfig Databricks-specific configuration
+for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+| `workspaceInstanceID` _string_ | The Databricks workspace instance ID. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
+
+
+
+
+#### AIGatewayEmbeddingsModelConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayEmbeddingsModelConfigType represents the type of AIGatewayEmbeddingsModelConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `azure` |  |
+| `bedrock` |  |
+| `databricks` |  |
+| `gemini` |  |
+| `huggingface` |  |
+| `vercel` |  |
+| `vertex` |  |
+
 #### AIGatewayEntityIdentifier
 
 _Underlying type:_ `string`
@@ -339,6 +459,1027 @@ In some cases, this may be the entity name or ID.
 _Appears in:_
 
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
+- [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
+- [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+
+#### AIGatewayGeminiEmbeddingsModelConfig
+
+
+AIGatewayGeminiEmbeddingsModelConfig Google Gemini-specific configuration for
+a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiEndpoint` _string_ | The custom API endpoint for the Gemini model. |
+| `locationID` _string_ | The Google Cloud location ID for the model endpoint. |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
+#### AIGatewayHuggingfaceEmbeddingsModelConfig
+
+
+AIGatewayHuggingfaceEmbeddingsModelConfig Hugging Face-specific configuration
+for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+| `useCache` _string_ | Whether to use the Hugging Face inference cache. |
+| `waitForModel` _string_ | Whether to wait for the model to load if it is not ready. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
+#### AIGatewayModelAPI
+
+
+AIGatewayModelAPI Configuration for proxying asynchronous requests/responses
+to/from an AI Gateway model using the files and batches APIs.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayACLS](#konnect-konghq-com-v1alpha1-types-aigatewayacls)_ | Access control rules for allowing or denying Consumers, Consumer Groups, or Authenticated Groups to this model. |
+| `capabilities` _[]string_ | List of AI capabilities enabled for this API model. |
+| `config` _[AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)_ | Routing, logging, and load balancing configuration for the model. |
+| `displayName` _string_ | The display name for this model instance. |
+| `enabled` _string_ | Whether the model is enabled. |
+| `formats` _[AIGatewayModelFormat](#konnect-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model, used as a stable human-readable reference. |
+| `policies` _[]string_ | List of policy references. |
+| `targets` _[AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)_ | One or more backend models that this model entry routes to. |
+
+_Appears in:_
+
+- [AIGatewayModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelconfig)
+
+#### AIGatewayModelAPIConfig
+
+
+AIGatewayModelAPIConfig Routing, logging, and load balancing configuration
+for the model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `balancer` _[AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)_ | Configuration for a model's load balancer when multiple target models are configured. |
+| `logging` _[AIGatewayModelAPIConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfiglogging)_ | Configuration for AI Gateway logging. |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `model` _[AIGatewayModelAPIConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigmodel)_ |  |
+| `proxy` _[AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
+| `responseStreaming` _string_ |  |
+| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+
+_Appears in:_
+
+- [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
+
+#### AIGatewayModelAPIConfigBalancer
+
+
+AIGatewayModelAPIConfigBalancer represents a union type for balancer.
+Only one of the fields should be set based on the Algorithm.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _[AIGatewayModelAPIConfigBalancerType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancertype)_ | Algorithm designates the type of configuration. |
+| `consistent-hashing` _[AIGatewayModelBalancerConsistentHashingConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconsistenthashingconfig)_ | ConsistentHashing configuration. |
+| `least-connections` _[AIGatewayModelBalancerLeastConnectionsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerleastconnectionsconfig)_ | LeastConnections configuration. |
+| `lowest-latency` _[AIGatewayModelBalancerLowestLatencyConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerlowestlatencyconfig)_ | LowestLatency configuration. |
+| `lowest-usage` _[AIGatewayModelBalancerLowestUsageConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerlowestusageconfig)_ | LowestUsage configuration. |
+| `priority` _[AIGatewayModelBalancerPriorityConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerpriorityconfig)_ | Priority configuration. |
+| `round-robin` _[AIGatewayModelBalancerRoundRobinConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerroundrobinconfig)_ | RoundRobin configuration. |
+| `semantic` _[AIGatewayModelBalancerSemanticConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfig)_ | Semantic configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
+
+#### AIGatewayModelAPIConfigBalancerType
+
+_Underlying type:_ `string`
+
+AIGatewayModelAPIConfigBalancerType represents the type of balancer.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consistent-hashing` |  |
+| `least-connections` |  |
+| `lowest-latency` |  |
+| `lowest-usage` |  |
+| `priority` |  |
+| `round-robin` |  |
+| `semantic` |  |
+
+#### AIGatewayModelAPIConfigLogging
+
+
+AIGatewayModelAPIConfigLogging Configuration for AI Gateway logging.
+
+
+
+| Field | Description |
+| --- | --- |
+| `payloads` _string_ |  |
+| `statistics` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
+
+#### AIGatewayModelAPIConfigModel
+
+
+AIGatewayModelAPIConfigModel is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `alias` _string_ | An alias for the model, used to select the target virtual model when passed in the "model" parameter of the request body. When not set, this defaults to the AI Gateway model's name. |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
+
+#### AIGatewayModelAPISpec
+
+
+AIGatewayModelAPISpec defines the API spec fields for AIGatewayModel.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelSpec](#konnect-konghq-com-v1alpha1-types-aigatewaymodelspec)
+
+
+
+#### AIGatewayModelBalancerConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayModelBalancerConfigType represents the type of AIGatewayModelBalancerConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelBalancerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consistent-hashing` |  |
+| `least-connections` |  |
+| `lowest-latency` |  |
+| `lowest-usage` |  |
+| `priority` |  |
+| `round-robin` |  |
+| `semantic` |  |
+
+#### AIGatewayModelBalancerConsistentHashingConfig
+
+
+AIGatewayModelBalancerConsistentHashingConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _int_ |  |
+| `failTimeout` _int_ | The period of time (in milliseconds) the target will be considered unavailable after the number of unsuccessful attempts reaches `max_fails`. |
+| `failoverCriteria` _[]string_ | Specifies in which cases an upstream response should be failover to the next target. Each option in the array is equivalent to the function of https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream |
+| `hashOnHeader` _string_ | The header to use for consistent-hashing. |
+| `maxFails` _int_ | Number of unsuccessful attempts to communicate with a target that should occur in the duration defined by `fail_timeout` before the target is considered unavailable. The zero value disables the circuit breaker. What is considered an unsuccessful attempt is defined by `failover_criteria`. Note the cases of `error`, `timeout` and `invalid_header` are always considered unsuccessful attempts, while the cases of `http_403` and `http_404` are never considered unsuccessful attempts. |
+| `readTimeout` _int_ |  |
+| `retries` _int_ | The number of retries to execute upon failure to proxy. |
+| `slots` _int_ | The number of slots in the load balancer algorithm. |
+| `writeTimeout` _int_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
+- [AIGatewayModelBalancerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
+- [AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+#### AIGatewayModelBalancerLeastConnectionsConfig
+
+
+AIGatewayModelBalancerLeastConnectionsConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _int_ |  |
+| `failTimeout` _int_ | The period of time (in milliseconds) the target will be considered unavailable after the number of unsuccessful attempts reaches `max_fails`. |
+| `failoverCriteria` _[]string_ | Specifies in which cases an upstream response should be failover to the next target. Each option in the array is equivalent to the function of https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream |
+| `maxFails` _int_ | Number of unsuccessful attempts to communicate with a target that should occur in the duration defined by `fail_timeout` before the target is considered unavailable. The zero value disables the circuit breaker. What is considered an unsuccessful attempt is defined by `failover_criteria`. Note the cases of `error`, `timeout` and `invalid_header` are always considered unsuccessful attempts, while the cases of `http_403` and `http_404` are never considered unsuccessful attempts. |
+| `readTimeout` _int_ |  |
+| `retries` _int_ | The number of retries to execute upon failure to proxy. |
+| `slots` _int_ | The number of slots in the load balancer algorithm. |
+| `writeTimeout` _int_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
+- [AIGatewayModelBalancerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
+- [AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+#### AIGatewayModelBalancerLowestLatencyConfig
+
+
+AIGatewayModelBalancerLowestLatencyConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _int_ |  |
+| `failTimeout` _int_ | The period of time (in milliseconds) the target will be considered unavailable after the number of unsuccessful attempts reaches `max_fails`. |
+| `failoverCriteria` _[]string_ | Specifies in which cases an upstream response should be failover to the next target. Each option in the array is equivalent to the function of https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream |
+| `latencyStrategy` _string_ | What metrics to use for latency. Available values are: `tpot` (time-per-output-token) and `e2e`. |
+| `maxFails` _int_ | Number of unsuccessful attempts to communicate with a target that should occur in the duration defined by `fail_timeout` before the target is considered unavailable. The zero value disables the circuit breaker. What is considered an unsuccessful attempt is defined by `failover_criteria`. Note the cases of `error`, `timeout` and `invalid_header` are always considered unsuccessful attempts, while the cases of `http_403` and `http_404` are never considered unsuccessful attempts. |
+| `readTimeout` _int_ |  |
+| `retries` _int_ | The number of retries to execute upon failure to proxy. |
+| `slots` _int_ | The number of slots in the load balancer algorithm. |
+| `writeTimeout` _int_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
+- [AIGatewayModelBalancerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
+- [AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+#### AIGatewayModelBalancerLowestUsageConfig
+
+
+AIGatewayModelBalancerLowestUsageConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _int_ |  |
+| `failTimeout` _int_ | The period of time (in milliseconds) the target will be considered unavailable after the number of unsuccessful attempts reaches `max_fails`. |
+| `failoverCriteria` _[]string_ | Specifies in which cases an upstream response should be failover to the next target. Each option in the array is equivalent to the function of https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream |
+| `maxFails` _int_ | Number of unsuccessful attempts to communicate with a target that should occur in the duration defined by `fail_timeout` before the target is considered unavailable. The zero value disables the circuit breaker. What is considered an unsuccessful attempt is defined by `failover_criteria`. Note the cases of `error`, `timeout` and `invalid_header` are always considered unsuccessful attempts, while the cases of `http_403` and `http_404` are never considered unsuccessful attempts. |
+| `readTimeout` _int_ |  |
+| `retries` _int_ | The number of retries to execute upon failure to proxy. |
+| `slots` _int_ | The number of slots in the load balancer algorithm. |
+| `tokensCountStrategy` _string_ | Methodology to use for token usage calculation. |
+| `writeTimeout` _int_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
+- [AIGatewayModelBalancerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
+- [AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+#### AIGatewayModelBalancerPriorityConfig
+
+
+AIGatewayModelBalancerPriorityConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _int_ |  |
+| `failTimeout` _int_ | The period of time (in milliseconds) the target will be considered unavailable after the number of unsuccessful attempts reaches `max_fails`. |
+| `failoverCriteria` _[]string_ | Specifies in which cases an upstream response should be failover to the next target. Each option in the array is equivalent to the function of https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream |
+| `maxFails` _int_ | Number of unsuccessful attempts to communicate with a target that should occur in the duration defined by `fail_timeout` before the target is considered unavailable. The zero value disables the circuit breaker. What is considered an unsuccessful attempt is defined by `failover_criteria`. Note the cases of `error`, `timeout` and `invalid_header` are always considered unsuccessful attempts, while the cases of `http_403` and `http_404` are never considered unsuccessful attempts. |
+| `readTimeout` _int_ |  |
+| `retries` _int_ | The number of retries to execute upon failure to proxy. |
+| `slots` _int_ | The number of slots in the load balancer algorithm. |
+| `writeTimeout` _int_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
+- [AIGatewayModelBalancerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
+- [AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+#### AIGatewayModelBalancerRoundRobinConfig
+
+
+AIGatewayModelBalancerRoundRobinConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _int_ |  |
+| `failTimeout` _int_ | The period of time (in milliseconds) the target will be considered unavailable after the number of unsuccessful attempts reaches `max_fails`. |
+| `failoverCriteria` _[]string_ | Specifies in which cases an upstream response should be failover to the next target. Each option in the array is equivalent to the function of https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream |
+| `maxFails` _int_ | Number of unsuccessful attempts to communicate with a target that should occur in the duration defined by `fail_timeout` before the target is considered unavailable. The zero value disables the circuit breaker. What is considered an unsuccessful attempt is defined by `failover_criteria`. Note the cases of `error`, `timeout` and `invalid_header` are always considered unsuccessful attempts, while the cases of `http_403` and `http_404` are never considered unsuccessful attempts. |
+| `readTimeout` _int_ |  |
+| `retries` _int_ | The number of retries to execute upon failure to proxy. |
+| `slots` _int_ | The number of slots in the load balancer algorithm. |
+| `writeTimeout` _int_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
+- [AIGatewayModelBalancerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
+- [AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+#### AIGatewayModelBalancerSemanticConfig
+
+
+AIGatewayModelBalancerSemanticConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `connectTimeout` _int_ |  |
+| `embeddings` _[AIGatewayModelBalancerSemanticConfigEmbeddings](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddings)_ | Embeddings model configuration for this model. |
+| `failTimeout` _int_ | The period of time (in milliseconds) the target will be considered unavailable after the number of unsuccessful attempts reaches `max_fails`. |
+| `failoverCriteria` _[]string_ | Specifies in which cases an upstream response should be failover to the next target. Each option in the array is equivalent to the function of https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream |
+| `maxFails` _int_ | Number of unsuccessful attempts to communicate with a target that should occur in the duration defined by `fail_timeout` before the target is considered unavailable. The zero value disables the circuit breaker. What is considered an unsuccessful attempt is defined by `failover_criteria`. Note the cases of `error`, `timeout` and `invalid_header` are always considered unsuccessful attempts, while the cases of `http_403` and `http_404` are never considered unsuccessful attempts. |
+| `readTimeout` _int_ |  |
+| `retries` _int_ | The number of retries to execute upon failure to proxy. |
+| `slots` _int_ | The number of slots in the load balancer algorithm. |
+| `vectordb` _[AIGatewayModelBalancerSemanticConfigVectordb](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigvectordb)_ | Configuration for the vector database used by the model. |
+| `writeTimeout` _int_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
+- [AIGatewayModelBalancerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
+- [AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+#### AIGatewayModelBalancerSemanticConfigEmbeddings
+
+
+AIGatewayModelBalancerSemanticConfigEmbeddings Embeddings model configuration
+for this model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowAuthOverride` _string_ | When enabled, request-level auth parameters (such as API keys or bearer tokens) will override the static values defined for the provider. |
+| `config` _[AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)_ | Configuration for an embeddings model. |
+| `name` _string_ | The name of the embeddings model. |
+| `provider` _[AIGatewayProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayproviderreference)_ | Reference to a provider instance. This is either the provider ID or the provider name. |
+
+_Appears in:_
+
+- [AIGatewayModelBalancerSemanticConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfig)
+
+#### AIGatewayModelBalancerSemanticConfigEmbeddingsConfig
+
+
+AIGatewayModelBalancerSemanticConfigEmbeddingsConfig represents a union type for config.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfigtype)_ | Type designates the type of configuration. |
+| `azure` _[AIGatewayAzureEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayazureembeddingsmodelconfig)_ | Azure configuration. |
+| `bedrock` _[AIGatewayBedrockEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaybedrockembeddingsmodelconfig)_ | Bedrock configuration. |
+| `databricks` _[AIGatewayDatabricksEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaydatabricksembeddingsmodelconfig)_ | Databricks configuration. |
+| `gemini` _[AIGatewayGeminiEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaygeminiembeddingsmodelconfig)_ | Gemini configuration. |
+| `huggingface` _[AIGatewayHuggingfaceEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayhuggingfaceembeddingsmodelconfig)_ | Huggingface configuration. |
+| `vercel` _[AIGatewayVercelEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayvercelembeddingsmodelconfig)_ | Vercel configuration. |
+| `vertex` _[AIGatewayVertexEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayvertexembeddingsmodelconfig)_ | Vertex configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelBalancerSemanticConfigEmbeddings](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddings)
+
+#### AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `azure` |  |
+| `bedrock` |  |
+| `databricks` |  |
+| `gemini` |  |
+| `huggingface` |  |
+| `vercel` |  |
+| `vertex` |  |
+
+#### AIGatewayModelBalancerSemanticConfigVectordb
+
+
+AIGatewayModelBalancerSemanticConfigVectordb represents a union type for vectordb.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayModelBalancerSemanticConfigVectordbType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigvectordbtype)_ | Type designates the type of configuration. |
+| `pgvector` _[AIGatewayModelVectorDBConfigPgVector](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigpgvector)_ | PgVector configuration. |
+| `redis` _[AIGatewayModelVectorDBConfigRedis](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredis)_ | Redis configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelBalancerSemanticConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfig)
+
+#### AIGatewayModelBalancerSemanticConfigVectordbType
+
+_Underlying type:_ `string`
+
+AIGatewayModelBalancerSemanticConfigVectordbType represents the type of vectordb.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelBalancerSemanticConfigVectordb](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigvectordb)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `pgvector` |  |
+| `redis` |  |
+
+#### AIGatewayModelConfig
+
+
+AIGatewayModelConfig represents a union type for AIGatewayModelConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayModelConfigType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelconfigtype)_ | Type designates the type of configuration. |
+| `api` _[AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)_ | API configuration. |
+| `model` _[AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)_ | Model configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapispec)
+
+#### AIGatewayModelConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayModelConfigType represents the type of AIGatewayModelConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `api` |  |
+| `model` |  |
+
+#### AIGatewayModelFormat
+
+
+AIGatewayModelFormat Request and response format supported by this model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | The format type. |
+
+_Appears in:_
+
+- [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
+- [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+
+#### AIGatewayModelModel
+
+
+AIGatewayModelModel Configuration for proxying synchronous requests/responses
+to/from an AI Gateway model using generative APIs.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayACLS](#konnect-konghq-com-v1alpha1-types-aigatewayacls)_ | Access control rules for allowing or denying Consumers, Consumer Groups, or Authenticated Groups to this model. |
+| `capabilities` _[]string_ | List of AI capabilities enabled for this model. |
+| `config` _[AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)_ | Routing, logging, and load balancing configuration for the model. |
+| `displayName` _string_ | The display name for this model instance. |
+| `enabled` _string_ | Whether the model is enabled. |
+| `formats` _[AIGatewayModelFormat](#konnect-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model, used as a stable human-readable reference. |
+| `policies` _[]string_ | List of policy references. |
+| `targets` _[AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)_ | One or more backend models that this model entry routes to. |
+
+_Appears in:_
+
+- [AIGatewayModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelconfig)
+
+#### AIGatewayModelModelConfig
+
+
+AIGatewayModelModelConfig Routing, logging, and load balancing configuration
+for the model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `balancer` _[AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)_ | Configuration for a model's load balancer when multiple target models are configured. |
+| `logging` _[AIGatewayModelModelConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfiglogging)_ | Configuration for AI Gateway logging. |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `model` _[AIGatewayModelModelConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigmodel)_ |  |
+| `proxy` _[AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
+| `responseStreaming` _string_ |  |
+| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+
+_Appears in:_
+
+- [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+
+#### AIGatewayModelModelConfigBalancer
+
+
+AIGatewayModelModelConfigBalancer represents a union type for balancer.
+Only one of the fields should be set based on the Algorithm.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _[AIGatewayModelModelConfigBalancerType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancertype)_ | Algorithm designates the type of configuration. |
+| `consistent-hashing` _[AIGatewayModelBalancerConsistentHashingConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerconsistenthashingconfig)_ | ConsistentHashing configuration. |
+| `least-connections` _[AIGatewayModelBalancerLeastConnectionsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerleastconnectionsconfig)_ | LeastConnections configuration. |
+| `lowest-latency` _[AIGatewayModelBalancerLowestLatencyConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerlowestlatencyconfig)_ | LowestLatency configuration. |
+| `lowest-usage` _[AIGatewayModelBalancerLowestUsageConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerlowestusageconfig)_ | LowestUsage configuration. |
+| `priority` _[AIGatewayModelBalancerPriorityConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerpriorityconfig)_ | Priority configuration. |
+| `round-robin` _[AIGatewayModelBalancerRoundRobinConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancerroundrobinconfig)_ | RoundRobin configuration. |
+| `semantic` _[AIGatewayModelBalancerSemanticConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfig)_ | Semantic configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
+
+#### AIGatewayModelModelConfigBalancerType
+
+_Underlying type:_ `string`
+
+AIGatewayModelModelConfigBalancerType represents the type of balancer.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consistent-hashing` |  |
+| `least-connections` |  |
+| `lowest-latency` |  |
+| `lowest-usage` |  |
+| `priority` |  |
+| `round-robin` |  |
+| `semantic` |  |
+
+#### AIGatewayModelModelConfigLogging
+
+
+AIGatewayModelModelConfigLogging Configuration for AI Gateway logging.
+
+
+
+| Field | Description |
+| --- | --- |
+| `payloads` _string_ |  |
+| `statistics` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
+
+#### AIGatewayModelModelConfigModel
+
+
+AIGatewayModelModelConfigModel is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `alias` _string_ | An alias for the model, used to select the target virtual model when passed in the "model" parameter of the request body. When not set, this defaults to the AI Gateway model's name. |
+| `nameHeader` _string_ | Display the model name selected in the X-Kong-LLM-Model response header |
+
+_Appears in:_
+
+- [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
+
+
+
+#### AIGatewayModelSpec
+
+
+AIGatewayModelSpec defines the desired state of AIGatewayModel.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `apiSpec` _[AIGatewayModelAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
+
+#### AIGatewayModelStatus
+
+
+AIGatewayModelStatus defines the observed state of AIGatewayModel.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
+
+
+
+#### AIGatewayModelVectorDBConfigPgVector
+
+
+AIGatewayModelVectorDBConfigPgVector is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `database` _string_ | the database of the pgvector database |
+| `dimensions` _int_ | the desired dimensionality for the vectors |
+| `distanceMetric` _string_ | the distance metric to use for vector searches |
+| `host` _string_ | the host of the pgvector database |
+| `password` _string_ | the password of the pgvector database This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `port` _int_ | the port of the pgvector database |
+| `ssl` _[AIGatewayModelVectorDBConfigPgVectorSSL](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigpgvectorssl)_ |  |
+| `threshold` _float64_ | the default similarity threshold for accepting semantic search results (float). Higher threshold means more results are considered similar. |
+| `timeout` _float64_ | the timeout of the pgvector database |
+| `user` _string_ | the user of the pgvector database This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayModelBalancerSemanticConfigVectordb](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigvectordb)
+- [AIGatewayModelVectorDBConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfig)
+
+#### AIGatewayModelVectorDBConfigPgVectorSSL
+
+
+AIGatewayModelVectorDBConfigPgVectorSSL is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cert` _string_ | the path of ssl cert to use for the pgvector database |
+| `certKey` _string_ | the path of ssl cert key to use for the pgvector database |
+| `enabled` _string_ | whether to use ssl for the pgvector database |
+| `required` _string_ | whether ssl is required for the pgvector database |
+| `verify` _string_ | whether to verify ssl for the pgvector database |
+| `version` _string_ | the ssl version to use for the pgvector database |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigPgVector](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigpgvector)
+
+#### AIGatewayModelVectorDBConfigRedis
+
+
+AIGatewayModelVectorDBConfigRedis Config for connecting to a Cloud Provider's
+Redis instance.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cloudAuthentication` _[AIGatewayModelVectorDBConfigRedisCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthentication)_ | Auth related config for connecting to a Cloud Provider's Redis instance. |
+| `cluster` _[AIGatewayModelVectorDBConfigRedisCluster](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscluster)_ | Cluster configuration for the Redis connection. |
+| `connectTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `connectionIsProxied` _string_ | If the connection to Redis is proxied (e.g. Envoy), set it `true`. Set the `host` and `port` to point to the proxy address. |
+| `database` _int_ | Database to use for the Redis connection when using the `redis` strategy |
+| `dimensions` _int_ | the desired dimensionality for the vectors |
+| `distanceMetric` _string_ | the distance metric to use for vector searches |
+| `host` _string_ | A string representing a host name, such as example.com. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `keepalive` _[AIGatewayModelVectorDBConfigRedisKeepalive](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediskeepalive)_ | Keepalive configuration for the Redis connection. |
+| `password` _string_ | Password to use for Redis connections. If undefined, no AUTH commands are sent to Redis. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `readTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `sendTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `sentinel` _[AIGatewayModelVectorDBConfigRedisSentinel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredissentinel)_ | Configuration for Redis Sentinel. |
+| `serverName` _string_ | A string representing an SNI (server name indication) value for TLS. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `ssl` _string_ | If set to true, uses SSL to connect to Redis. |
+| `sslVerify` _string_ | If set to true, verifies the validity of the server SSL certificate. If setting this parameter, also configure `lua_ssl_trusted_certificate` in `kong.conf` to specify the CA (or server) certificate used by your Redis server. You may also need to configure `lua_ssl_verify_depth` accordingly. |
+| `threshold` _float64_ | the default similarity threshold for accepting semantic search results (float). Higher threshold means more results are considered similar. |
+| `username` _string_ | Username to use for Redis connections. If undefined, ACL authentication won't be performed. This requires Redis v6.0.0+. To be compatible with Redis v5.x.y, you can set it to `default`. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayModelBalancerSemanticConfigVectordb](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigvectordb)
+- [AIGatewayModelVectorDBConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfig)
+
+#### AIGatewayModelVectorDBConfigRedisCloudAuthentication
+
+
+AIGatewayModelVectorDBConfigRedisCloudAuthentication represents a union type for cloud_authentication.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayModelVectorDBConfigRedisCloudAuthenticationType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthenticationtype)_ | Type designates the type of configuration. |
+| `aws` _[AIGatewayRedisAWSAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayredisawsauthentication)_ | AWS configuration. |
+| `azure` _[AIGatewayRedisAzureAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayredisazureauthentication)_ | Azure configuration. |
+| `gcp` _[AIGatewayRedisGCPAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayredisgcpauthentication)_ | GCP configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedis](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredis)
+
+#### AIGatewayModelVectorDBConfigRedisCloudAuthenticationType
+
+_Underlying type:_ `string`
+
+AIGatewayModelVectorDBConfigRedisCloudAuthenticationType represents the type of cloud_authentication.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedisCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthentication)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `azure` |  |
+| `gcp` |  |
+
+#### AIGatewayModelVectorDBConfigRedisCluster
+
+
+AIGatewayModelVectorDBConfigRedisCluster Cluster configuration for the Redis
+connection.
+
+
+
+| Field | Description |
+| --- | --- |
+| `maxRedirections` _int_ | Maximum retry attempts for redirection. |
+| `nodes` _[AIGatewayModelVectorDBConfigRedisClusterNodes](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredisclusternodes)_ | Cluster addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Cluster. The minimum length of the array is 1 element. |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedis](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredis)
+
+#### AIGatewayModelVectorDBConfigRedisClusterNodes
+
+
+AIGatewayModelVectorDBConfigRedisClusterNodes Cluster addresses to use for
+Redis connections when the `redis` strategy is defined.
+Defining this field implies using a Redis Cluster.
+The minimum length of the array is 1 element.
+
+
+
+| Field | Description |
+| --- | --- |
+| `ip` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedisCluster](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscluster)
+
+#### AIGatewayModelVectorDBConfigRedisKeepalive
+
+
+AIGatewayModelVectorDBConfigRedisKeepalive Keepalive configuration for the
+Redis connection.
+
+
+
+| Field | Description |
+| --- | --- |
+| `backlog` _int_ | Limits the total number of opened connections for a pool. If the connection pool is full, connection queues above the limit go into the backlog queue. If the backlog queue is full, subsequent connect operations fail and return `nil`. Queued operations (subject to set timeouts) resume once the number of connections in the pool is less than `pool_size`. If latency is high or throughput is low, try increasing this value. Empirically, this value is larger than `pool_size`. |
+| `poolSize` _int_ | The size limit for every cosocket connection pool associated with every remote server, per worker process. If neither `pool_size` nor `backlog` is specified, no pool is created. If `pool_size` isn't specified but `backlog` is specified, then the pool uses the default value. Try to increase (e.g. 512) this value if latency is high or throughput is low. |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedis](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredis)
+
+#### AIGatewayModelVectorDBConfigRedisSentinel
+
+
+AIGatewayModelVectorDBConfigRedisSentinel Configuration for Redis Sentinel.
+
+
+
+| Field | Description |
+| --- | --- |
+| `master` _string_ | Sentinel master to use for Redis connections. Defining this value implies using Redis Sentinel. |
+| `nodes` _[AIGatewayModelVectorDBConfigRedisSentinelNodes](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredissentinelnodes)_ | Sentinel node addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Sentinel. The minimum length of the array is 1 element. |
+| `password` _string_ | Sentinel password to authenticate with a Redis Sentinel instance. If undefined, no AUTH commands are sent to Redis Sentinels. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `role` _string_ | Sentinel role to use for Redis connections when the `redis` strategy is defined. Defining this value implies using Redis Sentinel. |
+| `username` _string_ | Sentinel username to authenticate with a Redis Sentinel instance. If undefined, ACL authentication won't be performed. This requires Redis v6.2.0+. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedis](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredis)
+
+#### AIGatewayModelVectorDBConfigRedisSentinelNodes
+
+
+AIGatewayModelVectorDBConfigRedisSentinelNodes Sentinel node addresses to use
+for Redis connections when the `redis` strategy is defined.
+Defining this field implies using a Redis Sentinel.
+The minimum length of the array is 1 element.
+
+
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedisSentinel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredissentinel)
+
+#### AIGatewayModelVectorDBConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayModelVectorDBConfigType represents the type of AIGatewayModelVectorDBConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `pgvector` |  |
+| `redis` |  |
+
+#### AIGatewayProviderReference
+
+_Underlying type:_ `string`
+
+AIGatewayProviderReference Reference to a provider instance.
+This is either the provider ID or the provider name.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelBalancerSemanticConfigEmbeddings](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddings)
+- [AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)
+
+#### AIGatewayProxyConfig
+
+
+AIGatewayProxyConfig HTTP/HTTPS proxy configuration for outbound requests to
+the upstream AI provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProxyConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfigauth)_ | Credentials used to authenticate to the proxy server. |
+| `httpProxy` _[AIGatewayProxyConfigHTTPProxy](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfighttpproxy)_ | HTTP proxy server to route plaintext outbound requests through. |
+| `httpsProxy` _[AIGatewayProxyConfigHTTPSProxy](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfighttpsproxy)_ | HTTPS proxy server to route TLS outbound requests through. |
+| `noProxy` _string_ | Comma-separated list of hosts that should not be proxied. |
+| `proxyScheme` _string_ | The proxy scheme to use when connecting to the proxy server. |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
+- [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
+
+#### AIGatewayProxyConfigAuth
+
+
+AIGatewayProxyConfigAuth Credentials used to authenticate to the proxy
+server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `password` _string_ | The password to use for proxy authentication. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `username` _string_ | The username to use for proxy authentication. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)
+
+#### AIGatewayProxyConfigHTTPProxy
+
+
+AIGatewayProxyConfigHTTPProxy HTTP proxy server to route plaintext outbound
+requests through.
+
+
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)
+
+#### AIGatewayProxyConfigHTTPSProxy
+
+
+AIGatewayProxyConfigHTTPSProxy HTTPS proxy server to route TLS outbound
+requests through.
+
+
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)
 
 #### AIGatewayProxyURL
 
@@ -357,6 +1498,665 @@ connected to a control-plane.
 _Appears in:_
 
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
+
+#### AIGatewayRedisAWSAuthentication
+
+
+AIGatewayRedisAWSAuthentication AWS specific configs for connecting to a
+Cloud Provider's redis instance.
+
+
+
+| Field | Description |
+| --- | --- |
+| `accessKeyID` _string_ | AWS Access Key ID to be used for authentication. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `assumeRoleArn` _string_ | The ARN of the IAM role to assume for generating ElastiCache IAM authentication tokens. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `cacheName` _string_ | The name of the AWS Elasticache cluster. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `isServerless` _string_ | This flag specifies whether the cluster is serverless. |
+| `region` _string_ | The region of the AWS ElastiCache cluster. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `roleSessionName` _string_ | The session name for the temporary credentials when assuming the IAM role. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `secretAccessKey` _string_ | AWS Secret Access Key. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedisCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthentication)
+
+#### AIGatewayRedisAzureAuthentication
+
+
+AIGatewayRedisAzureAuthentication Azure specific configs for connecting to a
+Cloud Provider's redis instance.
+
+
+
+| Field | Description |
+| --- | --- |
+| `clientID` _string_ | Azure Client ID. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `clientSecret` _string_ | Azure Client Secret. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `tenantID` _string_ | Azure Tenant ID. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedisCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthentication)
+
+#### AIGatewayRedisGCPAuthentication
+
+
+AIGatewayRedisGCPAuthentication GCP specific configs for connecting to a
+Cloud Provider's redis instance.
+
+
+
+| Field | Description |
+| --- | --- |
+| `serviceAccountJSON` _string_ | GCP Service Account JSON. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayModelVectorDBConfigRedisCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthentication)
+
+#### AIGatewayRouteConfig
+
+
+AIGatewayRouteConfig Configuration for an AI Gateway route.
+
+
+
+| Field | Description |
+| --- | --- |
+| `headers` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | One or more lists of values indexed by header name that will cause this route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
+| `hosts` _[]string_ | A list of domain names that match this route. Note that the hosts value is case sensitive. |
+| `httpsRedirectStatusCode` _int_ | The status code Kong responds with when all properties of a route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the route is configured to only accept the `https` protocol. |
+| `methods` _[]string_ | A list of HTTP methods that match this route. |
+| `paths` _[]string_ | A list of paths that match this route. |
+| `preserveHost` _string_ | When matching a route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the service's `host`. |
+| `protocols` _[]string_ | An array of the protocols this route should allow. See the [route Object](#route-object) section for a list of accepted protocols. When set to only `https`, HTTP requests are answered with an upgrade error. When set to only `http`, HTTPS requests are answered with an error. |
+| `regexPriority` _int_ | A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones). |
+| `requestBuffering` _string_ | Whether to enable request body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that receive data with chunked transfer encoding. |
+| `responseBuffering` _string_ | Whether to enable response body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that send data with chunked transfer encoding. |
+| `stripPath` _string_ | When matching a route via one of the `paths`, strip the matching prefix from the upstream request URL. |
+| `tags` _[]string_ | An optional set of strings associated with the route for grouping and filtering. |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
+- [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
+
+#### AIGatewayTarget
+
+
+AIGatewayTarget A target instance a model entry routes requests to.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowAuthOverride` _string_ | When enabled, request-level auth parameters (such as API keys or bearer tokens) will override the static values defined for the provider. |
+| `config` _[AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)_ | Configuration for a target model. |
+| `name` _string_ | The name of the model defined in the upstream provider that will be executed. |
+| `provider` _[AIGatewayProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayproviderreference)_ | Reference to a provider instance. This is either the provider ID or the provider name. |
+| `semanticDescription` _string_ | The semantic description of the target, required if using semantic load balancing. Specially, setting this to 'CATCHALL' will indicate such target to be used when no other targets match the semantic threshold. |
+| `weight` _int_ | The weight this target gets within the upstream load balancer |
+
+_Appears in:_
+
+- [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
+- [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+
+#### AIGatewayTargetAnthropicConfig
+
+
+AIGatewayTargetAnthropicConfig Anthropic-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+| `version` _string_ | The Anthropic API version to use. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetAzureConfig
+
+
+AIGatewayTargetAzureConfig Azure-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | The Azure OpenAI API version to use. |
+| `deploymentID` _string_ | The Azure deployment ID for the model. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetBedrockConfig
+
+
+AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `batchBucketPrefix` _string_ | S3 bucket prefix for batch inference jobs. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `embeddingsNormalize` _string_ | Whether to normalize embedding vectors in the response. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `performanceConfigLatency` _string_ | Latency performance configuration for the model invocation. |
+| `region` _string_ | The AWS region for the model. Setting this option overrides the AWS_REGION environment variable. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+| `videoOutputS3URI` _string_ | S3 URI for storing video generation outputs. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetCerebrasConfig
+
+
+AIGatewayTargetCerebrasConfig Cerebras-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetCohereConfig
+
+
+AIGatewayTargetCohereConfig Cohere-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | Cohere API version. `v1` uses the legacy `/v1/chat` endpoint; `v2` (default) uses `/v2/chat` and supports tool calling. |
+| `embeddingInputType` _string_ | The intended downstream use of the embeddings to improve model quality. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+| `waitForModel` _string_ | Whether to wait for the model to be ready before sending the request. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetConfig
+
+
+AIGatewayTargetConfig represents a union type for AIGatewayTargetConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayTargetConfigType](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfigtype)_ | Type designates the type of configuration. |
+| `anthropic` _[AIGatewayTargetAnthropicConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetanthropicconfig)_ | Anthropic configuration. |
+| `azure` _[AIGatewayTargetAzureConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetazureconfig)_ | Azure configuration. |
+| `bedrock` _[AIGatewayTargetBedrockConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetbedrockconfig)_ | Bedrock configuration. |
+| `cerebras` _[AIGatewayTargetCerebrasConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetcerebrasconfig)_ | Cerebras configuration. |
+| `cohere` _[AIGatewayTargetCohereConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetcohereconfig)_ | Cohere configuration. |
+| `dashscope` _[AIGatewayTargetDashscopeConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetdashscopeconfig)_ | Dashscope configuration. |
+| `databricks` _[AIGatewayTargetDatabricksConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetdatabricksconfig)_ | Databricks configuration. |
+| `deepseek` _[AIGatewayTargetDeepseekConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetdeepseekconfig)_ | Deepseek configuration. |
+| `gemini` _[AIGatewayTargetGeminiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetgeminiconfig)_ | Gemini configuration. |
+| `huggingface` _[AIGatewayTargetHuggingfaceConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargethuggingfaceconfig)_ | Huggingface configuration. |
+| `kimi` _[AIGatewayTargetKimiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetkimiconfig)_ | Kimi configuration. |
+| `llama2` _[AIGatewayTargetLlama2Config](#konnect-konghq-com-v1alpha1-types-aigatewaytargetllama2config)_ | Llama2 configuration. |
+| `mistral` _[AIGatewayTargetMistralConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetmistralconfig)_ | Mistral configuration. |
+| `ollama` _[AIGatewayTargetOllamaConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetollamaconfig)_ | Ollama configuration. |
+| `openai` _[AIGatewayTargetOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)_ | Openai configuration. |
+| `vercel` _[AIGatewayTargetVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)_ | Vercel configuration. |
+| `vertex` _[AIGatewayTargetVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvertexconfig)_ | Vertex configuration. |
+| `vllm` _[AIGatewayTargetVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)_ | Vllm configuration. |
+| `xai` _[AIGatewayTargetXaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetxaiconfig)_ | Xai configuration. |
+
+_Appears in:_
+
+- [AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)
+
+#### AIGatewayTargetConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayTargetConfigType represents the type of AIGatewayTargetConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `anthropic` |  |
+| `azure` |  |
+| `bedrock` |  |
+| `cerebras` |  |
+| `cohere` |  |
+| `dashscope` |  |
+| `databricks` |  |
+| `deepseek` |  |
+| `gemini` |  |
+| `huggingface` |  |
+| `kimi` |  |
+| `llama2` |  |
+| `mistral` |  |
+| `ollama` |  |
+| `openai` |  |
+| `vercel` |  |
+| `vertex` |  |
+| `vllm` |  |
+| `xai` |  |
+
+#### AIGatewayTargetDashscopeConfig
+
+
+AIGatewayTargetDashscopeConfig Alibaba DashScope-specific configuration for a
+model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `international` _string_ | Whether to use the international DashScope endpoint. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetDatabricksConfig
+
+
+AIGatewayTargetDatabricksConfig Databricks-specific configuration for a
+model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+| `workspaceInstanceID` _string_ | The Databricks workspace instance ID. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetDeepseekConfig
+
+
+AIGatewayTargetDeepseekConfig Deepseek-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetGeminiConfig
+
+
+AIGatewayTargetGeminiConfig Google Gemini-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiEndpoint` _string_ | The custom API endpoint for the Gemini model. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `endpointID` _string_ | The endpoint ID for the Gemini model. This must be set when running on Gemini on Vertex Model Garden. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `locationID` _string_ | The Google Cloud location ID for the model endpoint. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetHuggingfaceConfig
+
+
+AIGatewayTargetHuggingfaceConfig Hugging Face-specific configuration for a
+model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+| `useCache` _string_ | Whether to use the Hugging Face inference cache. |
+| `waitForModel` _string_ | Whether to wait for the model to load if it is not ready. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetKimiConfig
+
+
+AIGatewayTargetKimiConfig Kimi (Moonshot AI)-specific configuration for a
+model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `international` _string_ | When `true`, requests are sent to `api.moonshot.ai` (international). When `false`, requests are sent to `api.moonshot.cn` (mainland China). |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetLlama2Config
+
+
+AIGatewayTargetLlama2Config Llama2-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `format` _string_ | The request format to use when communicating with the Llama2 model. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetMistralConfig
+
+
+AIGatewayTargetMistralConfig Mistral-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `format` _string_ | The request format to use when communicating with the Mistral model. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetOllamaConfig
+
+
+AIGatewayTargetOllamaConfig Ollama-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetOpenaiConfig
+
+
+AIGatewayTargetOpenaiConfig Openai-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetVercelConfig
+
+
+AIGatewayTargetVercelConfig Vercel AI Gateway-specific configuration for a
+model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetVertexConfig
+
+
+AIGatewayTargetVertexConfig Google Vertex-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiEndpoint` _string_ | The custom API endpoint for the Vertex model. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `endpointID` _string_ | The endpoint ID for the Vertex model. This must be set when running on Vertex Model Garden. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `locationID` _string_ | The Google Cloud location ID for the model endpoint. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetVllmConfig
+
+
+AIGatewayTargetVllmConfig Vllm-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetXaiConfig
+
+
+AIGatewayTargetXaiConfig Xai-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayVercelEmbeddingsModelConfig
+
+
+AIGatewayVercelEmbeddingsModelConfig Vercel AI Gateway-specific configuration
+for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
+#### AIGatewayVertexEmbeddingsModelConfig
+
+
+AIGatewayVertexEmbeddingsModelConfig Google Vertex-specific configuration for
+a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiEndpoint` _string_ | The custom API endpoint for the Vertex model. |
+| `locationID` _string_ | The Google Cloud location ID for the model endpoint. |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
 
 
 
@@ -960,6 +2760,7 @@ KonnectEntityRef is a reference to a Konnect entity.
 
 _Appears in:_
 
+- [AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)
 - [PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)
 - [PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)
 - [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
@@ -1329,6 +3130,34 @@ MCPServerStatus defines the observed state of MCPServer.
 _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+
+#### ManagedBy
+
+_Underlying type:_ `[map[string]ManagedByValue](#map[string]managedbyvalue)`
+
+ManagedBy Stores information about what manages this entity, such as the tool
+or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
+- [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+
+#### ManagedByValue
+
+_Underlying type:_ `string`
+
+ManagedByValue is the value type for ManagedBy.
+
+
+
+
+_Appears in:_
+
+- [ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)
 
 #### Menu
 
@@ -2117,6 +3946,8 @@ for filtering a list of objects.<br /><br />Public labels are intended to store 
 _Appears in:_
 
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
+- [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
+- [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 
 #### PublicLabelsValue
 

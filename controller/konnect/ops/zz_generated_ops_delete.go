@@ -27,6 +27,8 @@ func DeleteGeneratedOps[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.AIGatewayControlPlane:
 		return deleteAIGatewayControlPlane(ctx, sdk.GetAIGatewaysSDK(), ent)
+	case *konnectv1alpha1.AIGatewayModel:
+		return deleteAIGatewayModel(ctx, sdk.GetAIGatewayModelsSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return deleteEventGatewayBackendCluster(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
