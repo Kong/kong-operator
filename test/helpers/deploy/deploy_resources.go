@@ -444,6 +444,83 @@ func Portal(
 	return &obj
 }
 
+// AIGatewayControlPlane deploys an AIGatewayControlPlane resource and returns it.
+func AIGatewayControlPlane(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.AIGatewayControlPlane {
+	t.Helper()
+	name := "ai-gw-cp-" + randomSuffix()
+	obj := konnectv1alpha1.AIGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.AIGatewayControlPlaneSpec{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: apiAuth.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.AIGatewayControlPlaneAPISpec{
+				Name:        konnectv1alpha1.AIGatewayEntityIdentifier(name),
+				DisplayName: "AI Gateway " + name,
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
+// AIGatewayAgent deploys an AIGatewayAgent resource and returns it.
+func AIGatewayAgent(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	gateway *konnectv1alpha1.AIGatewayControlPlane,
+	opts ...ObjOption,
+) *konnectv1alpha1.AIGatewayAgent {
+	t.Helper()
+	name := "ai-agent-" + randomSuffix()
+	obj := konnectv1alpha1.AIGatewayAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.AIGatewayAgentSpec{
+			GatewayRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: gateway.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
+				Name:        konnectv1alpha1.AIGatewayEntityIdentifier(name),
+				DisplayName: "AI Agent " + name,
+				Type:        "http",
+				Config: konnectv1alpha1.Config{
+					URL: "https://upstream.example.com",
+				},
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
 // KonnectEventGateway deploys a KonnectEventGateway resource and returns it.
 func KonnectEventGateway(
 	t *testing.T,

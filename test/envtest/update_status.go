@@ -127,6 +127,29 @@ func updateKongUpstreamStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
+func updateAIGatewayControlPlaneStatusWithProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	obj *konnectv1alpha1.AIGatewayControlPlane,
+	id string,
+) {
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+			return
+		}
+		obj.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
+			ID:        id,
+			ServerURL: sdkmocks.SDKServerURL,
+			OrgID:     "org-id",
+		}
+		obj.Status.Conditions = []metav1.Condition{
+			programmedCondition(obj.GetGeneration()),
+		}
+		assert.NoError(ct, cl.Status().Update(ctx, obj))
+	}, waitTime, tickTime)
+}
+
 func updateKonnectEventGatewayStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
