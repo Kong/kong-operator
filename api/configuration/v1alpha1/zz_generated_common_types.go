@@ -254,3 +254,49 @@ func renameKeysToSDK(v any) any {
 	}
 	return v
 }
+
+// sdkOpsConstField describes a const discriminator to inject at a payload path.
+type sdkOpsConstField struct {
+	Path  []string
+	Key   string
+	Value string
+}
+
+// injectSDKOpsConstFields sets each const discriminator into the payload, only
+// when the key is absent, so user- or union-provided values are never overridden.
+func injectSDKOpsConstFields(payload map[string]any, fields []sdkOpsConstField) {
+	for _, f := range fields {
+		setSDKOpsConstAtPath(payload, f.Path, f.Key, f.Value)
+	}
+}
+
+func setSDKOpsConstAtPath(v any, path []string, key, value string) {
+	if len(path) == 0 {
+		if m, ok := v.(map[string]any); ok {
+			if _, exists := m[key]; !exists {
+				m[key] = value
+			}
+		}
+		return
+	}
+	switch segment := path[0]; segment {
+	case "[]":
+		if items, ok := v.([]any); ok {
+			for _, item := range items {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	case "{}":
+		if object, ok := v.(map[string]any); ok {
+			for _, item := range object {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	default:
+		if object, ok := v.(map[string]any); ok {
+			if child, ok := object[segment]; ok {
+				setSDKOpsConstAtPath(child, path[1:], key, value)
+			}
+		}
+	}
+}

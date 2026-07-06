@@ -596,6 +596,10 @@ _test.unit: gotestsum
 		-coverprofile=coverage.unit.out \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(UNIT_TEST_PATHS)
+	$(MAKE) _test.unit.crd-from-oas
+
+.PHONY: _test.unit.crd-from-oas
+_test.unit.crd-from-oas:
 	cd crd-from-oas && \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \

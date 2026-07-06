@@ -475,7 +475,8 @@ import (
 {{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}}){{if .BoolFields}}
+{{end}})
+{{- if .BoolFields}}
 
 // {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type {{$.EntityName}}SDKOpsBoolField struct {
@@ -576,7 +577,25 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}
+{{- end}}
+{{- if .ConstFields}}
+
+// {{$.EntityName}}SDKOpsConstFields lists const discriminators that were stripped
+// from the CRD structs but are required by the Konnect SDK request types.
+var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
+{{- range .ConstFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+		Key:   "{{.Key}}",
+		Value: "{{.Value}}",
+	},
+{{- end}}
+}
+{{- end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
@@ -599,6 +618,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 		if err := normalize{{$.EntityName}}SDKOpsBoolFields(pm); err != nil {
 			return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
 		}
+	}
+	{{- end}}
+	{{- if $.ConstFields}}
+	if pm, ok := payload.(map[string]any); ok {
+		injectSDKOpsConstFields(pm, {{$.EntityName}}SDKOpsConstFields)
 	}
 	{{- end}}
 	data, err = json.Marshal(payload)
@@ -819,7 +843,8 @@ import (
 {{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}}){{if .BoolFields}}
+{{end}})
+{{- if .BoolFields}}
 
 // {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
 type {{$.EntityName}}SDKOpsBoolField struct {
@@ -920,7 +945,25 @@ func normalize{{$.EntityName}}SDKOpsBoolField(value any, path []string) (any, er
 		return object, nil
 	}
 }
-{{end}}
+{{- end}}
+{{- if .ConstFields}}
+
+// {{$.EntityName}}SDKOpsConstFields lists const discriminators that were stripped
+// from the CRD structs but are required by the Konnect SDK request types.
+var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
+{{- range .ConstFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+		Key:   "{{.Key}}",
+		Value: "{{.Value}}",
+	},
+{{- end}}
+}
+{{- end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
@@ -946,6 +989,9 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
 	}
+	{{- end }}
+	{{- if $.ConstFields}}
+	injectSDKOpsConstFields(payload, {{$.EntityName}}SDKOpsConstFields)
 	{{- end }}
 	return payload, nil
 }
@@ -1767,6 +1813,8 @@ import (
 ` + flattenSensitiveDataHelper + `
 
 ` + renameKeysToSDKHelper + `
+
+` + injectSDKOpsConstFieldsHelper + `
 `
 
 // opsPerEntityFileHeaderTemplate renders the shared file header (preamble,

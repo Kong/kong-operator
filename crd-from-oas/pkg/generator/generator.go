@@ -1455,6 +1455,9 @@ func (g *Generator) collectNamedRefsFromProperty(prop *parser.Property, refs map
 
 func collectUnionMemberDiscriminators(parsed *parser.ParsedSpec) map[string]map[string]struct{} {
 	unionMemberDiscriminators := make(map[string]map[string]struct{})
+	if parsed == nil || parsed.RequestBodies == nil && parsed.Schemas == nil {
+		return unionMemberDiscriminators
+	}
 
 	for _, schema := range parsed.RequestBodies {
 		collectSchemaUnionMemberDiscriminators(schema, unionMemberDiscriminators)
@@ -3770,6 +3773,16 @@ type sdkOpsBoolField struct {
 	Path  []string
 }
 
+// sdkOpsConstField represents a const discriminator that was stripped from the
+// CRD struct but is required by the SDK request type, to be re-injected at the
+// given payload path (e.g. Path=[anthropic config auth], Key="type", Value="basic").
+type sdkOpsConstField struct {
+	Label string
+	Path  []string
+	Key   string
+	Value string
+}
+
 // sdkOpsTestField represents a field to populate in the generated test.
 type sdkOpsTestField struct {
 	FieldName     string
@@ -3821,9 +3834,10 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		return "", err
 	}
 	boolFields := g.collectSDKOpsBoolFields(schema)
+	constFields := g.collectSDKOpsConstFields(schema)
 
 	if hasRootOneOf(schema) {
-		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields)
+		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields, constFields)
 	}
 
 	standardMethods := make([]sdkOpsMethod, 0, len(methods))
@@ -3847,6 +3861,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		EntityName              string
 		Imports                 []*sdkOpsImport
 		BoolFields              []sdkOpsBoolField
+		ConstFields             []sdkOpsConstField
 		Methods                 []sdkOpsMethod
 		NeedsClient             bool
 		SecretReferences        []SecretReferenceForTemplate
@@ -3860,6 +3875,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		EntityName:              entityName,
 		Imports:                 imports,
 		BoolFields:              boolFields,
+		ConstFields:             constFields,
 		Methods:                 standardMethods,
 		NeedsClient:             opsConfig.RequireClient,
 		SecretReferences:        g.templateSecretReferences(entityName),
@@ -3929,6 +3945,7 @@ func (g *Generator) generateRootUnionSDKOps(
 	imports []*sdkOpsImport,
 	methods []sdkOpsMethod,
 	boolFields []sdkOpsBoolField,
+	constFields []sdkOpsConstField,
 ) (string, error) {
 	rootUnionTypeName := goFieldName(entityName + "Config")
 
@@ -3995,6 +4012,7 @@ func (g *Generator) generateRootUnionSDKOps(
 	wrappedCreateBodyTypeName := ""
 	createMethodTypeName := ""
 	updateMethodTypeName := ""
+	updateMethodImportPath := ""
 	for _, method := range rootUnionMethods {
 		if method.IsCreate && method.IsOperationsWrapped {
 			wrappedCreateBodyTypeName = method.BodyTypeName
@@ -4006,7 +4024,22 @@ func (g *Generator) generateRootUnionSDKOps(
 		}
 		if !method.IsCreate && updateMethodTypeName == "" {
 			updateMethodTypeName = method.TypeName
+			updateMethodImportPath = method.ImportPath
 		}
+	}
+
+	// Determine whether the SDK update request type is itself a discriminated
+	// union (like the create request) rather than a struct wrapping a nested
+	// payload field. Introspecting the SDK type is authoritative; guessing from
+	// the OAS shape misclassifies variants whose only required $ref property is a
+	// scalar (e.g. a named string), which the SDK collapses to a plain type.
+	updateSDKTypeIsUnion := false
+	if hasUpdateMethod && !isOperationsWrapped && updateMethodTypeName != "" {
+		memberFields, err := ParseSDKUnionMemberFieldNames(updateMethodImportPath, updateMethodTypeName)
+		if err != nil {
+			return "", fmt.Errorf("failed to inspect SDK update type %s for %s: %w", updateMethodTypeName, entityName, err)
+		}
+		updateSDKTypeIsUnion = len(memberFields) > 0
 	}
 
 	var rawVariantNames []string
@@ -4035,7 +4068,14 @@ func (g *Generator) generateRootUnionSDKOps(
 		updateConstructorName := ""
 		updateDirectUnion := false
 		fieldName := fixInitialisms(variantNames[i])
-		if hasUpdateMethod && !isOperationsWrapped {
+		if hasUpdateMethod && !isOperationsWrapped && updateSDKTypeIsUnion {
+			// The SDK update request is a discriminated union (same shape as
+			// create); rebuild the selected variant directly via its update
+			// constructor instead of targeting a nested payload field.
+			updateVariantTypeName = fixInitialisms(variantRefName)
+			updateConstructorName = "Create" + updateMethodTypeName + fieldName
+			updateDirectUnion = true
+		} else if hasUpdateMethod && !isOperationsWrapped {
 			updatePayloadProp, err := findRootUnionUpdatePayloadProperty(variant.Properties)
 			if err != nil {
 				// Heuristic: when a root-union update variant exposes multiple required
@@ -4093,6 +4133,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		UnionTypeName    string
 		Imports          []*sdkOpsImport
 		BoolFields       []sdkOpsBoolField
+		ConstFields      []sdkOpsConstField
 		Methods          []sdkOpsRootUnionMethod
 		Variants         []sdkOpsRootUnionVariant
 		NeedsClient      bool
@@ -4103,6 +4144,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		UnionTypeName:    rootUnionTypeName,
 		Imports:          imports,
 		BoolFields:       boolFields,
+		ConstFields:      constFields,
 		Methods:          rootUnionMethods,
 		Variants:         variants,
 		NeedsClient:      opsConfig.RequireClient,
@@ -4381,6 +4423,118 @@ func (g *Generator) collectSDKOpsBoolFieldsFromProperty(prop *parser.Property, p
 
 func sdkOpsBoolFieldLabel(path []string) string {
 	return strings.Join(path, ".")
+}
+
+// collectSDKOpsConstFields finds discriminator fields that were stripped from
+// the generated CRD structs (because the referenced schema is also used as a
+// discriminated-union member) but are still required by the SDK request types.
+// For a plain $ref (non-union) to such a schema, the single-value-enum
+// discriminator (e.g. auth type="basic") has no CRD source and must be
+// re-injected into the SDK payload at marshal time. Paths use OAS property
+// names, which match the snake_case payload produced by renameKeysToSDK.
+func (g *Generator) collectSDKOpsConstFields(schema *parser.Schema) []sdkOpsConstField {
+	if schema == nil {
+		return nil
+	}
+
+	discs := collectUnionMemberDiscriminators(g.parsed)
+	var fields []sdkOpsConstField
+	seen := make(map[string]struct{})
+
+	for _, prop := range schema.Properties {
+		g.collectSDKOpsConstFieldsFromProperty(prop, []string{prop.Name}, discs, map[string]struct{}{}, seen, &fields)
+	}
+	if len(schema.OneOf) > 0 {
+		rawVariantNames := make([]string, 0, len(schema.OneOf))
+		for _, variant := range schema.OneOf {
+			variantName := variant.Name
+			if variant.RefName != "" {
+				variantName = variant.RefName
+			}
+			rawVariantNames = append(rawVariantNames, variantName)
+		}
+		variantNames := extractVariantNames(rawVariantNames)
+		discValueForRef := make(map[string]string, len(schema.DiscriminatorMapping))
+		for discValue, refName := range schema.DiscriminatorMapping {
+			discValueForRef[refName] = discValue
+		}
+		for i, variant := range schema.OneOf {
+			variantRefName := variant.Name
+			if variant.RefName != "" {
+				variantRefName = variant.RefName
+			}
+			variantJSONName := discValueForRef[variantRefName]
+			if variantJSONName == "" {
+				variantJSONName = strings.ToLower(variantNames[i])
+			}
+			for _, nestedProp := range variant.Properties {
+				g.collectSDKOpsConstFieldsFromProperty(nestedProp, []string{variantJSONName, nestedProp.Name}, discs, map[string]struct{}{}, seen, &fields)
+			}
+		}
+	}
+
+	sort.Slice(fields, func(i, j int) bool {
+		return fields[i].Label < fields[j].Label
+	})
+
+	return fields
+}
+
+func (g *Generator) collectSDKOpsConstFieldsFromProperty(
+	prop *parser.Property,
+	path []string,
+	discs map[string]map[string]struct{},
+	visited, seen map[string]struct{},
+	fields *[]sdkOpsConstField,
+) {
+	if g == nil || g.parsed == nil || prop == nil || skipProperty(prop) {
+		return
+	}
+
+	// A plain $ref (not a union at this position) to a schema whose discriminator
+	// was stripped: re-inject the stripped single-value-enum discriminator here.
+	if prop.RefName != "" && len(prop.OneOf) == 0 && len(prop.AnyOf) == 0 {
+		if refSchema := g.parsed.Schemas[prop.RefName]; refSchema != nil {
+			if stripped, ok := discs[prop.RefName]; ok {
+				for _, refProp := range refSchema.Properties {
+					if _, isStripped := stripped[refProp.Name]; !isStripped {
+						continue
+					}
+					if len(refProp.Enum) != 1 {
+						continue
+					}
+					label := strings.Join(path, ".") + "." + refProp.Name
+					if _, dup := seen[label]; dup {
+						continue
+					}
+					seen[label] = struct{}{}
+					*fields = append(*fields, sdkOpsConstField{
+						Label: label,
+						Path:  append([]string(nil), path...),
+						Key:   refProp.Name,
+						Value: fmt.Sprintf("%v", refProp.Enum[0]),
+					})
+				}
+			}
+			// Recurse into the ref schema's own properties for deeper nested refs.
+			if _, done := visited[prop.RefName]; !done {
+				visited[prop.RefName] = struct{}{}
+				for _, refProp := range refSchema.Properties {
+					g.collectSDKOpsConstFieldsFromProperty(refProp, append(append([]string(nil), path...), refProp.Name), discs, visited, seen, fields)
+				}
+			}
+		}
+	}
+
+	if prop.Items != nil {
+		g.collectSDKOpsConstFieldsFromProperty(prop.Items, append(append([]string(nil), path...), "[]"), discs, visited, seen, fields)
+	}
+	for _, nestedProp := range prop.Properties {
+		g.collectSDKOpsConstFieldsFromProperty(nestedProp, append(append([]string(nil), path...), nestedProp.Name), discs, visited, seen, fields)
+	}
+	if prop.AdditionalProperties != nil {
+		g.collectSDKOpsConstFieldsFromProperty(prop.AdditionalProperties, append(append([]string(nil), path...), "{}"), discs, visited, seen, fields)
+	}
 }
 
 func findRootUnionUpdatePayloadProperty(properties []*parser.Property) (*parser.Property, error) {

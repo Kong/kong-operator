@@ -280,6 +280,305 @@ func TestAIGatewayModelVectorDBConfigRedis_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayProviderAnthropic_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderAnthropic
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderAzure_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderAzure
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderBedrock_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderBedrock
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderCerebras_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderCerebras
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderCohere_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderCohere
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderConfigAuthAWS_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderConfigAuthAWS
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderConfigAuthAzure_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderConfigAuthAzure
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderConfigAuthBasic_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderConfigAuthBasic
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderConfigAuthGCP_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderConfigAuthGCP
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderDashscope_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderDashscope
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderDatabricks_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderDatabricks
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderDeepseek_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderDeepseek
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderGemini_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderGemini
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderHuggingface_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderHuggingface
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderKimi_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderKimi
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderLlama2_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderLlama2
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderMistral_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderMistral
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderOllama_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderOllama
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderOpenai_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderOpenai
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderVercel_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderVercel
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderVertex_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderVertex
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderVllm_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderVllm
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayProviderXai_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayProviderXai
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayProxyConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 

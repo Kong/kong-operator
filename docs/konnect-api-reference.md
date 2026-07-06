@@ -11,6 +11,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 
 - [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
 - [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
+- [AIGatewayProvider](#konnect-konghq-com-v1alpha1-aigatewayprovider)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
@@ -56,6 +57,21 @@ AIGatewayModel is the Schema for the aigatewaymodels API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayModelSpec](#konnect-konghq-com-v1alpha1-types-aigatewaymodelspec)_ |  |
 | `status` _[AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)_ |  |
+
+### AIGatewayProvider
+
+
+AIGatewayProvider is the Schema for the aigatewayproviders API.
+
+<!-- ai_gateway_provider description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayProvider`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayProviderSpec](#konnect-konghq-com-v1alpha1-types-aigatewayproviderspec)_ |  |
+| `status` _[AIGatewayProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewayproviderstatus)_ |  |
 
 ### KonnectAPIAuthConfiguration
 
@@ -478,6 +494,25 @@ _Appears in:_
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+- [AIGatewayProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropic)
+- [AIGatewayProviderAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazure)
+- [AIGatewayProviderBedrock](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrock)
+- [AIGatewayProviderCerebras](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercerebras)
+- [AIGatewayProviderCohere](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercohere)
+- [AIGatewayProviderDashscope](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdashscope)
+- [AIGatewayProviderDatabricks](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdatabricks)
+- [AIGatewayProviderDeepseek](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdeepseek)
+- [AIGatewayProviderGemini](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergemini)
+- [AIGatewayProviderHuggingface](#konnect-konghq-com-v1alpha1-types-aigatewayproviderhuggingface)
+- [AIGatewayProviderKimi](#konnect-konghq-com-v1alpha1-types-aigatewayproviderkimi)
+- [AIGatewayProviderLlama2](#konnect-konghq-com-v1alpha1-types-aigatewayproviderllama2)
+- [AIGatewayProviderMistral](#konnect-konghq-com-v1alpha1-types-aigatewayprovidermistral)
+- [AIGatewayProviderOllama](#konnect-konghq-com-v1alpha1-types-aigatewayproviderollama)
+- [AIGatewayProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewayprovideropenai)
+- [AIGatewayProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervercel)
+- [AIGatewayProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertex)
+- [AIGatewayProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervllm)
+- [AIGatewayProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewayproviderxai)
 
 #### AIGatewayGeminiEmbeddingsModelConfig
 
@@ -1411,6 +1446,841 @@ Allowed values:
 | `pgvector` |  |
 | `redis` |  |
 
+#### AIGatewayProviderAPISpec
+
+
+AIGatewayProviderAPISpec defines the API spec fields for AIGatewayProvider.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayProviderSpec](#konnect-konghq-com-v1alpha1-types-aigatewayproviderspec)
+
+#### AIGatewayProviderAnthropic
+
+
+AIGatewayProviderAnthropic Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderAnthropicConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropicconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderAnthropicConfig
+
+
+AIGatewayProviderAnthropicConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropic)
+
+#### AIGatewayProviderAzure
+
+
+AIGatewayProviderAzure Config for Azure LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderAzureConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazureconfig)_ |  |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderAzureConfig
+
+
+AIGatewayProviderAzureConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderAzureConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazureconfigauth)_ |  |
+| `instance` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayProviderAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazure)
+
+#### AIGatewayProviderAzureConfigAuth
+
+
+AIGatewayProviderAzureConfigAuth represents a union type for auth.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayProviderAzureConfigAuthType](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazureconfigauthtype)_ | Type designates the type of configuration. |
+| `azure` _[AIGatewayProviderConfigAuthAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthazure)_ | Azure configuration. |
+| `basic` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic configuration. |
+
+_Appears in:_
+
+- [AIGatewayProviderAzureConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazureconfig)
+
+#### AIGatewayProviderAzureConfigAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayProviderAzureConfigAuthType represents the type of auth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayProviderAzureConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazureconfigauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `azure` |  |
+| `basic` |  |
+
+#### AIGatewayProviderBedrock
+
+
+AIGatewayProviderBedrock Config for AWS LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderBedrockConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrockconfig)_ |  |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderBedrockConfig
+
+
+AIGatewayProviderBedrockConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderBedrockConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrockconfigauth)_ |  |
+
+_Appears in:_
+
+- [AIGatewayProviderBedrock](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrock)
+
+#### AIGatewayProviderBedrockConfigAuth
+
+
+AIGatewayProviderBedrockConfigAuth represents a union type for auth.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayProviderBedrockConfigAuthType](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrockconfigauthtype)_ | Type designates the type of configuration. |
+| `aws` _[AIGatewayProviderConfigAuthAWS](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthaws)_ | AWS configuration. |
+| `basic` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic configuration. |
+
+_Appears in:_
+
+- [AIGatewayProviderBedrockConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrockconfig)
+
+#### AIGatewayProviderBedrockConfigAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayProviderBedrockConfigAuthType represents the type of auth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayProviderBedrockConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrockconfigauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `basic` |  |
+
+#### AIGatewayProviderCerebras
+
+
+AIGatewayProviderCerebras Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderCerebrasConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercerebrasconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderCerebrasConfig
+
+
+AIGatewayProviderCerebrasConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderCerebras](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercerebras)
+
+#### AIGatewayProviderCohere
+
+
+AIGatewayProviderCohere Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderCohereConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercohereconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderCohereConfig
+
+
+AIGatewayProviderCohereConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderCohere](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercohere)
+
+#### AIGatewayProviderConfig
+
+
+AIGatewayProviderConfig represents a union type for AIGatewayProviderConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayProviderConfigType](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigtype)_ | Type designates the type of configuration. |
+| `anthropic` _[AIGatewayProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropic)_ | Anthropic configuration. |
+| `azure` _[AIGatewayProviderAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazure)_ | Azure configuration. |
+| `bedrock` _[AIGatewayProviderBedrock](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrock)_ | Bedrock configuration. |
+| `cerebras` _[AIGatewayProviderCerebras](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercerebras)_ | Cerebras configuration. |
+| `cohere` _[AIGatewayProviderCohere](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercohere)_ | Cohere configuration. |
+| `dashscope` _[AIGatewayProviderDashscope](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdashscope)_ | Dashscope configuration. |
+| `databricks` _[AIGatewayProviderDatabricks](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdatabricks)_ | Databricks configuration. |
+| `deepseek` _[AIGatewayProviderDeepseek](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdeepseek)_ | Deepseek configuration. |
+| `gemini` _[AIGatewayProviderGemini](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergemini)_ | Gemini configuration. |
+| `huggingface` _[AIGatewayProviderHuggingface](#konnect-konghq-com-v1alpha1-types-aigatewayproviderhuggingface)_ | Huggingface configuration. |
+| `kimi` _[AIGatewayProviderKimi](#konnect-konghq-com-v1alpha1-types-aigatewayproviderkimi)_ | Kimi configuration. |
+| `llama2` _[AIGatewayProviderLlama2](#konnect-konghq-com-v1alpha1-types-aigatewayproviderllama2)_ | Llama2 configuration. |
+| `mistral` _[AIGatewayProviderMistral](#konnect-konghq-com-v1alpha1-types-aigatewayprovidermistral)_ | Mistral configuration. |
+| `ollama` _[AIGatewayProviderOllama](#konnect-konghq-com-v1alpha1-types-aigatewayproviderollama)_ | Ollama configuration. |
+| `openai` _[AIGatewayProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewayprovideropenai)_ | Openai configuration. |
+| `vercel` _[AIGatewayProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervercel)_ | Vercel configuration. |
+| `vertex` _[AIGatewayProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertex)_ | Vertex configuration. |
+| `vllm` _[AIGatewayProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervllm)_ | Vllm configuration. |
+| `xai` _[AIGatewayProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewayproviderxai)_ | Xai configuration. |
+
+_Appears in:_
+
+- [AIGatewayProviderAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayproviderapispec)
+
+#### AIGatewayProviderConfigAuthAWS
+
+
+AIGatewayProviderConfigAuthAWS Configuration for AWS LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `accessKeyID` _string_ | The access key id for authenticating with static IAM User credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `assumeRoleArn` _string_ | The ARN of the IAM role to assume for generating authentication tokens. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `batchRoleArn` _string_ | AWS role arn to use when calling the batch API. |
+| `roleSessionName` _string_ | The session name for the temporary credentials when assuming the IAM role. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `secretAccessKey` _string_ | The secret access key for authenticating with static IAM User credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `stsEndpointURL` _string_ | The STS endpoint URL to use for generating authentication tokens. If not specified, the default AWS STS endpoint will be used. |
+
+_Appears in:_
+
+- [AIGatewayProviderBedrockConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrockconfigauth)
+
+#### AIGatewayProviderConfigAuthAzure
+
+
+AIGatewayProviderConfigAuthAzure Configuration for Azure LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `clientID` _string_ | If azure_use_managed_identity is set to true, and you need to use a different user-assigned identity for this LLM instance, set the client ID. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `clientSecret` _string_ | If azure_use_managed_identity is set to true, and you need to use a different user-assigned identity for this LLM instance, set the client secret. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `tenantID` _string_ | If azure_use_managed_identity is set to true, and you need to use a different user-assigned identity for this LLM instance, set the tenant ID. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `useManagedIdentity` _string_ | Set true to use the Azure Cloud Managed Identity (or user-assigned identity) to authenticate with Azure-provider models. |
+
+_Appears in:_
+
+- [AIGatewayProviderAzureConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazureconfigauth)
+
+#### AIGatewayProviderConfigAuthBasic
+
+
+AIGatewayProviderConfigAuthBasic Basic auth config for an upstream LLM
+provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `headers` _[AIGatewayProviderConfigAuthBasicHeaders](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasicheaders)_ |  |
+| `params` _[AIGatewayProviderConfigAuthBasicParams](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasicparams)_ |  |
+
+_Appears in:_
+
+- [AIGatewayProviderAnthropicConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropicconfig)
+- [AIGatewayProviderAzureConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazureconfigauth)
+- [AIGatewayProviderBedrockConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrockconfigauth)
+- [AIGatewayProviderCerebrasConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercerebrasconfig)
+- [AIGatewayProviderCohereConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercohereconfig)
+- [AIGatewayProviderDashscopeConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdashscopeconfig)
+- [AIGatewayProviderDatabricksConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdatabricksconfig)
+- [AIGatewayProviderDeepseekConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdeepseekconfig)
+- [AIGatewayProviderGeminiConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergeminiconfigauth)
+- [AIGatewayProviderHuggingfaceConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderhuggingfaceconfig)
+- [AIGatewayProviderKimiConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderkimiconfig)
+- [AIGatewayProviderLlama2Config](#konnect-konghq-com-v1alpha1-types-aigatewayproviderllama2config)
+- [AIGatewayProviderMistralConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidermistralconfig)
+- [AIGatewayProviderOllamaConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderollamaconfig)
+- [AIGatewayProviderOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovideropenaiconfig)
+- [AIGatewayProviderVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervercelconfig)
+- [AIGatewayProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertexconfigauth)
+- [AIGatewayProviderVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervllmconfig)
+- [AIGatewayProviderXaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderxaiconfig)
+
+#### AIGatewayProviderConfigAuthBasicHeaders
+
+
+AIGatewayProviderConfigAuthBasicHeaders is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | The name of the header used for authentication. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `value` _string_ | The auth header value for ‘header_name’, for example ‘Bearer key...’. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)
+
+#### AIGatewayProviderConfigAuthBasicParams
+
+
+AIGatewayProviderConfigAuthBasicParams is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `location` _string_ | Specify whether the param name and value options go in a query string, or the POST form/JSON body. |
+| `name` _string_ | This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `value` _string_ | This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)
+
+#### AIGatewayProviderConfigAuthGCP
+
+
+AIGatewayProviderConfigAuthGCP Configuration for GCP LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `metadataURL` _string_ | Custom metadata URL for GCP authentication. Useful for restricted network environments or custom GCP endpoints. If not set, Kong will use the default Google metadata endpoint. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `oauthTokenURL` _string_ | Custom OAuth token URL for GCP authentication. Useful for restricted network environments or custom GCP endpoints. If not set, Kong will use the default Google OAuth token endpoint. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `serviceAccountJSON` _string_ | Full JSON string of the GCP service account to authenticate. If not set (and gcp_use_service_account is true), the service account JSON will be from the environment variable GCP_SERVICE_ACCOUNT. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `useGcpServiceAccount` _string_ | Use service account auth for GCP-based providers and models. |
+
+_Appears in:_
+
+- [AIGatewayProviderGeminiConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergeminiconfigauth)
+- [AIGatewayProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertexconfigauth)
+
+#### AIGatewayProviderConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayProviderConfigType represents the type of AIGatewayProviderConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `anthropic` |  |
+| `azure` |  |
+| `bedrock` |  |
+| `cerebras` |  |
+| `cohere` |  |
+| `dashscope` |  |
+| `databricks` |  |
+| `deepseek` |  |
+| `gemini` |  |
+| `huggingface` |  |
+| `kimi` |  |
+| `llama2` |  |
+| `mistral` |  |
+| `ollama` |  |
+| `openai` |  |
+| `vercel` |  |
+| `vertex` |  |
+| `vllm` |  |
+| `xai` |  |
+
+#### AIGatewayProviderDashscope
+
+
+AIGatewayProviderDashscope Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderDashscopeConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdashscopeconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderDashscopeConfig
+
+
+AIGatewayProviderDashscopeConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderDashscope](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdashscope)
+
+#### AIGatewayProviderDatabricks
+
+
+AIGatewayProviderDatabricks Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderDatabricksConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdatabricksconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderDatabricksConfig
+
+
+AIGatewayProviderDatabricksConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderDatabricks](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdatabricks)
+
+#### AIGatewayProviderDeepseek
+
+
+AIGatewayProviderDeepseek Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderDeepseekConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdeepseekconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderDeepseekConfig
+
+
+AIGatewayProviderDeepseekConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderDeepseek](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdeepseek)
+
+#### AIGatewayProviderGemini
+
+
+AIGatewayProviderGemini Config for GCP LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderGeminiConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergeminiconfig)_ |  |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderGeminiConfig
+
+
+AIGatewayProviderGeminiConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderGeminiConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergeminiconfigauth)_ |  |
+| `projectID` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayProviderGemini](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergemini)
+
+#### AIGatewayProviderGeminiConfigAuth
+
+
+AIGatewayProviderGeminiConfigAuth represents a union type for auth.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayProviderGeminiConfigAuthType](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergeminiconfigauthtype)_ | Type designates the type of configuration. |
+| `basic` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic configuration. |
+| `gcp` _[AIGatewayProviderConfigAuthGCP](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthgcp)_ | GCP configuration. |
+
+_Appears in:_
+
+- [AIGatewayProviderGeminiConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergeminiconfig)
+
+#### AIGatewayProviderGeminiConfigAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayProviderGeminiConfigAuthType represents the type of auth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayProviderGeminiConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergeminiconfigauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `basic` |  |
+| `gcp` |  |
+
+#### AIGatewayProviderHuggingface
+
+
+AIGatewayProviderHuggingface Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderHuggingfaceConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderhuggingfaceconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderHuggingfaceConfig
+
+
+AIGatewayProviderHuggingfaceConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderHuggingface](#konnect-konghq-com-v1alpha1-types-aigatewayproviderhuggingface)
+
+#### AIGatewayProviderKimi
+
+
+AIGatewayProviderKimi Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderKimiConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderkimiconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderKimiConfig
+
+
+AIGatewayProviderKimiConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderKimi](#konnect-konghq-com-v1alpha1-types-aigatewayproviderkimi)
+
+#### AIGatewayProviderLlama2
+
+
+AIGatewayProviderLlama2 Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderLlama2Config](#konnect-konghq-com-v1alpha1-types-aigatewayproviderllama2config)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderLlama2Config
+
+
+AIGatewayProviderLlama2Config Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderLlama2](#konnect-konghq-com-v1alpha1-types-aigatewayproviderllama2)
+
+#### AIGatewayProviderMistral
+
+
+AIGatewayProviderMistral Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderMistralConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidermistralconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderMistralConfig
+
+
+AIGatewayProviderMistralConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderMistral](#konnect-konghq-com-v1alpha1-types-aigatewayprovidermistral)
+
+#### AIGatewayProviderOllama
+
+
+AIGatewayProviderOllama Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderOllamaConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderollamaconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderOllamaConfig
+
+
+AIGatewayProviderOllamaConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderOllama](#konnect-konghq-com-v1alpha1-types-aigatewayproviderollama)
+
+#### AIGatewayProviderOpenai
+
+
+AIGatewayProviderOpenai Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovideropenaiconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderOpenaiConfig
+
+
+AIGatewayProviderOpenaiConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewayprovideropenai)
+
 #### AIGatewayProviderReference
 
 _Underlying type:_ `string`
@@ -1425,6 +2295,214 @@ _Appears in:_
 
 - [AIGatewayModelBalancerSemanticConfigEmbeddings](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddings)
 - [AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)
+
+#### AIGatewayProviderSpec
+
+
+AIGatewayProviderSpec defines the desired state of AIGatewayProvider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `apiSpec` _[AIGatewayProviderAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayproviderapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayProvider](#konnect-konghq-com-v1alpha1-aigatewayprovider)
+
+#### AIGatewayProviderStatus
+
+
+AIGatewayProviderStatus defines the observed state of AIGatewayProvider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayProvider](#konnect-konghq-com-v1alpha1-aigatewayprovider)
+
+#### AIGatewayProviderVercel
+
+
+AIGatewayProviderVercel Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervercelconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderVercelConfig
+
+
+AIGatewayProviderVercelConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervercel)
+
+#### AIGatewayProviderVertex
+
+
+AIGatewayProviderVertex Config for GCP LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertexconfig)_ |  |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderVertexConfig
+
+
+AIGatewayProviderVertexConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertexconfigauth)_ |  |
+| `projectID` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertex)
+
+#### AIGatewayProviderVertexConfigAuth
+
+
+AIGatewayProviderVertexConfigAuth represents a union type for auth.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayProviderVertexConfigAuthType](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertexconfigauthtype)_ | Type designates the type of configuration. |
+| `basic` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic configuration. |
+| `gcp` _[AIGatewayProviderConfigAuthGCP](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthgcp)_ | GCP configuration. |
+
+_Appears in:_
+
+- [AIGatewayProviderVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertexconfig)
+
+#### AIGatewayProviderVertexConfigAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayProviderVertexConfigAuthType represents the type of auth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertexconfigauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `basic` |  |
+| `gcp` |  |
+
+#### AIGatewayProviderVllm
+
+
+AIGatewayProviderVllm Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervllmconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderVllmConfig
+
+
+AIGatewayProviderVllmConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervllm)
+
+#### AIGatewayProviderXai
+
+
+AIGatewayProviderXai Configuration for an upstream LLM provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayProviderXaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderxaiconfig)_ | Configuration for the provider. |
+| `displayName` _string_ | The display name for this provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfig)
+
+#### AIGatewayProviderXaiConfig
+
+
+AIGatewayProviderXaiConfig Configuration for the provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasic)_ | Basic auth config for an upstream LLM provider. |
+
+_Appears in:_
+
+- [AIGatewayProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewayproviderxai)
 
 #### AIGatewayProxyConfig
 
@@ -2778,6 +3856,7 @@ KonnectEntityRef is a reference to a Konnect entity.
 _Appears in:_
 
 - [AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)
+- [AIGatewayProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewayproviderstatus)
 - [PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)
 - [PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)
 - [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)
@@ -3162,6 +4241,25 @@ _Appears in:_
 
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+- [AIGatewayProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropic)
+- [AIGatewayProviderAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazure)
+- [AIGatewayProviderBedrock](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrock)
+- [AIGatewayProviderCerebras](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercerebras)
+- [AIGatewayProviderCohere](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercohere)
+- [AIGatewayProviderDashscope](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdashscope)
+- [AIGatewayProviderDatabricks](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdatabricks)
+- [AIGatewayProviderDeepseek](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdeepseek)
+- [AIGatewayProviderGemini](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergemini)
+- [AIGatewayProviderHuggingface](#konnect-konghq-com-v1alpha1-types-aigatewayproviderhuggingface)
+- [AIGatewayProviderKimi](#konnect-konghq-com-v1alpha1-types-aigatewayproviderkimi)
+- [AIGatewayProviderLlama2](#konnect-konghq-com-v1alpha1-types-aigatewayproviderllama2)
+- [AIGatewayProviderMistral](#konnect-konghq-com-v1alpha1-types-aigatewayprovidermistral)
+- [AIGatewayProviderOllama](#konnect-konghq-com-v1alpha1-types-aigatewayproviderollama)
+- [AIGatewayProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewayprovideropenai)
+- [AIGatewayProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervercel)
+- [AIGatewayProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertex)
+- [AIGatewayProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervllm)
+- [AIGatewayProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewayproviderxai)
 
 #### ManagedByValue
 
@@ -3965,6 +5063,25 @@ _Appears in:_
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+- [AIGatewayProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropic)
+- [AIGatewayProviderAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazure)
+- [AIGatewayProviderBedrock](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrock)
+- [AIGatewayProviderCerebras](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercerebras)
+- [AIGatewayProviderCohere](#konnect-konghq-com-v1alpha1-types-aigatewayprovidercohere)
+- [AIGatewayProviderDashscope](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdashscope)
+- [AIGatewayProviderDatabricks](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdatabricks)
+- [AIGatewayProviderDeepseek](#konnect-konghq-com-v1alpha1-types-aigatewayproviderdeepseek)
+- [AIGatewayProviderGemini](#konnect-konghq-com-v1alpha1-types-aigatewayprovidergemini)
+- [AIGatewayProviderHuggingface](#konnect-konghq-com-v1alpha1-types-aigatewayproviderhuggingface)
+- [AIGatewayProviderKimi](#konnect-konghq-com-v1alpha1-types-aigatewayproviderkimi)
+- [AIGatewayProviderLlama2](#konnect-konghq-com-v1alpha1-types-aigatewayproviderllama2)
+- [AIGatewayProviderMistral](#konnect-konghq-com-v1alpha1-types-aigatewayprovidermistral)
+- [AIGatewayProviderOllama](#konnect-konghq-com-v1alpha1-types-aigatewayproviderollama)
+- [AIGatewayProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewayprovideropenai)
+- [AIGatewayProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervercel)
+- [AIGatewayProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervertex)
+- [AIGatewayProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewayprovidervllm)
+- [AIGatewayProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewayproviderxai)
 
 #### PublicLabelsValue
 

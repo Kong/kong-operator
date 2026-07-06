@@ -135,7 +135,6 @@ func normalizeEventGatewayVirtualClusterConsumePolicySDKOpsBoolField(value any, 
 	}
 }
 
-
 func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
