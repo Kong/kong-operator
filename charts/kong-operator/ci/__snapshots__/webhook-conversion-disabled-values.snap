@@ -41808,7 +41808,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.2.0
+    kubernetes-configuration.konghq.com/version: v2.2.1
   name: aigatewaymodels.konnect.konghq.com
 spec:
   group: konnect.konghq.com
