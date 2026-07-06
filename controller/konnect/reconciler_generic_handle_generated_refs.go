@@ -76,6 +76,10 @@ func init() {
 			gvk:     konnectv1alpha1.GroupVersion.WithKind("Portal"),
 			handler: parentRefHandler[konnectv1alpha1.Portal, *konnectv1alpha1.Portal]{},
 		},
+		{
+			gvk:     konnectv1alpha1.GroupVersion.WithKind("AIGatewayControlPlane"),
+			handler: parentRefHandler[konnectv1alpha1.AIGatewayControlPlane, *konnectv1alpha1.AIGatewayControlPlane]{},
+		},
 	}
 	_generatedHandlersPerGVK = make(map[schema.GroupVersionKind]generatedParentRefHandler, len(_generatedHandlers))
 	for _, entry := range _generatedHandlers {
