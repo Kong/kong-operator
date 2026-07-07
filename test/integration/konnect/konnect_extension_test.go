@@ -224,8 +224,6 @@ func TestKonnectExtension(t *testing.T) {
 		})
 
 		t.Run("Mirror ControlPlane", func(t *testing.T) {
-			t.Skipf("Skip until flakiness is resolved, TODO: https://github.com/Kong/kong-operator/issues/4807")
-
 			// Create a Mirror Konnect control plane for the KonnectExtension to attach to.
 			mirrorCP := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 				deploy.WithTestIDLabel(testID),
@@ -480,6 +478,10 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 							{
 								Name:  "KONG_LOG_LEVEL",
 								Value: "debug",
+							},
+							{
+								Name:  "KONG_INCREMENTAL_SYNC",
+								Value: "off",
 							},
 						},
 						ReadinessProbe: &corev1.Probe{
