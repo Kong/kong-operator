@@ -485,8 +485,8 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 							},
 						},
 						ReadinessProbe: &corev1.Probe{
-							InitialDelaySeconds: 1,
-							PeriodSeconds:       1,
+							InitialDelaySeconds: 3,
+							PeriodSeconds:       3,
 						},
 					},
 				},
