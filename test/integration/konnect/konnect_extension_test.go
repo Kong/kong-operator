@@ -22,6 +22,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/pkg/builder"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	resourceutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
@@ -479,15 +480,8 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 								Name:  "KONG_LOG_LEVEL",
 								Value: "debug",
 							},
-							{
-								Name:  "KONG_INCREMENTAL_SYNC",
-								Value: "off",
-							},
 						},
-						ReadinessProbe: &corev1.Probe{
-							InitialDelaySeconds: 3,
-							PeriodSeconds:       3,
-						},
+						ReadinessProbe: resourceutils.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusEndpoint),
 					},
 				},
 			},
