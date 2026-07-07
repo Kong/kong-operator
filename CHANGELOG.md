@@ -70,6 +70,8 @@
   [#4772](https://github.com/Kong/kong-operator/pull/4772)
   - introduce `AIGatewayPolicy` CRD with reconciler.
   [#4781](https://github.com/Kong/kong-operator/pull/4781)
+  - introduce `AIGatewayAgent` CRD with reconciler.
+  [#4776](https://github.com/Kong/kong-operator/pull/4776)
 - GRPCRoute: enable GRPCRoute for on-prem gateway
   [#4364](https://github.com/Kong/kong-operator/pull/4364)
 
