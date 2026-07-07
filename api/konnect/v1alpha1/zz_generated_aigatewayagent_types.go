@@ -3,8 +3,6 @@
 package v1alpha1
 
 import (
-	"encoding/json"
-	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
@@ -56,10 +54,10 @@ type AIGatewayAgentSpec struct {
 
 // AIGatewayAgentAPISpec defines the API spec fields for AIGatewayAgent.
 type AIGatewayAgentAPISpec struct {
-	// Access control rules. Configure exactly one of `allow` or `deny`.
+	// Access control configuration for an agent.
 	//
 	// +optional
-	Acls *AIGatewayAgentAcls `json:"acls,omitempty"`
+	Access AIGatewayAgentAccess `json:"access,omitzero"`
 
 	// Configuration for the agent.
 	// The structure varies depending on the agent type.
@@ -199,124 +197,5 @@ type AIGatewayAgentConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Statistics string `json:"statistics,omitzero"`
-}
-
-
-// AIGatewayAgentAcls represents a union type for acls.
-// Only one of the fields should be set based on the Type.
-//
-type AIGatewayAgentAcls struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=allow;deny
-	Type AIGatewayAgentAclsType `json:"type,omitempty"`
-
-	// Allow configuration.
-	//
-	// +optional
-	Allow *AIGatewayAllowACL `json:"allow,omitempty"`
-	// Deny configuration.
-	//
-	// +optional
-	Deny *AIGatewayDenyACL `json:"deny,omitempty"`
-}
-
-// AIGatewayAgentAclsType represents the type of acls.
-type AIGatewayAgentAclsType string
-
-// AIGatewayAgentAclsType values.
-const (
-	AIGatewayAgentAclsTypeAllow AIGatewayAgentAclsType = "allow"
-	AIGatewayAgentAclsTypeDeny AIGatewayAgentAclsType = "deny"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayAgentAcls) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayAgentAcls type: %w", err)
-	}
-	m["type"] = typeBytes
-	switch u.Type {
-	case AIGatewayAgentAclsTypeAllow:
-		if u.Allow != nil {
-			raw, err := json.Marshal(u.Allow)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAcls Allow: %w", err)
-			}
-			m["allow"] = raw
-		}
-	case AIGatewayAgentAclsTypeDeny:
-		if u.Deny != nil {
-			raw, err := json.Marshal(u.Deny)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAcls Deny: %w", err)
-			}
-			m["deny"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayAgentAcls) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayAgentAcls: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = AIGatewayAgentAclsType(probe.Type)
-	switch probe.Type {
-	case "allow":
-		payload, ok := raw["allow"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayAllowACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAcls Allow: %w", err)
-		}
-		u.Allow = &val
-	case "deny":
-		payload, ok := raw["deny"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayDenyACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAcls Deny: %w", err)
-		}
-		u.Deny = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayAgentAPISpec) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayAgentAPISpec: nil receiver")
-	}
-	type alias AIGatewayAgentAPISpec
-	aux := alias{}
-	aux.Acls = &AIGatewayAgentAcls{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayAgentAPISpec: %w", err)
-	}
-	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil {
-		aux.Acls = nil
-	}
-	*s = AIGatewayAgentAPISpec(aux)
-	return nil
 }
 

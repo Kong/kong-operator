@@ -245,7 +245,7 @@ func (g *Generator) walkSensitiveLeafPath(
 
 		// "*" fans out across every variant instead of selecting one by name — used
 		// when a secret leaf lives at the same relative path in multiple (but not
-		// necessarily all) variants, e.g. AIGatewayProvider's per-provider auth config.
+		// necessarily all) variants, e.g. AIGatewayModelProvider's per-provider auth config.
 		// Variants where the remaining path doesn't resolve are skipped rather than
 		// failing generation, since a single wildcard path is expected to match only
 		// a subset of variants.

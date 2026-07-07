@@ -246,7 +246,7 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		schema.Dependencies = dependencies
 		schema.OperationID = operation.OperationID
 		schema.Tags = append([]string(nil), operation.Tags...)
-		schema.SuccessResponseRef = extractSuccessResponseRef(operation.Responses)
+		schema.SuccessResponseRef = p.extractSuccessResponseRef(operation.Responses)
 		schema.RespIDIsPointer = p.successResponseIDIsPointer(operation.Responses)
 		schema.RespHasID = p.successResponseHasID(operation.Responses)
 		schema.CreateReqBodyPointer = !reqBody.Required
@@ -270,7 +270,7 @@ func (p *Parser) extractUpdateOp(targetPath string, schema *Schema) {
 
 	schema.UpdateOperationID = updateOp.OperationID
 	schema.UpdateTags = append([]string(nil), updateOp.Tags...)
-	schema.UpdateSuccessResponseRef = extractSuccessResponseRef(updateOp.Responses)
+	schema.UpdateSuccessResponseRef = p.extractSuccessResponseRef(updateOp.Responses)
 	schema.UpdateRespIDIsPointer = p.successResponseIDIsPointer(updateOp.Responses)
 	schema.UpdatePathParams = extractPathParams(updatePath)
 	if updateOp.RequestBody != nil && updateOp.RequestBody.Value != nil {
@@ -371,7 +371,7 @@ func (p *Parser) extractListOp(targetPath string, schema *Schema) {
 	schema.ListOperationID = listOp.OperationID
 	schema.ListTags = append([]string(nil), listOp.Tags...)
 	schema.ListPathParams = extractPathParams(targetPath)
-	schema.ListSuccessResponseRef = extractSuccessResponseRef(listOp.Responses)
+	schema.ListSuccessResponseRef = p.extractSuccessResponseRef(listOp.Responses)
 }
 
 // findListOperation returns the GET operation on targetPath (the collection
@@ -785,10 +785,13 @@ func (p *Parser) successResponseHasID(responses *openapi3.Responses) bool {
 // nested content-schema $refs (e.g. #/components/schemas/Foo). When both are
 // present the content-schema ref is preferred because it names the actual
 // payload type produced by SDK codegen.
-func extractSuccessResponseRef(responses *openapi3.Responses) string {
+// If the resolved schema carries an x-speakeasy-name-override extension, the
+// override name is returned instead so generated code matches the SDK Go type.
+func (p *Parser) extractSuccessResponseRef(responses *openapi3.Responses) string {
 	if responses == nil {
 		return ""
 	}
+	var refName string
 	for _, code := range []string{"201", "200"} {
 		respRef := responses.Value(code)
 		if respRef == nil {
@@ -800,15 +803,31 @@ func extractSuccessResponseRef(responses *openapi3.Responses) string {
 					continue
 				}
 				if mt.Schema.Ref != "" {
-					return extractRefName(mt.Schema.Ref)
+					refName = extractRefName(mt.Schema.Ref)
+					break
 				}
 			}
 		}
-		if respRef.Ref != "" {
-			return extractRefName(respRef.Ref)
+		if refName == "" && respRef.Ref != "" {
+			refName = extractRefName(respRef.Ref)
+		}
+		if refName != "" {
+			break
 		}
 	}
-	return ""
+	if refName == "" {
+		return ""
+	}
+	// If the schema carries x-speakeasy-name-override, the SDK Go type uses
+	// that name for both the struct and the response-wrapper field.
+	if schemaRef, ok := p.doc.Components.Schemas[refName]; ok && schemaRef != nil && schemaRef.Value != nil {
+		if raw, ok := schemaRef.Value.Extensions["x-speakeasy-name-override"]; ok {
+			if name, ok := raw.(string); ok && name != "" {
+				return name
+			}
+		}
+	}
+	return refName
 }
 
 // extractRefName extracts the schema name from a $ref string.

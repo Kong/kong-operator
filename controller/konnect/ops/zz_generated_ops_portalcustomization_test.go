@@ -45,7 +45,7 @@ func TestCreatePortalCustomization_UsesSDKOpsConversion(t *testing.T) {
 	obj := testGeneratedPortalCustomizationForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreatePortalCustomizationV3()
+	expectedRequest, err := obj.Spec.APISpec.ToCreatePortalCustomization()
 	require.NoError(t, err)
 
 	sdk.EXPECT().
@@ -55,7 +55,7 @@ func TestCreatePortalCustomization_UsesSDKOpsConversion(t *testing.T) {
 			expectedRequest,
 		).
 		Return(&sdkkonnectops.ReplacePortalCustomizationResponse{
-			PortalCustomizationV3: &sdkkonnectcomp.PortalCustomizationV3{
+			PortalCustomization: &sdkkonnectcomp.PortalCustomization{
 			},
 		}, nil).
 		Once()
@@ -71,7 +71,7 @@ func TestCreatePortalCustomization_PropagatesSDKError(t *testing.T) {
 	obj := testGeneratedPortalCustomizationForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreatePortalCustomizationV3()
+	expectedRequest, err := obj.Spec.APISpec.ToCreatePortalCustomization()
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -96,7 +96,7 @@ func TestUpdatePortalCustomization_UsesSDKOpsConversion(t *testing.T) {
 	obj := testGeneratedPortalCustomizationForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToUpdatePortalCustomizationV3()
+	expectedRequest, err := obj.Spec.APISpec.ToUpdatePortalCustomization()
 	require.NoError(t, err)
 
 	sdk.EXPECT().
@@ -119,7 +119,7 @@ func TestUpdatePortalCustomization_PropagatesSDKError(t *testing.T) {
 	obj := testGeneratedPortalCustomizationForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToUpdatePortalCustomizationV3()
+	expectedRequest, err := obj.Spec.APISpec.ToUpdatePortalCustomization()
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -144,7 +144,7 @@ func TestDeletePortalCustomization_UsesGeneratedSDKOps(t *testing.T) {
 	obj := testGeneratedPortalCustomizationForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest := &sdkkonnectcomp.PortalCustomizationV3{}
+	expectedRequest := &sdkkonnectcomp.PortalCustomization{}
 
 	sdk.EXPECT().
 		ReplacePortalCustomization(
@@ -166,7 +166,7 @@ func TestDeletePortalCustomization_PropagatesSDKError(t *testing.T) {
 	obj := testGeneratedPortalCustomizationForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest := &sdkkonnectcomp.PortalCustomizationV3{}
+	expectedRequest := &sdkkonnectcomp.PortalCustomization{}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().

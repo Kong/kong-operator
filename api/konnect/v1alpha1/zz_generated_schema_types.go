@@ -12,6 +12,131 @@ import (
 // Configure exactly one of `allow` or `deny`.
 type AIGatewayACLS map[string]string
 
+// AIGatewayAgentAccess Access control configuration for an agent.
+type AIGatewayAgentAccess struct {
+	// Access control rules. Configure exactly one of `allow` or `deny`.
+	//
+	// +optional
+	Acls *AIGatewayAgentAccessAcls `json:"acls,omitempty"`
+}
+
+// AIGatewayAgentAccessAcls represents a union type for acls.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayAgentAccessAcls struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=allow;deny
+	Type AIGatewayAgentAccessAclsType `json:"type,omitempty"`
+
+	// Allow configuration.
+	//
+	// +optional
+	Allow *AIGatewayAllowACL `json:"allow,omitempty"`
+	// Deny configuration.
+	//
+	// +optional
+	Deny *AIGatewayDenyACL `json:"deny,omitempty"`
+}
+
+// AIGatewayAgentAccessAclsType represents the type of acls.
+type AIGatewayAgentAccessAclsType string
+
+// AIGatewayAgentAccessAclsType values.
+const (
+	AIGatewayAgentAccessAclsTypeAllow AIGatewayAgentAccessAclsType = "allow"
+	AIGatewayAgentAccessAclsTypeDeny AIGatewayAgentAccessAclsType = "deny"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayAgentAccessAcls) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayAgentAccessAclsTypeAllow:
+		if u.Allow != nil {
+			raw, err := json.Marshal(u.Allow)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Allow: %w", err)
+			}
+			m["allow"] = raw
+		}
+	case AIGatewayAgentAccessAclsTypeDeny:
+		if u.Deny != nil {
+			raw, err := json.Marshal(u.Deny)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Deny: %w", err)
+			}
+			m["deny"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayAgentAccessAcls) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayAgentAccessAclsType(probe.Type)
+	switch probe.Type {
+	case "allow":
+		payload, ok := raw["allow"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAllowACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Allow: %w", err)
+		}
+		u.Allow = &val
+	case "deny":
+		payload, ok := raw["deny"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDenyACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Deny: %w", err)
+		}
+		u.Deny = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayAgentAccess) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: nil receiver")
+	}
+	type alias AIGatewayAgentAccess
+	aux := alias{}
+	aux.Acls = &AIGatewayAgentAccessAcls{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: %w", err)
+	}
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil {
+		aux.Acls = nil
+	}
+	*s = AIGatewayAgentAccess(aux)
+	return nil
+}
+
 // AIGatewayAllowACL is a type alias.
 type AIGatewayAllowACL struct {
 	// List of Consumers, Consumer Groups, or Authenticated Groups that are
@@ -327,16 +452,10 @@ type AIGatewayEntityIdentifier string
 // AIGatewayGeminiEmbeddingsModelConfig Google Gemini-specific configuration for
 // a model.
 type AIGatewayGeminiEmbeddingsModelConfig struct {
-	// The custom API endpoint for the Gemini model.
+	// Configuration for a model hosted on Google Cloud Project.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	APIEndpoint string `json:"apiEndpoint,omitzero"`
-	// The Google Cloud location ID for the model endpoint.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	LocationID string `json:"locationID,omitzero"`
+	GcpEnvironment GCPModelConfig `json:"gcpEnvironment,omitzero"`
 	// The URL of the embeddings model.
 	//
 	// +required
@@ -366,14 +485,17 @@ type AIGatewayHuggingfaceEmbeddingsModelConfig struct {
 	WaitForModel string `json:"waitForModel,omitzero"`
 }
 
+// AIGatewayIdentityProviderReference Reference to a provider instance.
+// This is either the identity provider ID or the identity provider name.
+type AIGatewayIdentityProviderReference string
+
 // AIGatewayModelAPI Configuration for proxying asynchronous requests/responses
 // to/from an AI Gateway model using the files and batches APIs.
 type AIGatewayModelAPI struct {
-	// Access control rules for allowing or denying Consumers, Consumer Groups, or
-	// Authenticated Groups to this model.
+	// Access control configuration for a model.
 	//
 	// +optional
-	Acls AIGatewayACLS `json:"acls,omitzero"`
+	Access AIGatewayModelAccess `json:"access,omitzero"`
 	// List of AI capabilities enabled for this API model.
 	//
 	// +required
@@ -730,6 +852,138 @@ func (s *AIGatewayModelAPIConfig) UnmarshalJSON(data []byte) error {
 		aux.Balancer = nil
 	}
 	*s = AIGatewayModelAPIConfig(aux)
+	return nil
+}
+
+// AIGatewayModelAccess Access control configuration for a model.
+type AIGatewayModelAccess struct {
+	// Access control rules. Configure exactly one of `allow` or `deny`.
+	//
+	// +optional
+	Acls *AIGatewayModelAccessAcls `json:"acls,omitempty"`
+	// List of identity providers for granting access to the model.
+	// At most 1 identity provider of each identity provider type can be
+	// referenced.
+	//
+	//
+	// +optional
+	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
+}
+
+// AIGatewayModelAccessAcls represents a union type for acls.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelAccessAcls struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=allow;deny
+	Type AIGatewayModelAccessAclsType `json:"type,omitempty"`
+
+	// Allow configuration.
+	//
+	// +optional
+	Allow *AIGatewayAllowACL `json:"allow,omitempty"`
+	// Deny configuration.
+	//
+	// +optional
+	Deny *AIGatewayDenyACL `json:"deny,omitempty"`
+}
+
+// AIGatewayModelAccessAclsType represents the type of acls.
+type AIGatewayModelAccessAclsType string
+
+// AIGatewayModelAccessAclsType values.
+const (
+	AIGatewayModelAccessAclsTypeAllow AIGatewayModelAccessAclsType = "allow"
+	AIGatewayModelAccessAclsTypeDeny AIGatewayModelAccessAclsType = "deny"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelAccessAcls) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelAccessAcls type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelAccessAclsTypeAllow:
+		if u.Allow != nil {
+			raw, err := json.Marshal(u.Allow)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAccessAcls Allow: %w", err)
+			}
+			m["allow"] = raw
+		}
+	case AIGatewayModelAccessAclsTypeDeny:
+		if u.Deny != nil {
+			raw, err := json.Marshal(u.Deny)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAccessAcls Deny: %w", err)
+			}
+			m["deny"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelAccessAcls) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelAccessAcls: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelAccessAclsType(probe.Type)
+	switch probe.Type {
+	case "allow":
+		payload, ok := raw["allow"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAllowACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAccessAcls Allow: %w", err)
+		}
+		u.Allow = &val
+	case "deny":
+		payload, ok := raw["deny"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDenyACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAccessAcls Deny: %w", err)
+		}
+		u.Deny = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelAccess) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelAccess: nil receiver")
+	}
+	type alias AIGatewayModelAccess
+	aux := alias{}
+	aux.Acls = &AIGatewayModelAccessAcls{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelAccess: %w", err)
+	}
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil {
+		aux.Acls = nil
+	}
+	*s = AIGatewayModelAccess(aux)
 	return nil
 }
 
@@ -1429,13 +1683,13 @@ type AIGatewayModelBalancerSemanticConfigEmbeddings struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
-	// Reference to a provider instance.
-	// This is either the provider ID or the provider name.
+	// Reference to a model provider instance.
+	// This is either the model provider ID or the model provider name.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Provider AIGatewayProviderReference `json:"provider,omitzero"`
+	Provider AIGatewayModelProviderReference `json:"provider,omitzero"`
 }
 
 // AIGatewayModelBalancerSemanticConfigEmbeddingsConfig represents a union type for config.
@@ -1800,11 +2054,10 @@ type AIGatewayModelFormat struct {
 // AIGatewayModelModel Configuration for proxying synchronous requests/responses
 // to/from an AI Gateway model using generative APIs.
 type AIGatewayModelModel struct {
-	// Access control rules for allowing or denying Consumers, Consumer Groups, or
-	// Authenticated Groups to this model.
+	// Access control configuration for a model.
 	//
 	// +optional
-	Acls AIGatewayACLS `json:"acls,omitzero"`
+	Access AIGatewayModelAccess `json:"access,omitzero"`
 	// List of AI capabilities enabled for this model.
 	//
 	// +required
@@ -2169,6 +2422,1671 @@ func (s *AIGatewayModelModelConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// AIGatewayModelProviderAnthropic Configuration for an upstream model provider.
+type AIGatewayModelProviderAnthropic struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderAnthropicConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderAnthropicConfig Configuration for the model provider.
+type AIGatewayModelProviderAnthropicConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderAzure Config for Azure model provider.
+type AIGatewayModelProviderAzure struct {
+	//
+	//
+	// +required
+	Config AIGatewayModelProviderAzureConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderAzureConfig is a type alias.
+type AIGatewayModelProviderAzureConfig struct {
+	//
+	//
+	// +required
+	Auth *AIGatewayModelProviderAzureConfigAuth `json:"auth,omitempty"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Instance string `json:"instance,omitzero"`
+}
+
+// AIGatewayModelProviderAzureConfigAuth represents a union type for auth.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelProviderAzureConfigAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=azure;basic
+	Type AIGatewayModelProviderAzureConfigAuthType `json:"type,omitempty"`
+
+	// Azure configuration.
+	//
+	// +optional
+	Azure *AIGatewayModelProviderConfigAuthAzure `json:"azure,omitempty"`
+	// Basic configuration.
+	//
+	// +optional
+	Basic *AIGatewayModelProviderConfigAuthBasic `json:"basic,omitempty"`
+}
+
+// AIGatewayModelProviderAzureConfigAuthType represents the type of auth.
+type AIGatewayModelProviderAzureConfigAuthType string
+
+// AIGatewayModelProviderAzureConfigAuthType values.
+const (
+	AIGatewayModelProviderAzureConfigAuthTypeAzure AIGatewayModelProviderAzureConfigAuthType = "azure"
+	AIGatewayModelProviderAzureConfigAuthTypeBasic AIGatewayModelProviderAzureConfigAuthType = "basic"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelProviderAzureConfigAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelProviderAzureConfigAuth type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelProviderAzureConfigAuthTypeAzure:
+		if u.Azure != nil {
+			raw, err := json.Marshal(u.Azure)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderAzureConfigAuth azure: %w", err)
+			}
+			m["azure"] = raw
+		}
+	case AIGatewayModelProviderAzureConfigAuthTypeBasic:
+		if u.Basic != nil {
+			raw, err := json.Marshal(u.Basic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderAzureConfigAuth basic: %w", err)
+			}
+			m["basic"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelProviderAzureConfigAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderAzureConfigAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelProviderAzureConfigAuthType(probe.Type)
+	switch probe.Type {
+	case "azure":
+		payload, ok := raw["azure"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthAzure
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderAzureConfigAuth azure: %w", err)
+		}
+		u.Azure = &val
+	case "basic":
+		payload, ok := raw["basic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthBasic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderAzureConfigAuth basic: %w", err)
+		}
+		u.Basic = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelProviderAzureConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderAzureConfig: nil receiver")
+	}
+	type alias AIGatewayModelProviderAzureConfig
+	aux := alias{}
+	aux.Auth = &AIGatewayModelProviderAzureConfigAuth{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderAzureConfig: %w", err)
+	}
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Azure == nil && aux.Auth.Basic == nil {
+		aux.Auth = nil
+	}
+	*s = AIGatewayModelProviderAzureConfig(aux)
+	return nil
+}
+
+// AIGatewayModelProviderBedrock Config for AWS model provider.
+type AIGatewayModelProviderBedrock struct {
+	//
+	//
+	// +required
+	Config AIGatewayModelProviderBedrockConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderBedrockConfig is a type alias.
+type AIGatewayModelProviderBedrockConfig struct {
+	//
+	//
+	// +required
+	Auth *AIGatewayModelProviderBedrockConfigAuth `json:"auth,omitempty"`
+}
+
+// AIGatewayModelProviderBedrockConfigAuth represents a union type for auth.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelProviderBedrockConfigAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=aws;basic
+	Type AIGatewayModelProviderBedrockConfigAuthType `json:"type,omitempty"`
+
+	// AWS configuration.
+	//
+	// +optional
+	AWS *AIGatewayModelProviderConfigAuthAWS `json:"aws,omitempty"`
+	// Basic configuration.
+	//
+	// +optional
+	Basic *AIGatewayModelProviderConfigAuthBasic `json:"basic,omitempty"`
+}
+
+// AIGatewayModelProviderBedrockConfigAuthType represents the type of auth.
+type AIGatewayModelProviderBedrockConfigAuthType string
+
+// AIGatewayModelProviderBedrockConfigAuthType values.
+const (
+	AIGatewayModelProviderBedrockConfigAuthTypeAWS AIGatewayModelProviderBedrockConfigAuthType = "aws"
+	AIGatewayModelProviderBedrockConfigAuthTypeBasic AIGatewayModelProviderBedrockConfigAuthType = "basic"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelProviderBedrockConfigAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelProviderBedrockConfigAuth type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelProviderBedrockConfigAuthTypeAWS:
+		if u.AWS != nil {
+			raw, err := json.Marshal(u.AWS)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderBedrockConfigAuth aws: %w", err)
+			}
+			m["aws"] = raw
+		}
+	case AIGatewayModelProviderBedrockConfigAuthTypeBasic:
+		if u.Basic != nil {
+			raw, err := json.Marshal(u.Basic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderBedrockConfigAuth basic: %w", err)
+			}
+			m["basic"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelProviderBedrockConfigAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderBedrockConfigAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelProviderBedrockConfigAuthType(probe.Type)
+	switch probe.Type {
+	case "aws":
+		payload, ok := raw["aws"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthAWS
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderBedrockConfigAuth aws: %w", err)
+		}
+		u.AWS = &val
+	case "basic":
+		payload, ok := raw["basic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthBasic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderBedrockConfigAuth basic: %w", err)
+		}
+		u.Basic = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelProviderBedrockConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderBedrockConfig: nil receiver")
+	}
+	type alias AIGatewayModelProviderBedrockConfig
+	aux := alias{}
+	aux.Auth = &AIGatewayModelProviderBedrockConfigAuth{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderBedrockConfig: %w", err)
+	}
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.AWS == nil && aux.Auth.Basic == nil {
+		aux.Auth = nil
+	}
+	*s = AIGatewayModelProviderBedrockConfig(aux)
+	return nil
+}
+
+// AIGatewayModelProviderCerebras Configuration for an upstream model provider.
+type AIGatewayModelProviderCerebras struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderCerebrasConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderCerebrasConfig Configuration for the model provider.
+type AIGatewayModelProviderCerebrasConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderCohere Configuration for an upstream model provider.
+type AIGatewayModelProviderCohere struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderCohereConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderCohereConfig Configuration for the model provider.
+type AIGatewayModelProviderCohereConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderConfigAuthAWS Configuration for AWS model provider.
+type AIGatewayModelProviderConfigAuthAWS struct {
+	// The access key id for authenticating with static IAM User credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AccessKeyID string `json:"accessKeyID,omitzero"`
+	// The ARN of the IAM role to assume for generating authentication tokens.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AssumeRoleArn string `json:"assumeRoleArn,omitzero"`
+	// AWS role arn to use when calling the batch API.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	BatchRoleArn string `json:"batchRoleArn,omitzero"`
+	// The session name for the temporary credentials when assuming the IAM role.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RoleSessionName string `json:"roleSessionName,omitzero"`
+	// The secret access key for authenticating with static IAM User credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	SecretAccessKey SensitiveDataSource `json:"secretAccessKey,omitzero"`
+	// The STS endpoint URL to use for generating authentication tokens.
+	// If not specified, the default AWS STS endpoint will be used.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	StsEndpointURL string `json:"stsEndpointURL,omitzero"`
+}
+
+// AIGatewayModelProviderConfigAuthAzure Configuration for Azure model provider.
+type AIGatewayModelProviderConfigAuthAzure struct {
+	// If azure_use_managed_identity is set to true, and you need to use a
+	// different user-assigned identity for this LLM instance, set the client ID.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ClientID string `json:"clientID,omitzero"`
+	// If azure_use_managed_identity is set to true, and you need to use a
+	// different user-assigned identity for this LLM instance, set the client
+	// secret.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	ClientSecret SensitiveDataSource `json:"clientSecret,omitzero"`
+	// If azure_use_managed_identity is set to true, and you need to use a
+	// different user-assigned identity for this LLM instance, set the tenant ID.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	TenantID string `json:"tenantID,omitzero"`
+	// Set true to use the Azure Cloud Managed Identity (or user-assigned identity)
+	// to authenticate with Azure-provider models.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	UseManagedIdentity string `json:"useManagedIdentity,omitzero"`
+}
+
+// AIGatewayModelProviderConfigAuthBasic Basic auth config for an upstream model
+// provider.
+type AIGatewayModelProviderConfigAuthBasic struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Headers []AIGatewayModelProviderConfigAuthBasicHeaders `json:"headers,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Params []AIGatewayModelProviderConfigAuthBasicParams `json:"params,omitempty"`
+}
+
+// AIGatewayModelProviderConfigAuthBasicHeaders is a type alias.
+type AIGatewayModelProviderConfigAuthBasicHeaders struct {
+	// The name of the header used for authentication.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	// The auth header value for ‘header_name’, for example ‘Bearer
+	// key...’.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	Value SensitiveDataSource `json:"value,omitzero"`
+}
+
+// AIGatewayModelProviderConfigAuthBasicParams is a type alias.
+type AIGatewayModelProviderConfigAuthBasicParams struct {
+	// Specify whether the param name and value options go in a query string, or
+	// the POST form/JSON body.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=body;query
+	Location string `json:"location,omitzero"`
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	Value SensitiveDataSource `json:"value,omitzero"`
+}
+
+// AIGatewayModelProviderConfigAuthGCP Configuration for GCP model provider.
+type AIGatewayModelProviderConfigAuthGCP struct {
+	// Custom metadata URL for GCP authentication.
+	// Useful for restricted network environments or custom GCP endpoints.
+	// If not set, Kong will use the default Google metadata endpoint.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	MetadataURL string `json:"metadataURL,omitzero"`
+	// Custom OAuth token URL for GCP authentication.
+	// Useful for restricted network environments or custom GCP endpoints.
+	// If not set, Kong will use the default Google OAuth token endpoint.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	OauthTokenURL string `json:"oauthTokenURL,omitzero"`
+	// Full JSON string of the GCP service account to authenticate.
+	// If not set (and gcp_use_service_account is true), the service account JSON
+	// will be from the environment variable GCP_SERVICE_ACCOUNT.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	ServiceAccountJSON SensitiveDataSource `json:"serviceAccountJSON,omitzero"`
+	// Use service account auth for GCP-based providers and models.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	UseGcpServiceAccount string `json:"useGcpServiceAccount,omitzero"`
+}
+
+// AIGatewayModelProviderDashscope Configuration for an upstream model provider.
+type AIGatewayModelProviderDashscope struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderDashscopeConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderDashscopeConfig Configuration for the model provider.
+type AIGatewayModelProviderDashscopeConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderDatabricks Configuration for an upstream model
+// provider.
+type AIGatewayModelProviderDatabricks struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderDatabricksConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderDatabricksConfig Configuration for the model provider.
+type AIGatewayModelProviderDatabricksConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderDeepseek Configuration for an upstream model provider.
+type AIGatewayModelProviderDeepseek struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderDeepseekConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderDeepseekConfig Configuration for the model provider.
+type AIGatewayModelProviderDeepseekConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderGemini Config for GCP model provider.
+type AIGatewayModelProviderGemini struct {
+	//
+	//
+	// +required
+	Config AIGatewayModelProviderGeminiConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderGeminiConfig is a type alias.
+type AIGatewayModelProviderGeminiConfig struct {
+	//
+	//
+	// +required
+	Auth *AIGatewayModelProviderGeminiConfigAuth `json:"auth,omitempty"`
+}
+
+// AIGatewayModelProviderGeminiConfigAuth represents a union type for auth.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelProviderGeminiConfigAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=basic;gcp
+	Type AIGatewayModelProviderGeminiConfigAuthType `json:"type,omitempty"`
+
+	// Basic configuration.
+	//
+	// +optional
+	Basic *AIGatewayModelProviderConfigAuthBasic `json:"basic,omitempty"`
+	// GCP configuration.
+	//
+	// +optional
+	GCP *AIGatewayModelProviderConfigAuthGCP `json:"gcp,omitempty"`
+}
+
+// AIGatewayModelProviderGeminiConfigAuthType represents the type of auth.
+type AIGatewayModelProviderGeminiConfigAuthType string
+
+// AIGatewayModelProviderGeminiConfigAuthType values.
+const (
+	AIGatewayModelProviderGeminiConfigAuthTypeBasic AIGatewayModelProviderGeminiConfigAuthType = "basic"
+	AIGatewayModelProviderGeminiConfigAuthTypeGCP AIGatewayModelProviderGeminiConfigAuthType = "gcp"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelProviderGeminiConfigAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelProviderGeminiConfigAuth type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelProviderGeminiConfigAuthTypeBasic:
+		if u.Basic != nil {
+			raw, err := json.Marshal(u.Basic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderGeminiConfigAuth basic: %w", err)
+			}
+			m["basic"] = raw
+		}
+	case AIGatewayModelProviderGeminiConfigAuthTypeGCP:
+		if u.GCP != nil {
+			raw, err := json.Marshal(u.GCP)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderGeminiConfigAuth gcp: %w", err)
+			}
+			m["gcp"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelProviderGeminiConfigAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderGeminiConfigAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelProviderGeminiConfigAuthType(probe.Type)
+	switch probe.Type {
+	case "basic":
+		payload, ok := raw["basic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthBasic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderGeminiConfigAuth basic: %w", err)
+		}
+		u.Basic = &val
+	case "gcp":
+		payload, ok := raw["gcp"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthGCP
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderGeminiConfigAuth gcp: %w", err)
+		}
+		u.GCP = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelProviderGeminiConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderGeminiConfig: nil receiver")
+	}
+	type alias AIGatewayModelProviderGeminiConfig
+	aux := alias{}
+	aux.Auth = &AIGatewayModelProviderGeminiConfigAuth{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderGeminiConfig: %w", err)
+	}
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.GCP == nil {
+		aux.Auth = nil
+	}
+	*s = AIGatewayModelProviderGeminiConfig(aux)
+	return nil
+}
+
+// AIGatewayModelProviderHuggingface Configuration for an upstream model
+// provider.
+type AIGatewayModelProviderHuggingface struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderHuggingfaceConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderHuggingfaceConfig Configuration for the model provider.
+type AIGatewayModelProviderHuggingfaceConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderKimi Configuration for an upstream model provider.
+type AIGatewayModelProviderKimi struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderKimiConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderKimiConfig Configuration for the model provider.
+type AIGatewayModelProviderKimiConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderLlama2 Configuration for an upstream model provider.
+type AIGatewayModelProviderLlama2 struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderLlama2Config `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderLlama2Config Configuration for the model provider.
+type AIGatewayModelProviderLlama2Config struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderMistral Configuration for an upstream model provider.
+type AIGatewayModelProviderMistral struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderMistralConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderMistralConfig Configuration for the model provider.
+type AIGatewayModelProviderMistralConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderOllama Configuration for an upstream model provider.
+type AIGatewayModelProviderOllama struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderOllamaConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderOllamaConfig Configuration for the model provider.
+type AIGatewayModelProviderOllamaConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderOpenai Configuration for an upstream model provider.
+type AIGatewayModelProviderOpenai struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderOpenaiConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderOpenaiConfig Configuration for the model provider.
+type AIGatewayModelProviderOpenaiConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderReference Reference to a model provider instance.
+// This is either the model provider ID or the model provider name.
+type AIGatewayModelProviderReference string
+
+// AIGatewayModelProviderVercel Configuration for an upstream model provider.
+type AIGatewayModelProviderVercel struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderVercelConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderVercelConfig Configuration for the model provider.
+type AIGatewayModelProviderVercelConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderVertex Config for GCP model provider.
+type AIGatewayModelProviderVertex struct {
+	//
+	//
+	// +required
+	Config AIGatewayModelProviderVertexConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderVertexConfig is a type alias.
+type AIGatewayModelProviderVertexConfig struct {
+	//
+	//
+	// +required
+	Auth *AIGatewayModelProviderVertexConfigAuth `json:"auth,omitempty"`
+}
+
+// AIGatewayModelProviderVertexConfigAuth represents a union type for auth.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelProviderVertexConfigAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=basic;gcp
+	Type AIGatewayModelProviderVertexConfigAuthType `json:"type,omitempty"`
+
+	// Basic configuration.
+	//
+	// +optional
+	Basic *AIGatewayModelProviderConfigAuthBasic `json:"basic,omitempty"`
+	// GCP configuration.
+	//
+	// +optional
+	GCP *AIGatewayModelProviderConfigAuthGCP `json:"gcp,omitempty"`
+}
+
+// AIGatewayModelProviderVertexConfigAuthType represents the type of auth.
+type AIGatewayModelProviderVertexConfigAuthType string
+
+// AIGatewayModelProviderVertexConfigAuthType values.
+const (
+	AIGatewayModelProviderVertexConfigAuthTypeBasic AIGatewayModelProviderVertexConfigAuthType = "basic"
+	AIGatewayModelProviderVertexConfigAuthTypeGCP AIGatewayModelProviderVertexConfigAuthType = "gcp"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelProviderVertexConfigAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelProviderVertexConfigAuthTypeBasic:
+		if u.Basic != nil {
+			raw, err := json.Marshal(u.Basic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth basic: %w", err)
+			}
+			m["basic"] = raw
+		}
+	case AIGatewayModelProviderVertexConfigAuthTypeGCP:
+		if u.GCP != nil {
+			raw, err := json.Marshal(u.GCP)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth gcp: %w", err)
+			}
+			m["gcp"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelProviderVertexConfigAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelProviderVertexConfigAuthType(probe.Type)
+	switch probe.Type {
+	case "basic":
+		payload, ok := raw["basic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthBasic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth basic: %w", err)
+		}
+		u.Basic = &val
+	case "gcp":
+		payload, ok := raw["gcp"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthGCP
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth gcp: %w", err)
+		}
+		u.GCP = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelProviderVertexConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfig: nil receiver")
+	}
+	type alias AIGatewayModelProviderVertexConfig
+	aux := alias{}
+	aux.Auth = &AIGatewayModelProviderVertexConfigAuth{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfig: %w", err)
+	}
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.GCP == nil {
+		aux.Auth = nil
+	}
+	*s = AIGatewayModelProviderVertexConfig(aux)
+	return nil
+}
+
+// AIGatewayModelProviderVllm Configuration for an upstream model provider.
+type AIGatewayModelProviderVllm struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderVllmConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderVllmConfig Configuration for the model provider.
+type AIGatewayModelProviderVllmConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderXai Configuration for an upstream model provider.
+type AIGatewayModelProviderXai struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderXaiConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderXaiConfig Configuration for the model provider.
+type AIGatewayModelProviderXaiConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
 // AIGatewayModelVectorDBConfig represents a union type for AIGatewayModelVectorDBConfig.
 // Only one of the fields should be set based on the Type.
 //
@@ -2429,9 +4347,7 @@ type AIGatewayModelVectorDBConfigRedis struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=65535
-	Port int `json:"port,omitzero"`
+	Port *AIGatewayModelVectorDBConfigRedisPort `json:"port,omitempty"`
 	// An integer representing a timeout in milliseconds.
 	// Must be between 0 and 2^31-2.
 	//
@@ -2740,6 +4656,111 @@ func (u *AIGatewayModelVectorDBConfigRedisCloudAuthentication) UnmarshalJSON(dat
 	}
 	return nil
 }
+// AIGatewayModelVectorDBConfigRedisPortVariant1 is a type alias.
+type AIGatewayModelVectorDBConfigRedisPortVariant1 int
+
+// AIGatewayModelVectorDBConfigRedisPortVariant2 is a type alias.
+type AIGatewayModelVectorDBConfigRedisPortVariant2 string
+
+// AIGatewayModelVectorDBConfigRedisPort represents a union type for port.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayModelVectorDBConfigRedisPort struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=variant1;variant2
+	Type AIGatewayModelVectorDBConfigRedisPortType `json:"type,omitempty"`
+
+	// Variant1 configuration.
+	//
+	// +optional
+	Variant1 *AIGatewayModelVectorDBConfigRedisPortVariant1 `json:"variant1,omitempty"`
+	// Variant2 configuration.
+	//
+	// +optional
+	Variant2 *AIGatewayModelVectorDBConfigRedisPortVariant2 `json:"variant2,omitempty"`
+}
+
+// AIGatewayModelVectorDBConfigRedisPortType represents the type of port.
+type AIGatewayModelVectorDBConfigRedisPortType string
+
+// AIGatewayModelVectorDBConfigRedisPortType values.
+const (
+	AIGatewayModelVectorDBConfigRedisPortTypeVariant1 AIGatewayModelVectorDBConfigRedisPortType = "variant1"
+	AIGatewayModelVectorDBConfigRedisPortTypeVariant2 AIGatewayModelVectorDBConfigRedisPortType = "variant2"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelVectorDBConfigRedisPort) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisPort type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelVectorDBConfigRedisPortTypeVariant1:
+		if u.Variant1 != nil {
+			raw, err := json.Marshal(u.Variant1)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisPort Variant1: %w", err)
+			}
+			m["variant1"] = raw
+		}
+	case AIGatewayModelVectorDBConfigRedisPortTypeVariant2:
+		if u.Variant2 != nil {
+			raw, err := json.Marshal(u.Variant2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisPort Variant2: %w", err)
+			}
+			m["variant2"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelVectorDBConfigRedisPort) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedisPort: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelVectorDBConfigRedisPortType(probe.Type)
+	switch probe.Type {
+	case "variant1":
+		payload, ok := raw["variant1"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelVectorDBConfigRedisPortVariant1
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedisPort Variant1: %w", err)
+		}
+		u.Variant1 = &val
+	case "variant2":
+		payload, ok := raw["variant2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelVectorDBConfigRedisPortVariant2
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedisPort Variant2: %w", err)
+		}
+		u.Variant2 = &val
+	}
+	return nil
+}
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelVectorDBConfigRedis) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -2748,1687 +4769,18 @@ func (s *AIGatewayModelVectorDBConfigRedis) UnmarshalJSON(data []byte) error {
 	type alias AIGatewayModelVectorDBConfigRedis
 	aux := alias{}
 	aux.CloudAuthentication = &AIGatewayModelVectorDBConfigRedisCloudAuthentication{}
+	aux.Port = &AIGatewayModelVectorDBConfigRedisPort{}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelVectorDBConfigRedis: %w", err)
 	}
 	if aux.CloudAuthentication != nil && aux.CloudAuthentication.Type == "" && aux.CloudAuthentication.AWS == nil && aux.CloudAuthentication.Azure == nil && aux.CloudAuthentication.GCP == nil {
 		aux.CloudAuthentication = nil
 	}
+	if aux.Port != nil && aux.Port.Type == "" && aux.Port.Variant1 == nil && aux.Port.Variant2 == nil {
+		aux.Port = nil
+	}
 	*s = AIGatewayModelVectorDBConfigRedis(aux)
 	return nil
-}
-
-// AIGatewayProviderAnthropic Configuration for an upstream LLM provider.
-type AIGatewayProviderAnthropic struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderAnthropicConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderAnthropicConfig Configuration for the provider.
-type AIGatewayProviderAnthropicConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderAzure Config for Azure LLM provider.
-type AIGatewayProviderAzure struct {
-	//
-	//
-	// +required
-	Config AIGatewayProviderAzureConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderAzureConfig is a type alias.
-type AIGatewayProviderAzureConfig struct {
-	//
-	//
-	// +required
-	Auth *AIGatewayProviderAzureConfigAuth `json:"auth,omitempty"`
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Instance string `json:"instance,omitzero"`
-}
-
-// AIGatewayProviderAzureConfigAuth represents a union type for auth.
-// Only one of the fields should be set based on the Type.
-//
-type AIGatewayProviderAzureConfigAuth struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=azure;basic
-	Type AIGatewayProviderAzureConfigAuthType `json:"type,omitempty"`
-
-	// Azure configuration.
-	//
-	// +optional
-	Azure *AIGatewayProviderConfigAuthAzure `json:"azure,omitempty"`
-	// Basic configuration.
-	//
-	// +optional
-	Basic *AIGatewayProviderConfigAuthBasic `json:"basic,omitempty"`
-}
-
-// AIGatewayProviderAzureConfigAuthType represents the type of auth.
-type AIGatewayProviderAzureConfigAuthType string
-
-// AIGatewayProviderAzureConfigAuthType values.
-const (
-	AIGatewayProviderAzureConfigAuthTypeAzure AIGatewayProviderAzureConfigAuthType = "azure"
-	AIGatewayProviderAzureConfigAuthTypeBasic AIGatewayProviderAzureConfigAuthType = "basic"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayProviderAzureConfigAuth) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayProviderAzureConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
-	switch u.Type {
-	case AIGatewayProviderAzureConfigAuthTypeAzure:
-		if u.Azure != nil {
-			raw, err := json.Marshal(u.Azure)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayProviderAzureConfigAuth azure: %w", err)
-			}
-			m["azure"] = raw
-		}
-	case AIGatewayProviderAzureConfigAuthTypeBasic:
-		if u.Basic != nil {
-			raw, err := json.Marshal(u.Basic)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayProviderAzureConfigAuth basic: %w", err)
-			}
-			m["basic"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayProviderAzureConfigAuth) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderAzureConfigAuth: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = AIGatewayProviderAzureConfigAuthType(probe.Type)
-	switch probe.Type {
-	case "azure":
-		payload, ok := raw["azure"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayProviderConfigAuthAzure
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayProviderAzureConfigAuth azure: %w", err)
-		}
-		u.Azure = &val
-	case "basic":
-		payload, ok := raw["basic"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayProviderConfigAuthBasic
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayProviderAzureConfigAuth basic: %w", err)
-		}
-		u.Basic = &val
-	}
-	return nil
-}
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayProviderAzureConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderAzureConfig: nil receiver")
-	}
-	type alias AIGatewayProviderAzureConfig
-	aux := alias{}
-	aux.Auth = &AIGatewayProviderAzureConfigAuth{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderAzureConfig: %w", err)
-	}
-	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Azure == nil && aux.Auth.Basic == nil {
-		aux.Auth = nil
-	}
-	*s = AIGatewayProviderAzureConfig(aux)
-	return nil
-}
-
-// AIGatewayProviderBedrock Config for AWS LLM provider.
-type AIGatewayProviderBedrock struct {
-	//
-	//
-	// +required
-	Config AIGatewayProviderBedrockConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderBedrockConfig is a type alias.
-type AIGatewayProviderBedrockConfig struct {
-	//
-	//
-	// +required
-	Auth *AIGatewayProviderBedrockConfigAuth `json:"auth,omitempty"`
-}
-
-// AIGatewayProviderBedrockConfigAuth represents a union type for auth.
-// Only one of the fields should be set based on the Type.
-//
-type AIGatewayProviderBedrockConfigAuth struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=aws;basic
-	Type AIGatewayProviderBedrockConfigAuthType `json:"type,omitempty"`
-
-	// AWS configuration.
-	//
-	// +optional
-	AWS *AIGatewayProviderConfigAuthAWS `json:"aws,omitempty"`
-	// Basic configuration.
-	//
-	// +optional
-	Basic *AIGatewayProviderConfigAuthBasic `json:"basic,omitempty"`
-}
-
-// AIGatewayProviderBedrockConfigAuthType represents the type of auth.
-type AIGatewayProviderBedrockConfigAuthType string
-
-// AIGatewayProviderBedrockConfigAuthType values.
-const (
-	AIGatewayProviderBedrockConfigAuthTypeAWS AIGatewayProviderBedrockConfigAuthType = "aws"
-	AIGatewayProviderBedrockConfigAuthTypeBasic AIGatewayProviderBedrockConfigAuthType = "basic"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayProviderBedrockConfigAuth) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayProviderBedrockConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
-	switch u.Type {
-	case AIGatewayProviderBedrockConfigAuthTypeAWS:
-		if u.AWS != nil {
-			raw, err := json.Marshal(u.AWS)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayProviderBedrockConfigAuth aws: %w", err)
-			}
-			m["aws"] = raw
-		}
-	case AIGatewayProviderBedrockConfigAuthTypeBasic:
-		if u.Basic != nil {
-			raw, err := json.Marshal(u.Basic)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayProviderBedrockConfigAuth basic: %w", err)
-			}
-			m["basic"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayProviderBedrockConfigAuth) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderBedrockConfigAuth: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = AIGatewayProviderBedrockConfigAuthType(probe.Type)
-	switch probe.Type {
-	case "aws":
-		payload, ok := raw["aws"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayProviderConfigAuthAWS
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayProviderBedrockConfigAuth aws: %w", err)
-		}
-		u.AWS = &val
-	case "basic":
-		payload, ok := raw["basic"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayProviderConfigAuthBasic
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayProviderBedrockConfigAuth basic: %w", err)
-		}
-		u.Basic = &val
-	}
-	return nil
-}
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayProviderBedrockConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderBedrockConfig: nil receiver")
-	}
-	type alias AIGatewayProviderBedrockConfig
-	aux := alias{}
-	aux.Auth = &AIGatewayProviderBedrockConfigAuth{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderBedrockConfig: %w", err)
-	}
-	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.AWS == nil && aux.Auth.Basic == nil {
-		aux.Auth = nil
-	}
-	*s = AIGatewayProviderBedrockConfig(aux)
-	return nil
-}
-
-// AIGatewayProviderCerebras Configuration for an upstream LLM provider.
-type AIGatewayProviderCerebras struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderCerebrasConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderCerebrasConfig Configuration for the provider.
-type AIGatewayProviderCerebrasConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderCohere Configuration for an upstream LLM provider.
-type AIGatewayProviderCohere struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderCohereConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderCohereConfig Configuration for the provider.
-type AIGatewayProviderCohereConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderConfigAuthAWS Configuration for AWS LLM provider.
-type AIGatewayProviderConfigAuthAWS struct {
-	// The access key id for authenticating with static IAM User credentials.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	AccessKeyID string `json:"accessKeyID,omitzero"`
-	// The ARN of the IAM role to assume for generating authentication tokens.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	AssumeRoleArn string `json:"assumeRoleArn,omitzero"`
-	// AWS role arn to use when calling the batch API.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	BatchRoleArn string `json:"batchRoleArn,omitzero"`
-	// The session name for the temporary credentials when assuming the IAM role.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	RoleSessionName string `json:"roleSessionName,omitzero"`
-	// The secret access key for authenticating with static IAM User credentials.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	SecretAccessKey SensitiveDataSource `json:"secretAccessKey,omitzero"`
-	// The STS endpoint URL to use for generating authentication tokens.
-	// If not specified, the default AWS STS endpoint will be used.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	StsEndpointURL string `json:"stsEndpointURL,omitzero"`
-}
-
-// AIGatewayProviderConfigAuthAzure Configuration for Azure LLM provider.
-type AIGatewayProviderConfigAuthAzure struct {
-	// If azure_use_managed_identity is set to true, and you need to use a
-	// different user-assigned identity for this LLM instance, set the client ID.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	ClientID string `json:"clientID,omitzero"`
-	// If azure_use_managed_identity is set to true, and you need to use a
-	// different user-assigned identity for this LLM instance, set the client
-	// secret.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	ClientSecret SensitiveDataSource `json:"clientSecret,omitzero"`
-	// If azure_use_managed_identity is set to true, and you need to use a
-	// different user-assigned identity for this LLM instance, set the tenant ID.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	TenantID string `json:"tenantID,omitzero"`
-	// Set true to use the Azure Cloud Managed Identity (or user-assigned identity)
-	// to authenticate with Azure-provider models.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	UseManagedIdentity string `json:"useManagedIdentity,omitzero"`
-}
-
-// AIGatewayProviderConfigAuthBasic Basic auth config for an upstream LLM
-// provider.
-type AIGatewayProviderConfigAuthBasic struct {
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	Headers []AIGatewayProviderConfigAuthBasicHeaders `json:"headers,omitempty"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	Params []AIGatewayProviderConfigAuthBasicParams `json:"params,omitempty"`
-}
-
-// AIGatewayProviderConfigAuthBasicHeaders is a type alias.
-type AIGatewayProviderConfigAuthBasicHeaders struct {
-	// The name of the header used for authentication.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name,omitzero"`
-	// The auth header value for ‘header_name’, for example ‘Bearer
-	// key...’.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	Value SensitiveDataSource `json:"value,omitzero"`
-}
-
-// AIGatewayProviderConfigAuthBasicParams is a type alias.
-type AIGatewayProviderConfigAuthBasicParams struct {
-	// Specify whether the param name and value options go in a query string, or
-	// the POST form/JSON body.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=body;query
-	Location string `json:"location,omitzero"`
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name,omitzero"`
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	Value SensitiveDataSource `json:"value,omitzero"`
-}
-
-// AIGatewayProviderConfigAuthGCP Configuration for GCP LLM provider.
-type AIGatewayProviderConfigAuthGCP struct {
-	// Custom metadata URL for GCP authentication.
-	// Useful for restricted network environments or custom GCP endpoints.
-	// If not set, Kong will use the default Google metadata endpoint.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	MetadataURL string `json:"metadataURL,omitzero"`
-	// Custom OAuth token URL for GCP authentication.
-	// Useful for restricted network environments or custom GCP endpoints.
-	// If not set, Kong will use the default Google OAuth token endpoint.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	OauthTokenURL string `json:"oauthTokenURL,omitzero"`
-	// Full JSON string of the GCP service account to authenticate.
-	// If not set (and gcp_use_service_account is true), the service account JSON
-	// will be from the environment variable GCP_SERVICE_ACCOUNT.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	ServiceAccountJSON SensitiveDataSource `json:"serviceAccountJSON,omitzero"`
-	// Use service account auth for GCP-based providers and models.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	UseGcpServiceAccount string `json:"useGcpServiceAccount,omitzero"`
-}
-
-// AIGatewayProviderDashscope Configuration for an upstream LLM provider.
-type AIGatewayProviderDashscope struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderDashscopeConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderDashscopeConfig Configuration for the provider.
-type AIGatewayProviderDashscopeConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderDatabricks Configuration for an upstream LLM provider.
-type AIGatewayProviderDatabricks struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderDatabricksConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderDatabricksConfig Configuration for the provider.
-type AIGatewayProviderDatabricksConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderDeepseek Configuration for an upstream LLM provider.
-type AIGatewayProviderDeepseek struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderDeepseekConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderDeepseekConfig Configuration for the provider.
-type AIGatewayProviderDeepseekConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderGemini Config for GCP LLM provider.
-type AIGatewayProviderGemini struct {
-	//
-	//
-	// +required
-	Config AIGatewayProviderGeminiConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderGeminiConfig is a type alias.
-type AIGatewayProviderGeminiConfig struct {
-	//
-	//
-	// +required
-	Auth *AIGatewayProviderGeminiConfigAuth `json:"auth,omitempty"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	ProjectID string `json:"projectID,omitzero"`
-}
-
-// AIGatewayProviderGeminiConfigAuth represents a union type for auth.
-// Only one of the fields should be set based on the Type.
-//
-type AIGatewayProviderGeminiConfigAuth struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=basic;gcp
-	Type AIGatewayProviderGeminiConfigAuthType `json:"type,omitempty"`
-
-	// Basic configuration.
-	//
-	// +optional
-	Basic *AIGatewayProviderConfigAuthBasic `json:"basic,omitempty"`
-	// GCP configuration.
-	//
-	// +optional
-	GCP *AIGatewayProviderConfigAuthGCP `json:"gcp,omitempty"`
-}
-
-// AIGatewayProviderGeminiConfigAuthType represents the type of auth.
-type AIGatewayProviderGeminiConfigAuthType string
-
-// AIGatewayProviderGeminiConfigAuthType values.
-const (
-	AIGatewayProviderGeminiConfigAuthTypeBasic AIGatewayProviderGeminiConfigAuthType = "basic"
-	AIGatewayProviderGeminiConfigAuthTypeGCP AIGatewayProviderGeminiConfigAuthType = "gcp"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayProviderGeminiConfigAuth) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayProviderGeminiConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
-	switch u.Type {
-	case AIGatewayProviderGeminiConfigAuthTypeBasic:
-		if u.Basic != nil {
-			raw, err := json.Marshal(u.Basic)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayProviderGeminiConfigAuth basic: %w", err)
-			}
-			m["basic"] = raw
-		}
-	case AIGatewayProviderGeminiConfigAuthTypeGCP:
-		if u.GCP != nil {
-			raw, err := json.Marshal(u.GCP)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayProviderGeminiConfigAuth gcp: %w", err)
-			}
-			m["gcp"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayProviderGeminiConfigAuth) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderGeminiConfigAuth: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = AIGatewayProviderGeminiConfigAuthType(probe.Type)
-	switch probe.Type {
-	case "basic":
-		payload, ok := raw["basic"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayProviderConfigAuthBasic
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayProviderGeminiConfigAuth basic: %w", err)
-		}
-		u.Basic = &val
-	case "gcp":
-		payload, ok := raw["gcp"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayProviderConfigAuthGCP
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayProviderGeminiConfigAuth gcp: %w", err)
-		}
-		u.GCP = &val
-	}
-	return nil
-}
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayProviderGeminiConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderGeminiConfig: nil receiver")
-	}
-	type alias AIGatewayProviderGeminiConfig
-	aux := alias{}
-	aux.Auth = &AIGatewayProviderGeminiConfigAuth{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderGeminiConfig: %w", err)
-	}
-	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.GCP == nil {
-		aux.Auth = nil
-	}
-	*s = AIGatewayProviderGeminiConfig(aux)
-	return nil
-}
-
-// AIGatewayProviderHuggingface Configuration for an upstream LLM provider.
-type AIGatewayProviderHuggingface struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderHuggingfaceConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderHuggingfaceConfig Configuration for the provider.
-type AIGatewayProviderHuggingfaceConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderKimi Configuration for an upstream LLM provider.
-type AIGatewayProviderKimi struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderKimiConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderKimiConfig Configuration for the provider.
-type AIGatewayProviderKimiConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderLlama2 Configuration for an upstream LLM provider.
-type AIGatewayProviderLlama2 struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderLlama2Config `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderLlama2Config Configuration for the provider.
-type AIGatewayProviderLlama2Config struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderMistral Configuration for an upstream LLM provider.
-type AIGatewayProviderMistral struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderMistralConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderMistralConfig Configuration for the provider.
-type AIGatewayProviderMistralConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderOllama Configuration for an upstream LLM provider.
-type AIGatewayProviderOllama struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderOllamaConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderOllamaConfig Configuration for the provider.
-type AIGatewayProviderOllamaConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderOpenai Configuration for an upstream LLM provider.
-type AIGatewayProviderOpenai struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderOpenaiConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderOpenaiConfig Configuration for the provider.
-type AIGatewayProviderOpenaiConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderReference Reference to a provider instance.
-// This is either the provider ID or the provider name.
-type AIGatewayProviderReference string
-
-// AIGatewayProviderVercel Configuration for an upstream LLM provider.
-type AIGatewayProviderVercel struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderVercelConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderVercelConfig Configuration for the provider.
-type AIGatewayProviderVercelConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderVertex Config for GCP LLM provider.
-type AIGatewayProviderVertex struct {
-	//
-	//
-	// +required
-	Config AIGatewayProviderVertexConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderVertexConfig is a type alias.
-type AIGatewayProviderVertexConfig struct {
-	//
-	//
-	// +required
-	Auth *AIGatewayProviderVertexConfigAuth `json:"auth,omitempty"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	ProjectID string `json:"projectID,omitzero"`
-}
-
-// AIGatewayProviderVertexConfigAuth represents a union type for auth.
-// Only one of the fields should be set based on the Type.
-//
-type AIGatewayProviderVertexConfigAuth struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=basic;gcp
-	Type AIGatewayProviderVertexConfigAuthType `json:"type,omitempty"`
-
-	// Basic configuration.
-	//
-	// +optional
-	Basic *AIGatewayProviderConfigAuthBasic `json:"basic,omitempty"`
-	// GCP configuration.
-	//
-	// +optional
-	GCP *AIGatewayProviderConfigAuthGCP `json:"gcp,omitempty"`
-}
-
-// AIGatewayProviderVertexConfigAuthType represents the type of auth.
-type AIGatewayProviderVertexConfigAuthType string
-
-// AIGatewayProviderVertexConfigAuthType values.
-const (
-	AIGatewayProviderVertexConfigAuthTypeBasic AIGatewayProviderVertexConfigAuthType = "basic"
-	AIGatewayProviderVertexConfigAuthTypeGCP AIGatewayProviderVertexConfigAuthType = "gcp"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayProviderVertexConfigAuth) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayProviderVertexConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
-	switch u.Type {
-	case AIGatewayProviderVertexConfigAuthTypeBasic:
-		if u.Basic != nil {
-			raw, err := json.Marshal(u.Basic)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayProviderVertexConfigAuth basic: %w", err)
-			}
-			m["basic"] = raw
-		}
-	case AIGatewayProviderVertexConfigAuthTypeGCP:
-		if u.GCP != nil {
-			raw, err := json.Marshal(u.GCP)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayProviderVertexConfigAuth gcp: %w", err)
-			}
-			m["gcp"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayProviderVertexConfigAuth) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderVertexConfigAuth: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = AIGatewayProviderVertexConfigAuthType(probe.Type)
-	switch probe.Type {
-	case "basic":
-		payload, ok := raw["basic"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayProviderConfigAuthBasic
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayProviderVertexConfigAuth basic: %w", err)
-		}
-		u.Basic = &val
-	case "gcp":
-		payload, ok := raw["gcp"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayProviderConfigAuthGCP
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayProviderVertexConfigAuth gcp: %w", err)
-		}
-		u.GCP = &val
-	}
-	return nil
-}
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayProviderVertexConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderVertexConfig: nil receiver")
-	}
-	type alias AIGatewayProviderVertexConfig
-	aux := alias{}
-	aux.Auth = &AIGatewayProviderVertexConfigAuth{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayProviderVertexConfig: %w", err)
-	}
-	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.GCP == nil {
-		aux.Auth = nil
-	}
-	*s = AIGatewayProviderVertexConfig(aux)
-	return nil
-}
-
-// AIGatewayProviderVllm Configuration for an upstream LLM provider.
-type AIGatewayProviderVllm struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderVllmConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderVllmConfig Configuration for the provider.
-type AIGatewayProviderVllmConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayProviderXai Configuration for an upstream LLM provider.
-type AIGatewayProviderXai struct {
-	// Configuration for the provider.
-	//
-	// +required
-	Config AIGatewayProviderXaiConfig `json:"config,omitzero"`
-	// The display name for this provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this provider instance, used as a
-	// stable human-readable reference.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayProviderXaiConfig Configuration for the provider.
-type AIGatewayProviderXaiConfig struct {
-	// Basic auth config for an upstream LLM provider.
-	//
-	//
-	// +required
-	Auth AIGatewayProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
 // AIGatewayProxyConfig HTTP/HTTPS proxy configuration for outbound requests to
@@ -4740,13 +5092,13 @@ type AIGatewayTarget struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
-	// Reference to a provider instance.
-	// This is either the provider ID or the provider name.
+	// Reference to a model provider instance.
+	// This is either the model provider ID or the model provider name.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Provider AIGatewayProviderReference `json:"provider,omitzero"`
+	Provider AIGatewayModelProviderReference `json:"provider,omitzero"`
 	// The semantic description of the target, required if using semantic load
 	// balancing.
 	// Specially, setting this to 'CATCHALL' will indicate such target to be used
@@ -5669,31 +6021,18 @@ type AIGatewayTargetDeepseekConfig struct {
 
 // AIGatewayTargetGeminiConfig Google Gemini-specific configuration for a model.
 type AIGatewayTargetGeminiConfig struct {
-	// The custom API endpoint for the Gemini model.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	APIEndpoint string `json:"apiEndpoint,omitzero"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// The endpoint ID for the Gemini model.
-	// This must be set when running on Gemini on Vertex Model Garden.
-	//
+	// Configuration for a model hosted on Google Cloud Project.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	EndpointID string `json:"endpointID,omitzero"`
+	GcpEnvironment GCPModelConfig `json:"gcpEnvironment,omitzero"`
 	// Cost per input token for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
-	// The Google Cloud location ID for the model endpoint.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	LocationID string `json:"locationID,omitzero"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -6041,31 +6380,18 @@ type AIGatewayTargetVercelConfig struct {
 
 // AIGatewayTargetVertexConfig Google Vertex-specific configuration for a model.
 type AIGatewayTargetVertexConfig struct {
-	// The custom API endpoint for the Vertex model.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	APIEndpoint string `json:"apiEndpoint,omitzero"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// The endpoint ID for the Vertex model.
-	// This must be set when running on Vertex Model Garden.
-	//
+	// Configuration for a model hosted on Google Cloud Project.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	EndpointID string `json:"endpointID,omitzero"`
+	GcpEnvironment AIGatewayTargetVertexConfigGcpEnvironment `json:"gcpEnvironment,omitzero"`
 	// Cost per input token for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
-	// The Google Cloud location ID for the model endpoint.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	LocationID string `json:"locationID,omitzero"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -6094,6 +6420,38 @@ type AIGatewayTargetVertexConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetVertexConfigGcpEnvironment Configuration for a model hosted on
+// Google Cloud Project.
+type AIGatewayTargetVertexConfigGcpEnvironment struct {
+	// The custom API endpoint for the Gemini model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	APIEndpoint string `json:"apiEndpoint,omitzero"`
+	// The endpoint ID for the model.
+	// This must be set when running a target model on Gemini on Vertex Model
+	// Garden.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	EndpointID string `json:"endpointID,omitzero"`
+	// The Google Cloud location ID for the model endpoint.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	LocationID string `json:"locationID,omitzero"`
+	// The Google Cloud project ID for the model endpoint.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ProjectID string `json:"projectID,omitzero"`
 }
 
 // AIGatewayTargetVllmConfig Vllm-specific configuration for a model.
@@ -6191,16 +6549,10 @@ type AIGatewayVercelEmbeddingsModelConfig struct {
 // AIGatewayVertexEmbeddingsModelConfig Google Vertex-specific configuration for
 // a model.
 type AIGatewayVertexEmbeddingsModelConfig struct {
-	// The custom API endpoint for the Vertex model.
+	// Configuration for a model hosted on Google Cloud Project.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	APIEndpoint string `json:"apiEndpoint,omitzero"`
-	// The Google Cloud location ID for the model endpoint.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	LocationID string `json:"locationID,omitzero"`
+	GcpEnvironment GCPModelConfig `json:"gcpEnvironment,omitzero"`
 	// The URL of the embeddings model.
 	//
 	// +required
@@ -6257,6 +6609,28 @@ type CreatePortalCustomDomainSSLWithCustomCertificate struct {
 
 // Description is a type alias.
 type Description string
+
+// GCPModelConfig Configuration for a model hosted on Google Cloud Project.
+type GCPModelConfig struct {
+	// The custom API endpoint for the Gemini model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	APIEndpoint string `json:"apiEndpoint,omitzero"`
+	// The Google Cloud location ID for the model endpoint.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	LocationID string `json:"locationID,omitzero"`
+	// The Google Cloud project ID for the model endpoint.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ProjectID string `json:"projectID,omitzero"`
+}
 
 // GatewayDescription A human-readable description of the Gateway.
 type GatewayDescription string

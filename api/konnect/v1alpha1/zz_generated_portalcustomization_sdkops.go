@@ -202,34 +202,34 @@ func (s *PortalCustomizationAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	return data, nil
 }
 
-// ToCreatePortalCustomizationV3 converts the PortalCustomizationAPISpec to the SDK type
-// sdkkonnectcomp.PortalCustomizationV3 using JSON marshal/unmarshal.
+// ToCreatePortalCustomization converts the PortalCustomizationAPISpec to the SDK type
+// sdkkonnectcomp.PortalCustomization using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
 // object references) are naturally excluded because they have different JSON names.
-func (s *PortalCustomizationAPISpec) ToCreatePortalCustomizationV3() (*sdkkonnectcomp.PortalCustomizationV3, error) {
+func (s *PortalCustomizationAPISpec) ToCreatePortalCustomization() (*sdkkonnectcomp.PortalCustomization, error) {
 	data, err := s.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
 	}
-	var target sdkkonnectcomp.PortalCustomizationV3
+	var target sdkkonnectcomp.PortalCustomization
 	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into PortalCustomizationV3: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal into PortalCustomization: %w", err)
 	}
 	return &target, nil
 }
 
-// ToUpdatePortalCustomizationV3 converts the PortalCustomizationAPISpec to the SDK type
-// sdkkonnectcomp.PortalCustomizationV3 using JSON marshal/unmarshal.
+// ToUpdatePortalCustomization converts the PortalCustomizationAPISpec to the SDK type
+// sdkkonnectcomp.PortalCustomization using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
 // object references) are naturally excluded because they have different JSON names.
-func (s *PortalCustomizationAPISpec) ToUpdatePortalCustomizationV3() (*sdkkonnectcomp.PortalCustomizationV3, error) {
+func (s *PortalCustomizationAPISpec) ToUpdatePortalCustomization() (*sdkkonnectcomp.PortalCustomization, error) {
 	data, err := s.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
 	}
-	var target sdkkonnectcomp.PortalCustomizationV3
+	var target sdkkonnectcomp.PortalCustomization
 	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into PortalCustomizationV3: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal into PortalCustomization: %w", err)
 	}
 	return &target, nil
 }

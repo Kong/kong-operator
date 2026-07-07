@@ -94,7 +94,7 @@
   [#4781](https://github.com/Kong/kong-operator/pull/4781)
   - introduce `AIGatewayAgent` CRD with reconciler.
   [#4776](https://github.com/Kong/kong-operator/pull/4776)
-  - introduce `AIGatewayProvider` CRD with reconciler. Credentials can be sourced
+  - introduce `AIGatewayModelProvider` CRD with reconciler. Credentials can be sourced
     from a Kubernetes `Secret`s.
     [#4793](https://github.com/Kong/kong-operator/pull/4793)
     [#4798](https://github.com/Kong/kong-operator/pull/4798)

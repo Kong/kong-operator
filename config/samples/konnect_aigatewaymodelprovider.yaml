@@ -1,0 +1,180 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.tech
+---
+kind: AIGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+    labels:
+      app: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: AIGatewayModelProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-anthropic
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: anthropic
+    anthropic:
+      name: anthropic-provider
+      displayName: Anthropic
+      config:
+        auth:
+          headers:
+            - name: x-api-key
+              # Credential provided inline. See the "ai-gw-provider-openai" sample
+              # below for referencing a Kubernetes Secret instead.
+              value:
+                type: inline
+                value: sk-ant-xxxxxxxxxxxxxxxxxxxx
+---
+kind: AIGatewayModelProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-azure
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: azure
+    azure:
+      name: azure-provider
+      displayName: Azure
+      config:
+        instance: my-azure-instance
+        auth:
+          type: basic
+          basic:
+            headers:
+              - name: api-key
+                value:
+                  type: inline
+                  value: xxxxxxxxxxxxxxxxxxxx
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bedrock-credentials
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+data:
+  secretAccessKey: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==
+---
+kind: AIGatewayModelProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-bedrock
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: bedrock
+    bedrock:
+      name: bedrock-provider
+      displayName: Bedrock
+      config:
+        auth:
+          type: aws
+          aws:
+            accessKeyID: AKIAXXXXXXXXXXXXXXXX
+            # AWS secret access key referenced from a Kubernetes Secret rather
+            # than provided inline.
+            secretAccessKey:
+              type: secretRef
+              secretRef:
+                name: bedrock-credentials
+                key: secretAccessKey
+---
+kind: AIGatewayModelProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-gemini
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: gemini
+    gemini:
+      name: gemini-provider
+      displayName: Gemini
+      config:
+        auth:
+          type: basic
+          basic:
+            headers:
+              - name: x-goog-api-key
+                value:
+                  type: inline
+                  value: xxxxxxxxxxxxxxxxxxxx
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-credentials
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+data:
+  token: QmVhcmVyIHNrLXh4eHh4eHh4eHh4eHh4eHh4eHh4
+---
+kind: AIGatewayModelProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-openai
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: openai
+    openai:
+      name: openai-provider
+      displayName: OpenAI
+      config:
+        auth:
+          headers:
+            - name: Authorization
+              # Credential referenced from a Kubernetes Secret. The Secret must
+              # exist in the same namespace as this AIGatewayModelProvider (or set
+              # secretRef.namespace) and contain the key below.
+              value:
+                type: secretRef
+                secretRef:
+                  name: openai-credentials
+                  key: token

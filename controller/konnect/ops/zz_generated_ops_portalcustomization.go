@@ -21,7 +21,7 @@ func createPortalCustomization(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreatePortalCustomizationV3()
+	req, err := obj.Spec.APISpec.ToCreatePortalCustomization()
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -30,7 +30,7 @@ func createPortalCustomization(
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
 		return errWrap
 	}
-	if resp == nil || resp.PortalCustomizationV3 == nil {
+	if resp == nil || resp.PortalCustomization == nil {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 	return nil
@@ -45,7 +45,7 @@ func updatePortalCustomization(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: UpdateOp}
 	}
-	req, err := obj.Spec.APISpec.ToUpdatePortalCustomizationV3()
+	req, err := obj.Spec.APISpec.ToUpdatePortalCustomization()
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -68,7 +68,7 @@ func deletePortalCustomization(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: DeleteOp}
 	}
-	req := &sdkkonnectcomp.PortalCustomizationV3{}
+	req := &sdkkonnectcomp.PortalCustomization{}
 
 	_, err := sdk.ReplacePortalCustomization(ctx, parentID, req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
