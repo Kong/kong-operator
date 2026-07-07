@@ -363,6 +363,7 @@ func konnectExtensionTestCases(t *testing.T, cl client.Client, params KonnectExt
 			konnectExtensionTestBody(t, cl, params)
 		})
 
+		/* skip until flakiness resolved https://github.com/Kong/kong-operator/issues/4807
 		t.Run("automatic secret provisioning", func(t *testing.T) {
 			konnectExtension := deploy.KonnectExtension(
 				t, ctx, params.client,
@@ -379,6 +380,7 @@ func konnectExtensionTestCases(t *testing.T, cl client.Client, params KonnectExt
 			}
 			konnectExtensionTestBody(t, cl, params)
 		})
+		*/
 	})
 }
 
