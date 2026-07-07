@@ -139,7 +139,7 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 		},
 		{
-			name: "array type",
+			name: "array type without maxItems falls back to default",
 			prop: &parser.Property{
 				Name:     "items",
 				Type:     "array",
@@ -147,6 +147,19 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 			expected: []string{
 				"+optional",
+			},
+		},
+		{
+			name: "array type with explicit maxItems",
+			prop: &parser.Property{
+				Name:     "items",
+				Type:     "array",
+				Required: false,
+				MaxItems: new(int64(5)),
+			},
+			expected: []string{
+				"+optional",
+				"+kubebuilder:validation:MaxItems=5",
 			},
 		},
 		{

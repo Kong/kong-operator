@@ -39,6 +39,7 @@ type Property struct {
 	// Validations
 	MinLength     *int64
 	MaxLength     *int64
+	MaxItems      *int64
 	MaxProperties *int64
 	Minimum       *float64
 	Maximum       *float64

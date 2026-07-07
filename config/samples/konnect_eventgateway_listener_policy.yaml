@@ -109,10 +109,12 @@ spec:
               type: secretRef
               secretRef:
                 name: cp-event-1-listener-1-tls
+                key: tls.crt
             key:
               type: secretRef
               secretRef:
                 name: cp-event-1-listener-1-tls
+                key: tls.key
   eventGatewayListenerRef:
     type: namespacedRef
     namespacedRef:

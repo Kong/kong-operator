@@ -87,9 +87,9 @@ func (obj *EventGatewayDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, 
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			secretBytes, ok := secret.Data["tls.crt"]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, src.SecretRef.Name)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.Certificate.Value = &resolved
@@ -105,10 +105,7 @@ func (obj *EventGatewayDataPlaneCertificate) GetSensitiveDataSecretRefs() []Sens
 	}
 	var refs []SensitiveDataSecretRef
 	if obj.Spec.APISpec.Certificate.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.Certificate.SecretRef != nil {
-		refs = append(refs, SensitiveDataSecretRef{
-			Ref: *obj.Spec.APISpec.Certificate.SecretRef,
-			Key: "tls.crt",
-		})
+		refs = append(refs, *obj.Spec.APISpec.Certificate.SecretRef)
 	}
 	return refs
 }

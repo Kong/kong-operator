@@ -12,6 +12,16 @@ import (
 // the OpenAPI spec does not declare an explicit maxLength constraint.
 const defaultMaxLength = 253
 
+// // defaultMaxItems is the fallback MaxItems applied to array fields when the
+// // OpenAPI spec does not declare an explicit maxItems constraint. Unbounded
+// // arrays let Kubernetes' CEL cost estimator assume near-worst-case cardinality
+// // for any x-kubernetes-validations rule on the array's items, which can blow
+// // the per-CRD cost budget (see AIGatewayProvider's headers/params auth
+// // fields). Bump this (or set an explicit maxItems on the OAS schema / config)
+// // if a future Kubernetes release raises the CEL cost budget and a field
+// // genuinely needs more room.
+// const defaultMaxItems = 32
+
 // jsonTagForProperty returns the JSON tag segment for a property, mirroring
 // the logic the CRD type template uses: reference properties get a "Ref" suffix,
 // all others use the lowerCamelCase form of the OAS property name.
@@ -85,6 +95,20 @@ func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []s
 	// Map MaxProperties constraint (applies to both ref and inline map types)
 	if prop.MaxProperties != nil {
 		tags = append(tags, markerValidationMaxProperties(int(*prop.MaxProperties)))
+	}
+
+	// Array MaxItems constraint. Always emitted — an unbounded array lets the
+	// Kubernetes CEL cost estimator assume near-worst-case cardinality for any
+	// x-kubernetes-validations rule on its items, which can blow the per-CRD
+	// cost budget. Fall back to defaultMaxItems when the OAS spec declares none.
+	if prop.Type == "array" {
+		if prop.MaxItems != nil {
+			tags = append(tags, markerValidationMaxItems(int(*prop.MaxItems)))
+		}
+		// else {
+		// TODO: Don't change just yet.
+		// tags = append(tags, markerValidationMaxItems(defaultMaxItems))
+		// }
 	}
 
 	// Apply custom validations from config, overriding any auto-generated

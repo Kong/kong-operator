@@ -79,3 +79,4 @@ spec:
       type: secretRef
       secretRef:
         name: eventgatewaydataplanecert-cp-event-1
+        key: tls.crt

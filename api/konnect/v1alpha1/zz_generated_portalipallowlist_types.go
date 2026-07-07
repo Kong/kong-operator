@@ -57,6 +57,7 @@ type PortalIPAllowListAPISpec struct {
 	// The list of allowed ips for the portal.
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=25
 	AllowedIps []string `json:"allowedIps,omitempty"`
 }
 

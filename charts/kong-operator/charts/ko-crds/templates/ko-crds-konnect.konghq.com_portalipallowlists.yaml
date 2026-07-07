@@ -71,6 +71,7 @@ spec:
                     description: The list of allowed ips for the portal.
                     items:
                       type: string
+                    maxItems: 25
                     type: array
                 required:
                 - allowedIps

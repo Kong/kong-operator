@@ -4933,7 +4933,23 @@ _Appears in:_
 
 
 
+#### SensitiveDataSecretRef
 
+
+SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
+that holds a sensitive value for a CRD field.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referred resource. |
+| `key` _string_ | Key is the data key within the Secret. |
+| `namespace` _*string_ | Namespace is the namespace of the referred resource.<br /><br />For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br />This field MUST not be set when referring to cluster-scoped resources. |
+
+_Appears in:_
+
+- [SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)
 
 #### SensitiveDataSource
 
@@ -4947,7 +4963,7 @@ either inline or sourced from a Kubernetes Secret.
 | --- | --- |
 | `type` _[SensitiveDataSourceType](#configuration-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data: 'inline' or 'secretRef'. |
 | `value` _*string_ | Value contains the sensitive data provided inline. Required when type is 'inline'. |
-| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
+| `secretRef` _[SensitiveDataSecretRef](#configuration-konghq-com-v1alpha1-types-sensitivedatasecretref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
 
 _Appears in:_
 
@@ -10685,7 +10701,7 @@ AIGatewayProviderConfigAuthAWS Configuration for AWS LLM provider.
 | `assumeRoleArn` _string_ | The ARN of the IAM role to assume for generating authentication tokens. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `batchRoleArn` _string_ | AWS role arn to use when calling the batch API. |
 | `roleSessionName` _string_ | The session name for the temporary credentials when assuming the IAM role. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
-| `secretAccessKey` _string_ | The secret access key for authenticating with static IAM User credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `secretAccessKey` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | The secret access key for authenticating with static IAM User credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `stsEndpointURL` _string_ | The STS endpoint URL to use for generating authentication tokens. If not specified, the default AWS STS endpoint will be used. |
 
 _Appears in:_
@@ -10702,7 +10718,7 @@ AIGatewayProviderConfigAuthAzure Configuration for Azure LLM provider.
 | Field | Description |
 | --- | --- |
 | `clientID` _string_ | If azure_use_managed_identity is set to true, and you need to use a different user-assigned identity for this LLM instance, set the client ID. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
-| `clientSecret` _string_ | If azure_use_managed_identity is set to true, and you need to use a different user-assigned identity for this LLM instance, set the client secret. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `clientSecret` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | If azure_use_managed_identity is set to true, and you need to use a different user-assigned identity for this LLM instance, set the client secret. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `tenantID` _string_ | If azure_use_managed_identity is set to true, and you need to use a different user-assigned identity for this LLM instance, set the tenant ID. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `useManagedIdentity` _string_ | Set true to use the Azure Cloud Managed Identity (or user-assigned identity) to authenticate with Azure-provider models. |
 
@@ -10755,7 +10771,7 @@ AIGatewayProviderConfigAuthBasicHeaders is a type alias.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | The name of the header used for authentication. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
-| `value` _string_ | The auth header value for ‘header_name’, for example ‘Bearer key...’. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `value` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | The auth header value for ‘header_name’, for example ‘Bearer key...’. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 
 _Appears in:_
 
@@ -10772,7 +10788,7 @@ AIGatewayProviderConfigAuthBasicParams is a type alias.
 | --- | --- |
 | `location` _string_ | Specify whether the param name and value options go in a query string, or the POST form/JSON body. |
 | `name` _string_ | This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
-| `value` _string_ | This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `value` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 
 _Appears in:_
 
@@ -10789,7 +10805,7 @@ AIGatewayProviderConfigAuthGCP Configuration for GCP LLM provider.
 | --- | --- |
 | `metadataURL` _string_ | Custom metadata URL for GCP authentication. Useful for restricted network environments or custom GCP endpoints. If not set, Kong will use the default Google metadata endpoint. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `oauthTokenURL` _string_ | Custom OAuth token URL for GCP authentication. Useful for restricted network environments or custom GCP endpoints. If not set, Kong will use the default Google OAuth token endpoint. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
-| `serviceAccountJSON` _string_ | Full JSON string of the GCP service account to authenticate. If not set (and gcp_use_service_account is true), the service account JSON will be from the environment variable GCP_SERVICE_ACCOUNT. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `serviceAccountJSON` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | Full JSON string of the GCP service account to authenticate. If not set (and gcp_use_service_account is true), the service account JSON will be from the environment variable GCP_SERVICE_ACCOUNT. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `useGcpServiceAccount` _string_ | Use service account auth for GCP-based providers and models. |
 
 _Appears in:_
@@ -14093,7 +14109,65 @@ _Appears in:_
 - [CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)
 
+#### SensitiveDataSecretRef
 
+
+SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
+that holds a sensitive value for a CRD field.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referred resource. |
+| `key` _string_ | Key is the data key within the Secret. |
+| `namespace` _*string_ | Namespace is the namespace of the referred resource.<br /><br />For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br />This field MUST not be set when referring to cluster-scoped resources. |
+
+_Appears in:_
+
+- [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
+
+#### SensitiveDataSource
+
+
+SensitiveDataSource holds a sensitive string value that can be provided
+either inline or sourced from a Kubernetes Secret.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[SensitiveDataSourceType](#konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data: 'inline' or 'secretRef'. |
+| `value` _*string_ | Value contains the sensitive data provided inline. Required when type is 'inline'. |
+| `secretRef` _[SensitiveDataSecretRef](#konnect-konghq-com-v1alpha1-types-sensitivedatasecretref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
+
+_Appears in:_
+
+- [AIGatewayProviderConfigAuthAWS](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthaws)
+- [AIGatewayProviderConfigAuthAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthazure)
+- [AIGatewayProviderConfigAuthBasicHeaders](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasicheaders)
+- [AIGatewayProviderConfigAuthBasicParams](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthbasicparams)
+- [AIGatewayProviderConfigAuthGCP](#konnect-konghq-com-v1alpha1-types-aigatewayproviderconfigauthgcp)
+
+#### SensitiveDataSourceType
+
+_Underlying type:_ `string`
+
+SensitiveDataSourceType is the type of source for the sensitive data.
+
+
+
+
+_Appears in:_
+
+- [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
+| `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
 
 #### SpecRenderer
 

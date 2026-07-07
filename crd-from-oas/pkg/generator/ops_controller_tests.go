@@ -230,7 +230,7 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 			VariantField:    "Anthropic",
 			VariantTypeName: "AIGatewayProviderAnthropic",
 			VariantValue: fmt.Sprintf(
-				`&%[1]s.AIGatewayProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: %[1]s.AIGatewayProviderAnthropicConfig{Auth: %[1]s.AIGatewayProviderConfigAuthBasic{Headers: []%[1]s.AIGatewayProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: "test-value"}}}}}`,
+				`&%[1]s.AIGatewayProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: %[1]s.AIGatewayProviderAnthropicConfig{Auth: %[1]s.AIGatewayProviderConfigAuthBasic{Headers: []%[1]s.AIGatewayProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("test-value")}}}}}}`,
 				apiAlias,
 			),
 		}

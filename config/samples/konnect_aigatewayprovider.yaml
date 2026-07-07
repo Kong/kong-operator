@@ -44,7 +44,11 @@ spec:
         auth:
           headers:
             - name: x-api-key
-              value: sk-ant-xxxxxxxxxxxxxxxxxxxx
+              # Credential provided inline. See the "ai-gw-provider-openai" sample
+              # below for referencing a Kubernetes Secret instead.
+              value:
+                type: inline
+                value: sk-ant-xxxxxxxxxxxxxxxxxxxx
 ---
 kind: AIGatewayProvider
 apiVersion: konnect.konghq.com/v1alpha1
@@ -68,7 +72,48 @@ spec:
           basic:
             headers:
               - name: api-key
-                value: xxxxxxxxxxxxxxxxxxxx
+                value:
+                  type: inline
+                  value: xxxxxxxxxxxxxxxxxxxx
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bedrock-credentials
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+data:
+  secretAccessKey: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==
+---
+kind: AIGatewayProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-bedrock
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: bedrock
+    bedrock:
+      name: bedrock-provider
+      displayName: Bedrock
+      config:
+        auth:
+          type: aws
+          aws:
+            accessKeyID: AKIAXXXXXXXXXXXXXXXX
+            # AWS secret access key referenced from a Kubernetes Secret rather
+            # than provided inline.
+            secretAccessKey:
+              type: secretRef
+              secretRef:
+                name: bedrock-credentials
+                key: secretAccessKey
 ---
 kind: AIGatewayProvider
 apiVersion: konnect.konghq.com/v1alpha1
@@ -91,7 +136,20 @@ spec:
           basic:
             headers:
               - name: x-goog-api-key
-                value: xxxxxxxxxxxxxxxxxxxx
+                value:
+                  type: inline
+                  value: xxxxxxxxxxxxxxxxxxxx
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-credentials
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+data:
+  token: QmVhcmVyIHNrLXh4eHh4eHh4eHh4eHh4eHh4eHh4
 ---
 kind: AIGatewayProvider
 apiVersion: konnect.konghq.com/v1alpha1
@@ -112,4 +170,11 @@ spec:
         auth:
           headers:
             - name: Authorization
-              value: Bearer sk-xxxxxxxxxxxxxxxxxxxx
+              # Credential referenced from a Kubernetes Secret. The Secret must
+              # exist in the same namespace as this AIGatewayProvider (or set
+              # secretRef.namespace) and contain the key below.
+              value:
+                type: secretRef
+                secretRef:
+                  name: openai-credentials
+                  key: token

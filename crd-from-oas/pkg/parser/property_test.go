@@ -189,8 +189,28 @@ func TestParseProperty_ArrayType(t *testing.T) {
 
 	assert.Equal(t, "array", prop.Type)
 	assert.Equal(t, "List of tags", prop.Description)
+	assert.Nil(t, prop.MaxItems)
 	require.NotNil(t, prop.Items)
 	assert.Equal(t, "string", prop.Items.Type)
+}
+
+func TestParseProperty_ArrayMaxItems(t *testing.T) {
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			Type:     &openapi3.Types{"array"},
+			MaxItems: new(uint64(10)),
+			Items: &openapi3.SchemaRef{
+				Value: &openapi3.Schema{
+					Type: &openapi3.Types{"string"},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("tags", schemaRef, 0, make(map[string]bool))
+
+	require.NotNil(t, prop.MaxItems)
+	assert.Equal(t, int64(10), *prop.MaxItems)
 }
 
 func TestParseProperty_ArrayOfObjects(t *testing.T) {

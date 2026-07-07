@@ -291,6 +291,7 @@ spec:
                               - encryptionKey
                               - paths
                               type: object
+                            maxItems: 256
                             type: array
                           failureMode:
                             description: |-
