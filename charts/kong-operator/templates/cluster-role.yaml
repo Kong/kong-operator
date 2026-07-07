@@ -451,6 +451,7 @@ rules:
     resources:
       - aigatewaycontrolplanes
       - aigatewaymodels
+      - aigatewaypolicies
       - aigatewayproviders
       - konnectapiauthconfigurations
       - konnectcloudgatewaydataplanegroupconfigurations
@@ -478,6 +479,8 @@ rules:
       - aigatewaycontrolplanes/status
       - aigatewaymodels/finalizers
       - aigatewaymodels/status
+      - aigatewaypolicies/finalizers
+      - aigatewaypolicies/status
       - aigatewayproviders/finalizers
       - aigatewayproviders/status
       - konnectapiauthconfigurations/finalizers

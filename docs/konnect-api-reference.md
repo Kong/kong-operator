@@ -11,6 +11,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 
 - [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
 - [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
+- [AIGatewayPolicy](#konnect-konghq-com-v1alpha1-aigatewaypolicy)
 - [AIGatewayProvider](#konnect-konghq-com-v1alpha1-aigatewayprovider)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
@@ -57,6 +58,21 @@ AIGatewayModel is the Schema for the aigatewaymodels API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayModelSpec](#konnect-konghq-com-v1alpha1-types-aigatewaymodelspec)_ |  |
 | `status` _[AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)_ |  |
+
+### AIGatewayPolicy
+
+
+AIGatewayPolicy is the Schema for the aigatewaypolicys API.
+
+<!-- ai_gateway_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayPolicy`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayPolicySpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyspec)_ |  |
+| `status` _[AIGatewayPolicyStatus](#konnect-konghq-com-v1alpha1-types-aigatewaypolicystatus)_ |  |
 
 ### AIGatewayProvider
 
@@ -494,6 +510,7 @@ _Appears in:_
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+- [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
 - [AIGatewayProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropic)
 - [AIGatewayProviderAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazure)
 - [AIGatewayProviderBedrock](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrock)
@@ -1445,6 +1462,63 @@ Allowed values:
 | --- | --- |
 | `pgvector` |  |
 | `redis` |  |
+
+#### AIGatewayPolicyAPISpec
+
+
+AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Configuration for the policy. This is equivalent to the Kong 3 plugin configuration. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
+| `displayName` _string_ | The display name for this policy instance. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `global` _string_ | Whether the policy is globally applied to all resources. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this policy instance, used as a stable human-readable reference. |
+| `type` _string_ | The type of the Policy. This is equivalent to the Kong 3 plugin name. Some examples are: 'ai-sanitizer', 'ai-prompt-guard', and 'openid-connect'. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
+
+_Appears in:_
+
+- [AIGatewayPolicySpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyspec)
+
+
+
+#### AIGatewayPolicySpec
+
+
+AIGatewayPolicySpec defines the desired state of AIGatewayPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `apiSpec` _[AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayPolicy](#konnect-konghq-com-v1alpha1-aigatewaypolicy)
+
+#### AIGatewayPolicyStatus
+
+
+AIGatewayPolicyStatus defines the observed state of AIGatewayPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayPolicy](#konnect-konghq-com-v1alpha1-aigatewaypolicy)
 
 #### AIGatewayProviderAPISpec
 
@@ -3856,6 +3930,7 @@ KonnectEntityRef is a reference to a Konnect entity.
 _Appears in:_
 
 - [AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)
+- [AIGatewayPolicyStatus](#konnect-konghq-com-v1alpha1-types-aigatewaypolicystatus)
 - [AIGatewayProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewayproviderstatus)
 - [PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)
 - [PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)
@@ -4241,6 +4316,7 @@ _Appears in:_
 
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+- [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
 - [AIGatewayProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropic)
 - [AIGatewayProviderAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazure)
 - [AIGatewayProviderBedrock](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrock)
@@ -5063,6 +5139,7 @@ _Appears in:_
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+- [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
 - [AIGatewayProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewayprovideranthropic)
 - [AIGatewayProviderAzure](#konnect-konghq-com-v1alpha1-types-aigatewayproviderazure)
 - [AIGatewayProviderBedrock](#konnect-konghq-com-v1alpha1-types-aigatewayproviderbedrock)
