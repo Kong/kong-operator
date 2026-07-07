@@ -3,21 +3,21 @@
 package v1alpha1
 
 const (
-	// AiGatewayRefValidConditionType is the type of the condition that indicates
-	// whether the AiGateway reference is valid and points to an existing
+	// AIGatewayControlPlaneRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayControlPlane reference is valid and points to an existing
 	// AIGatewayControlPlane.
-	AiGatewayRefValidConditionType = "AiGatewayRefValid"
+	AIGatewayControlPlaneRefValidConditionType = "AIGatewayControlPlaneRefValid"
 
-	// AiGatewayRefReasonValid is the reason used with the AiGatewayRefValid
-	// condition type indicating that the AiGateway reference is valid.
-	AiGatewayRefReasonValid = "Valid"
-	// AiGatewayRefReasonInvalid is the reason used with the AiGatewayRefValid
-	// condition type indicating that the AiGateway reference is invalid.
-	AiGatewayRefReasonInvalid = "Invalid"
-	// AiGatewayRefReasonNotProgrammed is the reason used with the AiGatewayRefValid
+	// AIGatewayControlPlaneRefReasonValid is the reason used with the AIGatewayControlPlaneRefValid
+	// condition type indicating that the AIGatewayControlPlane reference is valid.
+	AIGatewayControlPlaneRefReasonValid = "Valid"
+	// AIGatewayControlPlaneRefReasonInvalid is the reason used with the AIGatewayControlPlaneRefValid
+	// condition type indicating that the AIGatewayControlPlane reference is invalid.
+	AIGatewayControlPlaneRefReasonInvalid = "Invalid"
+	// AIGatewayControlPlaneRefReasonNotProgrammed is the reason used with the AIGatewayControlPlaneRefValid
 	// condition type indicating that the referenced AIGatewayControlPlane exists but is not
 	// yet programmed in Konnect.
-	AiGatewayRefReasonNotProgrammed = "NotProgrammed"
+	AIGatewayControlPlaneRefReasonNotProgrammed = "NotProgrammed"
 
 	// EventGatewayRefValidConditionType is the type of the condition that indicates
 	// whether the EventGateway reference is valid and points to an existing

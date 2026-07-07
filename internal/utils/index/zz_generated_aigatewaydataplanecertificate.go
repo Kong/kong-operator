@@ -29,14 +29,14 @@ func aiGatewayDataPlaneCertificateOnAIGatewayControlPlaneRef(object client.Objec
 	if !ok {
 		return nil
 	}
-	if ent.Spec.GatewayRef.NamespacedRef == nil {
+	if ent.Spec.AIGatewayRef.NamespacedRef == nil {
 		return nil
 	}
 
 	refNamespace := ent.GetNamespace()
-	if ent.Spec.GatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.GatewayRef.NamespacedRef.Namespace != "" {
-		refNamespace = *ent.Spec.GatewayRef.NamespacedRef.Namespace
+	if ent.Spec.AIGatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.AIGatewayRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.AIGatewayRef.NamespacedRef.Namespace
 	}
 
-	return []string{refNamespace + "/" + ent.Spec.GatewayRef.NamespacedRef.Name}
+	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
 }
