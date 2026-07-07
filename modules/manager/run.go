@@ -326,22 +326,12 @@ func Run(
 	// Build the shared SSA TypeConverterProvider when any SSA-using controller is
 	// active.  Built on every replica (not leader-gated) so the converter is
 	// ready before reconcile loops start.
-	//
-	// eventGatewayCRDGroups lists the CRD groups whose types are passed to
-	// ApplyIfChanged / ApplyStatusIfChanged by the EventGateway DataPlane
-	// controller; it lives here rather than in the generic controller/pkg/ssa
-	// package because only this package knows which controllers are enabled.
 	var ssaProvider *controllerpkgssa.TypeConverterProvider
-	if cfg.KEGDataPlaneControllerEnabled || cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
-		eventGatewayCRDGroups := map[string]struct{}{
-			"eventgateway.konghq.com":  {},
-			"configuration.konghq.com": {},
-			"konnect.konghq.com":       {},
-		}
+	if IsSSAProviderNeeded(cfg) {
 		var err error
-		ssaProvider, err = controllerpkgssa.NewTypeConverterProvider(ctx, setupLog.WithName("ssa-crd-schema"), mgr, eventGatewayCRDGroups)
+		ssaProvider, err = buildSSAProvider(ctx, setupLog.WithName("ssa-crd-schema"), mgr)
 		if err != nil {
-			return fmt.Errorf("failed to build initial SSA TypeConverter: %w", err)
+			return err
 		}
 		if err := mgr.AddReadyzCheck("ssa-type-converter", ssaProvider.Ready); err != nil {
 			return fmt.Errorf("unable to add SSA TypeConverter readyz check: %w", err)

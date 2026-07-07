@@ -176,7 +176,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 	// The crdschema controller (which rebuilds the shared SSA TypeConverter)
 	// is enabled under the same condition as the shared TypeConverterProvider
 	// itself; see modules/manager/run.go.
-	if cfg.KEGDataPlaneControllerEnabled || cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
+	if IsSSAProviderNeeded(cfg) {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForCRDSchema(),
 		)
@@ -723,8 +723,12 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		// relevant CRDs change. Enabled whenever at least one SSA-using
 		// controller is active.
 		{
-			Enabled:    ssaProvider != nil,
-			Controller: &crdschema.Reconciler{Client: mgr.GetClient(), LoggingMode: c.LoggingMode, Provider: ssaProvider},
+			Enabled: ssaProvider != nil,
+			Controller: &crdschema.Reconciler{
+				Client:      mgr.GetClient(),
+				LoggingMode: c.LoggingMode,
+				Provider:    ssaProvider,
+			},
 		},
 	}
 
