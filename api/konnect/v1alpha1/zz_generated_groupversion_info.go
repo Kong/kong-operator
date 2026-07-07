@@ -9,6 +9,8 @@ import (
 
 func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
+		&AIGatewayAgent{},
+		&AIGatewayAgentList{},
 		&AIGatewayControlPlane{},
 		&AIGatewayControlPlaneList{},
 		&AIGatewayModel{},

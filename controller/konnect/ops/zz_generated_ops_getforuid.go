@@ -41,6 +41,8 @@ func getForUID[
 	e TEnt,
 ) (string, error) {
 	switch ent := any(e).(type) {
+	case *konnectv1alpha1.AIGatewayAgent:
+		return getAIGatewayAgentForUID(ctx, sdk.GetAIGatewayAgentsSDK(), ent)
 	case *konnectv1alpha1.AIGatewayControlPlane:
 		return getAIGatewayControlPlaneForUID(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:

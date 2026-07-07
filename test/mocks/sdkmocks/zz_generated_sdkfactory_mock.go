@@ -10,6 +10,7 @@ import (
 )
 
 type generatedMockSDKWrapper struct {
+	AIGatewayAgentsSDK                           *mocks.MockAIGatewayAgentsSDK
 	AIGatewaysSDK                                *mocks.MockAIGatewaysSDK
 	AIGatewayDataPlaneCertificatesSDK            *mocks.MockAIGatewayDataPlaneCertificatesSDK
 	AIGatewayModelsSDK                           *mocks.MockAIGatewayModelsSDK
@@ -36,6 +37,7 @@ type generatedMockSDKWrapper struct {
 
 func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 	return generatedMockSDKWrapper{
+		AIGatewayAgentsSDK:                           mocks.NewMockAIGatewayAgentsSDK(t),
 		AIGatewaysSDK:                                mocks.NewMockAIGatewaysSDK(t),
 		AIGatewayDataPlaneCertificatesSDK:            mocks.NewMockAIGatewayDataPlaneCertificatesSDK(t),
 		AIGatewayModelsSDK:                           mocks.NewMockAIGatewayModelsSDK(t),
@@ -59,6 +61,11 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		PortalPagesSDK:                               mocks.NewMockPortalPagesSDK(t),
 		PortalTeamsSDK:                               mocks.NewMockPortalTeamsSDK(t),
 	}
+}
+
+// GetAIGatewayAgentsSDK returns the SDK to operate AIGatewayAgent.
+func (m generatedMockSDKWrapper) GetAIGatewayAgentsSDK() sdkkonnectgo.AIGatewayAgentsSDK {
+	return m.AIGatewayAgentsSDK
 }
 
 // GetAIGatewaysSDK returns the SDK to operate AIGatewayControlPlane.
