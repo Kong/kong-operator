@@ -51,11 +51,16 @@ func TestIsSSAProviderNeeded(t *testing.T) {
 	}
 }
 
+// TestBuildSSAProvider_error checks that buildSSAProvider surfaces errors
+// from building the initial TypeConverter. rest.Config.Host here points at a
+// port nothing listens on, so the API calls buildSSAProvider makes (fetching
+// built-in schemas, listing CRDs) fail with a connection error,no real
+// cluster needed to exercise this path.
 func TestBuildSSAProvider_error(t *testing.T) {
 	mgr, err := ctrl.NewManager(&rest.Config{Host: "http://127.0.0.1:0"}, ctrlmgr.Options{Scheme: managerscheme.Get()})
 	require.NoError(t, err)
 
 	_, err = buildSSAProvider(t.Context(), logr.Discard(), mgr)
-	require.Error(t, err)
+	require.Error(t, err, "buildSSAProvider must fail when it cannot reach the API server")
 	assert.Contains(t, err.Error(), "failed to build initial SSA TypeConverter")
 }

@@ -81,8 +81,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	var relevant []*apiextensionsv1.CustomResourceDefinition
 	for group := range r.Provider.CRDGroups() {
-		list := &apiextensionsv1.CustomResourceDefinitionList{}
-		if err := r.List(ctx, list, client.MatchingFields{index.IndexFieldCRDOnGroup: group}); err != nil {
+		var list apiextensionsv1.CustomResourceDefinitionList
+		listOpts := client.MatchingFields{index.IndexFieldCRDOnGroup: group}
+		if err := r.List(ctx, &list, listOpts); err != nil {
 			return ctrl.Result{}, err
 		}
 		for i := range list.Items {
