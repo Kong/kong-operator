@@ -35,7 +35,7 @@ func testGeneratedAIGatewayAgentForSDKOps() *konnectv1alpha1.AIGatewayAgent {
 				ManagedBy: konnectv1alpha1.ManagedBy{"test-key": "test-value"},
 				Name: "test-value",
 				Policies: []string{"test-value"},
-				Type: "test-value",
+				Type: "a2a",
 			},
 		},
 	}

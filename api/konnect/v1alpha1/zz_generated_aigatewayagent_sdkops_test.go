@@ -17,7 +17,7 @@ func TestAIGatewayAgentAPISpec_ToCreateAIGatewayAgentRequest(t *testing.T) {
 		ManagedBy: ManagedBy{"test-key": "test-value"},
 		Name: AIGatewayEntityIdentifier("test-value"),
 		Policies: []string{"test-value"},
-		Type: "test-value",
+		Type: "a2a",
 	}
 	result, err := spec.ToCreateAIGatewayAgentRequest()
 	require.NoError(t, err)
@@ -35,7 +35,7 @@ func TestAIGatewayAgentAPISpec_ToCreateAIGatewayAgentRequest(t *testing.T) {
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["managed_by"])
 	require.Equal(t, "test-value", payload["name"])
 	require.Equal(t, []any{"test-value"}, payload["policies"])
-	require.Equal(t, "test-value", payload["type"])
+	require.Equal(t, "a2a", payload["type"])
 }
 
 func TestAIGatewayAgentAPISpec_ToUpdateAIGatewayAgentRequest(t *testing.T) {

@@ -3,6 +3,22 @@
 package v1alpha1
 
 const (
+	// AIGatewayConsumerRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayConsumer reference is valid and points to an existing
+	// AIGatewayConsumer.
+	AIGatewayConsumerRefValidConditionType = "AIGatewayConsumerRefValid"
+
+	// AIGatewayConsumerRefReasonValid is the reason used with the AIGatewayConsumerRefValid
+	// condition type indicating that the AIGatewayConsumer reference is valid.
+	AIGatewayConsumerRefReasonValid = "Valid"
+	// AIGatewayConsumerRefReasonInvalid is the reason used with the AIGatewayConsumerRefValid
+	// condition type indicating that the AIGatewayConsumer reference is invalid.
+	AIGatewayConsumerRefReasonInvalid = "Invalid"
+	// AIGatewayConsumerRefReasonNotProgrammed is the reason used with the AIGatewayConsumerRefValid
+	// condition type indicating that the referenced AIGatewayConsumer exists but is not
+	// yet programmed in Konnect.
+	AIGatewayConsumerRefReasonNotProgrammed = "NotProgrammed"
+
 	// AIGatewayControlPlaneRefValidConditionType is the type of the condition that indicates
 	// whether the AIGatewayControlPlane reference is valid and points to an existing
 	// AIGatewayControlPlane.

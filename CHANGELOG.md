@@ -98,6 +98,10 @@
     from a Kubernetes `Secret`s.
     [#4793](https://github.com/Kong/kong-operator/pull/4793)
     [#4798](https://github.com/Kong/kong-operator/pull/4798)
+  - introduce `AIGatewayConsumer` and `AIGatewayConsumerCredential` CRDs with
+  reconcilers. Credentials are modelled as a separate resource referencing the
+  consumer, mirroring the Konnect API hierarchy.
+  [#4804](https://github.com/Kong/kong-operator/pull/4804)
 - GRPCRoute: enable GRPCRoute for on-prem gateway
   [#4364](https://github.com/Kong/kong-operator/pull/4364)
 

@@ -47,6 +47,8 @@ resources:
   - gateway-operator.konghq.com_kongplugininstallations.yaml
   - gateway-operator.konghq.com_watchnamespacegrants.yaml
   - konnect.konghq.com_aigatewayagents.yaml
+  - konnect.konghq.com_aigatewayconsumercredentials.yaml
+  - konnect.konghq.com_aigatewayconsumers.yaml
   - konnect.konghq.com_aigatewaycontrolplanes.yaml
   - konnect.konghq.com_aigatewaymodels.yaml
   - konnect.konghq.com_aigatewaypolicies.yaml

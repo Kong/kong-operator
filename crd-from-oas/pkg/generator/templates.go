@@ -641,11 +641,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	if err != nil {
 		return nil, err
 	}
-	var target {{.ImportAlias}}.{{.TypeName}}
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
-	}
-	return &target, nil
+{{- template "sdkOpsUnmarshalReturn" .}}
 }
 {{end}}
 {{- if .NeedsClient}}
@@ -792,11 +788,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}},
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with references: %w", err)
 	}
-	var target {{.ImportAlias}}.{{.TypeName}}
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
-	}
-	return &target, nil
+{{- template "sdkOpsUnmarshalReturn" .}}
 }
 {{end}}
 {{- end}}
@@ -823,13 +815,26 @@ func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}},
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with parent ref: %w", err)
 	}
+{{- template "sdkOpsUnmarshalReturn" .}}
+}
+{{end}}
+{{- end}}
+{{- define "sdkOpsUnmarshalReturn" -}}
+{{- if .IsOperationsWrapped}}
+	var body {{.ComponentsImportAlias}}.{{.BodyTypeName}}
+	if err := json.Unmarshal(data, &body); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into {{.BodyTypeName}}: %w", err)
+	}
+	return &{{.ImportAlias}}.{{.TypeName}}{
+		{{.BodyFieldName}}: {{if .BodyFieldPointer}}&body{{else}}body{{end}},
+	}, nil
+{{- else}}
 	var target {{.ImportAlias}}.{{.TypeName}}
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
 	}
 	return &target, nil
-}
-{{end}}
+{{- end}}
 {{- end}}`
 
 const sdkOpsRootUnionTemplate = sharedGeneratedFilePreamble + `
@@ -1386,13 +1391,14 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Create.CreateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
 {{- if .Create.HasTags}}
-	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+	{{$reqBody}}.Tags = GenerateTagsForObject(obj, {{$reqBody}}.Tags...)
 {{- else if .Create.HasLabels}}
 {{- if .Create.LabelsPointer}}
-	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+	{{$reqBody}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$reqBody}}.Labels)
 {{- else}}
-	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+	{{$reqBody}}.Labels = WithKubernetesMetadataLabels(obj, {{$reqBody}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -1462,13 +1468,14 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Create.CreateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
 {{- if .Create.HasTags}}
-	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+	{{$reqBody}}.Tags = GenerateTagsForObject(obj, {{$reqBody}}.Tags...)
 {{- else if .Create.HasLabels}}
 {{- if .Create.LabelsPointer}}
-	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+	{{$reqBody}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$reqBody}}.Labels)
 {{- else}}
-	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+	{{$reqBody}}.Labels = WithKubernetesMetadataLabels(obj, {{$reqBody}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -1882,13 +1889,14 @@ func create{{.Entity}}(
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+{{- $reqBody := "req"}}{{if and .CreateFullyWrapped .CreateBodyField}}{{$reqBody = printf "req.%s" .CreateBodyField}}{{end}}
 {{- if .HasTags}}
-	req.Tags = GenerateTagsForObject(obj, req.Tags...)
+	{{$reqBody}}.Tags = GenerateTagsForObject(obj, {{$reqBody}}.Tags...)
 {{- else if .HasLabels}}
 {{- if .LabelsPointer}}
-	req.Labels = WithKubernetesMetadataLabelsPtr(obj, req.Labels)
+	{{$reqBody}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$reqBody}}.Labels)
 {{- else}}
-	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
+	{{$reqBody}}.Labels = WithKubernetesMetadataLabels(obj, {{$reqBody}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .CreateFullyWrapped}}

@@ -29,6 +29,8 @@ func UpdateGeneratedOps[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.AIGatewayAgent:
 		return updateAIGatewayAgent(ctx, sdk.GetAIGatewayAgentsSDK(), ent)
+	case *konnectv1alpha1.AIGatewayConsumer:
+		return updateAIGatewayConsumer(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayControlPlane:
 		return updateAIGatewayControlPlane(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:

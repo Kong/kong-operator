@@ -3505,10 +3505,12 @@ func TestGenerateSDKOpsTest_SkipsTypeAssertionsForUpdateMethods(t *testing.T) {
 	content, err := g.generateSDKOpsTest("IdentityProviderRequest", schema, opsConfig)
 	require.NoError(t, err)
 	assert.Contains(t, content, `func TestIdentityProviderRequestAPISpec_ToCreateIdentityProvider`)
-	assert.Contains(t, content, `Type: "test-value"`)
-	assert.Contains(t, content, `require.Equal(t, "test-value", payload["type"])`)
+	// Enum-typed fields use a valid enum value (the first) rather than a placeholder.
+	assert.Contains(t, content, `Type: "oidc"`)
+	assert.Contains(t, content, `require.Equal(t, "oidc", payload["type"])`)
 	assert.Contains(t, content, `func TestIdentityProviderRequestAPISpec_ToUpdateIdentityProvider`)
-	assert.Equal(t, 1, strings.Count(content, `Type: "test-value"`))
+	// type assertions are skipped for update methods, so it appears exactly once.
+	assert.Equal(t, 1, strings.Count(content, `Type: "oidc"`))
 }
 
 func TestParseSDKTypePath(t *testing.T) {
@@ -3853,6 +3855,49 @@ func TestGenerateMockSDKFactoryDispatcher(t *testing.T) {
 	assert.Less(t, idxIdentity, idxEvent)
 	assert.Less(t, idxEventCert, idxEvent)
 	assert.Less(t, idxEventCert, idxPortal)
+}
+
+func TestGenerateSDKFactoryDispatcher_SharedInterface(t *testing.T) {
+	// AIGatewayConsumer and AIGatewayConsumerCredential both use the
+	// AIGatewayConsumersSDK interface. The factory must emit the getter and
+	// interface entry exactly once to avoid duplicate declarations.
+	infos := []*SDKFactoryFileInfo{
+		{
+			Entity:                 "AIGatewayConsumer",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "AIGatewayConsumersSDK",
+			SDKFieldName:           "AIGatewayConsumers",
+		},
+		{
+			Entity:                 "AIGatewayConsumerCredential",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "AIGatewayConsumersSDK",
+			SDKFieldName:           "AIGatewayConsumers",
+		},
+	}
+
+	file, err := GenerateSDKFactoryDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	// One entry in the GeneratedSDK interface and one getter func => 2 total.
+	assert.Equal(t, 2, strings.Count(file.Content, "GetAIGatewayConsumersSDK()"),
+		"shared SDK interface must not produce duplicate getter declarations")
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+
+	// The mock factory must likewise deduplicate fields, constructors and methods.
+	mockFile, err := GenerateMockSDKFactoryDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, mockFile)
+	assert.Equal(t, 1, strings.Count(mockFile.Content, "*mocks.MockAIGatewayConsumersSDK"),
+		"shared SDK interface must not produce duplicate mock fields")
+	assert.Equal(t, 1, strings.Count(mockFile.Content, "mocks.NewMockAIGatewayConsumersSDK(t)"),
+		"shared SDK interface must not produce duplicate mock constructors")
+	mockFormatted, err := format.Source([]byte(mockFile.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(mockFormatted), mockFile.Content)
 }
 
 func TestGenerateSchemaTypes_MapWithValueTypes(t *testing.T) {

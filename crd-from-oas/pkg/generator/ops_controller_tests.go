@@ -267,6 +267,20 @@ func controllerOpsTestValueForProperty(prop *parser.Property, goType, apiAlias s
 		return `"Enabled"`
 	}
 
+	// Enum-typed string fields must use a valid enum value; some SDK enum types
+	// reject unknown values during unmarshalling.
+	if len(prop.Enum) > 0 {
+		quoted := fmt.Sprintf("%q", fmt.Sprintf("%v", prop.Enum[0]))
+		switch {
+		case goType == "string":
+			return quoted
+		case goType == "*string":
+			return fmt.Sprintf("new(%s)", quoted)
+		case prop.RefName != "" && prop.Type == "string" && !strings.HasPrefix(goType, "*"):
+			return quoted
+		}
+	}
+
 	switch goType {
 	case "string":
 		return `"test-value"`

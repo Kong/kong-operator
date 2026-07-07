@@ -44,7 +44,11 @@ type opsCreateFuncData struct {
 	// code sets the parent ID fields on the returned request object instead of
 	// passing parentID as a positional argument.
 	CreateFullyWrapped bool
-	RespIDIsPointer    bool
+	// CreateBodyField is the JSON body field name on the operations request
+	// wrapper. Only set when CreateFullyWrapped is true; used to target label/tag
+	// injection at req.<CreateBodyField> instead of the wrapper's top level.
+	CreateBodyField string
+	RespIDIsPointer bool
 	// SingletonNoID is true when the create response schema has no "id" field.
 	// Generated code skips the SetKonnectID call entirely for these entities.
 	SingletonNoID        bool
@@ -76,7 +80,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		return nil, fmt.Errorf("entity %q: missing 2xx response ref for create op", entityName)
 	}
 
-	_, createReqType, err := ParseSDKTypePath(createOp.Path)
+	createReqImportPath, createReqType, err := ParseSDKTypePath(createOp.Path)
 	if err != nil {
 		return nil, fmt.Errorf("entity %q: %w", entityName, err)
 	}
@@ -103,6 +107,17 @@ func (g *Generator) generateOpsCreateFuncBody(
 	// (i.e. the full request struct with path params included), which occurs for
 	// entities with multiple parent dependencies in the URL path.
 	createFullyWrapped := len(parents) >= 2
+
+	// For fully-wrapped requests the JSON body lives under a named field on the
+	// operations wrapper; label/tag injection must target that field.
+	var createBodyField string
+	if createFullyWrapped {
+		bodyInfo, err := ParseSDKRequestBodyInfo(createReqImportPath, createReqType)
+		if err != nil {
+			return nil, fmt.Errorf("entity %q: inspect create request body: %w", entityName, err)
+		}
+		createBodyField = bodyInfo.FieldName
+	}
 
 	var respRootUnion *opsCreateRootUnionResponseData
 	if schema.SuccessResponseRef != "" {
@@ -136,6 +151,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		LabelsPointer:        labelsPointer,
 		Parents:              parents,
 		CreateFullyWrapped:   createFullyWrapped,
+		CreateBodyField:      createBodyField,
 		RespIDIsPointer:      schema.RespIDIsPointer,
 		SingletonNoID:        isSingletonNoID(schema),
 		RespRootUnion:        respRootUnion,

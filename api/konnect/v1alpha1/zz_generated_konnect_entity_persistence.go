@@ -7,6 +7,16 @@ func (*AIGatewayAgent) PersistsKonnectID() bool {
 	return true
 }
 
+// PersistsKonnectID reports whether AIGatewayConsumer persists a Konnect ID in status.
+func (*AIGatewayConsumer) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayConsumerCredential persists a Konnect ID in status.
+func (*AIGatewayConsumerCredential) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether AIGatewayControlPlane persists a Konnect ID in status.
 func (*AIGatewayControlPlane) PersistsKonnectID() bool {
 	return true
