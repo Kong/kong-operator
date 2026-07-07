@@ -53,6 +53,28 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- EventGateway CRDs (Tech Preview) which allow referencing a `Secret` through
+  `secretRef`, now require the key name to be provided.
+
+  So:
+
+  ```yaml
+  type: secretRef
+  secretRef:
+    name: my-backend-cluster-tls
+  ```
+
+  Becomes:
+
+  ```yaml
+  type: secretRef
+  secretRef:
+    name: my-backend-cluster-tls
+    key: tls.crt # Key name depends on the type of referenced Secret.
+  ```
+
 ### Added
 
 - API: expose `trafficDistribution` and `internalTrafficPolicy` in `DataPlane`,
