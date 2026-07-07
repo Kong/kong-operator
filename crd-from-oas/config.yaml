@@ -17,7 +17,6 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.cert
             type: Secret
-            key: tls.crt
         ops:
           sdk:
           # AIGatewayDataPlaneClientCertificate is named struct in SDK
@@ -48,7 +47,7 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.certificate
             type: Secret
-            key: tls.crt
+            defaultKey: tls.crt
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK
@@ -91,10 +90,10 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.tlsServer.config.certificates[].certificate
             type: Secret
-            key: tls.crt
+            defaultKey: tls.crt
           - path: spec.apiSpec.tlsServer.config.certificates[].key
             type: Secret
-            key: tls.key
+            defaultKey: tls.key
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
@@ -157,10 +156,10 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.tls.clientIdentity.certificate
             type: Secret
-            key: tls.crt
+            defaultKey: tls.crt
           - path: spec.apiSpec.tls.clientIdentity.key
             type: Secret
-            key: tls.key
+            defaultKey: tls.key
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
         ops:
@@ -317,32 +316,24 @@ apiGroupVersions:
           # whose auth is itself a discriminated union.
           - path: spec.apiSpec.*.config.auth.headers[].value
             type: Secret
-            key: key
           - path: spec.apiSpec.*.config.auth.params[].value
             type: Secret
-            key: key
           # Cloud providers' basic-auth arm: matches when their union-typed
           # auth field is configured with the "basic" variant.
           - path: spec.apiSpec.*.config.auth.basic.headers[].value
             type: Secret
-            key: key
           - path: spec.apiSpec.*.config.auth.basic.params[].value
             type: Secret
-            key: key
           # Cloud-native credentials, one path per provider since each names
           # its secret field differently.
           - path: spec.apiSpec.bedrock.config.auth.aws.secretAccessKey
             type: Secret
-            key: key
           - path: spec.apiSpec.azure.config.auth.azure.clientSecret
             type: Secret
-            key: key
           - path: spec.apiSpec.gemini.config.auth.gcp.serviceAccountJSON
             type: Secret
-            key: key
           - path: spec.apiSpec.vertex.config.auth.gcp.serviceAccountJSON
             type: Secret
-            key: key
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayProvidersSDK

@@ -73,7 +73,7 @@ func TestBuildSensitiveLeaves_WildcardFanOutAcrossOneOfVariants(t *testing.T) {
 		APIVersion: "v1alpha1",
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"FakeUnionEntity": {
-				{Path: "spec.apiSpec.*.config.auth.headers[].value", Type: "Secret", Key: "key"},
+				{Path: "spec.apiSpec.*.config.auth.headers[].value", Type: "Secret"},
 			},
 		},
 	})
@@ -110,7 +110,7 @@ func TestBuildSensitiveLeaves_WildcardFanOutZeroMatches_Errors(t *testing.T) {
 		APIVersion: "v1alpha1",
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"FakeUnionEntity": {
-				{Path: "spec.apiSpec.*.config.auth.headers[].value", Type: "Secret", Key: "key"},
+				{Path: "spec.apiSpec.*.config.auth.headers[].value", Type: "Secret"},
 			},
 		},
 	})
@@ -170,7 +170,7 @@ func TestBuildSensitiveLeaves_MidPathUnionDescent(t *testing.T) {
 		APIVersion: "v1alpha1",
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"FakeCloudEntity": {
-				{Path: "spec.apiSpec.config.auth.aws.secretAccessKey", Type: "Secret", Key: "key"},
+				{Path: "spec.apiSpec.config.auth.aws.secretAccessKey", Type: "Secret"},
 			},
 		},
 	})
@@ -211,7 +211,7 @@ func TestBuildSensitiveLeaves_MidPathUnionDescent_UnknownVariant_Errors(t *testi
 		APIVersion: "v1alpha1",
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"FakeCloudEntity": {
-				{Path: "spec.apiSpec.config.auth.azure.secretAccessKey", Type: "Secret", Key: "key"},
+				{Path: "spec.apiSpec.config.auth.azure.secretAccessKey", Type: "Secret"},
 			},
 		},
 	})
@@ -286,9 +286,9 @@ func TestGenerateSDKOps_WildcardAndMidPathUnion_ProducesValidGo(t *testing.T) {
 		APIVersion: "v1alpha1",
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"FakeProvider": {
-				{Path: "spec.apiSpec.*.config.auth.headers[].value", Type: "Secret", Key: "key"},
-				{Path: "spec.apiSpec.*.config.auth.basic.headers[].value", Type: "Secret", Key: "key"},
-				{Path: "spec.apiSpec.cloud.config.auth.aws.secretAccessKey", Type: "Secret", Key: "key"},
+				{Path: "spec.apiSpec.*.config.auth.headers[].value", Type: "Secret"},
+				{Path: "spec.apiSpec.*.config.auth.basic.headers[].value", Type: "Secret"},
+				{Path: "spec.apiSpec.cloud.config.auth.aws.secretAccessKey", Type: "Secret"},
 			},
 		},
 	})

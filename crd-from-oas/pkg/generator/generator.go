@@ -359,7 +359,7 @@ func (g *Generator) walkSensitiveLeafPath(
 		}
 		// Record the structured selector for template generation.
 		leafGoField := goFieldName(targetProp.Name)
-		g.recordSensitiveLeafSelector(entityName, ref.Path, acc, leafGoField, ref.Key)
+		g.recordSensitiveLeafSelector(entityName, ref.Path, ref.DefaultKey, acc, leafGoField)
 		return nil
 	}
 
@@ -430,14 +430,14 @@ func (g *Generator) walkOneOfVariant(
 // recordSensitiveLeafSelector appends a selector for the given config path. A
 // single path can resolve to multiple selectors when it fans out across a "*"
 // wildcard union (one selector per matching variant).
-func (g *Generator) recordSensitiveLeafSelector(entityName, path string, acc selectorAccumulator, leafGoField, secretKey string) {
+func (g *Generator) recordSensitiveLeafSelector(entityName, path, defaultKey string, acc selectorAccumulator, leafGoField string) {
 	if g.sensitiveLeafSelectors == nil {
 		g.sensitiveLeafSelectors = make(map[string]map[string][]SecretReferenceForTemplate)
 	}
 	if g.sensitiveLeafSelectors[entityName] == nil {
 		g.sensitiveLeafSelectors[entityName] = make(map[string][]SecretReferenceForTemplate)
 	}
-	g.sensitiveLeafSelectors[entityName][path] = append(g.sensitiveLeafSelectors[entityName][path], acc.buildTemplate(path, secretKey, leafGoField))
+	g.sensitiveLeafSelectors[entityName][path] = append(g.sensitiveLeafSelectors[entityName][path], acc.buildTemplate(path, defaultKey, leafGoField))
 }
 
 // findEntitySchema finds the request body schema for the given entity name.
@@ -619,8 +619,10 @@ type SecretReferenceForTemplate struct {
 	// GoFieldSelector is the Go selector string relative to obj.Spec.APISpec,
 	// e.g. "TLS.ClientIdentity.Certificate". Empty when IsSlice is true.
 	GoFieldSelector string
-	// SecretKey is the data key to read from the referenced Kubernetes Secret.
-	SecretKey string
+	// DefaultKey is the Secret data key to fall back to when the manifest's
+	// secretRef.key is unset. Empty means secretRef.key is required at
+	// runtime for this field.
+	DefaultKey string
 	// Path is the original dot-separated config path, e.g. "spec.apiSpec.tls.clientIdentity.certificate".
 	Path string
 	// IsSlice is true when the secret leaf lives inside a slice field and the
@@ -677,7 +679,7 @@ func (acc selectorAccumulator) withSlice(goName string) selectorAccumulator {
 }
 
 // buildTemplate constructs a SecretReferenceForTemplate from the accumulated path parts.
-func (acc selectorAccumulator) buildTemplate(path, secretKey, leafGoField string) SecretReferenceForTemplate {
+func (acc selectorAccumulator) buildTemplate(path, defaultKey, leafGoField string) SecretReferenceForTemplate {
 	sliceIdx := -1
 	for i, p := range acc.parts {
 		if p.isSlice {
@@ -700,7 +702,7 @@ func (acc selectorAccumulator) buildTemplate(path, secretKey, leafGoField string
 		names = append(names, leafGoField)
 		return SecretReferenceForTemplate{
 			GoFieldSelector: strings.Join(names, "."),
-			SecretKey:       secretKey,
+			DefaultKey:      defaultKey,
 			Path:            path,
 			PointerGuards:   pointerGuards,
 		}
@@ -723,7 +725,7 @@ func (acc selectorAccumulator) buildTemplate(path, secretKey, leafGoField string
 
 	return SecretReferenceForTemplate{
 		Path:                path,
-		SecretKey:           secretKey,
+		DefaultKey:          defaultKey,
 		IsSlice:             true,
 		PointerGuards:       pointerGuards,
 		SliceParentSelector: strings.Join(parentParts, "."),
@@ -747,7 +749,7 @@ func (g *Generator) templateSecretReferences(entityName string) []SecretReferenc
 		}
 		result = append(result, SecretReferenceForTemplate{
 			GoFieldSelector: pathToGoSelector(ref.Path),
-			SecretKey:       ref.Key,
+			DefaultKey:      ref.DefaultKey,
 			Path:            ref.Path,
 		})
 	}
@@ -3555,12 +3557,6 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 	if g.objectRefImported() && g.config.CommonTypes != nil && g.config.CommonTypes.ObjectRef != nil {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
-	// NamespacedRefTypeName is the qualified Go type for *NamespacedRef used inside
-	// the SensitiveDataSource struct. When ObjectRef is imported it needs the alias prefix.
-	namedRefTypeName := "NamespacedRef"
-	if g.objectRefImported() && objectRefImport != nil {
-		namedRefTypeName = objectRefImport.Alias + ".NamespacedRef"
-	}
 	var sensitiveCursor *config.FieldConfig
 	if typeCursors != nil {
 		sensitiveCursor = typeCursors[sensitiveDataSourceTypeName]
@@ -3583,7 +3579,6 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 		ObjectRefImport                         *config.ImportConfig
 		Namespaced                              bool
 		HasSecretRefEntities                    bool
-		NamespacedRefTypeName                   string
 		SensitiveDataSourceValueMaxLength       int
 		SensitiveDataSourceTypeValidations      []string
 		SensitiveDataSourceSecretRefValidations []string
@@ -3595,7 +3590,6 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 		ObjectRefImport:                         objectRefImport,
 		Namespaced:                              g.objectRefNamespaced(),
 		HasSecretRefEntities:                    hasSecretRefs,
-		NamespacedRefTypeName:                   namedRefTypeName,
 		SensitiveDataSourceValueMaxLength:       sensitiveDataSourceValueMaxLength,
 		SensitiveDataSourceTypeValidations:      fieldValidations(sensitiveCursor, "type"),
 		SensitiveDataSourceSecretRefValidations: fieldValidations(sensitiveCursor, "secretRef"),

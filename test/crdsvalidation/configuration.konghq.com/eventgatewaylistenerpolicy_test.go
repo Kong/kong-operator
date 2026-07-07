@@ -77,8 +77,8 @@ func TestEventGatewayListenerPolicy(t *testing.T) {
 					obj := validListenerPolicy(ns.Name)
 					obj.Spec.APISpec.EventGatewayTLSListen.Config.Certificates = []configurationv1alpha1.TLSCertificate{
 						{
-							Certificate: secretRefSDS("my-tls-secret"),
-							Key:         secretRefSDS("my-tls-secret"),
+							Certificate: secretRefSDS("my-tls-secret", "tls.crt"),
+							Key:         secretRefSDS("my-tls-secret", "tls.key"),
 						},
 					}
 					return obj
@@ -91,7 +91,7 @@ func TestEventGatewayListenerPolicy(t *testing.T) {
 					obj.Spec.APISpec.EventGatewayTLSListen.Config.Certificates = []configurationv1alpha1.TLSCertificate{
 						{
 							Certificate: inlineSDS("cert-pem-data"),
-							Key:         secretRefSDS("my-tls-secret"),
+							Key:         secretRefSDS("my-tls-secret", "tls.key"),
 						},
 					}
 					return obj
@@ -107,8 +107,8 @@ func TestEventGatewayListenerPolicy(t *testing.T) {
 							Key:         inlineSDS("key-pem-data-1"),
 						},
 						{
-							Certificate: secretRefSDS("my-tls-secret-2"),
-							Key:         secretRefSDS("my-tls-secret-2"),
+							Certificate: secretRefSDS("my-tls-secret-2", "tls.crt"),
+							Key:         secretRefSDS("my-tls-secret-2", "tls.key"),
 						},
 					}
 					return obj

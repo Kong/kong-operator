@@ -90,7 +90,6 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.certificate
             type: Secret
-            key: tls.crt
         ops:
           requireClient: true
           create:
@@ -108,7 +107,6 @@ apiGroupVersions:
 		require.Len(t, konnect.Types[0].SecretReferences, 1)
 		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].SecretReferences[0].Path)
 		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
-		assert.Equal(t, "tls.crt", konnect.Types[0].SecretReferences[0].Key)
 		assert.True(t, konnect.Types[0].OpsRequireClient)
 		require.NotNil(t, konnect.Types[0].Ops)
 		assert.Equal(t,
@@ -792,7 +790,7 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
 					},
 					SecretReferences: []SecretReferenceConfig{
-						{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"},
+						{Path: "spec.apiSpec.certificate", Type: "Secret"},
 					},
 				},
 				{

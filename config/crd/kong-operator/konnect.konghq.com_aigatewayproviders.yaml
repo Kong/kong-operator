@@ -153,6 +153,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -170,6 +176,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -230,6 +237,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -247,6 +260,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -363,6 +377,12 @@ spec:
                                           SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                           Required when type is 'secretRef'.
                                         properties:
+                                          key:
+                                            description: Key is the data key within
+                                              the Secret.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
                                           name:
                                             description: Name is the name of the referred
                                               resource.
@@ -380,6 +400,7 @@ spec:
                                             maxLength: 253
                                             type: string
                                         required:
+                                        - key
                                         - name
                                         type: object
                                       type:
@@ -449,6 +470,12 @@ spec:
                                                 SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                                 Required when type is 'secretRef'.
                                               properties:
+                                                key:
+                                                  description: Key is the data key
+                                                    within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
                                                 name:
                                                   description: Name is the name of
                                                     the referred resource.
@@ -466,6 +493,7 @@ spec:
                                                   maxLength: 253
                                                   type: string
                                               required:
+                                              - key
                                               - name
                                               type: object
                                             type:
@@ -527,6 +555,12 @@ spec:
                                                 SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                                 Required when type is 'secretRef'.
                                               properties:
+                                                key:
+                                                  description: Key is the data key
+                                                    within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
                                                 name:
                                                   description: Name is the name of
                                                     the referred resource.
@@ -544,6 +578,7 @@ spec:
                                                   maxLength: 253
                                                   type: string
                                               required:
+                                              - key
                                               - name
                                               type: object
                                             type:
@@ -692,6 +727,12 @@ spec:
                                           SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                           Required when type is 'secretRef'.
                                         properties:
+                                          key:
+                                            description: Key is the data key within
+                                              the Secret.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
                                           name:
                                             description: Name is the name of the referred
                                               resource.
@@ -709,6 +750,7 @@ spec:
                                             maxLength: 253
                                             type: string
                                         required:
+                                        - key
                                         - name
                                         type: object
                                       type:
@@ -768,6 +810,12 @@ spec:
                                                 SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                                 Required when type is 'secretRef'.
                                               properties:
+                                                key:
+                                                  description: Key is the data key
+                                                    within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
                                                 name:
                                                   description: Name is the name of
                                                     the referred resource.
@@ -785,6 +833,7 @@ spec:
                                                   maxLength: 253
                                                   type: string
                                               required:
+                                              - key
                                               - name
                                               type: object
                                             type:
@@ -846,6 +895,12 @@ spec:
                                                 SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                                 Required when type is 'secretRef'.
                                               properties:
+                                                key:
+                                                  description: Key is the data key
+                                                    within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
                                                 name:
                                                   description: Name is the name of
                                                     the referred resource.
@@ -863,6 +918,7 @@ spec:
                                                   maxLength: 253
                                                   type: string
                                               required:
+                                              - key
                                               - name
                                               type: object
                                             type:
@@ -989,6 +1045,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1006,6 +1068,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -1066,6 +1129,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1083,6 +1152,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -1198,6 +1268,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1215,6 +1291,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -1275,6 +1352,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1292,6 +1375,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -1407,6 +1491,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1424,6 +1514,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -1484,6 +1575,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1501,6 +1598,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -1616,6 +1714,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1633,6 +1737,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -1693,6 +1798,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1710,6 +1821,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -1825,6 +1937,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1842,6 +1960,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -1902,6 +2021,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -1919,6 +2044,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -2039,6 +2165,12 @@ spec:
                                                 SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                                 Required when type is 'secretRef'.
                                               properties:
+                                                key:
+                                                  description: Key is the data key
+                                                    within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
                                                 name:
                                                   description: Name is the name of
                                                     the referred resource.
@@ -2056,6 +2188,7 @@ spec:
                                                   maxLength: 253
                                                   type: string
                                               required:
+                                              - key
                                               - name
                                               type: object
                                             type:
@@ -2117,6 +2250,12 @@ spec:
                                                 SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                                 Required when type is 'secretRef'.
                                               properties:
+                                                key:
+                                                  description: Key is the data key
+                                                    within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
                                                 name:
                                                   description: Name is the name of
                                                     the referred resource.
@@ -2134,6 +2273,7 @@ spec:
                                                   maxLength: 253
                                                   type: string
                                               required:
+                                              - key
                                               - name
                                               type: object
                                             type:
@@ -2199,6 +2339,12 @@ spec:
                                           SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                           Required when type is 'secretRef'.
                                         properties:
+                                          key:
+                                            description: Key is the data key within
+                                              the Secret.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
                                           name:
                                             description: Name is the name of the referred
                                               resource.
@@ -2216,6 +2362,7 @@ spec:
                                             maxLength: 253
                                             type: string
                                         required:
+                                        - key
                                         - name
                                         type: object
                                       type:
@@ -2346,6 +2493,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -2363,6 +2516,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -2423,6 +2577,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -2440,6 +2600,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -2555,6 +2716,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -2572,6 +2739,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -2632,6 +2800,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -2649,6 +2823,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -2764,6 +2939,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -2781,6 +2962,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -2841,6 +3023,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -2858,6 +3046,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -2973,6 +3162,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -2990,6 +3185,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -3050,6 +3246,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -3067,6 +3269,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -3182,6 +3385,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -3199,6 +3408,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -3259,6 +3469,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -3276,6 +3492,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -3391,6 +3608,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -3408,6 +3631,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -3468,6 +3692,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -3485,6 +3715,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -3624,6 +3855,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -3641,6 +3878,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -3701,6 +3939,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -3718,6 +3962,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -3838,6 +4083,12 @@ spec:
                                                 SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                                 Required when type is 'secretRef'.
                                               properties:
+                                                key:
+                                                  description: Key is the data key
+                                                    within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
                                                 name:
                                                   description: Name is the name of
                                                     the referred resource.
@@ -3855,6 +4106,7 @@ spec:
                                                   maxLength: 253
                                                   type: string
                                               required:
+                                              - key
                                               - name
                                               type: object
                                             type:
@@ -3916,6 +4168,12 @@ spec:
                                                 SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                                 Required when type is 'secretRef'.
                                               properties:
+                                                key:
+                                                  description: Key is the data key
+                                                    within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
                                                 name:
                                                   description: Name is the name of
                                                     the referred resource.
@@ -3933,6 +4191,7 @@ spec:
                                                   maxLength: 253
                                                   type: string
                                               required:
+                                              - key
                                               - name
                                               type: object
                                             type:
@@ -3998,6 +4257,12 @@ spec:
                                           SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                           Required when type is 'secretRef'.
                                         properties:
+                                          key:
+                                            description: Key is the data key within
+                                              the Secret.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
                                           name:
                                             description: Name is the name of the referred
                                               resource.
@@ -4015,6 +4280,7 @@ spec:
                                             maxLength: 253
                                             type: string
                                         required:
+                                        - key
                                         - name
                                         type: object
                                       type:
@@ -4145,6 +4411,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -4162,6 +4434,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -4222,6 +4495,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -4239,6 +4518,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -4354,6 +4634,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -4371,6 +4657,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:
@@ -4431,6 +4718,12 @@ spec:
                                             SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
                                             Required when type is 'secretRef'.
                                           properties:
+                                            key:
+                                              description: Key is the data key within
+                                                the Secret.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
                                             name:
                                               description: Name is the name of the
                                                 referred resource.
@@ -4448,6 +4741,7 @@ spec:
                                               maxLength: 253
                                               type: string
                                           required:
+                                          - key
                                           - name
                                           type: object
                                         type:

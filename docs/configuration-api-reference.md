@@ -4667,7 +4667,23 @@ _Appears in:_
 
 
 
+#### SensitiveDataSecretRef
 
+
+SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
+that holds a sensitive value for a CRD field.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referred resource. |
+| `key` _string_ | Key is the data key within the Secret. When omitted, some fields fall back to a fixed default key documented on the parent field; others require it to be set. |
+| `namespace` _*string_ | Namespace is the namespace of the referred resource.<br /><br />For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br />This field MUST not be set when referring to cluster-scoped resources. |
+
+_Appears in:_
+
+- [SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)
 
 #### SensitiveDataSource
 
@@ -4681,7 +4697,7 @@ either inline or sourced from a Kubernetes Secret.
 | --- | --- |
 | `type` _[SensitiveDataSourceType](#configuration-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data: 'inline' or 'secretRef'. |
 | `value` _*string_ | Value contains the sensitive data provided inline. Required when type is 'inline'. |
-| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
+| `secretRef` _[SensitiveDataSecretRef](#configuration-konghq-com-v1alpha1-types-sensitivedatasecretref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
 
 _Appears in:_
 

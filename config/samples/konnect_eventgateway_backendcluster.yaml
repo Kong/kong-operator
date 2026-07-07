@@ -122,8 +122,10 @@ spec:
           type: secretRef
           secretRef:
             name: my-backend-cluster-tls
+            key: tls.crt
         # Or source key from a Kubernetes Secret (key: tls.key from Secret my-backend-cluster-tls):
         key:
           type: secretRef
           secretRef:
             name: my-backend-cluster-tls
+            key: tls.key

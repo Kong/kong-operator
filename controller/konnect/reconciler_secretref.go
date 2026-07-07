@@ -40,7 +40,7 @@ func getSecretRefs[T constraints.SupportedKonnectEntityType, TEnt constraints.En
 	// SensitiveDataSecretRefsGetter; collect all active secretRef pointers.
 	if g, ok := any(e).(sensitiveDataSecretRefsGetter); ok {
 		for _, r := range g.GetSensitiveDataSecretRefs() {
-			secretRefs = append(secretRefs, r.Ref)
+			secretRefs = append(secretRefs, commonv1alpha1.NamespacedRef{Name: r.Name, Namespace: r.Namespace})
 		}
 	}
 	return secretRefs
@@ -95,10 +95,10 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			if g, ok := any(ent).(sensitiveDataSecretRefsGetter); ok {
 				for _, sdr := range g.GetSensitiveDataSecretRefs() {
 					refNS := ent.GetNamespace()
-					if sdr.Ref.Namespace != nil && *sdr.Ref.Namespace != "" {
-						refNS = *sdr.Ref.Namespace
+					if sdr.Namespace != nil && *sdr.Namespace != "" {
+						refNS = *sdr.Namespace
 					}
-					if sdr.Ref.Name != secretRef.Name || refNS != ns {
+					if sdr.Name != secretRef.Name || refNS != ns {
 						continue
 					}
 					if _, ok := secret.Data[sdr.Key]; !ok {

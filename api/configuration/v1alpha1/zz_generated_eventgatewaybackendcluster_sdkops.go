@@ -202,9 +202,13 @@ func (obj *EventGatewayBackendCluster) sdkOpsAPISpec(ctx context.Context, cl cli
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			secretBytes, ok := secret.Data["tls.crt"]
+			key := src.SecretRef.Key
+			if key == "" {
+				key = "tls.crt"
+			}
+			secretBytes, ok := secret.Data[key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, src.SecretRef.Name)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.TLS.ClientIdentity.Certificate.Value = &resolved
@@ -225,9 +229,13 @@ func (obj *EventGatewayBackendCluster) sdkOpsAPISpec(ctx context.Context, cl cli
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			secretBytes, ok := secret.Data["tls.key"]
+			key := src.SecretRef.Key
+			if key == "" {
+				key = "tls.key"
+			}
+			secretBytes, ok := secret.Data[key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.key'", namespace, src.SecretRef.Name)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.TLS.ClientIdentity.Key.Value = &resolved
@@ -243,16 +251,18 @@ func (obj *EventGatewayBackendCluster) GetSensitiveDataSecretRefs() []SensitiveD
 	}
 	var refs []SensitiveDataSecretRef
 	if obj.Spec.APISpec.TLS.ClientIdentity.Certificate.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.TLS.ClientIdentity.Certificate.SecretRef != nil {
-		refs = append(refs, SensitiveDataSecretRef{
-			Ref: *obj.Spec.APISpec.TLS.ClientIdentity.Certificate.SecretRef,
-			Key: "tls.crt",
-		})
+		ref := *obj.Spec.APISpec.TLS.ClientIdentity.Certificate.SecretRef
+		if ref.Key == "" {
+			ref.Key = "tls.crt"
+		}
+		refs = append(refs, ref)
 	}
 	if obj.Spec.APISpec.TLS.ClientIdentity.Key.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.TLS.ClientIdentity.Key.SecretRef != nil {
-		refs = append(refs, SensitiveDataSecretRef{
-			Ref: *obj.Spec.APISpec.TLS.ClientIdentity.Key.SecretRef,
-			Key: "tls.key",
-		})
+		ref := *obj.Spec.APISpec.TLS.ClientIdentity.Key.SecretRef
+		if ref.Key == "" {
+			ref.Key = "tls.key"
+		}
+		refs = append(refs, ref)
 	}
 	return refs
 }
