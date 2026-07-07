@@ -396,6 +396,7 @@ type AIGatewayModelAPI struct {
 	// List of request/response formats supported by this model.
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=1
 	Formats []AIGatewayModelFormat `json:"formats,omitempty"`
 	// Public labels store information about an entity that can be used for
 	// filtering a list of objects.
@@ -1826,6 +1827,7 @@ type AIGatewayModelModel struct {
 	// List of request/response formats supported by this model.
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=1
 	Formats []AIGatewayModelFormat `json:"formats,omitempty"`
 	// Public labels store information about an entity that can be used for
 	// filtering a list of objects.
@@ -3296,8 +3298,7 @@ type AIGatewayProviderConfigAuthAWS struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	SecretAccessKey string `json:"secretAccessKey,omitzero"`
+	SecretAccessKey SensitiveDataSource `json:"secretAccessKey,omitzero"`
 	// The STS endpoint URL to use for generating authentication tokens.
 	// If not specified, the default AWS STS endpoint will be used.
 	//
@@ -3325,8 +3326,7 @@ type AIGatewayProviderConfigAuthAzure struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	ClientSecret string `json:"clientSecret,omitzero"`
+	ClientSecret SensitiveDataSource `json:"clientSecret,omitzero"`
 	// If azure_use_managed_identity is set to true, and you need to use a
 	// different user-assigned identity for this LLM instance, set the tenant ID.
 	// This field is
@@ -3350,10 +3350,12 @@ type AIGatewayProviderConfigAuthBasic struct {
 	//
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=1
 	Headers []AIGatewayProviderConfigAuthBasicHeaders `json:"headers,omitempty"`
 	//
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=1
 	Params []AIGatewayProviderConfigAuthBasicParams `json:"params,omitempty"`
 }
 
@@ -3375,8 +3377,7 @@ type AIGatewayProviderConfigAuthBasicHeaders struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Value string `json:"value,omitzero"`
+	Value SensitiveDataSource `json:"value,omitzero"`
 }
 
 // AIGatewayProviderConfigAuthBasicParams is a type alias.
@@ -3401,8 +3402,7 @@ type AIGatewayProviderConfigAuthBasicParams struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Value string `json:"value,omitzero"`
+	Value SensitiveDataSource `json:"value,omitzero"`
 }
 
 // AIGatewayProviderConfigAuthGCP Configuration for GCP LLM provider.
@@ -3435,8 +3435,7 @@ type AIGatewayProviderConfigAuthGCP struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	ServiceAccountJSON string `json:"serviceAccountJSON,omitzero"`
+	ServiceAccountJSON SensitiveDataSource `json:"serviceAccountJSON,omitzero"`
 	// Use service account auth for GCP-based providers and models.
 	//
 	// +optional

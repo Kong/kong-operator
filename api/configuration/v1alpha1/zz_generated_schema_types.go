@@ -1992,6 +1992,7 @@ type EventGatewayParsedRecordEncryptFieldsConfig struct {
 	// Selects which fields to encrypt and with what keys.
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=256
 	EncryptFields []EventGatewayParsedRecordEncryptionSelector `json:"encryptFields,omitempty"`
 	// Describes how to handle a failure in a policy applied to produced records.
 	// * `reject` - rejects the record batch.
@@ -2918,6 +2919,7 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=1
 	Certificates []TLSCertificate `json:"certificates,omitempty"`
 	// Configures mutual TLS (mTLS) client certificate verification.
 	// When set, the gateway

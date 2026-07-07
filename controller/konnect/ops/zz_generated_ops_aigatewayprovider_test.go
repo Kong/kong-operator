@@ -10,6 +10,8 @@ import (
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -31,7 +33,7 @@ func testGeneratedAIGatewayProviderForSDKOps() *konnectv1alpha1.AIGatewayProvide
 			APISpec: konnectv1alpha1.AIGatewayProviderAPISpec{
 				AIGatewayProviderConfig: &konnectv1alpha1.AIGatewayProviderConfig{
 					Type: konnectv1alpha1.AIGatewayProviderConfigTypeAnthropic,
-					Anthropic: &konnectv1alpha1.AIGatewayProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: konnectv1alpha1.AIGatewayProviderAnthropicConfig{Auth: konnectv1alpha1.AIGatewayProviderConfigAuthBasic{Headers: []konnectv1alpha1.AIGatewayProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: "test-value"}}}}},
+					Anthropic: &konnectv1alpha1.AIGatewayProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: konnectv1alpha1.AIGatewayProviderAnthropicConfig{Auth: konnectv1alpha1.AIGatewayProviderConfigAuthBasic{Headers: []konnectv1alpha1.AIGatewayProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: konnectv1alpha1.SensitiveDataSource{Type: konnectv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")}}}}}},
 				},
 			},
 		},
@@ -43,10 +45,11 @@ func TestCreateAIGatewayProvider_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayProvidersSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayProviderForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayProviderRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayProviderRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedID := "aigatewayprovider-id"
 
@@ -65,7 +68,7 @@ func TestCreateAIGatewayProvider_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createAIGatewayProvider(ctx, sdk, obj))
+	require.NoError(t, createAIGatewayProvider(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -74,10 +77,11 @@ func TestCreateAIGatewayProvider_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayProvidersSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayProviderForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayProviderRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayProviderRequest(ctx, cl)
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -90,7 +94,7 @@ func TestCreateAIGatewayProvider_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createAIGatewayProvider(ctx, sdk, obj)
+	err = createAIGatewayProvider(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -99,11 +103,12 @@ func TestUpdateAIGatewayProvider_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayProvidersSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayProviderForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewayprovider-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayProviderRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayProviderRequest(ctx, cl)
 	require.NoError(t, err)
 
 	sdk.EXPECT().
@@ -118,7 +123,7 @@ func TestUpdateAIGatewayProvider_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayProviderResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayProvider(ctx, sdk, obj))
+	require.NoError(t, updateAIGatewayProvider(ctx, cl, sdk, obj))
 }
 
 func TestUpdateAIGatewayProvider_PropagatesSDKError(t *testing.T) {
@@ -126,11 +131,12 @@ func TestUpdateAIGatewayProvider_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayProvidersSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayProviderForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewayprovider-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayProviderRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayProviderRequest(ctx, cl)
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -146,7 +152,7 @@ func TestUpdateAIGatewayProvider_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayProvider(ctx, sdk, obj)
+	err = updateAIGatewayProvider(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

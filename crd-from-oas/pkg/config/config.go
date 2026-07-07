@@ -92,8 +92,6 @@ type SecretReferenceConfig struct {
 	// Type is the Kubernetes resource type that holds the sensitive data.
 	// Currently only "Secret" is supported.
 	Type string `yaml:"type"`
-	// Key is the data key inside the referenced resource (e.g. "tls.crt").
-	Key string `yaml:"key"`
 }
 
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
@@ -672,9 +670,6 @@ func (tc *TypeConfig) validate() error {
 	for i, sr := range tc.SecretReferences {
 		if !strings.HasPrefix(sr.Path, "spec.apiSpec.") {
 			return fmt.Errorf("secretReferences[%d].path must start with \"spec.apiSpec.\", got %q", i, sr.Path)
-		}
-		if sr.Key == "" {
-			return fmt.Errorf("secretReferences[%d].key is required", i)
 		}
 		if sr.Type != "Secret" {
 			return fmt.Errorf("secretReferences[%d].type %q is not supported; only \"Secret\" is currently allowed", i, sr.Type)

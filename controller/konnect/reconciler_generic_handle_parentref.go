@@ -140,7 +140,7 @@ func parentRefEntityHasCrossNamespaceRefs(ent client.Object) bool {
 	}
 	ns := ent.GetNamespace()
 	for _, r := range g.GetSensitiveDataSecretRefs() {
-		if n := r.Ref.Namespace; n != nil && *n != "" && *n != ns {
+		if n := r.Namespace; n != nil && *n != "" && *n != ns {
 			return true
 		}
 	}

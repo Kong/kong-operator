@@ -4,7 +4,6 @@ package v1alpha1
 
 import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // SecretKeyRef is a reference to a key in a Secret
@@ -97,7 +96,7 @@ type SensitiveDataSource struct {
 	// Required when type is 'secretRef'.
 	//
 	// +optional
-	SecretRef *commonv1alpha1.NamespacedRef `json:"secretRef,omitempty"`
+	SecretRef *SensitiveDataSecretRef `json:"secretRef,omitempty"`
 }
 
 // flattenSDKUnions recursively flattens nested discriminated-union shapes.

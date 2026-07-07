@@ -65,8 +65,9 @@ func (r *Reconciler) ensureKonnectCertificate(
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 				Certificate: configurationv1alpha1.SensitiveDataSource{
 					Type: configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-					SecretRef: &commonv1alpha1.NamespacedRef{
+					SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{
 						Name: certSecret.Name,
+						Key:  corev1.TLSCertKey,
 					},
 				},
 			},

@@ -147,7 +147,7 @@ type SensitiveDataSource struct {
 	//
 	// +optional{{range .SensitiveDataSourceSecretRefValidations}}
 	// {{ . }}{{end}}
-	SecretRef *{{.NamespacedRefTypeName}} ` + "`" + `json:"secretRef,omitempty"` + "`" + `
+	SecretRef *SensitiveDataSecretRef ` + "`" + `json:"secretRef,omitempty"` + "`" + `
 }`
 
 const konnectEntityRefType = `// KonnectEntityRef is a reference to a Konnect entity.
