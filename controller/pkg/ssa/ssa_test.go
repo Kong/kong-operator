@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/rest"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -42,16 +41,6 @@ import (
 )
 
 const testFieldManager = "ssa-unit-tests"
-
-type fakeManagerWithConfig struct {
-	ctrl.Manager
-
-	config *rest.Config
-}
-
-func (f fakeManagerWithConfig) GetConfig() *rest.Config {
-	return f.config
-}
 
 func svcWithPort(port int32) *corev1.Service {
 	return &corev1.Service{
@@ -110,16 +99,16 @@ func Test_gvToPathKey(t *testing.T) {
 	}
 }
 
-func Test_NewTypeConverter_error(t *testing.T) {
+func Test_fetchBuiltinSchemas_error(t *testing.T) {
 	tests := []struct {
 		name            string
-		mgr             ctrl.Manager
+		cfg             *rest.Config
 		groupVersions   []schema.GroupVersion
 		wantErrContains string
 	}{
 		{
 			name:            "openapi path listing fails",
-			mgr:             fakeManagerWithConfig{config: &rest.Config{Host: "http://127.0.0.1:0"}},
+			cfg:             &rest.Config{Host: "http://127.0.0.1:0"},
 			groupVersions:   []schema.GroupVersion{{Group: "", Version: "v1"}},
 			wantErrContains: "failed to list OpenAPI paths",
 		},
@@ -127,7 +116,7 @@ func Test_NewTypeConverter_error(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewTypeConverter(tc.mgr, tc.groupVersions)
+			_, err := fetchBuiltinSchemas(tc.cfg, tc.groupVersions)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantErrContains)
 		})

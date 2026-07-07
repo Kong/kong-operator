@@ -20,10 +20,10 @@ func TestSetupControllers(t *testing.T) {
 	mgr, err := ctrl.NewManager(&rest.Config{}, ctrlmgr.Options{})
 	require.NoError(t, err)
 	cfg := testutils.DefaultControllerConfigForTests()
-	controllerDefs, err := manager.SetupControllers(mgr, &cfg, nil)
+	controllerDefs, err := manager.SetupControllers(mgr, &cfg, nil, nil)
 	require.NoError(t, err)
 
-	const expectedControllerCount = 70
+	const expectedControllerCount = 71
 	require.Len(t, controllerDefs, expectedControllerCount)
 
 	seenControllerTypes := make(map[string]int, expectedControllerCount)
