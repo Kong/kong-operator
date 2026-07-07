@@ -378,6 +378,119 @@ func KonnectGatewayControlPlaneWithID(
 	return cp
 }
 
+// AIGatewayControlPlane deploys an AIGatewayControlPlane resource and returns it.
+func AIGatewayControlPlane(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.AIGatewayControlPlane {
+	t.Helper()
+
+	cp := &konnectv1alpha1.AIGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "agcp-",
+		},
+		Spec: konnectv1alpha1.AIGatewayControlPlaneSpec{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: apiAuth.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.AIGatewayControlPlaneAPISpec{
+				Name:        "test-agcp",
+				DisplayName: "Test AI Gateway CP",
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(cp)
+	}
+	require.NoError(t, cl.Create(ctx, cp))
+	logObjectCreate(t, cp)
+	return cp
+}
+
+// AIGatewayControlPlaneWithID deploys an AIGatewayControlPlane resource and returns it.
+// The Status ID and Programmed condition are set on the CP using a status Update() call.
+// It can be useful where the reconciler for AIGatewayControlPlane is not started
+// and hence the status has to be filled manually.
+func AIGatewayControlPlaneWithID(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.AIGatewayControlPlane {
+	t.Helper()
+
+	cp := AIGatewayControlPlane(t, ctx, cl, apiAuth, opts...)
+	cp.Status.Conditions = []metav1.Condition{
+		{
+			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
+			ObservedGeneration: cp.GetGeneration(),
+			LastTransitionTime: metav1.Now(),
+		},
+	}
+	cp.Status.ID = randomSuffix()
+	cp.Status.Endpoints = &konnectv1alpha1.AIGatewayControlPlaneEndpoints{
+		Configuration: "cfg.endpoint",
+		Telemetry:     "tp.endpoint",
+	}
+	require.NoError(t, cl.Status().Update(ctx, cp))
+	return cp
+}
+
+// AIGatewayPolicy deploys an AIGatewayPolicy resource and returns it.
+func AIGatewayPolicy(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	opts ...ObjOption,
+) *konnectv1alpha1.AIGatewayPolicy {
+	t.Helper()
+
+	policy := &konnectv1alpha1.AIGatewayPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "agp-",
+		},
+		Spec: konnectv1alpha1.AIGatewayPolicySpec{
+			APISpec: konnectv1alpha1.AIGatewayPolicyAPISpec{
+				Name:        "test-policy",
+				DisplayName: "Test AI Gateway Policy",
+				Type:        "ai-prompt-guard",
+				Config:      apiextensionsv1.JSON{Raw: []byte(`{}`)},
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(policy)
+	}
+	require.NoError(t, cl.Create(ctx, policy))
+	logObjectCreate(t, policy)
+	return policy
+}
+
+// WithAIGatewayControlPlaneRef returns an ObjOption that sets the AIGatewayRef
+// on an AIGatewayPolicy to point to the given AIGatewayControlPlane.
+func WithAIGatewayControlPlaneRef(cp *konnectv1alpha1.AIGatewayControlPlane) ObjOption {
+	return func(obj client.Object) {
+		p, ok := obj.(*konnectv1alpha1.AIGatewayPolicy)
+		if !ok {
+			panic(fmt.Errorf("%T is not an AIGatewayPolicy", obj))
+		}
+		p.Spec.AIGatewayRef = commonv1alpha1.ObjectRef{
+			Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			NamespacedRef: &commonv1alpha1.NamespacedRef{
+				Name: cp.GetName(),
+			},
+		}
+	}
+}
+
 // KonnectCloudGatewayDataPlaneGroupConfiguration deploys a
 // KonnectCloudGatewayDataPlaneGroupConfiguration resource and returns the resource.
 func KonnectCloudGatewayDataPlaneGroupConfiguration(
