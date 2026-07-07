@@ -55,7 +55,7 @@ metadata:
   name: ai-gw-cp-1-dataplane-cert
   namespace: default
 spec:
-  gatewayRef:
+  aiGatewayRef:
     type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
