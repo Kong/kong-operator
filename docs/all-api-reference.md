@@ -9317,7 +9317,7 @@ AIGatewayAgentSpec defines the desired state of AIGatewayAgent.
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
 | `apiSpec` _[AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_

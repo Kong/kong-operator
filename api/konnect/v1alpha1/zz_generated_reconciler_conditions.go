@@ -19,22 +19,6 @@ const (
 	// yet programmed in Konnect.
 	AIGatewayControlPlaneRefReasonNotProgrammed = "NotProgrammed"
 
-	// AiGatewayRefValidConditionType is the type of the condition that indicates
-	// whether the AiGateway reference is valid and points to an existing
-	// AIGatewayControlPlane.
-	AiGatewayRefValidConditionType = "AiGatewayRefValid"
-
-	// AiGatewayRefReasonValid is the reason used with the AiGatewayRefValid
-	// condition type indicating that the AiGateway reference is valid.
-	AiGatewayRefReasonValid = "Valid"
-	// AiGatewayRefReasonInvalid is the reason used with the AiGatewayRefValid
-	// condition type indicating that the AiGateway reference is invalid.
-	AiGatewayRefReasonInvalid = "Invalid"
-	// AiGatewayRefReasonNotProgrammed is the reason used with the AiGatewayRefValid
-	// condition type indicating that the referenced AIGatewayControlPlane exists but is not
-	// yet programmed in Konnect.
-	AiGatewayRefReasonNotProgrammed = "NotProgrammed"
-
 	// PortalRefValidConditionType is the type of the condition that indicates
 	// whether the Portal reference is valid and points to an existing
 	// Portal.

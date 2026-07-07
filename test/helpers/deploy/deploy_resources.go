@@ -495,7 +495,7 @@ func AIGatewayAgent(
 			Name: name,
 		},
 		Spec: konnectv1alpha1.AIGatewayAgentSpec{
-			GatewayRef: commonv1alpha1.ObjectRef{
+			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: gateway.Name,

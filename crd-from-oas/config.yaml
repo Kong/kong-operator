@@ -342,6 +342,8 @@ apiGroupVersions:
           parentEntityGVK:
             kind: AIGatewayControlPlane
             group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
 
       # Event Gateway APIs
       - path: /v1/event-gateways
