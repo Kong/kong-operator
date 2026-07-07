@@ -77,11 +77,9 @@ spec:
                           Required when type is 'secretRef'.
                         properties:
                           key:
-                            description: |-
-                              Key is the data key within the Secret. When omitted, some fields fall
-                              back to a fixed default key documented on the parent field; others
-                              require it to be set.
+                            description: Key is the data key within the Secret.
                             maxLength: 253
+                            minLength: 1
                             type: string
                           name:
                             description: Name is the name of the referred resource.
@@ -99,6 +97,7 @@ spec:
                             maxLength: 253
                             type: string
                         required:
+                        - key
                         - name
                         type: object
                       type:

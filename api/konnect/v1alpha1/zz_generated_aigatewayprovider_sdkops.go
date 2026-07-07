@@ -606,13 +606,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Anthropic.Config.Auth.Headers[i].Value.Value = &resolved
@@ -637,13 +633,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Cerebras.Config.Auth.Headers[i].Value.Value = &resolved
@@ -668,13 +660,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Cohere.Config.Auth.Headers[i].Value.Value = &resolved
@@ -699,13 +687,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Dashscope.Config.Auth.Headers[i].Value.Value = &resolved
@@ -730,13 +714,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Databricks.Config.Auth.Headers[i].Value.Value = &resolved
@@ -761,13 +741,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Deepseek.Config.Auth.Headers[i].Value.Value = &resolved
@@ -792,13 +768,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Huggingface.Config.Auth.Headers[i].Value.Value = &resolved
@@ -823,13 +795,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Kimi.Config.Auth.Headers[i].Value.Value = &resolved
@@ -854,13 +822,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Llama2.Config.Auth.Headers[i].Value.Value = &resolved
@@ -885,13 +849,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Mistral.Config.Auth.Headers[i].Value.Value = &resolved
@@ -916,13 +876,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Ollama.Config.Auth.Headers[i].Value.Value = &resolved
@@ -947,13 +903,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Openai.Config.Auth.Headers[i].Value.Value = &resolved
@@ -978,13 +930,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Vercel.Config.Auth.Headers[i].Value.Value = &resolved
@@ -1009,13 +957,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Vllm.Config.Auth.Headers[i].Value.Value = &resolved
@@ -1040,13 +984,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Xai.Config.Auth.Headers[i].Value.Value = &resolved
@@ -1071,13 +1011,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Anthropic.Config.Auth.Params[i].Value.Value = &resolved
@@ -1102,13 +1038,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Cerebras.Config.Auth.Params[i].Value.Value = &resolved
@@ -1133,13 +1065,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Cohere.Config.Auth.Params[i].Value.Value = &resolved
@@ -1164,13 +1092,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Dashscope.Config.Auth.Params[i].Value.Value = &resolved
@@ -1195,13 +1119,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Databricks.Config.Auth.Params[i].Value.Value = &resolved
@@ -1226,13 +1146,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Deepseek.Config.Auth.Params[i].Value.Value = &resolved
@@ -1257,13 +1173,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Huggingface.Config.Auth.Params[i].Value.Value = &resolved
@@ -1288,13 +1200,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Kimi.Config.Auth.Params[i].Value.Value = &resolved
@@ -1319,13 +1227,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Llama2.Config.Auth.Params[i].Value.Value = &resolved
@@ -1350,13 +1254,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Mistral.Config.Auth.Params[i].Value.Value = &resolved
@@ -1381,13 +1281,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Ollama.Config.Auth.Params[i].Value.Value = &resolved
@@ -1412,13 +1308,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Openai.Config.Auth.Params[i].Value.Value = &resolved
@@ -1443,13 +1335,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Vercel.Config.Auth.Params[i].Value.Value = &resolved
@@ -1474,13 +1362,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Vllm.Config.Auth.Params[i].Value.Value = &resolved
@@ -1505,13 +1389,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Xai.Config.Auth.Params[i].Value.Value = &resolved
@@ -1538,13 +1418,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.basic.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Azure.Config.Auth.Basic.Headers[i].Value.Value = &resolved
@@ -1573,13 +1449,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.basic.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Bedrock.Config.Auth.Basic.Headers[i].Value.Value = &resolved
@@ -1608,13 +1480,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.basic.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Gemini.Config.Auth.Basic.Headers[i].Value.Value = &resolved
@@ -1643,13 +1511,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.basic.headers[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Vertex.Config.Auth.Basic.Headers[i].Value.Value = &resolved
@@ -1678,13 +1542,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.basic.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Azure.Config.Auth.Basic.Params[i].Value.Value = &resolved
@@ -1713,13 +1573,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.basic.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Bedrock.Config.Auth.Basic.Params[i].Value.Value = &resolved
@@ -1748,13 +1604,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.basic.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Gemini.Config.Auth.Basic.Params[i].Value.Value = &resolved
@@ -1783,13 +1635,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.*.config.auth.basic.params[].value")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Vertex.Config.Auth.Basic.Params[i].Value.Value = &resolved
@@ -1818,13 +1666,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.bedrock.config.auth.aws.secretAccessKey")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Bedrock.Config.Auth.AWS.SecretAccessKey.Value = &resolved
@@ -1853,13 +1697,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.azure.config.auth.azure.clientSecret")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Azure.Config.Auth.Azure.ClientSecret.Value = &resolved
@@ -1888,13 +1728,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.gemini.config.auth.gcp.serviceAccountJSON")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.Value = &resolved
@@ -1923,13 +1759,9 @@ func (obj *AIGatewayProvider) sdkOpsAPISpec(ctx context.Context, cl client.Clien
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for spec.apiSpec.vertex.config.auth.gcp.serviceAccountJSON")
-			}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.AIGatewayProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON.Value = &resolved
@@ -1952,8 +1784,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Anthropic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Anthropic.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -1962,8 +1793,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Cerebras != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Cerebras.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -1972,8 +1802,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Cohere != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Cohere.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -1982,8 +1811,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Dashscope != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Dashscope.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -1992,8 +1820,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Databricks != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Databricks.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2002,8 +1829,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Deepseek != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Deepseek.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2012,8 +1838,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Huggingface != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Huggingface.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2022,8 +1847,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Kimi != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Kimi.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2032,8 +1856,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Llama2 != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Llama2.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2042,8 +1865,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Mistral != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Mistral.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2052,8 +1874,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Ollama != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Ollama.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2062,8 +1883,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Openai != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Openai.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2072,8 +1892,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Vercel != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Vercel.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2082,8 +1901,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Vllm != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Vllm.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2092,8 +1910,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Xai != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Xai.Config.Auth.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2102,8 +1919,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Anthropic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Anthropic.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2112,8 +1928,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Cerebras != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Cerebras.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2122,8 +1937,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Cohere != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Cohere.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2132,8 +1946,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Dashscope != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Dashscope.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2142,8 +1955,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Databricks != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Databricks.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2152,8 +1964,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Deepseek != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Deepseek.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2162,8 +1973,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Huggingface != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Huggingface.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2172,8 +1982,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Kimi != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Kimi.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2182,8 +1991,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Llama2 != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Llama2.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2192,8 +2000,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Mistral != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Mistral.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2202,8 +2009,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Ollama != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Ollama.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2212,8 +2018,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Openai != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Openai.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2222,8 +2027,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Vercel != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Vercel.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2232,8 +2036,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Vllm != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Vllm.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2242,8 +2045,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Xai != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Xai.Config.Auth.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2254,8 +2056,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth.Basic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth.Basic.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2268,8 +2069,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth.Basic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth.Basic.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2282,8 +2082,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth.Basic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth.Basic.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2296,8 +2095,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth.Basic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth.Basic.Headers {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2310,8 +2108,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth.Basic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth.Basic.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2324,8 +2121,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth.Basic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth.Basic.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2338,8 +2134,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth.Basic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth.Basic.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2352,8 +2147,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth.Basic != nil {
 	for _, item := range obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth.Basic.Params {
 		if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-			ref := *item.Value.SecretRef
-			refs = append(refs, ref)
+			refs = append(refs, *item.Value.SecretRef)
 		}
 	}
 	}
@@ -2365,8 +2159,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth != nil {
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth.AWS != nil {
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth.AWS.SecretAccessKey.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth.AWS.SecretAccessKey.SecretRef != nil {
-		ref := *obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth.AWS.SecretAccessKey.SecretRef
-		refs = append(refs, ref)
+		refs = append(refs, *obj.Spec.APISpec.AIGatewayProviderConfig.Bedrock.Config.Auth.AWS.SecretAccessKey.SecretRef)
 	}
 	}
 	}
@@ -2377,8 +2170,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth != nil {
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth.Azure != nil {
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth.Azure.ClientSecret.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth.Azure.ClientSecret.SecretRef != nil {
-		ref := *obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth.Azure.ClientSecret.SecretRef
-		refs = append(refs, ref)
+		refs = append(refs, *obj.Spec.APISpec.AIGatewayProviderConfig.Azure.Config.Auth.Azure.ClientSecret.SecretRef)
 	}
 	}
 	}
@@ -2389,8 +2181,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth != nil {
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth.GCP != nil {
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.SecretRef != nil {
-		ref := *obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.SecretRef
-		refs = append(refs, ref)
+		refs = append(refs, *obj.Spec.APISpec.AIGatewayProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.SecretRef)
 	}
 	}
 	}
@@ -2401,8 +2192,7 @@ func (obj *AIGatewayProvider) GetSensitiveDataSecretRefs() []SensitiveDataSecret
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth != nil {
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth.GCP != nil {
 	if obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON.SecretRef != nil {
-		ref := *obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON.SecretRef
-		refs = append(refs, ref)
+		refs = append(refs, *obj.Spec.APISpec.AIGatewayProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON.SecretRef)
 	}
 	}
 	}

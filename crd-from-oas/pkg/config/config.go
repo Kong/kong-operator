@@ -92,10 +92,6 @@ type SecretReferenceConfig struct {
 	// Type is the Kubernetes resource type that holds the sensitive data.
 	// Currently only "Secret" is supported.
 	Type string `yaml:"type"`
-	// DefaultKey is the Secret data key used when the manifest's secretRef.key
-	// is left unset (e.g. "tls.crt"). Omit for fields where callers must
-	// always set secretRef.key explicitly.
-	DefaultKey string `yaml:"defaultKey,omitempty"`
 }
 
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).

@@ -47,7 +47,6 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.certificate
             type: Secret
-            defaultKey: tls.crt
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK
@@ -90,10 +89,8 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.tlsServer.config.certificates[].certificate
             type: Secret
-            defaultKey: tls.crt
           - path: spec.apiSpec.tlsServer.config.certificates[].key
             type: Secret
-            defaultKey: tls.key
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
@@ -156,10 +153,8 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.tls.clientIdentity.certificate
             type: Secret
-            defaultKey: tls.crt
           - path: spec.apiSpec.tls.clientIdentity.key
             type: Secret
-            defaultKey: tls.key
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
         ops:

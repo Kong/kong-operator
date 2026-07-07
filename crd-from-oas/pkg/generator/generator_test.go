@@ -5078,7 +5078,7 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 		APIVersion: "v1alpha1",
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"KonnectEventDataPlaneCertificate": {
-				{Path: "spec.apiSpec.certificate", Type: "Secret", DefaultKey: "tls.crt"},
+				{Path: "spec.apiSpec.certificate", Type: "Secret"},
 				{Path: "spec.apiSpec.key", Type: "Secret"},
 			},
 		},
@@ -5110,9 +5110,7 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	assert.Contains(t, content, "src := apiSpec.Certificate")
 	assert.Contains(t, content, "src := apiSpec.Key")
 	assert.Contains(t, content, "if src.Type == SensitiveDataSourceTypeSecretRef {")
-	assert.Contains(t, content, `key = "tls.crt"`)
-	assert.Contains(t, content, `secretRef.key is required for spec.apiSpec.key`)
-	assert.Contains(t, content, `secretBytes, ok := secret.Data[key]`)
+	assert.Contains(t, content, `secretBytes, ok := secret.Data[src.SecretRef.Key]`)
 	assert.Contains(t, content, "apiSpec.Certificate.Value = &resolved")
 	assert.Contains(t, content, "apiSpec.Key.Value = &resolved")
 	assert.Contains(t, content, "payload = flattenSensitiveData(payload)")

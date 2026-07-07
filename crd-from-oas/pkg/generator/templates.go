@@ -676,19 +676,9 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-{{- if $ref.DefaultKey}}
-			if key == "" {
-				key = "{{$ref.DefaultKey}}"
-			}
-{{- else}}
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for {{$ref.Path}}")
-			}
-{{- end}}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}.Value = &resolved
@@ -715,19 +705,9 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-{{- if .DefaultKey}}
-			if key == "" {
-				key = "{{.DefaultKey}}"
-			}
-{{- else}}
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for {{.Path}}")
-			}
-{{- end}}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.{{.GoFieldSelector}}.Value = &resolved
@@ -755,13 +735,7 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 {{- end}}
 	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
 		if item.{{$ref.SliceLeafField}}.Type == SensitiveDataSourceTypeSecretRef && item.{{$ref.SliceLeafField}}.SecretRef != nil {
-			ref := *item.{{$ref.SliceLeafField}}.SecretRef
-{{- if $ref.DefaultKey}}
-			if ref.Key == "" {
-				ref.Key = "{{$ref.DefaultKey}}"
-			}
-{{- end}}
-			refs = append(refs, ref)
+			refs = append(refs, *item.{{$ref.SliceLeafField}}.SecretRef)
 		}
 	}
 {{- range $ref.PointerGuards}}
@@ -772,13 +746,7 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 	if obj.Spec.APISpec.{{.}} != nil {
 {{- end}}
 	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
-		ref := *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef
-{{- if .DefaultKey}}
-		if ref.Key == "" {
-			ref.Key = "{{.DefaultKey}}"
-		}
-{{- end}}
-		refs = append(refs, ref)
+		refs = append(refs, *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef)
 	}
 {{- range .PointerGuards}}
 	}
@@ -1211,19 +1179,9 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-{{- if $ref.DefaultKey}}
-			if key == "" {
-				key = "{{$ref.DefaultKey}}"
-			}
-{{- else}}
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for {{$ref.Path}}")
-			}
-{{- end}}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.{{$ref.SliceParentSelector}}[i].{{$ref.SliceLeafField}}.Value = &resolved
@@ -1250,19 +1208,9 @@ func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			key := src.SecretRef.Key
-{{- if .DefaultKey}}
-			if key == "" {
-				key = "{{.DefaultKey}}"
-			}
-{{- else}}
-			if key == "" {
-				return nil, fmt.Errorf("secretRef.key is required for {{.Path}}")
-			}
-{{- end}}
-			secretBytes, ok := secret.Data[key]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, key)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.{{.GoFieldSelector}}.Value = &resolved
@@ -1290,13 +1238,7 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 {{- end}}
 	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
 		if item.{{$ref.SliceLeafField}}.Type == SensitiveDataSourceTypeSecretRef && item.{{$ref.SliceLeafField}}.SecretRef != nil {
-			ref := *item.{{$ref.SliceLeafField}}.SecretRef
-{{- if $ref.DefaultKey}}
-			if ref.Key == "" {
-				ref.Key = "{{$ref.DefaultKey}}"
-			}
-{{- end}}
-			refs = append(refs, ref)
+			refs = append(refs, *item.{{$ref.SliceLeafField}}.SecretRef)
 		}
 	}
 {{- range $ref.PointerGuards}}
@@ -1307,13 +1249,7 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 	if obj.Spec.APISpec.{{.}} != nil {
 {{- end}}
 	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
-		ref := *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef
-{{- if .DefaultKey}}
-		if ref.Key == "" {
-			ref.Key = "{{.DefaultKey}}"
-		}
-{{- end}}
-		refs = append(refs, ref)
+		refs = append(refs, *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef)
 	}
 {{- range .PointerGuards}}
 	}

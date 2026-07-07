@@ -4678,7 +4678,7 @@ that holds a sensitive value for a CRD field.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the referred resource. |
-| `key` _string_ | Key is the data key within the Secret. When omitted, some fields fall back to a fixed default key documented on the parent field; others require it to be set. |
+| `key` _string_ | Key is the data key within the Secret. |
 | `namespace` _*string_ | Namespace is the namespace of the referred resource.<br /><br />For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br />This field MUST not be set when referring to cluster-scoped resources. |
 
 _Appears in:_
