@@ -481,7 +481,7 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 								Value: "debug",
 							},
 						},
-						ReadinessProbe: resourceutils.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusEndpoint),
+						ReadinessProbe: resourceutils.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 					},
 				},
 			},
