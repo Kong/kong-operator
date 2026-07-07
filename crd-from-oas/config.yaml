@@ -496,3 +496,20 @@ apiGroupVersions:
           delete:
             asPUT: true
         reconciler: {}
+      - path: /v1/ai-gateways/{gatewayId}/policies
+        name: AIGatewayPolicy
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayPoliciesSDK
+            fieldName: AIGatewayPolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayPolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayPolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: AIGatewayControlPlane
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
