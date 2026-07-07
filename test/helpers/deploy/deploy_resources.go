@@ -505,7 +505,7 @@ func AIGatewayAgent(
 				Name:        konnectv1alpha1.AIGatewayEntityIdentifier(name),
 				DisplayName: "AI Agent " + name,
 				Type:        "http",
-				Config: konnectv1alpha1.Config{
+				Config: konnectv1alpha1.AIGatewayAgentConfig{
 					URL: "https://upstream.example.com",
 				},
 			},

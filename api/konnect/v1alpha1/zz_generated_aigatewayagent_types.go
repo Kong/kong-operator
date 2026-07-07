@@ -65,7 +65,7 @@ type AIGatewayAgentAPISpec struct {
 	// The structure varies depending on the agent type.
 	//
 	// +required
-	Config Config `json:"config,omitzero"`
+	Config AIGatewayAgentConfig `json:"config,omitzero"`
 
 	// The display name for this agent.
 	//
@@ -155,13 +155,13 @@ type AIGatewayAgentStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }
 
-// Config Configuration for the agent.
+// AIGatewayAgentConfig Configuration for the agent.
 // The structure varies depending on the agent type.
-type Config struct {
+type AIGatewayAgentConfig struct {
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
-	Logging Logging `json:"logging,omitzero"`
+	Logging AIGatewayAgentConfigLogging `json:"logging,omitzero"`
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
@@ -182,8 +182,8 @@ type Config struct {
 	URL string `json:"url,omitzero"`
 }
 
-// Logging Configuration for AI Gateway logging.
-type Logging struct {
+// AIGatewayAgentConfigLogging Configuration for AI Gateway logging.
+type AIGatewayAgentConfigLogging struct {
 	// Maximum size in bytes for logged request/response payloads.
 	// Payloads exceeding this size will be truncated.
 	//

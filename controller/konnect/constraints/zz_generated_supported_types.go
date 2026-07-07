@@ -10,7 +10,8 @@ import (
 // SupportedGeneratedKonnectEntityType is the generated subset of
 // constraints.SupportedKonnectEntityType.
 type SupportedGeneratedKonnectEntityType interface {
-	konnectv1alpha1.AIGatewayControlPlane |
+	konnectv1alpha1.AIGatewayAgent |
+		konnectv1alpha1.AIGatewayControlPlane |
 		configurationv1alpha1.AIGatewayDataPlaneCertificate |
 		konnectv1alpha1.AIGatewayModel |
 		konnectv1alpha1.AIGatewayPolicy |

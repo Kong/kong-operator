@@ -153,7 +153,6 @@ func normalizeAIGatewayAgentSDKOpsBoolField(value any, path []string) (any, erro
 	}
 }
 
-
 func (s *AIGatewayAgentAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {

@@ -8867,6 +8867,7 @@ _Appears in:_
 
 Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1alpha1 API group.
 
+- [AIGatewayAgent](#konnect-konghq-com-v1alpha1-aigatewayagent)
 - [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
 - [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
 - [AIGatewayPolicy](#konnect-konghq-com-v1alpha1-aigatewaypolicy)
@@ -8886,6 +8887,21 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
 - [PortalPage](#konnect-konghq-com-v1alpha1-portalpage)
 - [PortalTeam](#konnect-konghq-com-v1alpha1-portalteam)
+
+### AIGatewayAgent
+
+
+AIGatewayAgent is the Schema for the aigatewayagents API.
+
+<!-- ai_gateway_agent description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayAgent`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayAgentSpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentspec)_ |  |
+| `status` _[AIGatewayAgentStatus](#konnect-konghq-com-v1alpha1-types-aigatewayagentstatus)_ |  |
 
 ### AIGatewayControlPlane
 
@@ -9193,7 +9209,152 @@ _Appears in:_
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 
+#### AIGatewayAgentAPISpec
 
+
+AIGatewayAgentAPISpec defines the API spec fields for AIGatewayAgent.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayAgentAcls](#konnect-konghq-com-v1alpha1-types-aigatewayagentacls)_ | Access control rules. Configure exactly one of `allow` or `deny`. |
+| `config` _[AIGatewayAgentConfig](#konnect-konghq-com-v1alpha1-types-aigatewayagentconfig)_ | Configuration for the agent. The structure varies depending on the agent type. |
+| `displayName` _string_ | The display name for this agent. |
+| `enabled` _string_ | Whether the Agent is enabled. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this agent, used as a stable human-readable reference. |
+| `policies` _[]string_ | List of policy references. |
+| `type` _string_ | The type of the agent. |
+
+_Appears in:_
+
+- [AIGatewayAgentSpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentspec)
+
+#### AIGatewayAgentAcls
+
+
+AIGatewayAgentAcls represents a union type for acls.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayAgentAclsType](#konnect-konghq-com-v1alpha1-types-aigatewayagentaclstype)_ | Type designates the type of configuration. |
+| `allow` _[AIGatewayAllowACL](#konnect-konghq-com-v1alpha1-types-aigatewayallowacl)_ | Allow configuration. |
+| `deny` _[AIGatewayDenyACL](#konnect-konghq-com-v1alpha1-types-aigatewaydenyacl)_ | Deny configuration. |
+
+_Appears in:_
+
+- [AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)
+
+#### AIGatewayAgentAclsType
+
+_Underlying type:_ `string`
+
+AIGatewayAgentAclsType represents the type of acls.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayAgentAcls](#konnect-konghq-com-v1alpha1-types-aigatewayagentacls)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `allow` |  |
+| `deny` |  |
+
+#### AIGatewayAgentConfig
+
+
+AIGatewayAgentConfig Configuration for the agent.
+The structure varies depending on the agent type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `logging` _[AIGatewayAgentConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewayagentconfiglogging)_ | Configuration for AI Gateway logging. |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+| `url` _string_ | Helper field to set protocol, host, port and path of the upstream A2A Agent using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
+
+_Appears in:_
+
+- [AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)
+
+#### AIGatewayAgentConfigLogging
+
+
+AIGatewayAgentConfigLogging Configuration for AI Gateway logging.
+
+
+
+| Field | Description |
+| --- | --- |
+| `maxPayloadSize` _int_ | Maximum size in bytes for logged request/response payloads. Payloads exceeding this size will be truncated. |
+| `payloads` _string_ |  |
+| `statistics` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayAgentConfig](#konnect-konghq-com-v1alpha1-types-aigatewayagentconfig)
+
+
+
+#### AIGatewayAgentSpec
+
+
+AIGatewayAgentSpec defines the desired state of AIGatewayAgent.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `apiSpec` _[AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayAgent](#konnect-konghq-com-v1alpha1-aigatewayagent)
+
+#### AIGatewayAgentStatus
+
+
+AIGatewayAgentStatus defines the observed state of AIGatewayAgent.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayAgent](#konnect-konghq-com-v1alpha1-aigatewayagent)
+
+#### AIGatewayAllowACL
+
+
+AIGatewayAllowACL is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allow` _[]string_ | List of Consumers, Consumer Groups, or Authenticated Groups that are permitted access. |
+
+_Appears in:_
+
+- [AIGatewayAgentAcls](#konnect-konghq-com-v1alpha1-types-aigatewayagentacls)
 
 #### AIGatewayAzureEmbeddingsModelConfig
 
@@ -9324,7 +9485,20 @@ _Appears in:_
 - [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
 - [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
 
+#### AIGatewayDenyACL
 
+
+AIGatewayDenyACL is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `deny` _[]string_ | List of Consumers, Consumer Groups, or Authenticated Groups that are denied access. |
+
+_Appears in:_
+
+- [AIGatewayAgentAcls](#konnect-konghq-com-v1alpha1-types-aigatewayagentacls)
 
 
 
@@ -9365,6 +9539,7 @@ In some cases, this may be the entity name or ID.
 
 _Appears in:_
 
+- [AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
@@ -11606,6 +11781,7 @@ AIGatewayRouteConfig Configuration for an AI Gateway route.
 
 _Appears in:_
 
+- [AIGatewayAgentConfig](#konnect-konghq-com-v1alpha1-types-aigatewayagentconfig)
 - [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
 - [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
 
@@ -12787,6 +12963,7 @@ KonnectEntityRef is a reference to a Konnect entity.
 
 _Appears in:_
 
+- [AIGatewayAgentStatus](#konnect-konghq-com-v1alpha1-types-aigatewayagentstatus)
 - [AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)
 - [AIGatewayPolicyStatus](#konnect-konghq-com-v1alpha1-types-aigatewaypolicystatus)
 - [AIGatewayProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewayproviderstatus)
@@ -13172,6 +13349,7 @@ or system responsible for its lifecycle (for example, `terraform`).<br /><br />K
 
 _Appears in:_
 
+- [AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
@@ -13995,6 +14173,7 @@ for filtering a list of objects.<br /><br />Public labels are intended to store 
 
 _Appears in:_
 
+- [AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
