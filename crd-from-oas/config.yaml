@@ -396,7 +396,6 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.apiKey
             type: Secret
-            key: api-key
         ops:
           sdk:
           # AIGatewayConsumerCredential shares the AIGatewayConsumersSDK interface
