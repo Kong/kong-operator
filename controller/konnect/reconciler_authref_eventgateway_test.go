@@ -26,6 +26,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 		backendClusterName = "backend-cluster"
 		virtualClusterName = "virtual-cluster"
 		listenerName       = "listener"
+		aiGatewayName      = "ai-gateway"
+		consumerName       = "ai-gateway-consumer"
 	)
 
 	wantAPIAuth := types.NamespacedName{
@@ -134,6 +136,26 @@ func TestGetAPIAuthRef(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: testNamespacedObjectRef(listenerName),
+					},
+				})
+			},
+			wantNN: wantAPIAuth,
+		},
+		{
+			name: "AI gateway consumer credential resolves API auth via AI gateway consumer parent",
+			objects: []client.Object{
+				newTestAPIAuthConfiguration(namespace, apiAuthName),
+				newTestAIGatewayControlPlane(namespace, aiGatewayName, apiAuthName),
+				newTestAIGatewayConsumer(namespace, consumerName, aiGatewayName),
+			},
+			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
+				return getAPIAuthRef(ctx, cl, &konnectv1alpha1.AIGatewayConsumerCredential{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ai-gateway-consumer-credential",
+						Namespace: namespace,
+					},
+					Spec: konnectv1alpha1.AIGatewayConsumerCredentialSpec{
+						AIGatewayConsumerRef: testNamespacedObjectRef(consumerName),
 					},
 				})
 			},
@@ -396,6 +418,34 @@ func newTestEventGatewayListener(namespace, name, gatewayName string) *configura
 		},
 		Spec: configurationv1alpha1.EventGatewayListenerSpec{
 			GatewayRef: testNamespacedObjectRef(gatewayName),
+		},
+	}
+}
+
+func newTestAIGatewayControlPlane(namespace, name, apiAuthName string) *konnectv1alpha1.AIGatewayControlPlane {
+	return &konnectv1alpha1.AIGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: konnectv1alpha1.AIGatewayControlPlaneSpec{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: apiAuthName,
+				},
+			},
+		},
+	}
+}
+
+func newTestAIGatewayConsumer(namespace, name, gatewayName string) *konnectv1alpha1.AIGatewayConsumer {
+	return &konnectv1alpha1.AIGatewayConsumer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: konnectv1alpha1.AIGatewayConsumerSpec{
+			AIGatewayRef: testNamespacedObjectRef(gatewayName),
 		},
 	}
 }

@@ -47,6 +47,11 @@ type aiGatewayRefAccessor interface {
 	GetAIGatewayControlPlaneRef() commonv1alpha1.ObjectRef
 }
 
+type aiGatewayConsumerRefAccessor interface {
+	objectWithParentRef
+	GetAIGatewayConsumerRef() commonv1alpha1.ObjectRef
+}
+
 func getAPIAuthRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -74,6 +79,9 @@ func getAPIAuthRef[
 	}
 	if obj, ok := any(ent).(eventGatewayVirtualClusterRefAccessor); ok {
 		return getAPIAuthRefViaVirtualCluster(ctx, cl, obj)
+	}
+	if obj, ok := any(ent).(aiGatewayConsumerRefAccessor); ok {
+		return getAPIAuthRefViaAIGatewayConsumer(ctx, cl, obj)
 	}
 
 	return types.NamespacedName{},
@@ -128,6 +136,17 @@ func getAPIAuthRefViaVirtualCluster(
 		return types.NamespacedName{}, fmt.Errorf("failed to get EventGatewayVirtualCluster %s: %w", nn, err)
 	}
 	return getAPIAuthRefViaBackendCluster(ctx, cl, virtualCluster)
+}
+
+func getAPIAuthRefViaAIGatewayConsumer(
+	ctx context.Context,
+	cl client.Client,
+	obj aiGatewayConsumerRefAccessor,
+) (types.NamespacedName, error) {
+	return getAPIAuthRefViaParent[
+		konnectv1alpha1.AIGatewayConsumer,
+		konnectv1alpha1.AIGatewayControlPlane,
+	](ctx, cl, obj)
 }
 
 // getAPIAuthRefViaParent resolves the APIAuth for an entity whose immediate parent

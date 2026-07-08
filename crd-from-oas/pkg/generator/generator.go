@@ -3810,22 +3810,23 @@ type sdkOpsMethod struct {
 	ImportPath  string
 
 	NestedUnionFields []sdkOpsNestedUnionField
+
+	// IsOperationsWrapped is true when the method's SDK type is in the operations
+	// package (a fully-wrapped request struct combining path params and the JSON
+	// body). In that case the conversion must unmarshal the payload into the body
+	// component type and wrap it in the operations request struct, because the body
+	// lives under a named (non-embedded) field that JSON payload keys don't match.
+	IsOperationsWrapped   bool
+	ComponentsImportAlias string
+	BodyTypeName          string // e.g. "CreateAIGatewayConsumerCredentialRequest"
+	BodyFieldName         string // field name on the operations request struct
+	BodyFieldPointer      bool
 }
 
 type sdkOpsRootUnionMethod struct {
 	sdkOpsMethod
 
 	IsCreate bool
-
-	// IsOperationsWrapped is true when the method's SDK type is in the operations
-	// package (fully-wrapped request struct). In that case, variant member types and
-	// their constructors live in the components package, and the return value must
-	// wrap the body union in the operations request struct.
-	IsOperationsWrapped   bool
-	ComponentsImportAlias string
-	BodyTypeName          string // e.g. "EventGatewayListenerPolicyCreate" or "...Update"
-	BodyFieldName         string // field name on the request struct, same as BodyTypeName
-	BodyFieldPointer      bool
 }
 
 type sdkOpsTestMethod struct {
@@ -3909,10 +3910,42 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields, constFields)
 	}
 
+	componentsPath := "github.com/Kong/sdk-konnect-go/models/components"
+	componentsImportAlias := sdkImportAlias(componentsPath)
+	needComponentsImport := false
 	standardMethods := make([]sdkOpsMethod, 0, len(methods))
 	for _, method := range methods {
 		method.NestedUnionFields = g.buildSDKOpsNestedUnionFields(schema, method)
+		// When the SDK request type lives in the operations package it is a
+		// fully-wrapped request struct (path params + a named body field). The
+		// conversion must unmarshal into the body component type and wrap it,
+		// because JSON payload keys don't match the wrapper's Go field names.
+		if strings.Contains(method.ImportAlias, "sdkkonnectoper") {
+			bodyInfo, err := ParseSDKRequestBodyInfo(method.ImportPath, method.TypeName)
+			if err != nil {
+				return "", fmt.Errorf("failed to inspect SDK request body for %s %s: %w", entityName, method.TypeName, err)
+			}
+			method.IsOperationsWrapped = true
+			method.ComponentsImportAlias = componentsImportAlias
+			method.BodyTypeName = bodyInfo.TypeName
+			method.BodyFieldName = bodyInfo.FieldName
+			method.BodyFieldPointer = bodyInfo.Pointer
+			needComponentsImport = true
+		}
 		standardMethods = append(standardMethods, method)
+	}
+	if needComponentsImport {
+		found := false
+		for _, imp := range imports {
+			if imp.Path == componentsPath {
+				found = true
+				break
+			}
+		}
+		if !found {
+			imports = append(imports, &sdkOpsImport{Alias: componentsImportAlias, Path: componentsPath})
+			sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
+		}
 	}
 
 	tmpl := template.Must(template.New("sdkops").Parse(sdkOpsTemplate))
@@ -4061,11 +4094,11 @@ func (g *Generator) generateRootUnionSDKOps(
 			hasUpdateMethod = true
 		}
 		m := sdkOpsRootUnionMethod{
-			sdkOpsMethod:          method,
-			IsCreate:              isCreate,
-			IsOperationsWrapped:   isOperationsWrapped,
-			ComponentsImportAlias: componentsImportAlias,
+			sdkOpsMethod: method,
+			IsCreate:     isCreate,
 		}
+		m.IsOperationsWrapped = isOperationsWrapped
+		m.ComponentsImportAlias = componentsImportAlias
 		if isOperationsWrapped {
 			bodyInfo, err := ParseSDKRequestBodyInfo(method.ImportPath, method.TypeName)
 			if err != nil {
@@ -4280,8 +4313,10 @@ func (g *Generator) buildSDKOpsTestFields(entityName string, props []*parser.Pro
 			// SensitiveDataSource field: emit an inline value; after flattenSensitiveData
 			// the JSON payload contains just the plain string.
 			testFields = append(testFields, sdkOpsTestField{
-				FieldName:     goFieldName(prop.Name),
-				JSONName:      jsonName(prop.Name),
+				FieldName: goFieldName(prop.Name),
+				// JSONName is the SDK payload key used in the generated
+				// payload["..."] check; prop.Name is already the OAS snake_case name.
+				JSONName:      prop.Name,
 				TestValue:     `SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")}`,
 				ExpectedValue: fmt.Sprintf("%q", "test-value"),
 			})
@@ -4657,6 +4692,25 @@ func sdkImportAlias(importPath string) string {
 func testValuesForProperty(prop *parser.Property, goType string) (string, string) {
 	if prop.Type == "boolean" {
 		return `"Enabled"`, "true"
+	}
+
+	// Enum-typed string fields must use a valid enum value: some SDK enum types
+	// reject unknown values during unmarshalling (unless x-speakeasy-unknown-values
+	// is set), so a generic placeholder would fail the round-trip conversion.
+	if len(prop.Enum) > 0 {
+		enumVal := fmt.Sprintf("%v", prop.Enum[0])
+		quoted := fmt.Sprintf("%q", enumVal)
+		switch {
+		case goType == "string":
+			return quoted, quoted
+		case goType == "*string":
+			return fmt.Sprintf("new(%s)", quoted), quoted
+		case prop.RefName != "" && prop.Type == "string":
+			if elementType, ok := strings.CutPrefix(goType, "*"); ok {
+				return fmt.Sprintf("new(%s(%s))", elementType, quoted), quoted
+			}
+			return fmt.Sprintf("%s(%s)", goType, quoted), quoted
+		}
 	}
 
 	switch goType {

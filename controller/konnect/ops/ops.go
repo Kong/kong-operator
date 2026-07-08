@@ -551,6 +551,8 @@ func Update[
 		err = updateSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = nil // DataPlaneCertificates are immutable.
+	case *konnectv1alpha1.AIGatewayConsumerCredential:
+		err = nil // AIGatewayConsumerCredentials are immutable.
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break

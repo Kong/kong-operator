@@ -32,9 +32,9 @@ func testGeneratedPortalPageForSDKOps() *konnectv1alpha1.PortalPage {
 				Content: "test-value",
 				Description: "test-value",
 				Slug: "test-value",
-				Status: "test-value",
+				Status: "published",
 				Title: "test-value",
-				Visibility: "test-value",
+				Visibility: "public",
 			},
 		},
 	}

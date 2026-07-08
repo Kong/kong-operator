@@ -55,9 +55,11 @@ func (s *PortalIPAllowListAPISpec) ToPutPortalIPAllowListRequest() (*sdkkonnecto
 	if err != nil {
 		return nil, err
 	}
-	var target sdkkonnectoper.PutPortalIPAllowListRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into PutPortalIPAllowListRequest: %w", err)
+	var body sdkkonnectcomp.CreatePortalSourceIPRestriction
+	if err := json.Unmarshal(data, &body); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into CreatePortalSourceIPRestriction: %w", err)
 	}
-	return &target, nil
+	return &sdkkonnectoper.PutPortalIPAllowListRequest{
+		CreatePortalSourceIPRestriction: &body,
+	}, nil
 }

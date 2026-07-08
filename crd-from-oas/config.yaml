@@ -363,6 +363,65 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
 
+      - path: /v1/ai-gateways/{gatewayId}/consumers
+        name: AIGatewayConsumer
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumersSDK
+            fieldName: AIGatewayConsumers
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: GetName()
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayConsumerRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayConsumerRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: AIGatewayControlPlane
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
+      # AIGatewayConsumerCredential is a child of AIGatewayConsumer. Credentials
+      # only obtain a Konnect ID once associated with a consumer, so they are
+      # modelled as a separate resource that references the consumer (analogous to
+      # KongPluginBinding), matching the OpenAPI resource hierarchy.
+      # Credentials support create/delete only (no update). The api_key value is
+      # write-only and sourced from a Secret; it is never echoed back in status.
+      - path: /v1/ai-gateways/{gatewayId}/consumers/{consumerId}/credentials
+        name: AIGatewayConsumerCredential
+        secretReferences:
+          - path: spec.apiSpec.apiKey
+            type: Secret
+        ops:
+          sdk:
+          # AIGatewayConsumerCredential shares the AIGatewayConsumersSDK interface
+          # with AIGatewayConsumer; the SDK exposes credential ops on it directly.
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumersSDK
+            fieldName: AIGatewayConsumers
+          requireClient: true
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: GetName()
+          create:
+          # Two-level-deep nested resource: the SDK create method takes the
+          # operations request wrapper (path params + body), not the components body.
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateAiGatewayConsumerCredentialRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: AIGatewayConsumer
+            group: konnect.konghq.com
+          ancestorEntityGVKs:
+            - kind: AIGatewayControlPlane
+              group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayConsumerRef
+
       # Event Gateway APIs
       - path: /v1/event-gateways
         name: KonnectEventGateway

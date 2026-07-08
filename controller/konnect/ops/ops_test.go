@@ -225,6 +225,37 @@ func TestCreate(t *testing.T) {
 	testCreate(t, testCasesForKonnectGatewayControlPlane)
 }
 
+func TestUpdateAIGatewayConsumerCredential_NoopsBecauseImmutable(t *testing.T) {
+	t.Parallel()
+
+	credential := &konnectv1alpha1.AIGatewayConsumerCredential{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-credential",
+			Namespace:  "test-ns",
+			Generation: 2,
+		},
+		Status: konnectv1alpha1.AIGatewayConsumerCredentialStatus{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+				ID: "credential-id",
+			},
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.
+		NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+	sdk := sdkmocks.NewMockSDKWrapperWithT(t)
+
+	_, err := Update(t.Context(), sdk, 0, fakeClient, &metricsmocks.MockRecorder{}, credential)
+	require.NoError(t, err)
+
+	require.Len(t, credential.Status.Conditions, 1)
+	assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedConditionType, credential.Status.Conditions[0].Type)
+	assert.Equal(t, metav1.ConditionTrue, credential.Status.Conditions[0].Status)
+	assert.Equal(t, credential.Generation, credential.Status.Conditions[0].ObservedGeneration)
+}
+
 func testCreate[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
