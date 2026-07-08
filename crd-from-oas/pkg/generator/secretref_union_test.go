@@ -12,7 +12,7 @@ import (
 )
 
 // TestBuildSensitiveLeaves_WildcardFanOutAcrossOneOfVariants covers a "*" secret
-// reference path on a root-level discriminated union (e.g. AIGatewayProvider):
+// reference path on a root-level discriminated union (e.g. AIGatewayModelProvider):
 // it must fan out across every variant, recording one selector per variant that
 // actually has the field, and silently skip variants that don't.
 func TestBuildSensitiveLeaves_WildcardFanOutAcrossOneOfVariants(t *testing.T) {
@@ -221,7 +221,7 @@ func TestBuildSensitiveLeaves_MidPathUnionDescent_UnknownVariant_Errors(t *testi
 }
 
 // TestGenerateSDKOps_WildcardAndMidPathUnion_ProducesValidGo is an end-to-end
-// regression test mirroring AIGatewayProvider's real shape: a root-level union
+// regression test mirroring AIGatewayModelProvider's real shape: a root-level union
 // with a "*" secret path across "basic" variants, plus one "cloud" variant
 // whose own auth field is a mid-path union (basic arm reachable via the same
 // wildcard, native arm reachable via an explicit scalar path). It asserts the

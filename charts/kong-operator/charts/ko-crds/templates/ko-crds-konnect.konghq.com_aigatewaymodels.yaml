@@ -126,12 +126,60 @@ spec:
                   api:
                     description: API configuration.
                     properties:
-                      acls:
-                        additionalProperties:
-                          type: string
-                        description: |-
-                          Access control rules for allowing or denying Consumers, Consumer Groups, or
-                          Authenticated Groups to this model.
+                      access:
+                        description: Access control configuration for a model.
+                        properties:
+                          acls:
+                            description: Access control rules. Configure exactly one
+                              of `allow` or `deny`.
+                            properties:
+                              allow:
+                                description: Allow configuration.
+                                properties:
+                                  allow:
+                                    description: |-
+                                      List of Consumers, Consumer Groups, or Authenticated Groups that are
+                                      permitted access.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - allow
+                                type: object
+                              deny:
+                                description: Deny configuration.
+                                properties:
+                                  deny:
+                                    description: |-
+                                      List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+                                      access.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - deny
+                                type: object
+                              type:
+                                description: Type designates the type of configuration.
+                                enum:
+                                - allow
+                                - deny
+                                minLength: 1
+                                type: string
+                            required:
+                            - type
+                            type: object
+                          identityProviders:
+                            description: |-
+                              List of identity providers for granting access to the model.
+                              At most 1 identity provider of each identity provider type can be
+                              referenced.
+                            items:
+                              description: |-
+                                AIGatewayIdentityProviderReference Reference to a provider instance.
+                                This is either the identity provider ID or the identity provider name.
+                              type: string
+                            type: array
                         type: object
                       capabilities:
                         description: List of AI capabilities enabled for this API
@@ -647,16 +695,33 @@ spec:
                                           gemini:
                                             description: Gemini configuration.
                                             properties:
-                                              apiEndpoint:
-                                                description: The custom API endpoint
-                                                  for the Gemini model.
-                                                maxLength: 253
-                                                type: string
-                                              locationID:
-                                                description: The Google Cloud location
-                                                  ID for the model endpoint.
-                                                maxLength: 253
-                                                type: string
+                                              gcpEnvironment:
+                                                description: Configuration for a model
+                                                  hosted on Google Cloud Project.
+                                                properties:
+                                                  apiEndpoint:
+                                                    description: The custom API endpoint
+                                                      for the Gemini model.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  locationID:
+                                                    description: The Google Cloud
+                                                      location ID for the model endpoint.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  projectID:
+                                                    description: The Google Cloud
+                                                      project ID for the model endpoint.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - apiEndpoint
+                                                - locationID
+                                                - projectID
+                                                type: object
                                               upstreamURL:
                                                 description: The URL of the embeddings
                                                   model.
@@ -720,16 +785,33 @@ spec:
                                           vertex:
                                             description: Vertex configuration.
                                             properties:
-                                              apiEndpoint:
-                                                description: The custom API endpoint
-                                                  for the Vertex model.
-                                                maxLength: 253
-                                                type: string
-                                              locationID:
-                                                description: The Google Cloud location
-                                                  ID for the model endpoint.
-                                                maxLength: 253
-                                                type: string
+                                              gcpEnvironment:
+                                                description: Configuration for a model
+                                                  hosted on Google Cloud Project.
+                                                properties:
+                                                  apiEndpoint:
+                                                    description: The custom API endpoint
+                                                      for the Gemini model.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  locationID:
+                                                    description: The Google Cloud
+                                                      location ID for the model endpoint.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  projectID:
+                                                    description: The Google Cloud
+                                                      project ID for the model endpoint.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - apiEndpoint
+                                                - locationID
+                                                - projectID
+                                                type: object
                                               upstreamURL:
                                                 description: The URL of the embeddings
                                                   model.
@@ -749,8 +831,8 @@ spec:
                                         type: string
                                       provider:
                                         description: |-
-                                          Reference to a provider instance.
-                                          This is either the provider ID or the provider name.
+                                          Reference to a model provider instance.
+                                          This is either the model provider ID or the model provider name.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -1140,9 +1222,24 @@ spec:
                                               An integer representing a port number between 0 and 65535, inclusive.
                                               This field is
                                               [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                            maximum: 65535
-                                            minimum: 0
-                                            type: integer
+                                            properties:
+                                              type:
+                                                description: Type designates the type
+                                                  of configuration.
+                                                enum:
+                                                - variant1
+                                                - variant2
+                                                minLength: 1
+                                                type: string
+                                              variant1:
+                                                description: Variant1 configuration.
+                                                type: integer
+                                              variant2:
+                                                description: Variant2 configuration.
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
                                           readTimeout:
                                             description: |-
                                               An integer representing a timeout in milliseconds.
@@ -2003,30 +2100,41 @@ spec:
                                 gemini:
                                   description: Gemini configuration.
                                   properties:
-                                    apiEndpoint:
-                                      description: The custom API endpoint for the
-                                        Gemini model.
-                                      maxLength: 253
-                                      type: string
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
                                       type: integer
-                                    endpointID:
-                                      description: |-
-                                        The endpoint ID for the Gemini model.
-                                        This must be set when running on Gemini on Vertex Model Garden.
-                                      maxLength: 253
-                                      type: string
+                                    gcpEnvironment:
+                                      description: Configuration for a model hosted
+                                        on Google Cloud Project.
+                                      properties:
+                                        apiEndpoint:
+                                          description: The custom API endpoint for
+                                            the Gemini model.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        locationID:
+                                          description: The Google Cloud location ID
+                                            for the model endpoint.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        projectID:
+                                          description: The Google Cloud project ID
+                                            for the model endpoint.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - apiEndpoint
+                                      - locationID
+                                      - projectID
+                                      type: object
                                     inputCost:
                                       description: Cost per input token for billing
                                         and cost tracking.
                                       type: number
-                                    locationID:
-                                      description: The Google Cloud location ID for
-                                        the model endpoint.
-                                      maxLength: 253
-                                      type: string
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
@@ -2410,30 +2518,50 @@ spec:
                                 vertex:
                                   description: Vertex configuration.
                                   properties:
-                                    apiEndpoint:
-                                      description: The custom API endpoint for the
-                                        Vertex model.
-                                      maxLength: 253
-                                      type: string
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
                                       type: integer
-                                    endpointID:
-                                      description: |-
-                                        The endpoint ID for the Vertex model.
-                                        This must be set when running on Vertex Model Garden.
-                                      maxLength: 253
-                                      type: string
+                                    gcpEnvironment:
+                                      description: Configuration for a model hosted
+                                        on Google Cloud Project.
+                                      properties:
+                                        apiEndpoint:
+                                          description: The custom API endpoint for
+                                            the Gemini model.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        endpointID:
+                                          description: |-
+                                            The endpoint ID for the model.
+                                            This must be set when running a target model on Gemini on Vertex Model
+                                            Garden.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        locationID:
+                                          description: The Google Cloud location ID
+                                            for the model endpoint.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        projectID:
+                                          description: The Google Cloud project ID
+                                            for the model endpoint.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - apiEndpoint
+                                      - endpointID
+                                      - locationID
+                                      - projectID
+                                      type: object
                                     inputCost:
                                       description: Cost per input token for billing
                                         and cost tracking.
                                       type: number
-                                    locationID:
-                                      description: The Google Cloud location ID for
-                                        the model endpoint.
-                                      maxLength: 253
-                                      type: string
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
@@ -2558,8 +2686,8 @@ spec:
                               type: string
                             provider:
                               description: |-
-                                Reference to a provider instance.
-                                This is either the provider ID or the provider name.
+                                Reference to a model provider instance.
+                                This is either the model provider ID or the model provider name.
                               maxLength: 253
                               minLength: 1
                               type: string
@@ -2594,12 +2722,60 @@ spec:
                   model:
                     description: Model configuration.
                     properties:
-                      acls:
-                        additionalProperties:
-                          type: string
-                        description: |-
-                          Access control rules for allowing or denying Consumers, Consumer Groups, or
-                          Authenticated Groups to this model.
+                      access:
+                        description: Access control configuration for a model.
+                        properties:
+                          acls:
+                            description: Access control rules. Configure exactly one
+                              of `allow` or `deny`.
+                            properties:
+                              allow:
+                                description: Allow configuration.
+                                properties:
+                                  allow:
+                                    description: |-
+                                      List of Consumers, Consumer Groups, or Authenticated Groups that are
+                                      permitted access.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - allow
+                                type: object
+                              deny:
+                                description: Deny configuration.
+                                properties:
+                                  deny:
+                                    description: |-
+                                      List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+                                      access.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - deny
+                                type: object
+                              type:
+                                description: Type designates the type of configuration.
+                                enum:
+                                - allow
+                                - deny
+                                minLength: 1
+                                type: string
+                            required:
+                            - type
+                            type: object
+                          identityProviders:
+                            description: |-
+                              List of identity providers for granting access to the model.
+                              At most 1 identity provider of each identity provider type can be
+                              referenced.
+                            items:
+                              description: |-
+                                AIGatewayIdentityProviderReference Reference to a provider instance.
+                                This is either the identity provider ID or the identity provider name.
+                              type: string
+                            type: array
                         type: object
                       capabilities:
                         description: List of AI capabilities enabled for this model.
@@ -3114,16 +3290,33 @@ spec:
                                           gemini:
                                             description: Gemini configuration.
                                             properties:
-                                              apiEndpoint:
-                                                description: The custom API endpoint
-                                                  for the Gemini model.
-                                                maxLength: 253
-                                                type: string
-                                              locationID:
-                                                description: The Google Cloud location
-                                                  ID for the model endpoint.
-                                                maxLength: 253
-                                                type: string
+                                              gcpEnvironment:
+                                                description: Configuration for a model
+                                                  hosted on Google Cloud Project.
+                                                properties:
+                                                  apiEndpoint:
+                                                    description: The custom API endpoint
+                                                      for the Gemini model.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  locationID:
+                                                    description: The Google Cloud
+                                                      location ID for the model endpoint.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  projectID:
+                                                    description: The Google Cloud
+                                                      project ID for the model endpoint.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - apiEndpoint
+                                                - locationID
+                                                - projectID
+                                                type: object
                                               upstreamURL:
                                                 description: The URL of the embeddings
                                                   model.
@@ -3187,16 +3380,33 @@ spec:
                                           vertex:
                                             description: Vertex configuration.
                                             properties:
-                                              apiEndpoint:
-                                                description: The custom API endpoint
-                                                  for the Vertex model.
-                                                maxLength: 253
-                                                type: string
-                                              locationID:
-                                                description: The Google Cloud location
-                                                  ID for the model endpoint.
-                                                maxLength: 253
-                                                type: string
+                                              gcpEnvironment:
+                                                description: Configuration for a model
+                                                  hosted on Google Cloud Project.
+                                                properties:
+                                                  apiEndpoint:
+                                                    description: The custom API endpoint
+                                                      for the Gemini model.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  locationID:
+                                                    description: The Google Cloud
+                                                      location ID for the model endpoint.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  projectID:
+                                                    description: The Google Cloud
+                                                      project ID for the model endpoint.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - apiEndpoint
+                                                - locationID
+                                                - projectID
+                                                type: object
                                               upstreamURL:
                                                 description: The URL of the embeddings
                                                   model.
@@ -3216,8 +3426,8 @@ spec:
                                         type: string
                                       provider:
                                         description: |-
-                                          Reference to a provider instance.
-                                          This is either the provider ID or the provider name.
+                                          Reference to a model provider instance.
+                                          This is either the model provider ID or the model provider name.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -3607,9 +3817,24 @@ spec:
                                               An integer representing a port number between 0 and 65535, inclusive.
                                               This field is
                                               [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                            maximum: 65535
-                                            minimum: 0
-                                            type: integer
+                                            properties:
+                                              type:
+                                                description: Type designates the type
+                                                  of configuration.
+                                                enum:
+                                                - variant1
+                                                - variant2
+                                                minLength: 1
+                                                type: string
+                                              variant1:
+                                                description: Variant1 configuration.
+                                                type: integer
+                                              variant2:
+                                                description: Variant2 configuration.
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
                                           readTimeout:
                                             description: |-
                                               An integer representing a timeout in milliseconds.
@@ -4478,30 +4703,41 @@ spec:
                                 gemini:
                                   description: Gemini configuration.
                                   properties:
-                                    apiEndpoint:
-                                      description: The custom API endpoint for the
-                                        Gemini model.
-                                      maxLength: 253
-                                      type: string
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
                                       type: integer
-                                    endpointID:
-                                      description: |-
-                                        The endpoint ID for the Gemini model.
-                                        This must be set when running on Gemini on Vertex Model Garden.
-                                      maxLength: 253
-                                      type: string
+                                    gcpEnvironment:
+                                      description: Configuration for a model hosted
+                                        on Google Cloud Project.
+                                      properties:
+                                        apiEndpoint:
+                                          description: The custom API endpoint for
+                                            the Gemini model.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        locationID:
+                                          description: The Google Cloud location ID
+                                            for the model endpoint.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        projectID:
+                                          description: The Google Cloud project ID
+                                            for the model endpoint.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - apiEndpoint
+                                      - locationID
+                                      - projectID
+                                      type: object
                                     inputCost:
                                       description: Cost per input token for billing
                                         and cost tracking.
                                       type: number
-                                    locationID:
-                                      description: The Google Cloud location ID for
-                                        the model endpoint.
-                                      maxLength: 253
-                                      type: string
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
@@ -4885,30 +5121,50 @@ spec:
                                 vertex:
                                   description: Vertex configuration.
                                   properties:
-                                    apiEndpoint:
-                                      description: The custom API endpoint for the
-                                        Vertex model.
-                                      maxLength: 253
-                                      type: string
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
                                       type: integer
-                                    endpointID:
-                                      description: |-
-                                        The endpoint ID for the Vertex model.
-                                        This must be set when running on Vertex Model Garden.
-                                      maxLength: 253
-                                      type: string
+                                    gcpEnvironment:
+                                      description: Configuration for a model hosted
+                                        on Google Cloud Project.
+                                      properties:
+                                        apiEndpoint:
+                                          description: The custom API endpoint for
+                                            the Gemini model.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        endpointID:
+                                          description: |-
+                                            The endpoint ID for the model.
+                                            This must be set when running a target model on Gemini on Vertex Model
+                                            Garden.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        locationID:
+                                          description: The Google Cloud location ID
+                                            for the model endpoint.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        projectID:
+                                          description: The Google Cloud project ID
+                                            for the model endpoint.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - apiEndpoint
+                                      - endpointID
+                                      - locationID
+                                      - projectID
+                                      type: object
                                     inputCost:
                                       description: Cost per input token for billing
                                         and cost tracking.
                                       type: number
-                                    locationID:
-                                      description: The Google Cloud location ID for
-                                        the model endpoint.
-                                      maxLength: 253
-                                      type: string
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
@@ -5033,8 +5289,8 @@ spec:
                               type: string
                             provider:
                               description: |-
-                                Reference to a provider instance.
-                                This is either the provider ID or the provider name.
+                                Reference to a model provider instance.
+                                This is either the model provider ID or the model provider name.
                               maxLength: 253
                               minLength: 1
                               type: string

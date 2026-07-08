@@ -303,8 +303,8 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
 
-      - path: /v1/ai-gateways/{gatewayId}/providers
-        name: AIGatewayProvider
+      - path: /v1/ai-gateways/{gatewayId}/model-providers
+        name: AIGatewayModelProvider
         secretReferences:
           # Basic-auth token: matches the 15 providers whose auth is a direct
           # (non-union) basic config; skipped for the 4 cloud providers below,
@@ -331,12 +331,12 @@ apiGroupVersions:
             type: Secret
         ops:
           sdk:
-            interface: github.com/Kong/sdk-konnect-go.AIGatewayProvidersSDK
-            fieldName: AIGatewayProviders
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayModelProvidersSDK
+            fieldName: AIGatewayModelProviders
           create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayProviderRequest
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelProviderRequest
           update:
-            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayProviderRequest
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayModelProviderRequest
           delete: {}
         reconciler:
           parentEntityGVK:
@@ -585,9 +585,9 @@ apiGroupVersions:
             interface: github.com/Kong/sdk-konnect-go.PortalCustomizationSDK
             fieldName: PortalCustomization
           create:
-            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
           update:
-            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomizationV3
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
           delete:
             asPUT: true
         reconciler: {}

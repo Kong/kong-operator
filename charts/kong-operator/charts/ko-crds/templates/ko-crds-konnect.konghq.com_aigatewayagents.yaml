@@ -123,45 +123,49 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
-                  acls:
-                    description: Access control rules. Configure exactly one of `allow`
-                      or `deny`.
+                  access:
+                    description: Access control configuration for an agent.
                     properties:
-                      allow:
-                        description: Allow configuration.
+                      acls:
+                        description: Access control rules. Configure exactly one of
+                          `allow` or `deny`.
                         properties:
                           allow:
-                            description: |-
-                              List of Consumers, Consumer Groups, or Authenticated Groups that are
-                              permitted access.
-                            items:
-                              type: string
-                            type: array
-                        required:
-                        - allow
-                        type: object
-                      deny:
-                        description: Deny configuration.
-                        properties:
+                            description: Allow configuration.
+                            properties:
+                              allow:
+                                description: |-
+                                  List of Consumers, Consumer Groups, or Authenticated Groups that are
+                                  permitted access.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - allow
+                            type: object
                           deny:
-                            description: |-
-                              List of Consumers, Consumer Groups, or Authenticated Groups that are denied
-                              access.
-                            items:
-                              type: string
-                            type: array
+                            description: Deny configuration.
+                            properties:
+                              deny:
+                                description: |-
+                                  List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+                                  access.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - deny
+                            type: object
+                          type:
+                            description: Type designates the type of configuration.
+                            enum:
+                            - allow
+                            - deny
+                            minLength: 1
+                            type: string
                         required:
-                        - deny
+                        - type
                         type: object
-                      type:
-                        description: Type designates the type of configuration.
-                        enum:
-                        - allow
-                        - deny
-                        minLength: 1
-                        type: string
-                    required:
-                    - type
                     type: object
                   config:
                     description: |-

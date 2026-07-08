@@ -16,7 +16,7 @@ const defaultMaxLength = 253
 // // OpenAPI spec does not declare an explicit maxItems constraint. Unbounded
 // // arrays let Kubernetes' CEL cost estimator assume near-worst-case cardinality
 // // for any x-kubernetes-validations rule on the array's items, which can blow
-// // the per-CRD cost budget (see AIGatewayProvider's headers/params auth
+// // the per-CRD cost budget (see AIGatewayModelProvider's headers/params auth
 // // fields). Bump this (or set an explicit maxItems on the OAS schema / config)
 // // if a future Kubernetes release raises the CEL cost budget and a field
 // // genuinely needs more room.

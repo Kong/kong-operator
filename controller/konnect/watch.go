@@ -311,7 +311,7 @@ type WatchableEntityType interface {
 		konnectv1alpha1.PortalIdentityProviderRequest |
 		konnectv1alpha1.AIGatewayControlPlane |
 		konnectv1alpha1.AIGatewayModel |
-		konnectv1alpha1.AIGatewayProvider |
+		konnectv1alpha1.AIGatewayModelProvider |
 		konnectv1alpha1.AIGatewayPolicy |
 		konnectv1alpha1.AIGatewayAgent |
 		konnectv1alpha1.AIGatewayConsumer |

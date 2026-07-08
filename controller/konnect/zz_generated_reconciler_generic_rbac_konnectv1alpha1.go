@@ -17,12 +17,12 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodelproviders,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodelproviders/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodelproviders/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaypolicies,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaypolicies/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaypolicies/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayproviders,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayproviders/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayproviders/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/finalizers,verbs=update;patch

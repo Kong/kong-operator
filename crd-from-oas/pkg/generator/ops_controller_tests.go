@@ -223,14 +223,14 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				apiAlias,
 			),
 		}
-	case "AIGatewayProvider":
+	case "AIGatewayModelProvider":
 		return &opsControllerRootUnionFixture{
-			UnionTypeName:   "AIGatewayProviderConfig",
-			TypeConstName:   "AIGatewayProviderConfigTypeAnthropic",
+			UnionTypeName:   "AIGatewayModelProviderConfig",
+			TypeConstName:   "AIGatewayModelProviderConfigTypeAnthropic",
 			VariantField:    "Anthropic",
-			VariantTypeName: "AIGatewayProviderAnthropic",
+			VariantTypeName: "AIGatewayModelProviderAnthropic",
 			VariantValue: fmt.Sprintf(
-				`&%[1]s.AIGatewayProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: %[1]s.AIGatewayProviderAnthropicConfig{Auth: %[1]s.AIGatewayProviderConfigAuthBasic{Headers: []%[1]s.AIGatewayProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("test-value")}}}}}}`,
+				`&%[1]s.AIGatewayModelProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: %[1]s.AIGatewayModelProviderAnthropicConfig{Auth: %[1]s.AIGatewayModelProviderConfigAuthBasic{Headers: []%[1]s.AIGatewayModelProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("test-value")}}}}}}`,
 				apiAlias,
 			),
 		}
