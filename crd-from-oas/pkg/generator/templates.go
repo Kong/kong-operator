@@ -2189,8 +2189,13 @@ func UpdateGeneratedOps[
 ) error {
 	switch ent := any(e).(type) {
 {{- range .Cases}}
+{{- if .SkipUpdate}}
+	case *{{.APIAlias}}.{{.Entity}}:
+		return nil // Entity does not support update.
+{{- else}}
 	case *{{.APIAlias}}.{{.Entity}}:
 		return update{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk.{{.SDKGetter}}(), ent)
+{{- end}}
 {{- end}}
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)

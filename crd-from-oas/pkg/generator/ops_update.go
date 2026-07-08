@@ -16,6 +16,9 @@ type OpsUpdateFileInfo struct {
 	APIPackagePath string
 	SDKGetter      string
 	NeedsClient    bool
+	// SkipUpdate indicates the entity does not support update. The dispatcher
+	// emits a nil return for this entity instead of calling an update function.
+	SkipUpdate bool
 }
 
 type updateOpCallShape struct {
@@ -206,6 +209,7 @@ func GenerateOpsUpdateDispatcher(infos []*OpsUpdateFileInfo) (*GeneratedFile, er
 			APIPackagePath: info.APIPackagePath,
 			SDKGetter:      info.SDKGetter,
 			NeedsClient:    info.NeedsClient,
+			SkipUpdate:     info.SkipUpdate,
 		})
 	}
 	return buildDispatcherFile("zz_generated_ops_update.go", opsUpdateDispatcherTemplate, "controller/konnect/ops", flat)

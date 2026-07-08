@@ -165,6 +165,7 @@ type flatInfo struct {
 	APIPackagePath string
 	SDKGetter      string
 	NeedsClient    bool
+	SkipUpdate     bool
 }
 
 // GenerateOpsCreateDispatcher emits zz_generated_ops_create.go with
