@@ -55,6 +55,12 @@
 
 ### Breaking changes
 
+- A cross-namespace reference from a `KonnectAPIAuthConfiguration` to a `Secret`
+  (via `spec.secretRef.namespace`) now requires a `KongReferenceGrant` in the
+  Secret's namespace permitting it. Without the grant the configuration reports
+  `ResolvedRefs=False` with reason `RefNotPermitted` and is marked invalid.
+  Previously such references were allowed with a warning only.
+  [#2908](https://github.com/Kong/kong-operator/issues/2908)
 - EventGateway CRDs (Tech Preview) which allow referencing a `Secret` through
   `secretRef`, now require the key name to be provided.
 
