@@ -13,6 +13,7 @@ type SupportedGeneratedKonnectEntityType interface {
 	konnectv1alpha1.AIGatewayAgent |
 		konnectv1alpha1.AIGatewayConsumer |
 		konnectv1alpha1.AIGatewayConsumerCredential |
+		konnectv1alpha1.AIGatewayConsumerGroup |
 		konnectv1alpha1.AIGatewayControlPlane |
 		configurationv1alpha1.AIGatewayDataPlaneCertificate |
 		konnectv1alpha1.AIGatewayModel |
