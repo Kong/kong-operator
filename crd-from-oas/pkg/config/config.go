@@ -3,9 +3,15 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	validExportedIdentifier = regexp.MustCompile(`^[A-Z][A-Za-z0-9_]*$`)
+	validJSONTag            = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`)
 )
 
 // ProjectConfig is the top-level configuration loaded from the config file.
@@ -140,6 +146,9 @@ type TypeConfig struct {
 	// OAS-derived string field at Path to become a SensitiveDataSource struct
 	// supporting inline and secretRef variants at runtime.
 	SecretReferences []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
+	// CustomSpecFields includes additional fields that are not generated from
+	// the OpenAPISpec.
+	CustomSpecFields []CustomSpecFieldConfig `yaml:"customSpecFields,omitempty"`
 	// Reconciler holds configuration for reconciler code generation.
 	// When set, reconciler wiring files (interface methods, watch options,
 	// index files) are generated for this entity.
@@ -157,6 +166,23 @@ type ParentRefConfig struct {
 	// ReplacesAPISpecField is the JSON name of the apiSpec property to suppress
 	// in favour of the new top-level field, e.g. "destination".
 	ReplacesAPISpecField string `yaml:"replacesAPISpecField"`
+}
+
+// CustomSpecFieldConfig defines a custom field to add to the generated Spec struct for an entity.
+// The fields are not generated from the OpenAPI spec, but are added to the Spec struct in the generated code.
+type CustomSpecFieldConfig struct {
+	// Name is the Go field name for the custom spec field, e.g. "CustomField".
+	Name string `yaml:"name"`
+	// JSONTag is the json tag for the custom spec field, e.g. "customField".
+	JSONTag string `yaml:"jsonTag"`
+	// Required indicates whether the custom spec field is required. Defaults to false.
+	Required bool `yaml:"required,omitempty"`
+	// Type is the Go type for the custom spec field, e.g. "string", "int", "bool", "[]string", etc.
+	Type string `yaml:"type"`
+	// Description is an optional description for the custom spec field, which will be added as a comment in the generated code.
+	Description string `yaml:"description,omitempty"`
+	// CEL is an optional CEL validation configuration for the custom spec field.
+	CEL *FieldConfig `yaml:"cel,omitempty"`
 }
 
 // ReconcilerConfig holds configuration for reconciler code generation.
@@ -383,14 +409,15 @@ type typeOpsYAML struct {
 }
 
 type typeConfigYAML struct {
-	Path                 string                  `yaml:"path"`
-	Name                 string                  `yaml:"name,omitempty"`
-	SchemaFieldOmissions map[string][]string     `yaml:"schemaFieldOmissions,omitempty"`
-	CEL                  map[string]*FieldConfig `yaml:"cel,omitempty"`
-	References           []ReferenceConfig       `yaml:"references,omitempty"`
-	SecretReferences     []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
-	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
-	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
+	Path                 string                   `yaml:"path"`
+	Name                 string                   `yaml:"name,omitempty"`
+	SchemaFieldOmissions map[string][]string      `yaml:"schemaFieldOmissions,omitempty"`
+	CEL                  map[string]*FieldConfig  `yaml:"cel,omitempty"`
+	References           []ReferenceConfig        `yaml:"references,omitempty"`
+	SecretReferences     []SecretReferenceConfig  `yaml:"secretReferences,omitempty"`
+	CustomSpecFields     []CustomSpecFieldConfig  `yaml:"customSpecFields,omitempty"`
+	Ops                  *typeOpsYAML             `yaml:"ops,omitempty"`
+	Reconciler           *ReconcilerConfig        `yaml:"reconciler,omitempty"`
 }
 
 // UnmarshalYAML preserves the in-memory Ops map shape while allowing
@@ -408,6 +435,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		CEL:                  raw.CEL,
 		References:           raw.References,
 		SecretReferences:     raw.SecretReferences,
+		CustomSpecFields:     raw.CustomSpecFields,
 		Reconciler:           raw.Reconciler,
 	}
 
@@ -617,6 +645,23 @@ func (c *APIGroupVersionConfig) SchemaFieldOmissionsConfig() map[string]map[stri
 	return result
 }
 
+// CustomSpecFieldsConfig builds a mapping from entity name to custom spec fields using the
+// provided pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) CustomSpecFieldsConfig(pathToEntityName map[string]string) map[string][]CustomSpecFieldConfig {
+	result := make(map[string][]CustomSpecFieldConfig)
+	for _, tc := range c.Types {
+		if len(tc.CustomSpecFields) == 0 {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = tc.CustomSpecFields
+	}
+	return result
+}
+
 func (c *APIGroupVersionConfig) validate() error {
 	if c.CommonTypes == nil || c.CommonTypes.ObjectRef == nil {
 		for _, tc := range c.Types {
@@ -688,6 +733,9 @@ func (tc *TypeConfig) validate() error {
 	if tc.OpsSkipGetForUID && tc.OpsGetForUID != nil {
 		return fmt.Errorf("ops.skipGetForUID and ops.getForUID are mutually exclusive")
 	}
+	if err := tc.validateCustomSpecFields(); err != nil {
+		return err
+	}
 	if tc.OpsGetForUID != nil {
 		if tc.OpsGetForUID.ListItemsSource != "" &&
 			tc.OpsGetForUID.ListItemsSource != GetForUIDListItemsSourceData &&
@@ -728,6 +776,40 @@ func (tc *TypeConfig) validate() error {
 	return nil
 }
 
+func (tc *TypeConfig) validateCustomSpecFields() error {
+	seenNames := make(map[string]bool, len(tc.CustomSpecFields))
+	seenJSONTags := make(map[string]bool, len(tc.CustomSpecFields))
+	for i, csf := range tc.CustomSpecFields {
+		if csf.Name == "" {
+			return fmt.Errorf("customSpecFields[%d].name is required", i)
+		}
+		if !validExportedIdentifier.MatchString(csf.Name) {
+			return fmt.Errorf("customSpecFields[%d].name %q must be a valid exported Go identifier (e.g. \"MyField\")", i, csf.Name)
+		}
+		if csf.JSONTag == "" {
+			return fmt.Errorf("customSpecFields[%d].jsonTag is required", i)
+		}
+		if !validJSONTag.MatchString(csf.JSONTag) {
+			return fmt.Errorf("customSpecFields[%d].jsonTag %q must be a valid JSON tag (alphanumeric, hyphens, underscores; no spaces or commas)", i, csf.JSONTag)
+		}
+		if csf.Type == "" {
+			return fmt.Errorf("customSpecFields[%d].type is required", i)
+		}
+		if err := isValidGoTypeForCRD(csf.Type); err != nil {
+			return fmt.Errorf("customSpecFields[%d].type %q: %w", i, csf.Type, err)
+		}
+		if seenNames[csf.Name] {
+			return fmt.Errorf("customSpecFields[%d]: duplicate name %q", i, csf.Name)
+		}
+		seenNames[csf.Name] = true
+		if seenJSONTags[csf.JSONTag] {
+			return fmt.Errorf("customSpecFields[%d]: duplicate jsonTag %q", i, csf.JSONTag)
+		}
+		seenJSONTags[csf.JSONTag] = true
+	}
+	return nil
+}
+
 func validateGetForUIDMatchFields(prefix string, fields []GetForUIDMatchField) error {
 	if len(fields) == 0 {
 		return fmt.Errorf("%s is required", prefix)
@@ -741,6 +823,76 @@ func validateGetForUIDMatchFields(prefix string, fields []GetForUIDMatchField) e
 		}
 	}
 	return nil
+}
+
+// isValidGoTypeForCRD returns true when t is a structurally valid Go type that can
+// be used for a custom spec field without requiring additional imports. It accepts:
+//   - primitive types: string, int, int32, int64, bool, float32, float64, byte
+//   - pointer, slice, and map wrappers of the above
+//   - unqualified named types (e.g. a type defined in the same package)
+//
+// Package-qualified types (e.g. "foo.Bar") are rejected because the generator has
+// no mechanism to add the required import automatically. Add an Import field to
+// CustomSpecFieldConfig if that becomes necessary.
+func isValidGoTypeForCRD(t string) error {
+	remaining, err := consumeGoType(t)
+	if err != nil {
+		return err
+	}
+	if remaining != "" {
+		return fmt.Errorf("unexpected trailing characters %q in type %q", remaining, t)
+	}
+	return nil
+}
+
+// consumeGoType consumes one complete Go type from the front of s and returns
+// whatever remains. It is called recursively for element/value types.
+func consumeGoType(s string) (remaining string, err error) {
+	if s == "" {
+		return "", fmt.Errorf("empty type")
+	}
+	switch {
+	case strings.HasPrefix(s, "*"):
+		return consumeGoType(s[1:])
+	case strings.HasPrefix(s, "[]"):
+		return consumeGoType(s[2:])
+	case strings.HasPrefix(s, "map["):
+		// consume key type up to closing ']'
+		rest := s[4:]
+		afterKey, err := consumeGoType(rest)
+		if err != nil {
+			return "", fmt.Errorf("invalid map key type in %q: %w", s, err)
+		}
+		if !strings.HasPrefix(afterKey, "]") {
+			return "", fmt.Errorf("missing ']' after map key type in %q", s)
+		}
+		return consumeGoType(afterKey[1:])
+	default:
+		// Read a bare identifier.
+		end := strings.IndexFunc(s, func(r rune) bool {
+			return !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_')
+		})
+		var ident string
+		if end == -1 {
+			ident = s
+			remaining = ""
+		} else {
+			ident = s[:end]
+			remaining = s[end:]
+		}
+		if ident == "" {
+			return "", fmt.Errorf("expected identifier in %q", s)
+		}
+		if strings.Contains(remaining, ".") && strings.HasPrefix(remaining, ".") {
+			// package-qualified: e.g. "foo.Bar"
+			return "", fmt.Errorf("package-qualified type %q is not supported for custom spec fields; use only primitives, slices, maps, or types defined in the same package", s)
+		}
+		// Check for a dot immediately after ident (package qualifier).
+		if strings.HasPrefix(remaining, ".") {
+			return "", fmt.Errorf("package-qualified type %q is not supported for custom spec fields; use only primitives, slices, maps, or types defined in the same package", s)
+		}
+		return remaining, nil
+	}
 }
 
 // ParseAPIGroupVersion splits a "group/version" string into its group and version parts.

@@ -66,6 +66,10 @@ type Config struct {
 	// When set, the matching spec field is replaced with *commonv1alpha1.ObjectRef
 	// and a resolved-ID status field is emitted.
 	References map[string][]config.ReferenceConfig
+	// CustomSpecFields maps entity names to custom fields that should be added
+	// directly to the EntityNameSpec struct (alongside APISpec). These fields are
+	// not derived from the OAS and must be explicitly configured.
+	CustomSpecFields map[string][]config.CustomSpecFieldConfig
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -2135,6 +2139,8 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		"objectRefTypeName":        func() string { return g.objectRefTypeName() },
 		"namespacedRefTypeName":    func() string { return g.namespacedRefTypeName() },
 		"join":                     strings.Join,
+		"celValidations":           customSpecFieldCELValidations,
+		"jsonOmitTag":              customSpecFieldJSONOmitTag,
 	}
 
 	tmpl := template.Must(template.New("crd").Funcs(funcMap).Parse(crdTypeTemplate))
@@ -2185,6 +2191,11 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		responseStatusFields = oc.ResponseStatusFields
 	}
 
+	customSpecFields := g.config.CustomSpecFields[entityName]
+	if err := checkCustomSpecFieldConflicts(customSpecFields, hasRootReconciler, parentRefGoFieldName, parentRefJSONName, immediateParentDep); err != nil {
+		return "", fmt.Errorf("entity %q: %w", entityName, err)
+	}
+
 	var buf strings.Builder
 	data := struct {
 		EntityName                string
@@ -2206,6 +2217,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
+		CustomSpecFields          []config.CustomSpecFieldConfig
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -2226,6 +2238,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
+		CustomSpecFields:          customSpecFields,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -5125,4 +5138,60 @@ func propertyUsesJSON(g *Generator, prop *parser.Property, parsed *parser.Parsed
 		}
 	}
 	return false
+}
+
+// customSpecFieldCELValidations returns the CEL validation markers for a custom spec
+// field, or nil when no CEL config is present.
+func customSpecFieldCELValidations(csf config.CustomSpecFieldConfig) []string {
+	if csf.CEL == nil {
+		return nil
+	}
+	return csf.CEL.Validations
+}
+
+// customSpecFieldJSONOmitTag returns the appropriate omit behaviour for a custom
+// spec field's JSON tag based on its Go type:
+//   - pointer (*T), slice ([]T), or map types → "omitempty"
+//   - value types (structs, primitives) → "omitzero"
+func customSpecFieldJSONOmitTag(goType string) string {
+	if strings.HasPrefix(goType, "*") || strings.HasPrefix(goType, "[]") || strings.HasPrefix(goType, "map[") {
+		return "omitempty"
+	}
+	return "omitzero"
+}
+
+// checkCustomSpecFieldConflicts verifies that no custom spec field has a Name or
+// JSONTag that clashes with the built-in fields of the EntityNameSpec struct.
+func checkCustomSpecFieldConflicts(
+	fields []config.CustomSpecFieldConfig,
+	hasRootReconciler bool,
+	parentRefGoFieldName string,
+	parentRefJSONName string,
+	immediateParentDep *parser.Dependency,
+) error {
+	// Build the set of reserved Go names and JSON tags already present in EntityNameSpec.
+	reservedNames := map[string]bool{"APISpec": true}
+	reservedJSONTags := map[string]bool{"apiSpec": true}
+
+	if hasRootReconciler {
+		reservedNames["KonnectConfiguration"] = true
+		reservedJSONTags["konnect"] = true
+	}
+	if parentRefGoFieldName != "" {
+		reservedNames[parentRefGoFieldName] = true
+		reservedJSONTags[parentRefJSONName] = true
+	} else if immediateParentDep != nil {
+		reservedNames[immediateParentDep.FieldName] = true
+		reservedJSONTags[immediateParentDep.JSONName] = true
+	}
+
+	for i, csf := range fields {
+		if reservedNames[csf.Name] {
+			return fmt.Errorf("customSpecFields[%d]: Name %q conflicts with a built-in Spec field", i, csf.Name)
+		}
+		if reservedJSONTags[csf.JSONTag] {
+			return fmt.Errorf("customSpecFields[%d]: jsonTag %q conflicts with a built-in Spec field JSON tag", i, csf.JSONTag)
+		}
+	}
+	return nil
 }

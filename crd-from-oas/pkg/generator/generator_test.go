@@ -5724,3 +5724,180 @@ func TestGenerateCRDType_Categories(t *testing.T) {
 		assert.NotContains(t, content, "categories=")
 	})
 }
+
+func TestCheckCustomSpecFieldConflicts(t *testing.T) {
+	tests := []struct {
+		name                string
+		fields              []config.CustomSpecFieldConfig
+		hasRootReconciler   bool
+		parentRefGoField    string
+		parentRefJSONName   string
+		immediateParentDep  *parser.Dependency
+		wantErr             bool
+		wantErrContains     string
+	}{
+		{
+			name: "no custom fields, no conflict",
+		},
+		{
+			name: "unique custom field, no conflict",
+			fields: []config.CustomSpecFieldConfig{
+				{Name: "CustomField", JSONTag: "customField", Type: "string"},
+			},
+		},
+		{
+			name: "name conflicts with APISpec",
+			fields: []config.CustomSpecFieldConfig{
+				{Name: "APISpec", JSONTag: "apiSpec", Type: "string"},
+			},
+			wantErr:         true,
+			wantErrContains: `Name "APISpec" conflicts with a built-in Spec field`,
+		},
+		{
+			name: "jsonTag conflicts with apiSpec",
+			fields: []config.CustomSpecFieldConfig{
+				{Name: "MyField", JSONTag: "apiSpec", Type: "string"},
+			},
+			wantErr:         true,
+			wantErrContains: `jsonTag "apiSpec" conflicts with a built-in Spec field`,
+		},
+		{
+			name:              "name conflicts with KonnectConfiguration when root reconciler",
+			hasRootReconciler: true,
+			fields: []config.CustomSpecFieldConfig{
+				{Name: "KonnectConfiguration", JSONTag: "konnect", Type: "string"},
+			},
+			wantErr:         true,
+			wantErrContains: `Name "KonnectConfiguration" conflicts with a built-in Spec field`,
+		},
+		{
+			name:              "jsonTag conflicts with konnect when root reconciler",
+			hasRootReconciler: true,
+			fields: []config.CustomSpecFieldConfig{
+				{Name: "MyField", JSONTag: "konnect", Type: "string"},
+			},
+			wantErr:         true,
+			wantErrContains: `jsonTag "konnect" conflicts with a built-in Spec field`,
+		},
+		{
+			name:             "no conflict with KonnectConfiguration when not root reconciler",
+			hasRootReconciler: false,
+			fields: []config.CustomSpecFieldConfig{
+				{Name: "KonnectConfiguration", JSONTag: "konnectConfiguration", Type: "string"},
+			},
+		},
+		{
+			name:             "name conflicts with parentRef go field name",
+			parentRefGoField: "GatewayRef",
+			parentRefJSONName: "gatewayRef",
+			fields: []config.CustomSpecFieldConfig{
+				{Name: "GatewayRef", JSONTag: "customTag", Type: "string"},
+			},
+			wantErr:         true,
+			wantErrContains: `Name "GatewayRef" conflicts with a built-in Spec field`,
+		},
+		{
+			name:             "name conflicts with immediate parent dep",
+			immediateParentDep: &parser.Dependency{FieldName: "ServiceRef", JSONName: "serviceRef"},
+			fields: []config.CustomSpecFieldConfig{
+				{Name: "ServiceRef", JSONTag: "myTag", Type: "string"},
+			},
+			wantErr:         true,
+			wantErrContains: `Name "ServiceRef" conflicts with a built-in Spec field`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkCustomSpecFieldConflicts(
+				tt.fields,
+				tt.hasRootReconciler,
+				tt.parentRefGoField,
+				tt.parentRefJSONName,
+				tt.immediateParentDep,
+			)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGenerateCRDType_CustomSpecFields(t *testing.T) {
+	schema := &parser.Schema{Name: "CreatePortal"}
+
+	t.Run("custom fields appear in EntityNameSpec with correct markers", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CustomSpecFields: map[string][]config.CustomSpecFieldConfig{
+				"Portal": {
+					{
+						Name:        "Tags",
+						JSONTag:     "tags",
+						Type:        "[]string",
+						Required:    false,
+						Description: "Optional list of tags.",
+					},
+					{
+						Name:     "Region",
+						JSONTag:  "region",
+						Type:     "string",
+						Required: true,
+					},
+				},
+			},
+		})
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+
+		assert.Contains(t, content, "Tags []string")
+		assert.Contains(t, content, `json:"tags,omitempty"`)
+		assert.Contains(t, content, "// +optional")
+		assert.Contains(t, content, "// Optional list of tags.")
+		assert.Contains(t, content, "Region string")
+		assert.Contains(t, content, `json:"region,omitzero"`)
+		assert.Contains(t, content, "// +required")
+	})
+
+	t.Run("custom fields with CEL validations are emitted", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CustomSpecFields: map[string][]config.CustomSpecFieldConfig{
+				"Portal": {
+					{
+						Name:    "Slug",
+						JSONTag: "slug",
+						Type:    "string",
+						CEL: &config.FieldConfig{
+							Validations: []string{"+kubebuilder:validation:MinLength=1", "+kubebuilder:validation:MaxLength=64"},
+						},
+					},
+				},
+			},
+		})
+		content, err := g.generateCRDType("CreatePortal", schema)
+		require.NoError(t, err)
+		assert.Contains(t, content, "+kubebuilder:validation:MinLength=1")
+		assert.Contains(t, content, "+kubebuilder:validation:MaxLength=64")
+	})
+
+	t.Run("conflict with APISpec returns error", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CustomSpecFields: map[string][]config.CustomSpecFieldConfig{
+				"Portal": {
+					{Name: "APISpec", JSONTag: "apiSpec", Type: "string"},
+				},
+			},
+		})
+		_, err := g.generateCRDType("CreatePortal", schema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `Name "APISpec" conflicts with a built-in Spec field`)
+	})
+}

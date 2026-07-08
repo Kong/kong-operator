@@ -150,6 +150,7 @@ func (r *Runner) Run(
 			ManualGetForUIDEntities:  manualGetForUIDEntities,
 			Categories:               agvConfig.Categories,
 			References:               agvConfig.ReferencesConfig(pathToEntityName),
+			CustomSpecFields:         agvConfig.CustomSpecFieldsConfig(pathToEntityName),
 		})
 
 		files, err := gen.Generate(parsed)

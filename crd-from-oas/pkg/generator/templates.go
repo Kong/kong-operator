@@ -85,6 +85,15 @@ type {{.EntityName}}Spec struct {
 	//
 	// +optional
 	APISpec {{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitzero"` + "`" + `
+{{- range .CustomSpecFields}}
+{{formatComment .Description}}
+	//
+	// {{if .Required}}+required{{else}}+optional{{end}}
+{{- range celValidations .}}
+	// {{.}}
+{{- end}}
+	{{.Name}} {{.Type}} ` + "`" + `json:"{{.JSONTag}},{{jsonOmitTag .Type}}"` + "`" + `
+{{- end}}
 }
 
 // {{.EntityName}}APISpec defines the API spec fields for {{.EntityName}}.

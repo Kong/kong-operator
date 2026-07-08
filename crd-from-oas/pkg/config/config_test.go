@@ -513,6 +513,313 @@ apiGroupVersions:
 	})
 }
 
+func TestLoadProjectConfig_CustomSpecFields(t *testing.T) {
+	t.Run("valid single custom spec field", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: CustomField
+            jsonTag: customField
+            type: string
+            description: A custom field.
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types[0].CustomSpecFields, 1)
+		csf := konnect.Types[0].CustomSpecFields[0]
+		assert.Equal(t, "CustomField", csf.Name)
+		assert.Equal(t, "customField", csf.JSONTag)
+		assert.Equal(t, "string", csf.Type)
+		assert.Equal(t, "A custom field.", csf.Description)
+		assert.False(t, csf.Required)
+	})
+
+	t.Run("valid multiple custom spec fields with CEL", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: SecretRef
+            jsonTag: secretRef
+            type: "*string"
+            required: true
+            cel:
+              _validations:
+                - "+kubebuilder:validation:MinLength=1"
+          - name: Tags
+            jsonTag: tags
+            type: "[]string"
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types[0].CustomSpecFields, 2)
+
+		first := konnect.Types[0].CustomSpecFields[0]
+		assert.Equal(t, "SecretRef", first.Name)
+		assert.Equal(t, "*string", first.Type)
+		assert.True(t, first.Required)
+		require.NotNil(t, first.CEL)
+		assert.Equal(t, []string{"+kubebuilder:validation:MinLength=1"}, first.CEL.Validations)
+
+		second := konnect.Types[0].CustomSpecFields[1]
+		assert.Equal(t, "Tags", second.Name)
+		assert.Equal(t, "[]string", second.Type)
+	})
+
+	t.Run("invalid: empty name", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: ""
+            jsonTag: myField
+            type: string
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "customSpecFields[0].name is required")
+	})
+
+	t.Run("invalid: name not an exported identifier", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: myField
+            jsonTag: myField
+            type: string
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `customSpecFields[0].name "myField" must be a valid exported Go identifier`)
+	})
+
+	t.Run("invalid: empty jsonTag", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: MyField
+            jsonTag: ""
+            type: string
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "customSpecFields[0].jsonTag is required")
+	})
+
+	t.Run("invalid: jsonTag with spaces", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: MyField
+            jsonTag: "my field"
+            type: string
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `customSpecFields[0].jsonTag "my field" must be a valid JSON tag`)
+	})
+
+	t.Run("invalid: empty type", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: MyField
+            jsonTag: myField
+            type: ""
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "customSpecFields[0].type is required")
+	})
+
+	t.Run("invalid: package-qualified type", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: MyField
+            jsonTag: myField
+            type: "foo.Bar"
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "package-qualified type")
+	})
+
+	t.Run("invalid: duplicate name", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: MyField
+            jsonTag: myField
+            type: string
+          - name: MyField
+            jsonTag: otherTag
+            type: int
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `duplicate name "MyField"`)
+	})
+
+	t.Run("invalid: duplicate jsonTag", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals
+        customSpecFields:
+          - name: MyField
+            jsonTag: myField
+            type: string
+          - name: OtherField
+            jsonTag: myField
+            type: int
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `duplicate jsonTag "myField"`)
+	})
+}
+
+func TestIsValidGoTypeForCRD(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		{name: "string", input: "string"},
+		{name: "int", input: "int"},
+		{name: "int32", input: "int32"},
+		{name: "int64", input: "int64"},
+		{name: "bool", input: "bool"},
+		{name: "float32", input: "float32"},
+		{name: "float64", input: "float64"},
+		{name: "byte", input: "byte"},
+		{name: "pointer to string", input: "*string"},
+		{name: "pointer to named type", input: "*MyNamedType"},
+		{name: "slice of string", input: "[]string"},
+		{name: "slice of pointers", input: "[]*string"},
+		{name: "map of string to string", input: "map[string]string"},
+		{name: "map of string to int", input: "map[string]int"},
+		{name: "map of string to named", input: "map[string]MyType"},
+		{name: "slice of map", input: "[]map[string]string"},
+		{name: "unqualified named type", input: "MyNamedType"},
+		{name: "empty string", input: "", wantErr: true},
+		{name: "package-qualified", input: "foo.Bar", wantErr: true, errMsg: "package-qualified"},
+		{name: "pointer to package-qualified", input: "*foo.Bar", wantErr: true, errMsg: "package-qualified"},
+		{name: "map value package-qualified", input: "map[string]foo.Bar", wantErr: true, errMsg: "package-qualified"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := isValidGoTypeForCRD(tc.input)
+			if tc.wantErr {
+				require.Error(t, err)
+				if tc.errMsg != "" {
+					assert.Contains(t, err.Error(), tc.errMsg)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAPIGroupVersionConfig_CustomSpecFieldsConfig(t *testing.T) {
+	t.Run("returns fields by entity name", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v3/portals",
+					CustomSpecFields: []CustomSpecFieldConfig{
+						{Name: "CustomField", JSONTag: "customField", Type: "string"},
+					},
+				},
+				{Path: "/v3/portals/{portalId}/teams"},
+			},
+		}
+		pathToEntity := map[string]string{
+			"/v3/portals":                  "Portal",
+			"/v3/portals/{portalId}/teams": "PortalTeam",
+		}
+
+		result := agv.CustomSpecFieldsConfig(pathToEntity)
+		require.Len(t, result, 1)
+		require.Contains(t, result, "Portal")
+		assert.Equal(t, "CustomField", result["Portal"][0].Name)
+		assert.NotContains(t, result, "PortalTeam")
+	})
+
+	t.Run("returns empty map when no custom fields", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{{Path: "/v3/portals"}},
+		}
+		result := agv.CustomSpecFieldsConfig(map[string]string{"/v3/portals": "Portal"})
+		assert.Empty(t, result)
+	})
+}
+
 func TestParseAPIGroupVersion(t *testing.T) {
 	tests := []struct {
 		name      string
