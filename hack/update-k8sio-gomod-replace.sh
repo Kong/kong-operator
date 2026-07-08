@@ -33,6 +33,12 @@ export -f generate_replace_command
 
 # Run in parallel to collect replace directives
 echo "Collecting replace directives for ${#MODS[@]} modules concurrently (N=${CONCURRENCY})"
+
+if [[ ${#MODS[@]} -eq 0 ]]; then
+    echo "No staging replace directives found in k8s.io/kubernetes@v${VERSION}/go.mod — nothing to update."
+    exit 0
+fi
+
 REPLACE_COMMANDS=($(printf "%s\n" "${MODS[@]}" | xargs -P "$CONCURRENCY" -n 1 -I {} bash -c 'generate_replace_command "$@"' _ {}))
 
 # Apply each replace directive serially
