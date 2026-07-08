@@ -30,6 +30,8 @@ import (
 	"fmt"
 	"os"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -72,7 +74,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	cleanupFuncs := resolveCleanupFuncs(mode)
+	cleanupFuncs, err := resolveCleanupFuncs(mode)
+	if err != nil {
+		log.Error(err, "error resolving cleanup functions")
+		os.Exit(1)
+	}
 	ctx := context.Background()
 	for _, f := range cleanupFuncs {
 		if err := f(ctx, log); err != nil {
@@ -98,23 +104,52 @@ func getCleanupMode() (string, error) {
 	return os.Args[1], nil
 }
 
-func resolveCleanupFuncs(mode string) []func(context.Context, logr.Logger) error {
+func generateSDK() (*sdkkonnectgo.SDK, error) {
+	serverURL, err := canonicalizedServerURL()
+	if err != nil {
+		return nil, fmt.Errorf("invalid server URL %s: %w", test.KonnectServerURL(), err)
+	}
+
+	return sdkkonnectgo.New(
+		sdkkonnectgo.WithSecurity(
+			sdkkonnectcomp.Security{
+				PersonalAccessToken: new(test.KonnectAccessToken()),
+			},
+		),
+		sdkkonnectgo.WithServerURL(serverURL),
+	), nil
+}
+
+func resolveCleanupFuncs(mode string) ([]func(context.Context, logr.Logger) error, error) {
+
 	switch mode {
 	case cleanupModeGKE:
 		return []func(context.Context, logr.Logger) error{
 			cleanupGKEClusters,
-		}
+		}, nil
 	case cleanupModeKonnect:
-		return []func(context.Context, logr.Logger) error{
-			cleanupKonnectControlPlanes,
-			cleanupKonnectSystemAccounts,
+		sdk, err := generateSDK()
+		if err != nil {
+			return nil, fmt.Errorf("error generating SDK: %w", err)
 		}
+
+		return []func(context.Context, logr.Logger) error{
+			cleanupKonnectEventGateways(sdk),
+			cleanupKonnectControlPlanes(sdk),
+			cleanupKonnectSystemAccounts(sdk),
+		}, nil
 	default:
+		sdk, err := generateSDK()
+		if err != nil {
+			return nil, fmt.Errorf("error generating SDK: %w", err)
+		}
+
 		return []func(context.Context, logr.Logger) error{
 			cleanupGKEClusters,
-			cleanupKonnectControlPlanes,
-			cleanupKonnectSystemAccounts,
-		}
+			cleanupKonnectEventGateways(sdk),
+			cleanupKonnectControlPlanes(sdk),
+			cleanupKonnectSystemAccounts(sdk),
+		}, nil
 	}
 }
 

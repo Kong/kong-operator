@@ -30,6 +30,9 @@ const (
 	// KonnectTestIDLabel is the label key added in the Konnect entity used to identify them created by the test suite.
 	// Since the label cannot start with `kong`, we use another key.
 	KonnectTestIDLabel = "operator-test-id"
+	// KonnectCreatedInTestsLabel is the label that is set on Konnect resources
+	// created by tests.
+	KonnectCreatedInTestsLabel = "created_in_tests"
 )
 
 func randomSuffix() string {
