@@ -1,0 +1,60 @@
+# Complete end-to-end sample for the AIGateway DataPlane controller.
+#
+# The operator automatically provisions the mTLS certificate Secret and the
+# AIGatewayDataPlaneCertificate — there is no need to create them manually.
+#
+# Apply order:
+#   kubectl apply -f konnect_aigateway_with_aigatewaydataplane.yaml
+#
+# Replace the token below with a real Konnect PAT before applying.
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.tech
+---
+kind: AIGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+# The AIGatewayDataPlane controller:
+#   1. Provisions a cluster-CA-signed mTLS Secret automatically.
+#   2. Creates and manages an AIGatewayDataPlaneCertificate (registers the cert with Konnect).
+#   3. Deploys the AI Gateway binary once the cert is programmed on Konnect.
+#   4. Creates the Ingress Service below.
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ai-gw-cp-1
+  deployment:
+    replicas: 1
+  network:
+    services:
+      ingress:
+        type: LoadBalancer
+        ports:
+          - name: ingress
+            port: 443
+            targetPort: 8443
