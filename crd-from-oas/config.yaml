@@ -543,6 +543,12 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayPolicyRequest
           delete: {}
+        customSpecFields:
+          - name: ConfigFrom
+            jsonTag: "configFrom"
+            type: AIGatewayPolicyConfigFrom
+            description: "ConfigFrom Reference to a Secret containing the policy configuration. Cannot be used with the spec.apiSpec.Config field."
+            required: false
         reconciler:
           parentEntityGVK:
             kind: AIGatewayControlPlane

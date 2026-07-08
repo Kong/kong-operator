@@ -51,6 +51,11 @@ type AIGatewayPolicySpec struct {
 	//
 	// +optional
 	APISpec AIGatewayPolicyAPISpec `json:"apiSpec,omitzero"`
+	// ConfigFrom Reference to a Secret containing the policy configuration.
+	// Cannot be used with the spec.apiSpec.Config field.
+	//
+	// +optional
+	ConfigFrom AIGatewayPolicyConfigFrom `json:"configFrom,omitzero"`
 }
 
 // AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.

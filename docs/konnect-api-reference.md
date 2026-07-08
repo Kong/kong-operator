@@ -1660,6 +1660,36 @@ _Appears in:_
 
 - [AIGatewayPolicySpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyspec)
 
+#### AIGatewayPolicyConfigFrom
+
+
+AIGatewayPolicyConfigFrom specifies the source of the configuration for an AIGatewayPolicy.
+Now it only supports sourcing from a Kubernetes Secret.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayPolicyConfigSourceType](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyconfigsourcetype)_ | SourceType specifies the type of the source of the configuration. Currently, only "Secret" is supported. |
+| `secretRef` _[SensitiveDataSecretRef](#konnect-konghq-com-v1alpha1-types-sensitivedatasecretref)_ | SecretRef is a reference to a Kubernetes Secret that contains the configuration for the AIGatewayPolicy. The `data` of the secret is used . |
+
+_Appears in:_
+
+- [AIGatewayPolicySpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyspec)
+
+#### AIGatewayPolicyConfigSourceType
+
+_Underlying type:_ `string`
+
+AIGatewayPolicyConfigSourceType is the type of the source of the configuration for an AIGatewayPolicy.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayPolicyConfigFrom](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyconfigfrom)
+
 
 
 #### AIGatewayPolicySpec
@@ -1673,6 +1703,7 @@ AIGatewayPolicySpec defines the desired state of AIGatewayPolicy.
 | --- | --- |
 | `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
 | `apiSpec` _[AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+| `configFrom` _[AIGatewayPolicyConfigFrom](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyconfigfrom)_ | ConfigFrom Reference to a Secret containing the policy configuration. Cannot be used with the spec.apiSpec.Config field. |
 
 _Appears in:_
 
@@ -5429,6 +5460,7 @@ that holds a sensitive value for a CRD field.
 
 _Appears in:_
 
+- [AIGatewayPolicyConfigFrom](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyconfigfrom)
 - [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
 
 #### SensitiveDataSource
