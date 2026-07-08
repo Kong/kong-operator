@@ -19,6 +19,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
+// +kubebuilder:validation:XValidation:rule="(!has(self.spec.eventGatewayBackendClusterRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef", message="spec.eventGatewayBackendClusterRef is immutable when an entity is already Programmed"
 type EventGatewayVirtualCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`

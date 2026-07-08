@@ -882,6 +882,12 @@ spec:
         required:
         - metadata
         type: object
+        x-kubernetes-validations:
+        - message: spec.eventGatewayBackendClusterRef is immutable when an entity
+            is already Programmed
+          rule: '(!has(self.spec.eventGatewayBackendClusterRef)) ? true : (!has(self.status)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'')) ? true : oldSelf.spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef'
     served: true
     storage: true
     subresources:

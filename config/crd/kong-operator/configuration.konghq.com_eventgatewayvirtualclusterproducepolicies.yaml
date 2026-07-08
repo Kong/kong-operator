@@ -846,6 +846,12 @@ spec:
         required:
         - metadata
         type: object
+        x-kubernetes-validations:
+        - message: spec.eventGatewayVirtualClusterRef is immutable when an entity
+            is already Programmed
+          rule: '(!has(self.spec.eventGatewayVirtualClusterRef)) ? true : (!has(self.status)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'')) ? true : oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
     served: true
     storage: true
     subresources:

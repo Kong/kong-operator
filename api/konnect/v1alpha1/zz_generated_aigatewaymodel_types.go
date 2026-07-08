@@ -21,6 +21,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
+// +kubebuilder:validation:XValidation:rule="(!has(self.spec.aiGatewayRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
 type AIGatewayModel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`

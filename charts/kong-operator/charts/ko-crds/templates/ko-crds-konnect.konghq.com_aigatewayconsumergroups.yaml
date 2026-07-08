@@ -298,6 +298,11 @@ spec:
         required:
         - metadata
         type: object
+        x-kubernetes-validations:
+        - message: spec.aiGatewayRef is immutable when an entity is already Programmed
+          rule: '(!has(self.spec.aiGatewayRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c,
+            c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.aiGatewayRef
+            == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:

@@ -19,6 +19,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
+// +kubebuilder:validation:XValidation:rule="(!has(self.spec.aiGatewayConsumerRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.aiGatewayConsumerRef == self.spec.aiGatewayConsumerRef", message="spec.aiGatewayConsumerRef is immutable when an entity is already Programmed"
 type AIGatewayConsumerCredential struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
