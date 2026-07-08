@@ -385,6 +385,9 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
 
+      # TODO: Replace policies []string with cross-object AIGatewayPolicy
+      # references once supported by crd-from-oas.
+      # See https://github.com/Kong/kong-operator/issues/4831.
       - path: /v1/ai-gateways/{gatewayId}/consumer-groups
         name: AIGatewayConsumerGroup
         ops:
