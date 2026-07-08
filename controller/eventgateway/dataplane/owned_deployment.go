@@ -51,13 +51,13 @@ func (r *Reconciler) ensureDeployment(
 	certSecretName string,
 ) error {
 	image := resolveImage(egdp, consts.DefaultKEGImage)
-	desired, err := buildDeployment(r.typeConverter, egdp, keg, image, certSecretName)
+	desired, err := buildDeployment(r.TypeConverter, egdp, keg, image, certSecretName)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for DataPlane %s/%s: %w",
 			egdp.Namespace, egdp.Name, err)
 	}
 
-	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		r.eventRecorder.Eventf(egdp, nil, corev1.EventTypeWarning, "DeploymentFailed", "ApplyDeployment",
 			"Failed to apply Deployment: %v", err)

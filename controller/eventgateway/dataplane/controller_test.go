@@ -132,7 +132,7 @@ func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reco
 	})
 	return &Reconciler{
 		Client:                   wrapped,
-		typeConverter:            managedfields.NewDeducedTypeConverter(),
+		TypeConverter:            managedfields.NewDeducedTypeConverter(),
 		eventRecorder:            recorder,
 		ClusterCASecretName:      testCASecretName,
 		ClusterCASecretNamespace: testCASecretNamespace,

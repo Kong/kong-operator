@@ -205,6 +205,16 @@
   [#4640](https://github.com/Kong/kong-operator/pull/4640)
 - Fix routes become unaccepted and removed from DataPlane unexpectedly
   [#4521](https://github.com/Kong/kong-operator/pull/4521)
+- EventGateway / MCPServer: fix Server-Side Apply (SSA) permanently failing with
+  "no corresponding type" for operator-owned CRD kinds (`KegDataPlane`, etc.).
+  The `managedfields.TypeConverter` was built once at startup from the API
+  server's `/openapi/v3` endpoint, which publishes CRD schemas asynchronously
+  (up to ~60 s debounce). CRDs that were not yet published were silently skipped,
+  permanently breaking SSA — including status writes — until the next restart.
+  The converter is now built in-process from the live CRD objects (apiserver-style,
+  zero debounce latency) and atomically refreshed by a dedicated CRD controller
+  whenever a relevant CRD changes at runtime.
+  [#4795](https://github.com/Kong/kong-operator/pull/4795)
 
 ## [v2.2.1]
 

@@ -145,7 +145,7 @@ func Test_applyStatus(t *testing.T) {
 	newReconciler := func(cl client.Client, rec *events.FakeRecorder) *Reconciler {
 		return &Reconciler{
 			Client:        cl,
-			typeConverter: tc,
+			TypeConverter: tc,
 			eventRecorder: rec,
 		}
 	}

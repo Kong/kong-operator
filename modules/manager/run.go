@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation"
 	"github.com/kong/kong-operator/v2/internal/telemetry"
@@ -190,8 +191,9 @@ func DefaultConfig() Config {
 }
 
 // SetupControllersFunc represents function to setup controllers, which is called
-// in Run function.
-type SetupControllersFunc func(manager.Manager, *Config, *multiinstance.Manager) ([]ControllerDef, error)
+// in Run function. ssaProvider is non-nil only when at least one SSA-using
+// controller is active (KEGDataPlane or MCPServer); it is nil otherwise.
+type SetupControllersFunc func(manager.Manager, *Config, *multiinstance.Manager, *controllerpkgssa.TypeConverterProvider) ([]ControllerDef, error)
 
 //+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 
@@ -321,7 +323,22 @@ func Run(
 		}
 	}
 
-	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr)
+	// Build the shared SSA TypeConverterProvider when any SSA-using controller is
+	// active.  Built on every replica (not leader-gated) so the converter is
+	// ready before reconcile loops start.
+	var ssaProvider *controllerpkgssa.TypeConverterProvider
+	if IsSSAProviderNeeded(cfg) {
+		var err error
+		ssaProvider, err = buildSSAProvider(ctx, setupLog.WithName("ssa-crd-schema"), mgr)
+		if err != nil {
+			return err
+		}
+		if err := mgr.AddReadyzCheck("ssa-type-converter", ssaProvider.Ready); err != nil {
+			return fmt.Errorf("unable to add SSA TypeConverter readyz check: %w", err)
+		}
+	}
+
+	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr, ssaProvider)
 	if err != nil {
 		setupLog.Error(err, "failed setting up controllers")
 		return err
