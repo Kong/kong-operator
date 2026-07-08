@@ -385,6 +385,31 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
 
+      # TODO: Replace policies []string with cross-object AIGatewayPolicy
+      # references once supported by crd-from-oas.
+      # See https://github.com/Kong/kong-operator/issues/4831.
+      - path: /v1/ai-gateways/{gatewayId}/consumer-groups
+        name: AIGatewayConsumerGroup
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumerGroupsSDK
+            fieldName: AIGatewayConsumerGroups
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: GetName()
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayConsumerGroupRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayConsumerGroupRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: AIGatewayControlPlane
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
       # AIGatewayConsumerCredential is a child of AIGatewayConsumer. Credentials
       # only obtain a Konnect ID once associated with a consumer, so they are
       # modelled as a separate resource that references the consumer (analogous to

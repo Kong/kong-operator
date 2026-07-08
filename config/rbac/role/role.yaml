@@ -452,6 +452,7 @@ rules:
   resources:
   - aigatewayagents
   - aigatewayconsumercredentials
+  - aigatewayconsumergroups
   - aigatewayconsumers
   - aigatewaycontrolplanes
   - aigatewaymodelproviders
@@ -483,6 +484,8 @@ rules:
   - aigatewayagents/status
   - aigatewayconsumercredentials/finalizers
   - aigatewayconsumercredentials/status
+  - aigatewayconsumergroups/finalizers
+  - aigatewayconsumergroups/status
   - aigatewayconsumers/finalizers
   - aigatewayconsumers/status
   - aigatewaycontrolplanes/finalizers

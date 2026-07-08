@@ -1,0 +1,70 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.tech
+---
+kind: AIGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: AIGatewayPolicy
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: aigw-policy-prompt-decorator
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: konnect-prompt-decorator-policy
+    displayName: AI Gateway Policy Prompt Decorator
+    type: ai-prompt-decorator
+    enabled: Enabled
+    global: Disabled
+    config:
+      llm_format: openai
+      max_request_body_size: 8388608
+      prompts:
+        append: null
+        prepend:
+        - content: In short words
+          role: user
+---
+kind: AIGatewayConsumerGroup
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-consumer-group-1
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: dev-users
+    displayName: Dev Users Group
+    # TODO: Replace this Konnect policy-name reference with a cross-object
+    # AIGatewayPolicy reference once supported.
+    # See https://github.com/Kong/kong-operator/issues/4831.
+    policies:
+      - konnect-prompt-decorator-policy
+    labels:
+      tier: development

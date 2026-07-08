@@ -316,6 +316,7 @@ type WatchableEntityType interface {
 		konnectv1alpha1.AIGatewayAgent |
 		konnectv1alpha1.AIGatewayConsumer |
 		konnectv1alpha1.AIGatewayConsumerCredential |
+		konnectv1alpha1.AIGatewayConsumerGroup |
 		konnectv1alpha1.KonnectEventGateway |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayListener |

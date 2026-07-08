@@ -15,6 +15,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&AIGatewayConsumerList{},
 		&AIGatewayConsumerCredential{},
 		&AIGatewayConsumerCredentialList{},
+		&AIGatewayConsumerGroup{},
+		&AIGatewayConsumerGroupList{},
 		&AIGatewayControlPlane{},
 		&AIGatewayControlPlaneList{},
 		&AIGatewayModel{},

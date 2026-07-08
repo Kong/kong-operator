@@ -31,6 +31,8 @@ func DeleteGeneratedOps[
 		return deleteAIGatewayConsumer(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumerCredential:
 		return deleteAIGatewayConsumerCredential(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
+	case *konnectv1alpha1.AIGatewayConsumerGroup:
+		return deleteAIGatewayConsumerGroup(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
 	case *konnectv1alpha1.AIGatewayControlPlane:
 		return deleteAIGatewayControlPlane(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:

@@ -8886,6 +8886,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [AIGatewayAgent](#konnect-konghq-com-v1alpha1-aigatewayagent)
 - [AIGatewayConsumer](#konnect-konghq-com-v1alpha1-aigatewayconsumer)
 - [AIGatewayConsumerCredential](#konnect-konghq-com-v1alpha1-aigatewayconsumercredential)
+- [AIGatewayConsumerGroup](#konnect-konghq-com-v1alpha1-aigatewayconsumergroup)
 - [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
 - [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
 - [AIGatewayModelProvider](#konnect-konghq-com-v1alpha1-aigatewaymodelprovider)
@@ -8950,6 +8951,21 @@ AIGatewayConsumerCredential is the Schema for the aigatewayconsumercredentials A
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayConsumerCredentialSpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialspec)_ |  |
 | `status` _[AIGatewayConsumerCredentialStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialstatus)_ |  |
+
+### AIGatewayConsumerGroup
+
+
+AIGatewayConsumerGroup is the Schema for the aigatewayconsumergroups API.
+
+<!-- ai_gateway_consumer_group description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayConsumerGroup`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayConsumerGroupSpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupspec)_ |  |
+| `status` _[AIGatewayConsumerGroupStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupstatus)_ |  |
 
 ### AIGatewayControlPlane
 
@@ -9523,6 +9539,58 @@ _Appears in:_
 
 - [AIGatewayConsumerCredential](#konnect-konghq-com-v1alpha1-aigatewayconsumercredential)
 
+#### AIGatewayConsumerGroupAPISpec
+
+
+AIGatewayConsumerGroupAPISpec defines the API spec fields for AIGatewayConsumerGroup.
+
+
+
+| Field | Description |
+| --- | --- |
+| `displayName` _string_ | The display name for this consumer group instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this consumer group, used as a stable human-readable reference. |
+| `policies` _[]string_ | List of policy references. |
+
+_Appears in:_
+
+- [AIGatewayConsumerGroupSpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupspec)
+
+#### AIGatewayConsumerGroupSpec
+
+
+AIGatewayConsumerGroupSpec defines the desired state of AIGatewayConsumerGroup.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `apiSpec` _[AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayConsumerGroup](#konnect-konghq-com-v1alpha1-aigatewayconsumergroup)
+
+#### AIGatewayConsumerGroupStatus
+
+
+AIGatewayConsumerGroupStatus defines the observed state of AIGatewayConsumerGroup.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayConsumerGroup](#konnect-konghq-com-v1alpha1-aigatewayconsumergroup)
+
 #### AIGatewayConsumerSpec
 
 
@@ -9703,6 +9771,7 @@ _Appears in:_
 - [AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)
 - [AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
+- [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
@@ -13293,6 +13362,7 @@ _Appears in:_
 
 - [AIGatewayAgentStatus](#konnect-konghq-com-v1alpha1-types-aigatewayagentstatus)
 - [AIGatewayConsumerCredentialStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialstatus)
+- [AIGatewayConsumerGroupStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupstatus)
 - [AIGatewayConsumerStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerstatus)
 - [AIGatewayModelProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderstatus)
 - [AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)
@@ -13682,6 +13752,7 @@ _Appears in:_
 - [AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)
 - [AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
+- [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
@@ -14508,6 +14579,7 @@ _Appears in:_
 - [AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)
 - [AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
+- [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
 - [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
