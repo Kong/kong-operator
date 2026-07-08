@@ -13,6 +13,7 @@ const (
 type AIGatewayPolicyConfigFrom struct {
 	// SourceType specifies the type of the source of the configuration. Currently, only "Secret" is supported.
 	// +kubebuilder:validation:Enum=Secret
+	// +required
 	SourceType AIGatewayPolicyConfigSourceType `json:"type"`
 	// SecretRef is a reference to a Kubernetes Secret that contains the configuration for the AIGatewayPolicy.
 	// The specified key in `data` of the secret is used .

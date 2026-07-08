@@ -5727,14 +5727,14 @@ func TestGenerateCRDType_Categories(t *testing.T) {
 
 func TestCheckCustomSpecFieldConflicts(t *testing.T) {
 	tests := []struct {
-		name                string
-		fields              []config.CustomSpecFieldConfig
-		hasRootReconciler   bool
-		parentRefGoField    string
-		parentRefJSONName   string
-		immediateParentDep  *parser.Dependency
-		wantErr             bool
-		wantErrContains     string
+		name               string
+		fields             []config.CustomSpecFieldConfig
+		hasRootReconciler  bool
+		parentRefGoField   string
+		parentRefJSONName  string
+		immediateParentDep *parser.Dependency
+		wantErr            bool
+		wantErrContains    string
 	}{
 		{
 			name: "no custom fields, no conflict",
@@ -5780,15 +5780,15 @@ func TestCheckCustomSpecFieldConflicts(t *testing.T) {
 			wantErrContains: `jsonTag "konnect" conflicts with a built-in Spec field`,
 		},
 		{
-			name:             "no conflict with KonnectConfiguration when not root reconciler",
+			name:              "no conflict with KonnectConfiguration when not root reconciler",
 			hasRootReconciler: false,
 			fields: []config.CustomSpecFieldConfig{
 				{Name: "KonnectConfiguration", JSONTag: "konnectConfiguration", Type: "string"},
 			},
 		},
 		{
-			name:             "name conflicts with parentRef go field name",
-			parentRefGoField: "GatewayRef",
+			name:              "name conflicts with parentRef go field name",
+			parentRefGoField:  "GatewayRef",
 			parentRefJSONName: "gatewayRef",
 			fields: []config.CustomSpecFieldConfig{
 				{Name: "GatewayRef", JSONTag: "customTag", Type: "string"},
@@ -5797,7 +5797,7 @@ func TestCheckCustomSpecFieldConflicts(t *testing.T) {
 			wantErrContains: `Name "GatewayRef" conflicts with a built-in Spec field`,
 		},
 		{
-			name:             "name conflicts with immediate parent dep",
+			name:               "name conflicts with immediate parent dep",
 			immediateParentDep: &parser.Dependency{FieldName: "ServiceRef", JSONName: "serviceRef"},
 			fields: []config.CustomSpecFieldConfig{
 				{Name: "ServiceRef", JSONTag: "myTag", Type: "string"},
