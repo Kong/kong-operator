@@ -184,6 +184,15 @@ func (g *Generator) generateEntityOpsFile(
 			SDKGetter:      sdkGetter,
 			NeedsClient:    updateData.NeedsClient,
 		}
+	} else {
+		// No update stanza in config: emit a no-op case in the dispatcher so
+		// the entity is handled gracefully without returning an error.
+		updateInfo = &OpsUpdateFileInfo{
+			Entity:         entityName,
+			APIAlias:       g.config.APIGroupPackageAlias,
+			APIPackagePath: g.config.APIGroupPackagePath,
+			SkipUpdate:     true,
+		}
 	}
 
 	var deleteInfo *OpsDeleteFileInfo
@@ -287,6 +296,7 @@ func buildDispatcherFile(
 		APIAlias    string
 		SDKGetter   string
 		NeedsClient bool
+		SkipUpdate  bool
 	}
 
 	importSet := map[string]string{}
@@ -298,6 +308,7 @@ func buildDispatcherFile(
 			APIAlias:    info.APIAlias,
 			SDKGetter:   info.SDKGetter,
 			NeedsClient: info.NeedsClient,
+			SkipUpdate:  info.SkipUpdate,
 		})
 	}
 

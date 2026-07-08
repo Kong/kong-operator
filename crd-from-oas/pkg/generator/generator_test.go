@@ -5225,10 +5225,11 @@ func TestGenerateOpsUpdate_NoUpdateOp_Skipped(t *testing.T) {
 
 	file, info, err := g.generateOpsUpdate("Portal", schema, opsConfig)
 	require.NoError(t, err)
-	require.NotNil(t, file) // file emitted for create
-	require.Nil(t, info)    // no update info → not in dispatcher
+	require.NotNil(t, file)
+	require.NotNil(t, info)          // Update info present -> emits nil case in dispatcher
+	require.True(t, info.SkipUpdate) // No update stanza -> no-op dispatcher case.
 
-	// File contains create but no update.
+	// File contains create but no update function.
 	assert.Contains(t, file.Content, "func createPortal(")
 	assert.NotContains(t, file.Content, "func updatePortal(")
 }
