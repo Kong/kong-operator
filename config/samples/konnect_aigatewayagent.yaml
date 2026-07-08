@@ -29,7 +29,7 @@ metadata:
   name: my-ai-agent
   namespace: default
 spec:
-  gatewayRef:
+  aiGatewayRef:
     type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
