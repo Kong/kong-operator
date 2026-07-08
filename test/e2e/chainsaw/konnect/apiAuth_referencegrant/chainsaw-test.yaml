@@ -1,19 +1,37 @@
-# KonnectAPIAuthConfiguration Cross-Namespace Reference Grant test scenario
+# KonnectAPIAuthConfiguration cross-namespace secretRef KongReferenceGrant test.
+#
+# The cross-namespace axis under test is spec.secretRef.namespace: the Secret holding the
+# Konnect token lives in a different namespace from the KonnectAPIAuthConfiguration.
+#
+# Scenario A: Secret and KonnectAPIAuthConfiguration in the same namespace — baseline, no
+#   grant needed. The ResolvedRefs condition is absent for same-namespace secretRefs.
+#
+# Scenario B: Secret in secret_namespace, KonnectAPIAuthConfiguration in the test namespace.
+#   The reference is denied (ResolvedRefs=False/RefNotPermitted, APIAuthValid=False) until a
+#   KongReferenceGrant in secret_namespace permits it.
+#
+# Scenario D: starting from Scenario B (APIAuthValid=True), deleting the KongReferenceGrant
+#   reverts the KonnectAPIAuthConfiguration to ResolvedRefs=False/RefNotPermitted, validating
+#   that the KongReferenceGrant watch is wired correctly.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   name: konnectapiauthconfiguration-referencegrant
 spec:
   description: |
-    This test validates backward compatibility for cross-namespace secret references in KonnectAPIAuthConfiguration.
-    Currently, the operator still allows cross-namespace references (with warnings about missing KongReferenceGrant)
-    to ensure we don't break existing users. The test ensures that:
-    1. Cross-namespace secret references continue to work but show KongReferenceGrant warning messages
-    2. Existing user configurations remain functional during the deprecation period
-    
-    NOTE: This is a temporary backward compatibility test. In future versions when cross-namespace 
-    references without KongReferenceGrant are no longer supported, this test will fail and must be 
-    updated to properly test the ReferenceGrant mechanism with both Secret and KonnectAPIAuthConfiguration.
+    Tests that a cross-namespace reference from a KonnectAPIAuthConfiguration to a Secret
+    requires a KongReferenceGrant in the Secret's namespace.
+
+    Scenario A: Secret and KonnectAPIAuthConfiguration in the same namespace. No grant needed;
+    APIAuthValid=True and the ResolvedRefs condition is absent.
+
+    Scenario B: Secret in secret_namespace, KonnectAPIAuthConfiguration in the test namespace.
+    Without a grant the configuration reports ResolvedRefs=False/RefNotPermitted and
+    APIAuthValid=False. Creating a KongReferenceGrant in secret_namespace makes it valid.
+
+    Scenario D: starting from Scenario B (APIAuthValid=True), deleting the KongReferenceGrant
+    reverts the KonnectAPIAuthConfiguration to ResolvedRefs=False/RefNotPermitted, validating
+    that the KongReferenceGrant watch is wired correctly.
 
   bindings:
     # Common bindings.
@@ -21,59 +39,237 @@ spec:
       value: (env('KONNECT_TOKEN'))
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
-    # Namespace bindings - use chainsaw $namespace as base
-    - name: auth_namespace  
-      value: ($namespace)
+    # Namespace bindings.
     - name: secret_namespace
-      value: (join('-', [($namespace), 'secret']))
-    # Resource bindings
-    - name: auth_secret_name
-      value: (join('-', [($namespace), 'cross-ns-secret']))
-    - name: konnect_auth_name
-      value: (join('-', [($namespace), 'cross-ns-auth']))
+      value: (join('-', [$namespace, 'secret']))
+    # Scenario A resource names (all in the test namespace).
+    - name: auth0_name
+      value: (join('-', [$namespace, 'auth0']))
+    - name: secret0_name
+      value: (join('-', [$namespace, 'secret0']))
+    # Scenario B resource names (Secret in secret_namespace, auth config in the test namespace).
+    - name: auth_name
+      value: (join('-', [$namespace, 'auth']))
+    - name: secret_name
+      value: (join('-', [$namespace, 'secret']))
+    - name: grant_name
+      value: (join('-', [$namespace, 'auth-to-secret']))
 
   steps:
-    # Step 1: Create the secret namespace.
-    - name: Create-secret-namespace
-      description: Create namespace for the secret.
-      use:
-        template: ../../common/_step_templates/apply-assert-namespace.yaml
-        with:
-          bindings:
-            - name: namespace_name
-              value: ($secret_namespace)
+    # =========================================================================
+    # Scenario A: Secret and KonnectAPIAuthConfiguration in the same namespace.
+    # No grant needed; ResolvedRefs condition is absent.
+    # =========================================================================
 
-    # Step 2: Create secret in the secret namespace.
-    - name: Create-cross-ns-secret
-      description: Create secret in the secret namespace.
+    - name: 1-create-secret-same-ns
+      description: Create the Konnect token Secret in the test namespace.
+      bindings:
+        - name: auth_secret_name
+          value: ($secret0_name)
+        - name: auth_secret_namespace
+          value: ($namespace)
       use:
         template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
-        with:
-          bindings:
-            - name: auth_secret_name
-              value: ($auth_secret_name)
-            - name: auth_secret_namespace
-              value: ($secret_namespace)
-            - name: konnect_token
-              value: ($konnect_token)
 
-    # Step 3: Create KonnectAPIAuthConfiguration in default namespace (should fail).
-    - name: Create-cross-ns-auth-config
-      description: Create KonnectAPIAuthConfiguration that references secret from different namespace.
+    - name: 2-create-auth-config-same-ns
+      description: Create KonnectAPIAuthConfiguration with a same-namespace secretRef. No grant needed.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              metadata:
+                name: ($auth0_name)
+                namespace: ($namespace)
+              spec:
+                type: secretRef
+                secretRef:
+                  name: ($secret0_name)
+                serverURL: ($konnect_url)
+
+    - name: 3-assert-auth-config-valid-same-ns
+      description: Assert APIAuthValid=True and that no ResolvedRefs condition is set for the same-namespace secretRef.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              metadata:
+                name: ($auth0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (length(conditions[?type == 'ResolvedRefs'])): 0
+
+    - name: 4-cleanup-scenario-a
+      description: Delete the same-namespace auth config; wait for it to be gone before proceeding.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              name: ($auth0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              metadata:
+                name: ($auth0_name)
+                namespace: ($namespace)
+
+    # =========================================================================
+    # Scenario B: Secret in secret_namespace, KonnectAPIAuthConfiguration in the
+    # test namespace. A KongReferenceGrant in secret_namespace is needed.
+    # =========================================================================
+
+    - name: 5-create-secret-namespace
+      description: Create the separate namespace for the Secret.
+      bindings:
+        - name: namespace_name
+          value: ($secret_namespace)
       use:
-        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
-        with:
-          bindings:
-            - name: konnect_auth_name
-              value: ($konnect_auth_name)
-            - name: konnect_auth_namespace
-              value: ($auth_namespace)
-            - name: auth_secret_name
-              value: ($auth_secret_name)
-            - name: auth_secret_namespace
-              value: ($secret_namespace)
-            - name: konnect_url
-              value: ($konnect_url)
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 6-create-secret-cross-ns
+      description: Create the Konnect token Secret in secret_namespace.
+      bindings:
+        - name: auth_secret_name
+          value: ($secret_name)
+        - name: auth_secret_namespace
+          value: ($secret_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: 7-create-auth-config-no-grant
+      description: Create KonnectAPIAuthConfiguration referencing the Secret in secret_namespace (no grant yet).
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              metadata:
+                name: ($auth_name)
+                namespace: ($namespace)
+              spec:
+                type: secretRef
+                secretRef:
+                  name: ($secret_name)
+                  namespace: ($secret_namespace)
+                serverURL: ($konnect_url)
+
+    - name: 8-assert-auth-config-grant-missing
+      description: Assert ResolvedRefs=False/RefNotPermitted and APIAuthValid=False because no grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              metadata:
+                name: ($auth_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'False'
+
+    - name: 9-create-auth-to-secret-grant
+      description: Create KongReferenceGrant in secret_namespace allowing KonnectAPIAuthConfiguration from the test namespace to reference the Secret.
+      bindings:
+        - name: kong_reference_grant_name
+          value: ($grant_name)
+        - name: kong_reference_grant_namespace
+          value: ($secret_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: core
+              kind: Secret
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 10-assert-auth-config-valid
+      description: Assert ResolvedRefs=True and APIAuthValid=True after the grant is in place.
+      timeouts:
+        assert: 90s
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              metadata:
+                name: ($auth_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+
+    # =========================================================================
+    # Scenario D: delete the grant and verify the KonnectAPIAuthConfiguration
+    # reverts to ResolvedRefs=False/RefNotPermitted (validates grant watch).
+    # =========================================================================
+
+    - name: 11-delete-auth-to-secret-grant
+      description: Delete the grant to verify the auth config reverts to RefNotPermitted.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: ($grant_name)
+              namespace: ($secret_namespace)
+
+    - name: 12-assert-auth-config-reverts-to-not-permitted
+      description: Assert the auth config transitions back to ResolvedRefs=False/RefNotPermitted after grant deletion.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              metadata:
+                name: ($auth_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 13-cleanup-scenario-b
+      description: Delete the cross-namespace auth config; wait for it to be gone.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              name: ($auth_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              metadata:
+                name: ($auth_name)
+                namespace: ($namespace)
 
   catch:
     # Capture debug snapshot on test failure for CI debugging.
