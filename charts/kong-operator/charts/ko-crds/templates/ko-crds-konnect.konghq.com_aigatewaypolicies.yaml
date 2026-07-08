@@ -210,7 +210,7 @@ spec:
                   secretRef:
                     description: |-
                       SecretRef is a reference to a Kubernetes Secret that contains the configuration for the AIGatewayPolicy.
-                      The `data` of the secret is used .
+                      The specified key in `data` of the secret is used .
                     properties:
                       key:
                         description: Key is the data key within the Secret.

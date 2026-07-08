@@ -15,7 +15,7 @@ type AIGatewayPolicyConfigFrom struct {
 	// +kubebuilder:validation:Enum=Secret
 	SourceType AIGatewayPolicyConfigSourceType `json:"type"`
 	// SecretRef is a reference to a Kubernetes Secret that contains the configuration for the AIGatewayPolicy.
-	// The `data` of the secret is used .
+	// The specified key in `data` of the secret is used .
 	// +optional
 	SecretRef *SensitiveDataSecretRef `json:"secretRef,omitempty"`
 }

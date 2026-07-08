@@ -1671,7 +1671,7 @@ Now it only supports sourcing from a Kubernetes Secret.
 | Field | Description |
 | --- | --- |
 | `type` _[AIGatewayPolicyConfigSourceType](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyconfigsourcetype)_ | SourceType specifies the type of the source of the configuration. Currently, only "Secret" is supported. |
-| `secretRef` _[SensitiveDataSecretRef](#konnect-konghq-com-v1alpha1-types-sensitivedatasecretref)_ | SecretRef is a reference to a Kubernetes Secret that contains the configuration for the AIGatewayPolicy. The `data` of the secret is used . |
+| `secretRef` _[SensitiveDataSecretRef](#konnect-konghq-com-v1alpha1-types-sensitivedatasecretref)_ | SecretRef is a reference to a Kubernetes Secret that contains the configuration for the AIGatewayPolicy. The specified key in `data` of the secret is used . |
 
 _Appears in:_
 
