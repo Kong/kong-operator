@@ -137,6 +137,292 @@ func TestAIGatewayIdentityProviderOpenIDConnect_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayMCPACLs_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPACLs
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPConversionTool_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPConversionTool
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerBaseACLPropertiesConsumer_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerBaseACLPropertiesConsumer
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerBaseACLPropertiesOauth_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerBaseACLPropertiesOauth
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerConversionListener_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerConversionListener
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerConversionOnly_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerConversionOnly
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerListener_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerListener
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerNoUpstreamConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerNoUpstreamConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerPassthroughListener_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerPassthroughListener
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerServerConfigBase_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerServerConfigBase
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServer_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerUpstreamServer
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerUpstreamServerConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerServerConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerUpstreamServerServerConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerWithUpstreamConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerWithUpstreamConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerWithUpstreamNoProxyConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerWithUpstreamNoProxyConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPToolAnnotations_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPToolAnnotations
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPToolBase_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPToolBase
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPToolParameter_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPToolParameter
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPUpstreamTool_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPUpstreamTool
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayModelAPI_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -683,6 +969,19 @@ func TestAIGatewayRedisAzureAuthentication_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayRedisCloudConfiguration_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayRedisCloudConfiguration
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayRedisGCPAuthentication_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1160,6 +1459,202 @@ func TestAIGatewayEmbeddingsModelConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	}
 }
 
+func TestAIGatewayMCPServerBaseACLPropertiesUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "consumer", payload: []byte("{\"aclAttributeType\":\"consumer\",\"consumer\":{}}")},
+		{name: "oauth_access_token", payload: []byte("{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerBaseACLProperties
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerBaseACLProperties: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayMCPServerConversionListenerAccessUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "consumer", payload: []byte("{\"aclAttributeType\":\"consumer\",\"consumer\":{}}")},
+		{name: "oauth_access_token", payload: []byte("{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerConversionListenerAccess
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerConversionListenerAccess: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayMCPServerListenerAccessUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "consumer", payload: []byte("{\"aclAttributeType\":\"consumer\",\"consumer\":{}}")},
+		{name: "oauth_access_token", payload: []byte("{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerListenerAccess
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerListenerAccess: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayMCPServerPassthroughListenerAccessUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "consumer", payload: []byte("{\"aclAttributeType\":\"consumer\",\"consumer\":{}}")},
+		{name: "oauth_access_token", payload: []byte("{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerPassthroughListenerAccess
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerPassthroughListenerAccess: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerAccessUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "consumer", payload: []byte("{\"aclAttributeType\":\"consumer\",\"consumer\":{}}")},
+		{name: "oauth_access_token", payload: []byte("{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerUpstreamServerAccess
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerUpstreamServerAccess: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerServerConfigToolsListAuthUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "credentials", payload: []byte("{\"type\":\"credentials\",\"credentials\":{}}")},
+		{name: "jwt", payload: []byte("{\"type\":\"jwt\",\"jwt\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerServerToolAuthConfigUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "credentials", payload: []byte("{\"type\":\"credentials\",\"credentials\":{}}")},
+		{name: "jwt", payload: []byte("{\"type\":\"jwt\",\"jwt\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerUpstreamServerServerToolAuthConfig
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerUpstreamServerServerToolAuthConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestAIGatewayModelAPIConfigBalancerUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1400,6 +1895,63 @@ func TestAIGatewayModelVectorDBConfigRedisPortUnmarshalJSON_NilReceiver(t *testi
 	}
 }
 
+func TestAIGatewayRedisCloudConfigurationCloudAuthenticationUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "aws", payload: []byte("{\"type\":\"aws\",\"aws\":{}}")},
+		{name: "azure", payload: []byte("{\"type\":\"azure\",\"azure\":{}}")},
+		{name: "gcp", payload: []byte("{\"type\":\"gcp\",\"gcp\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayRedisCloudConfigurationCloudAuthentication
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayRedisCloudConfigurationCloudAuthentication: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayRedisCloudConfigurationPortUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Variant1", payload: []byte("{\"type\":\"variant1\",\"variant1\":0}")},
+		{name: "Variant2", payload: []byte("{\"type\":\"variant2\",\"variant2\":\"\"}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayRedisCloudConfigurationPort
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayRedisCloudConfigurationPort: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestAIGatewayTargetConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1493,6 +2045,286 @@ func TestAIGatewayAgentAccessUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			t.Parallel()
 
 			var target AIGatewayAgentAccess
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayMCPServerConversionListenerUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		payload []byte
+		assert func(*testing.T, AIGatewayMCPServerConversionListener)
+	}{
+		{
+			name: "Access/consumer",
+			payload: []byte("{\"access\":{\"aclAttributeType\":\"consumer\",\"consumer\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerConversionListener) {
+				t.Helper()
+				if target.Access == nil {
+					t.Fatalf("Access should be allocated")
+				}
+				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerConversionListenerAccessTypeConsumer; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Access.Consumer == nil {
+					t.Fatalf("Access.Consumer should be allocated")
+				}
+			},
+		},
+		{
+			name: "Access/oauth_access_token",
+			payload: []byte("{\"access\":{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerConversionListener) {
+				t.Helper()
+				if target.Access == nil {
+					t.Fatalf("Access should be allocated")
+				}
+				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerConversionListenerAccessTypeOauth; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Access.Oauth == nil {
+					t.Fatalf("Access.Oauth should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerConversionListener
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayMCPServerListenerUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		payload []byte
+		assert func(*testing.T, AIGatewayMCPServerListener)
+	}{
+		{
+			name: "Access/consumer",
+			payload: []byte("{\"access\":{\"aclAttributeType\":\"consumer\",\"consumer\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListener) {
+				t.Helper()
+				if target.Access == nil {
+					t.Fatalf("Access should be allocated")
+				}
+				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerListenerAccessTypeConsumer; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Access.Consumer == nil {
+					t.Fatalf("Access.Consumer should be allocated")
+				}
+			},
+		},
+		{
+			name: "Access/oauth_access_token",
+			payload: []byte("{\"access\":{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListener) {
+				t.Helper()
+				if target.Access == nil {
+					t.Fatalf("Access should be allocated")
+				}
+				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerListenerAccessTypeOauth; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Access.Oauth == nil {
+					t.Fatalf("Access.Oauth should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerListener
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayMCPServerPassthroughListenerUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		payload []byte
+		assert func(*testing.T, AIGatewayMCPServerPassthroughListener)
+	}{
+		{
+			name: "Access/consumer",
+			payload: []byte("{\"access\":{\"aclAttributeType\":\"consumer\",\"consumer\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerPassthroughListener) {
+				t.Helper()
+				if target.Access == nil {
+					t.Fatalf("Access should be allocated")
+				}
+				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerPassthroughListenerAccessTypeConsumer; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Access.Consumer == nil {
+					t.Fatalf("Access.Consumer should be allocated")
+				}
+			},
+		},
+		{
+			name: "Access/oauth_access_token",
+			payload: []byte("{\"access\":{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerPassthroughListener) {
+				t.Helper()
+				if target.Access == nil {
+					t.Fatalf("Access should be allocated")
+				}
+				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerPassthroughListenerAccessTypeOauth; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Access.Oauth == nil {
+					t.Fatalf("Access.Oauth should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerPassthroughListener
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		payload []byte
+		assert func(*testing.T, AIGatewayMCPServerUpstreamServer)
+	}{
+		{
+			name: "Access/consumer",
+			payload: []byte("{\"access\":{\"aclAttributeType\":\"consumer\",\"consumer\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServer) {
+				t.Helper()
+				if target.Access == nil {
+					t.Fatalf("Access should be allocated")
+				}
+				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerUpstreamServerAccessTypeConsumer; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Access.Consumer == nil {
+					t.Fatalf("Access.Consumer should be allocated")
+				}
+			},
+		},
+		{
+			name: "Access/oauth_access_token",
+			payload: []byte("{\"access\":{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServer) {
+				t.Helper()
+				if target.Access == nil {
+					t.Fatalf("Access should be allocated")
+				}
+				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerUpstreamServerAccessTypeOauth; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Access.Oauth == nil {
+					t.Fatalf("Access.Oauth should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerUpstreamServer
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayMCPServerUpstreamServerServerConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		payload []byte
+		assert func(*testing.T, AIGatewayMCPServerUpstreamServerServerConfig)
+	}{
+		{
+			name: "ToolsListAuth/credentials",
+			payload: []byte("{\"toolsListAuth\":{\"type\":\"credentials\",\"credentials\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServerServerConfig) {
+				t.Helper()
+				if target.ToolsListAuth == nil {
+					t.Fatalf("ToolsListAuth should be allocated")
+				}
+				if got, want := target.ToolsListAuth.Type, AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeCredentials; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.ToolsListAuth.Credentials == nil {
+					t.Fatalf("ToolsListAuth.Credentials should be allocated")
+				}
+			},
+		},
+		{
+			name: "ToolsListAuth/jwt",
+			payload: []byte("{\"toolsListAuth\":{\"type\":\"jwt\",\"jwt\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServerServerConfig) {
+				t.Helper()
+				if target.ToolsListAuth == nil {
+					t.Fatalf("ToolsListAuth should be allocated")
+				}
+				if got, want := target.ToolsListAuth.Type, AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeJwt; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.ToolsListAuth.Jwt == nil {
+					t.Fatalf("ToolsListAuth.Jwt should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerUpstreamServerServerConfig
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}
@@ -1981,6 +2813,110 @@ func TestAIGatewayModelVectorDBConfigRedisUnmarshalJSON_DecodesUnionFields(t *te
 			t.Parallel()
 
 			var target AIGatewayModelVectorDBConfigRedis
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayRedisCloudConfigurationUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		payload []byte
+		assert func(*testing.T, AIGatewayRedisCloudConfiguration)
+	}{
+		{
+			name: "CloudAuthentication/aws",
+			payload: []byte("{\"cloudAuthentication\":{\"type\":\"aws\",\"aws\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
+				t.Helper()
+				if target.CloudAuthentication == nil {
+					t.Fatalf("CloudAuthentication should be allocated")
+				}
+				if got, want := target.CloudAuthentication.Type, AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAWS; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.CloudAuthentication.AWS == nil {
+					t.Fatalf("CloudAuthentication.AWS should be allocated")
+				}
+			},
+		},
+		{
+			name: "CloudAuthentication/azure",
+			payload: []byte("{\"cloudAuthentication\":{\"type\":\"azure\",\"azure\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
+				t.Helper()
+				if target.CloudAuthentication == nil {
+					t.Fatalf("CloudAuthentication should be allocated")
+				}
+				if got, want := target.CloudAuthentication.Type, AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAzure; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.CloudAuthentication.Azure == nil {
+					t.Fatalf("CloudAuthentication.Azure should be allocated")
+				}
+			},
+		},
+		{
+			name: "CloudAuthentication/gcp",
+			payload: []byte("{\"cloudAuthentication\":{\"type\":\"gcp\",\"gcp\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
+				t.Helper()
+				if target.CloudAuthentication == nil {
+					t.Fatalf("CloudAuthentication should be allocated")
+				}
+				if got, want := target.CloudAuthentication.Type, AIGatewayRedisCloudConfigurationCloudAuthenticationTypeGCP; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.CloudAuthentication.GCP == nil {
+					t.Fatalf("CloudAuthentication.GCP should be allocated")
+				}
+			},
+		},
+		{
+			name: "Port/Variant1",
+			payload: []byte("{\"port\":{\"type\":\"variant1\",\"variant1\":0}}"),
+			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
+				t.Helper()
+				if target.Port == nil {
+					t.Fatalf("Port should be allocated")
+				}
+				if got, want := target.Port.Type, AIGatewayRedisCloudConfigurationPortTypeVariant1; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Port.Variant1 == nil {
+					t.Fatalf("Port.Variant1 should be allocated")
+				}
+			},
+		},
+		{
+			name: "Port/Variant2",
+			payload: []byte("{\"port\":{\"type\":\"variant2\",\"variant2\":\"\"}}"),
+			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
+				t.Helper()
+				if target.Port == nil {
+					t.Fatalf("Port should be allocated")
+				}
+				if got, want := target.Port.Type, AIGatewayRedisCloudConfigurationPortTypeVariant2; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Port.Variant2 == nil {
+					t.Fatalf("Port.Variant2 should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayRedisCloudConfiguration
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

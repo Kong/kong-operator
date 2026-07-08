@@ -4,6 +4,7 @@ package ops
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -36,36 +37,25 @@ func createAIGatewayIdentityProvider(
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	var id string
-	if id == "" && resp.AIGatewayIdentityProvider.AIGatewayIdentityProviderKeyAuthAIGatewayIdentityProviderKeyAuthConfig != nil {
-		switch extractedID := any(resp.AIGatewayIdentityProvider.AIGatewayIdentityProviderKeyAuthAIGatewayIdentityProviderKeyAuthConfig.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
+	// The response is a (possibly multi-level) discriminated union. Its
+	// MarshalJSON already flattens every nesting level down to the real API
+	// JSON shape, so round-tripping through JSON is the simplest reliable way
+	// to read the "id" field regardless of how deep the union nesting goes.
+	respRootUnionJSON, err := json.Marshal(resp.AIGatewayIdentityProvider)
+	if err != nil {
+		return fmt.Errorf("failed extracting Konnect ID for %s: %w", obj.GetTypeName(), err)
 	}
-	if id == "" && resp.AIGatewayIdentityProvider.AIGatewayIdentityProviderOpenIDConnectAIGatewayIdentityProviderOpenIDConnectConfig != nil {
-		switch extractedID := any(resp.AIGatewayIdentityProvider.AIGatewayIdentityProviderOpenIDConnectAIGatewayIdentityProviderOpenIDConnectConfig.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
+	var respRootUnionID struct {
+		ID string `json:"id"`
 	}
-	if id == "" {
+	if err := json.Unmarshal(respRootUnionJSON, &respRootUnionID); err != nil {
+		return fmt.Errorf("failed extracting Konnect ID for %s: %w", obj.GetTypeName(), err)
+	}
+	if respRootUnionID.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	obj.SetKonnectID(id)
+	obj.SetKonnectID(respRootUnionID.ID)
 	return nil
 }
 

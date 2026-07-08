@@ -33,6 +33,8 @@ func reconciliationWatchOptionsForEntity[
 		return AIGatewayDataPlaneCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.AIGatewayIdentityProvider:
 		return AIGatewayIdentityProviderReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayMCPServer:
+		return AIGatewayMCPServerReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.AIGatewayModel:
 		return AIGatewayModelReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.AIGatewayModelProvider:

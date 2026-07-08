@@ -53,6 +53,8 @@ func getForUID[
 		return getAIGatewayDataPlaneCertificateForUID(ctx, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.AIGatewayIdentityProvider:
 		return getAIGatewayIdentityProviderForUID(ctx, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
+	case *konnectv1alpha1.AIGatewayMCPServer:
+		return getAIGatewayMCPServerForUID(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:
 		return getAIGatewayModelForUID(ctx, sdk.GetAIGatewayModelsSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModelProvider:

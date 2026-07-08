@@ -432,6 +432,27 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
 
+      - path: /v1/ai-gateways/{gatewayId}/mcp-servers
+        name: AIGatewayMCPServer
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayMCPServersSDK
+            fieldName: AIGatewayMCPServers
+          # List responses are root unions whose wrapper does not expose top-level
+          # GetID/GetLabels accessors, so conflict lookup stays hand-written for now.
+          skipGetForUID: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayMCPServerRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayMCPServerRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
       # AIGatewayConsumerCredential is a child of AIGatewayConsumer. Credentials
       # only obtain a Konnect ID once associated with a consumer, so they are
       # modelled as a separate resource that references the consumer (analogous to

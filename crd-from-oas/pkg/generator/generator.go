@@ -2326,7 +2326,13 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 			marshalTestTypes = append(marshalTestTypes, goName)
 		}
 
-		if hasRefVariants(schema.OneOf) && schema.Discriminator != "" {
+		// A schema with both root-level oneOf and its own properties is flattened
+		// into a plain struct by generateSchemaTypes (its "len(schema.Properties) > 0"
+		// case takes priority over the discriminated-union case), so it gets no
+		// MarshalJSON/UnmarshalJSON. Only emit root-union tests when the type
+		// generator actually produced a union wrapper, i.e. when there are no
+		// properties alongside the oneOf.
+		if len(schema.Properties) == 0 && hasRefVariants(schema.OneOf) && schema.Discriminator != "" {
 			rootSpec := buildUnionFieldSpec(goName, goName, refName, &parser.Property{
 				Name:                 goName,
 				OneOf:                schema.OneOf,
