@@ -313,6 +313,7 @@ type WatchableEntityType interface {
 		konnectv1alpha1.AIGatewayModel |
 		konnectv1alpha1.AIGatewayProvider |
 		konnectv1alpha1.AIGatewayPolicy |
+		konnectv1alpha1.AIGatewayAgent |
 		konnectv1alpha1.KonnectEventGateway |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayListener |

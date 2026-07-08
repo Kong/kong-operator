@@ -11,6 +11,7 @@ func generatedControllersForKonnectEntities(
 	controllerFactory konnectControllerFactory,
 ) []ControllerDef {
 	return []ControllerDef{
+		newKonnectEntityController[konnectv1alpha1.AIGatewayAgent](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.AIGatewayControlPlane](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.AIGatewayDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.AIGatewayModel](controllerFactory),

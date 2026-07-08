@@ -450,6 +450,7 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
+  - aigatewayagents
   - aigatewaycontrolplanes
   - aigatewaymodels
   - aigatewaypolicies
@@ -476,6 +477,8 @@ rules:
 - apiGroups:
   - konnect.konghq.com
   resources:
+  - aigatewayagents/finalizers
+  - aigatewayagents/status
   - aigatewaycontrolplanes/finalizers
   - aigatewaycontrolplanes/status
   - aigatewaymodels/finalizers

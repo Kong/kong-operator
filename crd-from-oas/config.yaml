@@ -345,6 +345,24 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
 
+      - path: /v1/ai-gateways/{gatewayId}/agents
+        name: AIGatewayAgent
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayAgentsSDK
+            fieldName: AIGatewayAgents
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: AIGatewayControlPlane
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
       # Event Gateway APIs
       - path: /v1/event-gateways
         name: KonnectEventGateway
