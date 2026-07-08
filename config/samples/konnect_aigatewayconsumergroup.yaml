@@ -23,6 +23,31 @@ spec:
     authRef:
       name: konnect-api-auth
 ---
+kind: AIGatewayPolicy
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: aigw-policy-prompt-decorator
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: aigw-policy-prompt-decorator
+    displayName: AI Gateway Policy Prompt Decorator
+    type: ai-prompt-decorator
+    enabled: Enabled
+    global: Disabled
+    config:
+      llm_format: openai
+      max_request_body_size: 8388608
+      prompts:
+        append: null
+        prepend:
+        - content: In short words
+          role: user
+---
 kind: AIGatewayConsumerGroup
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
@@ -37,6 +62,6 @@ spec:
     name: dev-users
     displayName: Dev Users Group
     policies:
-      - pii-sanitizer-policy
+      - aigw-policy-prompt-decorator
     labels:
       tier: development
