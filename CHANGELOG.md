@@ -102,6 +102,8 @@
   reconcilers. Credentials are modelled as a separate resource referencing the
   consumer, mirroring the Konnect API hierarchy.
   [#4804](https://github.com/Kong/kong-operator/pull/4804)
+  - introduce `AIGatewayConsumerGroup` CRD with reconciler.
+  [#4822](https://github.com/Kong/kong-operator/pull/4822)
 - GRPCRoute: enable GRPCRoute for on-prem gateway
   [#4364](https://github.com/Kong/kong-operator/pull/4364)
 
