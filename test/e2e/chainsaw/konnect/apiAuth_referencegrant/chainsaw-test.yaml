@@ -89,8 +89,6 @@ spec:
 
     - name: 3-assert-auth-config-valid-same-ns
       description: Assert APIAuthValid=True and that no ResolvedRefs condition is set for the same-namespace secretRef.
-      timeouts:
-        assert: 90s
       try:
         - assert:
             resource:
@@ -107,9 +105,6 @@ spec:
 
     - name: 4-cleanup-scenario-a
       description: Delete the same-namespace auth config; wait for it to be gone before proceeding.
-      timeouts:
-        delete: 120s
-        error: 120s
       try:
         - delete:
             ref:
@@ -203,8 +198,6 @@ spec:
 
     - name: 10-assert-auth-config-valid
       description: Assert ResolvedRefs=True and APIAuthValid=True after the grant is in place.
-      timeouts:
-        assert: 90s
       try:
         - assert:
             resource:
@@ -253,9 +246,6 @@ spec:
 
     - name: 13-cleanup-scenario-b
       description: Delete the cross-namespace auth config; wait for it to be gone.
-      timeouts:
-        delete: 120s
-        error: 120s
       try:
         - delete:
             ref:
