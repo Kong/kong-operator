@@ -34,7 +34,7 @@ spec:
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
-    name: aigw-policy-prompt-decorator
+    name: konnect-prompt-decorator-policy
     displayName: AI Gateway Policy Prompt Decorator
     type: ai-prompt-decorator
     enabled: Enabled
@@ -61,7 +61,10 @@ spec:
   apiSpec:
     name: dev-users
     displayName: Dev Users Group
+    # TODO: Replace this Konnect policy-name reference with a cross-object
+    # AIGatewayPolicy reference once supported.
+    # See https://github.com/Kong/kong-operator/issues/4831.
     policies:
-      - aigw-policy-prompt-decorator
+      - konnect-prompt-decorator-policy
     labels:
       tier: development
