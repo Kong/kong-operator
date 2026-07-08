@@ -60,7 +60,7 @@ func TestHelmUpgrade(t *testing.T) {
 	// This is the latest Chart available publicly (used by actual users) that we can upgrade from.
 	const (
 		lastReleasedChart        = "oci://docker.io/kong/kong-operator-chart"
-		lastReleasedChartVersion = "1.3.0" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
+		lastReleasedChartVersion = "1.3.1" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
 	)
 	// This is the Chart and image from current state of the repository that we want to upgrade to.
 	// Image has to be loaded into the cluster beforehand and specified via KONG_TEST_KONG_OPERATOR_IMAGE_LOAD
