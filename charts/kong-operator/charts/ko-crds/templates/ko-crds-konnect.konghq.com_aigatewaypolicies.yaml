@@ -196,6 +196,9 @@ spec:
                     maxLength: 253
                     minLength: 1
                     type: string
+                    x-kubernetes-validations:
+                    - message: policy type is immutable
+                      rule: self == oldSelf
                 required:
                 - config
                 - displayName

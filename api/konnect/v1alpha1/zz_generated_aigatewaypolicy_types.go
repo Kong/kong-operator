@@ -127,6 +127,7 @@ type AIGatewayPolicyAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="policy type is immutable"
 	Type string `json:"type,omitzero"`
 }
 

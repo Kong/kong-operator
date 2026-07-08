@@ -534,6 +534,12 @@ apiGroupVersions:
         reconciler: {}
       - path: /v1/ai-gateways/{gatewayId}/policies
         name: AIGatewayPolicy
+        cel:
+          spec:
+            apiSpec:
+              type:
+                _validations:
+                  - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"policy type is immutable\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayPoliciesSDK
