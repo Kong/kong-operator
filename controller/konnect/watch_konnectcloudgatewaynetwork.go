@@ -50,10 +50,8 @@ func enqueueKonnectCloudGatewayNetworkForKonnectAPIAuthConfiguration(
 		}
 		var l konnectv1alpha1.KonnectCloudGatewayNetworkList
 		if err := cl.List(ctx, &l,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(auth.GetNamespace()),
 			client.MatchingFields{
-				index.IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration: auth.Name,
+				index.IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration: auth.Namespace + "/" + auth.Name,
 			},
 		); err != nil {
 			return nil

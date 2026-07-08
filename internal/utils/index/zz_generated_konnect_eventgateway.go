@@ -33,5 +33,11 @@ func konnectEventGatewayAPIAuthConfigurationRef(object client.Object) []string {
 		return nil
 	}
 
-	return []string{ent.GetNamespace() + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+	namespace := ent.GetNamespace()
+	if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace != nil &&
+		*ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace != "" {
+		namespace = *ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace
+	}
+
+	return []string{namespace + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
 }

@@ -380,7 +380,8 @@ func (obj *{{.EntityName}}) Set{{.ParentStatusEntityName}}ID(id string) {
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
 func (obj *{{.EntityName}}) GetKonnectAPIAuthConfigurationRef() {{.KonnectAPIAuthConfigurationRefType}} {
 	return {{.KonnectAPIAuthConfigurationRefType}}{
-		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Name:      obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Namespace: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace,
 	}
 }
 {{- end}}

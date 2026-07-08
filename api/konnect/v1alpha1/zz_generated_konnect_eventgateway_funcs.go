@@ -78,6 +78,7 @@ func (obj *KonnectEventGateway) SetConditions(conditions []metav1.Condition) {
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
 func (obj *KonnectEventGateway) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
 	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Name:      obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Namespace: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace,
 	}
 }

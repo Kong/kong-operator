@@ -8,6 +8,14 @@ type KonnectAPIAuthConfigurationRef struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name"`
+
+	// Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+	// If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Namespace *string `json:"namespace,omitempty"`
 }
 
 // ControlPlaneKonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration resource

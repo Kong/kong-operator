@@ -151,7 +151,9 @@ func TestGenerateIndex_UsesNamespacedAPIAuthKey(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, content, `if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {`)
-	assert.Contains(t, content, `return []string{ent.GetNamespace() + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}`)
+	assert.Contains(t, content, `namespace := ent.GetNamespace()`)
+	assert.Contains(t, content, `namespace = *ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace`)
+	assert.Contains(t, content, `return []string{namespace + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}`)
 }
 
 func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
@@ -737,6 +739,7 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `func (obj *Portal) GetConditions() []metav1.Condition {`)
 		assert.Contains(t, content, `func (obj *Portal) SetConditions(conditions []metav1.Condition) {`)
 		assert.Contains(t, content, `func (obj *Portal) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {`)
+		assert.Contains(t, content, `Namespace: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace,`)
 	})
 
 	t.Run("non-root reconciler entities omit auth accessors", func(t *testing.T) {
