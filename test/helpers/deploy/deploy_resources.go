@@ -378,40 +378,6 @@ func KonnectGatewayControlPlaneWithID(
 	return cp
 }
 
-// AIGatewayControlPlane deploys an AIGatewayControlPlane resource and returns it.
-func AIGatewayControlPlane(
-	t *testing.T,
-	ctx context.Context,
-	cl client.Client,
-	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
-	opts ...ObjOption,
-) *konnectv1alpha1.AIGatewayControlPlane {
-	t.Helper()
-
-	cp := &konnectv1alpha1.AIGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "agcp-",
-		},
-		Spec: konnectv1alpha1.AIGatewayControlPlaneSpec{
-			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-					Name: apiAuth.Name,
-				},
-			},
-			APISpec: konnectv1alpha1.AIGatewayControlPlaneAPISpec{
-				Name:        "test-agcp",
-				DisplayName: "Test AI Gateway CP",
-			},
-		},
-	}
-	for _, opt := range opts {
-		opt(cp)
-	}
-	require.NoError(t, cl.Create(ctx, cp))
-	logObjectCreate(t, cp)
-	return cp
-}
-
 // AIGatewayControlPlaneWithID deploys an AIGatewayControlPlane resource and returns it.
 // The Status ID and Programmed condition are set on the CP using a status Update() call.
 // It can be useful where the reconciler for AIGatewayControlPlane is not started
