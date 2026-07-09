@@ -20,6 +20,7 @@ import (
 func TestGetAPIAuthRef(t *testing.T) {
 	const (
 		namespace          = "default"
+		apiAuthNamespace   = "konnect"
 		apiAuthName        = "api-auth"
 		portalName         = "portal"
 		eventGatewayName   = "event-gateway"
@@ -60,6 +61,29 @@ func TestGetAPIAuthRef(t *testing.T) {
 				})
 			},
 			wantNN: wantAPIAuth,
+		},
+		{
+			name: "event gateway child resolves cross-namespace API auth via event gateway parent with grant",
+			objects: []client.Object{
+				newTestAPIAuthConfiguration(apiAuthNamespace, apiAuthName),
+				newTestEventGatewayWithAPIAuthNamespace(namespace, eventGatewayName, apiAuthName, apiAuthNamespace),
+				newTestAPIAuthReferenceGrant(namespace, apiAuthNamespace, "KonnectEventGateway"),
+			},
+			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
+				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayBackendCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      backendClusterName,
+						Namespace: namespace,
+					},
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
+						GatewayRef: testNamespacedObjectRef(eventGatewayName),
+					},
+				})
+			},
+			wantNN: types.NamespacedName{
+				Namespace: apiAuthNamespace,
+				Name:      apiAuthName,
+			},
 		},
 		{
 			name: "event gateway child resolves API auth via event gateway parent",
@@ -195,9 +219,11 @@ func TestGetAPIAuthRef(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			s := scheme.Get()
 			cl := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+				WithScheme(s).
 				WithObjects(tc.objects...).
+				WithInterceptorFuncs(populateGVKOnGet(s)).
 				Build()
 
 			nn, err := tc.resolve(t.Context(), cl)
@@ -371,6 +397,15 @@ func newTestPortal(namespace, name, apiAuthName string) *konnectv1alpha1.Portal 
 }
 
 func newTestEventGateway(namespace, name, apiAuthName string) *konnectv1alpha1.KonnectEventGateway { //nolint:unparam
+	return newTestEventGatewayWithAPIAuthNamespace(namespace, name, apiAuthName, "")
+}
+
+func newTestEventGatewayWithAPIAuthNamespace(namespace, name, apiAuthName, apiAuthNamespace string) *konnectv1alpha1.KonnectEventGateway {
+	var authNamespace *string
+	if apiAuthNamespace != "" {
+		authNamespace = &apiAuthNamespace
+	}
+
 	return &konnectv1alpha1.KonnectEventGateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -379,7 +414,8 @@ func newTestEventGateway(namespace, name, apiAuthName string) *konnectv1alpha1.K
 		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-					Name: apiAuthName,
+					Name:      apiAuthName,
+					Namespace: authNamespace,
 				},
 			},
 		},
@@ -455,6 +491,30 @@ func testNamespacedObjectRef(name string) commonv1alpha1.ObjectRef {
 		Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 		NamespacedRef: &commonv1alpha1.NamespacedRef{
 			Name: name,
+		},
+	}
+}
+
+func newTestAPIAuthReferenceGrant(fromNamespace, toNamespace, fromKind string) *configurationv1alpha1.KongReferenceGrant {
+	return &configurationv1alpha1.KongReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "allow-api-auth",
+			Namespace: toNamespace,
+		},
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{
+				{
+					Group:     configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+					Kind:      configurationv1alpha1.Kind(fromKind),
+					Namespace: configurationv1alpha1.Namespace(fromNamespace),
+				},
+			},
+			To: []configurationv1alpha1.ReferenceGrantTo{
+				{
+					Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+					Kind:  "KonnectAPIAuthConfiguration",
+				},
+			},
 		},
 	}
 }

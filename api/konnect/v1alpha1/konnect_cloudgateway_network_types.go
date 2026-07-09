@@ -118,7 +118,8 @@ type KonnectCloudGatewayNetworkStatus struct {
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
 func (c *KonnectCloudGatewayNetwork) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
 	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-		Name: c.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Name:      c.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Namespace: c.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace,
 	}
 }
 

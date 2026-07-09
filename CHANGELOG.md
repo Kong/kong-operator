@@ -83,6 +83,9 @@
 
 ### Added
 
+- Konnect: allow root Konnect entities to reference `KonnectAPIAuthConfiguration`
+  resources across namespaces using `authRef.namespace` and `KongReferenceGrant`.
+  [#4839](https://github.com/Kong/kong-operator/pull/4839)
 - API: expose `trafficDistribution` and `internalTrafficPolicy` in `DataPlane`,
   `GatewayConfiguration` and `KegDataPlane` `ServiceOptions`. Both fields are
   propagated to the managed Kubernetes Service during reconciliation.
