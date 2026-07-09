@@ -5,6 +5,11 @@ set -Eeuo pipefail
 # It's highly inspired by https://github.com/tianon/gosu/blob/9dc5d8d7556e44d382b9f71734197b5071682c31/govulncheck-with-excludes.sh.
 # When govulncheck supports excluding vulnerabilities, this script should be removed: https://github.com/golang/go/issues/59507
 
+# Line-numbered trace prefix and an ERR trap so a failure (e.g. from jq) points
+# at the exact line without needing to hand-add "set -x" to debug it.
+export PS4='+ ${BASH_SOURCE##*/}:${LINENO}: '
+trap 'echo "govulncheck-with-excludes.sh: error at line ${LINENO} (exit $?)" >&2' ERR
+
 excludeVulns="$(jq -nc '[
 
   # Kubernetes kube-apiserver Vulnerable to Race Condition
@@ -30,7 +35,13 @@ excludeVulns="$(jq -nc '[
   # The affected docker cp and archive code paths are not used by the operator.
   "GO-2026-5617",
   "GO-2026-5668",
-  "GO-2026-5746"
+  "GO-2026-5746",
+
+  # The golang.org/x/crypto/openpgp package is unsafe by design, has numerous
+  # known security issues, is not maintained, and should not be used.
+  # If you are required to interoperate with OpenPGP systems and need a maintained package,
+  # consider github.com/ProtonMail/go-crypto/openpgp which is a maintained fork.
+  "GO-2026-5932"
 
 ]')"
 export excludeVulns
@@ -75,7 +86,7 @@ vulns="$(jq --arg filter_by "$filter_by" <<<"$json" -cs '
   )
   | unique
   | map($meta[.])
-')"
+' || exit 1)"
 if [ "$(jq <<<"$vulns" -r 'length')" -le 0 ]; then
   printf '%s\n' "$out"
   exit 1
@@ -87,9 +98,11 @@ filtered="$(jq <<<"$vulns" -c '
     .id as $id
     | $exclude | index($id) | not
   ))
-')"
+' || exit 1)"
 
-text="$(jq <<<"$filtered" -r 'map("- \(.id) (aka \(.aliases | join(", ")))\n\n\t\(.details | gsub("\n"; "\n\t"))") | join("\n\n")')"
+# .aliases is absent on some OSV entries (e.g. GO-2026-5932), default to [] so
+# "join" does not choke on null ("Cannot iterate over null (null)").
+text="$(jq <<<"$filtered" -r 'map("- \(.id) (aka \((.aliases // []) | join(", ")))\n\n\t\(.details | gsub("\n"; "\n\t"))") | join("\n\n")' || exit 1)"
 
 if [ -z "$text" ]; then
   printf 'No vulnerabilities found.\n'

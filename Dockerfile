@@ -2,7 +2,7 @@
 # Builder
 # ------------------------------------------------------------------------------
 
-FROM --platform=$BUILDPLATFORM golang:1.25.11@sha256:4a2f22aa4a8f4779956bca7a6b7a84b41813e564d9dcf5a57ec3d582ffc20e13 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25.12@sha256:d7912cedddfa15b2900a8dfb7187df0af5ec2cb424a371139b5b352fd3e6b740 AS builder
 
 WORKDIR /workspace
 ARG GOPATH
