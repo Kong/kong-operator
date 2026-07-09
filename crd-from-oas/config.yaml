@@ -36,7 +36,7 @@ apiGroupVersions:
           delete: {}
         reconciler:
           parentEntityGVK:
-            kind: AIGatewayControlPlane
+            kind: KonnectAIGateway
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
@@ -260,7 +260,7 @@ apiGroupVersions:
     types:
       # AI Gateway APIs
       - path: /v1/ai-gateways
-        name: AIGatewayControlPlane
+        name: KonnectAIGateway
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewaysSDK
@@ -298,7 +298,7 @@ apiGroupVersions:
           delete: {}
         reconciler:
           parentEntityGVK:
-            kind: AIGatewayControlPlane
+            kind: KonnectAIGateway
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
@@ -340,7 +340,7 @@ apiGroupVersions:
           delete: {}
         reconciler:
           parentEntityGVK:
-            kind: AIGatewayControlPlane
+            kind: KonnectAIGateway
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
@@ -358,7 +358,7 @@ apiGroupVersions:
           delete: {}
         reconciler:
           parentEntityGVK:
-            kind: AIGatewayControlPlane
+            kind: KonnectAIGateway
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
@@ -380,7 +380,7 @@ apiGroupVersions:
           delete: {}
         reconciler:
           parentEntityGVK:
-            kind: AIGatewayControlPlane
+            kind: KonnectAIGateway
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
@@ -405,7 +405,7 @@ apiGroupVersions:
           delete: {}
         reconciler:
           parentEntityGVK:
-            kind: AIGatewayControlPlane
+            kind: KonnectAIGateway
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
@@ -442,7 +442,7 @@ apiGroupVersions:
             kind: AIGatewayConsumer
             group: konnect.konghq.com
           ancestorEntityGVKs:
-            - kind: AIGatewayControlPlane
+            - kind: KonnectAIGateway
               group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayConsumerRef
@@ -629,7 +629,7 @@ apiGroupVersions:
           delete: {}
         reconciler:
           parentEntityGVK:
-            kind: AIGatewayControlPlane
+            kind: KonnectAIGateway
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef

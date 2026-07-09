@@ -42,9 +42,9 @@ type portalRefAccessor interface {
 	GetPortalRef() commonv1alpha1.ObjectRef
 }
 
-type aiGatewayRefAccessor interface {
+type konnectAIGatewayRefAccessor interface {
 	objectWithParentRef
-	GetAIGatewayControlPlaneRef() commonv1alpha1.ObjectRef
+	GetKonnectAIGatewayRef() commonv1alpha1.ObjectRef
 }
 
 type aiGatewayConsumerRefAccessor interface {
@@ -68,11 +68,11 @@ func getAPIAuthRef[
 	// TODO: make this generic for all root dependent entities.
 
 	// AIGateway
-	if obj, ok := any(ent).(aiGatewayRefAccessor); ok {
-		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.AIGatewayControlPlane](ctx, cl, obj, obj.GetParentRef())
+	if obj, ok := any(ent).(konnectAIGatewayRefAccessor); ok {
+		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.KonnectAIGateway](ctx, cl, obj, obj.GetParentRef())
 	}
 	if obj, ok := any(ent).(aiGatewayDataPlaneRefAccessor); ok {
-		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.AIGatewayControlPlane](ctx, cl, obj, obj.GetParentRef())
+		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.KonnectAIGateway](ctx, cl, obj, obj.GetParentRef())
 	}
 	if obj, ok := any(ent).(aiGatewayConsumerRefAccessor); ok {
 		return getAPIAuthRefViaAIGatewayConsumer(ctx, cl, obj)
@@ -158,7 +158,7 @@ func getAPIAuthRefViaAIGatewayConsumer(
 ) (types.NamespacedName, error) {
 	return getAPIAuthRefViaParent[
 		konnectv1alpha1.AIGatewayConsumer,
-		konnectv1alpha1.AIGatewayControlPlane,
+		konnectv1alpha1.KonnectAIGateway,
 	](ctx, cl, obj)
 }
 

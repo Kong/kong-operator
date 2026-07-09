@@ -64,7 +64,7 @@ spec:
             description: AIGatewayConsumerSpec defines the desired state of AIGatewayConsumer.
             properties:
               aiGatewayRef:
-                description: AIGatewayRef is the reference to the parent AIGatewayControlPlane
+                description: AIGatewayRef is the reference to the parent KonnectAIGateway
                   object.
                 properties:
                   konnectID:

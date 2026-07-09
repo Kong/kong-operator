@@ -19,7 +19,7 @@ func createAIGatewayPolicy(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: CreateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: CreateOp}
 	}
 	req, err := obj.Spec.APISpec.ToCreateAIGatewayPolicyRequest()
 	if err != nil {
@@ -46,7 +46,7 @@ func updateAIGatewayPolicy(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: UpdateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 	req, err := obj.Spec.APISpec.ToUpdateAIGatewayPolicyRequest()
@@ -75,7 +75,7 @@ func deleteAIGatewayPolicy(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: DeleteOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: DeleteOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 
@@ -93,7 +93,7 @@ func getAIGatewayPolicyForUID(
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: GetOp}
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
 	}
 
 	// TODO: pass a Filter to ListAiGatewayPolicies (e.g. by name/labels) so we

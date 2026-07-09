@@ -49,8 +49,6 @@ func getForUID[
 		return getAIGatewayConsumerCredentialForUID(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumerGroup:
 		return getAIGatewayConsumerGroupForUID(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
-	case *konnectv1alpha1.AIGatewayControlPlane:
-		return getAIGatewayControlPlaneForUID(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return getAIGatewayDataPlaneCertificateForUID(ctx, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:
@@ -75,6 +73,8 @@ func getForUID[
 		return getEventGatewayVirtualClusterPolicyForUID(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return getEventGatewayVirtualClusterProducePolicyForUID(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
+	case *konnectv1alpha1.KonnectAIGateway:
+		return getKonnectAIGatewayForUID(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return getKonnectEventGatewayForUID(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:

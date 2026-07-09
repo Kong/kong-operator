@@ -23,9 +23,9 @@ import (
 )
 
 const (
-	// IndexFieldAIGatewayDataPlaneOnAIGatewayControlPlane is the index field for
-	// AIGatewayDataPlane -> AIGatewayControlPlane (via spec.controlPlaneRef.konnectNamespacedRef.name).
-	IndexFieldAIGatewayDataPlaneOnAIGatewayControlPlane = "aiGatewayDataPlaneAIGatewayControlPlaneRef"
+	// IndexFieldAIGatewayDataPlaneOnKonnectAIGateway is the index field for
+	// AIGatewayDataPlane -> KonnectAIGateway (via spec.controlPlaneRef.konnectNamespacedRef.name).
+	IndexFieldAIGatewayDataPlaneOnKonnectAIGateway = "aiGatewayDataPlaneKonnectAIGatewayRef"
 )
 
 // OptionsForAIGatewayDataPlane returns required Index options for the AIGatewayDataPlane controller.
@@ -33,7 +33,7 @@ func OptionsForAIGatewayDataPlane() []Option {
 	return []Option{
 		{
 			Object:         &aigatewayv1alpha1.AIGatewayDataPlane{},
-			Field:          IndexFieldAIGatewayDataPlaneOnAIGatewayControlPlane,
+			Field:          IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
 			ExtractValueFn: aiGatewayDataPlaneControlPlaneRef,
 		},
 	}

@@ -26,9 +26,9 @@ func AIGatewayDataPlaneCertificateReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.AIGatewayControlPlane{},
+				&konnectv1alpha1.KonnectAIGateway{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueAIGatewayDataPlaneCertificateForAIGatewayControlPlane(cl),
+					enqueueAIGatewayDataPlaneCertificateForKonnectAIGateway(cl),
 				),
 			)
 		},
@@ -43,17 +43,17 @@ func AIGatewayDataPlaneCertificateReconciliationWatchOptions(
 	}
 }
 
-func enqueueAIGatewayDataPlaneCertificateForAIGatewayControlPlane(
+func enqueueAIGatewayDataPlaneCertificateForKonnectAIGateway(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		parent, ok := obj.(*konnectv1alpha1.AIGatewayControlPlane)
+		parent, ok := obj.(*konnectv1alpha1.KonnectAIGateway)
 		if !ok {
 			return nil
 		}
 		var l configurationv1alpha1.AIGatewayDataPlaneCertificateList
 		if err := cl.List(ctx, &l, client.MatchingFields{
-			index.IndexFieldAIGatewayDataPlaneCertificateOnAIGatewayControlPlaneRef: client.ObjectKeyFromObject(parent).String(),
+			index.IndexFieldAIGatewayDataPlaneCertificateOnKonnectAIGatewayRef: client.ObjectKeyFromObject(parent).String(),
 		}); err != nil {
 			return nil
 		}

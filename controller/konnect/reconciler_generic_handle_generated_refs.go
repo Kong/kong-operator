@@ -77,8 +77,8 @@ func init() {
 			handler: parentRefHandler[konnectv1alpha1.Portal, *konnectv1alpha1.Portal]{},
 		},
 		{
-			gvk:     konnectv1alpha1.GroupVersion.WithKind("AIGatewayControlPlane"),
-			handler: parentRefHandler[konnectv1alpha1.AIGatewayControlPlane, *konnectv1alpha1.AIGatewayControlPlane]{},
+			gvk:     konnectv1alpha1.GroupVersion.WithKind("KonnectAIGateway"),
+			handler: parentRefHandler[konnectv1alpha1.KonnectAIGateway, *konnectv1alpha1.KonnectAIGateway]{},
 		},
 		{
 			gvk:     konnectv1alpha1.GroupVersion.WithKind("AIGatewayConsumer"),

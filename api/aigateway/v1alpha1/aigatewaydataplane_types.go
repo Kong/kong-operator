@@ -25,7 +25,7 @@ import (
 
 // AIGatewayDataPlane is the Schema for the AIGateway data planes API.
 // It manages an AI Gateway binary Deployment that connects to Konnect via
-// a referenced AIGatewayControlPlane resource.
+// a referenced KonnectAIGateway (controlplane) resource.
 //
 // +genclient
 // +kubebuilder:object:root=true

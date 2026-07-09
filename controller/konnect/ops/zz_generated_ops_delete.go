@@ -33,8 +33,6 @@ func DeleteGeneratedOps[
 		return deleteAIGatewayConsumerCredential(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumerGroup:
 		return deleteAIGatewayConsumerGroup(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
-	case *konnectv1alpha1.AIGatewayControlPlane:
-		return deleteAIGatewayControlPlane(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return deleteAIGatewayDataPlaneCertificate(ctx, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:
@@ -59,6 +57,8 @@ func DeleteGeneratedOps[
 		return deleteEventGatewayVirtualClusterPolicy(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return deleteEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
+	case *konnectv1alpha1.KonnectAIGateway:
+		return deleteKonnectAIGateway(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return deleteKonnectEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:

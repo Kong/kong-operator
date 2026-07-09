@@ -35,8 +35,6 @@ func CreateGeneratedOps[
 		return createAIGatewayConsumerCredential(ctx, cl, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumerGroup:
 		return createAIGatewayConsumerGroup(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
-	case *konnectv1alpha1.AIGatewayControlPlane:
-		return createAIGatewayControlPlane(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return createAIGatewayDataPlaneCertificate(ctx, cl, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:
@@ -61,6 +59,8 @@ func CreateGeneratedOps[
 		return createEventGatewayVirtualClusterPolicy(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return createEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
+	case *konnectv1alpha1.KonnectAIGateway:
+		return createKonnectAIGateway(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return createKonnectEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:

@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	// IndexFieldAIGatewayConsumerOnAIGatewayControlPlaneRef is the index field for AIGatewayConsumer -> AIGatewayControlPlane.
-	IndexFieldAIGatewayConsumerOnAIGatewayControlPlaneRef = "aiGatewayConsumerOnAIGatewayControlPlaneRef"
+	// IndexFieldAIGatewayConsumerOnKonnectAIGatewayRef is the index field for AIGatewayConsumer -> KonnectAIGateway.
+	IndexFieldAIGatewayConsumerOnKonnectAIGatewayRef = "aiGatewayConsumerOnKonnectAIGatewayRef"
 )
 
 // OptionsForAIGatewayConsumer returns required Index options for AIGatewayConsumer reconciler.
@@ -18,13 +18,13 @@ func OptionsForAIGatewayConsumer() []Option {
 	return []Option{
 		{
 			Object:         &konnectv1alpha1.AIGatewayConsumer{},
-			Field:          IndexFieldAIGatewayConsumerOnAIGatewayControlPlaneRef,
-			ExtractValueFn: aiGatewayConsumerOnAIGatewayControlPlaneRef,
+			Field:          IndexFieldAIGatewayConsumerOnKonnectAIGatewayRef,
+			ExtractValueFn: aiGatewayConsumerOnKonnectAIGatewayRef,
 		},
 	}
 }
 
-func aiGatewayConsumerOnAIGatewayControlPlaneRef(object client.Object) []string {
+func aiGatewayConsumerOnKonnectAIGatewayRef(object client.Object) []string {
 	ent, ok := object.(*konnectv1alpha1.AIGatewayConsumer)
 	if !ok {
 		return nil

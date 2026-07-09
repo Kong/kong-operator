@@ -43,7 +43,7 @@ type AIGatewayModelProviderList struct {
 
 // AIGatewayModelProviderSpec defines the desired state of AIGatewayModelProvider.
 type AIGatewayModelProviderSpec struct {
-	// AIGatewayRef is the reference to the parent AIGatewayControlPlane object.
+	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
 	//
 	// +required
 	AIGatewayRef commonv1alpha1.ObjectRef `json:"aiGatewayRef,omitzero"`

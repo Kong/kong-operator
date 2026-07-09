@@ -19,21 +19,21 @@ const (
 	// yet programmed in Konnect.
 	AIGatewayConsumerRefReasonNotProgrammed = "NotProgrammed"
 
-	// AIGatewayControlPlaneRefValidConditionType is the type of the condition that indicates
-	// whether the AIGatewayControlPlane reference is valid and points to an existing
-	// AIGatewayControlPlane.
-	AIGatewayControlPlaneRefValidConditionType = "AIGatewayControlPlaneRefValid"
+	// KonnectAIGatewayRefValidConditionType is the type of the condition that indicates
+	// whether the KonnectAIGateway reference is valid and points to an existing
+	// KonnectAIGateway.
+	KonnectAIGatewayRefValidConditionType = "KonnectAIGatewayRefValid"
 
-	// AIGatewayControlPlaneRefReasonValid is the reason used with the AIGatewayControlPlaneRefValid
-	// condition type indicating that the AIGatewayControlPlane reference is valid.
-	AIGatewayControlPlaneRefReasonValid = "Valid"
-	// AIGatewayControlPlaneRefReasonInvalid is the reason used with the AIGatewayControlPlaneRefValid
-	// condition type indicating that the AIGatewayControlPlane reference is invalid.
-	AIGatewayControlPlaneRefReasonInvalid = "Invalid"
-	// AIGatewayControlPlaneRefReasonNotProgrammed is the reason used with the AIGatewayControlPlaneRefValid
-	// condition type indicating that the referenced AIGatewayControlPlane exists but is not
+	// KonnectAIGatewayRefReasonValid is the reason used with the KonnectAIGatewayRefValid
+	// condition type indicating that the KonnectAIGateway reference is valid.
+	KonnectAIGatewayRefReasonValid = "Valid"
+	// KonnectAIGatewayRefReasonInvalid is the reason used with the KonnectAIGatewayRefValid
+	// condition type indicating that the KonnectAIGateway reference is invalid.
+	KonnectAIGatewayRefReasonInvalid = "Invalid"
+	// KonnectAIGatewayRefReasonNotProgrammed is the reason used with the KonnectAIGatewayRefValid
+	// condition type indicating that the referenced KonnectAIGateway exists but is not
 	// yet programmed in Konnect.
-	AIGatewayControlPlaneRefReasonNotProgrammed = "NotProgrammed"
+	KonnectAIGatewayRefReasonNotProgrammed = "NotProgrammed"
 
 	// PortalRefValidConditionType is the type of the condition that indicates
 	// whether the Portal reference is valid and points to an existing

@@ -21,7 +21,7 @@ func createAIGatewayDataPlaneCertificate(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: CreateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: CreateOp}
 	}
 	req, err := obj.ToCreateAIGatewayDataPlaneCertificateRequest(ctx, cl)
 	if err != nil {
@@ -47,7 +47,7 @@ func deleteAIGatewayDataPlaneCertificate(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: DeleteOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: DeleteOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 
@@ -65,7 +65,7 @@ func getAIGatewayDataPlaneCertificateForUID(
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: GetOp}
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
 	}
 	resp, err := sdk.ListAiGatewayDataPlaneCertificates(ctx, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{
 		GatewayID: parentID,

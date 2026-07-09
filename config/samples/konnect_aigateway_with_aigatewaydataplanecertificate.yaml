@@ -1,0 +1,69 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.tech
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aigatewaydataplanecert-ai-gw-cp-1
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIICZTCCAg+gAwIBAgIUVjjwPhhV6XmuWKabaWpfKtwrS3kwDQYJKoZIhvcNAQEL
+    BQAwgYYxCzAJBgNVBAYTAlhYMRIwEAYDVQQIDAlTdGF0ZU5hbWUxETAPBgNVBAcM
+    CENpdHlOYW1lMRQwEgYDVQQKDAtDb21wYW55TmFtZTEbMBkGA1UECwwSQ29tcGFu
+    eVNlY3Rpb25OYW1lMR0wGwYDVQQDDBRDb21tb25OYW1lT3JIb3N0bmFtZTAeFw0y
+    NjA1MTQxMjMxMDNaFw0zNjA1MTExMjMxMDNaMIGGMQswCQYDVQQGEwJYWDESMBAG
+    A1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5TmFtZTEUMBIGA1UECgwLQ29t
+    cGFueU5hbWUxGzAZBgNVBAsMEkNvbXBhbnlTZWN0aW9uTmFtZTEdMBsGA1UEAwwU
+    Q29tbW9uTmFtZU9ySG9zdG5hbWUwXDANBgkqhkiG9w0BAQEFAANLADBIAkEAyiUO
+    3sxXqhW+8aZppqczR9pyejKz3cMnrN3ujHJMf/ou1PyLk4bFtpxy4G8XERhntUUY
+    Ng1rhcmilSo7+DAtcwIDAQABo1MwUTAdBgNVHQ4EFgQUBHpMVvFVJXmx9pZ2YnmU
+    Fn7MngswHwYDVR0jBBgwFoAUBHpMVvFVJXmx9pZ2YnmUFn7MngswDwYDVR0TAQH/
+    BAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAMKT/Lb/3EqMOq/mMrr43arFL38stNku
+    toJJgydd1s7dp3bh2iVqSI3DECc8iyRX8/oExNitF2vNQpULUXj+q4U=
+    -----END CERTIFICATE-----
+---
+kind: AIGatewayDataPlaneCertificate
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1-dataplane-cert
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    title: ai-gw-cp-1-dataplane-cert
+    description: AI Gateway Data Plane Certificate
+    cert:
+      type: secretRef
+      secretRef:
+        name: aigatewaydataplanecert-ai-gw-cp-1
+        key: tls.crt

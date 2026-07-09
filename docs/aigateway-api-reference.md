@@ -15,7 +15,7 @@ Package v1alpha1 contains API Schema definitions for the aigateway.konghq.com v1
 
 AIGatewayDataPlane is the Schema for the AIGateway data planes API.
 It manages an AI Gateway binary Deployment that connects to Konnect via
-a referenced AIGatewayControlPlane resource.
+a referenced KonnectAIGateway (controlplane) resource.
 
 <!-- ai_gateway_data_plane description placeholder -->
 
@@ -75,7 +75,7 @@ The Type field determines which sub-field is active.
 | Field | Description |
 | --- | --- |
 | `type` _[ControlPlaneRefType](#aigateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced. Currently only konnectNamespacedRef is supported. |
-| `konnectNamespacedRef` _[KonnectNamespacedRef](#aigateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a AIGatewayControlPlane resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#aigateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectAIGateway (controlplane) resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
 
 _Appears in:_
 
@@ -98,7 +98,7 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a AIGatewayControlPlane<br />resource in the same namespace as the DataPlane.<br /> |
+| `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a KonnectAIGateway<br />resource in the same namespace as the DataPlane.<br /> |
 
 #### DeploymentOptions
 
@@ -140,13 +140,13 @@ _Appears in:_
 #### KonnectNamespacedRef
 
 
-KonnectNamespacedRef is a reference to a AIGatewayControlPlane resource in the same namespace.
+KonnectNamespacedRef is a reference to a KonnectAIGateway resource in the same namespace.
 
 
 
 | Field | Description |
 | --- | --- |
-| `name` _string_ | Name is the name of the AIGatewayControlPlane resource. |
+| `name` _string_ | Name is the name of the KonnectAIGateway (controlplane) resource. |
 
 _Appears in:_
 

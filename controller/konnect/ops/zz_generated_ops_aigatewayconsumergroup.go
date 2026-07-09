@@ -19,7 +19,7 @@ func createAIGatewayConsumerGroup(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: CreateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: CreateOp}
 	}
 	req, err := obj.Spec.APISpec.ToCreateAIGatewayConsumerGroupRequest()
 	if err != nil {
@@ -46,7 +46,7 @@ func updateAIGatewayConsumerGroup(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: UpdateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 	req, err := obj.Spec.APISpec.ToUpdateAIGatewayConsumerGroupRequest()
@@ -75,7 +75,7 @@ func deleteAIGatewayConsumerGroup(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: DeleteOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: DeleteOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 
@@ -93,7 +93,7 @@ func getAIGatewayConsumerGroupForUID(
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: GetOp}
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
 	}
 	resp, err := sdk.ListAiGatewayConsumerGroups(ctx, sdkkonnectops.ListAiGatewayConsumerGroupsRequest{
 		GatewayID: parentID,

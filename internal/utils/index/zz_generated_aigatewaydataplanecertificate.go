@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	// IndexFieldAIGatewayDataPlaneCertificateOnAIGatewayControlPlaneRef is the index field for AIGatewayDataPlaneCertificate -> AIGatewayControlPlane.
-	IndexFieldAIGatewayDataPlaneCertificateOnAIGatewayControlPlaneRef = "aiGatewayDataPlaneCertificateOnAIGatewayControlPlaneRef"
+	// IndexFieldAIGatewayDataPlaneCertificateOnKonnectAIGatewayRef is the index field for AIGatewayDataPlaneCertificate -> KonnectAIGateway.
+	IndexFieldAIGatewayDataPlaneCertificateOnKonnectAIGatewayRef = "aiGatewayDataPlaneCertificateOnKonnectAIGatewayRef"
 )
 
 // OptionsForAIGatewayDataPlaneCertificate returns required Index options for AIGatewayDataPlaneCertificate reconciler.
@@ -18,13 +18,13 @@ func OptionsForAIGatewayDataPlaneCertificate() []Option {
 	return []Option{
 		{
 			Object:         &configurationv1alpha1.AIGatewayDataPlaneCertificate{},
-			Field:          IndexFieldAIGatewayDataPlaneCertificateOnAIGatewayControlPlaneRef,
-			ExtractValueFn: aiGatewayDataPlaneCertificateOnAIGatewayControlPlaneRef,
+			Field:          IndexFieldAIGatewayDataPlaneCertificateOnKonnectAIGatewayRef,
+			ExtractValueFn: aiGatewayDataPlaneCertificateOnKonnectAIGatewayRef,
 		},
 	}
 }
 
-func aiGatewayDataPlaneCertificateOnAIGatewayControlPlaneRef(object client.Object) []string {
+func aiGatewayDataPlaneCertificateOnKonnectAIGatewayRef(object client.Object) []string {
 	ent, ok := object.(*configurationv1alpha1.AIGatewayDataPlaneCertificate)
 	if !ok {
 		return nil

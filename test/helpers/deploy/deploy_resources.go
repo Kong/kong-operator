@@ -447,27 +447,27 @@ func Portal(
 	return &obj
 }
 
-// AIGatewayControlPlane deploys an AIGatewayControlPlane resource and returns it.
-func AIGatewayControlPlane(
+// KonnectAIGateway deploys a KonnectAIGateway (controlplane) resource and returns it.
+func KonnectAIGateway(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 	opts ...ObjOption,
-) *konnectv1alpha1.AIGatewayControlPlane {
+) *konnectv1alpha1.KonnectAIGateway {
 	t.Helper()
 	name := "ai-gw-cp-" + randomSuffix()
-	obj := konnectv1alpha1.AIGatewayControlPlane{
+	obj := konnectv1alpha1.KonnectAIGateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: konnectv1alpha1.AIGatewayControlPlaneSpec{
+		Spec: konnectv1alpha1.KonnectAIGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 					Name: apiAuth.Name,
 				},
 			},
-			APISpec: konnectv1alpha1.AIGatewayControlPlaneAPISpec{
+			APISpec: konnectv1alpha1.KonnectAIGatewayAPISpec{
 				Name:        konnectv1alpha1.AIGatewayEntityIdentifier(name),
 				DisplayName: "AI Gateway " + name,
 			},
@@ -488,7 +488,7 @@ func AIGatewayAgent(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	gateway *konnectv1alpha1.AIGatewayControlPlane,
+	gateway *konnectv1alpha1.KonnectAIGateway,
 	opts ...ObjOption,
 ) *konnectv1alpha1.AIGatewayAgent {
 	t.Helper()

@@ -13,7 +13,6 @@ type generatedMockSDKWrapper struct {
 	AIGatewayAgentsSDK                           *mocks.MockAIGatewayAgentsSDK
 	AIGatewayConsumersSDK                        *mocks.MockAIGatewayConsumersSDK
 	AIGatewayConsumerGroupsSDK                   *mocks.MockAIGatewayConsumerGroupsSDK
-	AIGatewaysSDK                                *mocks.MockAIGatewaysSDK
 	AIGatewayDataPlaneCertificatesSDK            *mocks.MockAIGatewayDataPlaneCertificatesSDK
 	AIGatewayModelsSDK                           *mocks.MockAIGatewayModelsSDK
 	AIGatewayModelProvidersSDK                   *mocks.MockAIGatewayModelProvidersSDK
@@ -26,6 +25,7 @@ type generatedMockSDKWrapper struct {
 	EventGatewayVirtualClusterConsumePoliciesSDK *mocks.MockEventGatewayVirtualClusterConsumePoliciesSDK
 	EventGatewayVirtualClusterPoliciesSDK        *mocks.MockEventGatewayVirtualClusterPoliciesSDK
 	EventGatewayVirtualClusterProducePoliciesSDK *mocks.MockEventGatewayVirtualClusterProducePoliciesSDK
+	AIGatewaysSDK                                *mocks.MockAIGatewaysSDK
 	EventGatewaysSDK                             *mocks.MockEventGatewaysSDK
 	PortalsSDK                                   *mocks.MockPortalsSDK
 	PortalCustomDomainsSDK                       *mocks.MockPortalCustomDomainsSDK
@@ -42,7 +42,6 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		AIGatewayAgentsSDK:                           mocks.NewMockAIGatewayAgentsSDK(t),
 		AIGatewayConsumersSDK:                        mocks.NewMockAIGatewayConsumersSDK(t),
 		AIGatewayConsumerGroupsSDK:                   mocks.NewMockAIGatewayConsumerGroupsSDK(t),
-		AIGatewaysSDK:                                mocks.NewMockAIGatewaysSDK(t),
 		AIGatewayDataPlaneCertificatesSDK:            mocks.NewMockAIGatewayDataPlaneCertificatesSDK(t),
 		AIGatewayModelsSDK:                           mocks.NewMockAIGatewayModelsSDK(t),
 		AIGatewayModelProvidersSDK:                   mocks.NewMockAIGatewayModelProvidersSDK(t),
@@ -55,6 +54,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		EventGatewayVirtualClusterConsumePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t),
 		EventGatewayVirtualClusterPoliciesSDK:        mocks.NewMockEventGatewayVirtualClusterPoliciesSDK(t),
 		EventGatewayVirtualClusterProducePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t),
+		AIGatewaysSDK:                                mocks.NewMockAIGatewaysSDK(t),
 		EventGatewaysSDK:                             mocks.NewMockEventGatewaysSDK(t),
 		PortalsSDK:                                   mocks.NewMockPortalsSDK(t),
 		PortalCustomDomainsSDK:                       mocks.NewMockPortalCustomDomainsSDK(t),
@@ -80,11 +80,6 @@ func (m generatedMockSDKWrapper) GetAIGatewayConsumersSDK() sdkkonnectgo.AIGatew
 // GetAIGatewayConsumerGroupsSDK returns the SDK to operate AIGatewayConsumerGroup.
 func (m generatedMockSDKWrapper) GetAIGatewayConsumerGroupsSDK() sdkkonnectgo.AIGatewayConsumerGroupsSDK {
 	return m.AIGatewayConsumerGroupsSDK
-}
-
-// GetAIGatewaysSDK returns the SDK to operate AIGatewayControlPlane.
-func (m generatedMockSDKWrapper) GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK {
-	return m.AIGatewaysSDK
 }
 
 // GetAIGatewayDataPlaneCertificatesSDK returns the SDK to operate AIGatewayDataPlaneCertificate.
@@ -145,6 +140,11 @@ func (m generatedMockSDKWrapper) GetEventGatewayVirtualClusterPoliciesSDK() sdkk
 // GetEventGatewayVirtualClusterProducePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterProducePolicy.
 func (m generatedMockSDKWrapper) GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK {
 	return m.EventGatewayVirtualClusterProducePoliciesSDK
+}
+
+// GetAIGatewaysSDK returns the SDK to operate KonnectAIGateway.
+func (m generatedMockSDKWrapper) GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK {
+	return m.AIGatewaysSDK
 }
 
 // GetEventGatewaysSDK returns the SDK to operate KonnectEventGateway.

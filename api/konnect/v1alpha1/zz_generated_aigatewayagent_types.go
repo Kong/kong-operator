@@ -41,7 +41,7 @@ type AIGatewayAgentList struct {
 
 // AIGatewayAgentSpec defines the desired state of AIGatewayAgent.
 type AIGatewayAgentSpec struct {
-	// AIGatewayRef is the reference to the parent AIGatewayControlPlane object.
+	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
 	//
 	// +required
 	AIGatewayRef commonv1alpha1.ObjectRef `json:"aiGatewayRef,omitzero"`

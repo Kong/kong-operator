@@ -92,8 +92,8 @@
 - AIGateway:
   - introduce `AIGatewayDataPlane` CRD with reconciler
   [#4690](https://github.com/Kong/kong-operator/pull/4690), [#4797](https://github.com/Kong/kong-operator/pull/4797)
-  - introduce `AIGatewayControlPlane` CRD with reconciler
-  [#4760](https://github.com/Kong/kong-operator/pull/4760), [#4792](https://github.com/Kong/kong-operator/pull/4792)
+  - introduce `KonnectAIGateway` CRD with reconciler
+  [#4760](https://github.com/Kong/kong-operator/pull/4760), [#4792](https://github.com/Kong/kong-operator/pull/4792), [#4848](https://github.com/Kong/kong-operator/pull/4848)
   - introduce `AIGatewayDataPlaneCertificate` CRD with reconciler
   [#4772](https://github.com/Kong/kong-operator/pull/4772)
   - introduce `AIGatewayPolicy` CRD with reconciler.

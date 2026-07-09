@@ -18,7 +18,7 @@ func getAIGatewayModelForUID(
 ) (string, error) {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
-		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: GetOp}
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
 	}
 
 	resp, err := sdk.ListAiGatewayModels(ctx, sdkkonnectops.ListAiGatewayModelsRequest{

@@ -77,14 +77,15 @@ func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 	}
 }
 
-// newProgrammedAIGWCP builds an AIGatewayControlPlane with Programmed=True and endpoints set.
-func newProgrammedAIGWCP() *konnectv1alpha1.AIGatewayControlPlane {
-	return &konnectv1alpha1.AIGatewayControlPlane{
+// newProgrammedKonnectAIGateway builds a KonnectAIGateway (controlplane)
+// with Programmed=True and endpoints set.
+func newProgrammedKonnectAIGateway() *konnectv1alpha1.KonnectAIGateway {
+	return &konnectv1alpha1.KonnectAIGateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: reconcileTestNS,
 			Name:      reconcileTestAIGWCPName,
 		},
-		Status: konnectv1alpha1.AIGatewayControlPlaneStatus{
+		Status: konnectv1alpha1.KonnectAIGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
 					Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -92,7 +93,7 @@ func newProgrammedAIGWCP() *konnectv1alpha1.AIGatewayControlPlane {
 					Reason: "Programmed",
 				},
 			},
-			Endpoints: &konnectv1alpha1.AIGatewayControlPlaneEndpoints{
+			Endpoints: &konnectv1alpha1.KonnectAIGatewayEndpoints{
 				Configuration: "cp.example.com",
 				Telemetry:     "tp.example.com",
 			},
@@ -100,9 +101,9 @@ func newProgrammedAIGWCP() *konnectv1alpha1.AIGatewayControlPlane {
 	}
 }
 
-// newNotProgrammedAIGWCP builds an AIGatewayControlPlane with Programmed=False.
-func newNotProgrammedAIGWCP() *konnectv1alpha1.AIGatewayControlPlane {
-	aigwcp := newProgrammedAIGWCP()
+// newNotProgrammedKonnectAIGateway builds an KonnectAIGateway with Programmed=False.
+func newNotProgrammedKonnectAIGateway() *konnectv1alpha1.KonnectAIGateway {
+	aigwcp := newProgrammedKonnectAIGateway()
 	aigwcp.Status.Conditions[0].Status = metav1.ConditionFalse
 	return aigwcp
 }
@@ -224,7 +225,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			wantResult: ctrl.Result{},
 		},
 		{
-			name: "AIGatewayControlPlane not found: error returned (runtime handles backoff), AIGatewayControlPlaneResolved=False",
+			name: "KonnectAIGateway not found: error returned (runtime handles backoff), KonnectAIGatewayResolved=False",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
 				caSecret(),
@@ -235,17 +236,17 @@ func TestReconciler_Reconcile(t *testing.T) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
 				assertCondition(t, aigwdp,
-					aigatewayv1alpha1.AIGatewayControlPlaneResolvedType,
+					aigatewayv1alpha1.KonnectAIGatewayResolvedType,
 					metav1.ConditionFalse,
-					aigatewayv1alpha1.AIGatewayControlPlaneNotFoundReason,
+					aigatewayv1alpha1.KonnectAIGatewayNotFoundReason,
 				)
 			},
 		},
 		{
-			name: "AIGatewayControlPlane not yet programmed: error returned (runtime handles backoff), AIGatewayControlPlaneResolved=False",
+			name: "KonnectAIGateway not yet programmed: error returned (runtime handles backoff), KonnectAIGatewayResolved=False",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
-				newNotProgrammedAIGWCP(),
+				newNotProgrammedKonnectAIGateway(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
@@ -254,9 +255,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
 				assertCondition(t, aigwdp,
-					aigatewayv1alpha1.AIGatewayControlPlaneResolvedType,
+					aigatewayv1alpha1.KonnectAIGatewayResolvedType,
 					metav1.ConditionFalse,
-					aigatewayv1alpha1.AIGatewayControlPlaneNotProgrammedReason,
+					aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason,
 				)
 			},
 		},
@@ -264,7 +265,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			name: "CA secret missing: error returned, CertificateProvisioned=False",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
-				newProgrammedAIGWCP(),
+				newProgrammedKonnectAIGateway(),
 			},
 			wantErr: true,
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
@@ -281,7 +282,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			name: "certificate secret just created: first reconcile returns early, CertificateProvisioned=True",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
-				newProgrammedAIGWCP(),
+				newProgrammedKonnectAIGateway(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
@@ -289,9 +290,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
 				assertCondition(t, aigwdp,
-					aigatewayv1alpha1.AIGatewayControlPlaneResolvedType,
+					aigatewayv1alpha1.KonnectAIGatewayResolvedType,
 					metav1.ConditionTrue,
-					aigatewayv1alpha1.AIGatewayControlPlaneResolvedReason,
+					aigatewayv1alpha1.KonnectAIGatewayResolvedReason,
 				)
 				assertCondition(t, aigwdp,
 					aigatewayv1alpha1.CertificateProvisionedType,
@@ -304,7 +305,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			name: "happy path: Deployment and Service created, all conditions set",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
-				newProgrammedAIGWCP(),
+				newProgrammedKonnectAIGateway(),
 				caSecret(),
 				newProgrammedKonnectCert(),
 			},
@@ -330,9 +331,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 				// All conditions set correctly.
 				aigwdp := getAIGWDP(t, cl)
 				assertCondition(t, aigwdp,
-					aigatewayv1alpha1.AIGatewayControlPlaneResolvedType,
+					aigatewayv1alpha1.KonnectAIGatewayResolvedType,
 					metav1.ConditionTrue,
-					aigatewayv1alpha1.AIGatewayControlPlaneResolvedReason,
+					aigatewayv1alpha1.KonnectAIGatewayResolvedReason,
 				)
 				assertCondition(t, aigwdp,
 					aigatewayv1alpha1.CertificateProvisionedType,
@@ -356,7 +357,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			name: "idempotency: third reconcile is noop, no create events",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
-				newProgrammedAIGWCP(),
+				newProgrammedKonnectAIGateway(),
 				caSecret(),
 				newProgrammedKonnectCert(),
 			},

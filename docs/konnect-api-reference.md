@@ -13,10 +13,10 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [AIGatewayConsumer](#konnect-konghq-com-v1alpha1-aigatewayconsumer)
 - [AIGatewayConsumerCredential](#konnect-konghq-com-v1alpha1-aigatewayconsumercredential)
 - [AIGatewayConsumerGroup](#konnect-konghq-com-v1alpha1-aigatewayconsumergroup)
-- [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
 - [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
 - [AIGatewayModelProvider](#konnect-konghq-com-v1alpha1-aigatewaymodelprovider)
 - [AIGatewayPolicy](#konnect-konghq-com-v1alpha1-aigatewaypolicy)
+- [KonnectAIGateway](#konnect-konghq-com-v1alpha1-konnectaigateway)
 - [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
@@ -93,21 +93,6 @@ AIGatewayConsumerGroup is the Schema for the aigatewayconsumergroups API.
 | `spec` _[AIGatewayConsumerGroupSpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupspec)_ |  |
 | `status` _[AIGatewayConsumerGroupStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupstatus)_ |  |
 
-### AIGatewayControlPlane
-
-
-AIGatewayControlPlane is the Schema for the aigatewaycontrolplanes API.
-
-<!-- ai_gateway_control_plane description placeholder -->
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
-| `kind` _string_ | `AIGatewayControlPlane`
-| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[AIGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanespec)_ |  |
-| `status` _[AIGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanestatus)_ |  |
-
 ### AIGatewayModel
 
 
@@ -152,6 +137,21 @@ AIGatewayPolicy is the Schema for the aigatewaypolicys API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayPolicySpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyspec)_ |  |
 | `status` _[AIGatewayPolicyStatus](#konnect-konghq-com-v1alpha1-types-aigatewaypolicystatus)_ |  |
+
+### KonnectAIGateway
+
+
+KonnectAIGateway is the Schema for the konnectaigateways API.
+
+<!-- konnect_ai_gateway description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectAIGateway`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectAIGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayspec)_ |  |
+| `status` _[KonnectAIGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectaigatewaystatus)_ |  |
 
 ### KonnectAPIAuthConfiguration
 
@@ -509,7 +509,7 @@ AIGatewayAgentSpec defines the desired state of AIGatewayAgent.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -693,7 +693,7 @@ AIGatewayConsumerGroupSpec defines the desired state of AIGatewayConsumerGroup.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -726,7 +726,7 @@ AIGatewayConsumerSpec defines the desired state of AIGatewayConsumer.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -749,77 +749,6 @@ AIGatewayConsumerStatus defines the observed state of AIGatewayConsumer.
 _Appears in:_
 
 - [AIGatewayConsumer](#konnect-konghq-com-v1alpha1-aigatewayconsumer)
-
-#### AIGatewayControlPlaneAPISpec
-
-
-AIGatewayControlPlaneAPISpec defines the API spec fields for AIGatewayControlPlane.
-
-
-
-| Field | Description |
-| --- | --- |
-| `description` _string_ | The description of the AI Gateway. |
-| `displayName` _string_ | The display name for this AI Gateway. |
-| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | The name for this AI Gateway. |
-| `proxyUrls` _[AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
-
-_Appears in:_
-
-- [AIGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanespec)
-
-#### AIGatewayControlPlaneEndpoints
-
-
-AIGatewayControlPlaneEndpoints holds the Endpoints from the Konnect API response.
-
-
-
-| Field | Description |
-| --- | --- |
-| `configuration` _string_ | Configuration is returned by the Konnect API. |
-| `telemetry` _string_ | Telemetry is returned by the Konnect API. |
-
-_Appears in:_
-
-- [AIGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanestatus)
-
-#### AIGatewayControlPlaneSpec
-
-
-AIGatewayControlPlaneSpec defines the desired state of AIGatewayControlPlane.
-
-
-
-| Field | Description |
-| --- | --- |
-| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
-| `apiSpec` _[AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
-
-_Appears in:_
-
-- [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
-
-#### AIGatewayControlPlaneStatus
-
-
-AIGatewayControlPlaneStatus defines the observed state of AIGatewayControlPlane.
-
-
-
-| Field | Description |
-| --- | --- |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
-| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
-| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
-| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
-| `endpoints` _[AIGatewayControlPlaneEndpoints](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneendpoints)_ | Endpoints contains the Endpoints returned by the Konnect API. |
-| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
-
-_Appears in:_
-
-- [AIGatewayControlPlane](#konnect-konghq-com-v1alpha1-aigatewaycontrolplane)
 
 #### AIGatewayDatabricksEmbeddingsModelConfig
 
@@ -898,7 +827,6 @@ _Appears in:_
 - [AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
-- [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
@@ -921,6 +849,7 @@ _Appears in:_
 - [AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
 - [AIGatewayModelProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
 
 #### AIGatewayGeminiEmbeddingsModelConfig
 
@@ -2514,7 +2443,7 @@ AIGatewayModelProviderSpec defines the desired state of AIGatewayModelProvider.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayModelProviderAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -2723,7 +2652,7 @@ AIGatewayModelSpec defines the desired state of AIGatewayModel.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayModelAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3077,7 +3006,7 @@ AIGatewayPolicySpec defines the desired state of AIGatewayPolicy.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3189,7 +3118,7 @@ connected to a control-plane.
 
 _Appears in:_
 
-- [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
 
 #### AIGatewayRedisAWSAuthentication
 
@@ -4241,6 +4170,77 @@ Js is a type alias.
 _Appears in:_
 
 - [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
+
+#### KonnectAIGatewayAPISpec
+
+
+KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `description` _string_ | The description of the AI Gateway. |
+| `displayName` _string_ | The display name for this AI Gateway. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | The name for this AI Gateway. |
+| `proxyUrls` _[AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
+
+_Appears in:_
+
+- [KonnectAIGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayspec)
+
+#### KonnectAIGatewayEndpoints
+
+
+KonnectAIGatewayEndpoints holds the Endpoints from the Konnect API response.
+
+
+
+| Field | Description |
+| --- | --- |
+| `configuration` _string_ | Configuration is returned by the Konnect API. |
+| `telemetry` _string_ | Telemetry is returned by the Konnect API. |
+
+_Appears in:_
+
+- [KonnectAIGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectaigatewaystatus)
+
+#### KonnectAIGatewaySpec
+
+
+KonnectAIGatewaySpec defines the desired state of KonnectAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `apiSpec` _[KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [KonnectAIGateway](#konnect-konghq-com-v1alpha1-konnectaigateway)
+
+#### KonnectAIGatewayStatus
+
+
+KonnectAIGatewayStatus defines the observed state of KonnectAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `endpoints` _[KonnectAIGatewayEndpoints](#konnect-konghq-com-v1alpha1-types-konnectaigatewayendpoints)_ | Endpoints contains the Endpoints returned by the Konnect API. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [KonnectAIGateway](#konnect-konghq-com-v1alpha1-konnectaigateway)
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -5705,7 +5705,6 @@ _Appears in:_
 - [AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
-- [AIGatewayControlPlaneAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplaneapispec)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
@@ -5728,6 +5727,7 @@ _Appears in:_
 - [AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
 - [AIGatewayModelProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
 
 #### PublicLabelsValue
 
@@ -6087,7 +6087,7 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 
 _Appears in:_
 
-- [AIGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanespec)
+- [KonnectAIGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayspec)
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
@@ -6126,7 +6126,7 @@ KonnectEntityStatus represents the status of a Konnect entity.
 
 _Appears in:_
 
-- [AIGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-aigatewaycontrolplanestatus)
+- [KonnectAIGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectaigatewaystatus)
 - [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 - [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
 - [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)

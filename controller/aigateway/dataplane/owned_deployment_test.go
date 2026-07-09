@@ -27,11 +27,11 @@ import (
 // helpers
 // -----------------------------------------------------------------
 
-// testAIGatewayControlPlane returns a minimal AIGatewayControlPlane with the
+// testKonnectAIGateway returns a minimal KonnectAIGateway with the
 // given Konnect Configuration/Telemetry endpoints.
-func testAIGatewayControlPlane(cpHost, tpHost string) *konnectv1alpha1.AIGatewayControlPlane {
-	aigwcp := &konnectv1alpha1.AIGatewayControlPlane{}
-	aigwcp.Status.Endpoints = &konnectv1alpha1.AIGatewayControlPlaneEndpoints{
+func testKonnectAIGateway(cpHost, tpHost string) *konnectv1alpha1.KonnectAIGateway {
+	aigwcp := &konnectv1alpha1.KonnectAIGateway{}
+	aigwcp.Status.Endpoints = &konnectv1alpha1.KonnectAIGatewayEndpoints{
 		Configuration: cpHost,
 		Telemetry:     tpHost,
 	}
@@ -150,18 +150,18 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		aigwcp    *konnectv1alpha1.AIGatewayControlPlane
+		aigwcp    *konnectv1alpha1.KonnectAIGateway
 		wantErr   bool
 		checkEnvs func(t *testing.T, envs []corev1.EnvVar)
 	}{
 		{
 			name:    "no endpoints in status returns error",
-			aigwcp:  &konnectv1alpha1.AIGatewayControlPlane{},
+			aigwcp:  &konnectv1alpha1.KonnectAIGateway{},
 			wantErr: true,
 		},
 		{
 			name:   "env vars set correctly from endpoints",
-			aigwcp: testAIGatewayControlPlane(cpHost, tpHost),
+			aigwcp: testKonnectAIGateway(cpHost, tpHost),
 			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {
 				assert.Equal(t, cpHost+":443", mustEnv(t, envs, EnvKongClusterControlPlane))
 				assert.Equal(t, cpHost, mustEnv(t, envs, EnvKongClusterServerName))
@@ -173,7 +173,7 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 		},
 		{
 			name:   "required hardcoded env vars are present",
-			aigwcp: testAIGatewayControlPlane(cpHost, tpHost),
+			aigwcp: testKonnectAIGateway(cpHost, tpHost),
 			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {
 				assert.Equal(t, "data_plane", mustEnv(t, envs, "KONG_ROLE"))
 				assert.Equal(t, "off", mustEnv(t, envs, "KONG_DATABASE"))
@@ -213,13 +213,13 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 func Test_buildDeployment(t *testing.T) {
 	tc := managedfields.NewDeducedTypeConverter()
 
-	validCP := testAIGatewayControlPlane("cp.example.com", "tp.example.com")
-	invalidCP := &konnectv1alpha1.AIGatewayControlPlane{}
+	validCP := testKonnectAIGateway("cp.example.com", "tp.example.com")
+	invalidCP := &konnectv1alpha1.KonnectAIGateway{}
 
 	tests := []struct {
 		name           string
 		aigwdp         *aigatewayv1alpha1.AIGatewayDataPlane
-		aigwcp         *konnectv1alpha1.AIGatewayControlPlane
+		aigwcp         *konnectv1alpha1.KonnectAIGateway
 		image          string
 		certSecretName string
 		wantErr        bool
@@ -299,7 +299,7 @@ func Test_buildDeployment(t *testing.T) {
 			},
 		},
 		{
-			name:           "AIGatewayControlPlane with no endpoints returns error",
+			name:           "KonnectAIGateway with no endpoints returns error",
 			aigwdp:         &aigatewayv1alpha1.AIGatewayDataPlane{},
 			aigwcp:         invalidCP,
 			image:          "kong/aigw:test",
@@ -337,7 +337,7 @@ func Test_ensureDeployment(t *testing.T) {
 	tc := managedfields.NewDeducedTypeConverter()
 	scheme := managerscheme.Get()
 
-	validCP := testAIGatewayControlPlane("cp.example.com", "tp.example.com")
+	validCP := testKonnectAIGateway("cp.example.com", "tp.example.com")
 
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: dpName},

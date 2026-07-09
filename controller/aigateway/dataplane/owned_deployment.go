@@ -45,7 +45,7 @@ func (r *Reconciler) ensureDeployment(
 	ctx context.Context,
 	logger logr.Logger,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.AIGatewayControlPlane,
+	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	certSecretName string,
 ) error {
 	image := resolveImage(aigwdp, consts.DefaultAIGatewayImage)
@@ -100,7 +100,7 @@ func resolveImage(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, defaultImage str
 func buildDeployment(
 	tc managedfields.TypeConverter,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.AIGatewayControlPlane,
+	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	image string,
 	certSecretName string,
 ) (*unstructured.Unstructured, error) {
@@ -154,7 +154,7 @@ func buildDeployment(
 // generateBaseDeployment creates the operator-managed AI Gateway Deployment without user overlays.
 func generateBaseDeployment(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.AIGatewayControlPlane,
+	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	image string,
 	certSecretName string,
 ) (*appsv1.Deployment, error) {
@@ -260,12 +260,12 @@ func generateBaseDeployment(
 }
 
 // buildAIGatewayEnvVars builds the AI Gateway environment variables
-// from required hardcoded values and AIGatewayControlPlane status.
+// from required hardcoded values and KonnectAIGateway (controlplane) status.
 func buildAIGatewayEnvVars(
-	aigatewaycp *konnectv1alpha1.AIGatewayControlPlane,
+	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 ) ([]corev1.EnvVar, error) {
 	if aigatewaycp.Status.Endpoints == nil {
-		return nil, fmt.Errorf("AIGatewayControlPlane %q has no endpoints in status", aigatewaycp.Name)
+		return nil, fmt.Errorf("KonnectAIGateway %q has no endpoints in status", aigatewaycp.Name)
 	}
 
 	cpHost := aigatewaycp.Status.Endpoints.Configuration

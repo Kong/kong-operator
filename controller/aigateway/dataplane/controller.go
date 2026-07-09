@@ -69,8 +69,8 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Owns(&corev1.Secret{}).
 		Owns(&configurationv1alpha1.AIGatewayDataPlaneCertificate{}).
 		Watches(
-			&konnectv1alpha1.AIGatewayControlPlane{},
-			handler.EnqueueRequestsFromMapFunc(enqueueForAIGatewayControlPlaneRef(mgr.GetClient())),
+			&konnectv1alpha1.KonnectAIGateway{},
+			handler.EnqueueRequestsFromMapFunc(enqueueForKonnectAIGatewayRef(mgr.GetClient())),
 		).
 		Complete(reconcile.AsReconciler(r.Client, r))
 }
@@ -83,8 +83,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 
 	defer func() { err = errors.Join(err, r.applyStatus(ctx, logger, aigwdp)) }()
 
-	// Resolve referenced AIGatewayControlPlane and set resolution condition.
-	aigatewaycp, err := r.resolveAIGatewayControlPlane(ctx, logger, aigwdp)
+	// Resolve referenced KonnectAIGateway and set resolution condition.
+	aigatewaycp, err := r.resolveKonnectAIGateway(ctx, logger, aigwdp)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

@@ -787,7 +787,7 @@ AIGatewayDataPlaneCertificateSpec defines the desired state of AIGatewayDataPlan
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent AIGatewayControlPlane object. |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-aigatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_

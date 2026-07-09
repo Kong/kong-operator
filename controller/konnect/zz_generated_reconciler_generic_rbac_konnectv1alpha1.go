@@ -14,9 +14,6 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumergroups,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumergroups/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumergroups/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaycontrolplanes,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaycontrolplanes/status,verbs=update;patch
-//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaycontrolplanes/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/finalizers,verbs=update;patch
@@ -26,6 +23,9 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaypolicies,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaypolicies/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaypolicies/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/finalizers,verbs=update;patch

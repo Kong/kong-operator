@@ -61,7 +61,7 @@ spec:
               of AIGatewayDataPlaneCertificate.
             properties:
               aiGatewayRef:
-                description: AIGatewayRef is the reference to the parent AIGatewayControlPlane
+                description: AIGatewayRef is the reference to the parent KonnectAIGateway
                   object.
                 properties:
                   konnectID:
