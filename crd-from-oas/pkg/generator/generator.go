@@ -359,7 +359,14 @@ func (g *Generator) walkSensitiveLeafPath(
 		}
 		// Record the structured selector for template generation.
 		leafGoField := goFieldName(targetProp.Name)
-		g.recordSensitiveLeafSelector(entityName, ref.Path, acc, leafGoField)
+		if isScalarArraySensitiveLeaf(targetProp) {
+			// The leaf itself is an array of secrets (e.g. "clientSecret: []string"):
+			// each element IS the SensitiveDataSource, so there's no per-element
+			// leaf field to select — record the array field itself as the slice.
+			g.recordSensitiveLeafSelector(entityName, ref.Path, acc.withSlice(leafGoField), "")
+		} else {
+			g.recordSensitiveLeafSelector(entityName, ref.Path, acc, leafGoField)
+		}
 		return nil
 	}
 
@@ -465,6 +472,17 @@ func (g *Generator) isSchemaFieldSensitiveLeaf(schemaGoTypeName, jsonFieldName s
 // is a direct apiSpec-level sensitive leaf for the given entity.
 func (g *Generator) isEntityAPISpecFieldSensitiveLeaf(entityName, jsonFieldName string) bool {
 	return g.entityAPISpecSensitiveLeaf(entityName, jsonFieldName)
+}
+
+// isScalarArraySensitiveLeaf returns true if prop is an array whose items are
+// scalars (not objects or $refs) — the OAS shape of a field like
+// "clientSecret: []string" where each element is itself a sensitive value.
+// This is distinct from the mid-path "field[]" array-of-objects case, which
+// steps into a per-element leaf instead of treating the element itself as
+// the secret.
+func isScalarArraySensitiveLeaf(prop *parser.Property) bool {
+	return prop.Type == "array" && prop.Items != nil &&
+		prop.Items.RefName == "" && len(prop.Items.Properties) == 0
 }
 
 // isSensitiveMatchField returns true if the given getForUID objectField path
@@ -1847,6 +1865,8 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	}
 	goType := g.goType(prop)
 	switch {
+	case isSensitive && isScalarArraySensitiveLeaf(prop):
+		goType = "[]SensitiveDataSource"
 	case isSensitive:
 		goType = "SensitiveDataSource"
 	case prop.RefName != "" && g.anyOfSchemaNames[prop.RefName]:
@@ -2074,6 +2094,11 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// Sensitive leaf fields are emitted as SensitiveDataSource regardless of their OAS type.
 	goTypeInCRD := func(prop *parser.Property) string {
 		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
+			// NOTE: direct apiSpec-level (single-segment path) secret leaves are
+			// always treated as scalar here, matching entityDirectSensitiveLeaves'
+			// selector, which buildSensitiveLeaves never walks against the schema
+			// (see the len(segments)==1 branch there). A direct array-of-strings
+			// leaf isn't supported yet — add self-slice recording there first.
 			return "SensitiveDataSource"
 		}
 		if len(prop.OneOf) > 0 {
@@ -4170,12 +4195,20 @@ func (g *Generator) generateRootUnionSDKOps(
 		updateConstructorName := ""
 		updateDirectUnion := false
 		fieldName := fixInitialisms(variantNames[i])
+		// The SDK's own constructor suffix is derived from the discriminator
+		// value (e.g. "openid-connect" -> "OpenidConnect"), not from the
+		// variant's schema type name. The two usually agree, but diverge when
+		// the type name carries an initialism the discriminator doesn't
+		// (e.g. type AIGatewayIdentityProviderOpenIDConnect vs. discriminator
+		// "openid-connect"). Use the discriminator-derived spelling so
+		// generated constructor calls match the SDK exactly.
+		ctorSuffix := pascalFromKebab(discValue)
 		if hasUpdateMethod && !isOperationsWrapped && updateSDKTypeIsUnion {
 			// The SDK update request is a discriminated union (same shape as
 			// create); rebuild the selected variant directly via its update
 			// constructor instead of targeting a nested payload field.
 			updateVariantTypeName = fixInitialisms(variantRefName)
-			updateConstructorName = "Create" + updateMethodTypeName + fieldName
+			updateConstructorName = "Create" + updateMethodTypeName + ctorSuffix
 			updateDirectUnion = true
 		} else if hasUpdateMethod && !isOperationsWrapped {
 			updatePayloadProp, err := findRootUnionUpdatePayloadProperty(variant.Properties)
@@ -4189,7 +4222,7 @@ func (g *Generator) generateRootUnionSDKOps(
 					return "", fmt.Errorf("failed to infer update payload property for %s variant %q: %w", entityName, variantRefName, err)
 				}
 				updateVariantTypeName = fixInitialisms(variantRefName)
-				updateConstructorName = "Create" + updateMethodTypeName + fieldName
+				updateConstructorName = "Create" + updateMethodTypeName + ctorSuffix
 				updateDirectUnion = true
 			} else {
 				if updatePayloadProp == nil {
@@ -4210,7 +4243,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		}
 		createConstructorName := "Create" + fixInitialisms(variantRefName)
 		if createMethodTypeName != "" {
-			createConstructorName = "Create" + createMethodTypeName + fieldName
+			createConstructorName = "Create" + createMethodTypeName + ctorSuffix
 		}
 		variants = append(variants, sdkOpsRootUnionVariant{
 			FieldName:                    fieldName,

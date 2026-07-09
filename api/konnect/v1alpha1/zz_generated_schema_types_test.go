@@ -111,6 +111,32 @@ func TestAIGatewayHuggingfaceEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayIdentityProviderKeyAuth_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayIdentityProviderKeyAuth
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayIdentityProviderOpenIDConnect_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayIdentityProviderOpenIDConnect
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayModelAPI_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 

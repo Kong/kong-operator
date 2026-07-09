@@ -13,6 +13,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [AIGatewayConsumer](#konnect-konghq-com-v1alpha1-aigatewayconsumer)
 - [AIGatewayConsumerCredential](#konnect-konghq-com-v1alpha1-aigatewayconsumercredential)
 - [AIGatewayConsumerGroup](#konnect-konghq-com-v1alpha1-aigatewayconsumergroup)
+- [AIGatewayIdentityProvider](#konnect-konghq-com-v1alpha1-aigatewayidentityprovider)
 - [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
 - [AIGatewayModelProvider](#konnect-konghq-com-v1alpha1-aigatewaymodelprovider)
 - [AIGatewayPolicy](#konnect-konghq-com-v1alpha1-aigatewaypolicy)
@@ -92,6 +93,21 @@ AIGatewayConsumerGroup is the Schema for the aigatewayconsumergroups API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayConsumerGroupSpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupspec)_ |  |
 | `status` _[AIGatewayConsumerGroupStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupstatus)_ |  |
+
+### AIGatewayIdentityProvider
+
+
+AIGatewayIdentityProvider is the Schema for the aigatewayidentityproviders API.
+
+<!-- ai_gateway_identity_provider description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayIdentityProvider`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayIdentityProviderSpec](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderspec)_ |  |
+| `status` _[AIGatewayIdentityProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderstatus)_ |  |
 
 ### AIGatewayModel
 
@@ -827,6 +843,8 @@ _Appears in:_
 - [AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
+- [AIGatewayIdentityProviderKeyAuth](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
+- [AIGatewayIdentityProviderOpenIDConnect](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
@@ -888,6 +906,146 @@ _Appears in:_
 - [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
 - [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
 
+#### AIGatewayIdentityProviderAPISpec
+
+
+AIGatewayIdentityProviderAPISpec defines the API spec fields for AIGatewayIdentityProvider.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayIdentityProviderSpec](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderspec)
+
+#### AIGatewayIdentityProviderConfig
+
+
+AIGatewayIdentityProviderConfig represents a union type for AIGatewayIdentityProviderConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayIdentityProviderConfigType](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderconfigtype)_ | Type designates the type of configuration. |
+| `key-auth` _[AIGatewayIdentityProviderKeyAuth](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)_ | KeyAuth configuration. |
+| `openid-connect` _[AIGatewayIdentityProviderOpenIDConnect](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)_ | OpenIDConnect configuration. |
+
+_Appears in:_
+
+- [AIGatewayIdentityProviderAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderapispec)
+
+#### AIGatewayIdentityProviderConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayIdentityProviderConfigType represents the type of AIGatewayIdentityProviderConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `key-auth` |  |
+| `openid-connect` |  |
+
+#### AIGatewayIdentityProviderKeyAuth
+
+
+AIGatewayIdentityProviderKeyAuth Configuration for an identity provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayIdentityProviderKeyAuthConfig](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauthconfig)_ | Configuration for the Kong Key auth identity provider. For advanced use cases, additional config properties can be sent in the request body. See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of properties |
+| `displayName` _string_ | The display name for this identity provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this identity provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderconfig)
+
+#### AIGatewayIdentityProviderKeyAuthConfig
+
+
+AIGatewayIdentityProviderKeyAuthConfig Configuration for the Kong Key auth
+identity provider.
+For advanced use cases, additional config properties can be sent in the
+request body.
+See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of
+properties
+
+
+
+| Field | Description |
+| --- | --- |
+| `hideCredentials` _string_ | An optional boolean value telling the plugin to show or hide the credential from the upstream service. If true, the plugin strips the credential from the request. |
+| `keyInBody` _string_ | If enabled, reads the request body. Supported MIME types: application/www-form-urlencoded, application/json, and multipart/form-data. |
+| `keyInHeader` _string_ | If enabled (default), the plugin reads the request header and tries to find the key in it. |
+| `keyInQuery` _string_ | If enabled (default), the plugin reads the query parameter in the request and tries to find the key in it. |
+| `keyNames` _[]string_ | An array of strings containing the names of the keys to look for in the request. |
+
+_Appears in:_
+
+- [AIGatewayIdentityProviderKeyAuth](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
+
+#### AIGatewayIdentityProviderOpenIDConnect
+
+
+AIGatewayIdentityProviderOpenIDConnect Configuration for an identity
+provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayIdentityProviderOpenIDConnectConfig](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfig)_ | Configuration for the OpenID Connect identity provider. For advanced use cases, additional config properties can be sent in the request body. See: https://developer.konghq.com/plugins/openid-connect/reference/ for the list of properties |
+| `displayName` _string_ | The display name for this identity provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this identity provider instance, used as a stable human-readable reference. |
+
+_Appears in:_
+
+- [AIGatewayIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderconfig)
+
+#### AIGatewayIdentityProviderOpenIDConnectConfig
+
+
+AIGatewayIdentityProviderOpenIDConnectConfig Configuration for the OpenID
+Connect identity provider.
+For advanced use cases, additional config properties can be sent in the
+request body.
+See: https://developer.konghq.com/plugins/openid-connect/reference/ for the
+list of properties
+
+
+
+| Field | Description |
+| --- | --- |
+| `authMethods` _[]string_ | Types of credentials/grants to enable. |
+| `clientID` _[]string_ | An array of strings representing the client id for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `clientSecret` _[][SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | An array of strings representing the client secret for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `consumerClaim` _[]string_ | An array containing an array of string paths representing the location of the claim in a nested object. For example, to map to user.info.id, set [ "user", "info", "id" ]. |
+| `consumerOptional` _string_ | Do not terminate the request if consumer mapping fails. |
+| `issuer` _string_ | URL that identifies the OpenID Provider |
+| `scopes` _[]string_ | This field is referenceable. |
+| `sslVerify` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayIdentityProviderOpenIDConnect](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
+
 #### AIGatewayIdentityProviderReference
 
 _Underlying type:_ `string`
@@ -901,6 +1059,41 @@ This is either the identity provider ID or the identity provider name.
 _Appears in:_
 
 - [AIGatewayModelAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccess)
+
+
+
+#### AIGatewayIdentityProviderSpec
+
+
+AIGatewayIdentityProviderSpec defines the desired state of AIGatewayIdentityProvider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `apiSpec` _[AIGatewayIdentityProviderAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayIdentityProvider](#konnect-konghq-com-v1alpha1-aigatewayidentityprovider)
+
+#### AIGatewayIdentityProviderStatus
+
+
+AIGatewayIdentityProviderStatus defines the observed state of AIGatewayIdentityProvider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayIdentityProvider](#konnect-konghq-com-v1alpha1-aigatewayidentityprovider)
 
 #### AIGatewayModelAPI
 
@@ -917,12 +1110,12 @@ to/from an AI Gateway model using the files and batches APIs.
 | `config` _[AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)_ | Routing, logging, and load balancing configuration for the model. |
 | `displayName` _string_ | The display name for this model instance. |
 | `enabled` _string_ | Whether the model is enabled. |
-| `formats` _[AIGatewayModelFormat](#konnect-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
+| `formats` _[][AIGatewayModelFormat](#konnect-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model, used as a stable human-readable reference. |
 | `policies` _[]string_ | List of policy references. |
-| `targets` _[AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)_ | One or more backend models that this model entry routes to. |
+| `targets` _[][AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)_ | One or more backend models that this model entry routes to. |
 
 _Appears in:_
 
@@ -1051,7 +1244,7 @@ AIGatewayModelAccess Access control configuration for a model.
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayModelAccessAcls](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | Access control rules. Configure exactly one of `allow` or `deny`. |
-| `identityProviders` _[AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced. |
+| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced. |
 
 _Appears in:_
 
@@ -1470,12 +1663,12 @@ to/from an AI Gateway model using generative APIs.
 | `config` _[AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)_ | Routing, logging, and load balancing configuration for the model. |
 | `displayName` _string_ | The display name for this model instance. |
 | `enabled` _string_ | Whether the model is enabled. |
-| `formats` _[AIGatewayModelFormat](#konnect-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
+| `formats` _[][AIGatewayModelFormat](#konnect-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model, used as a stable human-readable reference. |
 | `policies` _[]string_ | List of policy references. |
-| `targets` _[AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)_ | One or more backend models that this model entry routes to. |
+| `targets` _[][AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)_ | One or more backend models that this model entry routes to. |
 
 _Appears in:_
 
@@ -1925,8 +2118,8 @@ provider.
 
 | Field | Description |
 | --- | --- |
-| `headers` _[AIGatewayModelProviderConfigAuthBasicHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicheaders)_ |  |
-| `params` _[AIGatewayModelProviderConfigAuthBasicParams](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicparams)_ |  |
+| `headers` _[][AIGatewayModelProviderConfigAuthBasicHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicheaders)_ |  |
+| `params` _[][AIGatewayModelProviderConfigAuthBasicParams](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicparams)_ |  |
 
 _Appears in:_
 
@@ -2809,7 +3002,7 @@ connection.
 | Field | Description |
 | --- | --- |
 | `maxRedirections` _int_ | Maximum retry attempts for redirection. |
-| `nodes` _[AIGatewayModelVectorDBConfigRedisClusterNodes](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredisclusternodes)_ | Cluster addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Cluster. The minimum length of the array is 1 element. |
+| `nodes` _[][AIGatewayModelVectorDBConfigRedisClusterNodes](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredisclusternodes)_ | Cluster addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Cluster. The minimum length of the array is 1 element. |
 
 _Appears in:_
 
@@ -2925,7 +3118,7 @@ AIGatewayModelVectorDBConfigRedisSentinel Configuration for Redis Sentinel.
 | Field | Description |
 | --- | --- |
 | `master` _string_ | Sentinel master to use for Redis connections. Defining this value implies using Redis Sentinel. |
-| `nodes` _[AIGatewayModelVectorDBConfigRedisSentinelNodes](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredissentinelnodes)_ | Sentinel node addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Sentinel. The minimum length of the array is 1 element. |
+| `nodes` _[][AIGatewayModelVectorDBConfigRedisSentinelNodes](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigredissentinelnodes)_ | Sentinel node addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Sentinel. The minimum length of the array is 1 element. |
 | `password` _string_ | Sentinel password to authenticate with a Redis Sentinel instance. If undefined, no AUTH commands are sent to Redis Sentinels. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `role` _string_ | Sentinel role to use for Redis connections when the `redis` strategy is defined. Defining this value implies using Redis Sentinel. |
 | `username` _string_ | Sentinel username to authenticate with a Redis Sentinel instance. If undefined, ACL authentication won't be performed. This requires Redis v6.2.0+. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
@@ -3806,7 +3999,7 @@ AWSTransitGateway is the configuration of an AWS transit gateway.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Human-readable name of the transit gateway. |
-| `dns_config` _[TransitGatewayDNSConfig](#konnect-konghq-com-v1alpha1-types-transitgatewaydnsconfig)_ | List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway attachment. |
+| `dns_config` _[][TransitGatewayDNSConfig](#konnect-konghq-com-v1alpha1-types-transitgatewaydnsconfig)_ | List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway attachment. |
 | `cidr_blocks` _[]string_ | CIDR blocks for constructing a route table for the transit gateway, when attaching to the owning network. |
 | `attachment_config` _[AwsTransitGatewayAttachmentConfig](#konnect-konghq-com-v1alpha1-types-awstransitgatewayattachmentconfig)_ | configuration to attach to AWS transit gateway on the AWS side. |
 
@@ -3841,7 +4034,7 @@ AzureTransitGateway is the configuration of an Azure transit gateway.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Human-readable name of the transit gateway. |
-| `dns_config` _[TransitGatewayDNSConfig](#konnect-konghq-com-v1alpha1-types-transitgatewaydnsconfig)_ | List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway attachment. |
+| `dns_config` _[][TransitGatewayDNSConfig](#konnect-konghq-com-v1alpha1-types-transitgatewaydnsconfig)_ | List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway attachment. |
 | `attachment_config` _[AzureVNETPeeringAttachmentConfig](#konnect-konghq-com-v1alpha1-types-azurevnetpeeringattachmentconfig)_ | configuration to attach to Azure VNET peering gateway. |
 
 _Appears in:_
@@ -4184,7 +4377,7 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | The name for this AI Gateway. |
-| `proxyUrls` _[AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
+| `proxyUrls` _[][AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
 
 _Appears in:_
 
@@ -4307,7 +4500,7 @@ KonnectCloudGatewayDataPlaneGroupConfigurationSpec defines the desired state of 
 | Field | Description |
 | --- | --- |
 | `version` _string_ | Version specifies the desired Kong Gateway version. |
-| `dataplane_groups` _[KonnectConfigurationDataPlaneGroup](#konnect-konghq-com-v1alpha1-types-konnectconfigurationdataplanegroup)_ | DataplaneGroups is a list of desired data-plane groups that describe where to deploy instances, along with how many instances. |
+| `dataplane_groups` _[][KonnectConfigurationDataPlaneGroup](#konnect-konghq-com-v1alpha1-types-konnectconfigurationdataplanegroup)_ | DataplaneGroups is a list of desired data-plane groups that describe where to deploy instances, along with how many instances. |
 | `api_access` _*github.com/Kong/sdk-konnect-go/models/components.APIAccess_ | APIAccess is the desired type of API access for data-plane groups. |
 | `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane which DataPlanes from this configuration will connect to. |
 | `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a cloud gateway dataplane group configuration from an existing transit dataplane group configuration in Konnect. |
@@ -4330,7 +4523,7 @@ KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state 
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
-| `dataplane_groups` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatusgroup)_ | DataPlaneGroups is a list of deployed data-plane groups. |
+| `dataplane_groups` _[][KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatusgroup)_ | DataPlaneGroups is a list of deployed data-plane groups. |
 
 _Appears in:_
 
@@ -4450,7 +4643,7 @@ KonnectConfigurationDataPlaneGroup is the schema for the KonnectConfiguration ty
 | `region` _string_ | Region for cloud provider region. |
 | `networkRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | NetworkRef is the reference to the network that this data-plane group will be deployed on.<br /><br />Cross namespace references are not supported for networkRef of type namespacedRef. This will be enforced in the future but currently (due to limitation in CEL validation in Kubernetes 1.31 and older) it is not. |
 | `autoscale` _[ConfigurationDataPlaneGroupAutoscale](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupautoscale)_ | Autoscale configuration for the data-plane group. |
-| `environment` _[ConfigurationDataPlaneGroupEnvironmentField](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupenvironmentfield)_ | Array of environment variables to set for a data-plane group. |
+| `environment` _[][ConfigurationDataPlaneGroupEnvironmentField](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupenvironmentfield)_ | Array of environment variables to set for a data-plane group. |
 
 _Appears in:_
 
@@ -4490,6 +4683,7 @@ _Appears in:_
 - [AIGatewayConsumerCredentialStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialstatus)
 - [AIGatewayConsumerGroupStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupstatus)
 - [AIGatewayConsumerStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerstatus)
+- [AIGatewayIdentityProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderstatus)
 - [AIGatewayModelProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderstatus)
 - [AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)
 - [AIGatewayPolicyStatus](#konnect-konghq-com-v1alpha1-types-aigatewaypolicystatus)
@@ -4683,8 +4877,8 @@ KonnectExtensionStatus defines the observed state of KonnectExtension.
 | Field | Description |
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectExtensionStatus. |
-| `dataPlaneRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
-| `controlPlaneRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
+| `dataPlaneRefs` _[][NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
+| `controlPlaneRefs` _[][NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
 | `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
 | `konnect` _[KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplanestatus)_ | Konnect contains the status information related to the Konnect Control Plane. |
 
@@ -4879,6 +5073,8 @@ _Appears in:_
 - [AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
+- [AIGatewayIdentityProviderKeyAuth](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
+- [AIGatewayIdentityProviderOpenIDConnect](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
@@ -4924,9 +5120,9 @@ Menu is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `footerBottom` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
-| `footerSections` _[PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)_ |  |
-| `main` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+| `footerBottom` _[][PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+| `footerSections` _[][PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)_ |  |
+| `main` _[][PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
 
 _Appears in:_
 
@@ -5358,7 +5554,7 @@ PortalFooterMenuSection is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `items` _[PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
+| `items` _[][PortalMenuItem](#konnect-konghq-com-v1alpha1-types-portalmenuitem)_ |  |
 | `title` _string_ | The footer menu section title |
 
 _Appears in:_
@@ -5705,6 +5901,8 @@ _Appears in:_
 - [AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
+- [AIGatewayIdentityProviderKeyAuth](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
+- [AIGatewayIdentityProviderOpenIDConnect](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
@@ -5838,6 +6036,7 @@ either inline or sourced from a Kubernetes Secret.
 _Appears in:_
 
 - [AIGatewayConsumerCredentialAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
+- [AIGatewayIdentityProviderOpenIDConnectConfig](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfig)
 - [AIGatewayModelProviderConfigAuthAWS](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthaws)
 - [AIGatewayModelProviderConfigAuthAzure](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthazure)
 - [AIGatewayModelProviderConfigAuthBasicHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicheaders)
@@ -6323,8 +6522,8 @@ KonnectExtensionStatus defines the observed state of KonnectExtension.
 | Field | Description |
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectExtensionStatus. Known condition types are: |
-| `dataPlaneRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
-| `controlPlaneRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
+| `dataPlaneRefs` _[][NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
+| `controlPlaneRefs` _[][NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
 | `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha2-types-dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
 | `konnect` _[KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplanestatus)_ | Konnect contains the status information related to the Konnect Control Plane. |
 

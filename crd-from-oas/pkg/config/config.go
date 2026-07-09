@@ -88,6 +88,10 @@ type SecretReferenceConfig struct {
 	// Path is the dot-separated field path within the spec
 	// (e.g. "spec.apiSpec.tls.clientIdentity.certificate").
 	// Must start with "spec.apiSpec.".
+	// When the resolved OAS leaf is itself an array of strings (e.g.
+	// "clientSecret: []string"), the generator detects this from the schema and
+	// emits a list of secret sources ([]SensitiveDataSource, one per element)
+	// instead of a single one — no separate array notation is needed in Path.
 	Path string `yaml:"path"`
 	// Type is the Kubernetes resource type that holds the sensitive data.
 	// Currently only "Secret" is supported.

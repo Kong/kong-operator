@@ -220,6 +220,134 @@ func TestBuildSensitiveLeaves_MidPathUnionDescent_UnknownVariant_Errors(t *testi
 	assert.ErrorContains(t, err, `variant "azure" not found`)
 }
 
+// TestBuildSensitiveLeaves_ArrayOfScalarSecretLeaf covers a secret leaf that is
+// itself an array of strings behind a root-level union (mirroring
+// AIGatewayIdentityProvider's openid-connect.config.clientSecret): each array
+// element IS the SensitiveDataSource, not a per-element field, so the recorded
+// selector must be a "self-slice" with an empty SliceLeafField.
+func TestBuildSensitiveLeaves_ArrayOfScalarSecretLeaf(t *testing.T) {
+	fakeOpenIDConnectSchema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "config", Type: "object",
+				Properties: []*parser.Property{
+					{Name: "client_id", Type: "array", Items: &parser.Property{Type: "string"}},
+					{Name: "client_secret", Type: "array", Items: &parser.Property{Type: "string"}},
+				},
+			},
+		},
+	}
+	fakeKeyAuthSchema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "config", Type: "object", Properties: []*parser.Property{{Name: "key", Type: "string"}}},
+		},
+	}
+	entitySchema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{RefName: "FakeKeyAuth"},
+			{RefName: "FakeOpenIDConnect"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"key-auth":       "FakeKeyAuth",
+			"openid-connect": "FakeOpenIDConnect",
+		},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{"FakeIdentityProvider": entitySchema},
+		Schemas: map[string]*parser.Schema{
+			"FakeKeyAuth":       fakeKeyAuthSchema,
+			"FakeOpenIDConnect": fakeOpenIDConnectSchema,
+		},
+	}
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		SecretReferences: map[string][]config.SecretReferenceConfig{
+			"FakeIdentityProvider": {
+				{Path: "spec.apiSpec.openid-connect.config.clientSecret", Type: "Secret"},
+			},
+		},
+	})
+	require.NoError(t, g.buildSensitiveLeaves(parsed))
+
+	tmpls := g.templateSecretReferences("FakeIdentityProvider")
+	require.Len(t, tmpls, 1)
+	tmpl := tmpls[0]
+	assert.True(t, tmpl.IsSlice)
+	assert.Equal(t, "FakeIdentityProviderConfig.OpenIDConnect.Config.ClientSecret", tmpl.SliceParentSelector)
+	assert.Empty(t, tmpl.SliceLeafField)
+	assert.Equal(t, []string{"FakeIdentityProviderConfig", "FakeIdentityProviderConfig.OpenIDConnect"}, tmpl.PointerGuards)
+}
+
+// TestGenerateSDKOps_ArrayOfScalarSecretLeaf_ProducesValidGo is an end-to-end
+// regression test for the same shape: it asserts the generated
+// sdkOpsAPISpec/GetSensitiveDataSecretRefs compile and access the array
+// element directly (no per-element field selector).
+func TestGenerateSDKOps_ArrayOfScalarSecretLeaf_ProducesValidGo(t *testing.T) {
+	fakeOpenIDConnectSchema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "config", Type: "object",
+				Properties: []*parser.Property{
+					{Name: "client_secret", Type: "array", Items: &parser.Property{Type: "string"}},
+				},
+			},
+		},
+	}
+	fakeKeyAuthSchema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "config", Type: "object", Properties: []*parser.Property{{Name: "key", Type: "string"}}},
+		},
+	}
+	entitySchema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{RefName: "FakeKeyAuth"},
+			{RefName: "FakeOpenIDConnect"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"key-auth":       "FakeKeyAuth",
+			"openid-connect": "FakeOpenIDConnect",
+		},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{"FakeIdentityProvider": entitySchema},
+		Schemas: map[string]*parser.Schema{
+			"FakeKeyAuth":       fakeKeyAuthSchema,
+			"FakeOpenIDConnect": fakeOpenIDConnectSchema,
+		},
+	}
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		SecretReferences: map[string][]config.SecretReferenceConfig{
+			"FakeIdentityProvider": {
+				{Path: "spec.apiSpec.openid-connect.config.clientSecret", Type: "Secret"},
+			},
+		},
+	})
+	require.NoError(t, g.buildSensitiveLeaves(parsed))
+	opsConfig := &config.EntityOpsConfig{
+		RequireClient: true,
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateFakeIdentityProviderRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("FakeIdentityProvider", entitySchema, opsConfig)
+	require.NoError(t, err)
+
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err, "generated code must be valid Go")
+
+	assert.Contains(t, content, "if apiSpec.FakeIdentityProviderConfig != nil {")
+	assert.Contains(t, content, "if apiSpec.FakeIdentityProviderConfig.OpenIDConnect != nil {")
+	assert.Contains(t, content, "for i := range apiSpec.FakeIdentityProviderConfig.OpenIDConnect.Config.ClientSecret {")
+	assert.Contains(t, content, "src := apiSpec.FakeIdentityProviderConfig.OpenIDConnect.Config.ClientSecret[i]\n")
+	assert.Contains(t, content, "apiSpec.FakeIdentityProviderConfig.OpenIDConnect.Config.ClientSecret[i].Value = &resolved")
+
+	assert.Contains(t, content, "for _, item := range obj.Spec.APISpec.FakeIdentityProviderConfig.OpenIDConnect.Config.ClientSecret {")
+	assert.Contains(t, content, "if item.Type == SensitiveDataSourceTypeSecretRef && item.SecretRef != nil {")
+	assert.Contains(t, content, "refs = append(refs, *item.SecretRef)")
+}
+
 // TestGenerateSDKOps_WildcardAndMidPathUnion_ProducesValidGo is an end-to-end
 // regression test mirroring AIGatewayModelProvider's real shape: a root-level union
 // with a "*" secret path across "basic" variants, plus one "cloud" variant

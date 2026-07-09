@@ -37,6 +37,8 @@ func UpdateGeneratedOps[
 		return updateAIGatewayConsumerGroup(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return nil // Entity does not support update.
+	case *konnectv1alpha1.AIGatewayIdentityProvider:
+		return updateAIGatewayIdentityProvider(ctx, cl, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:
 		return updateAIGatewayModel(ctx, sdk.GetAIGatewayModelsSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModelProvider:

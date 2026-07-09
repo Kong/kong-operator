@@ -282,6 +282,28 @@ apiGroupVersions:
                   json: telemetry
                   respPath: Endpoints.Telemetry
         reconciler: {}
+
+      - path: /v1/ai-gateways/{gatewayId}/identity
+        name: AIGatewayIdentityProvider
+        secretReferences:
+          - path: spec.apiSpec.openid-connect.config.clientSecret
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayIdentityProvidersSDK
+            fieldName: AIGatewayIdentityProviders
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayIdentityProviderRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayIdentityProviderRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
         ops:
