@@ -1072,8 +1072,8 @@ func (in *AIGatewayIdentityProviderOpenIDConnectConfig) DeepCopyInto(out *AIGate
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.ConsumerClaim != nil {
-		in, out := &in.ConsumerClaim, &out.ConsumerClaim
+	if in.ConsumerClaims != nil {
+		in, out := &in.ConsumerClaims, &out.ConsumerClaims
 		*out = make([][]string, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {

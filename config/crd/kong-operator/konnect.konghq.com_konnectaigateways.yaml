@@ -89,7 +89,8 @@ spec:
                       "konnect", "mesh", "kic", or "_".
                     type: object
                   name:
-                    description: The name for this AI Gateway.
+                    description: The name for this AI Gateway. This value is immutable
+                      after creation.
                     maxLength: 256
                     minLength: 1
                     pattern: ^[A-Za-z0-9._-]{1,256}$

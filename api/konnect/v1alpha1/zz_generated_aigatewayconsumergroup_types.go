@@ -87,6 +87,7 @@ type AIGatewayConsumerGroupAPISpec struct {
 
 	// A user-defined unique identifier for this consumer group, used as a stable
 	// human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1

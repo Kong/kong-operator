@@ -833,6 +833,7 @@ spec:
                                         minLength: 1
                                         type: string
                                     required:
+                                    - config
                                     - name
                                     - provider
                                     type: object
@@ -1659,6 +1660,7 @@ spec:
                         description: |-
                           A user-defined unique identifier for this model, used as a stable
                           human-readable reference.
+                          This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
                         pattern: ^[A-Za-z0-9._-]{1,256}$
@@ -3428,6 +3430,7 @@ spec:
                                         minLength: 1
                                         type: string
                                     required:
+                                    - config
                                     - name
                                     - provider
                                     type: object
@@ -4262,6 +4265,7 @@ spec:
                         description: |-
                           A user-defined unique identifier for this model, used as a stable
                           human-readable reference.
+                          This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
                         pattern: ^[A-Za-z0-9._-]{1,256}$

@@ -806,9 +806,9 @@ func KongRoute(
 		Spec: configurationv1alpha1.KongRouteSpec{
 			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 				Name: new(name),
-				Protocols: []sdkkonnectcomp.RouteJSONProtocols{
-					sdkkonnectcomp.RouteJSONProtocolsHTTP,
-					sdkkonnectcomp.RouteJSONProtocolsHTTPS,
+				Protocols: []sdkkonnectcomp.Protocols{
+					sdkkonnectcomp.ProtocolsHTTP,
+					sdkkonnectcomp.ProtocolsHTTPS,
 				},
 				Methods: []string{"GET"},
 			},

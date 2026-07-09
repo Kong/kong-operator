@@ -526,6 +526,7 @@ type AIGatewayIdentityProviderKeyAuth struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this identity provider instance, used
 	// as a stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -621,6 +622,7 @@ type AIGatewayIdentityProviderOpenIDConnect struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this identity provider instance, used
 	// as a stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -666,7 +668,7 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	//
 	//
 	// +optional
-	ConsumerClaim [][]string `json:"consumerClaim,omitempty"`
+	ConsumerClaims [][]string `json:"consumerClaims,omitempty"`
 	// Do not terminate the request if consumer mapping fails.
 	//
 	//
@@ -749,6 +751,7 @@ type AIGatewayModelAPI struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model, used as a stable
 	// human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -1880,7 +1883,7 @@ type AIGatewayModelBalancerSemanticConfigEmbeddings struct {
 	AllowAuthOverride string `json:"allowAuthOverride,omitzero"`
 	// Configuration for an embeddings model.
 	//
-	// +optional
+	// +required
 	Config *AIGatewayModelBalancerSemanticConfigEmbeddingsConfig `json:"config,omitempty"`
 	// The name of the embeddings model.
 	//
@@ -2311,6 +2314,7 @@ type AIGatewayModelModel struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model, used as a stable
 	// human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -2663,6 +2667,7 @@ type AIGatewayModelProviderAnthropic struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -2716,6 +2721,7 @@ type AIGatewayModelProviderAzure struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -2891,6 +2897,7 @@ type AIGatewayModelProviderBedrock struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3060,6 +3067,7 @@ type AIGatewayModelProviderCerebras struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3113,6 +3121,7 @@ type AIGatewayModelProviderCohere struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3348,6 +3357,7 @@ type AIGatewayModelProviderDashscope struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3402,6 +3412,7 @@ type AIGatewayModelProviderDatabricks struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3455,6 +3466,7 @@ type AIGatewayModelProviderDeepseek struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3508,6 +3520,7 @@ type AIGatewayModelProviderGemini struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3678,6 +3691,7 @@ type AIGatewayModelProviderHuggingface struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3731,6 +3745,7 @@ type AIGatewayModelProviderKimi struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3784,6 +3799,7 @@ type AIGatewayModelProviderLlama2 struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3837,6 +3853,7 @@ type AIGatewayModelProviderMistral struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3890,6 +3907,7 @@ type AIGatewayModelProviderOllama struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3943,6 +3961,7 @@ type AIGatewayModelProviderOpenai struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -4000,6 +4019,7 @@ type AIGatewayModelProviderVercel struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -4053,6 +4073,7 @@ type AIGatewayModelProviderVertex struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -4222,6 +4243,7 @@ type AIGatewayModelProviderVllm struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -4275,6 +4297,7 @@ type AIGatewayModelProviderXai struct {
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1

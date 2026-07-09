@@ -353,8 +353,8 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 	if len(plugin.Protocols) > 0 {
 		pluginInput.Protocols = lo.Map(
 			plugin.Protocols,
-			func(p configurationv1.KongProtocol, _ int) sdkkonnectcomp.Protocols {
-				return sdkkonnectcomp.Protocols(p)
+			func(p configurationv1.KongProtocol, _ int) sdkkonnectcomp.PluginProtocols {
+				return sdkkonnectcomp.PluginProtocols(p)
 			},
 		)
 	}
@@ -452,7 +452,7 @@ func stringValueOrEmpty(v *string) string {
 	return *v
 }
 
-func protocolsEqual(expected, actual []sdkkonnectcomp.Protocols) bool {
+func protocolsEqual(expected, actual []sdkkonnectcomp.PluginProtocols) bool {
 	if len(expected) == 0 && len(actual) == 0 {
 		return true
 	}

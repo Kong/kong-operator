@@ -53,7 +53,7 @@ func (b *KongRouteBuilder) WithHosts(hosts []string) *KongRouteBuilder {
 }
 
 // WithProtocols sets the allowed protocols for the KongRoute being built.
-func (b *KongRouteBuilder) WithProtocols(protocols ...sdkkonnectcomp.RouteJSONProtocols) *KongRouteBuilder {
+func (b *KongRouteBuilder) WithProtocols(protocols ...sdkkonnectcomp.Protocols) *KongRouteBuilder {
 	b.route.Spec.Protocols = append(b.route.Spec.Protocols, protocols...)
 	return b
 }

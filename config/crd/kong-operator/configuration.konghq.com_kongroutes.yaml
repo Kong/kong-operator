@@ -255,8 +255,8 @@ spec:
                   HTTP requests are answered with an upgrade error. When set to only
                   `"http"`, HTTPS requests are answered with an error.
                 items:
-                  description: RouteJSONProtocols - A string representing a protocol,
-                    such as HTTP or HTTPS.
+                  description: Protocols - A string representing a protocol, such
+                    as HTTP or HTTPS.
                   type: string
                 type: array
               regex_priority:
