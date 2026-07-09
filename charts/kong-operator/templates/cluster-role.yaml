@@ -73,6 +73,23 @@ rules:
       - update
       - watch
   - apiGroups:
+      - aigateway.konghq.com
+    resources:
+      - aigatewaydataplanes
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - aigateway.konghq.com
+    resources:
+      - aigatewaydataplanes/status
+    verbs:
+      - patch
+      - update
+  - apiGroups:
       - apiextensions.k8s.io
     resources:
       - customresourcedefinitions
@@ -127,21 +144,25 @@ rules:
       - configuration.konghq.com
     resources:
       - aigatewaydataplanecertificates
-      - eventgatewaybackendclusters
-      - eventgatewaylistenerpolicies
-      - eventgatewaylisteners
-      - eventgatewayvirtualclusterconsumepolicies
-      - eventgatewayvirtualclusterpolicies
-      - eventgatewayvirtualclusterproducepolicies
-      - eventgatewayvirtualclusters
-      - kongcacertificates
-      - kongconsumergroups
-      - kongconsumers
-      - kongdataplaneclientcertificates/status
-      - kongkeys
-      - kongkeysets
-      - kongvaults
+      - eventgatewaydataplanecertificates
+      - kongcertificates
+      - kongcredentialacls
+      - kongcredentialapikeys
+      - kongcredentialbasicauths
+      - kongcredentialhmacs
+      - kongcredentialjwts
+      - kongdataplaneclientcertificates
+      - kongpluginbindings
+      - kongplugins
+      - kongreferencegrants
+      - kongroutes
+      - kongservices
+      - kongsnis
+      - kongtargets
+      - kongupstreams
     verbs:
+      - create
+      - delete
       - get
       - list
       - patch
@@ -200,25 +221,21 @@ rules:
   - apiGroups:
       - configuration.konghq.com
     resources:
-      - eventgatewaydataplanecertificates
-      - kongcertificates
-      - kongcredentialacls
-      - kongcredentialapikeys
-      - kongcredentialbasicauths
-      - kongcredentialhmacs
-      - kongcredentialjwts
-      - kongdataplaneclientcertificates
-      - kongpluginbindings
-      - kongplugins
-      - kongreferencegrants
-      - kongroutes
-      - kongservices
-      - kongsnis
-      - kongtargets
-      - kongupstreams
+      - eventgatewaybackendclusters
+      - eventgatewaylistenerpolicies
+      - eventgatewaylisteners
+      - eventgatewayvirtualclusterconsumepolicies
+      - eventgatewayvirtualclusterpolicies
+      - eventgatewayvirtualclusterproducepolicies
+      - eventgatewayvirtualclusters
+      - kongcacertificates
+      - kongconsumergroups
+      - kongconsumers
+      - kongdataplaneclientcertificates/status
+      - kongkeys
+      - kongkeysets
+      - kongvaults
     verbs:
-      - create
-      - delete
       - get
       - list
       - patch

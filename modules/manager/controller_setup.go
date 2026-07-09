@@ -20,6 +20,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
@@ -28,6 +29,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	aigwdataplane "github.com/kong/kong-operator/v2/controller/aigateway/dataplane"
 	"github.com/kong/kong-operator/v2/controller/controlplane"
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
@@ -163,6 +165,12 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 	if cfg.KEGDataPlaneControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForKegDataPlane(),
+		)
+	}
+
+	if cfg.AIGatewayDataPlaneControllerEnabled {
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForAIGatewayDataPlane(),
 		)
 	}
 
@@ -325,6 +333,26 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 					Resource: "konnecteventgateways",
+				},
+			},
+		},
+		{
+			condition: c.AIGatewayDataPlaneControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				{
+					Group:    aigatewayv1alpha1.SchemeGroupVersion.Group,
+					Version:  aigatewayv1alpha1.SchemeGroupVersion.Version,
+					Resource: "aigatewaydataplanes",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "aigatewaydataplanecertificates",
+				},
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "aigatewaycontrolplanes",
 				},
 			},
 		},
@@ -710,6 +738,19 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.KEGDataPlaneControllerEnabled,
 			Controller: &egdataplane.Reconciler{
+				Client:                   mgr.GetClient(),
+				LoggingMode:              c.LoggingMode,
+				ClusterCASecretName:      c.ClusterCASecretName,
+				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				SecretLabelSelector:      c.SecretLabelSelector,
+				CertTTL:                  c.CertTTL,
+				TypeConverter:            ssaProvider,
+			},
+		},
+		// AIGateway DataPlane controller
+		{
+			Enabled: c.AIGatewayDataPlaneControllerEnabled,
+			Controller: &aigwdataplane.Reconciler{
 				Client:                   mgr.GetClient(),
 				LoggingMode:              c.LoggingMode,
 				ClusterCASecretName:      c.ClusterCASecretName,

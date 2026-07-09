@@ -11,10 +11,10 @@ import (
 )
 
 // IsSSAProviderNeeded reports whether cfg requires the shared SSA
-// TypeConverterProvider, i.e. whether any SSA-using controller (EventGateway
-// DataPlane or MCPServer) is enabled.
+// TypeConverterProvider, i.e. whether any SSA-using controller
+// (EventGatewayDataPlane, AIGatewayDataPlane, or MCPServer) is enabled.
 func IsSSAProviderNeeded(cfg Config) bool {
-	return cfg.KEGDataPlaneControllerEnabled || cfg.FeatureGates.Enabled(FeatureGateMCPServer)
+	return cfg.KEGDataPlaneControllerEnabled || cfg.AIGatewayDataPlaneControllerEnabled || cfg.FeatureGates.Enabled(FeatureGateMCPServer)
 }
 
 // ssaCRDGroups are the CRD groups whose types are passed to ApplyIfChanged /
@@ -23,8 +23,11 @@ func IsSSAProviderNeeded(cfg Config) bool {
 // references (all owned by the EventGateway DataPlane controller). MCPServer,
 // the only other SSA-using controller, needs no CRD-group schemas at all
 // (only the core/apps built-ins), so no other groups belong here.
+// AIGatewayDataPlane adds aigateway.konghq.com for its own status patches and
+// configuration.konghq.com for AIGatewayDataPlaneCertificate objects.
 var ssaCRDGroups = map[string]struct{}{
 	"eventgateway.konghq.com":  {},
+	"aigateway.konghq.com":     {},
 	"configuration.konghq.com": {},
 	"konnect.konghq.com":       {},
 }

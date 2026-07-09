@@ -82,7 +82,8 @@ type AIGatewayDataPlaneSpec struct {
 	// +optional
 	Network *NetworkOptions `json:"network,omitempty"`
 
-	//TODO: add config field for AI Gateway configuration (provides optional overrides for AI Gateway runtime settings).
+	// TODO: add config field for AI Gateway configuration (provides optional overrides for AI Gateway runtime settings).
+	// See the issue: https://github.com/Kong/kong-operator/issues/4840 for more details.
 }
 
 // DeploymentOptions specifies options for the Deployment managed by the AIGatewayDataPlane controller.

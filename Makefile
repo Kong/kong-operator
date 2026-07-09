@@ -1030,6 +1030,7 @@ _run:
 		-cluster-ca-secret-namespace kong-system \
 		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
+		-enable-controller-aigatewaydataplane \
 		-enable-controller-konnect \
 		-enable-controller-controlplaneextensions \
 		-enable-conversion-webhook=false \
@@ -1077,6 +1078,7 @@ debug: generate install.all _ensure-kong-system-namespace
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		--enable-controller-aigateway \
+		--enable-controller-aigatewaydataplane \
 		--enable-controller-konnect \
 		-zap-time-encoding iso8601
 
