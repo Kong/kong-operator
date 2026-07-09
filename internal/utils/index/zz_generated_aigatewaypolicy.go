@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	// IndexFieldAIGatewayPolicyOnAIGatewayControlPlaneRef is the index field for AIGatewayPolicy -> AIGatewayControlPlane.
-	IndexFieldAIGatewayPolicyOnAIGatewayControlPlaneRef = "aiGatewayPolicyOnAIGatewayControlPlaneRef"
+	// IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef is the index field for AIGatewayPolicy -> KonnectAIGateway.
+	IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef = "aiGatewayPolicyOnKonnectAIGatewayRef"
 )
 
 // OptionsForAIGatewayPolicy returns required Index options for AIGatewayPolicy reconciler.
@@ -18,13 +18,13 @@ func OptionsForAIGatewayPolicy() []Option {
 	return []Option{
 		{
 			Object:         &konnectv1alpha1.AIGatewayPolicy{},
-			Field:          IndexFieldAIGatewayPolicyOnAIGatewayControlPlaneRef,
-			ExtractValueFn: aiGatewayPolicyOnAIGatewayControlPlaneRef,
+			Field:          IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef,
+			ExtractValueFn: aiGatewayPolicyOnKonnectAIGatewayRef,
 		},
 	}
 }
 
-func aiGatewayPolicyOnAIGatewayControlPlaneRef(object client.Object) []string {
+func aiGatewayPolicyOnKonnectAIGatewayRef(object client.Object) []string {
 	ent, ok := object.(*konnectv1alpha1.AIGatewayPolicy)
 	if !ok {
 		return nil

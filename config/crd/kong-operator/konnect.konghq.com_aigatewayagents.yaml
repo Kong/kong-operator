@@ -60,7 +60,7 @@ spec:
             description: AIGatewayAgentSpec defines the desired state of AIGatewayAgent.
             properties:
               aiGatewayRef:
-                description: AIGatewayRef is the reference to the parent AIGatewayControlPlane
+                description: AIGatewayRef is the reference to the parent KonnectAIGateway
                   object.
                 properties:
                   konnectID:

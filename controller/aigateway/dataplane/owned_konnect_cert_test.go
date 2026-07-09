@@ -45,13 +45,13 @@ func newTestAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 	}
 }
 
-func newTestAIGWCP() *konnectv1alpha1.AIGatewayControlPlane {
-	return &konnectv1alpha1.AIGatewayControlPlane{
+func newTestAIGWCP() *konnectv1alpha1.KonnectAIGateway {
+	return &konnectv1alpha1.KonnectAIGateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-aigwcp",
 			Namespace: "default",
 		},
-		Status: konnectv1alpha1.AIGatewayControlPlaneStatus{
+		Status: konnectv1alpha1.KonnectAIGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
 					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -60,7 +60,7 @@ func newTestAIGWCP() *konnectv1alpha1.AIGatewayControlPlane {
 					LastTransitionTime: metav1.NewTime(time.Now()),
 				},
 			},
-			Endpoints: &konnectv1alpha1.AIGatewayControlPlaneEndpoints{
+			Endpoints: &konnectv1alpha1.KonnectAIGatewayEndpoints{
 				Configuration: "cp.example.com",
 				Telemetry:     "tp.example.com",
 			},

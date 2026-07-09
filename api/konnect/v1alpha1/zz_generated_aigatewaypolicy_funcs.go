@@ -93,14 +93,14 @@ func (obj *AIGatewayPolicy) SetGatewayID(id string) {
 	obj.Status.GatewayID.ID = id
 }
 
-// GetAIGatewayControlPlaneRef returns the reference to the parent AIGatewayControlPlane.
-func (obj *AIGatewayPolicy) GetAIGatewayControlPlaneRef() commonv1alpha1.ObjectRef {
+// GetKonnectAIGatewayRef returns the reference to the parent KonnectAIGateway.
+func (obj *AIGatewayPolicy) GetKonnectAIGatewayRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.AIGatewayRef
 }
 
 // GetParentRef returns the reference to the parent entity.
 func (obj *AIGatewayPolicy) GetParentRef() commonv1alpha1.ObjectRef {
-	return obj.GetAIGatewayControlPlaneRef()
+	return obj.GetKonnectAIGatewayRef()
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
@@ -113,42 +113,42 @@ func (obj *AIGatewayPolicy) GetParentGVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   "konnect.konghq.com",
 		Version: GroupVersion.Version,
-		Kind:    "AIGatewayControlPlane",
+		Kind:    "KonnectAIGateway",
 	}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type
 // indicating whether the parent reference is valid.
 func (obj *AIGatewayPolicy) GetStatusConditionTypeParentRefValid() string {
-	return AIGatewayControlPlaneRefValidConditionType
+	return KonnectAIGatewayRefValidConditionType
 }
 
 // GetStatusConditionReasonParentRefValid returns the status condition reason
 // indicating that the parent reference is valid.
 func (obj *AIGatewayPolicy) GetStatusConditionReasonParentRefValid() string {
-	return AIGatewayControlPlaneRefReasonValid
+	return KonnectAIGatewayRefReasonValid
 }
 
 // GetStatusConditionReasonParentRefInvalid returns the status condition reason
 // indicating that the parent reference is invalid.
 func (obj *AIGatewayPolicy) GetStatusConditionReasonParentRefInvalid() string {
-	return AIGatewayControlPlaneRefReasonInvalid
+	return KonnectAIGatewayRefReasonInvalid
 }
 
 // GetStatusConditionReasonParentRefNotProgrammed returns the status condition
 // reason indicating that the referenced parent exists but is not yet
 // programmed in Konnect.
 func (obj *AIGatewayPolicy) GetStatusConditionReasonParentRefNotProgrammed() string {
-	return AIGatewayControlPlaneRefReasonNotProgrammed
+	return KonnectAIGatewayRefReasonNotProgrammed
 }
 
 // GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
 func (obj *AIGatewayPolicy) GetAncestorIDs() map[string]string {
 	m := make(map[string]string, 1)
 	if obj.Status.GatewayID != nil {
-		m["AIGatewayControlPlane"] = obj.Status.GatewayID.ID
+		m["KonnectAIGateway"] = obj.Status.GatewayID.ID
 	} else {
-		m["AIGatewayControlPlane"] = ""
+		m["KonnectAIGateway"] = ""
 	}
 	return m
 }
@@ -156,7 +156,7 @@ func (obj *AIGatewayPolicy) GetAncestorIDs() map[string]string {
 // SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
 func (obj *AIGatewayPolicy) SetAncestorID(kind, id string) {
 	switch kind {
-	case "AIGatewayControlPlane":
+	case "KonnectAIGateway":
 		obj.SetGatewayID(id)
 	}
 }

@@ -19,7 +19,7 @@ func createAIGatewayModel(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: CreateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: CreateOp}
 	}
 	req, err := obj.Spec.APISpec.ToCreateAIGatewayModelRequest()
 	if err != nil {
@@ -74,7 +74,7 @@ func updateAIGatewayModel(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: UpdateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 	req, err := obj.Spec.APISpec.ToUpdateAIGatewayModelRequest()
@@ -102,7 +102,7 @@ func deleteAIGatewayModel(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: DeleteOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: DeleteOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 

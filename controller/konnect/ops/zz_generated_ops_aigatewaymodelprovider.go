@@ -21,7 +21,7 @@ func createAIGatewayModelProvider(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: CreateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: CreateOp}
 	}
 	req, err := obj.ToCreateAIGatewayModelProviderRequest(ctx, cl)
 	if err != nil {
@@ -281,7 +281,7 @@ func updateAIGatewayModelProvider(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: UpdateOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 	req, err := obj.ToUpdateAIGatewayModelProviderRequest(ctx, cl)
@@ -309,7 +309,7 @@ func deleteAIGatewayModelProvider(
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: DeleteOp}
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: DeleteOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 
@@ -327,7 +327,7 @@ func getAIGatewayModelProviderForUID(
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
-		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayControlPlane", Op: GetOp}
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
 	}
 
 	// TODO: AIGatewayModelProvider's Konnect list response lacks labels/tags and no

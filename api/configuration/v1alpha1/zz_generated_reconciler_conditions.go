@@ -3,22 +3,6 @@
 package v1alpha1
 
 const (
-	// AIGatewayControlPlaneRefValidConditionType is the type of the condition that indicates
-	// whether the AIGatewayControlPlane reference is valid and points to an existing
-	// AIGatewayControlPlane.
-	AIGatewayControlPlaneRefValidConditionType = "AIGatewayControlPlaneRefValid"
-
-	// AIGatewayControlPlaneRefReasonValid is the reason used with the AIGatewayControlPlaneRefValid
-	// condition type indicating that the AIGatewayControlPlane reference is valid.
-	AIGatewayControlPlaneRefReasonValid = "Valid"
-	// AIGatewayControlPlaneRefReasonInvalid is the reason used with the AIGatewayControlPlaneRefValid
-	// condition type indicating that the AIGatewayControlPlane reference is invalid.
-	AIGatewayControlPlaneRefReasonInvalid = "Invalid"
-	// AIGatewayControlPlaneRefReasonNotProgrammed is the reason used with the AIGatewayControlPlaneRefValid
-	// condition type indicating that the referenced AIGatewayControlPlane exists but is not
-	// yet programmed in Konnect.
-	AIGatewayControlPlaneRefReasonNotProgrammed = "NotProgrammed"
-
 	// EventGatewayRefValidConditionType is the type of the condition that indicates
 	// whether the EventGateway reference is valid and points to an existing
 	// KonnectEventGateway.
@@ -82,4 +66,20 @@ const (
 	// condition type indicating that the referenced EventGatewayVirtualCluster exists but is not
 	// yet programmed in Konnect.
 	EventGatewayVirtualClusterRefReasonNotProgrammed = "NotProgrammed"
+
+	// KonnectAIGatewayRefValidConditionType is the type of the condition that indicates
+	// whether the KonnectAIGateway reference is valid and points to an existing
+	// KonnectAIGateway.
+	KonnectAIGatewayRefValidConditionType = "KonnectAIGatewayRefValid"
+
+	// KonnectAIGatewayRefReasonValid is the reason used with the KonnectAIGatewayRefValid
+	// condition type indicating that the KonnectAIGateway reference is valid.
+	KonnectAIGatewayRefReasonValid = "Valid"
+	// KonnectAIGatewayRefReasonInvalid is the reason used with the KonnectAIGatewayRefValid
+	// condition type indicating that the KonnectAIGateway reference is invalid.
+	KonnectAIGatewayRefReasonInvalid = "Invalid"
+	// KonnectAIGatewayRefReasonNotProgrammed is the reason used with the KonnectAIGatewayRefValid
+	// condition type indicating that the referenced KonnectAIGateway exists but is not
+	// yet programmed in Konnect.
+	KonnectAIGatewayRefReasonNotProgrammed = "NotProgrammed"
 )

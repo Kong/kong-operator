@@ -26,9 +26,9 @@ func AIGatewayPolicyReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.AIGatewayControlPlane{},
+				&konnectv1alpha1.KonnectAIGateway{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueAIGatewayPolicyForAIGatewayControlPlane(cl),
+					enqueueAIGatewayPolicyForKonnectAIGateway(cl),
 				),
 			)
 		},
@@ -43,17 +43,17 @@ func AIGatewayPolicyReconciliationWatchOptions(
 	}
 }
 
-func enqueueAIGatewayPolicyForAIGatewayControlPlane(
+func enqueueAIGatewayPolicyForKonnectAIGateway(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		parent, ok := obj.(*konnectv1alpha1.AIGatewayControlPlane)
+		parent, ok := obj.(*konnectv1alpha1.KonnectAIGateway)
 		if !ok {
 			return nil
 		}
 		var l konnectv1alpha1.AIGatewayPolicyList
 		if err := cl.List(ctx, &l, client.MatchingFields{
-			index.IndexFieldAIGatewayPolicyOnAIGatewayControlPlaneRef: client.ObjectKeyFromObject(parent).String(),
+			index.IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef: client.ObjectKeyFromObject(parent).String(),
 		}); err != nil {
 			return nil
 		}

@@ -19,7 +19,7 @@ spec:
   # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
   serverURL: us.api.konghq.tech
 ---
-kind: AIGatewayControlPlane
+kind: KonnectAIGateway
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
   name: ai-gw-cp-1

@@ -26,9 +26,9 @@ func AIGatewayModelProviderReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.AIGatewayControlPlane{},
+				&konnectv1alpha1.KonnectAIGateway{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueAIGatewayModelProviderForAIGatewayControlPlane(cl),
+					enqueueAIGatewayModelProviderForKonnectAIGateway(cl),
 				),
 			)
 		},
@@ -43,17 +43,17 @@ func AIGatewayModelProviderReconciliationWatchOptions(
 	}
 }
 
-func enqueueAIGatewayModelProviderForAIGatewayControlPlane(
+func enqueueAIGatewayModelProviderForKonnectAIGateway(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		parent, ok := obj.(*konnectv1alpha1.AIGatewayControlPlane)
+		parent, ok := obj.(*konnectv1alpha1.KonnectAIGateway)
 		if !ok {
 			return nil
 		}
 		var l konnectv1alpha1.AIGatewayModelProviderList
 		if err := cl.List(ctx, &l, client.MatchingFields{
-			index.IndexFieldAIGatewayModelProviderOnAIGatewayControlPlaneRef: client.ObjectKeyFromObject(parent).String(),
+			index.IndexFieldAIGatewayModelProviderOnKonnectAIGatewayRef: client.ObjectKeyFromObject(parent).String(),
 		}); err != nil {
 			return nil
 		}

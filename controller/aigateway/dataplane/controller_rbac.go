@@ -22,7 +22,7 @@ package dataplane
 
 // +kubebuilder:rbac:groups=aigateway.konghq.com,resources=aigatewaydataplanes,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=aigateway.konghq.com,resources=aigatewaydataplanes/status,verbs=update;patch
-// +kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaycontrolplanes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways,verbs=get;list;watch
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=aigatewaydataplanecertificates,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=create;get;list;watch;update;patch;delete

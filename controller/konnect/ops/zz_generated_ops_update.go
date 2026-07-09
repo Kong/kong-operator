@@ -35,8 +35,6 @@ func UpdateGeneratedOps[
 		return nil // Entity does not support update.
 	case *konnectv1alpha1.AIGatewayConsumerGroup:
 		return updateAIGatewayConsumerGroup(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
-	case *konnectv1alpha1.AIGatewayControlPlane:
-		return updateAIGatewayControlPlane(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return nil // Entity does not support update.
 	case *konnectv1alpha1.AIGatewayModel:
@@ -61,6 +59,8 @@ func UpdateGeneratedOps[
 		return updateEventGatewayVirtualClusterPolicy(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return updateEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
+	case *konnectv1alpha1.KonnectAIGateway:
+		return updateKonnectAIGateway(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return updateKonnectEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:

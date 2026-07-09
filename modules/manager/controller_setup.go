@@ -352,7 +352,7 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 				{
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
-					Resource: "aigatewaycontrolplanes",
+					Resource: "konnectaigateways",
 				},
 			},
 		},

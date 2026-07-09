@@ -29,8 +29,6 @@ func reconciliationWatchOptionsForEntity[
 		return AIGatewayConsumerCredentialReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.AIGatewayConsumerGroup:
 		return AIGatewayConsumerGroupReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayControlPlane:
-		return AIGatewayControlPlaneReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return AIGatewayDataPlaneCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.AIGatewayModel:
@@ -55,6 +53,8 @@ func reconciliationWatchOptionsForEntity[
 		return EventGatewayVirtualClusterPolicyReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.KonnectAIGateway:
+		return KonnectAIGatewayReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return KonnectEventGatewayReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.Portal:

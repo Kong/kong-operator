@@ -38,12 +38,12 @@ import (
 
 // ensureKonnectCertificate ensures an AIGatewayDataPlaneCertificate resource
 // exists for the given AIGatewayDataPlane, referencing the provisioned mTLS Secret and the
-// resolved AIGatewayControlPlane.
+// resolved KonnectAIGateway (controlplane).
 func (r *Reconciler) ensureKonnectCertificate(
 	ctx context.Context,
 	logger logr.Logger,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.AIGatewayControlPlane,
+	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	certSecret *corev1.Secret,
 ) (programmed bool, err error) {
 	desired := &configurationv1alpha1.AIGatewayDataPlaneCertificate{

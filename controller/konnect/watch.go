@@ -309,7 +309,7 @@ type WatchableEntityType interface {
 		konnectv1alpha1.PortalIPAllowList |
 		konnectv1alpha1.PortalTeam |
 		konnectv1alpha1.PortalIdentityProviderRequest |
-		konnectv1alpha1.AIGatewayControlPlane |
+		konnectv1alpha1.KonnectAIGateway |
 		konnectv1alpha1.AIGatewayModel |
 		konnectv1alpha1.AIGatewayModelProvider |
 		konnectv1alpha1.AIGatewayPolicy |

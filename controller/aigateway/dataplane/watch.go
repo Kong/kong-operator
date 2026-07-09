@@ -29,22 +29,22 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
-// enqueueForAIGatewayControlPlaneRef returns a MapFunc that enqueues reconcile requests
+// enqueueForKonnectAIGatewayRef returns a MapFunc that enqueues reconcile requests
 // for all AIGatewayDataPlanes in the same namespace whose
-// spec.controlPlaneRef.konnectNamespacedRef.name matches the changed AIGatewayControlPlane.
-func enqueueForAIGatewayControlPlaneRef(cl client.Client) handler.MapFunc {
+// spec.controlPlaneRef.konnectNamespacedRef.name matches the changed KonnectAIGateway.
+func enqueueForKonnectAIGatewayRef(cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		aigwcp, ok := obj.(*konnectv1alpha1.AIGatewayControlPlane)
+		aigwcp, ok := obj.(*konnectv1alpha1.KonnectAIGateway)
 		if !ok {
 			return nil
 		}
 
 		aigwdpList := &aigatewayv1alpha1.AIGatewayDataPlaneList{}
 		if err := cl.List(ctx, aigwdpList,
-			client.MatchingFields{index.IndexFieldAIGatewayDataPlaneOnAIGatewayControlPlane: aigwcp.Namespace + "/" + aigwcp.Name},
+			client.MatchingFields{index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway: aigwcp.Namespace + "/" + aigwcp.Name},
 		); err != nil {
-			ctrl.LoggerFrom(ctx).Error(err, "failed to list AIGatewayDataPlanes for AIGatewayControlPlane",
-				"AIGatewayControlPlane", aigwcp.Name)
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list AIGatewayDataPlanes for KonnectAIGateway",
+				"KonnectAIGateway", aigwcp.Name)
 			return nil
 		}
 

@@ -145,7 +145,7 @@ func TestGetAPIAuthRef(t *testing.T) {
 			name: "AI gateway consumer credential resolves API auth via AI gateway consumer parent",
 			objects: []client.Object{
 				newTestAPIAuthConfiguration(namespace, apiAuthName),
-				newTestAIGatewayControlPlane(namespace, aiGatewayName, apiAuthName),
+				newTestKonnectAIGateway(namespace, aiGatewayName, apiAuthName),
 				newTestAIGatewayConsumer(namespace, consumerName, aiGatewayName),
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
@@ -422,13 +422,13 @@ func newTestEventGatewayListener(namespace, name, gatewayName string) *configura
 	}
 }
 
-func newTestAIGatewayControlPlane(namespace, name, apiAuthName string) *konnectv1alpha1.AIGatewayControlPlane {
-	return &konnectv1alpha1.AIGatewayControlPlane{
+func newTestKonnectAIGateway(namespace, name, apiAuthName string) *konnectv1alpha1.KonnectAIGateway {
+	return &konnectv1alpha1.KonnectAIGateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: konnectv1alpha1.AIGatewayControlPlaneSpec{
+		Spec: konnectv1alpha1.KonnectAIGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 					Name: apiAuthName,

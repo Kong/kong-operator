@@ -48,12 +48,12 @@ func TestAIGatewayAgent(t *testing.T) {
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
-	t.Log("Creating KonnectAPIAuthConfiguration and parent AIGatewayControlPlane")
+	t.Log("Creating KonnectAPIAuthConfiguration and parent KonnectAIGateway")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	gateway := deploy.AIGatewayControlPlane(t, ctx, clientNamespaced, apiAuth)
+	gateway := deploy.KonnectAIGateway(t, ctx, clientNamespaced, apiAuth)
 
-	const aiGatewayControlPlaneID = "ai-gw-cp-12345"
-	updateAIGatewayControlPlaneStatusWithProgrammed(t, ctx, clientNamespaced, gateway, aiGatewayControlPlaneID)
+	const konnectAIGatewayID = "ai-gw-cp-12345"
+	updateKonnectAIGatewayStatusWithProgrammed(t, ctx, clientNamespaced, gateway, konnectAIGatewayID)
 
 	t.Run("should create, update and delete AIGatewayAgent successfully", func(t *testing.T) {
 		const (
@@ -67,7 +67,7 @@ func TestAIGatewayAgent(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on AIGatewayAgent creation")
 		sdk.AIGatewayAgentsSDK.EXPECT().
-			CreateAiGatewayAgent(mock.Anything, aiGatewayControlPlaneID, mock.MatchedBy(func(req sdkkonnectcomp.CreateAIGatewayAgentRequest) bool {
+			CreateAiGatewayAgent(mock.Anything, konnectAIGatewayID, mock.MatchedBy(func(req sdkkonnectcomp.CreateAIGatewayAgentRequest) bool {
 				return req.DisplayName == initialDisplayName &&
 					req.Config.URL == agentURL &&
 					string(req.Type) == "http" &&
@@ -96,7 +96,7 @@ func TestAIGatewayAgent(t *testing.T) {
 				objectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
 				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
 				func(a *konnectv1alpha1.AIGatewayAgent) bool {
-					return a.GetGatewayID() == aiGatewayControlPlaneID &&
+					return a.GetGatewayID() == konnectAIGatewayID &&
 						controllerutil.ContainsFinalizer(a, konnect.KonnectCleanupFinalizer)
 				},
 			),
@@ -108,7 +108,7 @@ func TestAIGatewayAgent(t *testing.T) {
 		t.Log("Setting up SDK expectations on AIGatewayAgent update")
 		sdk.AIGatewayAgentsSDK.EXPECT().
 			UpdateAiGatewayAgent(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpdateAiGatewayAgentRequest) bool {
-				return req.GatewayID == aiGatewayControlPlaneID &&
+				return req.GatewayID == konnectAIGatewayID &&
 					req.AgentIDOrName == agentID &&
 					req.UpdateAIGatewayAgentRequest.DisplayName == updatedDisplayName &&
 					req.UpdateAIGatewayAgentRequest.Labels != nil &&
@@ -139,7 +139,7 @@ func TestAIGatewayAgent(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on AIGatewayAgent deletion")
 		sdk.AIGatewayAgentsSDK.EXPECT().
-			DeleteAiGatewayAgent(mock.Anything, aiGatewayControlPlaneID, agentID).
+			DeleteAiGatewayAgent(mock.Anything, konnectAIGatewayID, agentID).
 			Return(&sdkkonnectops.DeleteAiGatewayAgentResponse{}, nil)
 
 		t.Log("Deleting AIGatewayAgent")
@@ -156,7 +156,7 @@ func TestAIGatewayAgent(t *testing.T) {
 		var agent *konnectv1alpha1.AIGatewayAgent
 
 		sdk.AIGatewayAgentsSDK.EXPECT().
-			CreateAiGatewayAgent(mock.Anything, aiGatewayControlPlaneID, mock.Anything).
+			CreateAiGatewayAgent(mock.Anything, konnectAIGatewayID, mock.Anything).
 			Return(nil, &sdkkonnecterrs.SDKError{
 				StatusCode: 400,
 				Body:       ErrBodyDataConstraintError,
@@ -164,7 +164,7 @@ func TestAIGatewayAgent(t *testing.T) {
 
 		sdk.AIGatewayAgentsSDK.EXPECT().
 			ListAiGatewayAgents(mock.Anything, sdkkonnectops.ListAiGatewayAgentsRequest{
-				GatewayID: aiGatewayControlPlaneID,
+				GatewayID: konnectAIGatewayID,
 			}).
 			RunAndReturn(func(_ context.Context, _ sdkkonnectops.ListAiGatewayAgentsRequest, _ ...sdkkonnectops.Option) (*sdkkonnectops.ListAiGatewayAgentsResponse, error) {
 				return &sdkkonnectops.ListAiGatewayAgentsResponse{
@@ -191,7 +191,7 @@ func TestAIGatewayAgent(t *testing.T) {
 				objectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
 				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
 				func(a *konnectv1alpha1.AIGatewayAgent) bool {
-					return a.GetGatewayID() == aiGatewayControlPlaneID &&
+					return a.GetGatewayID() == konnectAIGatewayID &&
 						controllerutil.ContainsFinalizer(a, konnect.KonnectCleanupFinalizer)
 				},
 			),

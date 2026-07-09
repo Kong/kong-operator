@@ -471,10 +471,10 @@ rules:
       - aigatewayconsumercredentials
       - aigatewayconsumergroups
       - aigatewayconsumers
-      - aigatewaycontrolplanes
       - aigatewaymodelproviders
       - aigatewaymodels
       - aigatewaypolicies
+      - konnectaigateways
       - konnectapiauthconfigurations
       - konnectcloudgatewaydataplanegroupconfigurations
       - konnectcloudgatewaynetworks
@@ -505,14 +505,14 @@ rules:
       - aigatewayconsumergroups/status
       - aigatewayconsumers/finalizers
       - aigatewayconsumers/status
-      - aigatewaycontrolplanes/finalizers
-      - aigatewaycontrolplanes/status
       - aigatewaymodelproviders/finalizers
       - aigatewaymodelproviders/status
       - aigatewaymodels/finalizers
       - aigatewaymodels/status
       - aigatewaypolicies/finalizers
       - aigatewaypolicies/status
+      - konnectaigateways/finalizers
+      - konnectaigateways/status
       - konnectapiauthconfigurations/finalizers
       - konnectapiauthconfigurations/status
       - konnectcloudgatewaydataplanegroupconfigurations/finalizers

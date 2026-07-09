@@ -24,13 +24,13 @@ func (c *errListClient) List(_ context.Context, _ client.ObjectList, _ ...client
 	return assert.AnError
 }
 
-func Test_enqueueForAIGatewayControlPlaneRef(t *testing.T) {
+func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 	const (
 		ns       = "test-ns"
 		aigwcpNM = "my-aigwcp"
 	)
 
-	aigwcp := &konnectv1alpha1.AIGatewayControlPlane{
+	aigwcp := &konnectv1alpha1.KonnectAIGateway{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: aigwcpNM},
 	}
 
@@ -59,7 +59,7 @@ func Test_enqueueForAIGatewayControlPlaneRef(t *testing.T) {
 		WithObjects(aigwcp, aigwdpMatching, aigwdpOther).
 		WithIndex(
 			&aigatewayv1alpha1.AIGatewayDataPlane{},
-			index.IndexFieldAIGatewayDataPlaneOnAIGatewayControlPlane,
+			index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
 			func(obj client.Object) []string {
 				dp, ok := obj.(*aigatewayv1alpha1.AIGatewayDataPlane)
 				if !ok || dp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
@@ -86,7 +86,7 @@ func Test_enqueueForAIGatewayControlPlaneRef(t *testing.T) {
 			wantNamespace: ns,
 		},
 		{
-			name:    "returns nil when obj is not AIGatewayControlPlane",
+			name:    "returns nil when obj is not KonnectAIGateway",
 			cl:      cl,
 			obj:     &corev1.ConfigMap{},
 			wantNil: true,
@@ -101,7 +101,7 @@ func Test_enqueueForAIGatewayControlPlaneRef(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mapFunc := enqueueForAIGatewayControlPlaneRef(tc.cl)
+			mapFunc := enqueueForKonnectAIGatewayRef(tc.cl)
 			requests := mapFunc(t.Context(), tc.obj)
 			if tc.wantNil {
 				require.Nil(t, requests)

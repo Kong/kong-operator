@@ -11,7 +11,6 @@ type GeneratedSDK interface {
 	GetAIGatewayAgentsSDK() sdkkonnectgo.AIGatewayAgentsSDK
 	GetAIGatewayConsumersSDK() sdkkonnectgo.AIGatewayConsumersSDK
 	GetAIGatewayConsumerGroupsSDK() sdkkonnectgo.AIGatewayConsumerGroupsSDK
-	GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK
 	GetAIGatewayDataPlaneCertificatesSDK() sdkkonnectgo.AIGatewayDataPlaneCertificatesSDK
 	GetAIGatewayModelsSDK() sdkkonnectgo.AIGatewayModelsSDK
 	GetAIGatewayModelProvidersSDK() sdkkonnectgo.AIGatewayModelProvidersSDK
@@ -24,6 +23,7 @@ type GeneratedSDK interface {
 	GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK
 	GetEventGatewayVirtualClusterPoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterPoliciesSDK
 	GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK
+	GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetPortalsSDK() sdkkonnectgo.PortalsSDK
 	GetPortalCustomDomainsSDK() sdkkonnectgo.PortalCustomDomainsSDK
@@ -48,11 +48,6 @@ func (w sdkWrapper) GetAIGatewayConsumersSDK() sdkkonnectgo.AIGatewayConsumersSD
 // GetAIGatewayConsumerGroupsSDK returns the SDK to operate AIGatewayConsumerGroup.
 func (w sdkWrapper) GetAIGatewayConsumerGroupsSDK() sdkkonnectgo.AIGatewayConsumerGroupsSDK {
 	return w.sdk.AIGatewayConsumerGroups
-}
-
-// GetAIGatewaysSDK returns the SDK to operate AIGatewayControlPlane.
-func (w sdkWrapper) GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK {
-	return w.sdk.AIGateways
 }
 
 // GetAIGatewayDataPlaneCertificatesSDK returns the SDK to operate AIGatewayDataPlaneCertificate.
@@ -113,6 +108,11 @@ func (w sdkWrapper) GetEventGatewayVirtualClusterPoliciesSDK() sdkkonnectgo.Even
 // GetEventGatewayVirtualClusterProducePoliciesSDK returns the SDK to operate EventGatewayVirtualClusterProducePolicy.
 func (w sdkWrapper) GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK {
 	return w.sdk.EventGatewayVirtualClusterProducePolicies
+}
+
+// GetAIGatewaysSDK returns the SDK to operate KonnectAIGateway.
+func (w sdkWrapper) GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK {
+	return w.sdk.AIGateways
 }
 
 // GetEventGatewaysSDK returns the SDK to operate KonnectEventGateway.

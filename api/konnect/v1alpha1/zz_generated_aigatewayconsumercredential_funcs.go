@@ -162,9 +162,9 @@ func (obj *AIGatewayConsumerCredential) GetStatusConditionReasonParentRefNotProg
 func (obj *AIGatewayConsumerCredential) GetAncestorIDs() map[string]string {
 	m := make(map[string]string, 1)
 	if obj.Status.GatewayID != nil {
-		m["AIGatewayControlPlane"] = obj.Status.GatewayID.ID
+		m["KonnectAIGateway"] = obj.Status.GatewayID.ID
 	} else {
-		m["AIGatewayControlPlane"] = ""
+		m["KonnectAIGateway"] = ""
 	}
 	return m
 }
@@ -172,7 +172,7 @@ func (obj *AIGatewayConsumerCredential) GetAncestorIDs() map[string]string {
 // SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
 func (obj *AIGatewayConsumerCredential) SetAncestorID(kind, id string) {
 	switch kind {
-	case "AIGatewayControlPlane":
+	case "KonnectAIGateway":
 		obj.SetGatewayID(id)
 	}
 }
