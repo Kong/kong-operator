@@ -30,10 +30,10 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | `disabled` _bool_ | Disabled set if the plugin is disabled or not. |
 | `config` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
 | `configFrom` _[NamespacedConfigSource](#configuration-konghq-com-v1-types-namespacedconfigsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
-| `configPatches` _[NamespacedConfigPatch](#configuration-konghq-com-v1-types-namespacedconfigpatch)_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
+| `configPatches` _[][NamespacedConfigPatch](#configuration-konghq-com-v1-types-namespacedconfigpatch)_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
-| `protocols` _[KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
+| `protocols` _[][KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _*github.com/kong/go-kong/kong.PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
 | `status` _[KongClusterPluginStatus](#configuration-konghq-com-v1-types-kongclusterpluginstatus)_ | Status represents the current status of the KongClusterPlugin resource. |
@@ -73,10 +73,10 @@ KongPlugin is the Schema for the kongplugins API.
 | `disabled` _bool_ | Disabled set if the plugin is disabled or not. |
 | `config` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
 | `configFrom` _[ConfigSource](#configuration-konghq-com-v1-types-configsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
-| `configPatches` _[ConfigPatch](#configuration-konghq-com-v1-types-configpatch)_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
+| `configPatches` _[][ConfigPatch](#configuration-konghq-com-v1-types-configpatch)_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
-| `protocols` _[KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
+| `protocols` _[][KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _*github.com/kong/go-kong/kong.PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
 | `status` _[KongPluginStatus](#configuration-konghq-com-v1-types-kongpluginstatus)_ | Status represents the current status of the KongPlugin resource. |
@@ -1184,7 +1184,7 @@ EventGatewayACLPolicyConfig Apply ACLs to virtual cluster traffic.
 
 | Field | Description |
 | --- | --- |
-| `rules` _[EventGatewayACLRule](#configuration-konghq-com-v1alpha1-types-eventgatewayaclrule)_ | Every ACL rule in this list applies independently. |
+| `rules` _[][EventGatewayACLRule](#configuration-konghq-com-v1alpha1-types-eventgatewayaclrule)_ | Every ACL rule in this list applies independently. |
 
 _Appears in:_
 
@@ -1216,7 +1216,7 @@ EventGatewayACLRule A Kafka ACL rule to apply to virtual cluster traffic
 | Field | Description |
 | --- | --- |
 | `action` _string_ | How to handle the request if the rule matches |
-| `operations` _[EventGatewayACLOperation](#configuration-konghq-com-v1alpha1-types-eventgatewayacloperation)_ | Types of Kafka operations to match against. Note that not every operation can apply to every resource type. |
+| `operations` _[][EventGatewayACLOperation](#configuration-konghq-com-v1alpha1-types-eventgatewayacloperation)_ | Types of Kafka operations to match against. Note that not every operation can apply to every resource type. |
 | `resourceNames` _[EventGatewayACLRuleResourceNames](#configuration-konghq-com-v1alpha1-types-eventgatewayaclruleresourcenames)_ | If any of these entries match, the resource name matches for this rule. A maximum of 50 entries are allowed. |
 | `resourceType` _string_ | This rule applies to access only for type of resource |
 
@@ -1687,8 +1687,8 @@ EventGatewayDecryptPolicyConfig The configuration of the decrypt policy.
 | Field | Description |
 | --- | --- |
 | `failureMode` _[EncryptionFailureMode](#configuration-konghq-com-v1alpha1-types-encryptionfailuremode)_ | Describes how to handle failing encryption or decryption. Use `error` if the record should be rejected if encryption or decryption fails. Use `passthrough` to ignore encryption or decryption failure and continue proxying the record. |
-| `keySources` _[EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
-| `partOfRecord` _[DecryptionRecordPart](#configuration-konghq-com-v1alpha1-types-decryptionrecordpart)_ | Describes the parts of a record to decrypt. |
+| `keySources` _[][EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
+| `partOfRecord` _[][DecryptionRecordPart](#configuration-konghq-com-v1alpha1-types-decryptionrecordpart)_ | Describes the parts of a record to decrypt. |
 
 _Appears in:_
 
@@ -1705,7 +1705,7 @@ EventGatewayEncryptConfig The configuration of the encrypt policy.
 | --- | --- |
 | `encryptionKey` _[EventGatewayEncryptConfigEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)_ | The key to use for encryption. |
 | `failureMode` _[EncryptionFailureMode](#configuration-konghq-com-v1alpha1-types-encryptionfailuremode)_ | Describes how to handle failing encryption or decryption. Use `error` if the record should be rejected if encryption or decryption fails. Use `passthrough` to ignore encryption or decryption failure and continue proxying the record. |
-| `partOfRecord` _[EncryptionRecordPart](#configuration-konghq-com-v1alpha1-types-encryptionrecordpart)_ | Describes the parts of a record to encrypt. |
+| `partOfRecord` _[][EncryptionRecordPart](#configuration-konghq-com-v1alpha1-types-encryptionrecordpart)_ | Describes the parts of a record to encrypt. |
 
 _Appears in:_
 
@@ -1822,7 +1822,7 @@ EventGatewayListenerAPISpec defines the API spec fields for EventGatewayListener
 | `description` _string_ | A human-readable description of the listener. |
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _string_ | The unique name of the listener. |
-| `ports` _[EventGatewayListenerPort](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerport)_ | Which port or ports to listen on. There can be multiple ways to define ports: - as a single port, e.g. 9092 - as a range of ports, e.g. 9092-9094<br /><br />It's possible to combine both, e.g. [9092, "9093-9095", 9096]. |
+| `ports` _[][EventGatewayListenerPort](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerport)_ | Which port or ports to listen on. There can be multiple ways to define ports: - as a single port, e.g. 9092 - as a range of ports, e.g. 9092-9094<br /><br />It's possible to combine both, e.g. [9092, "9093-9095", 9096]. |
 
 _Appears in:_
 
@@ -2054,7 +2054,7 @@ headers policy.
 
 | Field | Description |
 | --- | --- |
-| `actions` _[EventGatewayModifyHeaderAction](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderaction)_ | Actions are run in sequential order and act on individual headers. |
+| `actions` _[][EventGatewayModifyHeaderAction](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderaction)_ | Actions are run in sequential order and act on individual headers. |
 
 _Appears in:_
 
@@ -2072,7 +2072,7 @@ parsed record fields policy.
 | --- | --- |
 | `decryptFields` _[EventGatewayParsedRecordDecryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselector)_ | Selects fields of a parsed record for decryption. |
 | `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `keySources` _[EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
+| `keySources` _[][EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
 
 _Appears in:_
 
@@ -2165,7 +2165,7 @@ parsed record policy.
 
 | Field | Description |
 | --- | --- |
-| `encryptFields` _[EventGatewayParsedRecordEncryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselector)_ | Selects which fields to encrypt and with what keys. |
+| `encryptFields` _[][EventGatewayParsedRecordEncryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselector)_ | Selects which fields to encrypt and with what keys. |
 | `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
@@ -2578,7 +2578,7 @@ EventGatewayTLSListenerPolicyConfig is a type alias.
 | Field | Description |
 | --- | --- |
 | `allowPlaintext` _string_ | If false, only TLS connections are allowed. If true, both TLS and plaintext connections are allowed. |
-| `certificates` _[TLSCertificate](#configuration-konghq-com-v1alpha1-types-tlscertificate)_ |  |
+| `certificates` _[][TLSCertificate](#configuration-konghq-com-v1alpha1-types-tlscertificate)_ |  |
 | `clientAuthentication` _[EventGatewayTLSListenerPolicyConfigClientAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfigclientauthentication)_ | Configures mutual TLS (mTLS) client certificate verification. When set, the gateway requests or requires clients to present a certificate during the TLS handshake.<br /><br />**Requires a minimum runtime version of `1.1`**. |
 | `versions` _[TLSVersionRange](#configuration-konghq-com-v1alpha1-types-tlsversionrange)_ | A range of TLS versions. |
 
@@ -2601,7 +2601,7 @@ handshake.<br /><br />**Requires a minimum runtime version of `1.1`**.
 | --- | --- |
 | `mode` _string_ | * required - Reject TLS connections without a valid client certificate. * requested - Request a client certificate during the TLS handshake, but allow connections without one (falls back to other configured authentication methods). If a certificate is presented but cannot be verified, the connection is closed. |
 | `principalMapping` _string_ | An expression that extracts a principal identifier from a verified client certificate. This expression must evaluate to a string.<br /><br />**Requires a minimum runtime version of `1.1`**. |
-| `tlsTrustBundles` _[TLSTrustBundleReference](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereference)_ | TLS trust bundles contain CA certificate bundles used to verify client certificates. All bundles are merged into a single trust store; a client certificate is accepted if it chains to any trusted CA across all bundles. |
+| `tlsTrustBundles` _[][TLSTrustBundleReference](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereference)_ | TLS trust bundles contain CA certificate bundles used to verify client certificates. All bundles are merged into a single trust store; a client certificate is accepted if it chains to any trusted CA across all bundles. |
 
 _Appears in:_
 
@@ -2617,13 +2617,13 @@ EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVi
 | Field | Description |
 | --- | --- |
 | `aclMode` _[VirtualClusterACLMode](#configuration-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
-| `authentication` _[VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)_ | How to handle authentication from clients.<br /><br />It tries to authenticate with every rule sequentially one by one. It succeeds on the first match, and fails if no rule matches. |
+| `authentication` _[][VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)_ | How to handle authentication from clients.<br /><br />It tries to authenticate with every rule sequentially one by one. It succeeds on the first match, and fails if no rule matches. |
 | `description` _string_ | A human-readable description of the virtual cluster. |
 | `dnsLabel` _[VirtualClusterDNSLabel](#configuration-konghq-com-v1alpha1-types-virtualclusterdnslabel)_ | The DNS label used in the bootstrap server URL to identify the virtual cluster when using SNI routing. The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-', must start and end with an alphanumeric character. |
 | `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ | The name of the virtual cluster. |
 | `namespace` _[VirtualClusterNamespace](#configuration-konghq-com-v1alpha1-types-virtualclusternamespace)_ | Namespace allows to implement multitenancy using a single backend cluster. It allows to either hide or enforce a static prefix on resources (topics, consumer group IDs, transaction IDs). |
-| `topicAliases` _[VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `topicAliases` _[][VirtualClusterTopicAlias](#configuration-konghq-com-v1alpha1-types-virtualclustertopicalias)_ | Topic aliases allow exposing backend topics under additional names. An alias creates a new entry point to the same physical data. The alias `topic` field references namespace-visible names (if namespace is configured). Aliases are independent of namespace and can be used without it.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -3896,7 +3896,7 @@ KongLicenseStatus stores the status of the KongLicense being processed in each c
 
 | Field | Description |
 | --- | --- |
-| `controllers` _[KongLicenseControllerStatus](#configuration-konghq-com-v1alpha1-types-konglicensecontrollerstatus)_ |  |
+| `controllers` _[][KongLicenseControllerStatus](#configuration-konghq-com-v1alpha1-types-konglicensecontrollerstatus)_ |  |
 
 _Appears in:_
 
@@ -3988,8 +3988,8 @@ for Kong APIs.
 
 | Field | Description |
 | --- | --- |
-| `from` _[ReferenceGrantFrom](#configuration-konghq-com-v1alpha1-types-referencegrantfrom)_ | From describes the trusted namespaces and kinds that can reference the resources described in "To". Each entry in this list MUST be considered to be an additional place that references can be valid from, or to put this another way, entries MUST be combined using OR. |
-| `to` _[ReferenceGrantTo](#configuration-konghq-com-v1alpha1-types-referencegrantto)_ | To describes the resources that may be referenced by the resources described in "From". Each entry in this list MUST be considered to be an additional place that references can be valid to, or to put this another way, entries MUST be combined using OR. |
+| `from` _[][ReferenceGrantFrom](#configuration-konghq-com-v1alpha1-types-referencegrantfrom)_ | From describes the trusted namespaces and kinds that can reference the resources described in "To". Each entry in this list MUST be considered to be an additional place that references can be valid from, or to put this another way, entries MUST be combined using OR. |
+| `to` _[][ReferenceGrantTo](#configuration-konghq-com-v1alpha1-types-referencegrantto)_ | To describes the resources that may be referenced by the resources described in "From". Each entry in this list MUST be considered to be an additional place that references can be valid to, or to put this another way, entries MUST be combined using OR. |
 
 _Appears in:_
 
@@ -4139,7 +4139,7 @@ KongServiceAPISpec defines the specification of a Kong Service.
 | Field | Description |
 | --- | --- |
 | `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate when proxying to the upstream over TLS. The referenced KongCertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
-| `caCertificateRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `caCertificateRefs` _[][NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
@@ -4170,7 +4170,7 @@ KongServiceSpec defines specification of a Kong Service.
 | Field | Description |
 | --- | --- |
 | `clientCertificateRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ClientCertificateRef is a reference to a KongCertificate used as the client certificate when proxying to the upstream over TLS. The referenced KongCertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
-| `caCertificateRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
+| `caCertificateRefs` _[][NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | CACertificateRefs is the list of references to KongCACertificates used to verify the upstream server's TLS certificate. Each referenced KongCACertificate MUST belong to the same Konnect ControlPlane as this KongService. Cross-namespace references require a KongReferenceGrant in the target namespace. |
 | `id` _*string_ | ID is the unique identifier for the Service. Can be specified when creating a Service, but not updatable. If not specified, Kong will generate one. |
 | `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
 | `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
@@ -4986,7 +4986,7 @@ the virtual cluster containing principals with username and password.
 | --- | --- |
 | `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipal](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipal)_ | Fetches principal metadata from Kong Identity after successful authentication. The principal is looked up by a custom key matched against the authenticated identity.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `mediation` _string_ | The mediation type for SASL/PLAIN authentication. |
-| `principals` _[VirtualClusterAuthenticationPrincipal](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)_ | List of principals to be able to authenticate with, used with `terminate` mediation. |
+| `principals` _[][VirtualClusterAuthenticationPrincipal](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)_ | List of principals to be able to authenticate with, used with `terminate` mediation. |
 
 _Appears in:_
 
@@ -5062,7 +5062,7 @@ VirtualClusterAuthenticationValidate Validation rules.
 
 | Field | Description |
 | --- | --- |
-| `audiences` _[VirtualClusterAuthenticationAudience](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationaudience)_ | List of expected audience values. One of them has to match the audience claim in the token. |
+| `audiences` _[][VirtualClusterAuthenticationAudience](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationaudience)_ | List of expected audience values. One of them has to match the audience claim in the token. |
 | `issuer` _string_ | Expected token issuer in the token. |
 
 _Appears in:_
@@ -5129,8 +5129,8 @@ VirtualClusterNamespaceAdditionalProperties is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `consumerGroups` _[VirtualClusterNamespaceIDSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)_ | Consumer group IDs to expose even if they don't start with the namespace prefix. |
-| `topics` _[VirtualClusterNamespaceTopicSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespacetopicselector)_ | Additional backend topics to expose even if they don't match the namespace prefix. The topics are not affected by the hide/enforce prefix mode. If the client tries to create a topic that matches this list, the request is rejected. |
+| `consumerGroups` _[][VirtualClusterNamespaceIDSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceidselector)_ | Consumer group IDs to expose even if they don't start with the namespace prefix. |
+| `topics` _[][VirtualClusterNamespaceTopicSelector](#configuration-konghq-com-v1alpha1-types-virtualclusternamespacetopicselector)_ | Additional backend topics to expose even if they don't match the namespace prefix. The topics are not affected by the hide/enforce prefix mode. If the client tries to create a topic that matches this list, the request is rejected. |
 
 _Appears in:_
 
@@ -5479,7 +5479,7 @@ KongUpstreamHealthcheckHealthy configures thresholds and HTTP status codes to ma
 
 | Field | Description |
 | --- | --- |
-| `httpStatuses` _[HTTPStatus](#configuration-konghq-com-v1beta1-types-httpstatus)_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
+| `httpStatuses` _[][HTTPStatus](#configuration-konghq-com-v1beta1-types-httpstatus)_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
 | `interval` _*int_ | Interval is the interval between active health checks for an upstream in seconds when in a healthy state. |
 | `successes` _*int_ | Successes is the number of successes to consider a target healthy. |
 
@@ -5498,7 +5498,7 @@ KongUpstreamHealthcheckUnhealthy configures thresholds and HTTP status codes to 
 | Field | Description |
 | --- | --- |
 | `httpFailures` _*int_ | HTTPFailures is the number of failures to consider a target unhealthy. |
-| `httpStatuses` _[HTTPStatus](#configuration-konghq-com-v1beta1-types-httpstatus)_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
+| `httpStatuses` _[][HTTPStatus](#configuration-konghq-com-v1beta1-types-httpstatus)_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
 | `tcpFailures` _*int_ | TCPFailures is the number of TCP failures in a row to consider a target unhealthy. |
 | `timeouts` _*int_ | Timeouts is the number of timeouts in a row to consider a target unhealthy. |
 | `interval` _*int_ | Interval is the interval between active health checks for an upstream in seconds when in an unhealthy state. |

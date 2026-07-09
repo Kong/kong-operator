@@ -14,6 +14,9 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumergroups,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumergroups/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumergroups/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayidentityproviders,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayidentityproviders/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayidentityproviders/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/finalizers,verbs=update;patch

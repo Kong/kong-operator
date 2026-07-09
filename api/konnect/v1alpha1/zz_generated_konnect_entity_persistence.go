@@ -22,6 +22,11 @@ func (*AIGatewayConsumerGroup) PersistsKonnectID() bool {
 	return true
 }
 
+// PersistsKonnectID reports whether AIGatewayIdentityProvider persists a Konnect ID in status.
+func (*AIGatewayIdentityProvider) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether AIGatewayModel persists a Konnect ID in status.
 func (*AIGatewayModel) PersistsKonnectID() bool {
 	return true

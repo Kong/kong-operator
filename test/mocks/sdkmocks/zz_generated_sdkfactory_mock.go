@@ -14,6 +14,7 @@ type generatedMockSDKWrapper struct {
 	AIGatewayConsumersSDK                        *mocks.MockAIGatewayConsumersSDK
 	AIGatewayConsumerGroupsSDK                   *mocks.MockAIGatewayConsumerGroupsSDK
 	AIGatewayDataPlaneCertificatesSDK            *mocks.MockAIGatewayDataPlaneCertificatesSDK
+	AIGatewayIdentityProvidersSDK                *mocks.MockAIGatewayIdentityProvidersSDK
 	AIGatewayModelsSDK                           *mocks.MockAIGatewayModelsSDK
 	AIGatewayModelProvidersSDK                   *mocks.MockAIGatewayModelProvidersSDK
 	AIGatewayPoliciesSDK                         *mocks.MockAIGatewayPoliciesSDK
@@ -43,6 +44,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		AIGatewayConsumersSDK:                        mocks.NewMockAIGatewayConsumersSDK(t),
 		AIGatewayConsumerGroupsSDK:                   mocks.NewMockAIGatewayConsumerGroupsSDK(t),
 		AIGatewayDataPlaneCertificatesSDK:            mocks.NewMockAIGatewayDataPlaneCertificatesSDK(t),
+		AIGatewayIdentityProvidersSDK:                mocks.NewMockAIGatewayIdentityProvidersSDK(t),
 		AIGatewayModelsSDK:                           mocks.NewMockAIGatewayModelsSDK(t),
 		AIGatewayModelProvidersSDK:                   mocks.NewMockAIGatewayModelProvidersSDK(t),
 		AIGatewayPoliciesSDK:                         mocks.NewMockAIGatewayPoliciesSDK(t),
@@ -85,6 +87,11 @@ func (m generatedMockSDKWrapper) GetAIGatewayConsumerGroupsSDK() sdkkonnectgo.AI
 // GetAIGatewayDataPlaneCertificatesSDK returns the SDK to operate AIGatewayDataPlaneCertificate.
 func (m generatedMockSDKWrapper) GetAIGatewayDataPlaneCertificatesSDK() sdkkonnectgo.AIGatewayDataPlaneCertificatesSDK {
 	return m.AIGatewayDataPlaneCertificatesSDK
+}
+
+// GetAIGatewayIdentityProvidersSDK returns the SDK to operate AIGatewayIdentityProvider.
+func (m generatedMockSDKWrapper) GetAIGatewayIdentityProvidersSDK() sdkkonnectgo.AIGatewayIdentityProvidersSDK {
+	return m.AIGatewayIdentityProvidersSDK
 }
 
 // GetAIGatewayModelsSDK returns the SDK to operate AIGatewayModel.

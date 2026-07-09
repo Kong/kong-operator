@@ -3133,6 +3133,59 @@ func TestGenerateSDKOps_RootUnionUsesDirectUpdateConstructorForUnionRequests(t *
 	assert.NotContains(t, content, "target.Config = &unionValue")
 }
 
+// TestGenerateSDKOps_RootUnionConstructorSuffixUsesDiscriminatorNotTypeName
+// guards against regressing https://github.com/Kong/kong-operator: the SDK's
+// constructor suffix is derived from the discriminator value ("openid-connect"
+// -> "OpenidConnect"), not from the variant's schema type name
+// (AIGatewayIdentityProviderOpenIDConnect). The two diverge whenever the type
+// name carries an initialism ("OpenID") the discriminator spelling doesn't
+// ("openid"); using the type name produces a constructor call
+// (...OpenIDConnect) that doesn't exist in the SDK.
+func TestGenerateSDKOps_RootUnionConstructorSuffixUsesDiscriminatorNotTypeName(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				Name:    "AIGatewayIdentityProviderKeyAuth",
+				RefName: "AIGatewayIdentityProviderKeyAuth",
+			},
+			{
+				Name:    "AIGatewayIdentityProviderOpenIDConnect",
+				RefName: "AIGatewayIdentityProviderOpenIDConnect",
+			},
+		},
+		Properties: []*parser.Property{
+			{Name: "key-auth", Type: "object"},
+			{Name: "openid-connect", Type: "object"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"key-auth":       "AIGatewayIdentityProviderKeyAuth",
+			"openid-connect": "AIGatewayIdentityProviderOpenIDConnect",
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayIdentityProviderRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayIdentityProviderRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayIdentityProvider", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "CreateCreateAIGatewayIdentityProviderRequestKeyAuth")
+	assert.Contains(t, content, "CreateCreateAIGatewayIdentityProviderRequestOpenidConnect")
+	assert.Contains(t, content, "CreateUpdateAIGatewayIdentityProviderRequestKeyAuth")
+	assert.Contains(t, content, "CreateUpdateAIGatewayIdentityProviderRequestOpenidConnect")
+	assert.NotContains(t, content, "CreateCreateAIGatewayIdentityProviderRequestOpenIDConnect")
+	assert.NotContains(t, content, "CreateUpdateAIGatewayIdentityProviderRequestOpenIDConnect")
+	// The member struct type name is unaffected — it's a real SDK type spelled with "OpenID".
+	assert.Contains(t, content, "AIGatewayIdentityProviderOpenIDConnect")
+}
+
 func TestGenerateSDKOps_RootUnionUsesWrappedOperationsBodyMetadata(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{

@@ -485,6 +485,211 @@ type AIGatewayHuggingfaceEmbeddingsModelConfig struct {
 	WaitForModel string `json:"waitForModel,omitzero"`
 }
 
+// AIGatewayIdentityProviderKeyAuth Configuration for an identity provider.
+type AIGatewayIdentityProviderKeyAuth struct {
+	// Configuration for the Kong Key auth identity provider.
+	// For advanced use cases, additional config properties can be sent in the
+	// request body.
+	// See: https://developer.konghq.com/plugins/key-auth/reference/ for the list
+	// of properties
+	//
+	//
+	// +optional
+	Config AIGatewayIdentityProviderKeyAuthConfig `json:"config,omitzero"`
+	// The display name for this identity provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this identity provider instance, used
+	// as a stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayIdentityProviderKeyAuthConfig Configuration for the Kong Key auth
+// identity provider.
+// For advanced use cases, additional config properties can be sent in the
+// request body.
+// See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of
+// properties
+type AIGatewayIdentityProviderKeyAuthConfig struct {
+	// An optional boolean value telling the plugin to show or hide the credential
+	// from the upstream service.
+	// If true, the plugin strips the credential from the request.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	HideCredentials string `json:"hideCredentials,omitzero"`
+	// If enabled, reads the request body.
+	// Supported MIME types: application/www-form-urlencoded, application/json, and
+	// multipart/form-data.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	KeyInBody string `json:"keyInBody,omitzero"`
+	// If enabled (default), the plugin reads the request header and tries to find
+	// the key in it.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	KeyInHeader string `json:"keyInHeader,omitzero"`
+	// If enabled (default), the plugin reads the query parameter in the request
+	// and tries to find the key in it.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	KeyInQuery string `json:"keyInQuery,omitzero"`
+	// An array of strings containing the names of the keys to look for in the
+	// request.
+	//
+	//
+	// +optional
+	KeyNames []string `json:"keyNames,omitempty"`
+}
+
+// AIGatewayIdentityProviderOpenIDConnect Configuration for an identity
+// provider.
+type AIGatewayIdentityProviderOpenIDConnect struct {
+	// Configuration for the OpenID Connect identity provider.
+	// For advanced use cases, additional config properties can be sent in the
+	// request body.
+	// See: https://developer.konghq.com/plugins/openid-connect/reference/ for the
+	// list of properties
+	//
+	//
+	// +optional
+	Config AIGatewayIdentityProviderOpenIDConnectConfig `json:"config,omitzero"`
+	// The display name for this identity provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this identity provider instance, used
+	// as a stable human-readable reference.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayIdentityProviderOpenIDConnectConfig Configuration for the OpenID
+// Connect identity provider.
+// For advanced use cases, additional config properties can be sent in the
+// request body.
+// See: https://developer.konghq.com/plugins/openid-connect/reference/ for the
+// list of properties
+type AIGatewayIdentityProviderOpenIDConnectConfig struct {
+	// Types of credentials/grants to enable.
+	//
+	// +optional
+	AuthMethods []string `json:"authMethods,omitempty"`
+	// An array of strings representing the client id for the OpenID Connect
+	// provider.
+	// When multiple values are provided, the client ID and secrets pairs
+	// correspond based on their locations in the array.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	ClientID []string `json:"clientID,omitempty"`
+	// An array of strings representing the client secret for the OpenID Connect
+	// provider.
+	// When multiple values are provided, the client ID and secrets pairs
+	// correspond based on their locations in the array.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	ClientSecret []SensitiveDataSource `json:"clientSecret,omitempty"`
+	// An array containing an array of string paths representing the location of
+	// the claim in a nested object.
+	// For example, to map to user.info.id, set [ "user", "info", "id" ].
+	//
+	//
+	// +optional
+	ConsumerClaim [][]string `json:"consumerClaim,omitempty"`
+	// Do not terminate the request if consumer mapping fails.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConsumerOptional string `json:"consumerOptional,omitzero"`
+	// URL that identifies the OpenID Provider
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Issuer string `json:"issuer,omitzero"`
+	// This field is referenceable.
+	//
+	//
+	// +optional
+	Scopes []string `json:"scopes,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+}
+
 // AIGatewayIdentityProviderReference Reference to a provider instance.
 // This is either the identity provider ID or the identity provider name.
 type AIGatewayIdentityProviderReference string
