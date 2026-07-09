@@ -80,12 +80,12 @@
     name: my-backend-cluster-tls
     key: tls.crt # Key name depends on the type of referenced Secret.
   ```
-  
+
 - All the CRDs generated from Konnect OpenAPISpec with a parent reference now
   has a CEL to validate that the parent reference is immutable when a resouce
   has `Programmed` condition set to `True` in its status, meaning that it is
   already configured in Konnect.
-  This breaks the already released EventGateway CRDs, incluiding:
+  This breaks the already released EventGateway CRDs, including:
   - `EventGatewayVirtualCluster`
   - `EventGatewayVirtualClusterConsumePolicy`
   - `EventGatewayVirtualClusterPolicy`
