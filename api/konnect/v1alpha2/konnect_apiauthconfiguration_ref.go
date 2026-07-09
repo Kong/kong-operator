@@ -29,7 +29,7 @@ type ControlPlaneKonnectAPIAuthConfigurationRef struct {
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
-	// If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+	// If not specified, defaults to the resource namespace.
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1

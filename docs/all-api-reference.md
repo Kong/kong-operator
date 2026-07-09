@@ -14884,7 +14884,7 @@ in the control plane.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the KonnectAPIAuthConfiguration resource. |
-| `namespace` _*string_ | Namespace is the namespace of the KonnectAPIAuthConfiguration resource. If not specified, defaults to the same namespace as the KonnectConfiguration resource. |
+| `namespace` _*string_ | Namespace is the namespace of the KonnectAPIAuthConfiguration resource. If not specified, defaults to the resource namespace. |
 
 _Appears in:_
 
@@ -14945,7 +14945,7 @@ KonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration r
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the KonnectAPIAuthConfiguration resource. |
-| `namespace` _*string_ | Namespace is the namespace of the KonnectAPIAuthConfiguration resource. If not specified, defaults to the same namespace as the KonnectConfiguration resource. |
+| `namespace` _*string_ | Namespace is the namespace of the KonnectAPIAuthConfiguration resource. If not specified, defaults to the resource namespace. |
 
 _Appears in:_
 
