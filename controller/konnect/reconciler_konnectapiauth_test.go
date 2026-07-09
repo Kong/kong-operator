@@ -12,10 +12,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
@@ -513,6 +515,192 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 			hasFinalizer := slices.Contains(updatedAuth.Finalizers, APIAuthInUseFinalizer)
 
 			assert.Equal(t, tt.expectedFinalizerAdded, hasFinalizer, "finalizer presence mismatch")
+		})
+	}
+}
+
+func TestApiAuthHasCrossNamespaceSecretRef(t *testing.T) {
+	tests := []struct {
+		name     string
+		apiAuth  *konnectv1alpha1.KonnectAPIAuthConfiguration
+		expected bool
+	}{
+		{
+			name: "token type",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type: konnectv1alpha1.KonnectAPIAuthTypeToken,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "secretRef with nil SecretRef",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "secretRef with empty namespace defaults to same namespace",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: ""},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "secretRef with same namespace",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-a"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "secretRef with different namespace",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-b"},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, apiAuthHasCrossNamespaceSecretRef(tt.apiAuth))
+		})
+	}
+}
+
+func TestReconcileSecretRefResolvedRefs(t *testing.T) {
+	tests := []struct {
+		name                string
+		apiAuth             *konnectv1alpha1.KonnectAPIAuthConfiguration
+		expectConditionSet  bool
+		expectConditionTrue bool
+	}{
+		{
+			name: "token type: no ResolvedRefs condition",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type: konnectv1alpha1.KonnectAPIAuthTypeToken,
+				},
+			},
+			expectConditionSet: false,
+		},
+		{
+			name: "same-namespace secretRef: no ResolvedRefs condition",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-a"},
+				},
+			},
+			expectConditionSet: false,
+		},
+		{
+			name: "cross-namespace secretRef: ResolvedRefs=True",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-b"},
+				},
+			},
+			expectConditionSet:  true,
+			expectConditionTrue: true,
+		},
+		{
+			name: "cross-namespace secretRef with a stale ResolvedRefs=False is flipped to True",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-b"},
+				},
+				Status: konnectv1alpha1.KonnectAPIAuthConfigurationStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+							Status:             metav1.ConditionFalse,
+							Reason:             configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectConditionSet:  true,
+			expectConditionTrue: true,
+		},
+		{
+			name: "same-namespace secretRef removes a stale ResolvedRefs condition",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-a"},
+				},
+				Status: konnectv1alpha1.KonnectAPIAuthConfigurationStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+							Status:             metav1.ConditionTrue,
+							Reason:             configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectConditionSet: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := scheme.Get()
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithObjects(tt.apiAuth).
+				WithStatusSubresource(tt.apiAuth).
+				Build()
+
+			r := &KonnectAPIAuthConfigurationReconciler{client: cl}
+
+			_, err := r.reconcileSecretRefResolvedRefs(t.Context(), tt.apiAuth)
+			require.NoError(t, err)
+
+			var updated konnectv1alpha1.KonnectAPIAuthConfiguration
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(tt.apiAuth), &updated))
+
+			cond, ok := k8sutils.GetCondition(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, &updated)
+			if !tt.expectConditionSet {
+				assert.False(t, ok, "expected no ResolvedRefs condition, got: %+v", cond)
+				return
+			}
+			require.True(t, ok, "expected a ResolvedRefs condition to be set")
+			if tt.expectConditionTrue {
+				assert.Equal(t, metav1.ConditionTrue, cond.Status)
+				assert.Equal(t, configurationv1alpha1.KongReferenceGrantReasonResolvedRefs, cond.Reason)
+			} else {
+				assert.Equal(t, metav1.ConditionFalse, cond.Status)
+			}
 		})
 	}
 }
