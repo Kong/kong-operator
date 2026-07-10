@@ -31,6 +31,8 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
@@ -38,26 +40,26 @@ import (
 
 func TestKongConsumer(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1.KongConsumer](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1beta1.KongConsumerGroup](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKongCredentialSecretReconciler(controller.Options{}, logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
 	}
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	t.Log("Setting up clients")
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
@@ -70,7 +72,7 @@ func TestKongConsumer(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-	wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+	wConsumer := envtest.SetupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("should create, update and delete Consumer without ConsumerGroups successfully", func(t *testing.T) {
 		const (
@@ -111,15 +113,15 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, wConsumer, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(createdConsumer),
-				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+		envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(createdConsumer),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer update")
 		sdk.ConsumersSDK.EXPECT().
@@ -136,17 +138,17 @@ func TestKongConsumer(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(createdConsumer)))
 
 		t.Log("Waiting for KongConsumer to be patched")
-		watchFor(t, ctx, wConsumer, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(createdConsumer),
-				objectMatchesKonnectID[*configurationv1.KongConsumer](consumerID),
+		envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(createdConsumer),
+				envtest.ObjectMatchesKonnectID[*configurationv1.KongConsumer](consumerID),
 				func(c *configurationv1.KongConsumer) bool {
 					return c.Username == updatedUsername
 				},
 			),
 			"KongConsumer should get patched with new username",
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer deletion")
 		sdk.ConsumersSDK.EXPECT().
@@ -161,13 +163,13 @@ func TestKongConsumer(t *testing.T) {
 				assert.True(c, apierrors.IsNotFound(
 					clientNamespaced.Get(ctx, client.ObjectKeyFromObject(createdConsumer), createdConsumer),
 				))
-			}, waitTime, tickTime,
+			}, consts.WaitTime, consts.TickTime,
 		)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, consts.WaitTime, consts.TickTime)
 	})
 
-	cgWatch := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
+	cgWatch := envtest.SetupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("should create, update and delete Consumer with ConsumerGroups successfully", func(t *testing.T) {
 		const (
@@ -245,16 +247,16 @@ func TestKongConsumer(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, consumer, client.MergeFrom(createdConsumer)))
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, wConsumer, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(createdConsumer),
-				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+		envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(createdConsumer),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
 
 		t.Log("Waiting for KongConsumerGroup to be programmed")
-		watchFor(t, ctx, cgWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
+		envtest.WatchFor(t, ctx, cgWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
 			if c.GetName() != createdConsumerGroup.GetName() {
 				return false
 			}
@@ -264,7 +266,7 @@ func TestKongConsumer(t *testing.T) {
 			})
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumer update with ConsumerGroup")
 		sdk.ConsumersSDK.EXPECT().
@@ -308,8 +310,8 @@ func TestKongConsumer(t *testing.T) {
 		consumerToPatch.Username = "user-2-updated"
 		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(createdConsumer)))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, consts.WaitTime, consts.TickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
@@ -349,7 +351,7 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Watching for KongConsumers to verify the created KongConsumer programmed")
-		watchFor(t, ctx, wConsumer, apiwatch.Modified, func(c *configurationv1.KongConsumer) bool {
+		envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified, func(c *configurationv1.KongConsumer) bool {
 			return c.GetKonnectID() == consumerID && k8sutils.IsProgrammed(c)
 		}, "KongConsumer should be programmed and have ID in status after handling conflict")
 	})
@@ -364,7 +366,7 @@ func TestKongConsumer(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		w := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
@@ -401,17 +403,17 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, envtest.ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for KongConsumer to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongConsumer didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
 	})
@@ -426,7 +428,7 @@ func TestKongConsumer(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		w := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
@@ -463,19 +465,19 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, envtest.ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for object to be get Programmed and ControlPlaneRefValid conditions with status=False and konnect cleanup finalizer removed")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				assertNot(objectHasFinalizer[*configurationv1.KongConsumer](konnect.KonnectCleanupFinalizer)),
-				conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.AssertNot(envtest.ObjectHasFinalizer[*configurationv1.KongConsumer](konnect.KonnectCleanupFinalizer)),
+				envtest.ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			),
 			"Object didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
@@ -512,57 +514,57 @@ func TestKongConsumer(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, consumerToPatch, client.MergeFrom(created)))
 
 		t.Log("Waiting for object to be get Programmed with status=True and konnect cleanup finalizer re added")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(created),
-				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
-				objectHasFinalizer[*configurationv1.KongConsumer](konnect.KonnectCleanupFinalizer),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(created),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+				envtest.ObjectHasFinalizer[*configurationv1.KongConsumer](konnect.KonnectCleanupFinalizer),
 			),
 			"Object didn't get Programmed set to True",
 		)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, consts.WaitTime, consts.TickTime)
 	})
 }
 
 func TestKongConsumerSecretCredentials(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1.KongConsumer](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialBasicAuth](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialAPIKey](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialACL](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialJWT](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialHMAC](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKongCredentialSecretReconciler(controller.Options{}, logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
 	}
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	t.Log("Setting up clients")
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
@@ -636,8 +638,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			)
 
 		t.Log("Creating KongConsumerf")
-		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
-		wBasicAuth := setupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, cl, client.InNamespace(ns.Name))
+		wConsumer := envtest.SetupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wBasicAuth := envtest.SetupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, cl, client.InNamespace(ns.Name))
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
@@ -649,17 +651,17 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, wConsumer, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(createdConsumer),
-				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+		envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(createdConsumer),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
 
 		t.Log("Waiting for KongCredentialBasicAuth to be programmed")
-		watchFor(t, ctx, wBasicAuth, apiwatch.Modified,
-			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialBasicAuth](),
+		envtest.WatchFor(t, ctx, wBasicAuth, apiwatch.Modified,
+			envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialBasicAuth](),
 			"BasicAuth credential should get the Programmed condition",
 		)
 	})
@@ -735,19 +737,19 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
-		wKeyCredential := setupWatch[configurationv1alpha1.KongCredentialAPIKeyList](t, ctx, cl, client.InNamespace(ns.Name))
-		watchFor(t, ctx, wConsumer, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(createdConsumer),
-				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+		wConsumer := envtest.SetupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wKeyCredential := envtest.SetupWatch[configurationv1alpha1.KongCredentialAPIKeyList](t, ctx, cl, client.InNamespace(ns.Name))
+		envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(createdConsumer),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
 
 		t.Log("Waiting for KongCredentialAPIKey to be programmed")
-		watchFor(t, ctx, wKeyCredential, apiwatch.Modified,
-			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialAPIKey](),
+		envtest.WatchFor(t, ctx, wKeyCredential, apiwatch.Modified,
+			envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialAPIKey](),
 			"APIKey credential should get the Programmed condition",
 		)
 	})
@@ -825,20 +827,20 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		l.GetItems()
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
-		wACL := setupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, cl, client.InNamespace(ns.Name))
+		wConsumer := envtest.SetupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wACL := envtest.SetupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, cl, client.InNamespace(ns.Name))
 
-		watchFor(t, ctx, wConsumer, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(createdConsumer),
-				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+		envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(createdConsumer),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
 
 		t.Log("Waiting for KongCredentialACL to be programmed")
-		watchFor(t, ctx, wACL, apiwatch.Modified,
-			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialACL](),
+		envtest.WatchFor(t, ctx, wACL, apiwatch.Modified,
+			envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialACL](),
 			"ACL credential should get the Programmed condition",
 		)
 	})
@@ -917,19 +919,19 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumer to be programmed")
-		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
-		wJWT := setupWatch[configurationv1alpha1.KongCredentialJWTList](t, ctx, cl, client.InNamespace(ns.Name))
-		watchFor(t, ctx, wConsumer, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(createdConsumer),
-				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+		wConsumer := envtest.SetupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wJWT := envtest.SetupWatch[configurationv1alpha1.KongCredentialJWTList](t, ctx, cl, client.InNamespace(ns.Name))
+		envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(createdConsumer),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
 
 		t.Log("Waiting for KongCredentialJWT to be programmed")
-		watchFor(t, ctx, wJWT, apiwatch.Modified,
-			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialJWT](),
+		envtest.WatchFor(t, ctx, wJWT, apiwatch.Modified,
+			envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialJWT](),
 			"JWT credential should get the Programmed condition",
 		)
 	})
@@ -995,8 +997,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				nil,
 			)
 		t.Log("Creating KongConsumer")
-		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
-		wHMAC := setupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
+		wConsumer := envtest.SetupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+		wHMAC := envtest.SetupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
@@ -1008,17 +1010,17 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		)
 		t.Log("Waiting for KongConsumer to be programmed")
 
-		watchFor(t, ctx, wConsumer, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(createdConsumer),
-				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+		envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(createdConsumer),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
 
 		t.Log("Waiting for KongCredentialHMAC to be programmed")
-		watchFor(t, ctx, wHMAC, apiwatch.Modified,
-			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialHMAC](),
+		envtest.WatchFor(t, ctx, wHMAC, apiwatch.Modified,
+			envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialHMAC](),
 			"HMAC credential should get the Programmed condition",
 		)
 	})
@@ -1026,42 +1028,42 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 
 func TestAdoptingConsumerAndCredentials(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1.KongConsumer](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialBasicAuth](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialAPIKey](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialACL](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialJWT](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialHMAC](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKongCredentialSecretReconciler(controller.Options{}, logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
 	}
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	t.Log("Setting up clients")
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
@@ -1076,7 +1078,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 
 	consumerID := uuid.NewString()
 	userName := "user-1"
-	wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+	wConsumer := envtest.SetupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Setting up SDK expectations for getting and updating consumers")
 	sdk.ConsumersSDK.EXPECT().ListConsumerGroupsForConsumer(
@@ -1112,7 +1114,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 	)
 
 	t.Log("Waiting for KongConsumer to be programmed and set Konnect ID")
-	watchFor(t, ctx, wConsumer, apiwatch.Modified, func(kc *configurationv1.KongConsumer) bool {
+	envtest.WatchFor(t, ctx, wConsumer, apiwatch.Modified, func(kc *configurationv1.KongConsumer) bool {
 		return kc.Name == createdConsumer.Name && k8sutils.IsProgrammed(kc) && kc.GetKonnectID() == consumerID
 	},
 		"KongConsumer did not get programmed or set Konnect ID")
@@ -1120,7 +1122,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 	// Adopting a KeyAuth credential
 	t.Run("APIKey", func(t *testing.T) {
 		keyAuthID := uuid.NewString()
-		wAPIKey := setupWatch[configurationv1alpha1.KongCredentialAPIKeyList](t, ctx, cl, client.InNamespace(ns.Name))
+		wAPIKey := envtest.SetupWatch[configurationv1alpha1.KongCredentialAPIKeyList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating KeyAuth credentials")
 		sdk.KongCredentialsAPIKeySDK.EXPECT().GetKeyAuthWithConsumer(
@@ -1168,7 +1170,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, createdAPIKey))
 
 		t.Log("Waiting for the KongCredentialAPIKey to be programmed and set Konnect ID")
-		watchFor(t, ctx, wAPIKey, apiwatch.Modified, func(apikey *configurationv1alpha1.KongCredentialAPIKey) bool {
+		envtest.WatchFor(t, ctx, wAPIKey, apiwatch.Modified, func(apikey *configurationv1alpha1.KongCredentialAPIKey) bool {
 			return apikey.Name == createdAPIKey.Name && k8sutils.IsProgrammed(apikey) && apikey.GetKonnectID() == keyAuthID
 		},
 			"KongCredentialAPIKey did not get programmed or set Konnect ID")
@@ -1177,7 +1179,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 	// Adopting a basic auth credential
 	t.Run("BasicAuth", func(t *testing.T) {
 		basicAuthID := uuid.NewString()
-		wBasicAuth := setupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, cl, client.InNamespace(ns.Name))
+		wBasicAuth := envtest.SetupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating BasicAuth credentials")
 		sdk.KongCredentialsBasicAuthSDK.EXPECT().GetBasicAuthWithConsumer(
@@ -1226,7 +1228,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, createdBasicAuth))
 
 		t.Log("Waiting for the KongCredentialBasicAuth to be programmed and set Konnect ID")
-		watchFor(t, ctx, wBasicAuth, apiwatch.Modified, func(auth *configurationv1alpha1.KongCredentialBasicAuth) bool {
+		envtest.WatchFor(t, ctx, wBasicAuth, apiwatch.Modified, func(auth *configurationv1alpha1.KongCredentialBasicAuth) bool {
 			return auth.Name == createdBasicAuth.Name && k8sutils.IsProgrammed(auth) && auth.GetKonnectID() == basicAuthID
 		},
 			"KongCredentialBasicAuth did not get programmed or set Konnect ID")
@@ -1235,7 +1237,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 	// Adopting an ACL
 	t.Run("ACL", func(t *testing.T) {
 		aclID := uuid.NewString()
-		wACL := setupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, cl, client.InNamespace(ns.Name))
+		wACL := envtest.SetupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating ACL credentials")
 		sdk.KongCredentialsACLSDK.EXPECT().GetACLWithConsumer(
@@ -1283,7 +1285,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, createdACL))
 
 		t.Log("Waiting for the KongCredentialACL to be programmed and set Konnect ID")
-		watchFor(t, ctx, wACL, apiwatch.Modified, func(acl *configurationv1alpha1.KongCredentialACL) bool {
+		envtest.WatchFor(t, ctx, wACL, apiwatch.Modified, func(acl *configurationv1alpha1.KongCredentialACL) bool {
 			return acl.Name == createdACL.Name && k8sutils.IsProgrammed(acl) && acl.GetKonnectID() == aclID
 		},
 			"KongCredentialACL did not get programmed or set Konnect ID",
@@ -1293,7 +1295,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 	// Adopting an HMAC auth credential
 	t.Run("HMAC", func(t *testing.T) {
 		hmacID := uuid.NewString()
-		wHMAC := setupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
+		wHMAC := envtest.SetupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating HMACs")
 		sdk.KongCredentialsHMACSDK.EXPECT().GetHmacAuthWithConsumer(
@@ -1343,7 +1345,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, createdHMACAuth))
 
 		t.Log("Waiting for the KongCredentialHMAC to be programmed and set Konnect ID")
-		watchFor(t, ctx, wHMAC, apiwatch.Modified, func(hmac *configurationv1alpha1.KongCredentialHMAC) bool {
+		envtest.WatchFor(t, ctx, wHMAC, apiwatch.Modified, func(hmac *configurationv1alpha1.KongCredentialHMAC) bool {
 			return hmac.Name == createdHMACAuth.Name && k8sutils.IsProgrammed(hmac) && hmac.GetKonnectID() == hmacID
 		},
 			"KongCredentialHMAC did not get programmed or set Konnect ID",
@@ -1353,7 +1355,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 	// Adopting a JWT
 	t.Run("JWT", func(t *testing.T) {
 		jwtID := uuid.NewString()
-		wJWT := setupWatch[configurationv1alpha1.KongCredentialJWTList](t, ctx, cl, client.InNamespace(ns.Name))
+		wJWT := envtest.SetupWatch[configurationv1alpha1.KongCredentialJWTList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating JWTAuths")
 		sdk.KongCredentialsJWTSDK.EXPECT().GetJwtWithConsumer(
@@ -1405,7 +1407,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, createdJWT))
 
 		t.Log("Waiting for the KongCredentialJWT to be programmed and set Konnect ID")
-		watchFor(t, ctx, wJWT, apiwatch.Modified, func(jwt *configurationv1alpha1.KongCredentialJWT) bool {
+		envtest.WatchFor(t, ctx, wJWT, apiwatch.Modified, func(jwt *configurationv1alpha1.KongCredentialJWT) bool {
 			return jwt.Name == createdJWT.Name && k8sutils.IsProgrammed(jwt) && jwt.GetKonnectID() == jwtID
 		},
 			"KongCredentialJWT did not get programmed or set Konnect ID",

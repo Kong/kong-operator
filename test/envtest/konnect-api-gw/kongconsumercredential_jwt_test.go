@@ -24,6 +24,8 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
@@ -31,13 +33,13 @@ import (
 
 func TestKongConsumerCredential_JWT(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
 
 	// Setup up the envtest environment.
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
 		Scheme: scheme.Get(),
@@ -118,22 +120,22 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 			nil,
 		)
 
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialJWT](&metricsmocks.MockRecorder{}),
 		),
 	}
 
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	assert.EventuallyWithT(t,
-		assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialJWT, jwtID),
-		waitTime, tickTime,
+		envtest.AssertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialJWT, jwtID),
+		consts.WaitTime, consts.TickTime,
 		"KongCredentialJWT wasn't created",
 	)
 
-	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
+	envtest.EventuallyAssertSDKExpectations(t, sdk, consts.WaitTime, consts.TickTime)
 
 	sdk.EXPECT().
 		DeleteJwtWithConsumer(
@@ -158,11 +160,11 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongCredentialJWT), kongCredentialJWT),
 			))
-		}, waitTime, tickTime,
+		}, consts.WaitTime, consts.TickTime,
 		"KongCredentialJWT wasn't deleted but it should have been",
 	)
 
-	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
+	envtest.EventuallyAssertSDKExpectations(t, sdk, consts.WaitTime, consts.TickTime)
 
 	t.Run("conflict on creation should be handled successfully", func(t *testing.T) {
 		t.Log("Setting up SDK expectations on creation with conflict")
@@ -186,7 +188,7 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 				nil,
 				&sdkkonnecterrs.SDKError{
 					StatusCode: 400,
-					Body:       ErrBodyDataConstraintError,
+					Body:       consts.ErrBodyDataConstraintError,
 				},
 			)
 
@@ -208,14 +210,14 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 				},
 			}, nil)
 
-		w := setupWatch[configurationv1alpha1.KongCredentialJWTList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongCredentialJWTList](t, ctx, cl, client.InNamespace(ns.Name))
 		created := deploy.KongCredentialJWT(t, ctx, clientNamespaced, consumer.Name)
 
 		t.Log("Waiting for KongCredentialJWT to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongCredentialJWT) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongCredentialJWT) bool {
 			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
 		}, "KongCredentialJWT's Programmed condition should be true eventually")
 
-		eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk, consts.WaitTime, consts.TickTime)
 	})
 }

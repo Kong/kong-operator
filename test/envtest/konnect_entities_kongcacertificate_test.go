@@ -73,7 +73,7 @@ func TestKongCACertificate(t *testing.T) {
 		},
 	}, nil)
 
-	w := setupWatch[configurationv1alpha1.KongCACertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+	w := SetupWatch[configurationv1alpha1.KongCACertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongCACertificate")
 	createdCert := deploy.KongCACertificateAttachedToCP(t, ctx, clientNamespaced, cp,
@@ -84,7 +84,7 @@ func TestKongCACertificate(t *testing.T) {
 	)
 
 	t.Log("Waiting for KongCACertificate to be programmed")
-	watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongCACertificate) bool {
+	WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongCACertificate) bool {
 		if c.GetName() != createdCert.GetName() {
 			return false
 		}
@@ -95,7 +95,7 @@ func TestKongCACertificate(t *testing.T) {
 	}, "KongCACertificate's Programmed condition should be true eventually")
 
 	t.Log("Waiting for KongCACertificate to be created in the SDK")
-	eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
+	EventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 	t.Log("Setting up SDK expectations on KongCACertificate update")
 	sdk.CACertificatesSDK.EXPECT().UpsertCaCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertCaCertificateRequest) bool {
@@ -109,7 +109,7 @@ func TestKongCACertificate(t *testing.T) {
 	require.NoError(t, clientNamespaced.Patch(ctx, certToPatch, client.MergeFrom(createdCert)))
 
 	t.Log("Waiting for KongCACertificate to be updated in the SDK")
-	eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
+	EventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 	t.Log("Setting up SDK expectations on KongCACertificate deletion")
 	sdk.CACertificatesSDK.EXPECT().DeleteCaCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), "12345").
@@ -119,7 +119,7 @@ func TestKongCACertificate(t *testing.T) {
 	require.NoError(t, cl.Delete(ctx, createdCert))
 
 	t.Log("Waiting for KongCACertificate to be deleted in the SDK")
-	eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
+	EventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
 		const (
@@ -169,11 +169,11 @@ func TestKongCACertificate(t *testing.T) {
 		)
 
 		t.Log("Watching for KongCACertificates to verify the created KongCACertificate gets programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongCACertificate) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongCACertificate) bool {
 			return c.GetKonnectID() == certID && k8sutils.IsProgrammed(c)
 		}, "KongCACertificate should be programmed and have ID in status after handling conflict")
 
-		eventuallyAssertSDKExpectations(t, sdk.CACertificatesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.CACertificatesSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -187,7 +187,7 @@ func TestKongCACertificate(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		w := setupWatch[configurationv1alpha1.KongCACertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongCACertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongCACertifcate creation")
 		sdk.CACertificatesSDK.EXPECT().
@@ -214,18 +214,18 @@ func TestKongCACertificate(t *testing.T) {
 				cert.Spec.Tags = tags
 			},
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+		WatchFor(t, ctx, w, apiwatch.Modified, ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("CACertificate didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for CACert to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongCACertificate didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
 	})
@@ -233,7 +233,7 @@ func TestKongCACertificate(t *testing.T) {
 	t.Run("Adopting an existing CA certificate", func(t *testing.T) {
 		caCertID := uuid.NewString()
 
-		w := setupWatch[configurationv1alpha1.KongCACertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongCACertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on getting and updating CA certificates")
 		sdk.CACertificatesSDK.EXPECT().GetCaCertificate(
@@ -259,7 +259,7 @@ func TestKongCACertificate(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongCACertificate %s to be programmed and set Konnect ID", client.ObjectKeyFromObject(createdCACert))
-		watchFor(t, ctx, w, apiwatch.Modified,
+		WatchFor(t, ctx, w, apiwatch.Modified,
 			func(caCert *configurationv1alpha1.KongCACertificate) bool {
 				return caCert.Name == createdCACert.Name &&
 					k8sutils.IsProgrammed(caCert) &&

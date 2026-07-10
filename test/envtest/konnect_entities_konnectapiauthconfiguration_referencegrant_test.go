@@ -77,7 +77,7 @@ func TestKonnectAPIAuthConfigurationReferenceGrant(t *testing.T) {
 		},
 	)
 
-	w := setupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+	w := SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating a KonnectAPIAuthConfiguration referencing the Secret cross-namespace (no grant yet)")
 	apiAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
@@ -97,7 +97,7 @@ func TestKonnectAPIAuthConfigurationReferenceGrant(t *testing.T) {
 	require.NoError(t, clientNamespaced.Create(ctx, apiAuth))
 
 	t.Log("Waiting for KonnectAPIAuthConfiguration to have ResolvedRefs=False/RefNotPermitted (no grant)")
-	watchFor(t, ctx, w, apiwatch.Modified, func(a *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+	WatchFor(t, ctx, w, apiwatch.Modified, func(a *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 		if a.GetName() != apiAuth.GetName() {
 			return false
 		}
@@ -126,7 +126,7 @@ func TestKonnectAPIAuthConfigurationReferenceGrant(t *testing.T) {
 	)
 
 	t.Log("Waiting for KonnectAPIAuthConfiguration to become ResolvedRefs=True and APIAuthValid=True after the grant")
-	watchFor(t, ctx, w, apiwatch.Modified, func(a *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+	WatchFor(t, ctx, w, apiwatch.Modified, func(a *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 		if a.GetName() != apiAuth.GetName() {
 			return false
 		}

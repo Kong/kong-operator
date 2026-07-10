@@ -69,7 +69,7 @@ func TestKongRoute(t *testing.T) {
 	t.Run("adding, patching and deleting KongRoute", func(t *testing.T) {
 		const routeID = "route-12345"
 
-		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Route creation")
 		sdk.RoutesSDK.EXPECT().
@@ -102,14 +102,14 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Log("Waiting for Route to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
 			if r.GetName() != createdRoute.GetName() {
 				return false
 			}
 			return r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
 		}, "KongRoute didn't get Programmed status condition or didn't get the correct (route-12345) Konnect ID assigned")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Route update")
 		sdk.RoutesSDK.EXPECT().
@@ -129,7 +129,7 @@ func TestKongRoute(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, routeToPatch, client.MergeFrom(createdRoute)))
 
 		t.Log("Waiting for Route to get the update")
-		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
 			if r.GetName() != createdRoute.GetName() {
 				return false
 			}
@@ -139,7 +139,7 @@ func TestKongRoute(t *testing.T) {
 			return r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
 		}, "KongRoute didn't get patched with PreserveHost=true")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Route deletion")
 		sdk.RoutesSDK.EXPECT().
@@ -160,7 +160,7 @@ func TestKongRoute(t *testing.T) {
 		routeID := uuid.NewString()
 		routeName := "test-adoption-" + uuid.NewString()[:8]
 
-		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating routes")
 		sdk.RoutesSDK.EXPECT().GetRoute(
@@ -196,7 +196,7 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Logf("Waiting for the KongRoute %s/%s to get KonnectID and marked as programmed", ns.Name, createdRoute.Name)
-		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
 			return r.Name == createdRoute.Name && r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
 		},
 			fmt.Sprintf("KongRoute did not get programmed and set KonnectID to %s", routeID),
@@ -215,7 +215,7 @@ func TestKongRoute(t *testing.T) {
 		routeID := uuid.NewString()
 		routeName := "test-adoption-" + uuid.NewString()[:8]
 
-		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating routes")
 		sdk.RoutesSDK.EXPECT().GetRoute(
@@ -248,7 +248,7 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Logf("Waiting for the KongRoute %s/%s to get KonnectID and marked as programmed", ns.Name, createdRoute.Name)
-		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
 			return r.Name == createdRoute.Name && r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
 		},
 			fmt.Sprintf("KongRoute did not get programmed and set KonnectID to %s", routeID),
@@ -259,7 +259,7 @@ func TestKongRoute(t *testing.T) {
 		routeID := uuid.NewString()
 		routeName := "test-adoption-" + uuid.NewString()[:8]
 
-		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting routes")
 		sdk.RoutesSDK.EXPECT().GetRoute(
@@ -287,9 +287,9 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Logf("Waiting for the KongRoute %s/%s to be marked as not programmed and not adopted", ns.Name, createdRoute.Name)
-		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
 			return r.Name == createdRoute.Name &&
-				conditionsContainProgrammedFalse(r.GetConditions()) &&
+				ConditionsContainProgrammedFalse(r.GetConditions()) &&
 				lo.ContainsBy(r.GetConditions(), func(c metav1.Condition) bool {
 					return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType &&
 						c.Status == metav1.ConditionFalse
@@ -301,7 +301,7 @@ func TestKongRoute(t *testing.T) {
 	})
 
 	t.Run("Cross namespace ref KongRoute -> KonnectNamespacedRefControlPlane yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
-		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
+		w := SetupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
 
 		t.Log("Don't setting SDK expectations on KongRoute creation as we do not expect any operations to be made upstream")
 
@@ -311,7 +311,7 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Log("Waiting for Route to get ResolvedRefs condition with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
 			if kr.GetName() != createdRoute.GetName() {
 				return false
 			}
@@ -339,7 +339,7 @@ func TestKongRoute(t *testing.T) {
 
 		var paths = []string{"/path"}
 
-		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
+		w := SetupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
 
 		t.Log("Setting up SDK expectations on Route creation")
 		sdk.RoutesSDK.EXPECT().
@@ -383,7 +383,7 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Log("Waiting for Route to get ResolvedRefs condition with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
 			if kr.GetName() != createdRoute.GetName() {
 				return false
 			}
@@ -401,11 +401,11 @@ func TestKongRoute(t *testing.T) {
 			}
 			return k8sutils.HasConditionTrue(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, kr)
 		}, "KongRoute didn't get ResolvedRefs status condition set to True")
-		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 	})
 
 	t.Run("Cross namespace ref KongRoute -> KongService yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
-		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
+		w := SetupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
 
 		t.Log("Don't set SDK expectations on KongRoute creation as we do not expect any operations to be made upstream")
 
@@ -425,7 +425,7 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Log("Waiting for Route to get ResolvedRefs condition with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
 			if kr.GetName() != createdRoute.GetName() {
 				return false
 			}
@@ -451,7 +451,7 @@ func TestKongRoute(t *testing.T) {
 
 		var paths = []string{"/cross-ns-path"}
 
-		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
+		w := SetupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl2, client.InNamespace(ns2.Name))
 
 		t.Log("Setting up SDK expectations on Route creation")
 		sdk.RoutesSDK.EXPECT().
@@ -522,7 +522,7 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Log("Waiting for Route to get ResolvedRefs condition with status=True and be Programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(kr *configurationv1alpha1.KongRoute) bool {
 			if kr.GetName() != createdRoute.GetName() {
 				return false
 			}
@@ -542,6 +542,6 @@ func TestKongRoute(t *testing.T) {
 				kr.GetKonnectID() == routeID && k8sutils.IsProgrammed(kr)
 		}, "KongRoute didn't get ResolvedRefs status condition set to True or wasn't Programmed")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.RoutesSDK, waitTime, tickTime)
 	})
 }

@@ -69,7 +69,7 @@ func TestPortalPage(t *testing.T) {
 			displayName  = "Developer Portal"
 		)
 
-		portalWatch := setupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		portalWatch := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 		sdk.PortalsSDK.EXPECT().
 			CreatePortal(mock.Anything, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortal) bool {
 				return req.DisplayName != nil && *req.DisplayName == displayName &&
@@ -89,17 +89,17 @@ func TestPortalPage(t *testing.T) {
 		})
 
 		t.Log("Waiting for Portal to be programmed")
-		watchFor(t, ctx, portalWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(portal),
-				objectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(portal),
+				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 			),
 			"Portal didn't get Programmed status condition or Konnect ID",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
 
-		pageWatch := setupWatch[konnectv1alpha1.PortalPageList](t, ctx, cl, client.InNamespace(ns.Name))
+		pageWatch := SetupWatch[konnectv1alpha1.PortalPageList](t, ctx, cl, client.InNamespace(ns.Name))
 		page := testEnvtestPortalPage(ns.Name, portal.GetName(), initialTitle, initialSlug, initialBody, description)
 		expectedCreateRequest, err := page.Spec.APISpec.ToCreatePortalPageRequest()
 		require.NoError(t, err)
@@ -116,11 +116,11 @@ func TestPortalPage(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, page))
 
 		t.Log("Waiting for PortalPage to be programmed")
-		watchFor(t, ctx, pageWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(page),
-				objectMatchesKonnectID[*konnectv1alpha1.PortalPage](pageID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+		WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(page),
+				ObjectMatchesKonnectID[*konnectv1alpha1.PortalPage](pageID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
 				func(p *konnectv1alpha1.PortalPage) bool {
 					return p.GetPortalID() == portalID &&
 						controllerutil.ContainsFinalizer(p, konnect.KonnectCleanupFinalizer)
@@ -128,7 +128,7 @@ func TestPortalPage(t *testing.T) {
 			),
 			"PortalPage didn't get Programmed status condition, Portal ID, Konnect ID, or cleanup finalizer",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on PortalPage update")
 		pageToPatch := page.DeepCopy()
@@ -149,11 +149,11 @@ func TestPortalPage(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, pageToPatch, client.MergeFrom(page)))
 
 		t.Log("Waiting for PortalPage to be patched")
-		watchFor(t, ctx, pageWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(page),
-				objectMatchesKonnectID[*konnectv1alpha1.PortalPage](pageID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+		WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(page),
+				ObjectMatchesKonnectID[*konnectv1alpha1.PortalPage](pageID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
 				func(p *konnectv1alpha1.PortalPage) bool {
 					return string(p.Spec.APISpec.Title) == updatedTitle &&
 						string(p.Spec.APISpec.Content) == updatedBody
@@ -161,7 +161,7 @@ func TestPortalPage(t *testing.T) {
 			),
 			"PortalPage didn't get patched",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on PortalPage deletion")
 		sdk.PortalPagesSDK.EXPECT().
@@ -171,7 +171,7 @@ func TestPortalPage(t *testing.T) {
 		t.Log("Deleting PortalPage")
 		require.NoError(t, clientNamespaced.Delete(ctx, page))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, page, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, waitTime, tickTime)
 	})
 }
 

@@ -642,11 +642,6 @@ _test.envtest: gotestsum setup-envtest
 # To run the envtest suite with pretty format use:
 # GOTESTSUM_FORMAT=testname make test.envtest
 
-.PHONY: test.envtest.gateway
-test.envtest.gateway:
-	ENVTEST_TEST_PATHS=./test/envtest/gateway/... \
-		$(MAKE) _test.envtest
-
 .PHONY: test.envtest.base
 test.envtest.base:
 	ENVTEST_TEST_PATHS=./test/envtest/ \

@@ -1,6 +1,8 @@
 package envtest
 
-func objectMatchesKonnectID[
+// ObjectMatchesKonnectID returns a function that checks if an object's
+// Konnect ID matches the given ID.
+func ObjectMatchesKonnectID[
 	T interface {
 		GetKonnectID() string
 	},

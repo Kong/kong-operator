@@ -69,7 +69,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			updatedHeaderValue = "updated-value"
 		)
 
-		w := setupWatch[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating EventGatewayBackendCluster and setting its status to programmed")
 		backendCluster := deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, eventGateway, deploy.WithName("backend-cluster-a"))
@@ -132,11 +132,11 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, policy))
 
 		t.Log("Waiting for EventGatewayVirtualClusterProducePolicy to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(policy),
-				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](producePolicyID),
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(policy),
+				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](producePolicyID),
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](),
 				func(p *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) bool {
 					cfg := p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig
 					return p.GetGatewayID() == gatewayID &&
@@ -152,7 +152,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			),
 			"EventGatewayVirtualClusterProducePolicy didn't get Programmed status condition, parent IDs, Konnect ID, or cleanup finalizer",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualClusterProducePolicy update")
 		policyToPatch := policy.DeepCopy()
@@ -178,11 +178,11 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 		policy = policyToPatch
 
 		t.Log("Waiting for EventGatewayVirtualClusterProducePolicy to be patched")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(policy),
-				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](producePolicyID),
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(policy),
+				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](producePolicyID),
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](),
 				func(p *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) bool {
 					cfg := p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig
 					return p.GetGatewayID() == gatewayID &&
@@ -196,7 +196,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			),
 			"EventGatewayVirtualClusterProducePolicy didn't get patched",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualClusterProducePolicy deletion")
 		sdk.EventGatewayVirtualClusterProducePoliciesSDK.EXPECT().
@@ -213,7 +213,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 		t.Log("Deleting EventGatewayVirtualClusterProducePolicy")
 		require.NoError(t, clientNamespaced.Delete(ctx, policy))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, policy, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, waitTime, tickTime)
 	})
 }
 

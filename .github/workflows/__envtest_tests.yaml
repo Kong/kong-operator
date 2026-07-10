@@ -20,12 +20,13 @@ jobs:
   envtest-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
-    name: ${{ matrix.command }} - ${{ format('{0}', inputs.cluster_version) }}
+    name: ${{ matrix.testcase }} - ${{ format('{0}', inputs.cluster_version) }}
     strategy:
       matrix:
         include:
-          - command: gateway
-          - command: base
+          - testcase: konnect-api-gw
+          - testcase: gateway
+          - testcase: .
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -86,7 +87,9 @@ jobs:
         # Remove patch number as envtest releases are not provided for every patch version
         VERSION="${VERSION%.*}"
         echo "Cluster version: $VERSION"
-        make test.envtest.${{ matrix.command }} CLUSTER_VERSION=${VERSION}
+        make test.envtest \
+          CLUSTER_VERSION=${VERSION} \
+          ENVTEST_TEST_PATHS=./test/envtest/${{ matrix.testcase }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

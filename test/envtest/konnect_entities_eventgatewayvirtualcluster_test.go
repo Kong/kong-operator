@@ -70,7 +70,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			initialDNSLabel         = "payments"
 		)
 
-		w := setupWatch[configurationv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating EventGatewayBackendCluster and setting its status to programmed")
 		backendCluster := deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, eventGateway, deploy.WithName(backendClusterName))
@@ -123,11 +123,11 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 		})
 
 		t.Log("Waiting for EventGatewayVirtualCluster to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(virtualCluster),
-				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(virtualCluster),
+				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
 				func(vc *configurationv1alpha1.EventGatewayVirtualCluster) bool {
 					return vc.GetGatewayID() == expectedParentGateway &&
 						controllerutil.ContainsFinalizer(vc, konnect.KonnectCleanupFinalizer)
@@ -136,7 +136,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			"EventGatewayVirtualCluster didn't get Programmed status condition, parent Gateway ID, Konnect ID, or cleanup finalizer",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualCluster update")
 		sdk.EventGatewayVirtualClustersSDK.EXPECT().
@@ -160,11 +160,11 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, virtualClusterToPatch, client.MergeFrom(virtualCluster)))
 
 		t.Log("Waiting for EventGatewayVirtualCluster to be patched")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(virtualCluster),
-				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(virtualCluster),
+				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
 				func(vc *configurationv1alpha1.EventGatewayVirtualCluster) bool {
 					return vc.GetGatewayID() == expectedParentGateway &&
 						vc.Spec.APISpec.Name == updatedVirtualName &&
@@ -174,7 +174,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			"EventGatewayVirtualCluster didn't get patched",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualCluster deletion")
 		sdk.EventGatewayVirtualClustersSDK.EXPECT().
@@ -184,7 +184,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 		t.Log("Deleting EventGatewayVirtualCluster")
 		require.NoError(t, clientNamespaced.Delete(ctx, virtualCluster))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, virtualCluster, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
 	})
 
 	t.Run("should create EventGatewayVirtualCluster successfully on conflict when virtual cluster with matching uid tag exists", func(t *testing.T) {
@@ -193,7 +193,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			conflictBackendClusterKonnectID = "backend-cluster-conflict-konnect-id"
 		)
 
-		w := setupWatch[configurationv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating EventGatewayBackendCluster 'backend-cluster' and setting its status to programmed")
 		conflictBackendCluster := deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, eventGateway, deploy.WithName("backend-cluster"))
@@ -243,11 +243,11 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 		virtualCluster = deploy.EventGatewayVirtualCluster(t, ctx, clientNamespaced, conflictBackendCluster)
 
 		t.Log("Waiting for EventGatewayVirtualCluster to be programmed after UID conflict lookup")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(virtualCluster),
-				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(virtualCluster),
+				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
 				func(vc *configurationv1alpha1.EventGatewayVirtualCluster) bool {
 					return vc.GetGatewayID() == expectedParentGateway
 				},
@@ -255,6 +255,6 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			"EventGatewayVirtualCluster didn't get Programmed status condition, parent Gateway ID, or Konnect ID after conflict resolution",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
 	})
 }

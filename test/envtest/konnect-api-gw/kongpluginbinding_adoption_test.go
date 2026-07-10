@@ -18,6 +18,8 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -26,13 +28,13 @@ import (
 
 func TestKongPluginBindingAdoption(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
 
 	// Set up the envtest environment.
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	t.Log("Setting up clients")
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
@@ -47,18 +49,18 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongPluginBinding](&metricsmocks.MockRecorder{}),
 		),
 	}
 
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	t.Run("Adopting a globally applied plugin", func(t *testing.T) {
 		pluginID := uuid.NewString()
-		w := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating plugins")
 		sdk.PluginSDK.EXPECT().GetPlugin(
@@ -91,7 +93,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongPluginBinding %s/%s being Programmed and set Konnect ID", ns.Name, kpbGlobal.Name)
-		watchFor(t, ctx, w,
+		envtest.WatchFor(t, ctx, w,
 			apiwatch.Modified,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				return kpb.Name == kpbGlobal.Name &&
@@ -104,12 +106,12 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 
 		t.Logf("Deleting the KongPluginBinding %s/%s", ns.Name, kpbGlobal.Name)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpbGlobal))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, kpbGlobal, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, kpbGlobal, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("Adopting a plugin attached to a service", func(t *testing.T) {
 		pluginID := uuid.NewString()
-		w := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating a service with ID")
 		kongService := deploy.KongServiceWithID(t, ctx, clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp))
@@ -149,7 +151,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongPluginBinding %s/%s being Programmed and set Konnect ID", ns.Name, kpbService.Name)
-		watchFor(t, ctx, w,
+		envtest.WatchFor(t, ctx, w,
 			apiwatch.Modified,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				return kpb.Name == kpbService.Name &&
@@ -162,11 +164,11 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 
 		t.Logf("Deleting the KongPluginBinding %s/%s", ns.Name, kpbService.Name)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpbService))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, kpbService, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, kpbService, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("Adopting without KongPlugin reference should fail", func(t *testing.T) {
-		w := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating a KongPluginBinding without the KongPlugin to adopt the plugin")
 		kpbGlobal := deploy.KongPluginBinding(t, ctx, clientNamespaced, konnect.NewKongPluginBindingBuilder().
@@ -178,11 +180,11 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		)
 
 		t.Logf("Waiting for the KongPluginBinding %s/%s to be marked as not programmed with PluginRefValid=False", ns.Name, kpbGlobal.Name)
-		watchFor(t, ctx, w,
+		envtest.WatchFor(t, ctx, w,
 			apiwatch.Modified,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				return kpb.Name == kpbGlobal.Name &&
-					conditionsContainProgrammedFalse(kpb.GetConditions()) &&
+					envtest.ConditionsContainProgrammedFalse(kpb.GetConditions()) &&
 					k8sutils.HasConditionFalse(konnectv1alpha1.KongPluginRefValidConditionType, kpb)
 			},
 			"Did not see KongPluginBinding marked as not programmed with PluginRefValid=False in its conditions.",

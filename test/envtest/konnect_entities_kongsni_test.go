@@ -58,7 +58,7 @@ func TestKongSNI(t *testing.T) {
 		t.Log("Creating KongCertificate and setting it to Programmed")
 		createdCert := deploy.KongCertificateAttachedToCPWithProgrammed(t, ctx, clientNamespaced, cp, "cert-12345")
 
-		w := setupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK for creating SNI")
 		sdk.SNIsSDK.EXPECT().CreateSniWithCertificate(
@@ -82,7 +82,7 @@ func TestKongSNI(t *testing.T) {
 		)
 
 		t.Log("Waiting for SNI to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(s *configurationv1alpha1.KongSNI) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(s *configurationv1alpha1.KongSNI) bool {
 			return s.GetKonnectID() == "sni-12345" && k8sutils.IsProgrammed(s)
 		}, "SNI didn't get Programmed status condition or didn't get the correct (sni-12345) Konnect ID assigned")
 
@@ -101,7 +101,7 @@ func TestKongSNI(t *testing.T) {
 		sniToPatch.Spec.Name = "test2.kong-sni.example.com"
 		require.NoError(t, clientNamespaced.Patch(ctx, sniToPatch, client.MergeFrom(createdSNI)))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK for deleting SNI")
 		sdk.SNIsSDK.EXPECT().DeleteSniWithCertificate(
@@ -124,7 +124,7 @@ func TestKongSNI(t *testing.T) {
 			"KongSNI was not deleted",
 		)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)
 	})
 
 	t.Run("Adopting an existing SNI", func(t *testing.T) {
@@ -135,7 +135,7 @@ func TestKongSNI(t *testing.T) {
 		t.Log("Creating KongCertificate and setting it to Programmed")
 		createdCert := deploy.KongCertificateAttachedToCPWithProgrammed(t, ctx, clientNamespaced, cp, certID)
 
-		w := setupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating SNIs")
 		sdk.SNIsSDK.EXPECT().GetSniWithCertificate(
@@ -165,7 +165,7 @@ func TestKongSNI(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongSNI %s to get programmed and set Konnect ID", client.ObjectKeyFromObject(createdSNI))
-		watchFor(t, ctx, w, apiwatch.Modified, func(sni *configurationv1alpha1.KongSNI) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(sni *configurationv1alpha1.KongSNI) bool {
 			return sni.Name == createdSNI.Name &&
 				k8sutils.IsProgrammed(sni) &&
 				sni.GetKonnectID() == sniID
