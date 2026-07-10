@@ -100,7 +100,8 @@
   - introduce `AIGatewayDataPlaneCertificate` CRD with reconciler
   [#4772](https://github.com/Kong/kong-operator/pull/4772)
   - introduce `AIGatewayPolicy` CRD with reconciler. Configurations can be
-    sourced from a key in a Kubernetes `Secret`.
+    sourced from a key in a Kubernetes `Secret`. The value in secret should
+    be valid JSON or YAML format.
   [#4781](https://github.com/Kong/kong-operator/pull/4781)
   [#4856](https://github.com/Kong/kong-operator/pull/4856)
   - introduce `AIGatewayAgent` CRD with reconciler.

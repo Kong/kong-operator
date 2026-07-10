@@ -12,15 +12,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// testAIGatewayPolicyConfig mirrors the shape of AIGatewayPolicy.config's own
-// OAS example (anonymize/stop_on_error), used to verify that both the JSON
-// and YAML secret-data formats resolve to equivalent structured content.
-type testAIGatewayPolicyConfig struct {
-	Anonymize   []string `json:"anonymize"`
-	StopOnError bool     `json:"stop_on_error"`
-}
-
 func TestAIGatewayPolicyConfigDataSource_valueFromSecretRef(t *testing.T) {
+
+	// testAIGatewayPolicyConfig mirrors the shape of AIGatewayPolicy.config's own
+	// OAS example (anonymize/stop_on_error), used to verify that both the JSON
+	// and YAML secret-data formats resolve to equivalent structured content.
+	type testAIGatewayPolicyConfig struct {
+		Anonymize   []string `json:"anonymize"`
+		StopOnError bool     `json:"stop_on_error"`
+	}
+
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
 
