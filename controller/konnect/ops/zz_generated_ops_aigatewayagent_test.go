@@ -10,6 +10,8 @@ import (
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -34,7 +36,6 @@ func testGeneratedAIGatewayAgentForSDKOps() *konnectv1alpha1.AIGatewayAgent {
 				Labels: konnectv1alpha1.PublicLabels{"test-key": "test-value"},
 				ManagedBy: konnectv1alpha1.ManagedBy{"test-key": "test-value"},
 				Name: "test-value",
-				Policies: []string{"test-value"},
 				Type: "a2a",
 			},
 		},
@@ -46,10 +47,11 @@ func TestCreateAIGatewayAgent_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayAgentsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayAgentForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayAgentRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayAgentRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	expectedID := "aigatewayagent-id"
@@ -67,7 +69,7 @@ func TestCreateAIGatewayAgent_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createAIGatewayAgent(ctx, sdk, obj))
+	require.NoError(t, createAIGatewayAgent(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -76,10 +78,11 @@ func TestCreateAIGatewayAgent_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayAgentsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayAgentForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayAgentRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayAgentRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	sdkErr := errors.New("sdk error")
@@ -93,7 +96,7 @@ func TestCreateAIGatewayAgent_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createAIGatewayAgent(ctx, sdk, obj)
+	err = createAIGatewayAgent(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -102,11 +105,12 @@ func TestUpdateAIGatewayAgent_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayAgentsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayAgentForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewayagent-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayAgentRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayAgentRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 
@@ -122,7 +126,7 @@ func TestUpdateAIGatewayAgent_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayAgentResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayAgent(ctx, sdk, obj))
+	require.NoError(t, updateAIGatewayAgent(ctx, cl, sdk, obj))
 }
 
 func TestUpdateAIGatewayAgent_PropagatesSDKError(t *testing.T) {
@@ -130,11 +134,12 @@ func TestUpdateAIGatewayAgent_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayAgentsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayAgentForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewayagent-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayAgentRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayAgentRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	sdkErr := errors.New("sdk error")
@@ -151,7 +156,7 @@ func TestUpdateAIGatewayAgent_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayAgent(ctx, sdk, obj)
+	err = updateAIGatewayAgent(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

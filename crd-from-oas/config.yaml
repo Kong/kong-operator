@@ -306,6 +306,15 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
+        references:
+          - path: spec.apiSpec.api.access.acls.allow.allow
+            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
+          - path: spec.apiSpec.api.access.acls.deny.deny
+            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelsSDK
@@ -369,6 +378,18 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/agents
         name: AIGatewayAgent
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: id
+          - path: spec.apiSpec.access.acls.allow.allow
+            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
+          - path: spec.apiSpec.access.acls.deny.deny
+            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayAgentsSDK
@@ -387,6 +408,10 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/consumers
         name: AIGatewayConsumer
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: id
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumersSDK
@@ -407,11 +432,12 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
 
-      # TODO: Replace policies []string with cross-object AIGatewayPolicy
-      # references once supported by crd-from-oas.
-      # See https://github.com/Kong/kong-operator/issues/4831.
       - path: /v1/ai-gateways/{gatewayId}/consumer-groups
         name: AIGatewayConsumerGroup
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: id
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumerGroupsSDK

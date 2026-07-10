@@ -36,6 +36,11 @@ spec:
   apiSpec:
     name: dev-consumer
     displayName: Dev Team Consumer
+    # References to AIGatewayPolicy CRs (by metadata.name) applied to this
+    # consumer group. See config/samples/konnect_aigatewaypolicy.yaml for the
+    # referenced policy.
+    policies:
+      - name: aigw-policy-prompt-decorator
     type: api-key
     labels:
       team: platform-dev

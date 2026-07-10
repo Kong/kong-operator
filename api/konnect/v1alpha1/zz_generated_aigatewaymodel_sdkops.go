@@ -3,8 +3,13 @@
 package v1alpha1
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
@@ -313,15 +318,10 @@ func (s *AIGatewayModelAPISpec) selectedSDKOpsPayload(payload map[string]any) ([
 	return data, variant, nil
 }
 
-// ToCreateAIGatewayModelRequest converts the AIGatewayModelAPISpec to the SDK type
-// sdkkonnectcomp.CreateAIGatewayModelRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayModelAPISpec) ToCreateAIGatewayModelRequest() (*sdkkonnectcomp.CreateAIGatewayModelRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toCreateAIGatewayModelRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *AIGatewayModelAPISpec) toCreateAIGatewayModelRequestFromPayload(payload map[string]any) (*sdkkonnectcomp.CreateAIGatewayModelRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -347,15 +347,10 @@ func (s *AIGatewayModelAPISpec) ToCreateAIGatewayModelRequest() (*sdkkonnectcomp
 	}
 }
 
-// ToUpdateAIGatewayModelRequest converts the AIGatewayModelAPISpec to the SDK type
-// sdkkonnectcomp.UpdateAIGatewayModelRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayModelAPISpec) ToUpdateAIGatewayModelRequest() (*sdkkonnectcomp.UpdateAIGatewayModelRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toUpdateAIGatewayModelRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *AIGatewayModelAPISpec) toUpdateAIGatewayModelRequestFromPayload(payload map[string]any) (*sdkkonnectcomp.UpdateAIGatewayModelRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -387,4 +382,250 @@ func (s *AIGatewayModelAPISpec) ToUpdateAIGatewayModelRequest() (*sdkkonnectcomp
 	default:
 		return nil, fmt.Errorf("unsupported AIGatewayModel config variant %q", variant)
 	}
+}
+
+// RefsAtAIGatewayModelAPIAccessAclsAllowAllow returns the references at spec.apiSpec.api.access.acls.allow.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayModelAPIAccessAclsAllowAllow(obj *AIGatewayModel) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayModelConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.API == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls.Allow == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls.Allow.Allow
+}
+
+// resolveAIGatewayModelAPIAccessAclsAllowAllow resolves the CR references in spec.apiSpec.api.access.acls.allow.allow
+// to Konnect names.
+func resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx context.Context, cl client.Client, obj *AIGatewayModel) ([]string, error) {
+	refs := RefsAtAIGatewayModelAPIAccessAclsAllowAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumer"
+		}
+		if ns != obj.GetNamespace() {
+			return nil, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}
+		}
+		var resolvedValue, konnectID string
+		switch kind {
+		case "AIGatewayConsumer":
+			var referenced AIGatewayConsumer
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil, ReferenceNotFoundError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, Err: err}
+				}
+				return nil, fmt.Errorf("failed to get referenced AIGatewayConsumer %s/%s: %w", ns, ref.Name, err)
+			}
+			konnectID = referenced.GetKonnectID()
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+			}
+			resolvedValue = string(referenced.Spec.APISpec.Name)
+		case "AIGatewayConsumerGroup":
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err}
+				}
+				return nil, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err)
+			}
+			konnectID = referenced.GetKonnectID()
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+			}
+			resolvedValue = string(referenced.Spec.APISpec.Name)
+		default:
+			return nil, fmt.Errorf("unsupported reference kind %q at spec.apiSpec.api.access.acls.allow.allow", kind)
+		}
+		if konnectID == "" {
+			return nil, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name}
+		}
+		resolved = append(resolved, resolvedValue)
+	}
+	return resolved, nil
+}
+// RefsAtAIGatewayModelAPIAccessAclsDenyDeny returns the references at spec.apiSpec.api.access.acls.deny.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayModelAPIAccessAclsDenyDeny(obj *AIGatewayModel) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayModelConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.API == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls.Deny == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls.Deny.Deny
+}
+
+// resolveAIGatewayModelAPIAccessAclsDenyDeny resolves the CR references in spec.apiSpec.api.access.acls.deny.deny
+// to Konnect names.
+func resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx context.Context, cl client.Client, obj *AIGatewayModel) ([]string, error) {
+	refs := RefsAtAIGatewayModelAPIAccessAclsDenyDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumer"
+		}
+		if ns != obj.GetNamespace() {
+			return nil, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}
+		}
+		var resolvedValue, konnectID string
+		switch kind {
+		case "AIGatewayConsumer":
+			var referenced AIGatewayConsumer
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil, ReferenceNotFoundError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, Err: err}
+				}
+				return nil, fmt.Errorf("failed to get referenced AIGatewayConsumer %s/%s: %w", ns, ref.Name, err)
+			}
+			konnectID = referenced.GetKonnectID()
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+			}
+			resolvedValue = string(referenced.Spec.APISpec.Name)
+		case "AIGatewayConsumerGroup":
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err}
+				}
+				return nil, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err)
+			}
+			konnectID = referenced.GetKonnectID()
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+			}
+			resolvedValue = string(referenced.Spec.APISpec.Name)
+		default:
+			return nil, fmt.Errorf("unsupported reference kind %q at spec.apiSpec.api.access.acls.deny.deny", kind)
+		}
+		if konnectID == "" {
+			return nil, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name}
+		}
+		resolved = append(resolved, resolvedValue)
+	}
+	return resolved, nil
+}
+
+// ResolveKonnectReferences resolves every CR reference declared on the spec and
+// returns the joined resolution errors, or nil when all references resolve.
+func (obj *AIGatewayModel) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var errs []error
+	if _, err := resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+
+// ToCreateAIGatewayModelRequest converts the AIGatewayModel to the SDK type
+// sdkkonnectcomp.CreateAIGatewayModelRequest, resolving referenced CRs via the provided client.
+func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayModelRequest, error) {
+	spec := &obj.Spec.APISpec
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.api.access.acls carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil && obj.Spec.APISpec.AIGatewayModelConfig.API != nil && obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls != nil {
+		acls := obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls
+		api, _ := payload["api"].(map[string]any)
+		if api == nil {
+			api = map[string]any{}
+		}
+		access, _ := api["access"].(map[string]any)
+		if access == nil {
+			access = map[string]any{}
+		}
+		switch {
+		case acls.Type == AIGatewayModelAccessAclsTypeAllow:
+			resolvedAPIAccessAclsAllowAllow, err := resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.allow.allow references: %w", err)
+			}
+			access["acls"] = map[string]any{"allow": resolvedAPIAccessAclsAllowAllow}
+		case acls.Type == AIGatewayModelAccessAclsTypeDeny:
+			resolvedAPIAccessAclsDenyDeny, err := resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.deny.deny references: %w", err)
+			}
+			access["acls"] = map[string]any{"deny": resolvedAPIAccessAclsDenyDeny}
+		}
+		api["access"] = access
+		payload["api"] = api
+	}
+	return spec.toCreateAIGatewayModelRequestFromPayload(payload)
+}
+
+
+// ToUpdateAIGatewayModelRequest converts the AIGatewayModel to the SDK type
+// sdkkonnectcomp.UpdateAIGatewayModelRequest, resolving referenced CRs via the provided client.
+func (obj *AIGatewayModel) ToUpdateAIGatewayModelRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateAIGatewayModelRequest, error) {
+	spec := &obj.Spec.APISpec
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.api.access.acls carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil && obj.Spec.APISpec.AIGatewayModelConfig.API != nil && obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls != nil {
+		acls := obj.Spec.APISpec.AIGatewayModelConfig.API.Access.Acls
+		api, _ := payload["api"].(map[string]any)
+		if api == nil {
+			api = map[string]any{}
+		}
+		access, _ := api["access"].(map[string]any)
+		if access == nil {
+			access = map[string]any{}
+		}
+		switch {
+		case acls.Type == AIGatewayModelAccessAclsTypeAllow:
+			resolvedAPIAccessAclsAllowAllow, err := resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.allow.allow references: %w", err)
+			}
+			access["acls"] = map[string]any{"allow": resolvedAPIAccessAclsAllowAllow}
+		case acls.Type == AIGatewayModelAccessAclsTypeDeny:
+			resolvedAPIAccessAclsDenyDeny, err := resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.deny.deny references: %w", err)
+			}
+			access["acls"] = map[string]any{"deny": resolvedAPIAccessAclsDenyDeny}
+		}
+		api["access"] = access
+		payload["api"] = api
+	}
+	return spec.toUpdateAIGatewayModelRequestFromPayload(payload)
 }

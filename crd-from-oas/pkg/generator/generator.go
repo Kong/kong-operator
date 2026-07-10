@@ -3,7 +3,9 @@ package generator
 import (
 	"fmt"
 	"go/format"
+	"go/token"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"text/template"
@@ -100,6 +102,10 @@ type Generator struct {
 	// collide with another generated package type and therefore need a parent
 	// prefix when emitted.
 	ambiguousInlineTypeNames map[string]bool
+	// schemaTypeRefFieldsCache memoizes schemaTypeRefFields: schema Go type name →
+	// leaf JSON field name → generated ref struct type name. Built once from every
+	// entity's configured references via refFieldTarget.
+	schemaTypeRefFieldsCache map[string]map[string]string
 }
 
 const sensitiveDataSourceTypeName = "SensitiveDataSource"
@@ -449,6 +455,9 @@ func (g *Generator) recordSensitiveLeafSelector(entityName, path string, acc sel
 
 // findEntitySchema finds the request body schema for the given entity name.
 func findEntitySchema(parsed *parser.ParsedSpec, entityName string) *parser.Schema {
+	if parsed == nil {
+		return nil
+	}
 	for name, schema := range parsed.RequestBodies {
 		if parser.GetEntityNameFromType(name) == entityName {
 			return schema
@@ -796,6 +805,13 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	// Pre-compute sensitive leaf maps so field emission can substitute types.
 	if err := g.buildSensitiveLeaves(parsed); err != nil {
 		return nil, fmt.Errorf("failed to build sensitive leaf maps: %w", err)
+	}
+
+	// Validate that every configured inter-CR reference path maps to an array
+	// property in the entity's OAS schema; the field is emitted as a typed ref
+	// slice, so a missing or non-array property is a config error.
+	if err := g.validateReferences(parsed); err != nil {
+		return nil, err
 	}
 
 	// Generate types for each request body (these are the main CRD types).
@@ -1320,10 +1336,11 @@ func (g *Generator) generateEntitySDKOpsFiles(entityName string, schema *parser.
 	}
 
 	prefix := commonGeneratedFilePrefix + EntityFilePrefix(entityName)
-	return []GeneratedFile{
-		{Name: prefix + "_sdkops.go", Content: opsContent},
-		{Name: prefix + "_sdkops_test.go", Content: opsTestContent},
-	}, nil
+	files := []GeneratedFile{{Name: prefix + "_sdkops.go", Content: opsContent}}
+	if opsTestContent != "" {
+		files = append(files, GeneratedFile{Name: prefix + "_sdkops_test.go", Content: opsTestContent})
+	}
+	return files, nil
 }
 
 // generateEntityOpsFile generates the per-entity Konnect ops file and matching
@@ -1433,6 +1450,17 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 		files = append(files, *konnectEntityPersistenceFile)
 	}
 
+	referencesContent, err := g.GenerateReferencesFile()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate references file: %w", err)
+	}
+	if referencesContent != "" {
+		files = append(files, GeneratedFile{
+			Name:    "zz_generated_references.go",
+			Content: referencesContent,
+		})
+	}
+
 	if len(referencedSchemas) > 0 {
 		files = append(files, GeneratedFile{
 			Name:    "zz_generated_schema_types.go",
@@ -1448,6 +1476,71 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 	}
 
 	return files, nil
+}
+
+// refTypeTemplateData is the per-ref-struct data for referencesFileTemplate.
+type refTypeTemplateData struct {
+	TypeName      string
+	Kinds         []string
+	SingleKind    bool
+	DefaultKind   string
+	KindsEnum     string // "A;B"
+	KindsSentence string // "an AIGatewayPolicy" / "an AIGatewayConsumer or AIGatewayConsumerGroup"
+	ResolvesTo    string
+}
+
+// GenerateReferencesFile emits the shared zz_generated_references.go content,
+// or "" when no entity declares references.
+func (g *Generator) GenerateReferencesFile() (string, error) {
+	byName := map[string]refTypeTemplateData{}
+	names := []string{}
+	for _, refs := range g.config.References {
+		for _, ref := range refs {
+			name := ref.TypeName()
+			if _, seen := byName[name]; seen {
+				continue // dedup; config validation guarantees identical declarations
+			}
+			names = append(names, name)
+			byName[name] = refTypeTemplateData{
+				TypeName:      name,
+				Kinds:         ref.Kinds,
+				SingleKind:    len(ref.Kinds) == 1,
+				DefaultKind:   ref.Kinds[0],
+				KindsEnum:     strings.Join(ref.Kinds, ";"),
+				KindsSentence: kindsSentence(ref.Kinds),
+				ResolvesTo:    ref.ResolvesTo,
+			}
+		}
+	}
+	if len(names) == 0 {
+		return "", nil
+	}
+	sort.Strings(names) // deterministic output
+	data := struct {
+		PackageName string
+		RefTypes    []refTypeTemplateData
+	}{PackageName: g.config.APIVersion, RefTypes: make([]refTypeTemplateData, 0, len(names))}
+	for _, n := range names {
+		data.RefTypes = append(data.RefTypes, byName[n])
+	}
+
+	tmpl := template.Must(template.New("references").Parse(referencesFileTemplate))
+	var buf strings.Builder
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// kindsSentence renders a human-readable enumeration of referenced kinds for
+// use in generated doc comments.
+func kindsSentence(kinds []string) string {
+	switch len(kinds) {
+	case 1:
+		return "an " + kinds[0]
+	default:
+		return "an " + strings.Join(kinds[:len(kinds)-1], ", ") + " or " + kinds[len(kinds)-1]
+	}
 }
 
 func (g *Generator) generateKonnectEntityPersistenceFile(parsed *parser.ParsedSpec) (*GeneratedFile, error) {
@@ -1846,11 +1939,27 @@ func (g *Generator) schemaTypesImports(refNames []string, parsed *parser.ParsedS
 func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Property, typeName string, fieldCursor *config.FieldConfig) {
 	jsonFieldName := jsonName(prop.Name)
 	isSensitive := g.isSchemaFieldSensitiveLeaf(typeName, jsonFieldName)
+	// Ref-ified shared schema-type field: emitted as a slice of the generated ref
+	// struct, which carries its own item-level validation. Mirror generateCRDType:
+	// suppress OAS-derived item string markers, keep only required/optional and the
+	// array-level MaxItems bound (unbounded slices of CEL-validated structs can blow
+	// the per-CRD cost budget), and swap the element type for the ref struct.
+	refTypeName := g.schemaTypeRefFields()[typeName][jsonFieldName]
 
 	buf.WriteString(formatComment(prop.Description))
 	buf.WriteString("\n")
 	buf.WriteString("\t//\n")
-	if isSensitive {
+	switch {
+	case refTypeName != "":
+		if prop.Required && !prop.Nullable {
+			fmt.Fprintf(buf, "\t// %s\n", markerRequired())
+		} else {
+			fmt.Fprintf(buf, "\t// %s\n", markerOptional())
+		}
+		if prop.Type == "array" && prop.MaxItems != nil {
+			fmt.Fprintf(buf, "\t// %s\n", markerValidationMaxItems(int(*prop.MaxItems)))
+		}
+	case isSensitive:
 		// Sensitive leaf: emit only required/optional; SensitiveDataSource carries
 		// the shared validation for its inline value representation.
 		if prop.Required && !prop.Nullable {
@@ -1858,7 +1967,7 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 		} else {
 			fmt.Fprintf(buf, "\t// %s\n", markerOptional())
 		}
-	} else {
+	default:
 		for _, tag := range KubebuilderTags(prop, fieldCursor) {
 			fmt.Fprintf(buf, "\t// %s\n", tag)
 		}
@@ -1867,6 +1976,8 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	switch {
 	case isSensitive && isScalarArraySensitiveLeaf(prop):
 		goType = "[]SensitiveDataSource"
+	case refTypeName != "":
+		goType = "[]" + refTypeName
 	case isSensitive:
 		goType = "SensitiveDataSource"
 	case prop.RefName != "" && g.anyOfSchemaNames[prop.RefName]:
@@ -2077,6 +2188,26 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// For sensitive leaf fields the OAS string markers are suppressed since the
 	// SensitiveDataSource struct carries its own validation.
 	kubebuilderTagsWithConfig := func(prop *parser.Property) []string {
+		// Configured inter-CR reference fields are emitted as slices of the
+		// generated ref struct, which carries its own item-level validation
+		// markers. The OAS-derived item-level string markers (item MaxLength,
+		// MinLength, Pattern, etc.) must not be emitted for them. Array-level
+		// bounds (MaxItems) ARE preserved: an unbounded slice of struct items
+		// lets the Kubernetes CEL cost estimator assume near-worst-case
+		// cardinality over the ref struct's own x-kubernetes-validations rules,
+		// which can blow the per-CRD cost budget (see tags.go MaxItems note).
+		if g.referenceForField(entityName, jsonName(prop.Name)) != nil {
+			var tags []string
+			if prop.Required && !prop.Nullable {
+				tags = append(tags, markerRequired())
+			} else {
+				tags = append(tags, markerOptional())
+			}
+			if prop.Type == "array" && prop.MaxItems != nil {
+				tags = append(tags, markerValidationMaxItems(int(*prop.MaxItems)))
+			}
+			return tags
+		}
 		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
 			if prop.Required && !prop.Nullable {
 				return []string{markerRequired()}
@@ -2093,6 +2224,12 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// anyOf union refs also need pointer treatment so omitempty omits zero values.
 	// Sensitive leaf fields are emitted as SensitiveDataSource regardless of their OAS type.
 	goTypeInCRD := func(prop *parser.Property) string {
+		// Configured inter-CR reference fields become slices of the generated
+		// ref struct (e.g. []AIGatewayPolicyRef). Checked first so non-template
+		// consumers (buildSDKOpsTestFields etc.) observe the ref type too.
+		if ref := g.referenceForField(entityName, jsonName(prop.Name)); ref != nil {
+			return "[]" + ref.TypeName()
+		}
 		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
 			// NOTE: direct apiSpec-level (single-segment path) secret leaves are
 			// always treated as scalar here, matching entityDirectSensitiveLeaves'
@@ -2141,14 +2278,21 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	funcMap := template.FuncMap{
-		"goType":                   goTypeInCRD,
-		"goFieldName":              goFieldName,
-		"jsonTag":                  jsonTag,
-		"jsonPropName":             func(p *parser.Property) string { return jsonName(p.Name) },
-		"refJSONTag":               func(p *parser.Property) string { return jsonName(p.Name) + "Ref" },
-		"kubebuilderTags":          kubebuilderTagsWithConfig,
-		"isRefProperty":            isRefProperty,
-		"isRefConfigField":         func(prop *parser.Property) bool { return g.referenceForField(entityName, prop.Name) != nil },
+		"goType":           goTypeInCRD,
+		"goFieldName":      goFieldName,
+		"jsonTag":          jsonTag,
+		"jsonPropName":     func(p *parser.Property) string { return jsonName(p.Name) },
+		"refJSONTag":       func(p *parser.Property) string { return jsonName(p.Name) + "Ref" },
+		"kubebuilderTags":  kubebuilderTagsWithConfig,
+		"isRefProperty":    isRefProperty,
+		"isRefConfigField": func(prop *parser.Property) bool { return g.referenceForField(entityName, jsonName(prop.Name)) != nil },
+		"refTypeNameForField": func(prop *parser.Property) string {
+			ref := g.referenceForField(entityName, jsonName(prop.Name))
+			if ref == nil {
+				return ""
+			}
+			return ref.TypeName()
+		},
 		"isParentRefReplacedField": func(propName string) bool { return isParentRefReplacedField(propName) },
 		"refEntityName":            parser.GetRefEntityName,
 		"skipProperty":             skipProperty,
@@ -3669,6 +3813,36 @@ func (g *Generator) schemaTypeObjectRefImportIfNeeded(typeName string, schema *p
 	return nil
 }
 
+// GoPathSegment is one property hop in the Go field-access chain for a
+// reference path, e.g. "spec.apiSpec.access.acls.allow.allow" walks the
+// segments Access (value), Acls (pointer), Allow (pointer), Allow (leaf,
+// value). Pointer is true when the generated Go field for this hop is itself
+// a pointer (a union wrapper field, or the discriminated variant field
+// selected when descending into a oneOf) and must be nil-guarded before the
+// chain continues.
+type GoPathSegment struct {
+	Name    string
+	Pointer bool
+	// JSONKey is the CRD wire-format JSON key of this hop, which (after
+	// snake_case conversion via sdkJSONKey) is also its key in the SDK payload
+	// map. It is empty for synthetic hops with no JSON key of their own, i.e.
+	// the inline-embedded <Entity>Config wrapper of a root-union entity.
+	JSONKey string
+	// UnionWrapper is true when this hop is a discriminated-union wrapper field
+	// (a property-level oneOf/anyOf, or the synthesized root-union config).
+	UnionWrapper bool
+	// UnionTypeName is the generated Go type name for this discriminated-union
+	// wrapper. It is set when UnionWrapper is true.
+	UnionTypeName string
+	// UnionVariant is true when this hop is the variant member field selected
+	// while descending through a discriminated union.
+	UnionVariant bool
+	// VariantProperties is the number of properties on the variant member's
+	// schema; only set when UnionVariant is true. SDK payload injection uses it
+	// to refuse rebuilding a union value whose member has sibling fields.
+	VariantProperties int
+}
+
 // TemplateReferenceConfig extends ReferenceConfig with Go-code computed fields
 // suitable for use in templates.
 type TemplateReferenceConfig struct {
@@ -3677,9 +3851,46 @@ type TemplateReferenceConfig struct {
 	// GoFieldName is the Go struct field name derived from the last path segment,
 	// e.g. "spec.apiSpec.destination" → "Destination".
 	GoFieldName string
-	// JSONFieldName is the JSON key used in the SDK payload after renameKeysToSDK,
-	// e.g. "destination". Derived from the last segment of Path.
+	// JSONFieldName is the CRD wire-format JSON key, e.g. "destination".
+	// Derived from the last segment of Path.
 	JSONFieldName string
+	// SDKJSONFieldName is the JSON key used in the SDK payload after
+	// renameKeysToSDK (camelCase → snake_case), e.g. "someField" → "some_field".
+	// This is the key the reference resolver must overwrite in the payload map,
+	// because the payload has already been passed through renameKeysToSDK.
+	SDKJSONFieldName string
+	// DefaultKind is the single referenced kind (Kinds[0]). For single-kind
+	// references the API server defaults the ref's kind field to this value, so
+	// the resolver targets this concrete type directly.
+	DefaultKind string
+	// GoResolverName is the resolver-name suffix: the Go path segments after
+	// "spec.apiSpec." joined without separators, e.g. "spec.apiSpec.policies" →
+	// "Policies", "spec.apiSpec.access.acls.allow.allow" → "AccessAclsAllowAllow".
+	// The generated resolver is named resolve<Entity><GoResolverName>.
+	GoResolverName string
+	// NestedRef is true when the reference path descends below the top-level
+	// apiSpec (more than one segment after "spec.apiSpec."). Nested references
+	// source their slice from the RefsAt<Entity><GoResolverName> accessor rather
+	// than a direct spec field.
+	NestedRef bool
+	// RefsExpr is the Go expression yielding the []<RefType> slice to resolve.
+	// Top-level: obj.Spec.APISpec.<GoFieldName>. Nested: RefsAt<Entity><GoResolverName>(obj).
+	RefsExpr string
+	// GoPathSegments is the Go field-access chain for nested reference paths,
+	// computed by refFieldTarget's walk. Empty for top-level paths (which use
+	// RefsExpr's direct field access without an accessor). Nested references
+	// use this to emit a nil-guarded RefsAt<Entity><GoResolverName> accessor.
+	GoPathSegments []GoPathSegment
+	// MultiKind is true when the reference may point at more than one kind, so the
+	// resolver dispatches on the ref's Kind field.
+	MultiKind bool
+	// ResolvesToName is true when references resolve to the referenced CR's Konnect
+	// name rather than its Konnect ID.
+	ResolvesToName bool
+	// ACLNested is true for AIGatewayACLRef references that are nested inside the
+	// AIGateway ACL union. Such references are excluded from the flat leaf-key
+	// payload assignment and injected via an ACL-specific payload rewrite instead.
+	ACLNested bool
 }
 
 // templateReferences returns the references for an entity with computed Go field names.
@@ -3694,29 +3905,673 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 		if idx := strings.LastIndex(tail, "."); idx >= 0 {
 			tail = tail[idx+1:]
 		}
+		var defaultKind string
+		if len(ref.Kinds) > 0 {
+			defaultKind = ref.Kinds[0]
+		}
+		goFieldNameStr := goFieldName(tail)
+		segments := strings.Split(strings.TrimPrefix(ref.Path, "spec.apiSpec."), ".")
+		goSegments := make([]string, len(segments))
+		for j, seg := range segments {
+			goSegments[j] = goFieldName(seg)
+		}
+		goResolverName := strings.Join(goSegments, "")
+		nested := len(segments) > 1
+		refsExpr := "obj.Spec.APISpec." + goFieldNameStr
+		var goPathSegments []GoPathSegment
+		if nested {
+			refsExpr = "RefsAt" + entityName + goResolverName + "(obj)"
+			// The walk requires the parsed schema; failures here are validated
+			// against earlier by validateReferences, so any error at this point
+			// leaves GoPathSegments empty rather than aborting generation.
+			if _, _, goPath, err := g.refFieldTarget(entityName, ref); err == nil {
+				goPathSegments = goPath
+			}
+		}
+		aclNested := false
+		for _, seg := range goPathSegments {
+			if seg.UnionWrapper {
+				aclNested = ref.TypeName() == "AIGatewayACLRef"
+				break
+			}
+		}
 		result[i] = TemplateReferenceConfig{
-			ReferenceConfig: ref,
-			GoFieldName:     goFieldName(tail),
-			JSONFieldName:   tail,
+			ReferenceConfig:  ref,
+			GoFieldName:      goFieldNameStr,
+			JSONFieldName:    tail,
+			SDKJSONFieldName: sdkJSONKey(tail),
+			DefaultKind:      defaultKind,
+			GoResolverName:   goResolverName,
+			NestedRef:        nested,
+			RefsExpr:         refsExpr,
+			GoPathSegments:   goPathSegments,
+			MultiKind:        len(ref.Kinds) > 1,
+			ResolvesToName:   ref.ResolvesTo == "name",
+			ACLNested:        aclNested,
 		}
 	}
 	return result
 }
 
+// TemplateACLRefParentNav is one sibling-preserving navigation hop from the SDK
+// payload root down to the map holding the ACL union value being rebuilt.
+type TemplateACLRefParentNav struct {
+	// Var is the local variable holding the map at this hop.
+	Var string
+	// Key is the hop's key in its parent map (SDK snake_case form).
+	Key string
+	// Parent is the variable holding the parent map ("payload" at the root).
+	Parent string
+}
+
+// TemplateACLRefVariant is one AIGateway ACL variant arm. When the CRD ACL
+// union's discriminator selects this arm, the ACL union value in the SDK
+// payload is rebuilt as {"allow": <resolved names>} or {"deny": <resolved names>}.
+type TemplateACLRefVariant struct {
+	// GoMemberField is the variant member field on the CRD union struct.
+	GoMemberField string
+	// LeafSDKKey is the SDK payload key of the leaf array inside the variant
+	// member object.
+	LeafSDKKey string
+	// ResolverName is the resolver-name suffix (TemplateReferenceConfig.GoResolverName).
+	ResolverName string
+	// TypeConst is the generated discriminator constant for this ACL union arm.
+	TypeConst string
+	// RefPath is the full configured reference path, used in error messages.
+	RefPath string
+}
+
+// TemplateACLRefInjection describes the SDK payload injection block for
+// AIGatewayACLRef references grouped under one "access.acls" union. The
+// generated code rebuilds the ACL union value from the CRD union's selected
+// variant while preserving sibling keys of every ancestor map; when the CRD ACL
+// union pointer is nil the payload is left untouched (pointer omitempty
+// semantics: absent means "not configured").
+type TemplateACLRefInjection struct {
+	// Path is the CRD path of the ACL union wrapper (the configured reference
+	// path minus the variant and leaf segments), used in the generated comment.
+	Path string
+	// Cond guards the whole block: nil checks for every pointer hop up to and
+	// including the union wrapper, joined with &&.
+	Cond string
+	// UnionVar is the local variable bound to the CRD union pointer.
+	UnionVar string
+	// UnionExpr is the Go expression yielding the CRD union pointer.
+	UnionExpr string
+	// SDKUnionKey is the union value's key in its parent payload map.
+	SDKUnionKey string
+	// TargetVar is the variable holding the parent payload map of the union
+	// value (the last ParentNavs var, or "payload" when the union is top-level).
+	TargetVar string
+	// ParentNavs are the sibling-preserving navigation hops from "payload" down
+	// to TargetVar, in descent order.
+	ParentNavs []TemplateACLRefParentNav
+	// ParentNavsReversed are the same hops in write-back (innermost-first) order.
+	ParentNavsReversed []TemplateACLRefParentNav
+	// Variants are the union's arms, one per configured reference.
+	Variants []TemplateACLRefVariant
+}
+
+// aclRefInjections groups AIGatewayACLRef references by their access.acls union
+// ancestor and computes the ACL-specific payload-injection plan for each group.
+// This intentionally supports only refs ending in access.acls.allow.allow or
+// access.acls.deny.deny; it is not a general nested-union payload rewrite
+// engine.
+func aclRefInjections(refs []TemplateReferenceConfig) ([]TemplateACLRefInjection, error) {
+	var groups []TemplateACLRefInjection
+	groupIndex := map[string]int{}
+	for _, ref := range refs {
+		segs := ref.GoPathSegments
+		hasUnion := false
+		for _, seg := range segs {
+			if seg.UnionWrapper {
+				hasUnion = true
+				break
+			}
+		}
+		if hasUnion && ref.TypeName() != "AIGatewayACLRef" {
+			return nil, fmt.Errorf("reference path %q: SDK-union references must use refTypeName AIGatewayACLRef", ref.Path)
+		}
+		if ref.TypeName() == "AIGatewayACLRef" && !isSupportedAIGatewayACLRefPath(ref.Path) {
+			return nil, fmt.Errorf("reference path %q: AIGatewayACLRef SDK payload injection only supports paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
+		}
+		if !ref.ACLNested {
+			continue
+		}
+		// The innermost union wrapper is the ACL union whose value gets rebuilt.
+		unionIdx := -1
+		for i, seg := range segs {
+			if seg.UnionWrapper {
+				unionIdx = i
+			}
+		}
+		if unionIdx < 0 || len(segs) != unionIdx+3 || !segs[unionIdx+1].UnionVariant {
+			return nil, fmt.Errorf("reference path %q: AIGatewayACLRef SDK payload injection requires the leaf array directly on the ACL union variant member", ref.Path)
+		}
+		if segs[unionIdx].UnionTypeName == "" {
+			return nil, fmt.Errorf("reference path %q: AIGatewayACLRef SDK payload injection requires union type metadata", ref.Path)
+		}
+		if segs[unionIdx].JSONKey != "acls" {
+			return nil, fmt.Errorf("reference path %q: AIGatewayACLRef SDK payload injection requires the union field to be access.acls", ref.Path)
+		}
+		if segs[unionIdx+1].VariantProperties != 1 {
+			return nil, fmt.Errorf("reference path %q: ACL union variant member %q has sibling fields that a rebuilt SDK payload value would drop", ref.Path, segs[unionIdx+1].Name)
+		}
+
+		variant := TemplateACLRefVariant{
+			GoMemberField: segs[unionIdx+1].Name,
+			LeafSDKKey:    sdkJSONKey(segs[unionIdx+2].JSONKey),
+			ResolverName:  ref.GoResolverName,
+			TypeConst:     segs[unionIdx].UnionTypeName + "Type" + segs[unionIdx+1].Name,
+			RefPath:       ref.Path,
+		}
+
+		names := make([]string, 0, unionIdx+1)
+		for _, seg := range segs[:unionIdx+1] {
+			names = append(names, seg.Name)
+		}
+		groupKey := strings.Join(names, ".")
+		if idx, ok := groupIndex[groupKey]; ok {
+			for _, existing := range groups[idx].Variants {
+				if existing.GoMemberField == variant.GoMemberField {
+					return nil, fmt.Errorf("reference path %q: duplicate reference for union variant %q", ref.Path, variant.GoMemberField)
+				}
+			}
+			groups[idx].Variants = append(groups[idx].Variants, variant)
+			continue
+		}
+
+		unionExpr := "obj.Spec.APISpec." + groupKey
+		conds := make([]string, 0, unionIdx+1)
+		for j := range unionIdx {
+			if segs[j].Pointer {
+				conds = append(conds, "obj.Spec.APISpec."+strings.Join(names[:j+1], ".")+" != nil")
+			}
+		}
+		conds = append(conds, unionExpr+" != nil")
+
+		usedVars := map[string]bool{
+			"payload": true, "data": true, "err": true,
+			"obj": true, "ctx": true, "cl": true, "spec": true,
+		}
+		unionVar := uniqueLocalVar(goLocalVarFromKey(segs[unionIdx].JSONKey), usedVars)
+		parent := "payload"
+		var navs []TemplateACLRefParentNav
+		for j := range unionIdx {
+			if segs[j].JSONKey == "" {
+				// Inline hop (root-union config wrapper): no payload key.
+				continue
+			}
+			navVar := uniqueLocalVar(goLocalVarFromKey(segs[j].JSONKey), usedVars)
+			navs = append(navs, TemplateACLRefParentNav{
+				Var:    navVar,
+				Key:    sdkJSONKey(segs[j].JSONKey),
+				Parent: parent,
+			})
+			parent = navVar
+		}
+		reversed := make([]TemplateACLRefParentNav, 0, len(navs))
+		for _, v := range slices.Backward(navs) {
+			reversed = append(reversed, v)
+		}
+
+		pathParts := strings.Split(ref.Path, ".")
+		groupIndex[groupKey] = len(groups)
+		groups = append(groups, TemplateACLRefInjection{
+			Path:               strings.Join(pathParts[:len(pathParts)-2], "."),
+			Cond:               strings.Join(conds, " && "),
+			UnionVar:           unionVar,
+			UnionExpr:          unionExpr,
+			SDKUnionKey:        sdkJSONKey(segs[unionIdx].JSONKey),
+			TargetVar:          parent,
+			ParentNavs:         navs,
+			ParentNavsReversed: reversed,
+			Variants:           []TemplateACLRefVariant{variant},
+		})
+	}
+	return groups, nil
+}
+
+func isSupportedAIGatewayACLRefPath(path string) bool {
+	return strings.HasSuffix(path, ".access.acls.allow.allow") ||
+		strings.HasSuffix(path, ".access.acls.deny.deny")
+}
+
+// goLocalVarFromKey derives a Go local-variable name from a payload key, e.g.
+// "access" → "access", "api" → "api", "some_field" → "someField".
+func goLocalVarFromKey(key string) string {
+	name := []rune(goFieldName(key))
+	upper := 0
+	for upper < len(name) && unicode.IsUpper(name[upper]) {
+		upper++
+	}
+	// Keep the last uppercase of a leading acronym run when it starts the next
+	// word (e.g. "APIKey" → "apiKey").
+	if upper > 1 && upper < len(name) {
+		upper--
+	}
+	for i := range upper {
+		name[i] = unicode.ToLower(name[i])
+	}
+	v := string(name)
+	if token.IsKeyword(v) {
+		v += "Value"
+	}
+	return v
+}
+
+// uniqueLocalVar returns base if unused (marking it used), otherwise base with
+// the smallest numeric suffix that is unused.
+func uniqueLocalVar(base string, used map[string]bool) string {
+	v := base
+	for i := 2; used[v]; i++ {
+		v = fmt.Sprintf("%s%d", base, i)
+	}
+	used[v] = true
+	return v
+}
+
+// sdkJSONKey converts a CRD camelCase wire-format JSON key to the snake_case key
+// used by the Konnect SDK payload. It mirrors the camelToSnakeCase helper emitted
+// into generated code (see renameKeysToSDKHelper) so that reference injection into
+// the already-renamed payload map targets the correct key.
+func sdkJSONKey(s string) string {
+	var buf []byte
+	for i := range len(s) {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' {
+			if i > 0 && (s[i-1] >= 'a' && s[i-1] <= 'z' ||
+				(i+1 < len(s) && s[i+1] >= 'a' && s[i+1] <= 'z')) {
+				buf = append(buf, '_')
+			}
+			buf = append(buf, c+('a'-'A'))
+		} else {
+			buf = append(buf, c)
+		}
+	}
+	return string(buf)
+}
+
 // referenceForField returns the ReferenceConfig for the given entity+field if
 // that field is configured as an inter-CR reference, or nil otherwise.
-// propName is the JSON/OpenAPI property name (e.g. "destination").
+// propName is the top-level JSON/OpenAPI property name directly under
+// spec.apiSpec (e.g. "policies"). Nested references are handled by
+// schemaTypeRefFields instead and must not match here just because their leaf
+// field has the same name as a top-level APISpec property.
 func (g *Generator) referenceForField(entityName, propName string) *config.ReferenceConfig {
 	for i, ref := range g.config.References[entityName] {
-		tail := ref.Path
-		if idx := strings.LastIndex(tail, "."); idx >= 0 {
-			tail = tail[idx+1:]
+		const prefix = "spec.apiSpec."
+		remainder := strings.TrimPrefix(ref.Path, prefix)
+		if remainder == ref.Path || strings.Contains(remainder, ".") {
+			continue
 		}
-		if tail == propName {
+		if remainder == propName {
 			return &g.config.References[entityName][i]
 		}
 	}
 	return nil
+}
+
+// validateReferences verifies that every configured inter-CR reference path
+// resolves to an array-typed property in the entity's OAS request-body schema
+// and that shared schema fields are ref-typed consistently by every embedding
+// entity.
+func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
+	// refTarget uniquely identifies a (possibly shared) schema type field that a
+	// reference points at.
+	type refTarget struct {
+		schemaType string
+		field      string
+	}
+	// refUsage records how a single entity ref-ifies a target.
+	type refUsage struct {
+		entity      string
+		refTypeName string
+		resolvesTo  string
+		kindsKey    string
+	}
+	usages := make(map[refTarget][]refUsage)
+
+	// Resolve every configured reference to its owning schema type + leaf field.
+	// Iterate entities in a stable order so error messages are deterministic.
+	entityNames := make([]string, 0, len(g.config.References))
+	for entityName, refs := range g.config.References {
+		if len(refs) == 0 {
+			continue
+		}
+		entityNames = append(entityNames, entityName)
+	}
+	sort.Strings(entityNames)
+	for _, entityName := range entityNames {
+		for _, ref := range g.config.References[entityName] {
+			schemaType, field, goPath, err := g.refFieldTarget(entityName, ref)
+			if err != nil {
+				return err
+			}
+			if len(goPath) > 1 {
+				if ref.TypeName() != "AIGatewayACLRef" {
+					return fmt.Errorf("reference path %q: nested references must use refTypeName AIGatewayACLRef", ref.Path)
+				}
+				if !isSupportedAIGatewayACLRefPath(ref.Path) {
+					return fmt.Errorf("reference path %q: AIGatewayACLRef references only support paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
+				}
+			}
+			target := refTarget{schemaType: schemaType, field: field}
+			usages[target] = append(usages[target], refUsage{
+				entity:      entityName,
+				refTypeName: ref.TypeName(),
+				resolvesTo:  ref.ResolvesTo,
+				kindsKey:    kindsKey(ref.Kinds),
+			})
+		}
+	}
+
+	// Embedder consistency: if a shared schema-type field is ref-ified by one
+	// entity, every OTHER entity whose schema reaches that same schema type must
+	// declare a matching reference (same TypeName / ResolvesTo / Kinds). Entity
+	// APISpec targets are never shared, so they trivially pass.
+	reach := g.entityReachableSchemaTypes(parsed)
+	targets := make([]refTarget, 0, len(usages))
+	for target := range usages {
+		targets = append(targets, target)
+	}
+	sort.Slice(targets, func(i, j int) bool {
+		if targets[i].schemaType != targets[j].schemaType {
+			return targets[i].schemaType < targets[j].schemaType
+		}
+		return targets[i].field < targets[j].field
+	})
+	for _, target := range targets {
+		us := usages[target]
+		declaredBy := make(map[string]refUsage, len(us))
+		for _, u := range us {
+			declaredBy[u.entity] = u
+		}
+		expected := us[0]
+		embedders := make([]string, 0, len(reach))
+		for entity := range reach {
+			embedders = append(embedders, entity)
+		}
+		sort.Strings(embedders)
+		for _, entity := range embedders {
+			if !reach[entity][target.schemaType] {
+				continue
+			}
+			u, ok := declaredBy[entity]
+			if !ok {
+				return fmt.Errorf("schema type %s field %q is referenced-typed via entity %s but entity %s embeds the same type without a matching references entry", target.schemaType, target.field, expected.entity, entity)
+			}
+			if u.refTypeName != expected.refTypeName || u.resolvesTo != expected.resolvesTo || u.kindsKey != expected.kindsKey {
+				return fmt.Errorf("schema type %s field %q is referenced-typed inconsistently: entity %s and entity %s declare mismatching references entries", target.schemaType, target.field, expected.entity, entity)
+			}
+		}
+	}
+	return nil
+}
+
+// kindsKey returns an order-insensitive key for a list of reference kinds so two
+// references can be compared for kind equality.
+func kindsKey(kinds []string) string {
+	sorted := append([]string(nil), kinds...)
+	sort.Strings(sorted)
+	return strings.Join(sorted, "\x00")
+}
+
+// entityReachableSchemaTypes maps each request-body entity name to the set of
+// generated Go type names of the named component schemas its schema transitively
+// reaches. It mirrors the referenced-schema traversal Generate performs so the
+// embedder-consistency check sees the same reachability.
+func (g *Generator) entityReachableSchemaTypes(parsed *parser.ParsedSpec) map[string]map[string]bool {
+	result := make(map[string]map[string]bool)
+	for name, schema := range parsed.RequestBodies {
+		entityName := parser.GetEntityNameFromType(name)
+		refs := make(map[string]bool)
+		g.collectNamedReferencedSchemas(schema, refs)
+		g.expandReferencedSchemas(parsed, refs)
+		goTypes := make(map[string]bool, len(refs))
+		for raw := range refs {
+			goTypes[fixInitialisms(raw)] = true
+		}
+		result[entityName] = goTypes
+	}
+	return result
+}
+
+// expandReferencedSchemas grows refs to a fixed point: schemas chosen for
+// emission may themselves reference further named schemas via their properties
+// or oneOf/anyOf variants.
+func (g *Generator) expandReferencedSchemas(parsed *parser.ParsedSpec, refs map[string]bool) {
+	worklist := make([]string, 0, len(refs))
+	for name := range refs {
+		worklist = append(worklist, name)
+	}
+	for len(worklist) > 0 {
+		name := worklist[len(worklist)-1]
+		worklist = worklist[:len(worklist)-1]
+		schema, ok := parsed.Schemas[name]
+		if !ok {
+			continue
+		}
+		before := len(refs)
+		g.collectNamedReferencedSchemas(schema, refs)
+		if len(refs) > before {
+			for n := range refs {
+				worklist = append(worklist, n)
+			}
+		}
+	}
+}
+
+// refFieldTarget resolves a reference path (e.g. "spec.apiSpec.access.acls.allow.allow")
+// through the entity's parsed schema to the generated Go type name of the schema
+// that owns the leaf field, and the leaf field's JSON name. Top-level paths
+// (e.g. "spec.apiSpec.policies") resolve to the entity's <Entity>APISpec type.
+// The final property must be an array. Errors name the full offending path.
+//
+// goPath is the Go field-access chain for the path: one GoPathSegment per
+// path segment, recording the generated Go field name and whether that field
+// is a pointer (union wrapper fields, and the discriminated variant field
+// selected when descending into a oneOf, are always pointers). It is used to
+// emit nil-guarded accessors for nested reference paths.
+func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig) (schemaTypeName string, fieldJSONName string, goPath []GoPathSegment, err error) {
+	parts := strings.Split(ref.Path, ".")
+	if len(parts) < 3 || parts[0] != "spec" || parts[1] != "apiSpec" {
+		return "", "", nil, fmt.Errorf("reference path %q must start with \"spec.apiSpec.\"", ref.Path)
+	}
+	segments := parts[2:]
+
+	entitySchema := findEntitySchema(g.parsed, entityName)
+	if entitySchema == nil {
+		return "", "", nil, fmt.Errorf("entity %q: schema not found for reference path %q", entityName, ref.Path)
+	}
+
+	typeName := entityName + "APISpec"
+	schema := entitySchema
+	var union *parser.Property
+	var unionPrefix string
+	var goPathSegments []GoPathSegment
+
+	// Root-level oneOf: the entity schema is itself a discriminated union. The
+	// generated APISpec embeds a *<Entity>Config union wrapper (inline in JSON,
+	// so the hop has no JSON key of its own) whose variant fields the first
+	// path segment selects.
+	if hasRootOneOf(entitySchema) {
+		union = &parser.Property{
+			Name:                 entityName + "Config",
+			OneOf:                entitySchema.OneOf,
+			Discriminator:        entitySchema.Discriminator,
+			DiscriminatorMapping: entitySchema.DiscriminatorMapping,
+		}
+		goPathSegments = append(goPathSegments, GoPathSegment{
+			Name:          goFieldName(entityName + "Config"),
+			Pointer:       true,
+			UnionWrapper:  true,
+			UnionTypeName: generatedUnionTypeName(union, ""),
+		})
+	}
+
+	for i, seg := range segments {
+		final := i == len(segments)-1
+
+		if union != nil {
+			// Descend into the union variant whose JSON name matches the segment.
+			var matched *unionVariant
+			for _, v := range buildUnionVariants(union, generatedUnionTypeName(union, unionPrefix)) {
+				if jsonName(v.discValue) == seg {
+					vc := v
+					matched = &vc
+					break
+				}
+			}
+			if matched == nil {
+				return "", "", nil, fmt.Errorf("reference path %q: segment %q does not match any union variant", ref.Path, seg)
+			}
+			if final {
+				return "", "", nil, fmt.Errorf("reference path %q: final segment %q resolves to a union variant, not an array field", ref.Path, seg)
+			}
+			// The variant field on the union wrapper struct is always a pointer.
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: matched.fieldName, Pointer: true, JSONKey: seg, UnionVariant: true})
+			variantSchema, variantType, verr := g.unionVariantSchema(union, *matched)
+			if verr != nil {
+				return "", "", nil, fmt.Errorf("reference path %q: %w", ref.Path, verr)
+			}
+			goPathSegments[len(goPathSegments)-1].VariantProperties = len(variantSchema.Properties)
+			schema = variantSchema
+			typeName = variantType
+			union = nil
+			continue
+		}
+
+		var prop *parser.Property
+		for _, p := range schema.Properties {
+			if jsonName(p.Name) == seg || p.Name == seg {
+				prop = p
+				break
+			}
+		}
+		if prop == nil {
+			return "", "", nil, fmt.Errorf("reference path %q: segment %q does not match any field", ref.Path, seg)
+		}
+
+		if final {
+			if prop.Type != "array" {
+				return "", "", nil, fmt.Errorf("reference path %q must be an array property, got %q", ref.Path, prop.Type)
+			}
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			return typeName, jsonName(prop.Name), goPathSegments, nil
+		}
+
+		switch {
+		case len(prop.OneOf) > 0 || len(prop.AnyOf) > 0:
+			// oneOf/anyOf properties are rendered as a pointer to the generated
+			// union type (see goTypeInCRD/goType).
+			goPathSegments = append(goPathSegments, GoPathSegment{
+				Name:          goFieldName(prop.Name),
+				Pointer:       true,
+				JSONKey:       jsonName(prop.Name),
+				UnionWrapper:  true,
+				UnionTypeName: generatedUnionTypeName(prop, typeName),
+			})
+			union = prop
+			unionPrefix = typeName
+		case prop.RefName != "" && !prop.IsReference:
+			// $ref properties whose target schema is anyOf-registered are
+			// rendered as a pointer (see goTypeInCRD/writeSchemaField's
+			// `g.anyOfSchemaNames[prop.RefName]` check); mirror that here so
+			// the accessor emits a nil guard for this segment too.
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: g.anyOfSchemaNames[prop.RefName], JSONKey: jsonName(prop.Name)})
+			refSchema := g.parsed.Schemas[prop.RefName]
+			if refSchema == nil {
+				return "", "", nil, fmt.Errorf("reference path %q: schema %q not found", ref.Path, prop.RefName)
+			}
+			schema = refSchema
+			typeName = fixInitialisms(prop.RefName)
+		case len(prop.Properties) > 0:
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			typeName = g.inlineTypeName(entityName, typeName, prop.Name)
+			schema = &parser.Schema{Properties: prop.Properties}
+		case prop.Type == "array" && prop.Items != nil && prop.Items.RefName != "":
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			itemSchema := g.parsed.Schemas[prop.Items.RefName]
+			if itemSchema == nil {
+				return "", "", nil, fmt.Errorf("reference path %q: schema %q not found", ref.Path, prop.Items.RefName)
+			}
+			schema = itemSchema
+			typeName = fixInitialisms(prop.Items.RefName)
+		case prop.Type == "array" && prop.Items != nil && len(prop.Items.Properties) > 0:
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			typeName = g.inlineTypeName(entityName, typeName, prop.Name)
+			schema = &parser.Schema{Properties: prop.Items.Properties}
+		default:
+			return "", "", nil, fmt.Errorf("reference path %q: cannot descend through segment %q", ref.Path, seg)
+		}
+	}
+
+	return "", "", nil, fmt.Errorf("reference path %q: resolved to no field", ref.Path)
+}
+
+// schemaTypeRefFields returns a map keyed by shared schema Go type name whose
+// value maps a leaf JSON field name to the generated ref struct type name that
+// should replace the field's OAS-derived element type. It is built once from
+// every entity's configured references via refFieldTarget and memoized. Targets
+// that resolve to an entity's <Entity>APISpec (top-level references) are handled
+// separately by generateCRDType/referenceForField and are irrelevant here since
+// APISpec types are not emitted by generateSchemaTypes.
+func (g *Generator) schemaTypeRefFields() map[string]map[string]string {
+	if g.schemaTypeRefFieldsCache != nil {
+		return g.schemaTypeRefFieldsCache
+	}
+	m := map[string]map[string]string{}
+	entityNames := make([]string, 0, len(g.config.References))
+	for entityName := range g.config.References {
+		entityNames = append(entityNames, entityName)
+	}
+	sort.Strings(entityNames)
+	for _, entityName := range entityNames {
+		for _, ref := range g.config.References[entityName] {
+			schemaType, field, _, err := g.refFieldTarget(entityName, ref)
+			if err != nil {
+				// Reference paths are validated by validateReferences before code
+				// generation; skip anything that fails to resolve here.
+				continue
+			}
+			if schemaType == entityName+"APISpec" {
+				continue
+			}
+			if m[schemaType] == nil {
+				m[schemaType] = map[string]string{}
+			}
+			m[schemaType][field] = ref.TypeName()
+		}
+	}
+	g.schemaTypeRefFieldsCache = m
+	return m
+}
+
+// unionVariantSchema resolves the schema and generated Go type name for a
+// selected union variant. buildUnionVariants leaves source nil when the union is
+// driven by a discriminator mapping, so fall back to the mapping's ref name.
+func (g *Generator) unionVariantSchema(union *parser.Property, variant unionVariant) (*parser.Schema, string, error) {
+	if variant.source != nil {
+		if variant.source.RefName != "" {
+			s := g.parsed.Schemas[variant.source.RefName]
+			if s == nil {
+				return nil, "", fmt.Errorf("schema %q not found for union variant %q", variant.source.RefName, variant.discValue)
+			}
+			return s, variant.goTypeName, nil
+		}
+		if len(variant.source.Properties) > 0 {
+			return &parser.Schema{Properties: variant.source.Properties}, variant.goTypeName, nil
+		}
+	}
+	if refName := union.DiscriminatorMapping[variant.discValue]; refName != "" {
+		s := g.parsed.Schemas[refName]
+		if s == nil {
+			return nil, "", fmt.Errorf("schema %q not found for union variant %q", refName, variant.discValue)
+		}
+		return s, fixInitialisms(refName), nil
+	}
+	return nil, "", fmt.Errorf("cannot descend into union variant %q", variant.discValue)
 }
 
 // entityHasReferences returns true if the entity has at least one configured reference.
@@ -3852,6 +4707,11 @@ type sdkOpsRootUnionMethod struct {
 	sdkOpsMethod
 
 	IsCreate bool
+	// FromPayloadMethodName is the unexported companion builder that converts an
+	// already-computed SDK payload map into the SDK request. Only emitted (and
+	// called) when the entity has configured references, so that the resolved
+	// values can be injected into the payload between computation and conversion.
+	FromPayloadMethodName string
 }
 
 type sdkOpsTestMethod struct {
@@ -3983,6 +4843,12 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		parentStatusEntityName = parentRefStatusEntityName(rootRefDependency(schema), rc)
 	}
 
+	references := g.templateReferences(entityName)
+	aclInjections, err := aclRefInjections(references)
+	if err != nil {
+		return "", fmt.Errorf("entity %s: %w", entityName, err)
+	}
+
 	data := struct {
 		APIVersion              string
 		EntityName              string
@@ -3994,6 +4860,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		SecretReferences        []SecretReferenceForTemplate
 		HasReferences           bool
 		References              []TemplateReferenceConfig
+		ACLRefInjections        []TemplateACLRefInjection
 		HasParentRefReplacement bool
 		ParentRefReplacesField  string
 		ParentStatusEntityName  string
@@ -4004,10 +4871,11 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		BoolFields:              boolFields,
 		ConstFields:             constFields,
 		Methods:                 standardMethods,
-		NeedsClient:             opsConfig.RequireClient,
+		NeedsClient:             opsConfig.RequireClient || g.entityHasReferences(entityName),
 		SecretReferences:        g.templateSecretReferences(entityName),
 		HasReferences:           g.entityHasReferences(entityName),
-		References:              g.templateReferences(entityName),
+		References:              references,
+		ACLRefInjections:        aclInjections,
 		HasParentRefReplacement: hasParentRefReplacement,
 		ParentRefReplacesField:  parentRefReplacesField,
 		ParentStatusEntityName:  parentStatusEntityName,
@@ -4119,8 +4987,9 @@ func (g *Generator) generateRootUnionSDKOps(
 			hasUpdateMethod = true
 		}
 		m := sdkOpsRootUnionMethod{
-			sdkOpsMethod: method,
-			IsCreate:     isCreate,
+			sdkOpsMethod:          method,
+			IsCreate:              isCreate,
+			FromPayloadMethodName: strings.ToLower(method.MethodName[:1]) + method.MethodName[1:] + "FromPayload",
 		}
 		m.IsOperationsWrapped = isOperationsWrapped
 		m.ComponentsImportAlias = componentsImportAlias
@@ -4260,6 +5129,12 @@ func (g *Generator) generateRootUnionSDKOps(
 		})
 	}
 
+	references := g.templateReferences(entityName)
+	aclInjections, err := aclRefInjections(references)
+	if err != nil {
+		return "", fmt.Errorf("entity %s: %w", entityName, err)
+	}
+
 	tmpl := template.Must(template.New("sdkops-root-union").Parse(sdkOpsRootUnionTemplate))
 	var buf strings.Builder
 	data := struct {
@@ -4273,6 +5148,8 @@ func (g *Generator) generateRootUnionSDKOps(
 		Variants         []sdkOpsRootUnionVariant
 		NeedsClient      bool
 		SecretReferences []SecretReferenceForTemplate
+		References       []TemplateReferenceConfig
+		ACLRefInjections []TemplateACLRefInjection
 	}{
 		APIVersion:       g.config.APIVersion,
 		EntityName:       entityName,
@@ -4282,8 +5159,10 @@ func (g *Generator) generateRootUnionSDKOps(
 		ConstFields:      constFields,
 		Methods:          rootUnionMethods,
 		Variants:         variants,
-		NeedsClient:      opsConfig.RequireClient,
+		NeedsClient:      opsConfig.RequireClient || g.entityHasReferences(entityName),
 		SecretReferences: g.templateSecretReferences(entityName),
+		References:       references,
+		ACLRefInjections: aclInjections,
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
@@ -4293,6 +5172,10 @@ func (g *Generator) generateRootUnionSDKOps(
 
 // generateSDKOpsTest generates a test file for the SDK ops conversion methods.
 func (g *Generator) generateSDKOpsTest(entityName string, schema *parser.Schema, opsConfig *config.EntityOpsConfig) (string, error) {
+	if g.entityHasReferences(entityName) {
+		return "", nil
+	}
+
 	_, methods, err := g.buildSDKOpsMethods(opsConfig)
 	if err != nil {
 		return "", err
@@ -4340,6 +5223,12 @@ func (g *Generator) buildSDKOpsTestFields(entityName string, props []*parser.Pro
 	testFields := make([]sdkOpsTestField, 0, len(props))
 	for _, prop := range props {
 		if skipProperty(prop) || prop.IsReference || shouldSkipSDKOpsTestField(prop, method) {
+			continue
+		}
+		// Configured inter-CR reference fields are typed ref slices; their
+		// resolution is exercised by generated reference-specific tests, not
+		// the generic SDK ops payload tests.
+		if g.referenceForField(entityName, jsonName(prop.Name)) != nil {
 			continue
 		}
 		if ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {

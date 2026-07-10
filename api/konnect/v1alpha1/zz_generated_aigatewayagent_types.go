@@ -115,7 +115,7 @@ type AIGatewayAgentAPISpec struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 
 	// The type of the agent.
 	//

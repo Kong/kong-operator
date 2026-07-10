@@ -3,8 +3,13 @@
 package v1alpha1
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
@@ -29,14 +34,77 @@ func (s *AIGatewayConsumerGroupAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	return data, nil
 }
 
-// ToCreateAIGatewayConsumerGroupRequest converts the AIGatewayConsumerGroupAPISpec to the SDK type
-// sdkkonnectcomp.CreateAIGatewayConsumerGroupRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayConsumerGroupAPISpec) ToCreateAIGatewayConsumerGroupRequest() (*sdkkonnectcomp.CreateAIGatewayConsumerGroupRequest, error) {
-	data, err := s.marshalSDKOpsPayload()
+
+
+// resolveAIGatewayConsumerGroupPolicies resolves the CR references in spec.apiSpec.policies
+// to Konnect IDs.
+func resolveAIGatewayConsumerGroupPolicies(ctx context.Context, cl client.Client, obj *AIGatewayConsumerGroup) ([]string, error) {
+	resolved := make([]string, 0, len(obj.Spec.APISpec.Policies))
+	for _, ref := range obj.Spec.APISpec.Policies {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayPolicy"
+		}
+		if ns != obj.GetNamespace() {
+			return nil, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}
+		}
+		var referenced AIGatewayPolicy
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err}
+			}
+			return nil, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err)
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+		}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			return nil, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name}
+		}
+		resolved = append(resolved, id)
+	}
+	return resolved, nil
+}
+
+// ResolveKonnectReferences resolves every CR reference declared on the spec and
+// returns the joined resolution errors, or nil when all references resolve.
+func (obj *AIGatewayConsumerGroup) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var errs []error
+	if _, err := resolveAIGatewayConsumerGroupPolicies(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// ToCreateAIGatewayConsumerGroupRequest converts the AIGatewayConsumerGroup to the SDK type
+// sdkkonnectcomp.CreateAIGatewayConsumerGroupRequest, resolving referenced CRs to Konnect IDs via the provided client.
+func (obj *AIGatewayConsumerGroup) ToCreateAIGatewayConsumerGroupRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayConsumerGroupRequest, error) {
+	spec := &obj.Spec.APISpec
+	data, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode AIGatewayConsumerGroup SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	resolvedPolicies, err := resolveAIGatewayConsumerGroupPolicies(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.policies references: %w", err)
+	}
+	// Always set: an empty list must explicitly clear the field in Konnect.
+	payload["policies"] = resolvedPolicies
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal AIGatewayConsumerGroup SDK payload with references: %w", err)
 	}
 	var target sdkkonnectcomp.CreateAIGatewayConsumerGroupRequest
 	if err := json.Unmarshal(data, &target); err != nil {
@@ -45,14 +113,30 @@ func (s *AIGatewayConsumerGroupAPISpec) ToCreateAIGatewayConsumerGroupRequest() 
 	return &target, nil
 }
 
-// ToUpdateAIGatewayConsumerGroupRequest converts the AIGatewayConsumerGroupAPISpec to the SDK type
-// sdkkonnectcomp.UpdateAIGatewayConsumerGroupRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayConsumerGroupAPISpec) ToUpdateAIGatewayConsumerGroupRequest() (*sdkkonnectcomp.UpdateAIGatewayConsumerGroupRequest, error) {
-	data, err := s.marshalSDKOpsPayload()
+// ToUpdateAIGatewayConsumerGroupRequest converts the AIGatewayConsumerGroup to the SDK type
+// sdkkonnectcomp.UpdateAIGatewayConsumerGroupRequest, resolving referenced CRs to Konnect IDs via the provided client.
+func (obj *AIGatewayConsumerGroup) ToUpdateAIGatewayConsumerGroupRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateAIGatewayConsumerGroupRequest, error) {
+	spec := &obj.Spec.APISpec
+	data, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode AIGatewayConsumerGroup SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	resolvedPolicies, err := resolveAIGatewayConsumerGroupPolicies(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.policies references: %w", err)
+	}
+	// Always set: an empty list must explicitly clear the field in Konnect.
+	payload["policies"] = resolvedPolicies
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal AIGatewayConsumerGroup SDK payload with references: %w", err)
 	}
 	var target sdkkonnectcomp.UpdateAIGatewayConsumerGroupRequest
 	if err := json.Unmarshal(data, &target); err != nil {

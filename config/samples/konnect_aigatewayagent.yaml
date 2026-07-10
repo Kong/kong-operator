@@ -38,6 +38,24 @@ spec:
     displayName: My AI Agent
     type: http
     enabled: Enabled
+    # References to AIGatewayPolicy CRs (by metadata.name) applied to this agent.
+    # See config/samples/konnect_aigatewaypolicy.yaml for the referenced policy.
+    policies:
+      - name: aigw-policy-prompt-decorator
+    # Access control: allow-list of AIGatewayConsumer / AIGatewayConsumerGroup
+    # CRs (referenced by metadata.name). The operator resolves each reference to
+    # the referenced CR's Konnect name at reconcile time. See
+    # config/samples/konnect_aigatewayconsumer.yaml and
+    # config/samples/konnect_aigatewayconsumergroup.yaml.
+    access:
+      acls:
+        type: allow
+        allow:
+          allow:
+            - kind: AIGatewayConsumer
+              name: ai-gw-consumer-1
+            - kind: AIGatewayConsumerGroup
+              name: ai-gw-consumer-group-1
     config:
       url: https://my-upstream-agent.example.com
       route:

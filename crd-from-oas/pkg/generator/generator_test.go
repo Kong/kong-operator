@@ -230,6 +230,115 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.GatewayRef.NamespacedRef.Namespace != "" {`)
 		assert.Contains(t, content, `return []string{refNamespace + "/" + ent.Spec.GatewayRef.NamespacedRef.Name}`)
 	})
+
+	t.Run("watches and indexes cross-referenced kinds", func(t *testing.T) {
+		gWithRefs := NewGenerator(Config{
+			APIVersion:           "v1alpha1",
+			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			APIGroupPackageAlias: "konnectv1alpha1",
+			References: map[string][]config.ReferenceConfig{
+				"AIGatewayAgent": {
+					{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"}, ResolvesTo: "id"},
+				},
+			},
+		})
+
+		agentMetadata := reconcilerEntityMetadata{
+			EntityName:                 "AIGatewayAgent",
+			EntityNameLowerCamel:       "aiGatewayAgent",
+			ParentEntityName:           "AIGatewayControlPlane",
+			ParentRefFieldName:         "AIGatewayRef",
+			APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			APIGroupPackageAlias:       "konnectv1alpha1",
+			ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			ParentAPIGroupPackageAlias: "konnectv1alpha1",
+		}
+
+		watchOut, err := gWithRefs.generateWatch(agentMetadata, &config.ReconcilerConfig{
+			IsRoot:           new(false),
+			ParentEntityType: "AIGatewayControlPlane",
+		})
+		require.NoError(t, err)
+		require.Contains(t, watchOut, "enqueueAIGatewayAgentForAIGatewayPolicy")
+		require.Contains(t, watchOut, "&konnectv1alpha1.AIGatewayPolicy{}")
+
+		indexOut, err := gWithRefs.generateIndex(agentMetadata, &config.ReconcilerConfig{
+			IsRoot:           new(false),
+			ParentEntityType: "AIGatewayControlPlane",
+		})
+		require.NoError(t, err)
+		require.Contains(t, indexOut, "IndexFieldAIGatewayAgentOnAIGatewayPolicyRef")
+		require.Contains(t, indexOut, "for _, ref := range ent.Spec.APISpec.Policies {")
+	})
+}
+
+// TestGenerateWatchAndIndex_DedupSharedKinds verifies that two reference fields
+// pointing at the same kinds (ACL allow and deny, each referencing
+// AIGatewayConsumer and AIGatewayConsumerGroup) collapse to exactly one watch,
+// index field and extractor per distinct kind, unioning both accessors.
+func TestGenerateWatchAndIndex_DedupSharedKinds(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion:           "v1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {
+				{
+					Path:        "spec.apiSpec.access.acls.allow.allow",
+					Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+					RefTypeName: "AIGatewayACLRef",
+					ResolvesTo:  "name",
+				},
+				{
+					Path:        "spec.apiSpec.access.acls.deny.deny",
+					Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+					RefTypeName: "AIGatewayACLRef",
+					ResolvesTo:  "name",
+				},
+			},
+		},
+	})
+
+	metadata := reconcilerEntityMetadata{
+		EntityName:                 "AIGatewayAgent",
+		EntityNameLowerCamel:       "aiGatewayAgent",
+		ParentEntityName:           "AIGatewayControlPlane",
+		ParentRefFieldName:         "AIGatewayRef",
+		APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias:       "konnectv1alpha1",
+		ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		ParentAPIGroupPackageAlias: "konnectv1alpha1",
+	}
+	rc := &config.ReconcilerConfig{IsRoot: new(false), ParentEntityType: "AIGatewayControlPlane"}
+
+	watchOut, err := g.generateWatch(metadata, rc)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(watchOut))
+	require.NoError(t, err, "generated watch must be valid Go source")
+
+	// Exactly one enqueue func and one Watches registration per distinct kind.
+	assert.Equal(t, 1, strings.Count(watchOut, "func enqueueAIGatewayAgentForAIGatewayConsumer("))
+	assert.Equal(t, 1, strings.Count(watchOut, "func enqueueAIGatewayAgentForAIGatewayConsumerGroup("))
+	assert.Equal(t, 1, strings.Count(watchOut, "&konnectv1alpha1.AIGatewayConsumer{}"))
+	assert.Equal(t, 1, strings.Count(watchOut, "&konnectv1alpha1.AIGatewayConsumerGroup{}"))
+
+	indexOut, err := g.generateIndex(metadata, rc)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(indexOut))
+	require.NoError(t, err, "generated index must be valid Go source")
+
+	// Exactly one index field const and one extractor func per distinct kind.
+	assert.Equal(t, 1, strings.Count(indexOut, "IndexFieldAIGatewayAgentOnAIGatewayConsumerRef ="))
+	assert.Equal(t, 1, strings.Count(indexOut, "IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef ="))
+	assert.Equal(t, 1, strings.Count(indexOut, "func aiGatewayAgentOnAIGatewayConsumerRef("))
+	assert.Equal(t, 1, strings.Count(indexOut, "func aiGatewayAgentOnAIGatewayConsumerGroupRef("))
+
+	// Each extractor unions the allow and deny accessors from the API package.
+	assert.Contains(t, indexOut, "konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent)")
+	assert.Contains(t, indexOut, "konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsDenyDeny(ent)")
+	// Multi-kind references require the kind to be populated (no empty-kind match).
+	assert.Contains(t, indexOut, `if ref.Kind != "AIGatewayConsumer" {`)
+	assert.Contains(t, indexOut, `if ref.Kind != "AIGatewayConsumerGroup" {`)
 }
 
 func TestGenerateReconcilerConditions(t *testing.T) {
@@ -477,6 +586,99 @@ func TestGenerateCRDType_ObjectRefImport(t *testing.T) {
 		content, err := g.generateCRDType("CreateTeam", schemaWithRef)
 		require.NoError(t, err)
 		assert.Contains(t, content, "*commonv1alpha1.ObjectRef")
+	})
+}
+
+func TestGenerateCRDType_ReferenceFieldTypeSwap(t *testing.T) {
+	maxLen := int64(100)
+	maxItems := int64(50)
+	schema := &parser.Schema{
+		Name: "CreateAIGatewayAgent",
+		Properties: []*parser.Property{
+			{
+				Name:     "policies",
+				Type:     "array",
+				MaxItems: &maxItems,
+				Items: &parser.Property{
+					Name:      "policy",
+					Type:      "string",
+					MaxLength: &maxLen,
+				},
+			},
+		},
+	}
+
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {{
+				Path:       "spec.apiSpec.policies",
+				Kinds:      []string{"AIGatewayPolicy"},
+				ResolvesTo: "id",
+			}},
+		},
+	})
+	content, err := g.generateCRDType("CreateAIGatewayAgent", schema)
+	require.NoError(t, err)
+	// The field name and JSON tag are preserved; only the item type changes to
+	// the generated ref struct type.
+	require.Contains(t, content, "Policies []AIGatewayPolicyRef `json:\"policies,omitempty\"`")
+	require.NotContains(t, content, "Policies []string")
+	// Item-level string markers must NOT be emitted for ref fields — the
+	// generated ref struct carries its own item validation.
+	require.NotContains(t, content, "MaxLength")
+	// Array-level bounds MUST be preserved so the Kubernetes CEL cost estimator
+	// stays bounded over the ref struct's own item validations.
+	require.Contains(t, content, "+kubebuilder:validation:MaxItems=50")
+}
+
+func TestGenerate_ReferencePathMustBeArray(t *testing.T) {
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateAIGatewayAgent": {
+				Name: "CreateAIGatewayAgent",
+				Properties: []*parser.Property{
+					{Name: "policies", Type: "string"},
+				},
+			},
+		},
+		Schemas: map[string]*parser.Schema{},
+	}
+
+	t.Run("non-array property errors", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			References: map[string][]config.ReferenceConfig{
+				"AIGatewayAgent": {{
+					Path:       "spec.apiSpec.policies",
+					Kinds:      []string{"AIGatewayPolicy"},
+					ResolvesTo: "id",
+				}},
+			},
+		})
+		_, err := g.Generate(parsed)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "must be an array property")
+	})
+
+	t.Run("missing property errors", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			References: map[string][]config.ReferenceConfig{
+				"AIGatewayAgent": {{
+					Path:       "spec.apiSpec.doesnotexist",
+					Kinds:      []string{"AIGatewayPolicy"},
+					ResolvesTo: "id",
+				}},
+			},
+		})
+		_, err := g.Generate(parsed)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "spec.apiSpec.doesnotexist")
+		require.Contains(t, err.Error(), "does not match any field")
 	})
 }
 
@@ -5223,6 +5425,95 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	assert.Contains(t, content, "return spec.ToUpdateEventGatewayDataPlaneCertificateRequest()")
 }
 
+func TestGenerateSDKOps_ClientRequestMethodsResolveReferences(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {
+				{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"}, ResolvesTo: "id"},
+			},
+		},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "policies", Type: "array"},
+			{Name: "name", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayAgent", schema, opsConfig)
+	require.NoError(t, err)
+
+	// References imply the entity needs a client even without secret refs.
+	require.Contains(t, content, `"context"`)
+	require.Contains(t, content, `apierrors "k8s.io/apimachinery/pkg/api/errors"`)
+	require.Contains(t, content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
+	// No secret-ref plumbing when only references are configured.
+	require.NotContains(t, content, "corev1")
+	require.NotContains(t, content, "func (obj *AIGatewayAgent) sdkOpsAPISpec")
+
+	// Resolver function.
+	require.Contains(t, content, "func resolveAIGatewayAgentPolicies(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error)")
+	require.Contains(t, content, "resolved := make([]string, 0, len(obj.Spec.APISpec.Policies))")
+	require.Contains(t, content, "for _, ref := range obj.Spec.APISpec.Policies {")
+	require.Contains(t, content, `if ns != obj.GetNamespace() {`)
+	require.Contains(t, content, `return nil, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}`)
+	// Top-level references resolve via direct field access, not a generated
+	// accessor; nested reference accessors are only needed for deeper paths.
+	require.NotContains(t, content, "func RefsAt")
+	require.Contains(t, content, "var referenced AIGatewayPolicy")
+	require.Contains(t, content, `if apierrors.IsNotFound(err) {`)
+	require.Contains(t, content, `return nil, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err}`)
+	require.Contains(t, content, `return nil, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err)`)
+	require.Contains(t, content, `return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}`)
+	require.Contains(t, content, `return nil, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name}`)
+
+	// Client-needing builders with payload injection.
+	require.Contains(t, content, "func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl client.Client)")
+	require.Contains(t, content, "func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl client.Client)")
+	require.NotContains(t, content, "func (s *AIGatewayAgentAPISpec) ToCreateAIGatewayAgentRequest()")
+	require.NotContains(t, content, "func (s *AIGatewayAgentAPISpec) ToUpdateAIGatewayAgentRequest()")
+	require.Contains(t, content, "resolvedPolicies, err := resolveAIGatewayAgentPolicies(ctx, cl, obj)")
+	require.Contains(t, content, `payload["policies"] = resolvedPolicies`)
+}
+
+func TestGenerateSDKOps_EmitsResolveKonnectReferences(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {
+				{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"}, ResolvesTo: "id"},
+			},
+		},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "policies", Type: "array"},
+			{Name: "name", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayAgent", schema, opsConfig)
+	require.NoError(t, err)
+
+	require.Contains(t, content, `"errors"`)
+	require.Contains(t, content, "func (obj *AIGatewayAgent) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {")
+	require.Contains(t, content, "if _, err := resolveAIGatewayAgentPolicies(ctx, cl, obj); err != nil {")
+	require.Contains(t, content, "return errors.Join(errs...)")
+}
+
 func TestGenerateOpsUpdate_PointerBody(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
@@ -5825,4 +6116,65 @@ func TestGenerateCRDType_Categories(t *testing.T) {
 		assert.Contains(t, content, "+kubebuilder:resource:scope=Namespaced\n")
 		assert.NotContains(t, content, "categories=")
 	})
+}
+
+func TestGenerateReferencesFile(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {{
+				Path:       "spec.apiSpec.policies",
+				Kinds:      []string{"AIGatewayPolicy"},
+				ResolvesTo: "id",
+			}},
+			"AIGatewayConsumer": {{
+				Path:       "spec.apiSpec.policies",
+				Kinds:      []string{"AIGatewayPolicy"},
+				ResolvesTo: "id",
+			}},
+		},
+	})
+	out, err := g.GenerateReferencesFile()
+	require.NoError(t, err)
+	// Deduplicated: two entities share AIGatewayPolicyRef, emitted once.
+	require.Equal(t, 1, strings.Count(out, "type AIGatewayPolicyRef struct"))
+	require.Contains(t, out, "+kubebuilder:validation:Enum=AIGatewayPolicy")
+	require.Contains(t, out, "+kubebuilder:default=AIGatewayPolicy")
+	require.Contains(t, out, `Kind string `+"`"+`json:"kind,omitempty"`+"`")
+	require.Contains(t, out, `Name string `+"`"+`json:"name"`+"`")
+	require.Contains(t, out, `Namespace string `+"`"+`json:"namespace,omitempty"`+"`")
+	require.Contains(t, out, "KonnectReferencesResolvedConditionType")
+	require.Contains(t, out, "KonnectReferencesResolvedReasonInvalid")
+	require.Contains(t, out, "type ReferenceNotFoundError struct")
+	require.Contains(t, out, "type ReferenceNotProgrammedError struct")
+	require.Contains(t, out, "type ReferenceCrossNamespaceError struct")
+	require.Contains(t, out, "type ReferenceDifferentGatewayError struct")
+}
+
+func TestGenerateReferencesFile_MultiKind(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {{
+				Path:        "spec.apiSpec.allow",
+				Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+				ResolvesTo:  "id",
+				RefTypeName: "AIGatewayACLRef",
+			}},
+		},
+	})
+	out, err := g.GenerateReferencesFile()
+	require.NoError(t, err)
+	require.Contains(t, out, "type AIGatewayACLRef struct")
+	require.Contains(t, out, "+kubebuilder:validation:Enum=AIGatewayConsumer;AIGatewayConsumerGroup")
+	// Multi-kind: kind is required, no default.
+	require.Contains(t, out, `Kind string `+"`"+`json:"kind"`+"`")
+	require.NotContains(t, out, "+kubebuilder:default=AIGatewayConsumer")
+}
+
+func TestGenerateReferencesFile_Empty(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	out, err := g.GenerateReferencesFile()
+	require.NoError(t, err)
+	require.Empty(t, out)
 }

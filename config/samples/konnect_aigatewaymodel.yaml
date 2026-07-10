@@ -45,6 +45,18 @@ spec:
         - type: openai
       capabilities:
         - files
+      # Access control: allow-list of AIGatewayConsumer / AIGatewayConsumerGroup
+      # CRs (referenced by metadata.name), resolved to the referenced CR's
+      # Konnect name at reconcile time.
+      access:
+        acls:
+          type: allow
+          allow:
+            allow:
+              - kind: AIGatewayConsumer
+                name: ai-gw-consumer-1
+              - kind: AIGatewayConsumerGroup
+                name: ai-gw-consumer-group-1
       config:
         model:
           alias: gpt-4o-mini

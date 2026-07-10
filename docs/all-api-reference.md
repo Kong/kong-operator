@@ -9274,6 +9274,25 @@ PortalTeam is the Schema for the portalteams API.
 ### Types
 
 In this section you will find types that the CRDs rely on.
+#### AIGatewayACLRef
+
+
+AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [AIGatewayAllowACL](#konnect-konghq-com-v1alpha1-types-aigatewayallowacl)
+- [AIGatewayDenyACL](#konnect-konghq-com-v1alpha1-types-aigatewaydenyacl)
+
 
 
 #### AIGatewayAgentAPISpec
@@ -9292,7 +9311,7 @@ AIGatewayAgentAPISpec defines the API spec fields for AIGatewayAgent.
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this agent, used as a stable human-readable reference. This value is immutable after creation. |
-| `policies` _[]string_ | List of policy references. |
+| `policies` _[][AIGatewayPolicyRef](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `type` _string_ | The type of the agent. |
 
 _Appears in:_
@@ -9432,7 +9451,7 @@ AIGatewayAllowACL is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `allow` _[]string_ | List of Consumers, Consumer Groups, or Authenticated Groups that are permitted access. |
+| `allow` _[][AIGatewayACLRef](#konnect-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of Consumers, Consumer Groups, or Authenticated Groups that are permitted access. |
 
 _Appears in:_
 
@@ -9493,7 +9512,7 @@ AIGatewayConsumerAPISpec defines the API spec fields for AIGatewayConsumer.
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this consumer, used as a stable human-readable reference. This value is immutable after creation. |
-| `policies` _[]string_ | List of policy references. |
+| `policies` _[][AIGatewayPolicyRef](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `type` _string_ | The type of the consumer. |
 
 _Appears in:_
@@ -9568,7 +9587,7 @@ AIGatewayConsumerGroupAPISpec defines the API spec fields for AIGatewayConsumerG
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this consumer group, used as a stable human-readable reference. This value is immutable after creation. |
-| `policies` _[]string_ | List of policy references. |
+| `policies` _[][AIGatewayPolicyRef](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 
 _Appears in:_
 
@@ -9667,7 +9686,7 @@ AIGatewayDenyACL is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `deny` _[]string_ | List of Consumers, Consumer Groups, or Authenticated Groups that are denied access. |
+| `deny` _[][AIGatewayACLRef](#konnect-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of Consumers, Consumer Groups, or Authenticated Groups that are denied access. |
 
 _Appears in:_
 
@@ -12061,6 +12080,26 @@ AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 _Appears in:_
 
 - [AIGatewayPolicySpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyspec)
+
+#### AIGatewayPolicyRef
+
+
+AIGatewayPolicyRef references an AIGatewayPolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [AIGatewayAgentAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayagentapispec)
+- [AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
+- [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
 
 
 
@@ -14828,6 +14867,14 @@ Defaults to unpublished.
 _Appears in:_
 
 - [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+
+
+
+
+
+
+
+
 
 #### SAMLIdentityProviderMetadata
 

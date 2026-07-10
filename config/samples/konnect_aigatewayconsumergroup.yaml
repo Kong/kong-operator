@@ -61,10 +61,10 @@ spec:
   apiSpec:
     name: dev-users
     displayName: Dev Users Group
-    # TODO: Replace this Konnect policy-name reference with a cross-object
-    # AIGatewayPolicy reference once supported.
-    # See https://github.com/Kong/kong-operator/issues/4831.
+    # References to AIGatewayPolicy CRs (by metadata.name) applied to this
+    # consumer group. See config/samples/konnect_aigatewaypolicy.yaml for the
+    # referenced policy.
     policies:
-      - konnect-prompt-decorator-policy
+      - name: aigw-policy-prompt-decorator
     labels:
       tier: development

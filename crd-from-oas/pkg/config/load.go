@@ -25,6 +25,9 @@ func LoadProjectConfig(path string) (*ProjectConfig, error) {
 	}
 
 	for gv, agv := range cfg.APIGroupVersions {
+		if _, _, err := ParseAPIGroupVersion(gv); err != nil {
+			return nil, err
+		}
 		inferIsRootForGroup(agv)
 		if err := agv.validate(); err != nil {
 			return nil, fmt.Errorf("apiGroupVersion %q: %w", gv, err)

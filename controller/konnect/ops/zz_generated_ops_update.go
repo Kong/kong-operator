@@ -28,19 +28,19 @@ func UpdateGeneratedOps[
 ) error {
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.AIGatewayAgent:
-		return updateAIGatewayAgent(ctx, sdk.GetAIGatewayAgentsSDK(), ent)
+		return updateAIGatewayAgent(ctx, cl, sdk.GetAIGatewayAgentsSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumer:
-		return updateAIGatewayConsumer(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
+		return updateAIGatewayConsumer(ctx, cl, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumerCredential:
 		return nil // Entity does not support update.
 	case *konnectv1alpha1.AIGatewayConsumerGroup:
-		return updateAIGatewayConsumerGroup(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
+		return updateAIGatewayConsumerGroup(ctx, cl, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return nil // Entity does not support update.
 	case *konnectv1alpha1.AIGatewayIdentityProvider:
 		return updateAIGatewayIdentityProvider(ctx, cl, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:
-		return updateAIGatewayModel(ctx, sdk.GetAIGatewayModelsSDK(), ent)
+		return updateAIGatewayModel(ctx, cl, sdk.GetAIGatewayModelsSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModelProvider:
 		return updateAIGatewayModelProvider(ctx, cl, sdk.GetAIGatewayModelProvidersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayPolicy:

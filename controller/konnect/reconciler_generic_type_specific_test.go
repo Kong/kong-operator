@@ -1,17 +1,29 @@
 package konnect
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
+
+type failingKonnectReferenceResolver struct {
+	err error
+}
+
+func (r failingKonnectReferenceResolver) ResolveKonnectReferences(context.Context, client.Client) error {
+	return r.err
+}
 
 func TestHandleKongConsumerSpecific(t *testing.T) {
 	t.Run("KongConsumer", func(t *testing.T) {
@@ -201,4 +213,124 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestHandleKonnectReferencesResolution(t *testing.T) {
+	agent := &konnectv1alpha1.AIGatewayAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "ns"},
+		Spec: konnectv1alpha1.AIGatewayAgentSpec{
+			APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
+				Policies: []konnectv1alpha1.AIGatewayPolicyRef{{Name: "missing-policy"}},
+			},
+		},
+	}
+
+	t.Run("missing referenced CR sets condition False with NotFound", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy()).Build()
+		ent := agent.DeepCopy()
+		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason)
+	})
+
+	t.Run("referenced CR exists but is not programmed sets condition False with NotProgrammed", func(t *testing.T) {
+		policy := &konnectv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "missing-policy", Namespace: "ns"}}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
+		ent := agent.DeepCopy()
+		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotProgrammed, cond.Reason)
+	})
+
+	t.Run("cross-namespace ref sets condition False with Invalid", func(t *testing.T) {
+		ent := agent.DeepCopy()
+		ent.Spec.APISpec.Policies = []konnectv1alpha1.AIGatewayPolicyRef{{
+			Namespace: "other-ns",
+			Name:      "policy",
+		}}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy()).Build()
+
+		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
+	})
+
+	t.Run("different GatewayID ref sets condition False with Invalid", func(t *testing.T) {
+		policy := &konnectv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "policy", Namespace: "ns"}}
+		policy.SetKonnectID("kid-123")
+		policy.SetGatewayID("gw-other")
+		ent := agent.DeepCopy()
+		ent.SetGatewayID("gw-agent")
+		ent.Spec.APISpec.Policies = []konnectv1alpha1.AIGatewayPolicyRef{{Name: policy.Name}}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy(), policy).Build()
+
+		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
+	})
+
+	t.Run("programmed referenced CR sets condition True", func(t *testing.T) {
+		policy := &konnectv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "missing-policy", Namespace: "ns"}}
+		policy.SetKonnectID("kid-123")
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
+		ent := agent.DeepCopy()
+		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		require.NoError(t, err)
+		require.False(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonResolved, cond.Reason)
+	})
+
+	t.Run("unexpected resolver error is returned for normal reconcile retry", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		ent := agent.DeepCopy()
+		resolverErr := errors.New("cache unavailable")
+
+		updated, isProblem, err := handleKonnectReferences(
+			t.Context(),
+			cl,
+			ent,
+			failingKonnectReferenceResolver{err: resolverErr},
+		)
+		require.ErrorIs(t, err, resolverErr)
+		require.False(t, isProblem)
+		require.False(t, updated)
+	})
+}
+
+func getKonnectReferencesResolvedCondition(conditions []metav1.Condition) (metav1.Condition, bool) {
+	for _, cond := range conditions {
+		if cond.Type == konnectv1alpha1.KonnectReferencesResolvedConditionType {
+			return cond, true
+		}
+	}
+	return metav1.Condition{}, false
 }

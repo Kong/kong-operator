@@ -34,6 +34,22 @@ func AIGatewayModelReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&konnectv1alpha1.AIGatewayConsumer{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayModelForAIGatewayConsumer(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&konnectv1alpha1.AIGatewayConsumerGroup{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayModelForAIGatewayConsumerGroup(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.AIGatewayModelList](cl),
@@ -54,6 +70,42 @@ func enqueueAIGatewayModelForKonnectAIGateway(
 		var l konnectv1alpha1.AIGatewayModelList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayModelOnKonnectAIGatewayRef: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayModelForAIGatewayConsumer(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*konnectv1alpha1.AIGatewayConsumer)
+		if !ok {
+			return nil
+		}
+		var l konnectv1alpha1.AIGatewayModelList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayModelOnAIGatewayConsumerRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayModelForAIGatewayConsumerGroup(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*konnectv1alpha1.AIGatewayConsumerGroup)
+		if !ok {
+			return nil
+		}
+		var l konnectv1alpha1.AIGatewayModelList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}
