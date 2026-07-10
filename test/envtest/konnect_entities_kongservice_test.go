@@ -79,7 +79,7 @@ func TestKongService(t *testing.T) {
 		)
 		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Service creation")
 		sdk.ServicesSDK.EXPECT().
@@ -109,11 +109,11 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Waiting for Service to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
 			return kt.GetKonnectID() == serviceID && k8sutils.IsProgrammed(kt)
 		}, "KongService didn't get Programmed status condition or didn't get the correct (service-12345) Konnect ID assigned")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Service update")
 		sdk.ServicesSDK.EXPECT().
@@ -131,18 +131,18 @@ func TestKongService(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, serviceToPatch, client.MergeFrom(createdService)))
 
 		t.Log("Waiting for Service to be patched")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(createdService),
-				objectMatchesKonnectID[*configurationv1alpha1.KongService](serviceID),
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongService](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(createdService),
+				ObjectMatchesKonnectID[*configurationv1alpha1.KongService](serviceID),
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongService](),
 				func(s *configurationv1alpha1.KongService) bool {
 					return s.Spec.Port == port
 				},
 			),
 			"KongService didn't get patched",
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Service deletion")
 		sdk.ServicesSDK.EXPECT().
@@ -157,7 +157,7 @@ func TestKongService(t *testing.T) {
 		require.NoError(t, clientNamespaced.Delete(ctx, createdService))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, createdService, waitTime, tickTime)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
 
 	t.Run("trying to attach KongService to KonnectGatewayControlPlane of type KIC fails (due to CP being read only)", func(t *testing.T) {
@@ -177,7 +177,7 @@ func TestKongService(t *testing.T) {
 		)
 		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Service creation")
 		errBody := `{
@@ -213,10 +213,10 @@ func TestKongService(t *testing.T) {
 				s.Spec.Host = host
 			},
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for Service to get the Programmed condition set to False")
-		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
 			if kt.GetName() != createdService.GetName() {
 				return false
 			}
@@ -245,7 +245,7 @@ func TestKongService(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Service creation")
 		sdk.ServicesSDK.EXPECT().
@@ -275,15 +275,15 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+		WatchFor(t, ctx, w, apiwatch.Modified, ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("KongService didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for Service to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongService didn't get Programmed and/or ControlPlaneRefValid status condition set to False")
 	})
 
@@ -298,7 +298,7 @@ func TestKongService(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Service creation")
 		sdk.ServicesSDK.EXPECT().
@@ -327,17 +327,17 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+		WatchFor(t, ctx, w, apiwatch.Modified, ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for object to be get Programmed and ControlPlaneRefValid conditions with status=False and konnect cleanup finalizer removed")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				assertNot(objectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer)),
-				conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				AssertNot(ObjectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer)),
+				ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			),
 			"Object didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
@@ -362,10 +362,10 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Waiting for object to be get Programmed with status=True and konnect cleanup finalizer re added")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongService](),
-				objectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongService](),
+				ObjectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer),
 			),
 			"Object didn't get Programmed set to True",
 		)
@@ -373,7 +373,7 @@ func TestKongService(t *testing.T) {
 
 	t.Run("adopting a service in override mode then deleting it", func(t *testing.T) {
 		serviceKonnectID := uuid.NewString()
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating service")
 		sdk.ServicesSDK.EXPECT().GetService(
@@ -399,7 +399,7 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Logf("Waiting for the KongService %s/%s to be programmed and get Konnect ID", ns.Name, createdService.Name)
-		watchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+		WatchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			return ks.Name == createdService.Name &&
 				ks.GetKonnectID() == serviceKonnectID && k8sutils.IsProgrammed(ks)
 		},
@@ -417,7 +417,7 @@ func TestKongService(t *testing.T) {
 		require.NoError(t, clientNamespaced.Delete(t.Context(), createdService))
 
 		t.Log("Waiting for the SDK's DeleteService to be called")
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for the KongService to disappear")
 		eventually.WaitForObjectToNotExist(t, ctx, cl, createdService, waitTime, tickTime)
@@ -425,7 +425,7 @@ func TestKongService(t *testing.T) {
 
 	t.Run("adopting a service with NotFound error returned from upstream", func(t *testing.T) {
 		serviceKonnectID := uuid.NewString()
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting service")
 		sdk.ServicesSDK.EXPECT().GetService(
@@ -443,9 +443,9 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Logf("Waiting for the KongService %s/%s to be marked as not programmed", ns.Name, createdService.Name)
-		watchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+		WatchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			return ks.Name == createdService.Name &&
-				conditionsContainProgrammedFalse(ks.GetConditions()) &&
+				ConditionsContainProgrammedFalse(ks.GetConditions()) &&
 				lo.ContainsBy(ks.GetConditions(), func(c metav1.Condition) bool {
 					return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType &&
 						c.Status == metav1.ConditionFalse
@@ -457,7 +457,7 @@ func TestKongService(t *testing.T) {
 
 	t.Run("adopting a service with the k8s-uid tag already exists in the upstream service", func(t *testing.T) {
 		serviceKonnectID := uuid.NewString()
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting service")
 		sdk.ServicesSDK.EXPECT().GetService(
@@ -486,9 +486,9 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Logf("Waiting for the KongService %s/%s to be marked as not programmed", ns.Name, createdService.Name)
-		watchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+		WatchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			return ks.Name == createdService.Name &&
-				conditionsContainProgrammedFalse(ks.GetConditions()) &&
+				ConditionsContainProgrammedFalse(ks.GetConditions()) &&
 				lo.ContainsBy(ks.GetConditions(), func(c metav1.Condition) bool {
 					return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType &&
 						c.Status == metav1.ConditionFalse
@@ -501,7 +501,7 @@ func TestKongService(t *testing.T) {
 	})
 
 	t.Run("Cross namespace ref KongService -> KonnectNamespacedRefControlPlane yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl2, client.InNamespace(ns2.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl2, client.InNamespace(ns2.Name))
 
 		t.Log("Don't setting SDK expectations on Service creation as we do not expect any operations to be made upstream")
 
@@ -511,7 +511,7 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Waiting for Service to get ResolvedRefs condition with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			if ks.GetName() != createdService.GetName() {
 				return false
 			}
@@ -537,7 +537,7 @@ func TestKongService(t *testing.T) {
 			id   = "service-1234566"
 		)
 
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl2, client.InNamespace(ns2.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl2, client.InNamespace(ns2.Name))
 
 		t.Log("Setting up SDK expectations on Service creation")
 		sdk.ServicesSDK.EXPECT().
@@ -579,7 +579,7 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Waiting for Service to get ResolvedRefs condition with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			if ks.GetName() != createdService.GetName() {
 				return false
 			}
@@ -598,13 +598,13 @@ func TestKongService(t *testing.T) {
 			return k8sutils.HasConditionTrue(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, ks)
 		}, "KongService didn't get ResolvedRefs status condition set to True")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
 
 	t.Run("network error on create sets Programmed condition to False", func(t *testing.T) {
 		const host = "network-error-test.com"
 
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations to return a network error on Service creation")
 		networkErr := &url.Error{
@@ -632,7 +632,7 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Waiting for Service to get Programmed condition with status=False due to network error")
-		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			if ks.GetName() != createdService.GetName() {
 				return false
 			}
@@ -646,10 +646,10 @@ func TestKongService(t *testing.T) {
 			// can always be cleaned up. The previous behaviour (finalizer added only
 			// after a successful create) would leave no finalizer here.
 			return c.Status == metav1.ConditionFalse && c.Reason == "FailedToCreate" &&
-				objectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer)(ks)
+				ObjectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer)(ks)
 		}, "KongService should get Programmed=False on network error and still carry the cleanup finalizer")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
 
 	t.Run("network error on update sets Programmed condition to False", func(t *testing.T) {
@@ -659,7 +659,7 @@ func TestKongService(t *testing.T) {
 			newPort   = int64(9090)
 		)
 
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Service creation (success)")
 		sdk.ServicesSDK.EXPECT().
@@ -689,13 +689,13 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log("Waiting for Service to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			return ks.GetName() == createdService.GetName() &&
 				ks.GetKonnectID() == serviceID &&
 				k8sutils.IsProgrammed(ks)
 		}, "KongService didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations to return a network error on Service update")
 		networkErr := &url.Error{
@@ -719,7 +719,7 @@ func TestKongService(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, serviceToPatch, client.MergeFrom(createdService)))
 
 		t.Log("Waiting for Service to get Programmed condition with status=False due to network error on update")
-		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			if ks.GetName() != createdService.GetName() {
 				return false
 			}
@@ -737,6 +737,6 @@ func TestKongService(t *testing.T) {
 				c.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed
 		}, "KongService should get the Programmed condition set to status=False due to network error on update")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
 }

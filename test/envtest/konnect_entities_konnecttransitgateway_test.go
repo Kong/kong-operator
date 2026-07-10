@@ -57,7 +57,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		)
 
 		t.Log("Setting up a watch for KonnectCloudGatewayTransitGateway events")
-		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayTransitGatewayList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayTransitGatewayList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
 		sdk.CloudGatewaysSDK.EXPECT().CreateTransitGateway(
 			mock.Anything,
@@ -121,7 +121,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, tg))
 
 		t.Log("Waiting for KonnectCloudGatewayTransitGateway to be Programmed and get a Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway) bool {
 			return tg.GetKonnectID() == id && conditionsContainProgrammed(tg.GetConditions(), metav1.ConditionTrue)
 		}, "Did not see KonnectCloudGatewayTransitGateway get Programmed and Konnect ID set.")
 
@@ -144,7 +144,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		oldTg := tg.DeepCopy()
 		tg.Spec.AWSTransitGateway.AttachmentConfig.RAMShareArn = "ram_share_arn_"
 		require.NoError(t, clientNamespaced.Patch(ctx, tg, client.MergeFrom(oldTg)))
-		watchFor(t, ctx, w, apiwatch.Modified, func(tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway) bool {
 			return tg.GetKonnectID() == id && tg.Status.State == sdkkonnectcomp.TransitGatewayStateReady
 		}, "Did not see KonnectCloudGatewayTransitGateway get status.state updated")
 
@@ -157,7 +157,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		eventually.WaitForObjectToNotExist(t, ctx, cl, tg, waitTime, tickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 
 	t.Run("Creating a transit gateway with existing name", func(t *testing.T) {
@@ -169,7 +169,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		)
 
 		t.Log("Setting up a watch for KonnectCloudGatewayTransitGateway events")
-		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayTransitGatewayList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayTransitGatewayList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation and listing")
 		sdk.CloudGatewaysSDK.EXPECT().CreateTransitGateway(
 			mock.Anything,
@@ -245,11 +245,11 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, tg))
 
 		t.Log("Waiting for KonnectCloudGatewayTransitGateway to be Programmed and get a Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway) bool {
 			return tg.GetKonnectID() == id && conditionsContainProgrammed(tg.GetConditions(), metav1.ConditionTrue)
 		}, "Did not see KonnectCloudGatewayTransitGateway get Programmed and Konnect ID set.")
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 }

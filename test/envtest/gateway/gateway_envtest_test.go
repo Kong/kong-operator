@@ -20,12 +20,13 @@ import (
 	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/create"
 	certhelper "github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -34,19 +35,19 @@ func TestGatewayAddressOverride(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithGatewayAPI, WithKong)
-	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	ctrlClient := NewControllerClient(t, scheme, envcfg)
+	scheme := envtest.Scheme(t, envtest.WithGatewayAPI, envtest.WithKong)
+	envcfg, _ := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	ctrlClient := envtest.NewControllerClient(t, scheme, envcfg)
 
 	expected := []string{"10.0.0.1", "10.0.0.2"}
 	udp := []string{"10.0.0.3", "10.0.0.4"}
-	gw, _ := deployGateway(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg,
-		AdminAPIOptFns(),
-		WithPublishService(gw.Namespace),
-		WithPublishStatusAddress(expected, udp),
-		WithGatewayFeatureEnabled,
-		WithGatewayAPIControllers(),
+	gw, _ := create.Gateway(ctx, t, ctrlClient)
+	envtest.RunManager(ctx, t, envcfg,
+		envtest.AdminAPIOptFns(),
+		envtest.WithPublishService(gw.Namespace),
+		envtest.WithPublishStatusAddress(expected, udp),
+		envtest.WithGatewayFeatureEnabled,
+		envtest.WithGatewayAPIControllers(),
 	)
 
 	allExpected := slices.Concat(expected, udp)
@@ -84,20 +85,20 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithGatewayAPI, WithKong)
-	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	ctrlClient := NewControllerClient(t, scheme, envcfg)
+	scheme := envtest.Scheme(t, envtest.WithGatewayAPI, envtest.WithKong)
+	envcfg, _ := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	ctrlClient := envtest.NewControllerClient(t, scheme, envcfg)
 
-	gw, _ := deployGateway(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg,
-		AdminAPIOptFns(),
-		WithPublishService(gw.Namespace),
-		WithGatewayFeatureEnabled,
-		WithGatewayAPIControllers(),
+	gw, _ := create.Gateway(ctx, t, ctrlClient)
+	envtest.RunManager(ctx, t, envcfg,
+		envtest.AdminAPIOptFns(),
+		envtest.WithPublishService(gw.Namespace),
+		envtest.WithGatewayFeatureEnabled,
+		envtest.WithGatewayAPIControllers(),
 	)
 
 	const numOfRoutes = 120
-	createHTTPRoutes(ctx, t, ctrlClient, gw, numOfRoutes)
+	create.HTTPRoutes(ctx, t, ctrlClient, gw, numOfRoutes)
 
 	require.Eventually(t, func() bool {
 		err := ctrlClient.Get(ctx, k8stypes.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, &gw)
@@ -118,76 +119,6 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 		}
 		return true
 	}, waitTime, tickTime, "failed to reconcile all HTTPRoutes")
-}
-
-// createHTTPRoutes creates a number of dummy HTTPRoutes for the given Gateway.
-func createHTTPRoutes(
-	ctx context.Context,
-	t *testing.T,
-	ctrlClient ctrlclient.Client,
-	gw gatewayapi.Gateway,
-	numOfRoutes int,
-) []*gatewayapi.HTTPRoute {
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-svc",
-			Namespace: gw.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:     "http",
-					Protocol: corev1.ProtocolTCP,
-					Port:     80,
-				},
-			},
-		},
-	}
-	require.NoError(t, ctrlClient.Create(ctx, svc))
-	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, svc) })
-
-	routes := make([]*gatewayapi.HTTPRoute, 0, numOfRoutes)
-	for range numOfRoutes {
-		httpPort := gatewayapi.PortNumber(80)
-		pathMatchPrefix := gatewayapi.PathMatchPathPrefix
-		httpRoute := &gatewayapi.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "httproute-",
-				Namespace:    gw.Namespace,
-			},
-			Spec: gatewayapi.HTTPRouteSpec{
-				CommonRouteSpec: gatewayapi.CommonRouteSpec{
-					ParentRefs: []gatewayapi.ParentReference{{
-						Name: gatewayapi.ObjectName(gw.Name),
-					}},
-				},
-				Rules: []gatewayapi.HTTPRouteRule{{
-					Matches: []gatewayapi.HTTPRouteMatch{
-						{
-							Path: &gatewayapi.HTTPPathMatch{
-								Type:  &pathMatchPrefix,
-								Value: new("/test-http-route"),
-							},
-						},
-					},
-					BackendRefs: []gatewayapi.HTTPBackendRef{{
-						BackendRef: gatewayapi.BackendRef{
-							BackendObjectReference: gatewayapi.BackendObjectReference{
-								Name: gatewayapi.ObjectName("backend-svc"),
-								Port: &httpPort,
-								Kind: util.StringToGatewayAPIKindPtr("Service"),
-							},
-						},
-					}},
-				}},
-			},
-		}
-
-		require.NoError(t, ctrlClient.Create(ctx, httpRoute))
-		t.Cleanup(func() { _ = ctrlClient.Delete(ctx, httpRoute) })
-		routes = append(routes, httpRoute)
-	}
-	return routes
 }
 
 // TestGatewayInfrastructureLabels verifies that labels and annotations set in
@@ -211,8 +142,8 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 	defer cancel()
 
 	scheme := managerscheme.Get()
-	envcfg, ns := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, envcfg, scheme)
+	envcfg, ns := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, envcfg, scheme)
 	c := mgr.GetClient()
 
 	// Create the cluster CA secret required by the DataPlane reconciler.
@@ -237,7 +168,7 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 	t.Cleanup(func() { _ = c.Delete(ctx, caSecret) })
 
 	// Start KO Gateway and DataPlane reconcilers.
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&kogateway.Reconciler{
 			Client:                c,
 			Scheme:                scheme,

@@ -4447,12 +4447,15 @@ func TestGenerateOpsCreate_RootUnionResponseExtractsVariantID(t *testing.T) {
 	require.NotNil(t, info)
 
 	assert.Contains(t, file.Content, "if resp == nil || resp.AIGatewayModel == nil {")
-	assert.Contains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelAPI != nil")
-	assert.Contains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelAPI.GetID()")
-	assert.Contains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelModel != nil")
-	assert.Contains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelModel.GetID()")
-	assert.Contains(t, file.Content, "obj.SetKonnectID(id)")
+	// The response is a discriminated union (possibly nested); its MarshalJSON
+	// already flattens every level down to the real API JSON shape, so the Konnect
+	// ID is extracted via a JSON round-trip instead of a per-variant Go field
+	// access chain. This is robust to unions nested more than one level deep.
+	assert.Contains(t, file.Content, "json.Marshal(resp.AIGatewayModel)")
+	assert.Contains(t, file.Content, `ID string `+"`json:\"id\"`")
+	assert.Contains(t, file.Content, "obj.SetKonnectID(respRootUnionID.ID)")
 	assert.NotContains(t, file.Content, "resp.AIGatewayModel.ID")
+	assert.NotContains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelAPI")
 }
 
 func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {

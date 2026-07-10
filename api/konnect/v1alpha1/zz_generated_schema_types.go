@@ -696,6 +696,2108 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 // This is either the identity provider ID or the identity provider name.
 type AIGatewayIdentityProviderReference string
 
+// AIGatewayMCPACLs Access control rules for MCP resources.
+// Configure `allow`, `deny`, or both.
+type AIGatewayMCPACLs struct {
+	// List of consumer groups that are permitted access.
+	//
+	// +optional
+	Allow []string `json:"allow,omitempty"`
+	// List of consumer groups that are denied access.
+	//
+	// +optional
+	Deny []string `json:"deny,omitempty"`
+}
+
+// AIGatewayMCPConversionTool A tool exposed by an MCP Server in
+// `conversion-only` or `conversion-listener` mode.
+type AIGatewayMCPConversionTool struct {
+	//
+	//
+	// +optional
+	Access AIGatewayMCPConversionToolAccess `json:"access,omitzero"`
+	//
+	//
+	// +optional
+	Annotations AIGatewayMCPToolAnnotations `json:"annotations,omitzero"`
+	// A description of what the tool does.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Description string `json:"description,omitzero"`
+	// The headers of the exported API.
+	// By default, Kong will extract the headers from API configuration.
+	// If the configured headers are not exactly matched, this field is required.
+	//
+	// +optional
+	Headers AIGatewayMCPToolHeaders `json:"headers,omitzero"`
+	// The host of the exported API, which must match the route's hosts.
+	// It should be the route's host.
+	// By default, Kong will extract the host from API configuration.
+	// If the configured host is wildcard, this field is required.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// For conversion-only and conversion-listener modes, the method of the
+	// exported API, which must match the route's methods.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=DELETE;GET;PATCH;POST;PUT
+	Method string `json:"method,omitzero"`
+	// Tool identifier.
+	// In passthrough-listener mode, used to match remote MCP Server tools for ACL
+	// enforcement.
+	// In other modes, it is also used as the tool name (overrides
+	// annotations.title if present).
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	//
+	//
+	// +optional
+	Parameters []AIGatewayMCPToolParameter `json:"parameters,omitempty"`
+	// The path of the exported API, which must match the route's paths.
+	// Path not starting with '/' are treated as relative path and the route path
+	// will be added as the prefix.
+	// By default, Kong will extract the path from API configuration.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Path string `json:"path,omitzero"`
+	// The query arguments of the exported API.
+	// If the generated query arguments are not exactly matched, this field is
+	// required.
+	//
+	// +optional
+	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
+	// The API requestBody specification defined in OpenAPI JSON format.
+	// For example,
+	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
+	// See
+	// https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
+	// for more details.
+	// Note that `$ref` is not supported.
+	//
+	// +optional
+	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
+	// The API responses specification defined in OpenAPI JSON format.
+	// This specification will be used to validate the upstream response and map it
+	// back to the structuredOutput.
+	// For example,
+	// '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
+	// See https://swagger.io/docs/specification/v3_0/describing-responses/ for
+	// more details.
+	// Only one non-error (status code < 400) response is supported.
+	// Note that `$ref` is not supported.
+	//
+	// +optional
+	Responses AIGatewayMCPToolResponses `json:"responses,omitzero"`
+	// The scheme of the exported API.
+	// By default, Kong will extract the scheme from API configuration.
+	// If the configured scheme is not expected, this field can be used to override
+	// it.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Scheme string `json:"scheme,omitzero"`
+}
+
+// AIGatewayMCPConversionToolAccess is a type alias.
+type AIGatewayMCPConversionToolAccess struct {
+	// Access control rules for allowing or denying consumer groups access to this
+	// tool.
+	// When configured, these will override the default access control rules
+	// defined on the MCP Server.
+	//
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+}
+
+// AIGatewayMCPServerBaseACLProperties represents a union type for AIGatewayMCPServerBaseACLProperties.
+// Only one of the fields should be set based on the AclAttributeType.
+//
+type AIGatewayMCPServerBaseACLProperties struct {
+	// AclAttributeType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consumer;oauthAccessToken
+	AclAttributeType AIGatewayMCPServerBaseACLPropertiesType `json:"aclAttributeType,omitempty"`
+
+	// Consumer configuration.
+	//
+	// +optional
+	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
+	// Oauth configuration.
+	//
+	// +optional
+	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
+}
+
+// AIGatewayMCPServerBaseACLPropertiesType represents the type of AIGatewayMCPServerBaseACLProperties.
+type AIGatewayMCPServerBaseACLPropertiesType string
+
+// AIGatewayMCPServerBaseACLPropertiesType values.
+const (
+	AIGatewayMCPServerBaseACLPropertiesTypeConsumer AIGatewayMCPServerBaseACLPropertiesType = "consumer"
+	AIGatewayMCPServerBaseACLPropertiesTypeOauth AIGatewayMCPServerBaseACLPropertiesType = "oauthAccessToken"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerBaseACLProperties) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.AclAttributeType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayMCPServerBaseACLProperties aclAttributeType: %w", err)
+	}
+	m["aclAttributeType"] = typeBytes
+	switch u.AclAttributeType {
+	case AIGatewayMCPServerBaseACLPropertiesTypeConsumer:
+		if u.Consumer != nil {
+			raw, err := json.Marshal(u.Consumer)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerBaseACLProperties consumer: %w", err)
+			}
+			m["consumer"] = raw
+		}
+	case AIGatewayMCPServerBaseACLPropertiesTypeOauth:
+		if u.Oauth != nil {
+			raw, err := json.Marshal(u.Oauth)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerBaseACLProperties oauth_access_token: %w", err)
+			}
+			m["oauthAccessToken"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerBaseACLProperties) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerBaseACLProperties: nil receiver")
+	}
+	var probe struct {
+		AclAttributeType string `json:"aclAttributeType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.AclAttributeType = AIGatewayMCPServerBaseACLPropertiesType(probe.AclAttributeType)
+	switch probe.AclAttributeType {
+	case "consumer":
+		payload, ok := raw["consumer"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesConsumer
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerBaseACLProperties consumer: %w", err)
+		}
+		u.Consumer = &val
+	case "oauthAccessToken":
+		payload, ok := raw["oauthAccessToken"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesOauth
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerBaseACLProperties oauth_access_token: %w", err)
+		}
+		u.Oauth = &val
+	}
+	return nil
+}
+// AIGatewayMCPServerBaseACLPropertiesConsumer is a type alias.
+type AIGatewayMCPServerBaseACLPropertiesConsumer struct {
+	// Access control rules for allowing or denying consumer groups.
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	// Default access control rules for allowing or denying consumer groups to
+	// tools.
+	//
+	// +optional
+	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
+}
+
+// AIGatewayMCPServerBaseACLPropertiesOauth is a type alias.
+type AIGatewayMCPServerBaseACLPropertiesOauth struct {
+	// The claim in the OAuth2 access token to use as the subject for ACL
+	// evaluation when `acl_attribute_type` is set to `oauth_access_token`.
+	// Nested claim can be fetched by using a jq filter starts with dot, e.g.,
+	// “.user.email”: https://jqlang.org/manual/#object-identifier-index
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	AccessTokenClaimField string `json:"accessTokenClaimField,omitzero"`
+	// Access control rules for allowing or denying consumer groups.
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	// Default access control rules for allowing or denying consumer groups to
+	// tools.
+	//
+	// +optional
+	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
+}
+
+// AIGatewayMCPServerConversionListener is a type alias.
+type AIGatewayMCPServerConversionListener struct {
+	//
+	//
+	// +optional
+	Access *AIGatewayMCPServerConversionListenerAccess `json:"access,omitempty"`
+	// Routing, logging, and server configuration for the MCP Server.
+	//
+	// +required
+	Config AIGatewayMCPServerWithUpstreamNoProxyConfig `json:"config,omitzero"`
+	// The display name for the MCP Server.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Whether the MCP Server is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this MCP server, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// List of policy references.
+	//
+	// +optional
+	Policies []string `json:"policies,omitempty"`
+	// List of tools exposed by this MCP Server.
+	//
+	// +optional
+	Tools []AIGatewayMCPConversionTool `json:"tools,omitempty"`
+}
+
+// AIGatewayMCPServerConversionListenerAccess represents a union type for access.
+// Only one of the fields should be set based on the AclAttributeType.
+//
+type AIGatewayMCPServerConversionListenerAccess struct {
+	// AclAttributeType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consumer;oauthAccessToken
+	AclAttributeType AIGatewayMCPServerConversionListenerAccessType `json:"aclAttributeType,omitempty"`
+
+	// Consumer configuration.
+	//
+	// +optional
+	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
+	// Oauth configuration.
+	//
+	// +optional
+	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
+}
+
+// AIGatewayMCPServerConversionListenerAccessType represents the type of access.
+type AIGatewayMCPServerConversionListenerAccessType string
+
+// AIGatewayMCPServerConversionListenerAccessType values.
+const (
+	AIGatewayMCPServerConversionListenerAccessTypeConsumer AIGatewayMCPServerConversionListenerAccessType = "consumer"
+	AIGatewayMCPServerConversionListenerAccessTypeOauth AIGatewayMCPServerConversionListenerAccessType = "oauthAccessToken"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerConversionListenerAccess) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.AclAttributeType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerAccess aclAttributeType: %w", err)
+	}
+	m["aclAttributeType"] = typeBytes
+	switch u.AclAttributeType {
+	case AIGatewayMCPServerConversionListenerAccessTypeConsumer:
+		if u.Consumer != nil {
+			raw, err := json.Marshal(u.Consumer)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerAccess consumer: %w", err)
+			}
+			m["consumer"] = raw
+		}
+	case AIGatewayMCPServerConversionListenerAccessTypeOauth:
+		if u.Oauth != nil {
+			raw, err := json.Marshal(u.Oauth)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerAccess oauth_access_token: %w", err)
+			}
+			m["oauthAccessToken"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerConversionListenerAccess) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerAccess: nil receiver")
+	}
+	var probe struct {
+		AclAttributeType string `json:"aclAttributeType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.AclAttributeType = AIGatewayMCPServerConversionListenerAccessType(probe.AclAttributeType)
+	switch probe.AclAttributeType {
+	case "consumer":
+		payload, ok := raw["consumer"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesConsumer
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerAccess consumer: %w", err)
+		}
+		u.Consumer = &val
+	case "oauthAccessToken":
+		payload, ok := raw["oauthAccessToken"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesOauth
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerAccess oauth_access_token: %w", err)
+		}
+		u.Oauth = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerConversionListener) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListener: nil receiver")
+	}
+	type alias AIGatewayMCPServerConversionListener
+	aux := alias{}
+	aux.Access = &AIGatewayMCPServerConversionListenerAccess{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListener: %w", err)
+	}
+	if aux.Access != nil && aux.Access.AclAttributeType == "" && aux.Access.Consumer == nil && aux.Access.Oauth == nil {
+		aux.Access = nil
+	}
+	*s = AIGatewayMCPServerConversionListener(aux)
+	return nil
+}
+
+// AIGatewayMCPServerConversionOnly is a type alias.
+type AIGatewayMCPServerConversionOnly struct {
+	// Routing, logging, and request body size limits for the MCP Server.
+	//
+	// +required
+	Config AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig `json:"config,omitzero"`
+	// The display name for the MCP Server.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Whether the MCP Server is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this MCP server, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// List of policy references.
+	//
+	// +optional
+	Policies []string `json:"policies,omitempty"`
+	// List of tools exposed by this MCP Server.
+	//
+	// +optional
+	Tools []AIGatewayMCPConversionTool `json:"tools,omitempty"`
+}
+
+// AIGatewayMCPServerListener is a type alias.
+type AIGatewayMCPServerListener struct {
+	//
+	//
+	// +optional
+	Access *AIGatewayMCPServerListenerAccess `json:"access,omitempty"`
+	// Routing, logging, and server configuration for the MCP Server.
+	//
+	// +required
+	Config AIGatewayMCPServerNoUpstreamConfig `json:"config,omitzero"`
+	// The display name for the MCP Server.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Whether the MCP Server is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this MCP server, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// List of policy references.
+	//
+	// +optional
+	Policies []string `json:"policies,omitempty"`
+	// List of tools exposed by this MCP Server.
+	//
+	// +optional
+	Tools []AIGatewayMCPToolBase `json:"tools,omitempty"`
+}
+
+// AIGatewayMCPServerListenerAccess represents a union type for access.
+// Only one of the fields should be set based on the AclAttributeType.
+//
+type AIGatewayMCPServerListenerAccess struct {
+	// AclAttributeType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consumer;oauthAccessToken
+	AclAttributeType AIGatewayMCPServerListenerAccessType `json:"aclAttributeType,omitempty"`
+
+	// Consumer configuration.
+	//
+	// +optional
+	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
+	// Oauth configuration.
+	//
+	// +optional
+	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
+}
+
+// AIGatewayMCPServerListenerAccessType represents the type of access.
+type AIGatewayMCPServerListenerAccessType string
+
+// AIGatewayMCPServerListenerAccessType values.
+const (
+	AIGatewayMCPServerListenerAccessTypeConsumer AIGatewayMCPServerListenerAccessType = "consumer"
+	AIGatewayMCPServerListenerAccessTypeOauth AIGatewayMCPServerListenerAccessType = "oauthAccessToken"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerListenerAccess) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.AclAttributeType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerAccess aclAttributeType: %w", err)
+	}
+	m["aclAttributeType"] = typeBytes
+	switch u.AclAttributeType {
+	case AIGatewayMCPServerListenerAccessTypeConsumer:
+		if u.Consumer != nil {
+			raw, err := json.Marshal(u.Consumer)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerAccess consumer: %w", err)
+			}
+			m["consumer"] = raw
+		}
+	case AIGatewayMCPServerListenerAccessTypeOauth:
+		if u.Oauth != nil {
+			raw, err := json.Marshal(u.Oauth)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerAccess oauth_access_token: %w", err)
+			}
+			m["oauthAccessToken"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerListenerAccess) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerAccess: nil receiver")
+	}
+	var probe struct {
+		AclAttributeType string `json:"aclAttributeType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.AclAttributeType = AIGatewayMCPServerListenerAccessType(probe.AclAttributeType)
+	switch probe.AclAttributeType {
+	case "consumer":
+		payload, ok := raw["consumer"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesConsumer
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerAccess consumer: %w", err)
+		}
+		u.Consumer = &val
+	case "oauthAccessToken":
+		payload, ok := raw["oauthAccessToken"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesOauth
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerAccess oauth_access_token: %w", err)
+		}
+		u.Oauth = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerListener) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListener: nil receiver")
+	}
+	type alias AIGatewayMCPServerListener
+	aux := alias{}
+	aux.Access = &AIGatewayMCPServerListenerAccess{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListener: %w", err)
+	}
+	if aux.Access != nil && aux.Access.AclAttributeType == "" && aux.Access.Consumer == nil && aux.Access.Oauth == nil {
+		aux.Access = nil
+	}
+	*s = AIGatewayMCPServerListener(aux)
+	return nil
+}
+
+// AIGatewayMCPServerNoUpstreamConfig Routing, logging, and server configuration
+// for the MCP Server.
+type AIGatewayMCPServerNoUpstreamConfig struct {
+	// Configuration for AI Gateway logging.
+	//
+	// +optional
+	Logging AIGatewayMCPServerNoUpstreamConfigLogging `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// Configuration for an AI Gateway route.
+	//
+	// +optional
+	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// Server-side configuration for the MCP Server.
+	//
+	// +optional
+	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+}
+
+// AIGatewayMCPServerNoUpstreamConfigLogging Configuration for AI Gateway
+// logging.
+type AIGatewayMCPServerNoUpstreamConfigLogging struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Audits string `json:"audits,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Statistics string `json:"statistics,omitzero"`
+}
+
+// AIGatewayMCPServerPassthroughListener is a type alias.
+type AIGatewayMCPServerPassthroughListener struct {
+	//
+	//
+	// +optional
+	Access *AIGatewayMCPServerPassthroughListenerAccess `json:"access,omitempty"`
+	// Routing, logging, and server configuration for the MCP Server.
+	//
+	// +required
+	Config AIGatewayMCPServerWithUpstreamConfig `json:"config,omitzero"`
+	// The display name for the MCP Server.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Whether the MCP Server is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this MCP server, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// List of policy references.
+	//
+	// +optional
+	Policies []string `json:"policies,omitempty"`
+	// List of tools exposed by this MCP Server.
+	//
+	// +optional
+	Tools []AIGatewayMCPToolBase `json:"tools,omitempty"`
+}
+
+// AIGatewayMCPServerPassthroughListenerAccess represents a union type for access.
+// Only one of the fields should be set based on the AclAttributeType.
+//
+type AIGatewayMCPServerPassthroughListenerAccess struct {
+	// AclAttributeType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consumer;oauthAccessToken
+	AclAttributeType AIGatewayMCPServerPassthroughListenerAccessType `json:"aclAttributeType,omitempty"`
+
+	// Consumer configuration.
+	//
+	// +optional
+	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
+	// Oauth configuration.
+	//
+	// +optional
+	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
+}
+
+// AIGatewayMCPServerPassthroughListenerAccessType represents the type of access.
+type AIGatewayMCPServerPassthroughListenerAccessType string
+
+// AIGatewayMCPServerPassthroughListenerAccessType values.
+const (
+	AIGatewayMCPServerPassthroughListenerAccessTypeConsumer AIGatewayMCPServerPassthroughListenerAccessType = "consumer"
+	AIGatewayMCPServerPassthroughListenerAccessTypeOauth AIGatewayMCPServerPassthroughListenerAccessType = "oauthAccessToken"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerPassthroughListenerAccess) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.AclAttributeType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayMCPServerPassthroughListenerAccess aclAttributeType: %w", err)
+	}
+	m["aclAttributeType"] = typeBytes
+	switch u.AclAttributeType {
+	case AIGatewayMCPServerPassthroughListenerAccessTypeConsumer:
+		if u.Consumer != nil {
+			raw, err := json.Marshal(u.Consumer)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerPassthroughListenerAccess consumer: %w", err)
+			}
+			m["consumer"] = raw
+		}
+	case AIGatewayMCPServerPassthroughListenerAccessTypeOauth:
+		if u.Oauth != nil {
+			raw, err := json.Marshal(u.Oauth)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerPassthroughListenerAccess oauth_access_token: %w", err)
+			}
+			m["oauthAccessToken"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerPassthroughListenerAccess) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerPassthroughListenerAccess: nil receiver")
+	}
+	var probe struct {
+		AclAttributeType string `json:"aclAttributeType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.AclAttributeType = AIGatewayMCPServerPassthroughListenerAccessType(probe.AclAttributeType)
+	switch probe.AclAttributeType {
+	case "consumer":
+		payload, ok := raw["consumer"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesConsumer
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerPassthroughListenerAccess consumer: %w", err)
+		}
+		u.Consumer = &val
+	case "oauthAccessToken":
+		payload, ok := raw["oauthAccessToken"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesOauth
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerPassthroughListenerAccess oauth_access_token: %w", err)
+		}
+		u.Oauth = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerPassthroughListener) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerPassthroughListener: nil receiver")
+	}
+	type alias AIGatewayMCPServerPassthroughListener
+	aux := alias{}
+	aux.Access = &AIGatewayMCPServerPassthroughListenerAccess{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerPassthroughListener: %w", err)
+	}
+	if aux.Access != nil && aux.Access.AclAttributeType == "" && aux.Access.Consumer == nil && aux.Access.Oauth == nil {
+		aux.Access = nil
+	}
+	*s = AIGatewayMCPServerPassthroughListener(aux)
+	return nil
+}
+
+// AIGatewayMCPServerServerConfigBase Server-side configuration for the MCP
+// Server.
+type AIGatewayMCPServerServerConfigBase struct {
+	// Whether to forward the client request headers to the upstream server when
+	// calling the tools.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
+	// Enable managed session when Kong responds as MCP server in listener,
+	// conversion-listener, or upstream-server modes.
+	// This doesn't affect the passthrough-listener mode as the state in that mode
+	// is maintained by the upstream MCP servers.
+	//
+	//
+	// +optional
+	Session AIGatewayMCPServerServerConfigBaseSession `json:"session,omitzero"`
+	// The tag of the MCP server.
+	// This is used to filter the exported MCP tools.
+	// The field should contain exactly one tag.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Tag string `json:"tag,omitzero"`
+	// The timeout for calling the tools in milliseconds.
+	//
+	// +optional
+	Timeout int `json:"timeout,omitzero"`
+}
+
+// AIGatewayMCPServerServerConfigBaseSession Enable managed session when Kong
+// responds as MCP server in listener, conversion-listener, or upstream-server
+// modes.
+// This doesn't affect the passthrough-listener mode as the state in that mode
+// is maintained by the upstream MCP servers.
+type AIGatewayMCPServerServerConfigBaseSession struct {
+	// The configuration for client-side session storage.
+	//
+	// +optional
+	Client AIGatewayMCPServerServerConfigBaseSessionClient `json:"client,omitzero"`
+	// If enabled, Kong will maintain managed sessions with the MCP server.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Managed string `json:"managed,omitzero"`
+	// Config for connecting to a Cloud Provider's Redis instance.
+	//
+	// +optional
+	Redis AIGatewayRedisCloudConfiguration `json:"redis,omitzero"`
+	// The time-to-live (TTL) for each session in seconds.
+	//
+	// +optional
+	SessionTtl int `json:"sessionTtl,omitzero"`
+	// The strategy for the session.
+	// If the value is 'client', the session is encrypted into MCP session id
+	// assigned to the client.
+	// If the value is not 'client', the session is stored in the configured
+	// database.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=client;redis
+	Strategy string `json:"strategy,omitzero"`
+}
+
+// AIGatewayMCPServerServerConfigBaseSessionClient The configuration for
+// client-side session storage.
+type AIGatewayMCPServerServerConfigBaseSessionClient struct {
+	// The secrets that are used in session encryption.
+	// Required when the strategy is 'client'.
+	// The first secret is used for encryption, while all secrets are used for
+	// decryption to support key rotation.
+	//
+	//
+	// +optional
+	Secrets []string `json:"secrets,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamServer is a type alias.
+type AIGatewayMCPServerUpstreamServer struct {
+	//
+	//
+	// +optional
+	Access *AIGatewayMCPServerUpstreamServerAccess `json:"access,omitempty"`
+	// Routing, logging, and server configuration for the MCP Server.
+	//
+	// +required
+	Config AIGatewayMCPServerUpstreamServerConfig `json:"config,omitzero"`
+	// The display name for the MCP Server.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Whether the MCP Server is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this MCP server, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// List of policy references.
+	//
+	// +optional
+	Policies []string `json:"policies,omitempty"`
+	// List of tools exposed by this MCP Server.
+	//
+	// +optional
+	Tools []AIGatewayMCPUpstreamTool `json:"tools,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamServerAccess represents a union type for access.
+// Only one of the fields should be set based on the AclAttributeType.
+//
+type AIGatewayMCPServerUpstreamServerAccess struct {
+	// AclAttributeType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consumer;oauthAccessToken
+	AclAttributeType AIGatewayMCPServerUpstreamServerAccessType `json:"aclAttributeType,omitempty"`
+
+	// Consumer configuration.
+	//
+	// +optional
+	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
+	// Oauth configuration.
+	//
+	// +optional
+	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamServerAccessType represents the type of access.
+type AIGatewayMCPServerUpstreamServerAccessType string
+
+// AIGatewayMCPServerUpstreamServerAccessType values.
+const (
+	AIGatewayMCPServerUpstreamServerAccessTypeConsumer AIGatewayMCPServerUpstreamServerAccessType = "consumer"
+	AIGatewayMCPServerUpstreamServerAccessTypeOauth AIGatewayMCPServerUpstreamServerAccessType = "oauthAccessToken"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerUpstreamServerAccess) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.AclAttributeType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerAccess aclAttributeType: %w", err)
+	}
+	m["aclAttributeType"] = typeBytes
+	switch u.AclAttributeType {
+	case AIGatewayMCPServerUpstreamServerAccessTypeConsumer:
+		if u.Consumer != nil {
+			raw, err := json.Marshal(u.Consumer)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerAccess consumer: %w", err)
+			}
+			m["consumer"] = raw
+		}
+	case AIGatewayMCPServerUpstreamServerAccessTypeOauth:
+		if u.Oauth != nil {
+			raw, err := json.Marshal(u.Oauth)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerAccess oauth_access_token: %w", err)
+			}
+			m["oauthAccessToken"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerUpstreamServerAccess) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerAccess: nil receiver")
+	}
+	var probe struct {
+		AclAttributeType string `json:"aclAttributeType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.AclAttributeType = AIGatewayMCPServerUpstreamServerAccessType(probe.AclAttributeType)
+	switch probe.AclAttributeType {
+	case "consumer":
+		payload, ok := raw["consumer"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesConsumer
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerAccess consumer: %w", err)
+		}
+		u.Consumer = &val
+	case "oauthAccessToken":
+		payload, ok := raw["oauthAccessToken"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerBaseACLPropertiesOauth
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerAccess oauth_access_token: %w", err)
+		}
+		u.Oauth = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerUpstreamServer) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServer: nil receiver")
+	}
+	type alias AIGatewayMCPServerUpstreamServer
+	aux := alias{}
+	aux.Access = &AIGatewayMCPServerUpstreamServerAccess{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServer: %w", err)
+	}
+	if aux.Access != nil && aux.Access.AclAttributeType == "" && aux.Access.Consumer == nil && aux.Access.Oauth == nil {
+		aux.Access = nil
+	}
+	*s = AIGatewayMCPServerUpstreamServer(aux)
+	return nil
+}
+
+// AIGatewayMCPServerUpstreamServerConfig Routing, logging, and server
+// configuration for the MCP Server.
+type AIGatewayMCPServerUpstreamServerConfig struct {
+	// Configuration for AI Gateway logging.
+	//
+	// +optional
+	Logging AIGatewayMCPServerUpstreamServerConfigLogging `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// Configuration for an AI Gateway route.
+	//
+	// +optional
+	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// Server-side configuration specific to `upstream-server` mode.
+	//
+	// +optional
+	Server AIGatewayMCPServerUpstreamServerServerConfig `json:"server,omitzero"`
+	// The time-to-live (TTL) for the upstream tools cache in seconds.
+	// Set to `0` to refresh on
+	// every client call.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=0
+	ToolsCacheTtlSeconds int `json:"toolsCacheTtlSeconds,omitzero"`
+	// Helper field to set protocol, host, port and path of the upstream service
+	// using a URL.
+	// This is the same as a Kong Gateway Service URL:
+	// ${scheme}://${host}:${port}/${path}
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	URL string `json:"url,omitzero"`
+}
+
+// AIGatewayMCPServerUpstreamServerConfigLogging Configuration for AI Gateway
+// logging.
+type AIGatewayMCPServerUpstreamServerConfigLogging struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Audits string `json:"audits,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Statistics string `json:"statistics,omitzero"`
+}
+
+// AIGatewayMCPServerUpstreamServerServerConfig Server-side configuration
+// specific to `upstream-server` mode.
+type AIGatewayMCPServerUpstreamServerServerConfig struct {
+	// Whether to forward the client request headers to the upstream server when
+	// calling the tools.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
+	// If enabled, the original upstream tool names are preserved as-is when Kong
+	// acts as an MCP server.
+	// If disabled (`false`), the service name will be prepended to the MCP tool
+	// names to avoid name
+	// collisions when multiple services are used.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	PreserveUpstreamToolNames string `json:"preserveUpstreamToolNames,omitzero"`
+	// Enable managed session when Kong responds as MCP server in listener,
+	// conversion-listener, or upstream-server modes.
+	// This doesn't affect the passthrough-listener mode as the state in that mode
+	// is maintained by the upstream MCP servers.
+	//
+	//
+	// +optional
+	Session AIGatewayMCPServerUpstreamServerServerConfigSession `json:"session,omitzero"`
+	// The tag of the MCP server.
+	// This is used to filter the exported MCP tools.
+	// The field should contain exactly one tag.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Tag string `json:"tag,omitzero"`
+	// The timeout for calling the tools in milliseconds.
+	//
+	// +optional
+	Timeout int `json:"timeout,omitzero"`
+	// Configuration for an Upstream Server's MCP Server Tools' Authentication.
+	//
+	// +optional
+	ToolsListAuth *AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth `json:"toolsListAuth,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamServerServerConfigSession Enable managed session
+// when Kong responds as MCP server in listener, conversion-listener, or
+// upstream-server modes.
+// This doesn't affect the passthrough-listener mode as the state in that mode
+// is maintained by the upstream MCP servers.
+type AIGatewayMCPServerUpstreamServerServerConfigSession struct {
+	// The configuration for client-side session storage.
+	//
+	// +optional
+	Client AIGatewayMCPServerUpstreamServerServerConfigSessionClient `json:"client,omitzero"`
+	// If enabled, Kong will maintain managed sessions with the MCP server.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Managed string `json:"managed,omitzero"`
+	// Config for connecting to a Cloud Provider's Redis instance.
+	//
+	// +optional
+	Redis AIGatewayRedisCloudConfiguration `json:"redis,omitzero"`
+	// The time-to-live (TTL) for each session in seconds.
+	//
+	// +optional
+	SessionTtl int `json:"sessionTtl,omitzero"`
+	// The strategy for the session.
+	// If the value is 'client', the session is encrypted into MCP session id
+	// assigned to the client.
+	// If the value is not 'client', the session is stored in the configured
+	// database.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=client;redis
+	Strategy string `json:"strategy,omitzero"`
+}
+
+// AIGatewayMCPServerUpstreamServerServerConfigSessionClient The configuration
+// for client-side session storage.
+type AIGatewayMCPServerUpstreamServerServerConfigSessionClient struct {
+	// The secrets that are used in session encryption.
+	// Required when the strategy is 'client'.
+	// The first secret is used for encryption, while all secrets are used for
+	// decryption to support key rotation.
+	//
+	//
+	// +optional
+	Secrets []string `json:"secrets,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth represents a union type for tools_list_auth.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=credentials;jwt
+	Type AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType `json:"type,omitempty"`
+
+	// Credentials configuration.
+	//
+	// +optional
+	Credentials *AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials `json:"credentials,omitempty"`
+	// Jwt configuration.
+	//
+	// +optional
+	Jwt *AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt `json:"jwt,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType represents the type of tools_list_auth.
+type AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType string
+
+// AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType values.
+const (
+	AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeCredentials AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType = "credentials"
+	AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeJwt AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType = "jwt"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeCredentials:
+		if u.Credentials != nil {
+			raw, err := json.Marshal(u.Credentials)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth credentials: %w", err)
+			}
+			m["credentials"] = raw
+		}
+	case AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeJwt:
+		if u.Jwt != nil {
+			raw, err := json.Marshal(u.Jwt)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth jwt: %w", err)
+			}
+			m["jwt"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType(probe.Type)
+	switch probe.Type {
+	case "credentials":
+		payload, ok := raw["credentials"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth credentials: %w", err)
+		}
+		u.Credentials = &val
+	case "jwt":
+		payload, ok := raw["jwt"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth jwt: %w", err)
+		}
+		u.Jwt = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerUpstreamServerServerConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerServerConfig: nil receiver")
+	}
+	type alias AIGatewayMCPServerUpstreamServerServerConfig
+	aux := alias{}
+	aux.ToolsListAuth = &AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerServerConfig: %w", err)
+	}
+	if aux.ToolsListAuth != nil && aux.ToolsListAuth.Type == "" && aux.ToolsListAuth.Credentials == nil && aux.ToolsListAuth.Jwt == nil {
+		aux.ToolsListAuth = nil
+	}
+	*s = AIGatewayMCPServerUpstreamServerServerConfig(aux)
+	return nil
+}
+
+// AIGatewayMCPServerUpstreamServerServerToolAuthConfig represents a union type for AIGatewayMCPServerUpstreamServerServerToolAuthConfig.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayMCPServerUpstreamServerServerToolAuthConfig struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=credentials;jwt
+	Type AIGatewayMCPServerUpstreamServerServerToolAuthConfigType `json:"type,omitempty"`
+
+	// Credentials configuration.
+	//
+	// +optional
+	Credentials *AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials `json:"credentials,omitempty"`
+	// Jwt configuration.
+	//
+	// +optional
+	Jwt *AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt `json:"jwt,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamServerServerToolAuthConfigType represents the type of AIGatewayMCPServerUpstreamServerServerToolAuthConfig.
+type AIGatewayMCPServerUpstreamServerServerToolAuthConfigType string
+
+// AIGatewayMCPServerUpstreamServerServerToolAuthConfigType values.
+const (
+	AIGatewayMCPServerUpstreamServerServerToolAuthConfigTypeCredentials AIGatewayMCPServerUpstreamServerServerToolAuthConfigType = "credentials"
+	AIGatewayMCPServerUpstreamServerServerToolAuthConfigTypeJwt AIGatewayMCPServerUpstreamServerServerToolAuthConfigType = "jwt"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerUpstreamServerServerToolAuthConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerToolAuthConfig type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayMCPServerUpstreamServerServerToolAuthConfigTypeCredentials:
+		if u.Credentials != nil {
+			raw, err := json.Marshal(u.Credentials)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerToolAuthConfig credentials: %w", err)
+			}
+			m["credentials"] = raw
+		}
+	case AIGatewayMCPServerUpstreamServerServerToolAuthConfigTypeJwt:
+		if u.Jwt != nil {
+			raw, err := json.Marshal(u.Jwt)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerToolAuthConfig jwt: %w", err)
+			}
+			m["jwt"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerUpstreamServerServerToolAuthConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerServerToolAuthConfig: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayMCPServerUpstreamServerServerToolAuthConfigType(probe.Type)
+	switch probe.Type {
+	case "credentials":
+		payload, ok := raw["credentials"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerServerToolAuthConfig credentials: %w", err)
+		}
+		u.Credentials = &val
+	case "jwt":
+		payload, ok := raw["jwt"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerServerToolAuthConfig jwt: %w", err)
+		}
+		u.Jwt = &val
+	}
+	return nil
+}
+// AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials is a type alias.
+type AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials struct {
+	// Header name used to send the fetched access token to the upstream MCP
+	// server.
+	// The value should
+	// include the header name and the token prefix if needed.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AccessTokenHeader string `json:"accessTokenHeader,omitzero"`
+	// The client ID for the OAuth 2.0 client-credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientID string `json:"clientID,omitzero"`
+	// The client secret for the OAuth 2.0 client-credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ClientSecret string `json:"clientSecret,omitzero"`
+	// Header name used to send the fetched ID token to the upstream MCP server.
+	// The value should
+	// include the header name and the token prefix if needed.
+	// Leave empty to omit the ID token
+	// when fetching the tools list.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IDTokenHeader string `json:"idTokenHeader,omitzero"`
+	// The scopes for the OAuth 2.0 client-credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Scope string `json:"scope,omitzero"`
+	// The token endpoint URL for fetching the OAuth 2.0 access token using
+	// client-credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	TokenEndpoint string `json:"tokenEndpoint,omitzero"`
+}
+
+// AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt is a type alias.
+type AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt struct {
+	// Header name used to send the fetched access token to the upstream MCP
+	// server.
+	// The value should
+	// include the header name and the token prefix if needed.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AccessTokenHeader string `json:"accessTokenHeader,omitzero"`
+	// Header name used to send the fetched ID token to the upstream MCP server.
+	// The value should
+	// include the header name and the token prefix if needed.
+	// Leave empty to omit the ID token
+	// when fetching the tools list.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IDTokenHeader string `json:"idTokenHeader,omitzero"`
+	// The scopes for the OAuth 2.0 client-credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Scope string `json:"scope,omitzero"`
+}
+
+// AIGatewayMCPServerWithUpstreamConfig Routing, logging, and server
+// configuration for the MCP Server.
+type AIGatewayMCPServerWithUpstreamConfig struct {
+	// Configuration for AI Gateway logging.
+	//
+	// +optional
+	Logging AIGatewayMCPServerWithUpstreamConfigLogging `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
+	// provider.
+	//
+	// +optional
+	Proxy AIGatewayProxyConfig `json:"proxy,omitzero"`
+	// Configuration for an AI Gateway route.
+	//
+	// +optional
+	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// Server-side configuration for the MCP Server.
+	//
+	// +optional
+	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+	// Helper field to set protocol, host, port and path of the upstream service
+	// using a URL.
+	// This is the same as a Kong Gateway Service URL:
+	// ${scheme}://${host}:${port}/${path}
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	URL string `json:"url,omitzero"`
+}
+
+// AIGatewayMCPServerWithUpstreamConfigLogging Configuration for AI Gateway
+// logging.
+type AIGatewayMCPServerWithUpstreamConfigLogging struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Audits string `json:"audits,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Statistics string `json:"statistics,omitzero"`
+}
+
+// AIGatewayMCPServerWithUpstreamNoProxyConfig Routing, logging, and server
+// configuration for the MCP Server.
+type AIGatewayMCPServerWithUpstreamNoProxyConfig struct {
+	// Configuration for AI Gateway logging.
+	//
+	// +optional
+	Logging AIGatewayMCPServerWithUpstreamNoProxyConfigLogging `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// Configuration for an AI Gateway route.
+	//
+	// +optional
+	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// Server-side configuration for the MCP Server.
+	//
+	// +optional
+	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+	// Helper field to set protocol, host, port and path of the upstream service
+	// using a URL.
+	// This is the same as a Kong Gateway Service URL:
+	// ${scheme}://${host}:${port}/${path}
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	URL string `json:"url,omitzero"`
+}
+
+// AIGatewayMCPServerWithUpstreamNoProxyConfigLogging Configuration for AI
+// Gateway logging.
+type AIGatewayMCPServerWithUpstreamNoProxyConfigLogging struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Audits string `json:"audits,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Statistics string `json:"statistics,omitzero"`
+}
+
+// AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig Routing, logging,
+// and request body size limits for the MCP Server.
+type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
+	// Configuration for AI Gateway logging.
+	//
+	// +optional
+	Logging AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// Configuration for an AI Gateway route.
+	//
+	// +optional
+	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// Helper field to set protocol, host, port and path of the upstream service
+	// using a URL.
+	// This is the same as a Kong Gateway Service URL:
+	// ${scheme}://${host}:${port}/${path}
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	URL string `json:"url,omitzero"`
+}
+
+// AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging
+// Configuration for AI Gateway logging.
+type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Audits string `json:"audits,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Statistics string `json:"statistics,omitzero"`
+}
+
+// AIGatewayMCPToolAnnotations is a type alias.
+type AIGatewayMCPToolAnnotations struct {
+	// If true, the tool may perform destructive updates
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	DestructiveHint string `json:"destructiveHint,omitzero"`
+	// If true, repeated calls with same args have no additional effect
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	IdempotentHint string `json:"idempotentHint,omitzero"`
+	// If true, tool interacts with external entities
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	OpenWorldHint string `json:"openWorldHint,omitzero"`
+	// If true, the tool does not modify its environment
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ReadOnlyHint string `json:"readOnlyHint,omitzero"`
+	// Human-readable title for the tool
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Title string `json:"title,omitzero"`
+}
+
+// AIGatewayMCPToolBase A tool exposed by the MCP Server, mapped to a backend
+// HTTP endpoint.
+type AIGatewayMCPToolBase struct {
+	//
+	//
+	// +optional
+	Access AIGatewayMCPToolBaseAccess `json:"access,omitzero"`
+	//
+	//
+	// +optional
+	Annotations AIGatewayMCPToolAnnotations `json:"annotations,omitzero"`
+	// A description of what the tool does.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Description string `json:"description,omitzero"`
+	// The headers of the exported API.
+	// By default, Kong will extract the headers from API configuration.
+	// If the configured headers are not exactly matched, this field is required.
+	//
+	// +optional
+	Headers AIGatewayMCPToolHeaders `json:"headers,omitzero"`
+	// The host of the exported API, which must match the route's hosts.
+	// It should be the route's host.
+	// By default, Kong will extract the host from API configuration.
+	// If the configured host is wildcard, this field is required.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// For conversion-only and conversion-listener modes, the method of the
+	// exported API, which must match the route's methods.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=DELETE;GET;PATCH;POST;PUT
+	Method string `json:"method,omitzero"`
+	// Tool identifier.
+	// In passthrough-listener mode, used to match remote MCP Server tools for ACL
+	// enforcement.
+	// In other modes, it is also used as the tool name (overrides
+	// annotations.title if present).
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	//
+	//
+	// +optional
+	Parameters []AIGatewayMCPToolParameter `json:"parameters,omitempty"`
+	// The path of the exported API, which must match the route's paths.
+	// Path not starting with '/' are treated as relative path and the route path
+	// will be added as the prefix.
+	// By default, Kong will extract the path from API configuration.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Path string `json:"path,omitzero"`
+	// The query arguments of the exported API.
+	// If the generated query arguments are not exactly matched, this field is
+	// required.
+	//
+	// +optional
+	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
+	// The API requestBody specification defined in OpenAPI JSON format.
+	// For example,
+	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
+	// See
+	// https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
+	// for more details.
+	// Note that `$ref` is not supported.
+	//
+	// +optional
+	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
+	// The API responses specification defined in OpenAPI JSON format.
+	// This specification will be used to validate the upstream response and map it
+	// back to the structuredOutput.
+	// For example,
+	// '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
+	// See https://swagger.io/docs/specification/v3_0/describing-responses/ for
+	// more details.
+	// Only one non-error (status code < 400) response is supported.
+	// Note that `$ref` is not supported.
+	//
+	// +optional
+	Responses AIGatewayMCPToolResponses `json:"responses,omitzero"`
+	// The scheme of the exported API.
+	// By default, Kong will extract the scheme from API configuration.
+	// If the configured scheme is not expected, this field can be used to override
+	// it.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Scheme string `json:"scheme,omitzero"`
+}
+
+// AIGatewayMCPToolBaseAccess is a type alias.
+type AIGatewayMCPToolBaseAccess struct {
+	// Access control rules for allowing or denying consumer groups access to this
+	// tool.
+	// When configured, these will override the default access control rules
+	// defined on the MCP Server.
+	//
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+}
+
+// AIGatewayMCPToolHeaders The headers of the exported API.
+// By default, Kong will extract the headers from API configuration.
+// If the configured headers are not exactly matched, this field is required.
+type AIGatewayMCPToolHeaders map[string]string
+
+// AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
+// JSON format.
+// For example, '[{"name": "city", "in": "query", "description": "Name of the
+// city to get the weather for", "required": true, "schema": {"type":
+// "string"}}]'.
+// See https://swagger.io/docs/specification/v3_0/describing-parameters/ for
+// more details.
+type AIGatewayMCPToolParameter struct {
+	// A description of the parameter.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Description string `json:"description,omitzero"`
+	// The location of the parameter in the request.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=query;path;header;body
+	In string `json:"in,omitzero"`
+	// The name of the parameter.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	// Whether this parameter is required.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Required string `json:"required,omitzero"`
+	// JSON Schema definition for the parameter value.
+	// See
+	// https://swagger.io/docs/specification/v3_0/describing-parameters/#schema-vs-content
+	// for more details.
+	//
+	// +optional
+	Schema apiextensionsv1.JSON `json:"schema,omitzero"`
+}
+
+// AIGatewayMCPToolQuery The query arguments of the exported API.
+// If the generated query arguments are not exactly matched, this field is
+// required.
+type AIGatewayMCPToolQuery map[string]string
+
+// AIGatewayMCPToolRequestBody The API requestBody specification defined in
+// OpenAPI JSON format.
+// For example,
+// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
+// See
+// https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
+// for more details.
+// Note that `$ref` is not supported.
+type AIGatewayMCPToolRequestBody map[string]string
+
+// AIGatewayMCPToolResponses The API responses specification defined in OpenAPI
+// JSON format.
+// This specification will be used to validate the upstream response and map it
+// back to the structuredOutput.
+// For example,
+// '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
+// See https://swagger.io/docs/specification/v3_0/describing-responses/ for more
+// details.
+// Only one non-error (status code < 400) response is supported.
+// Note that `$ref` is not supported.
+type AIGatewayMCPToolResponses map[string]string
+
+// AIGatewayMCPUpstreamTool A tool exposed by an MCP Server in `upstream-server`
+// mode.
+// Extends the base tool with input/output schema overrides for the upstream
+// server's advertised tool.
+type AIGatewayMCPUpstreamTool struct {
+	//
+	//
+	// +optional
+	Access AIGatewayMCPUpstreamToolAccess `json:"access,omitzero"`
+	//
+	//
+	// +optional
+	Annotations AIGatewayMCPToolAnnotations `json:"annotations,omitzero"`
+	// A description of what the tool does.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Description string `json:"description,omitzero"`
+	// The headers of the exported API.
+	// By default, Kong will extract the headers from API configuration.
+	// If the configured headers are not exactly matched, this field is required.
+	//
+	// +optional
+	Headers AIGatewayMCPToolHeaders `json:"headers,omitzero"`
+	// The host of the exported API, which must match the route's hosts.
+	// It should be the route's host.
+	// By default, Kong will extract the host from API configuration.
+	// If the configured host is wildcard, this field is required.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The entire `inputSchema` section for the tool.
+	// Overrides the upstream server's `inputSchema`
+	// for the same tool name, if present.
+	//
+	//
+	// +optional
+	InputSchema apiextensionsv1.JSON `json:"inputSchema,omitzero"`
+	// When provided, the method of the exported API, which must match the route's
+	// methods.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=DELETE;GET;PATCH;POST;PUT
+	Method string `json:"method,omitzero"`
+	// Tool identifier.
+	// In passthrough-listener mode, used to match remote MCP Server tools for ACL
+	// enforcement.
+	// In other modes, it is also used as the tool name (overrides
+	// annotations.title if present).
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	// The entire `outputSchema` section for the tool.
+	// Overrides the upstream server's `outputSchema`
+	// for the same tool name, if present.
+	//
+	//
+	// +optional
+	OutputSchema apiextensionsv1.JSON `json:"outputSchema,omitzero"`
+	//
+	//
+	// +optional
+	Parameters []AIGatewayMCPToolParameter `json:"parameters,omitempty"`
+	// The path of the exported API, which must match the route's paths.
+	// Path not starting with '/' are treated as relative path and the route path
+	// will be added as the prefix.
+	// By default, Kong will extract the path from API configuration.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Path string `json:"path,omitzero"`
+	// The query arguments of the exported API.
+	// If the generated query arguments are not exactly matched, this field is
+	// required.
+	//
+	// +optional
+	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
+	// The API requestBody specification defined in OpenAPI JSON format.
+	// For example,
+	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
+	// See
+	// https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
+	// for more details.
+	// Note that `$ref` is not supported.
+	//
+	// +optional
+	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
+	// The API responses specification defined in OpenAPI JSON format.
+	// This specification will be used to validate the upstream response and map it
+	// back to the structuredOutput.
+	// For example,
+	// '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
+	// See https://swagger.io/docs/specification/v3_0/describing-responses/ for
+	// more details.
+	// Only one non-error (status code < 400) response is supported.
+	// Note that `$ref` is not supported.
+	//
+	// +optional
+	Responses AIGatewayMCPToolResponses `json:"responses,omitzero"`
+	// The scheme of the exported API.
+	// By default, Kong will extract the scheme from API configuration.
+	// If the configured scheme is not expected, this field can be used to override
+	// it.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Scheme string `json:"scheme,omitzero"`
+}
+
+// AIGatewayMCPUpstreamToolAccess is a type alias.
+type AIGatewayMCPUpstreamToolAccess struct {
+	// Access control rules for allowing or denying consumer groups access to this
+	// tool.
+	// When configured, these will override the default access control rules
+	// defined on the MCP Server.
+	//
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+}
+
 // AIGatewayModelAPI Configuration for proxying asynchronous requests/responses
 // to/from an AI Gateway model using the files and batches APIs.
 type AIGatewayModelAPI struct {
@@ -5199,6 +7301,492 @@ type AIGatewayRedisAzureAuthentication struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	TenantID string `json:"tenantID,omitzero"`
+}
+
+// AIGatewayRedisCloudConfiguration Config for connecting to a Cloud Provider's
+// Redis instance.
+type AIGatewayRedisCloudConfiguration struct {
+	// Auth related config for connecting to a Cloud Provider's Redis instance.
+	//
+	// +optional
+	CloudAuthentication *AIGatewayRedisCloudConfigurationCloudAuthentication `json:"cloudAuthentication,omitempty"`
+	// Cluster configuration for the Redis connection.
+	//
+	// +optional
+	Cluster AIGatewayRedisCloudConfigurationCluster `json:"cluster,omitzero"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// If the connection to Redis is proxied (e.g.
+	// Envoy), set it `true`.
+	// Set the `host` and `port` to point to the proxy address.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConnectionIsProxied string `json:"connectionIsProxied,omitzero"`
+	// Database to use for the Redis connection when using the `redis` strategy
+	//
+	// +optional
+	Database int `json:"database,omitzero"`
+	// A string representing a host name, such as example.com.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// Keepalive configuration for the Redis connection.
+	//
+	// +optional
+	Keepalive AIGatewayRedisCloudConfigurationKeepalive `json:"keepalive,omitzero"`
+	// Password to use for Redis connections.
+	// If undefined, no AUTH commands are sent to Redis.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Password string `json:"password,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	Port *AIGatewayRedisCloudConfigurationPort `json:"port,omitempty"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	SendTimeout int `json:"sendTimeout,omitzero"`
+	// Configuration for Redis Sentinel.
+	//
+	// +optional
+	Sentinel AIGatewayRedisCloudConfigurationSentinel `json:"sentinel,omitzero"`
+	// A string representing an SNI (server name indication) value for TLS.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ServerName string `json:"serverName,omitzero"`
+	// If set to true, uses SSL to connect to Redis.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	// If set to true, verifies the validity of the server SSL certificate.
+	// If setting this parameter, also configure `lua_ssl_trusted_certificate` in
+	// `kong.conf` to specify the CA (or server) certificate used by your Redis
+	// server.
+	// You may also need to configure `lua_ssl_verify_depth` accordingly.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Username to use for Redis connections.
+	// If undefined, ACL authentication won't be performed.
+	// This requires Redis v6.0.0+.
+	// To be compatible with Redis v5.x.y, you can set it to `default`.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username string `json:"username,omitzero"`
+}
+
+// AIGatewayRedisCloudConfigurationCluster Cluster configuration for the Redis
+// connection.
+type AIGatewayRedisCloudConfigurationCluster struct {
+	// Maximum retry attempts for redirection.
+	//
+	// +optional
+	MaxRedirections int `json:"maxRedirections,omitzero"`
+	// Cluster addresses to use for Redis connections when the `redis` strategy is
+	// defined.
+	// Defining this field implies using a Redis Cluster.
+	// The minimum length of the array is 1 element.
+	//
+	// +optional
+	Nodes []AIGatewayRedisCloudConfigurationClusterNodes `json:"nodes,omitempty"`
+}
+
+// AIGatewayRedisCloudConfigurationClusterNodes Cluster addresses to use for
+// Redis connections when the `redis` strategy is defined.
+// Defining this field implies using a Redis Cluster.
+// The minimum length of the array is 1 element.
+type AIGatewayRedisCloudConfigurationClusterNodes struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IP string `json:"ip,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// AIGatewayRedisCloudConfigurationKeepalive Keepalive configuration for the
+// Redis connection.
+type AIGatewayRedisCloudConfigurationKeepalive struct {
+	// Limits the total number of opened connections for a pool.
+	// If the connection pool is full, connection queues above the limit go into
+	// the backlog queue.
+	// If the backlog queue is full, subsequent connect operations fail and return
+	// `nil`.
+	// Queued operations (subject to set timeouts) resume once the number of
+	// connections in the pool is less than `pool_size`.
+	// If latency is high or throughput is low, try increasing this value.
+	// Empirically, this value is larger than `pool_size`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	Backlog int `json:"backlog,omitzero"`
+	// The size limit for every cosocket connection pool associated with every
+	// remote server, per worker process.
+	// If neither `pool_size` nor `backlog` is specified, no pool is created.
+	// If `pool_size` isn't specified but `backlog` is specified, then the pool
+	// uses the default value.
+	// Try to increase (e.g.
+	// 512) this value if latency is high or throughput is low.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2.147483646e+09
+	PoolSize int `json:"poolSize,omitzero"`
+}
+
+// AIGatewayRedisCloudConfigurationSentinel Configuration for Redis Sentinel.
+type AIGatewayRedisCloudConfigurationSentinel struct {
+	// Sentinel master to use for Redis connections.
+	// Defining this value implies using Redis Sentinel.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Master string `json:"master,omitzero"`
+	// Sentinel node addresses to use for Redis connections when the `redis`
+	// strategy is defined.
+	// Defining this field implies using a Redis Sentinel.
+	// The minimum length of the array is 1 element.
+	//
+	// +optional
+	Nodes []AIGatewayRedisCloudConfigurationSentinelNodes `json:"nodes,omitempty"`
+	// Sentinel password to authenticate with a Redis Sentinel instance.
+	// If undefined, no AUTH commands are sent to Redis Sentinels.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Password string `json:"password,omitzero"`
+	// Sentinel role to use for Redis connections when the `redis` strategy is
+	// defined.
+	// Defining this value implies using Redis Sentinel.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=any;master;slave
+	Role string `json:"role,omitzero"`
+	// Sentinel username to authenticate with a Redis Sentinel instance.
+	// If undefined, ACL authentication won't be performed.
+	// This requires Redis v6.2.0+.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username string `json:"username,omitzero"`
+}
+
+// AIGatewayRedisCloudConfigurationSentinelNodes Sentinel node addresses to use
+// for Redis connections when the `redis` strategy is defined.
+// Defining this field implies using a Redis Sentinel.
+// The minimum length of the array is 1 element.
+type AIGatewayRedisCloudConfigurationSentinelNodes struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// AIGatewayRedisCloudConfigurationCloudAuthentication represents a union type for cloud_authentication.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayRedisCloudConfigurationCloudAuthentication struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=aws;azure;gcp
+	Type AIGatewayRedisCloudConfigurationCloudAuthenticationType `json:"type,omitempty"`
+
+	// AWS configuration.
+	//
+	// +optional
+	AWS *AIGatewayRedisAWSAuthentication `json:"aws,omitempty"`
+	// Azure configuration.
+	//
+	// +optional
+	Azure *AIGatewayRedisAzureAuthentication `json:"azure,omitempty"`
+	// GCP configuration.
+	//
+	// +optional
+	GCP *AIGatewayRedisGCPAuthentication `json:"gcp,omitempty"`
+}
+
+// AIGatewayRedisCloudConfigurationCloudAuthenticationType represents the type of cloud_authentication.
+type AIGatewayRedisCloudConfigurationCloudAuthenticationType string
+
+// AIGatewayRedisCloudConfigurationCloudAuthenticationType values.
+const (
+	AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAWS AIGatewayRedisCloudConfigurationCloudAuthenticationType = "aws"
+	AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAzure AIGatewayRedisCloudConfigurationCloudAuthenticationType = "azure"
+	AIGatewayRedisCloudConfigurationCloudAuthenticationTypeGCP AIGatewayRedisCloudConfigurationCloudAuthenticationType = "gcp"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayRedisCloudConfigurationCloudAuthentication) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationCloudAuthentication type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAWS:
+		if u.AWS != nil {
+			raw, err := json.Marshal(u.AWS)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationCloudAuthentication aws: %w", err)
+			}
+			m["aws"] = raw
+		}
+	case AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAzure:
+		if u.Azure != nil {
+			raw, err := json.Marshal(u.Azure)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationCloudAuthentication azure: %w", err)
+			}
+			m["azure"] = raw
+		}
+	case AIGatewayRedisCloudConfigurationCloudAuthenticationTypeGCP:
+		if u.GCP != nil {
+			raw, err := json.Marshal(u.GCP)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationCloudAuthentication gcp: %w", err)
+			}
+			m["gcp"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayRedisCloudConfigurationCloudAuthentication) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayRedisCloudConfigurationCloudAuthentication: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayRedisCloudConfigurationCloudAuthenticationType(probe.Type)
+	switch probe.Type {
+	case "aws":
+		payload, ok := raw["aws"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayRedisAWSAuthentication
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayRedisCloudConfigurationCloudAuthentication aws: %w", err)
+		}
+		u.AWS = &val
+	case "azure":
+		payload, ok := raw["azure"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayRedisAzureAuthentication
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayRedisCloudConfigurationCloudAuthentication azure: %w", err)
+		}
+		u.Azure = &val
+	case "gcp":
+		payload, ok := raw["gcp"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayRedisGCPAuthentication
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayRedisCloudConfigurationCloudAuthentication gcp: %w", err)
+		}
+		u.GCP = &val
+	}
+	return nil
+}
+// AIGatewayRedisCloudConfigurationPortVariant1 is a type alias.
+type AIGatewayRedisCloudConfigurationPortVariant1 int
+
+// AIGatewayRedisCloudConfigurationPortVariant2 is a type alias.
+type AIGatewayRedisCloudConfigurationPortVariant2 string
+
+// AIGatewayRedisCloudConfigurationPort represents a union type for port.
+// Only one of the fields should be set based on the Type.
+//
+type AIGatewayRedisCloudConfigurationPort struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=variant1;variant2
+	Type AIGatewayRedisCloudConfigurationPortType `json:"type,omitempty"`
+
+	// Variant1 configuration.
+	//
+	// +optional
+	Variant1 *AIGatewayRedisCloudConfigurationPortVariant1 `json:"variant1,omitempty"`
+	// Variant2 configuration.
+	//
+	// +optional
+	Variant2 *AIGatewayRedisCloudConfigurationPortVariant2 `json:"variant2,omitempty"`
+}
+
+// AIGatewayRedisCloudConfigurationPortType represents the type of port.
+type AIGatewayRedisCloudConfigurationPortType string
+
+// AIGatewayRedisCloudConfigurationPortType values.
+const (
+	AIGatewayRedisCloudConfigurationPortTypeVariant1 AIGatewayRedisCloudConfigurationPortType = "variant1"
+	AIGatewayRedisCloudConfigurationPortTypeVariant2 AIGatewayRedisCloudConfigurationPortType = "variant2"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayRedisCloudConfigurationPort) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationPort type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayRedisCloudConfigurationPortTypeVariant1:
+		if u.Variant1 != nil {
+			raw, err := json.Marshal(u.Variant1)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationPort Variant1: %w", err)
+			}
+			m["variant1"] = raw
+		}
+	case AIGatewayRedisCloudConfigurationPortTypeVariant2:
+		if u.Variant2 != nil {
+			raw, err := json.Marshal(u.Variant2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationPort Variant2: %w", err)
+			}
+			m["variant2"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayRedisCloudConfigurationPort) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayRedisCloudConfigurationPort: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayRedisCloudConfigurationPortType(probe.Type)
+	switch probe.Type {
+	case "variant1":
+		payload, ok := raw["variant1"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayRedisCloudConfigurationPortVariant1
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayRedisCloudConfigurationPort Variant1: %w", err)
+		}
+		u.Variant1 = &val
+	case "variant2":
+		payload, ok := raw["variant2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayRedisCloudConfigurationPortVariant2
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayRedisCloudConfigurationPort Variant2: %w", err)
+		}
+		u.Variant2 = &val
+	}
+	return nil
+}
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayRedisCloudConfiguration) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayRedisCloudConfiguration: nil receiver")
+	}
+	type alias AIGatewayRedisCloudConfiguration
+	aux := alias{}
+	aux.CloudAuthentication = &AIGatewayRedisCloudConfigurationCloudAuthentication{}
+	aux.Port = &AIGatewayRedisCloudConfigurationPort{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayRedisCloudConfiguration: %w", err)
+	}
+	if aux.CloudAuthentication != nil && aux.CloudAuthentication.Type == "" && aux.CloudAuthentication.AWS == nil && aux.CloudAuthentication.Azure == nil && aux.CloudAuthentication.GCP == nil {
+		aux.CloudAuthentication = nil
+	}
+	if aux.Port != nil && aux.Port.Type == "" && aux.Port.Variant1 == nil && aux.Port.Variant2 == nil {
+		aux.Port = nil
+	}
+	*s = AIGatewayRedisCloudConfiguration(aux)
+	return nil
 }
 
 // AIGatewayRedisGCPAuthentication GCP specific configs for connecting to a

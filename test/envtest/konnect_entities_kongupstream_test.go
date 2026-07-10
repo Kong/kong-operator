@@ -53,7 +53,7 @@ func TestKongUpstream(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-	w := setupWatch[configurationv1alpha1.KongUpstreamList](t, ctx, cl, client.InNamespace(ns.Name))
+	w := SetupWatch[configurationv1alpha1.KongUpstreamList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("adding, patching and deleting KongUpstream", func(t *testing.T) {
 		const upstreamID = "upstream-12345"
@@ -86,11 +86,11 @@ func TestKongUpstream(t *testing.T) {
 		)
 
 		t.Log("Waiting for Upstream to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongUpstream) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongUpstream) bool {
 			return r.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(r)
 		}, "KongUpstream didn't get Programmed status condition or didn't get the correct (upstream-12345) Konnect ID assigned")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Upstream update")
 		sdk.UpstreamsSDK.EXPECT().
@@ -110,7 +110,7 @@ func TestKongUpstream(t *testing.T) {
 		upstreamToPatch.Spec.HashFallbackHeader = new("X-Hash-Header")
 		require.NoError(t, clientNamespaced.Patch(ctx, upstreamToPatch, client.MergeFrom(createdUpstream)))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Upstream deletion")
 		sdk.UpstreamsSDK.EXPECT().
@@ -125,7 +125,7 @@ func TestKongUpstream(t *testing.T) {
 		require.NoError(t, clientNamespaced.Delete(ctx, createdUpstream))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, createdUpstream, waitTime, tickTime)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -137,7 +137,7 @@ func TestKongUpstream(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		w := setupWatch[configurationv1alpha1.KongUpstreamList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongUpstreamList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Upstream creation")
 		sdk.UpstreamsSDK.EXPECT().
@@ -165,18 +165,18 @@ func TestKongUpstream(t *testing.T) {
 				s.Spec.Tags = append(s.Spec.Tags, "test-1")
 			},
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+		WatchFor(t, ctx, w, apiwatch.Modified, ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("KongUpstream didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for Service to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongUpstream didn't get Programmed and/or ControlPlaneRefValid status condition set to False")
 	})
 
@@ -184,7 +184,7 @@ func TestKongUpstream(t *testing.T) {
 		upstreamID := uuid.NewString()
 		upstreamName := uuid.NewString()[:8] + ".example.test"
 
-		w := setupWatch[configurationv1alpha1.KongUpstreamList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongUpstreamList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating upstreams")
 		sdk.UpstreamsSDK.EXPECT().GetUpstream(
@@ -212,7 +212,7 @@ func TestKongUpstream(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongUpstream %s/%s to set Konnect ID and programmed condition", ns.Name, createdUpstream.Name)
-		watchFor(t, ctx, w, apiwatch.Modified, func(u *configurationv1alpha1.KongUpstream) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(u *configurationv1alpha1.KongUpstream) bool {
 			return createdUpstream.Name == u.Name &&
 				u.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(u)
 		},
@@ -226,7 +226,7 @@ func TestKongUpstream(t *testing.T) {
 		require.NoError(t, clientNamespaced.Delete(ctx, createdUpstream))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, createdUpstream, waitTime, tickTime)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 
 	})
 }

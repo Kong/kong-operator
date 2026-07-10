@@ -4,6 +4,7 @@ package ops
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -36,240 +37,25 @@ func createAIGatewayModelProvider(
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	var id string
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderAnthropic != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderAnthropic.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
+	// The response is a (possibly multi-level) discriminated union. Its
+	// MarshalJSON already flattens every nesting level down to the real API
+	// JSON shape, so round-tripping through JSON is the simplest reliable way
+	// to read the "id" field regardless of how deep the union nesting goes.
+	respRootUnionJSON, err := json.Marshal(resp.AIGatewayModelProvider)
+	if err != nil {
+		return fmt.Errorf("failed extracting Konnect ID for %s: %w", obj.GetTypeName(), err)
 	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderAzure != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderAzure.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
+	var respRootUnionID struct {
+		ID string `json:"id"`
 	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderBedrock != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderBedrock.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
+	if err := json.Unmarshal(respRootUnionJSON, &respRootUnionID); err != nil {
+		return fmt.Errorf("failed extracting Konnect ID for %s: %w", obj.GetTypeName(), err)
 	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderCerebras != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderCerebras.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderCohere != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderCohere.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderDashscope != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderDashscope.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderDatabricks != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderDatabricks.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderDeepseek != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderDeepseek.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderGemini != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderGemini.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderHuggingface != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderHuggingface.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderKimi != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderKimi.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderLlama2 != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderLlama2.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderMistral != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderMistral.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderOllama != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderOllama.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderOpenai != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderOpenai.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderVercel != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderVercel.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderVllm != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderVllm.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderXai != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderXai.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" && resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderVertex != nil {
-		switch extractedID := any(resp.AIGatewayModelProvider.AIGatewayModelProviderAIGatewayModelProviderVertex.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
-	}
-	if id == "" {
+	if respRootUnionID.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	obj.SetKonnectID(id)
+	obj.SetKonnectID(respRootUnionID.ID)
 	return nil
 }
 

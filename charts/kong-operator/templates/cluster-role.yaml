@@ -472,6 +472,7 @@ rules:
       - aigatewayconsumergroups
       - aigatewayconsumers
       - aigatewayidentityproviders
+      - aigatewaymcpservers
       - aigatewaymodelproviders
       - aigatewaymodels
       - aigatewaypolicies
@@ -508,6 +509,8 @@ rules:
       - aigatewayconsumers/status
       - aigatewayidentityproviders/finalizers
       - aigatewayidentityproviders/status
+      - aigatewaymcpservers/finalizers
+      - aigatewaymcpservers/status
       - aigatewaymodelproviders/finalizers
       - aigatewaymodelproviders/status
       - aigatewaymodels/finalizers

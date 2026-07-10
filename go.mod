@@ -23,7 +23,7 @@ require (
 	github.com/gohugoio/hashstructure v0.6.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.21.7
-	github.com/google/pprof v0.0.0-20260604005048-7023385849c0
+	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v1.0.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -60,7 +60,7 @@ require (
 	k8s.io/apimachinery v0.36.2
 	k8s.io/cli-runtime v0.36.2
 	k8s.io/client-go v0.36.2
-	k8s.io/kube-openapi v0.0.0-20260624041617-8f3fa4921821
+	k8s.io/kube-openapi v0.0.0-20260706235625-cdb1db5517a0
 	k8s.io/kubectl v0.36.2
 	k8s.io/kubernetes v1.36.2
 	oras.land/oras-go/v2 v2.6.1

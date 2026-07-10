@@ -23,6 +23,8 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/conditions"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/create"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
@@ -36,7 +38,7 @@ type testcaseGatewayWithGatewayClassReconciliation struct {
 		cl client.Client,
 		gwc gatewayapi.GatewayClass,
 		gw gatewayapi.Gateway,
-		ns corev1.Namespace,
+		ns *corev1.Namespace,
 	)
 }
 
@@ -53,8 +55,8 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 	)
 
 	ctx := t.Context()
-	scheme := Scheme(t, WithGatewayAPI)
-	cfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
+	scheme := envtest.Scheme(t, envtest.WithGatewayAPI)
+	cfg, _ := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
 
 	testcases := []testcaseGatewayWithGatewayClassReconciliation{
 		{
@@ -86,7 +88,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				cl client.Client,
 				gwc gatewayapi.GatewayClass,
 				gw gatewayapi.Gateway,
-				ns corev1.Namespace,
+				ns *corev1.Namespace,
 			) {
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, cl.Create(ctx, &gwc))
@@ -156,7 +158,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				cl client.Client,
 				gwc gatewayapi.GatewayClass,
 				gw gatewayapi.Gateway,
-				ns corev1.Namespace,
+				ns *corev1.Namespace,
 			) {
 				t.Logf("verifying that the Gateway %s does not get scheduled by the controller due to missing its GatewayClass", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -246,7 +248,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				cl client.Client,
 				gwc gatewayapi.GatewayClass,
 				gw gatewayapi.Gateway,
-				ns corev1.Namespace,
+				ns *corev1.Namespace,
 			) {
 				t.Logf("verifying that the Gateway %s does not get scheduled by the controller due to missing its GatewayClass", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -349,8 +351,8 @@ func testGatewayWithGatewayClassReconciliation(
 			}
 			defer cancel()
 
-			cl := NewControllerClient(t, scheme, cfg)
-			ns := CreateNamespace(ctx, t, cl)
+			cl := envtest.NewControllerClient(t, scheme, cfg)
+			ns := create.Namespace(ctx, t, cl)
 			clNamespaced := client.NewNamespacedClient(cl, ns.Name)
 
 			svc := corev1.Service{
@@ -379,7 +381,7 @@ func testGatewayWithGatewayClassReconciliation(
 				DataplaneClient:   mocks.Dataplane{},
 				ReferenceIndexers: ctrlref.NewCacheIndexers(logr.Discard()),
 			}
-			StartReconciler(ctx, t, scheme, cfg, gwReconciler, WithWatchNamespace(ns.Name))
+			envtest.StartReconciler(ctx, t, scheme, cfg, gwReconciler, envtest.WithWatchNamespace(ns.Name))
 
 			t.Logf("deploying gateway %s using %s gateway class", tc.Gateway.Name, tc.GatewayClass.Name)
 			tc.Gateway.Namespace = ns.Name

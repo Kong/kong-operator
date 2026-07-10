@@ -66,7 +66,7 @@ func TestKongTarget(t *testing.T) {
 		)
 		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
-		w := setupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Target creation")
 		sdk.TargetsSDK.EXPECT().CreateTargetWithUpstream(
@@ -90,11 +90,11 @@ func TestKongTarget(t *testing.T) {
 		)
 
 		t.Log("Waiting for Target to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
 			return kt.GetKonnectID() == targetID && k8sutils.IsProgrammed(kt)
 		}, "KongTarget didn't get Programmed status condition or didn't get the correct (target-12345) Konnect ID assigned")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Target update")
 		sdk.TargetsSDK.EXPECT().UpsertTargetWithUpstream(
@@ -109,7 +109,7 @@ func TestKongTarget(t *testing.T) {
 		targetToPatch.Spec.Weight = 200
 		require.NoError(t, clientNamespaced.Patch(ctx, targetToPatch, client.MergeFrom(createdTarget)))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Target deletion")
 		sdk.TargetsSDK.EXPECT().DeleteTargetWithUpstream(
@@ -123,7 +123,7 @@ func TestKongTarget(t *testing.T) {
 		require.NoError(t, clientNamespaced.Delete(ctx, createdTarget))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, createdTarget, waitTime, tickTime)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
 	})
 
 	t.Run("Adopting a target with an upstream", func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestKongTarget(t *testing.T) {
 		)
 		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
-		w := setupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating targets")
 		sdk.TargetsSDK.EXPECT().GetTargetWithUpstream(
@@ -166,7 +166,7 @@ func TestKongTarget(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongTarget %s/%s to set Konnect ID and programmed condition", ns.Name, createdTarget.Name)
-		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
 			return createdTarget.Name == kt.Name &&
 				kt.GetKonnectID() == targetID && k8sutils.IsProgrammed(kt)
 		},
@@ -185,6 +185,6 @@ func TestKongTarget(t *testing.T) {
 		require.NoError(t, clientNamespaced.Delete(ctx, createdTarget))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, createdTarget, waitTime, tickTime)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
 	})
 }

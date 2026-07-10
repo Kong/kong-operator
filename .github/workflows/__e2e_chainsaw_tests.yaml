@@ -87,9 +87,15 @@ jobs:
     - name: DNS lookup for us.control-plane.konghq.tech
       run: dig us.control-plane.konghq.tech
 
+    - name: set kong ee version
+      run: |
+        echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=$(yq -ojson -r '.chainsaw.kong-ee' < test/test_dependencies.yaml )" >> $GITHUB_ENV
+
     - name: run chainsaw e2e tests
       id: chainsaw-tests
       env:
+        GATEWAY_IMAGE: ${{ env.TEST_KONG_IMAGE }}:${{ env.TEST_KONG_TAG }}
         KONNECT_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONNECT_SERVER_URL: us.api.konghq.tech
         TEST_ID: ${{ env.TEST_ID }}

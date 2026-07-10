@@ -1,6 +1,8 @@
 package envtest
 
 import (
+	"github.com/samber/lo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -8,7 +10,7 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-func conditionsAreSetWhenReferencedControlPlaneIsMissing[
+func ConditionsAreSetWhenReferencedControlPlaneIsMissing[
 	T interface {
 		client.Object
 		k8sutils.ConditionsAware
@@ -32,7 +34,7 @@ func conditionsAreSetWhenReferencedControlPlaneIsMissing[
 	}
 }
 
-func conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef[
+func ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef[
 	T interface {
 		client.Object
 		k8sutils.ConditionsAware
@@ -55,10 +57,29 @@ func conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef[
 	}
 }
 
-func objectHasConditionProgrammedSetToTrue[
+// ObjectHasConditionProgrammedSetToTrue returns a function that checks if the given
+// object has the "Programmed" condition set to true.
+func ObjectHasConditionProgrammedSetToTrue[
 	T k8sutils.ConditionsAware,
 ]() func(T) bool {
 	return func(obj T) bool {
 		return k8sutils.IsProgrammed(obj)
 	}
+}
+
+func ConditionsContainProgrammedFalse(conds []metav1.Condition) bool {
+	return conditionsContainProgrammed(conds, metav1.ConditionFalse)
+}
+
+func ConditionsContainProgrammedTrue(conds []metav1.Condition) bool {
+	return conditionsContainProgrammed(conds, metav1.ConditionTrue)
+}
+
+func conditionsContainProgrammed(conds []metav1.Condition, status metav1.ConditionStatus) bool {
+	return lo.ContainsBy(conds,
+		func(condition metav1.Condition) bool {
+			return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+				condition.Status == status
+		},
+	)
 }

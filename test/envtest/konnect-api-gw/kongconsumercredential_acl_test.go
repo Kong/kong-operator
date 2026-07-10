@@ -24,20 +24,22 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
-func TestKongConsumerCredential_APIKey(t *testing.T) {
+func TestKongConsumerCredential_ACL(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
 
 	// Setup up the envtest environment.
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
 		Scheme: scheme.Get(),
@@ -70,110 +72,110 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 	}
 	require.NoError(t, clientNamespaced.Status().Update(ctx, consumer))
 
-	kongCredentialAPIKey := deploy.KongCredentialAPIKey(t, ctx, clientNamespaced, consumer.Name)
-	keyID := uuid.NewString()
+	aclGroup := "acl-group1"
+	kongCredentialACL := deploy.KongCredentialACL(t, ctx, clientNamespaced, consumer.Name, aclGroup)
+	aclID := uuid.NewString()
 	tags := []string{
 		"k8s-generation:1",
 		"k8s-group:configuration.konghq.com",
-		"k8s-kind:KongCredentialAPIKey",
-		"k8s-name:" + kongCredentialAPIKey.Name,
+		"k8s-kind:KongCredentialACL",
+		"k8s-name:" + kongCredentialACL.Name,
 		"k8s-namespace:" + ns.Name,
-		"k8s-uid:" + string(kongCredentialAPIKey.GetUID()),
+		"k8s-uid:" + string(kongCredentialACL.GetUID()),
 		"k8s-version:v1alpha1",
 		"managed-by:kong-operator",
 	}
 
 	factory := sdkmocks.NewMockSDKFactory(t)
-	sdk := factory.SDK.KongCredentialsAPIKeySDK
-
+	sdk := factory.SDK.KongCredentialsACLSDK
 	sdk.EXPECT().
-		CreateKeyAuthWithConsumer(
+		CreateACLWithConsumer(
 			mock.Anything,
-			sdkkonnectops.CreateKeyAuthWithConsumerRequest{
+			sdkkonnectops.CreateACLWithConsumerRequest{
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
-				KeyAuthWithoutParents: &sdkkonnectcomp.KeyAuthWithoutParents{
-					Key:  new("key"),
-					Tags: tags,
+				ACLWithoutParents: sdkkonnectcomp.ACLWithoutParents{
+					Group: aclGroup,
+					Tags:  tags,
 				},
 			},
 		).
 		Return(
-			&sdkkonnectops.CreateKeyAuthWithConsumerResponse{
-				KeyAuth: &sdkkonnectcomp.KeyAuth{
-					ID: new(keyID),
+			&sdkkonnectops.CreateACLWithConsumerResponse{
+				ACL: &sdkkonnectcomp.ACL{
+					ID: new(aclID),
 				},
 			},
 			nil,
 		)
 	sdk.EXPECT().
-		UpsertKeyAuthWithConsumer(mock.Anything, mock.Anything, mock.Anything).Maybe().
+		UpsertACLWithConsumer(mock.Anything, mock.Anything, mock.Anything).Maybe().
 		Return(
-			&sdkkonnectops.UpsertKeyAuthWithConsumerResponse{
-				KeyAuth: &sdkkonnectcomp.KeyAuth{
-					ID: new(keyID),
+			&sdkkonnectops.UpsertACLWithConsumerResponse{
+				ACL: &sdkkonnectcomp.ACL{
+					ID: new(aclID),
 				},
 			},
 			nil,
 		)
 
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](konnectInfiniteSyncTime),
-			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialAPIKey](&metricsmocks.MockRecorder{}),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](consts.KonnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialACL](&metricsmocks.MockRecorder{}),
 		),
 	}
 
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	assert.EventuallyWithT(t,
-		assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialAPIKey, keyID),
-		waitTime, tickTime,
-		"KongCredentialAPIKey wasn't created",
+		envtest.AssertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialACL, aclID),
+		consts.WaitTime, consts.TickTime,
+		"KongCredentialACL wasn't created",
 	)
 
-	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
+	envtest.EventuallyAssertSDKExpectations(t, sdk, consts.WaitTime, consts.TickTime)
 
 	sdk.EXPECT().
-		DeleteKeyAuthWithConsumer(
+		DeleteACLWithConsumer(
 			mock.Anything,
-			sdkkonnectops.DeleteKeyAuthWithConsumerRequest{
+			sdkkonnectops.DeleteACLWithConsumerRequest{
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
-				KeyAuthID:                   keyID,
+				ACLID:                       aclID,
 			},
 		).
 		Return(
-			&sdkkonnectops.DeleteKeyAuthWithConsumerResponse{
+			&sdkkonnectops.DeleteACLWithConsumerResponse{
 				StatusCode: 200,
 			},
 			nil,
 		)
-
-	require.NoError(t, clientNamespaced.Delete(ctx, kongCredentialAPIKey))
+	require.NoError(t, clientNamespaced.Delete(ctx, kongCredentialACL))
 
 	assert.EventuallyWithT(t,
 		func(c *assert.CollectT) {
 			assert.True(c, apierrors.IsNotFound(
-				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongCredentialAPIKey), kongCredentialAPIKey),
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongCredentialACL), kongCredentialACL),
 			))
-		}, waitTime, tickTime,
-		"KongCredentialAPIKey wasn't deleted but it should have been",
+		}, consts.WaitTime, consts.TickTime,
+		"KongCredentialACL wasn't deleted but it should have been",
 	)
 
-	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
+	envtest.EventuallyAssertSDKExpectations(t, sdk, consts.WaitTime, consts.TickTime)
 
 	t.Run("conflict on creation should be handled successfully", func(t *testing.T) {
 		t.Log("Setting up SDK expectations on creation with conflict")
 		sdk.EXPECT().
-			CreateKeyAuthWithConsumer(
+			CreateACLWithConsumer(
 				mock.Anything,
-				mock.MatchedBy(func(r sdkkonnectops.CreateKeyAuthWithConsumerRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateACLWithConsumerRequest) bool {
 					return r.ControlPlaneID == cp.GetKonnectID() &&
 						r.ConsumerIDForNestedEntities == consumerID &&
-						r.KeyAuthWithoutParents.Tags != nil &&
+						r.ACLWithoutParents.Group == aclGroup &&
+						r.ACLWithoutParents.Tags != nil &&
 						slices.ContainsFunc(
-							r.KeyAuthWithoutParents.Tags,
+							r.ACLWithoutParents.Tags,
 							func(t string) bool {
 								return strings.HasPrefix(t, "k8s-uid:")
 							},
@@ -185,36 +187,37 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 				nil,
 				&sdkkonnecterrs.SDKError{
 					StatusCode: 400,
-					Body:       ErrBodyDataConstraintError,
+					Body:       consts.ErrBodyDataConstraintError,
 				},
 			)
 
 		sdk.EXPECT().
-			ListKeyAuth(
+			ListACL(
 				mock.Anything,
-				mock.MatchedBy(func(r sdkkonnectops.ListKeyAuthRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.ListACLRequest) bool {
 					return r.ControlPlaneID == cp.GetKonnectID() &&
 						r.Tags != nil && strings.HasPrefix(*r.Tags, "k8s-uid")
 				}),
 			).
-			Return(&sdkkonnectops.ListKeyAuthResponse{
-				Object: &sdkkonnectops.ListKeyAuthResponseBody{
-					Data: []sdkkonnectcomp.KeyAuth{
+			Return(&sdkkonnectops.ListACLResponse{
+				Object: &sdkkonnectops.ListACLResponseBody{
+					Data: []sdkkonnectcomp.ACL{
 						{
-							ID: new(keyID),
+							ID: new(aclID),
 						},
 					},
 				},
 			}, nil)
 
-		w := setupWatch[configurationv1alpha1.KongCredentialAPIKeyList](t, ctx, cl, client.InNamespace(ns.Name))
-		created := deploy.KongCredentialAPIKey(t, ctx, clientNamespaced, consumer.Name)
+		w := envtest.SetupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, cl, client.InNamespace(ns.Name))
+		created := deploy.KongCredentialACL(t, ctx, clientNamespaced, consumer.Name, aclGroup)
 
-		t.Log("Waiting for KongCredentialAPIKey to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongCredentialAPIKey) bool {
+		t.Log("Waiting for KongCredentialACL to be programmed")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongCredentialACL) bool {
 			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
-		}, "KongCredentialAPIKey's Programmed condition should be true eventually")
+		}, "KongCredentialACL's Programmed condition should be true eventually")
 
-		eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
+		t.Log("Checking SDK KongCredentialACL operations")
+		envtest.EventuallyAssertSDKExpectations(t, sdk, consts.WaitTime, consts.TickTime)
 	})
 }

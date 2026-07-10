@@ -15,6 +15,8 @@ import (
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 )
 
@@ -24,8 +26,8 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 	scheme := managerscheme.Get()
 	ctx := t.Context()
 
-	cfg, gwNs := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme)
+	cfg, gwNs := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{
 		Client:                mgr.GetClient(),
@@ -33,7 +35,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 		Namespace:             gwNs.Name,
 		DefaultDataPlaneImage: "kong:latest",
 	}
-	StartReconcilers(ctx, t, mgr, logs, r)
+	envtest.StartReconcilers(ctx, t, mgr, logs, r)
 
 	c := mgr.GetClient()
 
@@ -57,7 +59,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 	t.Cleanup(func() { _ = c.Delete(ctx, gc) })
 
 	t.Log("patching GatewayClass status to Accepted=True")
-	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), waitTime, tickTime)
+	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), consts.WaitTime, consts.TickTime)
 
 	// Create a Gateway that uses the GatewayClass.
 	gw := deploy.Gateway(t, ctx, c,
@@ -82,7 +84,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 				}
 			}
 			return false
-		}, waitTime, tickTime, "derived KonnectGatewayControlPlane grant should not exist without user grant")
+		}, consts.WaitTime, consts.TickTime, "derived KonnectGatewayControlPlane grant should not exist without user grant")
 	})
 
 	t.Run("derived grant is created after user creates KongReferenceGrant", func(t *testing.T) {
@@ -119,7 +121,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 				}
 			}
 			return false
-		}, waitTime, tickTime, "derived KonnectGatewayControlPlane grant should be created")
+		}, consts.WaitTime, consts.TickTime, "derived KonnectGatewayControlPlane grant should be created")
 
 		t.Run("derived grant is removed after user deletes KongReferenceGrant", func(t *testing.T) {
 			t.Log("deleting user KongReferenceGrant")
@@ -138,7 +140,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 					}
 				}
 				return true
-			}, waitTime, tickTime, "derived grant should be cleaned up after user grant is deleted")
+			}, consts.WaitTime, consts.TickTime, "derived grant should be cleaned up after user grant is deleted")
 		})
 	})
 
@@ -176,7 +178,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 				}
 			}
 			return false
-		}, waitTime, tickTime, "derived grant should be created when user grant allows any auth name")
+		}, consts.WaitTime, consts.TickTime, "derived grant should be created when user grant allows any auth name")
 
 		t.Log("cleaning up user grant for next sub-test")
 		require.NoError(t, c.Delete(ctx, userGrant))
@@ -192,7 +194,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 				}
 			}
 			return true
-		}, waitTime, tickTime, "derived grant should be cleaned up")
+		}, consts.WaitTime, consts.TickTime, "derived grant should be cleaned up")
 	})
 }
 
@@ -218,8 +220,8 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 	scheme := managerscheme.Get()
 	ctx := t.Context()
 
-	cfg, gwNs := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme)
+	cfg, gwNs := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{
 		Client:                mgr.GetClient(),
@@ -227,7 +229,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 		Namespace:             gwNs.Name,
 		DefaultDataPlaneImage: "kong:latest",
 	}
-	StartReconcilers(ctx, t, mgr, logs, r)
+	envtest.StartReconcilers(ctx, t, mgr, logs, r)
 
 	c := mgr.GetClient()
 	authNs := deploy.Namespace(t, ctx, c)
@@ -246,7 +248,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 	t.Cleanup(func() { _ = c.Delete(ctx, gc) })
 
 	t.Log("patching GatewayClass status to Accepted=True")
-	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), waitTime, tickTime)
+	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), consts.WaitTime, consts.TickTime)
 
 	// Create user KongReferenceGrant first.
 	userGrant := deploy.KongReferenceGrant(t, ctx, c,
@@ -287,7 +289,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 			}
 		}
 		return false
-	}, waitTime, tickTime, "derived grant should exist")
+	}, consts.WaitTime, consts.TickTime, "derived grant should exist")
 
 	t.Log("deleting Gateway to trigger cleanup")
 	require.NoError(t, c.Delete(ctx, gw))
@@ -308,6 +310,6 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 			}
 		}
 		return true
-	}, waitTime, tickTime, "derived grant should be cleaned up after Gateway deletion")
+	}, consts.WaitTime, consts.TickTime, "derived grant should be cleaned up after Gateway deletion")
 
 }

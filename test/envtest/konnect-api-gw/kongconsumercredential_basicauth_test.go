@@ -24,20 +24,22 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
-func TestKongConsumerCredential_HMAC(t *testing.T) {
+func TestKongConsumerCredential_BasicAuth(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
 
 	// Setup up the envtest environment.
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
 		Scheme: scheme.Get(),
@@ -70,108 +72,112 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 	}
 	require.NoError(t, clientNamespaced.Status().Update(ctx, consumer))
 
-	kongCredentialHMAC := deploy.KongCredentialHMAC(t, ctx, clientNamespaced, consumer.Name)
-	hmacID := uuid.NewString()
+	password := "password"
+	username := "username"
+	kongCredentialBasicAuth := deploy.KongCredentialBasicAuth(t, ctx, clientNamespaced, consumer.Name, username, password)
+	basicAuthID := uuid.NewString()
 	tags := []string{
 		"k8s-generation:1",
 		"k8s-group:configuration.konghq.com",
-		"k8s-kind:KongCredentialHMAC",
-		"k8s-name:" + kongCredentialHMAC.Name,
+		"k8s-kind:KongCredentialBasicAuth",
+		"k8s-name:" + kongCredentialBasicAuth.Name,
 		"k8s-namespace:" + ns.Name,
-		"k8s-uid:" + string(kongCredentialHMAC.GetUID()),
+		"k8s-uid:" + string(kongCredentialBasicAuth.GetUID()),
 		"k8s-version:v1alpha1",
 		"managed-by:kong-operator",
 	}
 
 	factory := sdkmocks.NewMockSDKFactory(t)
-	sdk := factory.SDK.KongCredentialsHMACSDK
+	sdk := factory.SDK.KongCredentialsBasicAuthSDK
+
 	sdk.EXPECT().
-		CreateHmacAuthWithConsumer(
+		CreateBasicAuthWithConsumer(
 			mock.Anything,
-			sdkkonnectops.CreateHmacAuthWithConsumerRequest{
+			sdkkonnectops.CreateBasicAuthWithConsumerRequest{
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
-				HMACAuthWithoutParents: sdkkonnectcomp.HMACAuthWithoutParents{
-					Username: "username",
+				BasicAuthWithoutParents: sdkkonnectcomp.BasicAuthWithoutParents{
+					Password: password,
+					Username: username,
 					Tags:     tags,
 				},
 			},
 		).
 		Return(
-			&sdkkonnectops.CreateHmacAuthWithConsumerResponse{
-				HMACAuth: &sdkkonnectcomp.HMACAuth{
-					ID: new(hmacID),
+			&sdkkonnectops.CreateBasicAuthWithConsumerResponse{
+				BasicAuth: &sdkkonnectcomp.BasicAuth{
+					ID: new(basicAuthID),
 				},
 			},
 			nil,
 		)
 	sdk.EXPECT().
-		UpsertHmacAuthWithConsumer(mock.Anything, mock.Anything, mock.Anything).Maybe().
+		UpsertBasicAuthWithConsumer(mock.Anything, mock.Anything, mock.Anything).Maybe().
 		Return(
-			&sdkkonnectops.UpsertHmacAuthWithConsumerResponse{
-				HMACAuth: &sdkkonnectcomp.HMACAuth{
-					ID: new(hmacID),
+			&sdkkonnectops.UpsertBasicAuthWithConsumerResponse{
+				BasicAuth: &sdkkonnectcomp.BasicAuth{
+					ID: new(basicAuthID),
 				},
 			},
 			nil,
 		)
 
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
-			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialHMAC](&metricsmocks.MockRecorder{}),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](consts.KonnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialBasicAuth](&metricsmocks.MockRecorder{}),
 		),
 	}
 
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	assert.EventuallyWithT(t,
-		assertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialHMAC, hmacID),
-		waitTime, tickTime,
-		"KongCredentialHMAC wasn't created",
+		envtest.AssertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kongCredentialBasicAuth, basicAuthID),
+		consts.WaitTime, consts.TickTime,
+		"KongCredentialBasicAuth wasn't created",
 	)
 
-	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
+	envtest.EventuallyAssertSDKExpectations(t, sdk, consts.WaitTime, consts.TickTime)
 
 	sdk.EXPECT().
-		DeleteHmacAuthWithConsumer(
+		DeleteBasicAuthWithConsumer(
 			mock.Anything,
-			sdkkonnectops.DeleteHmacAuthWithConsumerRequest{
+			sdkkonnectops.DeleteBasicAuthWithConsumerRequest{
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
-				HMACAuthID:                  hmacID,
+				BasicAuthID:                 basicAuthID,
 			},
 		).
 		Return(
-			&sdkkonnectops.DeleteHmacAuthWithConsumerResponse{
+			&sdkkonnectops.DeleteBasicAuthWithConsumerResponse{
 				StatusCode: 200,
 			},
 			nil,
 		)
-	require.NoError(t, clientNamespaced.Delete(ctx, kongCredentialHMAC))
+	require.NoError(t, clientNamespaced.Delete(ctx, kongCredentialBasicAuth))
 
 	assert.EventuallyWithT(t,
 		func(c *assert.CollectT) {
 			assert.True(c, apierrors.IsNotFound(
-				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongCredentialHMAC), kongCredentialHMAC),
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongCredentialBasicAuth), kongCredentialBasicAuth),
 			))
-		}, waitTime, tickTime,
-		"KongCredentialHMAC wasn't deleted but it should have been",
+		}, consts.WaitTime, consts.TickTime,
+		"KongCredentialBasicAuth wasn't deleted but it should have been",
 	)
 
-	eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
+	envtest.EventuallyAssertSDKExpectations(t, factory.SDK.KongCredentialsBasicAuthSDK, consts.WaitTime, consts.TickTime)
 
 	t.Run("conflict on creation should be handled successfully", func(t *testing.T) {
 		t.Log("Setting up SDK expectations on creation with conflict")
 		sdk.EXPECT().
-			CreateHmacAuthWithConsumer(
+			CreateBasicAuthWithConsumer(
 				mock.Anything,
-				mock.MatchedBy(func(r sdkkonnectops.CreateHmacAuthWithConsumerRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateBasicAuthWithConsumerRequest) bool {
 					return r.ControlPlaneID == cp.GetKonnectID() &&
 						r.ConsumerIDForNestedEntities == consumerID &&
-						r.HMACAuthWithoutParents.Tags != nil &&
+						r.BasicAuthWithoutParents.Tags != nil &&
 						slices.ContainsFunc(
-							r.HMACAuthWithoutParents.Tags,
+							r.BasicAuthWithoutParents.Tags,
 							func(t string) bool {
 								return strings.HasPrefix(t, "k8s-uid:")
 							},
@@ -183,36 +189,36 @@ func TestKongConsumerCredential_HMAC(t *testing.T) {
 				nil,
 				&sdkkonnecterrs.SDKError{
 					StatusCode: 400,
-					Body:       ErrBodyDataConstraintError,
+					Body:       consts.ErrBodyDataConstraintError,
 				},
 			)
 
 		sdk.EXPECT().
-			ListHmacAuth(
+			ListBasicAuth(
 				mock.Anything,
-				mock.MatchedBy(func(r sdkkonnectops.ListHmacAuthRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.ListBasicAuthRequest) bool {
 					return r.ControlPlaneID == cp.GetKonnectID() &&
 						r.Tags != nil && strings.HasPrefix(*r.Tags, "k8s-uid")
 				}),
 			).
-			Return(&sdkkonnectops.ListHmacAuthResponse{
-				Object: &sdkkonnectops.ListHmacAuthResponseBody{
-					Data: []sdkkonnectcomp.HMACAuth{
+			Return(&sdkkonnectops.ListBasicAuthResponse{
+				Object: &sdkkonnectops.ListBasicAuthResponseBody{
+					Data: []sdkkonnectcomp.BasicAuth{
 						{
-							ID: new(hmacID),
+							ID: new(basicAuthID),
 						},
 					},
 				},
 			}, nil)
 
-		w := setupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
-		created := deploy.KongCredentialHMAC(t, ctx, clientNamespaced, consumer.Name)
+		w := envtest.SetupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, cl, client.InNamespace(ns.Name))
+		created := deploy.KongCredentialBasicAuth(t, ctx, clientNamespaced, consumer.Name, "username", "password")
 
-		t.Log("Waiting for KongCredentialHMAC to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongCredentialHMAC) bool {
+		t.Log("Waiting for KongCredentialBasicAuth to be programmed")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongCredentialBasicAuth) bool {
 			return k.GetName() == created.GetName() && k8sutils.IsProgrammed(k)
-		}, "KongCredentialHMAC's Programmed condition should be true eventually")
+		}, "KongCredentialBasicAuth's Programmed condition should be true eventually")
 
-		eventuallyAssertSDKExpectations(t, sdk, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk, consts.WaitTime, consts.TickTime)
 	})
 }

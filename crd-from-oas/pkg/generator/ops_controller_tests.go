@@ -250,6 +250,17 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				apiAlias,
 			),
 		}
+	case "AIGatewayMCPServer":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayMCPServerConfig",
+			TypeConstName:   "AIGatewayMCPServerConfigTypeConversionOnly",
+			VariantField:    "ConversionOnly",
+			VariantTypeName: "AIGatewayMCPServerConversionOnly",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: %[1]s.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}}`,
+				apiAlias,
+			),
+		}
 	}
 
 	rootUnionTypeName := goFieldName(entityName + "Config")

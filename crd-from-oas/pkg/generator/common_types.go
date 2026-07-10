@@ -310,7 +310,7 @@ func camelToSnakeCase(s string) string {
 // camelCase (CRD K8s wire format) to snake_case (Konnect SDK wire format).
 func isSDKDiscriminatorKey(key string) bool {
 	switch key {
-	case "type", "op", "kind", "mode":
+	case "type", "op", "kind", "mode", "aclAttributeType":
 		return true
 	default:
 		return false

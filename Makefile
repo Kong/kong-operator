@@ -10,6 +10,7 @@ TAG ?= $(shell git describe --tags)
 VERSION ?= $(shell cat VERSION)
 GO_MODULE_MAJOR_VERSION := $(shell go list -m -f '{{.Path}}' | awk -F'/v' '{print (NF>1) ? $$NF : "1"}')
 GO_METADATA_PACKAGE = $(REPO)/v$(GO_MODULE_MAJOR_VERSION)/modules/manager/metadata
+TEST_DEPENDENCIES_FILE = $(PROJECT_DIR)/test/test_dependencies.yaml
 
 ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
@@ -574,7 +575,7 @@ CONFORMANCE_TEST_TIMEOUT ?= "20m"
 E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
-TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < ./test/test_dependencies.yaml)
+TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < $(TEST_DEPENDENCIES_FILE))
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 
 .PHONY: tune.inotify
@@ -614,10 +615,11 @@ test.unit:
 test.unit.pretty:
 	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
 
-ENVTEST_TEST_PATHS := ./test/envtest/...
+ENVTEST_TEST_PATHS ?= ./test/envtest/...
 ENVTEST_TIMEOUT ?= 30m
-PKG_LIST=./controller/...,./internal/...,./pkg/...,./modules/...
+PKG_LIST = ./controller/...,./internal/...,./pkg/...,./modules/...
 TEST_DIR ?= $(PROJECT_DIR)
+ENVTEST_GOTESTSUM_FORMAT ?= standard-verbose
 
 .PHONY: _test.envtest
 _test.envtest: gotestsum setup-envtest
@@ -625,7 +627,7 @@ _test.envtest: gotestsum setup-envtest
 	cd $(TEST_DIR) && \
 	KUBECONFIG=$(KUBECONFIG) \
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
-	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	GOTESTSUM_FORMAT=$(ENVTEST_GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- \
 		$(GOTESTFLAGS) \
 		-race \
@@ -637,13 +639,17 @@ _test.envtest: gotestsum setup-envtest
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(ENVTEST_TEST_PATHS)
 
+# To run the envtest suite with pretty format use:
+# GOTESTSUM_FORMAT=testname make test.envtest
+
+.PHONY: test.envtest.base
+test.envtest.base:
+	ENVTEST_TEST_PATHS=./test/envtest/ \
+		$(MAKE) _test.envtest
+
 .PHONY: test.envtest
 test.envtest:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose
-
-.PHONY: test.envtest.pretty
-test.envtest.pretty:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname
+	$(MAKE) _test.envtest
 
 .PHONY: test.crds-validation
 test.crds-validation:
@@ -833,7 +839,9 @@ CHAINSAW_TEST_DIR ?= ./test/e2e/chainsaw
 CHAINSAW_CONFIG ?= ./test/e2e/chainsaw/.chainsaw.yaml
 .PHONY: test.e2e.chainsaw
 test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
-	GRPCURL_BIN=$(GRPCURL) $(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
+	GATEWAY_IMAGE=$(shell $(YQ) -ojson -r '.chainsaw.kong-ee' < $(TEST_DEPENDENCIES_FILE))
+	GRPCURL_BIN=$(GRPCURL) \
+		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
 GO_TEST_PARALLEL := $(if $(GO_TEST_PARALLEL),$(GO_TEST_PARALLEL),$(NCPU))

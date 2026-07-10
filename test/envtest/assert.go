@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func assertCollectObjectExistsAndHasKonnectID(
+func AssertCollectObjectExistsAndHasKonnectID(
 	t *testing.T,
 	ctx context.Context,
 	clientNamespaced client.Client,
@@ -50,7 +50,7 @@ func (a MockTestingTAdapter) Logf(format string, args ...any) {
 	a.t.Logf(format, args...)
 }
 
-// eventuallyAssertSDKExpectations waits for the SDK to have all its expectations met.
+// EventuallyAssertSDKExpectations waits for the SDK to have all its expectations met.
 // This is useful to ensure that all expected calls to the SDK have been made up
 // to a certain point in the test.
 //
@@ -59,7 +59,7 @@ func (a MockTestingTAdapter) Logf(format string, args ...any) {
 //
 // This function uses an adapter for assert.CollectT to allow it to be used with
 // AssertExpectations, which requires a mock.TestingT interface.
-func eventuallyAssertSDKExpectations(
+func EventuallyAssertSDKExpectations(
 	t *testing.T,
 	sdk interface {
 		AssertExpectations(mock.TestingT) bool
@@ -91,8 +91,8 @@ func eventuallyAssertSDKExpectations(
 	)
 }
 
-// assertsAnd returns a function that performs a logical AND of the given asserts.
-func assertsAnd[
+// AssertsAnd returns a function that performs a logical AND of the given asserts.
+func AssertsAnd[
 	T client.Object,
 ](
 	asserts ...func(T) bool,
@@ -108,7 +108,8 @@ func assertsAnd[
 	}
 }
 
-func assertNot[
+// AssertNot returns a function that negates the given assert.
+func AssertNot[
 	T client.Object,
 ](
 	assert func(T) bool,

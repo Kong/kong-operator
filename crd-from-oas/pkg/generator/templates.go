@@ -2008,6 +2008,9 @@ package ops
 
 import (
 	"context"
+{{- if .NeedsJSONImport}}
+	"encoding/json"
+{{- end}}
 	"fmt"
 {{- if .NeedsStringsImport}}
 	"strings"
@@ -2091,26 +2094,25 @@ func create{{.Entity}}(
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	var id string
-{{- range .RespRootUnion.VariantFieldNames}}
-	if id == "" && resp.{{$.RespField}}.{{.}} != nil {
-		switch extractedID := any(resp.{{$.RespField}}.{{.}}.GetID()).(type) {
-		case string:
-			if extractedID != "" {
-				id = extractedID
-			}
-		case *string:
-			if extractedID != nil && *extractedID != "" {
-				id = *extractedID
-			}
-		}
+	// The response is a (possibly multi-level) discriminated union. Its
+	// MarshalJSON already flattens every nesting level down to the real API
+	// JSON shape, so round-tripping through JSON is the simplest reliable way
+	// to read the "id" field regardless of how deep the union nesting goes.
+	respRootUnionJSON, err := json.Marshal(resp.{{.RespField}})
+	if err != nil {
+		return fmt.Errorf("failed extracting Konnect ID for %s: %w", obj.GetTypeName(), err)
 	}
-{{- end}}
-	if id == "" {
+	var respRootUnionID struct {
+		ID string ` + "`json:\"id\"`" + `
+	}
+	if err := json.Unmarshal(respRootUnionJSON, &respRootUnionID); err != nil {
+		return fmt.Errorf("failed extracting Konnect ID for %s: %w", obj.GetTypeName(), err)
+	}
+	if respRootUnionID.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	obj.SetKonnectID(id)
+	obj.SetKonnectID(respRootUnionID.ID)
 {{- else if .RespIDIsPointer}}
 	if resp == nil || resp.{{.RespField}} == nil || resp.{{.RespField}}.ID == nil || *resp.{{.RespField}}.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
