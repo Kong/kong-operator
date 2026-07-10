@@ -36,9 +36,14 @@ func programmedConsumer(name, namespace, konnectName, konnectID string) *konnect
 	return c
 }
 
-func programmedPolicy(name, namespace, konnectID, gatewayID string) *konnectv1alpha1.AIGatewayPolicy {
+func programmedPolicy(name, namespace, konnectID, gatewayID, specName string) *konnectv1alpha1.AIGatewayPolicy {
 	p := &konnectv1alpha1.AIGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec: konnectv1alpha1.AIGatewayPolicySpec{
+			APISpec: konnectv1alpha1.AIGatewayPolicyAPISpec{
+				Name: konnectv1alpha1.AIGatewayEntityIdentifier(specName),
+			},
+		},
 	}
 	p.SetKonnectID(konnectID)
 	p.SetGatewayID(gatewayID)
@@ -136,7 +141,7 @@ func TestToCreateAIGatewayAgentRequest_ACLRefNotProgrammed(t *testing.T) {
 func TestToCreateAIGatewayAgentRequest_AllowsExplicitSameNamespacePolicyRef(t *testing.T) {
 	t.Parallel()
 
-	policy := programmedPolicy("policy-1", "ns", "kid-policy-1", "gw-1")
+	policy := programmedPolicy("policy-1", "ns", "kid-policy-1", "gw-1", "konnect-policy-name")
 	agent := testAgentWithPolicyRef("ns", konnectv1alpha1.AIGatewayPolicyRef{
 		Namespace: "ns",
 		Name:      "policy-1",
@@ -147,13 +152,13 @@ func TestToCreateAIGatewayAgentRequest_AllowsExplicitSameNamespacePolicyRef(t *t
 
 	req, err := agent.ToCreateAIGatewayAgentRequest(t.Context(), cl)
 	require.NoError(t, err)
-	require.Equal(t, []string{"kid-policy-1"}, req.Policies)
+	require.Equal(t, []string{"konnect-policy-name"}, req.Policies)
 }
 
 func TestToCreateAIGatewayAgentRequest_RejectsCrossNamespacePolicyRef(t *testing.T) {
 	t.Parallel()
 
-	policy := programmedPolicy("policy-1", "other-ns", "kid-policy-1", "gw-1")
+	policy := programmedPolicy("policy-1", "other-ns", "kid-policy-1", "gw-1", "konnect-policy-name")
 	agent := testAgentWithPolicyRef("ns", konnectv1alpha1.AIGatewayPolicyRef{
 		Namespace: "other-ns",
 		Name:      "policy-1",
@@ -170,7 +175,7 @@ func TestToCreateAIGatewayAgentRequest_RejectsCrossNamespacePolicyRef(t *testing
 func TestToCreateAIGatewayAgentRequest_RejectsPolicyRefFromDifferentGateway(t *testing.T) {
 	t.Parallel()
 
-	policy := programmedPolicy("policy-1", "ns", "kid-policy-1", "gw-2")
+	policy := programmedPolicy("policy-1", "ns", "kid-policy-1", "gw-2", "konnect-policy-name")
 	agent := testAgentWithPolicyRef("ns", konnectv1alpha1.AIGatewayPolicyRef{
 		Name: "policy-1",
 	})
