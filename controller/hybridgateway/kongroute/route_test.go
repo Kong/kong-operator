@@ -115,7 +115,7 @@ func TestRoutesForRule(t *testing.T) {
 		hostnames       []string
 		expectError     bool
 		expectRoutes    int
-		expectProtocols []sdkkonnectcomp.RouteJSONProtocols
+		expectProtocols []sdkkonnectcomp.Protocols
 	}{
 		{
 			name:         "no sectionName - both protocols from all listeners",
@@ -123,9 +123,9 @@ func TestRoutesForRule(t *testing.T) {
 			serviceName:  "test-service",
 			hostnames:    []string{"example.com"},
 			expectRoutes: 2,
-			expectProtocols: []sdkkonnectcomp.RouteJSONProtocols{
-				sdkkonnectcomp.RouteJSONProtocols("http"),
-				sdkkonnectcomp.RouteJSONProtocols("https"),
+			expectProtocols: []sdkkonnectcomp.Protocols{
+				sdkkonnectcomp.Protocols("http"),
+				sdkkonnectcomp.Protocols("https"),
 			},
 		},
 		{
@@ -138,8 +138,8 @@ func TestRoutesForRule(t *testing.T) {
 			serviceName:  "test-service",
 			hostnames:    []string{"example.com"},
 			expectRoutes: 2,
-			expectProtocols: []sdkkonnectcomp.RouteJSONProtocols{
-				sdkkonnectcomp.RouteJSONProtocols("http"),
+			expectProtocols: []sdkkonnectcomp.Protocols{
+				sdkkonnectcomp.Protocols("http"),
 			},
 		},
 		{
@@ -152,8 +152,8 @@ func TestRoutesForRule(t *testing.T) {
 			serviceName:  "test-service",
 			hostnames:    []string{"example.com"},
 			expectRoutes: 2,
-			expectProtocols: []sdkkonnectcomp.RouteJSONProtocols{
-				sdkkonnectcomp.RouteJSONProtocols("https"),
+			expectProtocols: []sdkkonnectcomp.Protocols{
+				sdkkonnectcomp.Protocols("https"),
 			},
 		},
 	}
@@ -421,9 +421,9 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 	require.NotNil(t, results[0].Spec.RegexPriority)
 	assert.Equal(t, routebuilder.KongHTTPRoutePathRegexPriorityOffset+9, *results[0].Spec.RegexPriority)
 	assert.ElementsMatch(t,
-		[]sdkkonnectcomp.RouteJSONProtocols{
-			sdkkonnectcomp.RouteJSONProtocols("http"),
-			sdkkonnectcomp.RouteJSONProtocols("https"),
+		[]sdkkonnectcomp.Protocols{
+			sdkkonnectcomp.Protocols("http"),
+			sdkkonnectcomp.Protocols("https"),
 		},
 		results[0].Spec.Protocols,
 	)

@@ -35,9 +35,9 @@ func TestExtractAsUnstructured(t *testing.T) {
 							Hosts:   []string{"example.com", "another.com"},
 							Methods: []string{"GET", "POST"},
 							Paths:   []string{"/foo", "/bar"},
-							Protocols: []sdkkonnectcomp.RouteJSONProtocols{
-								sdkkonnectcomp.RouteJSONProtocols("http"),
-								sdkkonnectcomp.RouteJSONProtocols("https"),
+							Protocols: []sdkkonnectcomp.Protocols{
+								sdkkonnectcomp.Protocols("http"),
+								sdkkonnectcomp.Protocols("https"),
 							},
 							StripPath:     new(true),
 							PreserveHost:  new(false),

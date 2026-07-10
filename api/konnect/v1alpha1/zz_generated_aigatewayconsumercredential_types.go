@@ -94,6 +94,7 @@ type AIGatewayConsumerCredentialAPISpec struct {
 
 	// A user-defined unique identifier for this credential, used as a stable
 	// human-readable reference.
+	// This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1

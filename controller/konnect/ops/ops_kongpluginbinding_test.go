@@ -152,7 +152,7 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
 				InstanceName: new("my-plugin"),
-				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+				Protocols:    []sdkkonnectcomp.PluginProtocols{"http", "https"},
 			},
 		},
 		{
@@ -197,7 +197,7 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
 				InstanceName: new("my-plugin"),
-				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+				Protocols:    []sdkkonnectcomp.PluginProtocols{"http", "https"},
 				Service: &sdkkonnectcomp.PluginService{
 					ID: new("service-id-123"),
 				},
@@ -229,7 +229,7 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
 				InstanceName: new("my-plugin"),
-				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+				Protocols:    []sdkkonnectcomp.PluginProtocols{"http", "https"},
 				Route: &sdkkonnectcomp.PluginRoute{
 					ID: new("route-id-123"),
 				},
@@ -261,7 +261,7 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
 				InstanceName: new("my-plugin"),
-				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+				Protocols:    []sdkkonnectcomp.PluginProtocols{"http", "https"},
 				Consumer: &sdkkonnectcomp.PluginConsumer{
 					ID: new("consumer-id-123"),
 				},
@@ -296,7 +296,7 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 				Enabled:      new(true),
 				Tags:         []string{"tag1", "tag2"},
 				InstanceName: new("my-plugin"),
-				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+				Protocols:    []sdkkonnectcomp.PluginProtocols{"http", "https"},
 				Service: &sdkkonnectcomp.PluginService{
 					ID: new("service-id-123"),
 				},

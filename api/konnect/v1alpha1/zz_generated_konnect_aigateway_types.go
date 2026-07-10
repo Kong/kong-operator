@@ -80,7 +80,7 @@ type KonnectAIGatewayAPISpec struct {
 	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 
-	// The name for this AI Gateway.
+	// The name for this AI Gateway. This value is immutable after creation.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1

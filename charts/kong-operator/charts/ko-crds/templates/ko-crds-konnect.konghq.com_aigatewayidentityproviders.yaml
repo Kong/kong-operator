@@ -217,6 +217,7 @@ spec:
                         description: |-
                           A user-defined unique identifier for this identity provider instance, used
                           as a stable human-readable reference.
+                          This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
                         pattern: ^[A-Za-z0-9._-]{1,256}$
@@ -319,7 +320,7 @@ spec:
                                 rule: 'self.type == ''inline'' ? has(self.value) :
                                   has(self.secretRef)'
                             type: array
-                          consumerClaim:
+                          consumerClaims:
                             description: |-
                               An array containing an array of string paths representing the location of
                               the claim in a nested object.
@@ -390,6 +391,7 @@ spec:
                         description: |-
                           A user-defined unique identifier for this identity provider instance, used
                           as a stable human-readable reference.
+                          This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
                         pattern: ^[A-Za-z0-9._-]{1,256}$
