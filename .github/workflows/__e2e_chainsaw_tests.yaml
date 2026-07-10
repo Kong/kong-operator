@@ -32,6 +32,7 @@ jobs:
         - gateway
         - hybridgateway
         - konnect
+        - aigateway
         # TODO: fix eventgateway suite and re-enable it in the matrix once they are stable again.
         # TODO: https://github.com/Kong/kong-operator/issues/4757
         # - eventgateway
@@ -82,10 +83,14 @@ jobs:
           --set image.tag=${{ env.TAG }} \
           --set env.enable_controller_konnect=true \
           --set env.enable_controller_kegdataplane=true \
+          --set env.enable_controller_aigatewaydataplane=true \
           --wait
 
     - name: DNS lookup for us.control-plane.konghq.tech
       run: dig us.control-plane.konghq.tech
+
+    - name: Apply chainsaw suite prerequisites
+      run: make test.e2e.chainsaw.prereq DIRNAME=${{ matrix.suite }}
 
     - name: set kong ee version
       run: |

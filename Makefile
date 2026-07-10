@@ -838,6 +838,15 @@ test.e2e:
 
 CHAINSAW_TEST_DIR ?= ./test/e2e/chainsaw
 CHAINSAW_CONFIG ?= ./test/e2e/chainsaw/.chainsaw.yaml
+CHAINSAW_FIXTURES_DIR ?= ./test/e2e/chainsaw/fixtures
+
+# DIRNAME is passed to the dispatcher via the environment (never substituted into the
+# recipe), so its value can never be parsed as a shell command.
+.PHONY: test.e2e.chainsaw.prereq
+test.e2e.chainsaw.prereq: export DIRNAME := $(DIRNAME)
+test.e2e.chainsaw.prereq: ## Apply prerequisite fixtures for a chainsaw suite (usage: DIRNAME=<suite>).
+	bash $(CHAINSAW_FIXTURES_DIR)/run-prereq.sh
+
 .PHONY: test.e2e.chainsaw
 test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
 	GATEWAY_IMAGE=$(shell $(YQ) -ojson -r '.chainsaw.kong-ee' < $(TEST_DEPENDENCIES_FILE))
