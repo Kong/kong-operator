@@ -1694,6 +1694,7 @@ func Namespace(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
+	opts ...ObjOption,
 ) *corev1.Namespace {
 	t.Helper()
 

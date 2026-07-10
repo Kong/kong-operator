@@ -15,6 +15,7 @@ import (
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/test/envtest/create"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
@@ -27,7 +28,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
-	gw, _ := deployGateway(ctx, t, ctrlClient)
+	gw, _ := create.Gateway(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
@@ -125,7 +126,7 @@ func Test_WatchNamespaces(t *testing.T) {
 	scheme := Scheme(t, WithGatewayAPI)
 	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
-	gw, _ := deployGateway(ctx, t, ctrlClient)
+	gw, _ := create.Gateway(ctx, t, ctrlClient)
 	hidden := CreateNamespace(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
