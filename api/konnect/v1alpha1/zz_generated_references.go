@@ -110,7 +110,7 @@ type AIGatewayACLRef struct {
 }
 
 // AIGatewayPolicyRef references an AIGatewayPolicy in the cluster. The referenced
-// object's Konnect id is used where the Konnect API accepts it.
+// object's Konnect name is used where the Konnect API accepts it.
 type AIGatewayPolicyRef struct {
 	// Kind is the kind of the referenced object.
 	//

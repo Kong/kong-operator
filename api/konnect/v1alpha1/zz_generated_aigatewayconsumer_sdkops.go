@@ -37,7 +37,7 @@ func (s *AIGatewayConsumerAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 
 
 // resolveAIGatewayConsumerPolicies resolves the CR references in spec.apiSpec.policies
-// to Konnect IDs.
+// to Konnect names.
 func resolveAIGatewayConsumerPolicies(ctx context.Context, cl client.Client, obj *AIGatewayConsumer) ([]string, error) {
 	resolved := make([]string, 0, len(obj.Spec.APISpec.Policies))
 	var errs []error
@@ -67,12 +67,11 @@ func resolveAIGatewayConsumerPolicies(ctx context.Context, cl client.Client, obj
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
 		}
-		id := referenced.GetKonnectID()
-		if id == "" {
+		if referenced.GetKonnectID() == "" {
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, id)
+		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
