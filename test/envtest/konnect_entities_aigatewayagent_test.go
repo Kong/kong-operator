@@ -176,7 +176,7 @@ func TestAIGatewayAgent(t *testing.T) {
 		}
 		require.NoError(t, clientNamespaced.Create(ctx, consumer))
 
-		w := setupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating AIGatewayAgent that references the consumer via an ACL allow rule")
 		agent := deploy.AIGatewayAgent(t, ctx, clientNamespaced, gateway, func(o client.Object) {
@@ -197,7 +197,7 @@ func TestAIGatewayAgent(t *testing.T) {
 		})
 
 		t.Log("Waiting for KonnectReferencesResolved=False with ReferenceNotProgrammed reason")
-		watchFor(t, ctx, w, apiwatch.Modified,
+		WatchFor(t, ctx, w, apiwatch.Modified,
 			func(a *konnectv1alpha1.AIGatewayAgent) bool {
 				if a.GetName() != agent.GetName() {
 					return false
@@ -233,7 +233,7 @@ func TestAIGatewayAgent(t *testing.T) {
 		}, waitTime, tickTime)
 
 		t.Log("Waiting for the watch to re-enqueue the agent and flip KonnectReferencesResolved to True")
-		watchFor(t, ctx, w, apiwatch.Modified,
+		WatchFor(t, ctx, w, apiwatch.Modified,
 			func(a *konnectv1alpha1.AIGatewayAgent) bool {
 				if a.GetName() != agent.GetName() {
 					return false
@@ -246,7 +246,7 @@ func TestAIGatewayAgent(t *testing.T) {
 			"AIGatewayAgent KonnectReferencesResolved didn't flip to True after the consumer was programmed",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, waitTime, tickTime)
 	})
 
 	t.Run("should create AIGatewayAgent successfully on conflict when agent with matching uid label exists", func(t *testing.T) {
