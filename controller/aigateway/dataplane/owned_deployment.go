@@ -48,7 +48,7 @@ func (r *Reconciler) ensureDeployment(
 	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	certSecretName string,
 ) error {
-	image := resolveImage(aigwdp, consts.DefaultAIGatewayImage)
+	image := resolveImage(aigwdp, consts.DefaultAIGatewayDataPlaneImage)
 	desired, err := buildDeployment(r.TypeConverter, aigwdp, aigatewaycp, image, certSecretName)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for AIGatewayDataPlane %s/%s: %w",
@@ -82,11 +82,11 @@ func (r *Reconciler) ensureDeployment(
 //  3. defaultImage
 func resolveImage(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, defaultImage string) string {
 	if aigwdp.Spec.Deployment != nil && aigwdp.Spec.Deployment.PodTemplateSpec != nil {
-		if c := k8sutils.GetPodContainerByName(&aigwdp.Spec.Deployment.PodTemplateSpec.Spec, consts.AIGatewayContainerName); c != nil && c.Image != "" {
+		if c := k8sutils.GetPodContainerByName(&aigwdp.Spec.Deployment.PodTemplateSpec.Spec, consts.AIGatewayDataPlaneContainerName); c != nil && c.Image != "" {
 			return c.Image
 		}
 	}
-	if relatedImage := os.Getenv(consts.RelatedImageAIGatewayEnvVar); relatedImage != "" {
+	if relatedImage := os.Getenv(consts.RelatedImageAIGatewayDataPlaneEnvVar); relatedImage != "" {
 		return relatedImage
 	}
 	return defaultImage
@@ -159,7 +159,7 @@ func generateBaseDeployment(
 	certSecretName string,
 ) (*appsv1.Deployment, error) {
 	labels := map[string]string{
-		"app.kubernetes.io/name":                      consts.AIGatewayContainerName,
+		"app.kubernetes.io/name":                      consts.AIGatewayDataPlaneContainerName,
 		consts.GatewayOperatorManagedByLabel:          consts.AIGatewayDataPlaneManagedByLabelValue,
 		consts.GatewayOperatorManagedByNameLabel:      aigwdp.Name,
 		consts.GatewayOperatorManagedByNamespaceLabel: aigwdp.Namespace,
@@ -178,7 +178,7 @@ func generateBaseDeployment(
 	const tmpVolumeName = "tmp"
 
 	container := corev1.Container{
-		Name:  consts.AIGatewayContainerName,
+		Name:  consts.AIGatewayDataPlaneContainerName,
 		Image: image,
 		Env:   envVars,
 		SecurityContext: &corev1.SecurityContext{

@@ -94,6 +94,7 @@
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}docker{{/if}}",
       "fileMatch": [
         "^pkg/consts/dataplane\\.go$",
+        "^pkg/consts/aigateway\\.go$",
         "^internal/versions/controlplane\\.go$",
         "^test/e2e/helm_install_upgrade_test\\.go$"
       ],

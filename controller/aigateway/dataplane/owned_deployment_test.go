@@ -70,7 +70,7 @@ func Test_resolveImage(t *testing.T) {
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
-								{Name: consts.AIGatewayContainerName, Image: image},
+								{Name: consts.AIGatewayDataPlaneContainerName, Image: image},
 							},
 						},
 					},
@@ -131,7 +131,7 @@ func Test_resolveImage(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.envImage != "" {
-				t.Setenv(consts.RelatedImageAIGatewayEnvVar, tc.envImage)
+				t.Setenv(consts.RelatedImageAIGatewayDataPlaneEnvVar, tc.envImage)
 			}
 			assert.Equal(t, tc.wantImage, resolveImage(tc.aigwdp, defaultImg))
 		})
@@ -282,7 +282,7 @@ func Test_buildDeployment(t *testing.T) {
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
-									{Name: consts.AIGatewayContainerName, Image: "custom/aigw:overlay"},
+									{Name: consts.AIGatewayDataPlaneContainerName, Image: "custom/aigw:overlay"},
 								},
 							},
 						},
