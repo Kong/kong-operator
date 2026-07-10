@@ -407,6 +407,7 @@ func RefsAtAIGatewayModelAPIAccessAclsAllowAllow(obj *AIGatewayModel) []AIGatewa
 func resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx context.Context, cl client.Client, obj *AIGatewayModel) ([]string, error) {
 	refs := RefsAtAIGatewayModelAPIAccessAclsAllowAllow(obj)
 	resolved := make([]string, 0, len(refs))
+	var errs []error
 	for _, ref := range refs {
 		ns := ref.Namespace
 		if ns == "" {
@@ -417,7 +418,8 @@ func resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx context.Context, cl client
 			kind = "AIGatewayConsumer"
 		}
 		if ns != obj.GetNamespace() {
-			return nil, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
 		}
 		var resolvedValue, konnectID string
 		switch kind {
@@ -425,35 +427,46 @@ func resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx context.Context, cl client
 			var referenced AIGatewayConsumer
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 				if apierrors.IsNotFound(err) {
-					return nil, ReferenceNotFoundError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, Err: err}
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, Err: err})
+					continue
 				}
-				return nil, fmt.Errorf("failed to get referenced AIGatewayConsumer %s/%s: %w", ns, ref.Name, err)
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumer %s/%s: %w", ns, ref.Name, err))
+				continue
 			}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
-				return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
 			}
 			resolvedValue = string(referenced.Spec.APISpec.Name)
 		case "AIGatewayConsumerGroup":
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 				if apierrors.IsNotFound(err) {
-					return nil, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err}
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
 				}
-				return nil, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err)
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
 			}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
-				return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
 			}
 			resolvedValue = string(referenced.Spec.APISpec.Name)
 		default:
-			return nil, fmt.Errorf("unsupported reference kind %q at spec.apiSpec.api.access.acls.allow.allow", kind)
+			errs = append(errs, fmt.Errorf("unsupported reference kind %q at spec.apiSpec.api.access.acls.allow.allow", kind))
+			continue
 		}
 		if konnectID == "" {
-			return nil, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name}
+			errs = append(errs, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name})
+			continue
 		}
 		resolved = append(resolved, resolvedValue)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
 	}
 	return resolved, nil
 }
@@ -480,6 +493,7 @@ func RefsAtAIGatewayModelAPIAccessAclsDenyDeny(obj *AIGatewayModel) []AIGatewayA
 func resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx context.Context, cl client.Client, obj *AIGatewayModel) ([]string, error) {
 	refs := RefsAtAIGatewayModelAPIAccessAclsDenyDeny(obj)
 	resolved := make([]string, 0, len(refs))
+	var errs []error
 	for _, ref := range refs {
 		ns := ref.Namespace
 		if ns == "" {
@@ -490,7 +504,8 @@ func resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx context.Context, cl client.C
 			kind = "AIGatewayConsumer"
 		}
 		if ns != obj.GetNamespace() {
-			return nil, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
 		}
 		var resolvedValue, konnectID string
 		switch kind {
@@ -498,35 +513,46 @@ func resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx context.Context, cl client.C
 			var referenced AIGatewayConsumer
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 				if apierrors.IsNotFound(err) {
-					return nil, ReferenceNotFoundError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, Err: err}
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, Err: err})
+					continue
 				}
-				return nil, fmt.Errorf("failed to get referenced AIGatewayConsumer %s/%s: %w", ns, ref.Name, err)
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumer %s/%s: %w", ns, ref.Name, err))
+				continue
 			}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
-				return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumer", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
 			}
 			resolvedValue = string(referenced.Spec.APISpec.Name)
 		case "AIGatewayConsumerGroup":
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 				if apierrors.IsNotFound(err) {
-					return nil, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err}
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
 				}
-				return nil, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err)
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
 			}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
-				return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
 			}
 			resolvedValue = string(referenced.Spec.APISpec.Name)
 		default:
-			return nil, fmt.Errorf("unsupported reference kind %q at spec.apiSpec.api.access.acls.deny.deny", kind)
+			errs = append(errs, fmt.Errorf("unsupported reference kind %q at spec.apiSpec.api.access.acls.deny.deny", kind))
+			continue
 		}
 		if konnectID == "" {
-			return nil, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name}
+			errs = append(errs, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name})
+			continue
 		}
 		resolved = append(resolved, resolvedValue)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
 	}
 	return resolved, nil
 }

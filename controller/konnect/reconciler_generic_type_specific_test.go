@@ -293,6 +293,65 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
 	})
 
+	t.Run("joined same-category reference errors keep specific reason", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		ent := agent.DeepCopy()
+		resolverErr := errors.Join(
+			konnectv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "policy-1"},
+			konnectv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "policy-2"},
+		)
+
+		updated, isProblem, err := handleKonnectReferences(
+			t.Context(),
+			cl,
+			ent,
+			failingKonnectReferenceResolver{err: resolverErr},
+		)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason)
+		assert.Contains(t, cond.Message, "policy-1")
+		assert.Contains(t, cond.Message, "policy-2")
+	})
+
+	t.Run("joined mixed-category reference errors set generic failure reason", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		ent := agent.DeepCopy()
+		resolverErr := errors.Join(
+			konnectv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "missing-policy"},
+			konnectv1alpha1.ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "pending-policy"},
+			konnectv1alpha1.ReferenceCrossNamespaceError{
+				Kind:              "AIGatewayPolicy",
+				Namespace:         "other-ns",
+				Name:              "invalid-policy",
+				ReferrerNamespace: "ns",
+			},
+		)
+
+		updated, isProblem, err := handleKonnectReferences(
+			t.Context(),
+			cl,
+			ent,
+			failingKonnectReferenceResolver{err: resolverErr},
+		)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonResolutionFailed, cond.Reason)
+		assert.Contains(t, cond.Message, "missing-policy")
+		assert.Contains(t, cond.Message, "pending-policy")
+		assert.Contains(t, cond.Message, "invalid-policy")
+	})
+
 	t.Run("programmed referenced CR sets condition True", func(t *testing.T) {
 		policy := &konnectv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "missing-policy", Namespace: "ns"}}
 		policy.SetKonnectID("kid-123")

@@ -19,6 +19,9 @@ const (
 	// KonnectReferencesResolvedReasonInvalid indicates a reference is invalid
 	// and cannot be resolved by waiting for the referenced CR to be programmed.
 	KonnectReferencesResolvedReasonInvalid = "ReferenceInvalid"
+	// KonnectReferencesResolvedReasonResolutionFailed indicates references failed
+	// for multiple reasons. The condition message contains per-reference details.
+	KonnectReferencesResolvedReasonResolutionFailed = "ReferenceResolutionFailed"
 )
 
 // ReferenceNotFoundError is returned when a referenced CR does not exist.

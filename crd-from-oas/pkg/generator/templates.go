@@ -836,9 +836,11 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 {{- if .NestedRef}}
 	refs := {{.RefsExpr}}
 	resolved := make([]string, 0, len(refs))
+	var errs []error
 	for _, ref := range refs {
 {{- else}}
 	resolved := make([]string, 0, len(obj.Spec.APISpec.{{.GoFieldName}}))
+	var errs []error
 	for _, ref := range obj.Spec.APISpec.{{.GoFieldName}} {
 {{- end}}
 		ns := ref.Namespace
@@ -850,7 +852,8 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			kind = "{{.DefaultKind}}"
 		}
 		if ns != obj.GetNamespace() {
-			return nil, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
 		}
 {{- if .MultiKind}}
 		var resolvedValue, konnectID string
@@ -860,13 +863,16 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			var referenced {{.}}
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 				if apierrors.IsNotFound(err) {
-					return nil, ReferenceNotFoundError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, Err: err}
+					errs = append(errs, ReferenceNotFoundError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, Err: err})
+					continue
 				}
-				return nil, fmt.Errorf("failed to get referenced {{.}} %s/%s: %w", ns, ref.Name, err)
+				errs = append(errs, fmt.Errorf("failed to get referenced {{.}} %s/%s: %w", ns, ref.Name, err))
+				continue
 			}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
-				return nil, ReferenceDifferentGatewayError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
 			}
 {{- if $ref.ResolvesToName}}
 			resolvedValue = string(referenced.Spec.APISpec.Name)
@@ -875,36 +881,46 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 {{- end}}
 {{- end}}
 		default:
-			return nil, fmt.Errorf("unsupported reference kind %q at {{$ref.Path}}", kind)
+			errs = append(errs, fmt.Errorf("unsupported reference kind %q at {{$ref.Path}}", kind))
+			continue
 		}
 		if konnectID == "" {
-			return nil, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name}
+			errs = append(errs, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name})
+			continue
 		}
 		resolved = append(resolved, resolvedValue)
 {{- else}}
 		var referenced {{.DefaultKind}}
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
-				return nil, ReferenceNotFoundError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, Err: err}
+				errs = append(errs, ReferenceNotFoundError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, Err: err})
+				continue
 			}
-			return nil, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, ref.Name, err)
+			errs = append(errs, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, ref.Name, err))
+			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
-			return nil, ReferenceDifferentGatewayError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
 		}
 {{- if .ResolvesToName}}
 		if referenced.GetKonnectID() == "" {
-			return nil, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name}
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
 		}
 		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
 {{- else}}
 		id := referenced.GetKonnectID()
 		if id == "" {
-			return nil, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name}
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
 		}
 		resolved = append(resolved, id)
 {{- end}}
 {{- end}}
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
 	}
 	return resolved, nil
 }
@@ -2977,6 +2993,9 @@ const (
 	// KonnectReferencesResolvedReasonInvalid indicates a reference is invalid
 	// and cannot be resolved by waiting for the referenced CR to be programmed.
 	KonnectReferencesResolvedReasonInvalid = "ReferenceInvalid"
+	// KonnectReferencesResolvedReasonResolutionFailed indicates references failed
+	// for multiple reasons. The condition message contains per-reference details.
+	KonnectReferencesResolvedReasonResolutionFailed = "ReferenceResolutionFailed"
 )
 
 // ReferenceNotFoundError is returned when a referenced CR does not exist.

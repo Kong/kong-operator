@@ -25,10 +25,39 @@ spec:
     authRef:
       name: konnect-api-auth-1
 ---
+kind: AIGatewayConsumer
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-model-consumer
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: model-dev-consumer
+    displayName: Dev Team Consumer
+    type: api-key
+---
+kind: AIGatewayConsumerGroup
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-model-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: model-dev-users
+    displayName: Dev Users Group
+---
 kind: AIGatewayModel
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: ai-gw-model-1
+  name: sample-ai-gw-model
   namespace: default
 spec:
   aiGatewayRef:
@@ -54,9 +83,9 @@ spec:
           allow:
             allow:
               - kind: AIGatewayConsumer
-                name: ai-gw-consumer-1
+                name: ai-gw-model-consumer
               - kind: AIGatewayConsumerGroup
-                name: ai-gw-consumer-group-1
+                name: ai-gw-model-consumer-group
       config:
         model:
           alias: gpt-4o-mini

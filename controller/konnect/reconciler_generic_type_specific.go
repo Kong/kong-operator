@@ -183,13 +183,54 @@ func handleKonnectReferences[
 }
 
 func konnectReferenceResolutionReason(err error) string {
-	if hasInvalidKonnectReferenceResolutionError(err) {
+	reasons := konnectReferenceResolutionReasons(err)
+	if len(reasons) > 1 {
+		return konnectv1alpha1.KonnectReferencesResolvedReasonResolutionFailed
+	}
+	if reasons[referenceResolutionReasonInvalid] {
 		return konnectv1alpha1.KonnectReferencesResolvedReasonInvalid
 	}
-	if _, ok := errors.AsType[konnectv1alpha1.ReferenceNotFoundError](err); ok {
+	if reasons[referenceResolutionReasonNotFound] {
 		return konnectv1alpha1.KonnectReferencesResolvedReasonNotFound
 	}
 	return konnectv1alpha1.KonnectReferencesResolvedReasonNotProgrammed
+}
+
+type referenceResolutionReasonCategory string
+
+const (
+	referenceResolutionReasonInvalid       referenceResolutionReasonCategory = "invalid"
+	referenceResolutionReasonNotFound      referenceResolutionReasonCategory = "not-found"
+	referenceResolutionReasonNotProgrammed referenceResolutionReasonCategory = "not-programmed"
+)
+
+func konnectReferenceResolutionReasons(err error) map[referenceResolutionReasonCategory]bool {
+	reasons := map[referenceResolutionReasonCategory]bool{}
+	collectKonnectReferenceResolutionReasons(err, reasons)
+	return reasons
+}
+
+func collectKonnectReferenceResolutionReasons(err error, reasons map[referenceResolutionReasonCategory]bool) {
+	if err == nil {
+		return
+	}
+	if joined, ok := errors.AsType[interface {
+		error
+		Unwrap() []error
+	}](err); ok {
+		for _, e := range joined.Unwrap() {
+			collectKonnectReferenceResolutionReasons(e, reasons)
+		}
+		return
+	}
+	switch {
+	case hasInvalidKonnectReferenceResolutionError(err):
+		reasons[referenceResolutionReasonInvalid] = true
+	case hasNotFoundKonnectReferenceResolutionError(err):
+		reasons[referenceResolutionReasonNotFound] = true
+	case hasNotProgrammedKonnectReferenceResolutionError(err):
+		reasons[referenceResolutionReasonNotProgrammed] = true
+	}
 }
 
 func isExpectedKonnectReferenceResolutionError(err error) bool {
@@ -230,4 +271,14 @@ func hasInvalidKonnectReferenceResolutionError(err error) bool {
 		return true
 	}
 	return false
+}
+
+func hasNotFoundKonnectReferenceResolutionError(err error) bool {
+	_, ok := errors.AsType[konnectv1alpha1.ReferenceNotFoundError](err)
+	return ok
+}
+
+func hasNotProgrammedKonnectReferenceResolutionError(err error) bool {
+	_, ok := errors.AsType[konnectv1alpha1.ReferenceNotProgrammedError](err)
+	return ok
 }

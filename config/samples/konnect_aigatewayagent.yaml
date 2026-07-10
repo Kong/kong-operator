@@ -23,10 +23,10 @@ spec:
     authRef:
       name: konnect-api-auth-1
 ---
-kind: AIGatewayAgent
+kind: AIGatewayPolicy
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: my-ai-agent
+  name: aigw-agent-policy-prompt-decorator
   namespace: default
 spec:
   aiGatewayRef:
@@ -34,33 +34,82 @@ spec:
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
-    name: my-ai-agent
+    name: aigw-agent-policy-prompt-decorator
+    displayName: AI Gateway Policy Prompt Decorator
+    type: ai-prompt-decorator
+    enabled: Enabled
+    global: Disabled
+    config:
+      llm_format: openai
+      prompts:
+        prepend:
+          - content: In short words
+            role: user
+---
+kind: AIGatewayConsumer
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-agent-consumer
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: agent-dev-consumer
+    displayName: Dev Team Consumer
+    type: api-key
+---
+kind: AIGatewayConsumerGroup
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-agent-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: agent-dev-users
+    displayName: Dev Users Group
+---
+kind: AIGatewayAgent
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: sample-ai-agent
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: sample-ai-agent
     displayName: My AI Agent
     type: http
     enabled: Enabled
     # References to AIGatewayPolicy CRs (by metadata.name) applied to this agent.
-    # See config/samples/konnect_aigatewaypolicy.yaml for the referenced policy.
     policies:
-      - name: aigw-policy-prompt-decorator
+      - name: aigw-agent-policy-prompt-decorator
     # Access control: allow-list of AIGatewayConsumer / AIGatewayConsumerGroup
     # CRs (referenced by metadata.name). The operator resolves each reference to
-    # the referenced CR's Konnect name at reconcile time. See
-    # config/samples/konnect_aigatewayconsumer.yaml and
-    # config/samples/konnect_aigatewayconsumergroup.yaml.
+    # the referenced CR's Konnect name at reconcile time.
     access:
       acls:
         type: allow
         allow:
           allow:
             - kind: AIGatewayConsumer
-              name: ai-gw-consumer-1
+              name: ai-gw-agent-consumer
             - kind: AIGatewayConsumerGroup
-              name: ai-gw-consumer-group-1
+              name: ai-gw-agent-consumer-group
     config:
       url: https://my-upstream-agent.example.com
       route:
         paths:
-          - /my-ai-agent
+          - /sample-ai-agent
         methods:
           - GET
           - POST

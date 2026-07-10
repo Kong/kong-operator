@@ -40,6 +40,7 @@ func (s *AIGatewayConsumerAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 // to Konnect IDs.
 func resolveAIGatewayConsumerPolicies(ctx context.Context, cl client.Client, obj *AIGatewayConsumer) ([]string, error) {
 	resolved := make([]string, 0, len(obj.Spec.APISpec.Policies))
+	var errs []error
 	for _, ref := range obj.Spec.APISpec.Policies {
 		ns := ref.Namespace
 		if ns == "" {
@@ -50,23 +51,31 @@ func resolveAIGatewayConsumerPolicies(ctx context.Context, cl client.Client, obj
 			kind = "AIGatewayPolicy"
 		}
 		if ns != obj.GetNamespace() {
-			return nil, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
 		}
 		var referenced AIGatewayPolicy
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
-				return nil, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err}
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})
+				continue
 			}
-			return nil, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err)
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
-			return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
 		}
 		id := referenced.GetKonnectID()
 		if id == "" {
-			return nil, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name}
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
+			continue
 		}
 		resolved = append(resolved, id)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
 	}
 	return resolved, nil
 }

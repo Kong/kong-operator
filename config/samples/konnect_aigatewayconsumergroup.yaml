@@ -26,7 +26,7 @@ spec:
 kind: AIGatewayPolicy
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: aigw-policy-prompt-decorator
+  name: aigw-consumer-group-policy-prompt-decorator
   namespace: default
 spec:
   aiGatewayRef:
@@ -34,7 +34,7 @@ spec:
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
-    name: konnect-prompt-decorator-policy
+    name: aigw-consumer-group-policy-prompt-decorator
     displayName: AI Gateway Policy Prompt Decorator
     type: ai-prompt-decorator
     enabled: Enabled
@@ -51,7 +51,7 @@ spec:
 kind: AIGatewayConsumerGroup
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: ai-gw-consumer-group-1
+  name: sample-ai-gw-consumer-group
   namespace: default
 spec:
   aiGatewayRef:
@@ -59,12 +59,11 @@ spec:
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
-    name: dev-users
+    name: sample-dev-users
     displayName: Dev Users Group
     # References to AIGatewayPolicy CRs (by metadata.name) applied to this
-    # consumer group. See config/samples/konnect_aigatewaypolicy.yaml for the
-    # referenced policy.
+    # consumer group.
     policies:
-      - name: aigw-policy-prompt-decorator
+      - name: aigw-consumer-group-policy-prompt-decorator
     labels:
       tier: development

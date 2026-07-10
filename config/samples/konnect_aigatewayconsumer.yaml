@@ -23,10 +23,10 @@ spec:
     authRef:
       name: konnect-api-auth
 ---
-kind: AIGatewayConsumer
+kind: AIGatewayPolicy
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: ai-gw-consumer-1
+  name: aigw-consumer-policy-prompt-decorator
   namespace: default
 spec:
   aiGatewayRef:
@@ -34,13 +34,35 @@ spec:
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
-    name: dev-consumer
+    name: aigw-consumer-policy-prompt-decorator
+    displayName: AI Gateway Policy Prompt Decorator
+    type: ai-prompt-decorator
+    enabled: Enabled
+    global: Disabled
+    config:
+      llm_format: openai
+      prompts:
+        prepend:
+          - content: In short words
+            role: user
+---
+kind: AIGatewayConsumer
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: sample-ai-gw-consumer
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: sample-dev-consumer
     displayName: Dev Team Consumer
     # References to AIGatewayPolicy CRs (by metadata.name) applied to this
-    # consumer group. See config/samples/konnect_aigatewaypolicy.yaml for the
-    # referenced policy.
+    # consumer.
     policies:
-      - name: aigw-policy-prompt-decorator
+      - name: aigw-consumer-policy-prompt-decorator
     type: api-key
     labels:
       team: platform-dev

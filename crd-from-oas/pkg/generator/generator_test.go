@@ -5461,18 +5461,21 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveReferences(t *testing.T) {
 	// Resolver function.
 	require.Contains(t, content, "func resolveAIGatewayAgentPolicies(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error)")
 	require.Contains(t, content, "resolved := make([]string, 0, len(obj.Spec.APISpec.Policies))")
+	require.Contains(t, content, "var errs []error")
 	require.Contains(t, content, "for _, ref := range obj.Spec.APISpec.Policies {")
 	require.Contains(t, content, `if ns != obj.GetNamespace() {`)
-	require.Contains(t, content, `return nil, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}`)
+	require.Contains(t, content, `errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})`)
+	require.Contains(t, content, `continue`)
 	// Top-level references resolve via direct field access, not a generated
 	// accessor; nested reference accessors are only needed for deeper paths.
 	require.NotContains(t, content, "func RefsAt")
 	require.Contains(t, content, "var referenced AIGatewayPolicy")
 	require.Contains(t, content, `if apierrors.IsNotFound(err) {`)
-	require.Contains(t, content, `return nil, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err}`)
-	require.Contains(t, content, `return nil, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err)`)
-	require.Contains(t, content, `return nil, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()}`)
-	require.Contains(t, content, `return nil, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name}`)
+	require.Contains(t, content, `errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})`)
+	require.Contains(t, content, `errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))`)
+	require.Contains(t, content, `errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})`)
+	require.Contains(t, content, `errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})`)
+	require.Contains(t, content, "if err := errors.Join(errs...); err != nil {")
 
 	// Client-needing builders with payload injection.
 	require.Contains(t, content, "func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl client.Client)")
@@ -6145,6 +6148,7 @@ func TestGenerateReferencesFile(t *testing.T) {
 	require.Contains(t, out, `Namespace string `+"`"+`json:"namespace,omitempty"`+"`")
 	require.Contains(t, out, "KonnectReferencesResolvedConditionType")
 	require.Contains(t, out, "KonnectReferencesResolvedReasonInvalid")
+	require.Contains(t, out, "KonnectReferencesResolvedReasonResolutionFailed")
 	require.Contains(t, out, "type ReferenceNotFoundError struct")
 	require.Contains(t, out, "type ReferenceNotProgrammedError struct")
 	require.Contains(t, out, "type ReferenceCrossNamespaceError struct")
