@@ -174,6 +174,7 @@ type AIGatewayPolicyConfigDataSource struct {
 	// Required when type is 'inline'.
 	//
 	// +optional
+	// +kubebuilder:validation:Type=object
 	Value *apiextensionsv1.JSON `json:"value,omitempty"`
 
 	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.

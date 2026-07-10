@@ -168,6 +168,7 @@ spec:
                         description: |-
                           Value contains the sensitive data provided inline.
                           Required when type is 'inline'.
+                        type: object
                         x-kubernetes-preserve-unknown-fields: true
                     required:
                     - type

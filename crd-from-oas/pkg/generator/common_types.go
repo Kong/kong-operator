@@ -155,10 +155,13 @@ type SensitiveDataSource struct {
 // file (not common_types.go) for secret reference leaves whose OAS type isn't
 // string. It shares the SensitiveDataSourceType enum and SensitiveDataSecretRef
 // type with the common SensitiveDataSource, differing only in the Value field's
-// type. Rendered via [fmt.Sprintf] with (name, valueGoType, name) — plain string
-// substitution rather than text/template, since callers build this per-field
-// (potentially many times per file) and shouldn't have to thread template
-// execution errors through generateSchemaTypes/generateCRDType.
+// type. Rendered via [fmt.Sprintf] with (name, valueGoType, valueTypeMarker) —
+// plain string substitution rather than text/template, since callers build
+// this per-field (potentially many times per file) and shouldn't have to
+// thread template execution errors through generateSchemaTypes/generateCRDType.
+// valueTypeMarker is an optional extra kubebuilder marker line (with trailing
+// newline and indentation, or "") inserted just above the Value field — see
+// sensitiveValueTypeMarker.
 const dedicatedSensitiveDataSourceStructType = `// %[1]s holds a sensitive value that can be provided either inline or
 // sourced from a Kubernetes Secret.
 //
@@ -174,7 +177,7 @@ type %[1]s struct {
 	// Required when type is 'inline'.
 	//
 	// +optional
-	Value *%[2]s ` + "`" + `json:"value,omitempty"` + "`" + `
+%[3]s	Value *%[2]s ` + "`" + `json:"value,omitempty"` + "`" + `
 
 	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
 	// Required when type is 'secretRef'.

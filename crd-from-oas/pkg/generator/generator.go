@@ -2121,9 +2121,25 @@ func (g *Generator) writeDedicatedSensitiveTypesFromLeaves(buf *strings.Builder,
 	}
 	sort.Strings(names)
 	for _, name := range names {
-		fmt.Fprintf(buf, dedicatedSensitiveDataSourceStructType, name, valueGoTypeByName[name])
+		valueGoType := valueGoTypeByName[name]
+		fmt.Fprintf(buf, dedicatedSensitiveDataSourceStructType, name, valueGoType, sensitiveValueTypeMarker(valueGoType))
 		buf.WriteString("\n\n")
 	}
+}
+
+// sensitiveValueTypeMarker returns the extra kubebuilder marker needed on a
+// dedicated SensitiveDataSource-like type's Value field for CEL's has() to
+// type-check it. apiextensionsv1.JSON has no inherent schema type (only
+// x-kubernetes-preserve-unknown-fields), which breaks the type's
+// "has(self.value)" XValidation rule; forcing type: object (accurate, since
+// goType() only produces apiextensionsv1.JSON for OAS type: object fields)
+// fixes it. Every other ValueGoType already carries its own concrete schema
+// type and needs nothing extra.
+func sensitiveValueTypeMarker(valueGoType string) string {
+	if valueGoType == "apiextensionsv1.JSON" {
+		return "\t// +kubebuilder:validation:Type=object\n"
+	}
+	return ""
 }
 
 // writeNestedInlineTypes emits Go type definitions for any property that is an
