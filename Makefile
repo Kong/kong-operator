@@ -615,10 +615,11 @@ test.unit:
 test.unit.pretty:
 	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
 
-ENVTEST_TEST_PATHS := ./test/envtest/...
+ENVTEST_TEST_PATHS ?= ./test/envtest/...
 ENVTEST_TIMEOUT ?= 30m
-PKG_LIST=./controller/...,./internal/...,./pkg/...,./modules/...
+PKG_LIST = ./controller/...,./internal/...,./pkg/...,./modules/...
 TEST_DIR ?= $(PROJECT_DIR)
+ENVTEST_GOTESTSUM_FORMAT ?= standard-verbose
 
 .PHONY: _test.envtest
 _test.envtest: gotestsum setup-envtest
@@ -626,7 +627,7 @@ _test.envtest: gotestsum setup-envtest
 	cd $(TEST_DIR) && \
 	KUBECONFIG=$(KUBECONFIG) \
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
-	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	GOTESTSUM_FORMAT=$(ENVTEST_GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- \
 		$(GOTESTFLAGS) \
 		-race \
@@ -638,13 +639,17 @@ _test.envtest: gotestsum setup-envtest
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(ENVTEST_TEST_PATHS)
 
+# To run the envtest suite with pretty format use:
+# GOTESTSUM_FORMAT=testname make test.envtest
+
+.PHONY: test.envtest.base
+test.envtest.base:
+	ENVTEST_TEST_PATHS=./test/envtest/ \
+		$(MAKE) _test.envtest
+
 .PHONY: test.envtest
 test.envtest:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose
-
-.PHONY: test.envtest.pretty
-test.envtest.pretty:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname
+	$(MAKE) _test.envtest
 
 .PHONY: test.crds-validation
 test.crds-validation:

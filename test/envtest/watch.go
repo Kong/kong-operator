@@ -30,11 +30,11 @@ func (w watch[T]) WatchI() apiwatch.Interface {
 	return w.w
 }
 
-// setupWatch sets up a watch.Interface for the provided client.ObjectList.
+// SetupWatch sets up a watch.Interface for the provided client.ObjectList.
 // It is useful if an action needs to be performed between setting up the watch
 // and starting to watch for actual events on that watch.
 // It returns the watch.Interface and registers its cleanup using t.Cleanup.
-func setupWatch[
+func SetupWatch[
 	TList interface {
 		GetItems() []T
 	},
@@ -70,9 +70,9 @@ func setupWatch[
 	}
 }
 
-// watchFor watches for an event of type eventType using the provided watch.Interface.
+// WatchFor watches for an event of type eventType using the provided watch.Interface.
 // It is a wrapper of helpers.WatchFor which uses the type safe `watch` and a fixed timeout.
-func watchFor[
+func WatchFor[
 	T client.Object,
 ](
 	t *testing.T,

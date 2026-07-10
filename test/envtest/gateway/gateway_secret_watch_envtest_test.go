@@ -14,6 +14,8 @@ import (
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	certhelper "github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -24,8 +26,8 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	scheme := managerscheme.Get()
 	ctx := t.Context()
 
-	cfg, ns := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{
 		Client:                mgr.GetClient(),
@@ -33,7 +35,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 		Namespace:             ns.Name,
 		DefaultDataPlaneImage: "kong:latest",
 	}
-	StartReconcilers(ctx, t, mgr, logs, r)
+	envtest.StartReconcilers(ctx, t, mgr, logs, r)
 
 	c := mgr.GetClient()
 
@@ -47,7 +49,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	require.NoError(t, c.Create(ctx, gc))
 
 	t.Log("patching GatewayClass status to Accepted=True")
-	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), waitTime, tickTime)
+	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), consts.WaitTime, consts.TickTime)
 
 	// Create an initial INVALID TLS Secret referenced by the Gateway listener.
 	secretName := "test-cert"
@@ -85,7 +87,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 
 	t.Log("verifying that the invalid Secret results in ResolvedRefs=False (InvalidCertificateRef)")
 	gwNN := types.NamespacedName{Namespace: ns.Name, Name: gw.Name}
-	require.Eventually(t, testutils.GatewayListenerResolvedRefsCondition(t, ctx, gwNN, c, metav1.ConditionFalse), waitTime, tickTime)
+	require.Eventually(t, testutils.GatewayListenerResolvedRefsCondition(t, ctx, gwNN, c, metav1.ConditionFalse), consts.WaitTime, consts.TickTime)
 
 	t.Log("rotating the Secret with a valid TLS certificate and key")
 	certPEM, keyPEM := certhelper.MustGenerateCertPEMFormat()
@@ -99,5 +101,5 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	}, client.MergeFrom(bad)))
 
 	t.Log("verifying that after rotation the Secret watch enqueues the Gateway and ResolvedRefs becomes True")
-	require.Eventually(t, testutils.GatewayListenerResolvedRefsCondition(t, ctx, gwNN, c, metav1.ConditionTrue), waitTime, tickTime)
+	require.Eventually(t, testutils.GatewayListenerResolvedRefsCondition(t, ctx, gwNN, c, metav1.ConditionTrue), consts.WaitTime, consts.TickTime)
 }

@@ -16,6 +16,7 @@ import (
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
+	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
@@ -29,8 +30,8 @@ func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
 	ctx := t.Context()
 	scheme := managerscheme.Get()
 
-	cfg, ns := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{
 		Client:                mgr.GetClient(),
@@ -38,7 +39,7 @@ func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
 		Namespace:             ns.Name,
 		DefaultDataPlaneImage: "kong:latest",
 	}
-	StartReconcilers(ctx, t, mgr, logs, r)
+	envtest.StartReconcilers(ctx, t, mgr, logs, r)
 
 	c := mgr.GetClient()
 

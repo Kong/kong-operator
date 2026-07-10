@@ -24,8 +24,10 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
-	"github.com/kong/kong-operator/v2/pkg/consts"
+	pkgconsts "github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -40,13 +42,13 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	// KongPluginBindings.
 
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
 
 	// Setup up the envtest environment.
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	clientWithWatch, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
 		Scheme: scheme.Get(),
@@ -61,15 +63,15 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKongPluginReconciler(controller.Options{}, logging.DevelopmentMode, mgr.GetClient()),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongPluginBinding](&metricsmocks.MockRecorder{}),
 		),
 	}
 
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	addPluginDeleteExpectation := func() {
 		sdk.PluginSDK.EXPECT().
@@ -105,7 +107,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			exists = true
 			assert.NotEmpty(c, kpb.GetKonnectID())
 			assert.True(c, controllerutil.ContainsFinalizer(kpb, konnect.KonnectCleanupFinalizer))
-		}, waitTime, tickTime, "KongPluginBinding %s was not synced before deletion", key)
+		}, consts.WaitTime, consts.TickTime, "KongPluginBinding %s was not synced before deletion", key)
 		if !exists {
 			t.Logf("managed kongPluginBinding %s (bound to %s) was already deleted", key, client.ObjectKeyFromObject(obj))
 			return
@@ -114,7 +116,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Logf("delete managed kongPluginBinding %s (bound to %s), then check it gets recreated", client.ObjectKeyFromObject(kpb), client.ObjectKeyFromObject(obj))
 		addPluginDeleteExpectation()
 		require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, kpb)))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, kpb, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, kpb, consts.WaitTime, consts.TickTime)
 	}
 
 	rateLimitingkongPlugin := &configurationv1.KongPlugin{
@@ -146,9 +148,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				if !assert.NoError(c, clientNamespacedWithWatch.Get(ctx, client.ObjectKeyFromObject(rateLimitingkongPlugin), &kp)) {
 					return
 				}
-				assert.Equal(c, expected, controllerutil.ContainsFinalizer(&kp, consts.PluginInUseFinalizer))
+				assert.Equal(c, expected, controllerutil.ContainsFinalizer(&kp, pkgconsts.PluginInUseFinalizer))
 			},
-			waitTime, tickTime,
+			consts.WaitTime, consts.TickTime,
 			message,
 		)
 	}
@@ -177,7 +179,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				}
 				assert.NotNil(c, found)
 			},
-			waitTime, tickTime,
+			consts.WaitTime, consts.TickTime,
 			message,
 		)
 		require.NotNil(t, found)
@@ -214,7 +216,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
-		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
+		envtest.UpdateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 
 		t.Logf("waiting for KongPluginBinding to be created")
 		kongPluginBinding := waitForKongPluginBinding(t, "KongPluginBinding wasn't created",
@@ -242,7 +244,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			},
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
 
 		t.Logf(
 			"remove annotation from KongService %s and check that managed KongPluginBinding %s gets deleted, "+
@@ -267,11 +269,11 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			client.ObjectKeyFromObject(kongPluginBinding),
 		)
 		eventually.WaitForObjectToNotExist(
-			t, ctx, clientNamespaced, kongPluginBinding, waitTime, tickTime,
+			t, ctx, clientNamespaced, kongPluginBinding, consts.WaitTime, consts.TickTime,
 			"KongPluginBinding wasn't deleted after removing annotation from KongService",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("binding to KongRoute", func(t *testing.T) {
@@ -284,7 +286,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
-		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
+		envtest.UpdateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 		kongRoute := deploy.KongRoute(
 			t, ctx, clientNamespaced,
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -293,7 +295,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
 		})
-		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
+		envtest.UpdateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
 		t.Logf("waiting for KongPluginBinding to be created")
 		kongPluginBinding := waitForKongPluginBinding(t, "KongPluginBinding wasn't created",
@@ -321,7 +323,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			},
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
 
 		t.Logf(
 			"remove annotation from KongRoute %s and check that managed KongPluginBinding %s gets deleted, "+
@@ -346,18 +348,18 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			client.ObjectKeyFromObject(kongPluginBinding),
 		)
 		eventually.WaitForObjectToNotExist(
-			t, ctx, clientNamespaced, kongPluginBinding, waitTime, tickTime,
+			t, ctx, clientNamespaced, kongPluginBinding, consts.WaitTime, consts.TickTime,
 			"KongPluginBinding wasn't deleted after removing annotation from KongRoute",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("binding to KongService and KongRoute", func(t *testing.T) {
 		serviceID := uuid.NewString()
 		routeID := uuid.NewString()
 
-		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		wKongPluginBinding := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -365,7 +367,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
-		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
+		envtest.UpdateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 		kongRoute := deploy.KongRoute(t, ctx, clientNamespaced,
 			deploy.WithNamespacedKongServiceRef(kongService),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -373,11 +375,11 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
 		})
-		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
+		envtest.UpdateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
 		t.Logf("waiting for 2 KongPluginBindings to be created")
 		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
-		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
+		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -406,7 +408,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
 
-		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
+		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -437,7 +439,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		delete(kongRoute.Annotations, metadata.AnnotationKeyPlugins)
 		require.NoError(t, clientNamespaced.Update(ctx, kongRoute))
 		eventually.WaitForObjectToNotExist(
-			t, ctx, clientNamespaced, kpbRoute, waitTime, tickTime,
+			t, ctx, clientNamespaced, kpbRoute, consts.WaitTime, consts.TickTime,
 			"KongPluginBinding bound to Route wasn't deleted after removing annotation from KongRoute",
 		)
 
@@ -451,11 +453,11 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		require.NoError(t, clientNamespaced.Update(ctx, kongService))
 
 		eventually.WaitForObjectToNotExist(
-			t, ctx, clientNamespaced, kpbService, waitTime, tickTime,
+			t, ctx, clientNamespaced, kpbService, consts.WaitTime, consts.TickTime,
 			"KongPluginBinding bound to Service wasn't deleted after removing annotation from KongService",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("binding to KongConsumer, KongService and KongRoute", func(t *testing.T) {
@@ -476,7 +478,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			).
 			Maybe()
 
-		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		wKongPluginBinding := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -484,7 +486,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
-		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
+		envtest.UpdateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 		kongRoute := deploy.KongRoute(
 			t, ctx, clientNamespaced,
 			deploy.WithNamespacedKongServiceRef(kongService),
@@ -493,7 +495,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
 		})
-		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
+		envtest.UpdateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 		kongConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, "username-1",
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -501,11 +503,11 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongConsumer))
 		})
-		updateKongConsumerStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumer, consumerID, cp.GetKonnectStatus().GetKonnectID())
+		envtest.UpdateKongConsumerStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumer, consumerID, cp.GetKonnectStatus().GetKonnectID())
 
 		t.Logf("waiting for 2 KongPluginBindings to be created")
 		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
-		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
+		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -538,7 +540,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
 
-		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
+		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -579,7 +581,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				index.IndexFieldKongPluginBindingKongServiceReference:  kongService.Name,
 				index.IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
 			},
-			waitTime, tickTime,
+			consts.WaitTime, consts.TickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				assert.Len(c, bindings, 1)
 			},
@@ -587,7 +589,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		)
 
 		eventually.WaitForObjectToNotExist(
-			t, ctx, clientNamespaced, kpbRoute, waitTime, tickTime,
+			t, ctx, clientNamespaced, kpbRoute, consts.WaitTime, consts.TickTime,
 			"KongPluginBinding bound to Route wasn't deleted after removing annotation from KongRoute",
 		)
 
@@ -605,7 +607,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				index.IndexFieldKongPluginBindingKongPluginReference:   managedPluginReference,
 				index.IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
 			},
-			waitTime, tickTime,
+			consts.WaitTime, consts.TickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				if !assert.Len(c, bindings, 1) {
 					return
@@ -635,14 +637,14 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				index.IndexFieldKongPluginBindingKongPluginReference:   managedPluginReference,
 				index.IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
 			},
-			waitTime, tickTime,
+			consts.WaitTime, consts.TickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				assert.Empty(c, bindings)
 			},
 			"KongConsumer bound KongPluginBinding wasn't deleted",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("binding to KongConsumerGroup, KongService and KongRoute", func(t *testing.T) {
@@ -663,7 +665,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			).
 			Maybe()
 
-		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		wKongPluginBinding := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -671,7 +673,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
-		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
+		envtest.UpdateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
 		kongRoute := deploy.KongRoute(
 			t, ctx, clientNamespaced,
 			deploy.WithNamespacedKongServiceRef(kongService),
@@ -680,7 +682,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
 		})
-		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
+		envtest.UpdateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -688,11 +690,11 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongConsumerGroup))
 		})
-		updateKongConsumerGroupStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumerGroup, consumerGroupID, cp.GetKonnectStatus().GetKonnectID())
+		envtest.UpdateKongConsumerGroupStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumerGroup, consumerGroupID, cp.GetKonnectStatus().GetKonnectID())
 
 		t.Logf("waiting for 2 KongPluginBindings to be created")
 		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
-		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
+		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -725,7 +727,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
 
-		watchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
+		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
 					return false
@@ -766,7 +768,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				index.IndexFieldKongPluginBindingKongServiceReference:       kongService.Name,
 				index.IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
 			},
-			waitTime, tickTime,
+			consts.WaitTime, consts.TickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				assert.Len(c, bindings, 1)
 			},
@@ -774,7 +776,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		)
 
 		eventually.WaitForObjectToNotExist(
-			t, ctx, clientNamespaced, kpbRoute, waitTime, tickTime,
+			t, ctx, clientNamespaced, kpbRoute, consts.WaitTime, consts.TickTime,
 			"KongPluginBinding bound to Route wasn't deleted after removing annotation from KongRoute",
 		)
 
@@ -792,7 +794,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				index.IndexFieldKongPluginBindingKongPluginReference:        managedPluginReference,
 				index.IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
 			},
-			waitTime, tickTime,
+			consts.WaitTime, consts.TickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				if !assert.Len(c, bindings, 1) {
 					return
@@ -822,13 +824,13 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				index.IndexFieldKongPluginBindingKongPluginReference:        managedPluginReference,
 				index.IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
 			},
-			waitTime, tickTime,
+			consts.WaitTime, consts.TickTime,
 			func(c *assert.CollectT, bindings []configurationv1alpha1.KongPluginBinding) {
 				assert.Empty(c, bindings)
 			},
 			"KongConsumerGroup bound KongPluginBinding wasn't deleted",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PluginSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
 	})
 }

@@ -78,7 +78,7 @@ func TestKongVault(t *testing.T) {
 		}),
 	)
 
-	vaultWatch := setupWatch[configurationv1alpha1.KongVaultList](t, ctx, cl)
+	vaultWatch := SetupWatch[configurationv1alpha1.KongVaultList](t, ctx, cl)
 
 	t.Run("Cross namespace ref KongVault -> KonnectNamespacedRefControlPlane yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
 		const (
@@ -90,7 +90,7 @@ func TestKongVault(t *testing.T) {
 		createdVault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp2)
 
 		t.Log("Waiting for KongVault to get ResolvedRefs condition with status=False")
-		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+		WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
 			if kv.GetName() != createdVault.GetName() {
 				return false
 			}
@@ -136,11 +136,11 @@ func TestKongVault(t *testing.T) {
 		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp)
 
 		t.Log("Waiting for KongVault to be programmed")
-		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
+		WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
 			return v.GetKonnectID() == vaultID && k8sutils.IsProgrammed(v)
 		}, "KongVault didn't get Programmed status condition or didn't get the correct (vault-12345) Konnect ID assigned")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 
 		t.Log("Setting up mock SDK for vault update")
 		sdk.VaultSDK.EXPECT().UpsertVault(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertVaultRequest) bool {
@@ -154,7 +154,7 @@ func TestKongVault(t *testing.T) {
 		vaultToPatch.Spec.Description = vaultDespription
 		require.NoError(t, clientNamespaced.Patch(ctx, vaultToPatch, client.MergeFrom(vault)))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 
 		t.Log("Setting up mock SDK for vault deletion")
 		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), vaultID).
@@ -163,7 +163,7 @@ func TestKongVault(t *testing.T) {
 		t.Log("Deleting KongVault")
 		require.NoError(t, cl.Delete(ctx, vault))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 	})
 
 	t.Run("should correctly handle conflict on create", func(t *testing.T) {
@@ -214,7 +214,7 @@ func TestKongVault(t *testing.T) {
 		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp)
 
 		t.Log("Waiting for KongVault to be programmed")
-		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
+		WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
 			if v.GetName() != vault.GetName() {
 				return false
 			}
@@ -225,7 +225,7 @@ func TestKongVault(t *testing.T) {
 			})
 		}, "KongVault's Programmed condition should be true eventually")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 	})
 
 	t.Run("Adopting existing vault", func(t *testing.T) {
@@ -265,7 +265,7 @@ func TestKongVault(t *testing.T) {
 		)
 
 		t.Logf("Watching for vault %s to be programmed and set Konnect ID", createdVault.Name)
-		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+		WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
 			return kv.Name == createdVault.Name &&
 				k8sutils.IsProgrammed(kv) &&
 				kv.GetKonnectID() == vaultID

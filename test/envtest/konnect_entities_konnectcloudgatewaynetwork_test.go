@@ -52,7 +52,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 
 	t.Run("Creating, updating and deleting Konnect cloud gateway network", func(t *testing.T) {
 		t.Log("Setting up a watch for KonnectCloudGatewayNetwork events")
-		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
 
 		var (
@@ -101,7 +101,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		})
 
 		t.Log("Waiting for KonnectCloudGatewayNetwork to be Programmed and get a Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
 			return n.GetKonnectID() == networkID && conditionsContainProgrammed(n.GetConditions(), metav1.ConditionTrue)
 		}, "Did not see KonnectCloudGatewayNetwork get Programmed and Konnect ID set.")
 
@@ -124,12 +124,12 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		eventually.WaitForObjectToNotExist(t, ctx, cl, network, waitTime, tickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 
 	t.Run("Creating network when SDK returns ForbiddenError", func(t *testing.T) {
 		t.Log("Setting up a watch for KonnectCloudGatewayNetwork events")
-		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
 
 		networkName := "cloud-gateway-network-test-" + uuid.NewString()[:8]
@@ -160,17 +160,17 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		})
 
 		t.Log("Waiting for KonnectCloudGatewayNetwork to be Programmed and get a Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
-			return conditionsContainProgrammedFalse(n.GetConditions())
+		WatchFor(t, ctx, w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
+			return ConditionsContainProgrammedFalse(n.GetConditions())
 		}, "Did not see KonnectCloudGatewayNetwork get Programmed condition set to false.")
 
 		t.Log("Waiting for the expected calls called in SDK")
-		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 
 	t.Run("Adopting a network with match mode", func(t *testing.T) {
 		t.Log("Setting up a watch for KonnectCloudGatewayNetwork events")
-		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		networkName := "cloud-gateway-network-test-adopt-" + uuid.NewString()[:8]
 		networkID := uuid.NewString()
@@ -220,9 +220,9 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		})
 
 		t.Log("Waiting for KonnectCloudGatewayNetwork to be marked as programmed and get Konnect ID")
-		watchFor(t, t.Context(), w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
+		WatchFor(t, t.Context(), w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
 			return n.Name == createdNetwork.Name &&
-				conditionsContainProgrammedTrue(n.GetConditions()) &&
+				ConditionsContainProgrammedTrue(n.GetConditions()) &&
 				n.GetKonnectID() == networkID
 		},
 			"Did not see KonnectCloudGatewayNetwork turn Programmed and set Konnect ID",
@@ -231,7 +231,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 
 	t.Run("Adopting a network with match mode but not matching the network in Konnect", func(t *testing.T) {
 		t.Log("Setting up a watch for KonnectCloudGatewayNetwork events")
-		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		networkName := "cloud-gateway-network-test-adopt-" + uuid.NewString()[:8]
 		networkID := uuid.NewString()
@@ -281,9 +281,9 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		})
 
 		t.Log("Waiting for KonnectCloudGatewayNetwork to be marked as not programmed")
-		watchFor(t, t.Context(), w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
+		WatchFor(t, t.Context(), w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
 			return n.Name == createdNetwork.Name &&
-				conditionsContainProgrammedFalse(n.GetConditions()) && lo.ContainsBy(
+				ConditionsContainProgrammedFalse(n.GetConditions()) && lo.ContainsBy(
 				n.GetConditions(), func(c metav1.Condition) bool {
 					return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType &&
 						c.Status == metav1.ConditionFalse &&

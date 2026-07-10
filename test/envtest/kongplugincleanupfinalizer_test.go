@@ -55,13 +55,13 @@ func TestKongPluginFinalizer(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, rateLimitingkongPlugin))
 		})
 
-		wKongService := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		wKongService := SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
-		_ = watchFor(t, ctx, wKongService, apiwatch.Modified,
+		_ = WatchFor(t, ctx, wKongService, apiwatch.Modified,
 			func(svc *configurationv1alpha1.KongService) bool {
 				return svc.Name == kongService.Name &&
 					slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -72,7 +72,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		old := kongService.DeepCopy()
 		kongService.Annotations = nil
 		require.NoError(t, clientNamespaced.Patch(ctx, kongService, client.MergeFrom(old)))
-		_ = watchFor(t, ctx, wKongService, apiwatch.Modified,
+		_ = WatchFor(t, ctx, wKongService, apiwatch.Modified,
 			func(svc *configurationv1alpha1.KongService) bool {
 				return svc.Name == kongService.Name &&
 					!slices.Contains(svc.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -90,14 +90,14 @@ func TestKongPluginFinalizer(t *testing.T) {
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
-		wKongRoute := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		wKongRoute := SetupWatch[configurationv1alpha1.KongRouteList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongRoute := deploy.KongRoute(
 			t, ctx, clientNamespaced,
 			deploy.WithNamespacedKongServiceRef(kongService),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
-		_ = watchFor(t, ctx, wKongRoute, apiwatch.Modified,
+		_ = WatchFor(t, ctx, wKongRoute, apiwatch.Modified,
 			func(route *configurationv1alpha1.KongRoute) bool {
 				return route.Name == kongRoute.Name &&
 					slices.Contains(route.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -108,7 +108,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		old := kongRoute.DeepCopy()
 		kongRoute.Annotations = nil
 		require.NoError(t, clientNamespaced.Patch(ctx, kongRoute, client.MergeFrom(old)))
-		_ = watchFor(t, ctx, wKongRoute, apiwatch.Modified,
+		_ = WatchFor(t, ctx, wKongRoute, apiwatch.Modified,
 			func(route *configurationv1alpha1.KongRoute) bool {
 				return route.Name == kongRoute.Name &&
 					!slices.Contains(route.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -123,13 +123,13 @@ func TestKongPluginFinalizer(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, rateLimitingkongPlugin))
 		})
 
-		wKongConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		wKongConsumer := SetupWatch[configurationv1.KongConsumerList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, "username-1",
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
-		_ = watchFor(t, ctx, wKongConsumer, apiwatch.Modified,
+		_ = WatchFor(t, ctx, wKongConsumer, apiwatch.Modified,
 			func(c *configurationv1.KongConsumer) bool {
 				return c.Name == kongConsumer.Name &&
 					slices.Contains(c.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -140,7 +140,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		old := kongConsumer.DeepCopy()
 		kongConsumer.Annotations = nil
 		require.NoError(t, clientNamespaced.Patch(ctx, kongConsumer, client.MergeFrom(old)))
-		_ = watchFor(t, ctx, wKongConsumer, apiwatch.Modified,
+		_ = WatchFor(t, ctx, wKongConsumer, apiwatch.Modified,
 			func(c *configurationv1.KongConsumer) bool {
 				return c.Name == kongConsumer.Name &&
 					!slices.Contains(c.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -155,13 +155,13 @@ func TestKongPluginFinalizer(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, rateLimitingkongPlugin))
 		})
 
-		wKongConsumerGroup := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
+		wKongConsumerGroup := SetupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 
-		_ = watchFor(t, ctx, wKongConsumerGroup, apiwatch.Modified,
+		_ = WatchFor(t, ctx, wKongConsumerGroup, apiwatch.Modified,
 			func(cg *configurationv1beta1.KongConsumerGroup) bool {
 				return cg.Name == kongConsumerGroup.Name &&
 					slices.Contains(cg.GetFinalizers(), consts.CleanupPluginBindingFinalizer)
@@ -172,7 +172,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 		old := kongConsumerGroup.DeepCopy()
 		kongConsumerGroup.Annotations = nil
 		require.NoError(t, clientNamespaced.Patch(ctx, kongConsumerGroup, client.MergeFrom(old)))
-		_ = watchFor(t, ctx, wKongConsumerGroup, apiwatch.Modified,
+		_ = WatchFor(t, ctx, wKongConsumerGroup, apiwatch.Modified,
 			func(cg *configurationv1beta1.KongConsumerGroup) bool {
 				return cg.Name == kongConsumerGroup.Name &&
 					!slices.Contains(cg.GetFinalizers(), consts.CleanupPluginBindingFinalizer)

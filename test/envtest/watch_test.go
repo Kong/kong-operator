@@ -25,10 +25,10 @@ func TestWatch(t *testing.T) {
 		}
 	)
 
-	wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl)
+	wConsumer := SetupWatch[configurationv1.KongConsumerList](t, ctx, cl)
 	require.NoError(t, cl.Create(ctx, consumer))
-	watchFor(t, ctx, wConsumer, apiwatch.Added,
-		objectMatchesName(consumer),
+	WatchFor(t, ctx, wConsumer, apiwatch.Added,
+		ObjectMatchesName(consumer),
 		"error",
 	)
 }

@@ -59,7 +59,7 @@ func TestPortal(t *testing.T) {
 			initialDescription = "Portal created from envtest"
 		)
 
-		w := setupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Portal creation")
 		sdk.PortalsSDK.EXPECT().
@@ -90,11 +90,11 @@ func TestPortal(t *testing.T) {
 		})
 
 		t.Log("Waiting for Portal to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(portal),
-				objectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(portal),
+				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 				func(p *konnectv1alpha1.Portal) bool {
 					return controllerutil.ContainsFinalizer(p, konnect.KonnectCleanupFinalizer)
 				},
@@ -102,7 +102,7 @@ func TestPortal(t *testing.T) {
 			"Portal didn't get Programmed status condition, Konnect ID, or cleanup finalizer",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Portal update")
 		sdk.PortalsSDK.EXPECT().
@@ -120,11 +120,11 @@ func TestPortal(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, portalToPatch, client.MergeFrom(portal)))
 
 		t.Log("Waiting for Portal to be patched")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(portal),
-				objectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(portal),
+				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 				func(p *konnectv1alpha1.Portal) bool {
 					return p.Spec.APISpec.DisplayName == updatedDisplayName
 				},
@@ -132,7 +132,7 @@ func TestPortal(t *testing.T) {
 			"Portal didn't get patched",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on Portal deletion")
 		sdk.PortalsSDK.EXPECT().
@@ -142,13 +142,13 @@ func TestPortal(t *testing.T) {
 		t.Log("Deleting Portal")
 		require.NoError(t, clientNamespaced.Delete(ctx, portal))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, portal, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
 	})
 
 	t.Run("should create Portal successfully on conflict when Portal with matching uid tag exists", func(t *testing.T) {
 		const portalID = "portal-conflict-id"
 
-		w := setupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		// Declared up-front so the ListPortals expectation closure below can
 		// read the Portal's UID after k8s assigns it on Create.
@@ -182,15 +182,15 @@ func TestPortal(t *testing.T) {
 		portal = deploy.Portal(t, ctx, clientNamespaced, apiAuth)
 
 		t.Log("Waiting for Portal to be programmed after UID conflict lookup")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(portal),
-				objectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(portal),
+				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 			),
 			"Portal didn't get Programmed status condition or Konnect ID after conflict resolution",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
 	})
 }

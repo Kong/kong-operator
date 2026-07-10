@@ -77,7 +77,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		)
 
 		t.Log("Setting up a watch for KonnectCloudGatewayDataPlaneGroupConfiguration events")
-		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
 		const expectedCPGeo = sdkkonnectcomp.ControlPlaneGeoUs // US is the default used by the Mock SDK, we expect this to be propagated.
 		sdk.CloudGatewaysSDK.EXPECT().CreateConfiguration(
@@ -117,12 +117,12 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		)
 
 		t.Log("Waiting for KonnectCloudGatewayDataPlaneGroupConfiguration to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(c *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration) bool {
 			return c.GetKonnectID() == id && k8sutils.IsProgrammed(c)
 		}, "KonnectCloudGatewayDataPlaneGroupConfiguration didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
 
 		t.Log("Checking SDK operations")
-		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 
 		// NOTE: we delete the data plane group configuration by "creating" (using PUT)
 		// because Cloud Gateways DataPlane Group connfiguration API doesn't support
@@ -147,7 +147,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		eventually.WaitForObjectToNotExist(t, ctx, cl, dpg, waitTime, tickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 
 	t.Run("namespacedRef adding and deleting", func(t *testing.T) {
@@ -163,7 +163,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		)
 
 		t.Log("Setting up a watch for KonnectCloudGatewayDataPlaneGroupConfiguration events")
-		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
 		const expectedCPGeo = sdkkonnectcomp.ControlPlaneGeoUs // US is the default used by the Mock SDK, we expect this to be propagated.
 		sdk.CloudGatewaysSDK.EXPECT().CreateConfiguration(
@@ -198,12 +198,12 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		)
 
 		t.Log("Waiting for KonnectCloudGatewayDataPlaneGroupConfiguration to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(c *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration) bool {
 			return c.GetKonnectID() == id && k8sutils.IsProgrammed(c)
 		}, "KonnectCloudGatewayDataPlaneGroupConfiguration didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
 
 		t.Log("Checking SDK operations")
-		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 
 		// NOTE: we delete the data plane group configuration by "creating" (using PUT)
 		// because Cloud Gateways DataPlane Group connfiguration API doesn't support
@@ -228,6 +228,6 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		eventually.WaitForObjectToNotExist(t, ctx, cl, dpg, waitTime, tickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 }

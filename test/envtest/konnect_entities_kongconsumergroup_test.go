@@ -61,7 +61,7 @@ func TestKongConsumerGroup(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-	cWatch := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
+	cWatch := SetupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("should create, update and delete ConsumerGroup successfully", func(t *testing.T) {
 		const (
@@ -92,7 +92,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumerGroup to be programmed")
-		watchFor(t, ctx, cWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
+		WatchFor(t, ctx, cWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
 			if c.GetName() != cg.GetName() {
 				return false
 			}
@@ -102,7 +102,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			})
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumerGroup update")
 		sdk.ConsumerGroupSDK.EXPECT().
@@ -116,7 +116,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		cgToPatch.Spec.Name = updatedCGName
 		require.NoError(t, clientNamespaced.Patch(ctx, cgToPatch, client.MergeFrom(cg)))
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on KongConsumerGroup deletion")
 		sdk.ConsumerGroupSDK.EXPECT().
@@ -134,7 +134,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			}, waitTime, tickTime,
 		)
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 	})
 
 	t.Run("should create ConsumerGroup successfully on conflict when ConsumerGroup with matching uid tag exists", func(t *testing.T) {
@@ -186,11 +186,11 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongConsumerGroup to be programmed")
-		watchFor(t, ctx, cWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
+		WatchFor(t, ctx, cWatch, apiwatch.Modified, func(c *configurationv1beta1.KongConsumerGroup) bool {
 			return c.GetKonnectID() == cgID && k8sutils.IsProgrammed(c)
 		}, "KongConsumerGroup's Programmed condition should be true eventually")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -203,7 +203,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		w := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongConsumerGroup creation")
 		sdk.ConsumerGroupSDK.EXPECT().
@@ -231,18 +231,18 @@ func TestKongConsumerGroup(t *testing.T) {
 				cg.Spec.Name = name
 			},
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+		WatchFor(t, ctx, w, apiwatch.Modified, ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("ConsumerGroup didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for KongConsumerGroup to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongConsumerGroup didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
 	})
@@ -251,7 +251,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		cgID := uuid.NewString()
 		cgName := "adopted-consumer-group"
 
-		w := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating consumer groups")
 		sdk.ConsumerGroupSDK.EXPECT().GetConsumerGroup(
@@ -283,7 +283,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongConsumerGroup %s to be programmed and set Konnect ID", client.ObjectKeyFromObject(createdConsumerGroup))
-		watchFor(t, ctx, w, apiwatch.Modified, func(cg *configurationv1beta1.KongConsumerGroup) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(cg *configurationv1beta1.KongConsumerGroup) bool {
 			return cg.Name == createdConsumerGroup.Name &&
 				k8sutils.IsProgrammed(cg) &&
 				cg.GetKonnectID() == cgID

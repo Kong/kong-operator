@@ -63,7 +63,7 @@ func TestPortalCustomDomain(t *testing.T) {
 			initialHostname = "developer.example.com"
 		)
 
-		portalWatch := setupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		portalWatch := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 		sdk.PortalsSDK.EXPECT().
 			CreatePortal(mock.Anything, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortal) bool {
 				return req.DisplayName != nil && *req.DisplayName == displayName &&
@@ -83,17 +83,17 @@ func TestPortalCustomDomain(t *testing.T) {
 		})
 
 		t.Log("Waiting for Portal to be programmed")
-		watchFor(t, ctx, portalWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(portal),
-				objectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(portal),
+				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 			),
 			"Portal didn't get Programmed status condition or Konnect ID",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
 
-		domainWatch := setupWatch[konnectv1alpha1.PortalCustomDomainList](t, ctx, cl, client.InNamespace(ns.Name))
+		domainWatch := SetupWatch[konnectv1alpha1.PortalCustomDomainList](t, ctx, cl, client.InNamespace(ns.Name))
 		domain := testEnvtestPortalCustomDomain(ns.Name, portal.GetName(), "Enabled", initialHostname)
 		expectedCreateRequest, err := domain.Spec.APISpec.ToCreatePortalCustomDomainRequest()
 		require.NoError(t, err)
@@ -110,10 +110,10 @@ func TestPortalCustomDomain(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, domain))
 
 		t.Log("Waiting for PortalCustomDomain to be programmed")
-		watchFor(t, ctx, domainWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(domain),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomDomain](),
+		WatchFor(t, ctx, domainWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(domain),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomDomain](),
 				func(p *konnectv1alpha1.PortalCustomDomain) bool {
 					return p.GetPortalID() == portalID &&
 						p.GetKonnectID() == "" &&
@@ -122,7 +122,7 @@ func TestPortalCustomDomain(t *testing.T) {
 			),
 			"PortalCustomDomain didn't get Programmed status condition, Portal ID, or cleanup finalizer",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on PortalCustomDomain update")
 		domainToPatch := domain.DeepCopy()
@@ -138,10 +138,10 @@ func TestPortalCustomDomain(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, domainToPatch, client.MergeFrom(domain)))
 
 		t.Log("Waiting for PortalCustomDomain to be patched")
-		watchFor(t, ctx, domainWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(domain),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomDomain](),
+		WatchFor(t, ctx, domainWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(domain),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomDomain](),
 				func(p *konnectv1alpha1.PortalCustomDomain) bool {
 					return p.Spec.APISpec.Enabled == "Disabled" &&
 						p.GetPortalID() == portalID &&
@@ -150,7 +150,7 @@ func TestPortalCustomDomain(t *testing.T) {
 			),
 			"PortalCustomDomain didn't get patched",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on PortalCustomDomain deletion")
 		sdk.PortalCustomDomainsSDK.EXPECT().
@@ -160,7 +160,7 @@ func TestPortalCustomDomain(t *testing.T) {
 		t.Log("Deleting PortalCustomDomain")
 		require.NoError(t, clientNamespaced.Delete(ctx, domain))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, domain, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, waitTime, tickTime)
 	})
 }
 

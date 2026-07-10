@@ -69,7 +69,7 @@ func TestPortalCustomization(t *testing.T) {
 			updatedRobots = "User-agent: *\nDisallow: /private"
 		)
 
-		portalWatch := setupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		portalWatch := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 		sdk.PortalsSDK.EXPECT().
 			CreatePortal(mock.Anything, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortal) bool {
 				return req.DisplayName != nil && *req.DisplayName == displayName &&
@@ -89,17 +89,17 @@ func TestPortalCustomization(t *testing.T) {
 		})
 
 		t.Log("Waiting for Portal to be programmed")
-		watchFor(t, ctx, portalWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(portal),
-				objectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(portal),
+				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 			),
 			"Portal didn't get Programmed status condition or Konnect ID",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
 
-		customizationWatch := setupWatch[konnectv1alpha1.PortalCustomizationList](t, ctx, cl, client.InNamespace(ns.Name))
+		customizationWatch := SetupWatch[konnectv1alpha1.PortalCustomizationList](t, ctx, cl, client.InNamespace(ns.Name))
 		customization := testEnvtestPortalCustomization(ns.Name, portal.GetName(), initialCSS, initialLayout, initialRobots)
 		expectedCreateRequest, err := customization.Spec.APISpec.ToCreatePortalCustomization()
 		require.NoError(t, err)
@@ -120,10 +120,10 @@ func TestPortalCustomization(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, customization))
 
 		t.Log("Waiting for PortalCustomization to be programmed")
-		watchFor(t, ctx, customizationWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(customization),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomization](),
+		WatchFor(t, ctx, customizationWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(customization),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomization](),
 				func(p *konnectv1alpha1.PortalCustomization) bool {
 					return p.GetPortalID() == portalID &&
 						p.GetKonnectID() == "" &&
@@ -135,7 +135,7 @@ func TestPortalCustomization(t *testing.T) {
 			),
 			"PortalCustomization didn't get Programmed status condition, Portal ID, or cleanup finalizer",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalCustomizationSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalCustomizationSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on PortalCustomization update")
 		customizationToPatch := customization.DeepCopy()
@@ -159,10 +159,10 @@ func TestPortalCustomization(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, customizationToPatch, client.MergeFrom(customization)))
 
 		t.Log("Waiting for PortalCustomization to be patched")
-		watchFor(t, ctx, customizationWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(customization),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomization](),
+		WatchFor(t, ctx, customizationWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(customization),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomization](),
 				func(p *konnectv1alpha1.PortalCustomization) bool {
 					return p.GetPortalID() == portalID &&
 						p.GetKonnectID() == "" &&
@@ -173,7 +173,7 @@ func TestPortalCustomization(t *testing.T) {
 			),
 			"PortalCustomization didn't get patched",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalCustomizationSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalCustomizationSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on PortalCustomization deletion")
 		sdk.PortalCustomizationSDK.EXPECT().
@@ -189,7 +189,7 @@ func TestPortalCustomization(t *testing.T) {
 		t.Log("Deleting PortalCustomization")
 		require.NoError(t, clientNamespaced.Delete(ctx, customization))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, customization, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, sdk.PortalCustomizationSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalCustomizationSDK, waitTime, tickTime)
 	})
 }
 

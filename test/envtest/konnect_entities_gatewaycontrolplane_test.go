@@ -101,7 +101,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "12345", cp.Status.ID)
-			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedTrue(cp.Status.Conditions),
 				"Programmed condition should be set and it status should be true",
 			)
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
@@ -243,7 +243,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "12345", cp.Status.ID)
-			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedTrue(cp.Status.Conditions),
 				"Programmed condition should be set and it status should be true",
 			)
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
@@ -265,7 +265,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "12346", cpGroup.Status.ID)
-			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedTrue(cpGroup.Status.Conditions),
 				"Programmed condition should be set and it status should be true",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
@@ -413,7 +413,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				),
 			)
 
-			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedTrue(cp.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
@@ -432,7 +432,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "123467", cpGroup.Status.ID)
-			assert.True(t, conditionsContainProgrammedFalse(cpGroup.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedFalse(cpGroup.Status.Conditions),
 				"Programmed condition should be set and its status should be false because of an error returned by Konnect API when setting group members",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedFalse(cpGroup.Status.Conditions),
@@ -533,7 +533,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "123456", cp.Status.ID, "ID should be set")
-			assert.True(t, conditionsContainProgrammedTrue(cp.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedTrue(cp.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
@@ -720,7 +720,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "group-123456", cpGroup.Status.ID, "ID should be set")
-			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedTrue(cpGroup.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
@@ -809,7 +809,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "cpg-id", cpGroup.Status.ID, "ID should be set")
-			assert.True(t, conditionsContainProgrammedTrue(cpGroup.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedTrue(cpGroup.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
@@ -860,7 +860,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				),
 			)
 
-			assert.True(t, conditionsContainProgrammedFalse(cp.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedFalse(cp.Status.Conditions),
 				"Programmed condition should be set to False due to network error",
 			)
 			assert.True(t,
@@ -909,7 +909,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					c.Reason == konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound
 			}), "APIAuthResolvedRef condition should be False with RefNotFound reason")
 
-			assert.True(t, conditionsContainProgrammedFalse(cp.Status.Conditions),
+			assert.True(t, ConditionsContainProgrammedFalse(cp.Status.Conditions),
 				"Programmed condition should be set to False when APIAuth ref is not found",
 			)
 			assert.True(t,
@@ -921,23 +921,6 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 		},
 	},
-}
-
-func conditionsContainProgrammed(conds []metav1.Condition, status metav1.ConditionStatus) bool {
-	return lo.ContainsBy(conds,
-		func(condition metav1.Condition) bool {
-			return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-				condition.Status == status
-		},
-	)
-}
-
-func conditionsContainProgrammedFalse(conds []metav1.Condition) bool {
-	return conditionsContainProgrammed(conds, metav1.ConditionFalse)
-}
-
-func conditionsContainProgrammedTrue(conds []metav1.Condition) bool {
-	return conditionsContainProgrammed(conds, metav1.ConditionTrue)
 }
 
 func conditionsContainProgrammedWithReason(
@@ -1027,7 +1010,7 @@ func TestKonnectGatewayControlPlane_CrossNamespaceRefNotPermitted(t *testing.T) 
 				c.Reason == konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotPermitted
 		}), "APIAuthResolvedRef condition should be False with RefNotPermitted reason")
 
-		assert.True(collect, conditionsContainProgrammedFalse(cp.Status.Conditions),
+		assert.True(collect, ConditionsContainProgrammedFalse(cp.Status.Conditions),
 			"Programmed condition should be set to False when cross-namespace ref is not permitted",
 		)
 		assert.True(collect,

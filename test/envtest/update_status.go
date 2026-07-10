@@ -18,7 +18,7 @@ import (
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
-func updateKongConsumerStatusWithKonnectID(
+func UpdateKongConsumerStatusWithKonnectID(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -34,7 +34,7 @@ func updateKongConsumerStatusWithKonnectID(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongConsumerGroupStatusWithKonnectID(
+func UpdateKongConsumerGroupStatusWithKonnectID(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -50,7 +50,7 @@ func updateKongConsumerGroupStatusWithKonnectID(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongServiceStatusWithProgrammed(
+func UpdateKongServiceStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -69,7 +69,7 @@ func updateKongServiceStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongRouteStatusWithProgrammed(
+func UpdateKongRouteStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,

@@ -75,7 +75,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		},
 	}, nil)
 
-	w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+	w := SetupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating KongDataPlaneClientCertificate")
 	createdCert := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
@@ -83,7 +83,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	)
 
 	t.Log("Waiting for KongDataPlaneClientCertificate to be programmed")
-	watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
+	WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
 		if c.GetName() != createdCert.GetName() {
 			return false
 		}
@@ -94,7 +94,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	}, "KongDataPlaneClientCertificate's Programmed condition should be true eventually")
 
 	t.Log("Waiting for KongDataPlaneClientCertificate to be created in the SDK")
-	eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
+	EventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 
 	t.Log("Setting up SDK expectations on KongDataPlaneClientCertificate deletion")
 	sdk.DataPlaneCertificatesSDK.EXPECT().DeleteDataplaneCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), dpCertID).
@@ -104,7 +104,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	require.NoError(t, cl.Delete(ctx, createdCert))
 
 	t.Log("Waiting for KongDataPlaneClientCertificate to be deleted in the SDK")
-	eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
+	EventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
 		const (
@@ -115,7 +115,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongDataPlaneClientCertificate creation")
 		sdk.DataPlaneCertificatesSDK.EXPECT().
@@ -138,25 +138,25 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		created := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+		WatchFor(t, ctx, w, apiwatch.Modified, ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("DataPlaneClientCertificate didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for DataPlaneClientCertificate to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongDataPlaneClientCertificate didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
 	})
 
 	t.Run("Adopting existing dataplane certificate", func(t *testing.T) {
 		dpCertID := uuid.NewString()
-		w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting DataPlane certificates")
 		sdk.DataPlaneCertificatesSDK.EXPECT().GetDataplaneCertificate(
@@ -179,7 +179,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongDataPlaneClientCertificate %s/%s to be programmed and set Konnect ID", ns.Name, createdDPCert.Name)
-		watchFor(t, ctx, w, apiwatch.Modified, func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
 			return dpCert.Name == createdDPCert.Name &&
 				k8sutils.IsProgrammed(dpCert) &&
 				dpCert.GetKonnectID() == dpCertID
@@ -189,7 +189,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	})
 
 	t.Run("Cross namespace ref KongDataPlaneClientCertificate -> KonnectNamespacedRefControlPlane yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
-		w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl2, client.InNamespace(ns2.Name))
+		w := SetupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl2, client.InNamespace(ns2.Name))
 
 		t.Log("Don't setting SDK expectations on DataPlaneClientCertificate creation as we do not expect any operations to be made upstream")
 
@@ -199,7 +199,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongDataPlaneClientCertificate to get ResolvedRefs condition with status=False")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
 			if c.GetName() != createdCert.GetName() {
 				return false
 			}
@@ -222,7 +222,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	t.Run("Cross namespace ref KongDataPlaneClientCertificate -> KonnectNamespacedRefControlPlane yields ResolvedRefs=True with valid KongReferenceGrant", func(t *testing.T) {
 		const id = "dp-cert-cross-ns-1234"
 
-		w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl2, client.InNamespace(ns2.Name))
+		w := SetupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl2, client.InNamespace(ns2.Name))
 
 		t.Log("Setting up SDK expectations on DataPlaneClientCertificate creation")
 		sdk.DataPlaneCertificatesSDK.EXPECT().
@@ -262,7 +262,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongDataPlaneClientCertificate to get ResolvedRefs condition with status=True")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
+		WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
 			if c.GetName() != createdCert.GetName() {
 				return false
 			}
@@ -281,6 +281,6 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			return k8sutils.HasConditionTrue(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, c)
 		}, "KongDataPlaneClientCertificate didn't get ResolvedRefs status condition set to True")
 
-		eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 	})
 }

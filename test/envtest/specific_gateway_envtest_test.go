@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/test/envtest/create"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
@@ -30,10 +31,10 @@ func TestSpecificGatewayNN(t *testing.T) {
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
 	var (
-		gw, gwc = deployGateway(ctx, t, ctrlClient)
+		gw, gwc = create.Gateway(ctx, t, ctrlClient)
 		nn      = client.ObjectKeyFromObject(&gw)
 		// We use the same GatewayClass here.
-		gwIgnored = deployGatewayUsingGatewayClass(ctx, t, ctrlClient, gwc)
+		gwIgnored = create.GatewayUsingGatewayClass(ctx, t, ctrlClient, gwc)
 		nnIgnored = client.ObjectKeyFromObject(&gwIgnored)
 	)
 
@@ -47,8 +48,8 @@ func TestSpecificGatewayNN(t *testing.T) {
 	)
 
 	const routeCount = 10
-	routes := createHTTPRoutes(ctx, t, ctrlClient, gw, routeCount)
-	ignoredRoutes := createHTTPRoutes(ctx, t, ctrlClient, gwIgnored, routeCount)
+	routes := create.HTTPRoutes(ctx, t, ctrlClient, gw, routeCount)
+	ignoredRoutes := create.HTTPRoutes(ctx, t, ctrlClient, gwIgnored, routeCount)
 
 	t.Run("configured specific gateway gets its listener status filled", func(t *testing.T) {
 		require.Eventually(t, func() bool {
