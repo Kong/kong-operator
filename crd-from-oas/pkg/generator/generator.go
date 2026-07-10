@@ -954,6 +954,21 @@ func (g *Generator) templateSecretReferences(entityName string) []SecretReferenc
 	return result
 }
 
+// secretReferencesNeedCoreV1Import reports whether any of the given secret
+// references resolves to a string value — only those render the inline
+// Secret-fetch-and-convert code path in sdkOpsAPISpec that references
+// corev1.Secret. Non-string leaves resolve via a hand-written
+// valueFromSecretRef method instead, which doesn't need this import in the
+// generated file.
+func secretReferencesNeedCoreV1Import(refs []SecretReferenceForTemplate) bool {
+	for _, ref := range refs {
+		if ref.ValueGoType == "" || ref.ValueGoType == "string" {
+			return true
+		}
+	}
+	return false
+}
+
 func (g *Generator) entityAPISpecSensitiveLeaf(entityName, jsonFieldName string) bool {
 	leaves, ok := g.entityDirectSensitiveLeaves[entityName]
 	if !ok {
@@ -4222,6 +4237,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		parentStatusEntityName = parentRefStatusEntityName(rootRefDependency(schema), rc)
 	}
 
+	secretReferences := g.templateSecretReferences(entityName)
 	data := struct {
 		APIVersion              string
 		EntityName              string
@@ -4231,6 +4247,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		Methods                 []sdkOpsMethod
 		NeedsClient             bool
 		SecretReferences        []SecretReferenceForTemplate
+		NeedsSecretFetchImport  bool
 		HasReferences           bool
 		References              []TemplateReferenceConfig
 		HasParentRefReplacement bool
@@ -4244,7 +4261,8 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		ConstFields:             constFields,
 		Methods:                 standardMethods,
 		NeedsClient:             opsConfig.RequireClient,
-		SecretReferences:        g.templateSecretReferences(entityName),
+		SecretReferences:        secretReferences,
+		NeedsSecretFetchImport:  secretReferencesNeedCoreV1Import(secretReferences),
 		HasReferences:           g.entityHasReferences(entityName),
 		References:              g.templateReferences(entityName),
 		HasParentRefReplacement: hasParentRefReplacement,
@@ -4501,28 +4519,31 @@ func (g *Generator) generateRootUnionSDKOps(
 
 	tmpl := template.Must(template.New("sdkops-root-union").Parse(sdkOpsRootUnionTemplate))
 	var buf strings.Builder
+	secretReferences := g.templateSecretReferences(entityName)
 	data := struct {
-		APIVersion       string
-		EntityName       string
-		UnionTypeName    string
-		Imports          []*sdkOpsImport
-		BoolFields       []sdkOpsBoolField
-		ConstFields      []sdkOpsConstField
-		Methods          []sdkOpsRootUnionMethod
-		Variants         []sdkOpsRootUnionVariant
-		NeedsClient      bool
-		SecretReferences []SecretReferenceForTemplate
+		APIVersion             string
+		EntityName             string
+		UnionTypeName          string
+		Imports                []*sdkOpsImport
+		BoolFields             []sdkOpsBoolField
+		ConstFields            []sdkOpsConstField
+		Methods                []sdkOpsRootUnionMethod
+		Variants               []sdkOpsRootUnionVariant
+		NeedsClient            bool
+		SecretReferences       []SecretReferenceForTemplate
+		NeedsSecretFetchImport bool
 	}{
-		APIVersion:       g.config.APIVersion,
-		EntityName:       entityName,
-		UnionTypeName:    rootUnionTypeName,
-		Imports:          imports,
-		BoolFields:       boolFields,
-		ConstFields:      constFields,
-		Methods:          rootUnionMethods,
-		Variants:         variants,
-		NeedsClient:      opsConfig.RequireClient,
-		SecretReferences: g.templateSecretReferences(entityName),
+		APIVersion:             g.config.APIVersion,
+		EntityName:             entityName,
+		UnionTypeName:          rootUnionTypeName,
+		Imports:                imports,
+		BoolFields:             boolFields,
+		ConstFields:            constFields,
+		Methods:                rootUnionMethods,
+		Variants:               variants,
+		NeedsClient:            opsConfig.RequireClient,
+		SecretReferences:       secretReferences,
+		NeedsSecretFetchImport: secretReferencesNeedCoreV1Import(secretReferences),
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
@@ -4581,16 +4602,28 @@ func (g *Generator) buildSDKOpsTestFields(entityName string, props []*parser.Pro
 		if skipProperty(prop) || prop.IsReference || shouldSkipSDKOpsTestField(prop, method) {
 			continue
 		}
-		if ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
-			// SensitiveDataSource field: emit an inline value; after flattenSensitiveData
-			// the JSON payload contains just the plain string.
+		if leafType, ok := g.entityAPISpecFieldSensitiveType(entityName, jsonName(prop.Name)); ok {
+			// Sensitive field: emit an inline value; after flattenSensitiveData
+			// the JSON payload contains just the plain (unwrapped) value.
+			typeName := "SensitiveDataSource"
+			innerValue, expectedValue := `"test-value"`, fmt.Sprintf("%q", "test-value")
+			if leafType.DedicatedTypeName != "" {
+				typeName = leafType.DedicatedTypeName
+				innerValue, expectedValue = testValuesForProperty(prop, leafType.ValueGoType)
+				if innerValue == "" || expectedValue == "" {
+					// No simple literal representation for this value type (e.g. a
+					// free-form JSON object) — skip, matching how a non-sensitive
+					// field of the same complex type is already skipped below.
+					continue
+				}
+			}
 			testFields = append(testFields, sdkOpsTestField{
 				FieldName: goFieldName(prop.Name),
 				// JSONName is the SDK payload key used in the generated
 				// payload["..."] check; prop.Name is already the OAS snake_case name.
 				JSONName:      prop.Name,
-				TestValue:     `SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")}`,
-				ExpectedValue: fmt.Sprintf("%q", "test-value"),
+				TestValue:     fmt.Sprintf("%s{Type: SensitiveDataSourceTypeInline, Value: new(%s)}", typeName, innerValue),
+				ExpectedValue: expectedValue,
 			})
 			continue
 		}

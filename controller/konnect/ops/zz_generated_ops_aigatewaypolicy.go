@@ -5,6 +5,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -14,6 +15,7 @@ import (
 
 func createAIGatewayPolicy(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayPoliciesSDK,
 	obj *konnectv1alpha1.AIGatewayPolicy,
 ) error {
@@ -21,7 +23,7 @@ func createAIGatewayPolicy(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreateAIGatewayPolicyRequest()
+	req, err := obj.ToCreateAIGatewayPolicyRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -41,6 +43,7 @@ func createAIGatewayPolicy(
 
 func updateAIGatewayPolicy(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayPoliciesSDK,
 	obj *konnectv1alpha1.AIGatewayPolicy,
 ) error {
@@ -49,7 +52,7 @@ func updateAIGatewayPolicy(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToUpdateAIGatewayPolicyRequest()
+	req, err := obj.ToUpdateAIGatewayPolicyRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -62,7 +65,7 @@ func updateAIGatewayPolicy(
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
-			return createAIGatewayPolicy(ctx, sdk, obj)
+			return createAIGatewayPolicy(ctx, cl, sdk, obj)
 		})
 	}
 	return nil

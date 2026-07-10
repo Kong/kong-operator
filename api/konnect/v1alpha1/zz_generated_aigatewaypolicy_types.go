@@ -63,7 +63,7 @@ type AIGatewayPolicyAPISpec struct {
 	//
 	//
 	// +required
-	Config apiextensionsv1.JSON `json:"config,omitzero"`
+	Config AIGatewayPolicyConfigDataSource `json:"config,omitzero"`
 
 	// The display name for this policy instance.
 	//
@@ -158,3 +158,28 @@ type AIGatewayPolicyStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }
+
+// AIGatewayPolicyConfigDataSource holds a sensitive value that can be provided either inline or
+// sourced from a Kubernetes Secret.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.value) : has(self.secretRef)",message="value required when type=inline; secretRef required when type=secretRef"
+type AIGatewayPolicyConfigDataSource struct {
+	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
+	//
+	// +kubebuilder:validation:Enum=inline;secretRef
+	// +kubebuilder:default=inline
+	Type SensitiveDataSourceType `json:"type"`
+
+	// Value contains the sensitive data provided inline.
+	// Required when type is 'inline'.
+	//
+	// +optional
+	Value *apiextensionsv1.JSON `json:"value,omitempty"`
+
+	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+	// Required when type is 'secretRef'.
+	//
+	// +optional
+	SecretRef *SensitiveDataSecretRef `json:"secretRef,omitempty"`
+}
+
