@@ -84,6 +84,22 @@ type ReferenceConfig struct {
 
 // SecretReferenceConfig configures a single sensitive field that can be provided
 // inline or sourced from a Kubernetes Secret.
+//
+// The Go type backing the inline value is inferred from the OAS field at Path,
+// not configured here:
+//   - When the field resolves to a string (OAS booleans included, since this
+//     generator represents them as Go string), it becomes the shared
+//     SensitiveDataSource type (Value *string) — unchanged regardless of this change.
+//   - Otherwise (e.g. an arbitrary JSON object, an integer, a typed map), the
+//     generator emits a dedicated per-field type instead (named from the
+//     entity and the field's Go selector, e.g. "AIGatewayPolicyConfigDataSource")
+//     whose Value field matches the OAS field's type. Resolving such a field's
+//     secretRef at runtime requires a hand-written valueFromSecretRef method on
+//     the generated dedicated type, added to secretref_manual.go in the target
+//     API package — the generator only emits the call site, not the method.
+//   - A leaf that is itself a oneOf union or an object with nested properties
+//     (inline or via $ref) is rejected at generation time: there's no single
+//     unambiguous value to wrap in inline-vs-secretRef.
 type SecretReferenceConfig struct {
 	// Path is the dot-separated field path within the spec
 	// (e.g. "spec.apiSpec.tls.clientIdentity.certificate").
@@ -141,8 +157,10 @@ type TypeConfig struct {
 	OpsResponseStatusFields []ResponseStatusFieldConfig `yaml:"-"`
 	// SecretReferences lists sensitive field paths whose values can be provided
 	// either inline or sourced from a Kubernetes Secret. Each entry causes the
-	// OAS-derived string field at Path to become a SensitiveDataSource struct
-	// supporting inline and secretRef variants at runtime.
+	// OAS-derived field at Path to become a union struct supporting inline and
+	// secretRef variants at runtime — the shared SensitiveDataSource type for
+	// string fields, or a dedicated generated type for non-string fields (see
+	// SecretReferenceConfig's doc comment).
 	SecretReferences []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
 	// Reconciler holds configuration for reconciler code generation.
 	// When set, reconciler wiring files (interface methods, watch options,

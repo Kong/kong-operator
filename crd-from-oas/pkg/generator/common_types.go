@@ -150,6 +150,39 @@ type SensitiveDataSource struct {
 	SecretRef *SensitiveDataSecretRef ` + "`" + `json:"secretRef,omitempty"` + "`" + `
 }`
 
+// dedicatedSensitiveDataSourceStructType is a per-field variant of
+// sensitiveDataSourceStructType, emitted into an entity's own generated types
+// file (not common_types.go) for secret reference leaves whose OAS type isn't
+// string. It shares the SensitiveDataSourceType enum and SensitiveDataSecretRef
+// type with the common SensitiveDataSource, differing only in the Value field's
+// type. Rendered via [fmt.Sprintf] with (name, valueGoType, name) — plain string
+// substitution rather than text/template, since callers build this per-field
+// (potentially many times per file) and shouldn't have to thread template
+// execution errors through generateSchemaTypes/generateCRDType.
+const dedicatedSensitiveDataSourceStructType = `// %[1]s holds a sensitive value that can be provided either inline or
+// sourced from a Kubernetes Secret.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.value) : has(self.secretRef)",message="value required when type=inline; secretRef required when type=secretRef"
+type %[1]s struct {
+	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
+	//
+	// +kubebuilder:validation:Enum=inline;secretRef
+	// +kubebuilder:default=inline
+	Type SensitiveDataSourceType ` + "`" + `json:"type"` + "`" + `
+
+	// Value contains the sensitive data provided inline.
+	// Required when type is 'inline'.
+	//
+	// +optional
+	Value *%[2]s ` + "`" + `json:"value,omitempty"` + "`" + `
+
+	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+	// Required when type is 'secretRef'.
+	//
+	// +optional
+	SecretRef *SensitiveDataSecretRef ` + "`" + `json:"secretRef,omitempty"` + "`" + `
+}`
+
 const konnectEntityRefType = `// KonnectEntityRef is a reference to a Konnect entity.
 type KonnectEntityRef struct {
 	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.
@@ -160,14 +193,16 @@ type KonnectEntityRef struct {
 }`
 
 // flattenSensitiveDataHelper is a runtime helper emitted into common_types.go.
-// It replaces every JSON object matching the SensitiveDataSource wire shape
-// {"type": "inline"|"secretRef", "value": "<string>", ...} with just the bare
-// string value, so the Konnect SDK receives a plain string instead of the
-// structured CRD representation.
-const flattenSensitiveDataHelper = `// flattenSensitiveData recursively replaces any SensitiveDataSource JSON
-// object shape {"type": "inline|secretRef", "value": "X", ...} with the
-// bare string "X", translating the CRD wire format to the Konnect SDK
-// wire format which expects plain strings for sensitive fields.
+// It replaces every JSON object matching the SensitiveDataSource (or dedicated
+// per-field DataSource) wire shape {"type": "inline"|"secretRef", "value": X, ...}
+// with the bare value X, so the Konnect SDK receives a plain value instead of
+// the structured CRD representation. X may be a string, number, boolean,
+// object, or array — the shape check only inspects "type", not "value"'s kind.
+const flattenSensitiveDataHelper = `// flattenSensitiveData recursively replaces any SensitiveDataSource (or
+// dedicated per-field DataSource) JSON object shape
+// {"type": "inline|secretRef", "value": X, ...} with the bare value X,
+// translating the CRD wire format to the Konnect SDK wire format which
+// expects plain values (of whatever type X is) for sensitive fields.
 func flattenSensitiveData(v any) any {
 	switch x := v.(type) {
 	case map[string]any:
@@ -178,10 +213,8 @@ func flattenSensitiveData(v any) any {
 		if typ != "inline" && typ != "secretRef" {
 			return x
 		}
-		rawVal, hasVal := x["value"]
-		val, isString := rawVal.(string)
-		if hasVal && isString {
-			return val
+		if rawVal, hasVal := x["value"]; hasVal {
+			return rawVal
 		}
 		return x
 	case []any:
