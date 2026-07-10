@@ -8888,6 +8888,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [AIGatewayConsumerCredential](#konnect-konghq-com-v1alpha1-aigatewayconsumercredential)
 - [AIGatewayConsumerGroup](#konnect-konghq-com-v1alpha1-aigatewayconsumergroup)
 - [AIGatewayIdentityProvider](#konnect-konghq-com-v1alpha1-aigatewayidentityprovider)
+- [AIGatewayMCPServer](#konnect-konghq-com-v1alpha1-aigatewaymcpserver)
 - [AIGatewayModel](#konnect-konghq-com-v1alpha1-aigatewaymodel)
 - [AIGatewayModelProvider](#konnect-konghq-com-v1alpha1-aigatewaymodelprovider)
 - [AIGatewayPolicy](#konnect-konghq-com-v1alpha1-aigatewaypolicy)
@@ -8982,6 +8983,21 @@ AIGatewayIdentityProvider is the Schema for the aigatewayidentityproviders API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayIdentityProviderSpec](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderspec)_ |  |
 | `status` _[AIGatewayIdentityProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderstatus)_ |  |
+
+### AIGatewayMCPServer
+
+
+AIGatewayMCPServer is the Schema for the aigatewaymcpservers API.
+
+<!-- ai_gateway_mcp_server description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayMCPServer`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayMCPServerSpec](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverspec)_ |  |
+| `status` _[AIGatewayMCPServerStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverstatus)_ |  |
 
 ### AIGatewayModel
 
@@ -9719,6 +9735,11 @@ _Appears in:_
 - [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
 - [AIGatewayIdentityProviderKeyAuth](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
 - [AIGatewayIdentityProviderOpenIDConnect](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
+- [AIGatewayMCPServerConversionListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+- [AIGatewayMCPServerConversionOnly](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
+- [AIGatewayMCPServerListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+- [AIGatewayMCPServerPassthroughListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+- [AIGatewayMCPServerUpstreamServer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
@@ -9968,6 +9989,1119 @@ AIGatewayIdentityProviderStatus defines the observed state of AIGatewayIdentityP
 _Appears in:_
 
 - [AIGatewayIdentityProvider](#konnect-konghq-com-v1alpha1-aigatewayidentityprovider)
+
+#### AIGatewayMCPACLs
+
+
+AIGatewayMCPACLs Access control rules for MCP resources.
+Configure `allow`, `deny`, or both.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allow` _[]string_ | List of consumer groups that are permitted access. |
+| `deny` _[]string_ | List of consumer groups that are denied access. |
+
+_Appears in:_
+
+- [AIGatewayMCPConversionToolAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontoolaccess)
+- [AIGatewayMCPServerBaseACLPropertiesConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)
+- [AIGatewayMCPServerBaseACLPropertiesOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)
+- [AIGatewayMCPToolBaseAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbaseaccess)
+- [AIGatewayMCPUpstreamToolAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtoolaccess)
+
+#### AIGatewayMCPConversionTool
+
+
+AIGatewayMCPConversionTool A tool exposed by an MCP Server in
+`conversion-only` or `conversion-listener` mode.
+
+
+
+| Field | Description |
+| --- | --- |
+| `access` _[AIGatewayMCPConversionToolAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontoolaccess)_ |  |
+| `annotations` _[AIGatewayMCPToolAnnotations](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ |  |
+| `description` _string_ | A description of what the tool does. |
+| `headers` _[AIGatewayMCPToolHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolheaders)_ | The headers of the exported API. By default, Kong will extract the headers from API configuration. If the configured headers are not exactly matched, this field is required. |
+| `host` _string_ | The host of the exported API, which must match the route's hosts. It should be the route's host. By default, Kong will extract the host from API configuration. If the configured host is wildcard, this field is required. |
+| `method` _string_ | For conversion-only and conversion-listener modes, the method of the exported API, which must match the route's methods. |
+| `name` _string_ | Tool identifier. In passthrough-listener mode, used to match remote MCP Server tools for ACL enforcement. In other modes, it is also used as the tool name (overrides annotations.title if present). |
+| `parameters` _[][AIGatewayMCPToolParameter](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ |  |
+| `path` _string_ | The path of the exported API, which must match the route's paths. Path not starting with '/' are treated as relative path and the route path will be added as the prefix. By default, Kong will extract the path from API configuration. |
+| `query` _[AIGatewayMCPToolQuery](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
+| `requestBody` _[AIGatewayMCPToolRequestBody](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
+| `responses` _[AIGatewayMCPToolResponses](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
+| `scheme` _string_ | The scheme of the exported API. By default, Kong will extract the scheme from API configuration. If the configured scheme is not expected, this field can be used to override it. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+- [AIGatewayMCPServerConversionOnly](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
+
+#### AIGatewayMCPConversionToolAccess
+
+
+AIGatewayMCPConversionToolAccess is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Access control rules for allowing or denying consumer groups access to this tool. When configured, these will override the default access control rules defined on the MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPConversionTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
+
+#### AIGatewayMCPServerAPISpec
+
+
+AIGatewayMCPServerAPISpec defines the API spec fields for AIGatewayMCPServer.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerSpec](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverspec)
+
+
+
+#### AIGatewayMCPServerBaseACLPropertiesConsumer
+
+
+AIGatewayMCPServerBaseACLPropertiesConsumer is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Access control rules for allowing or denying consumer groups. |
+| `defaultToolAcls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default access control rules for allowing or denying consumer groups to tools. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerBaseACLProperties](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclproperties)
+- [AIGatewayMCPServerConversionListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
+- [AIGatewayMCPServerListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
+- [AIGatewayMCPServerPassthroughListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
+- [AIGatewayMCPServerUpstreamServerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)
+
+#### AIGatewayMCPServerBaseACLPropertiesOauth
+
+
+AIGatewayMCPServerBaseACLPropertiesOauth is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `accessTokenClaimField` _string_ | The claim in the OAuth2 access token to use as the subject for ACL evaluation when `acl_attribute_type` is set to `oauth_access_token`. Nested claim can be fetched by using a jq filter starts with dot, e.g., “.user.email”: https://jqlang.org/manual/#object-identifier-index |
+| `acls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Access control rules for allowing or denying consumer groups. |
+| `defaultToolAcls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default access control rules for allowing or denying consumer groups to tools. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerBaseACLProperties](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclproperties)
+- [AIGatewayMCPServerConversionListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
+- [AIGatewayMCPServerListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
+- [AIGatewayMCPServerPassthroughListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
+- [AIGatewayMCPServerUpstreamServerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)
+
+#### AIGatewayMCPServerBaseACLPropertiesType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerBaseACLPropertiesType represents the type of AIGatewayMCPServerBaseACLProperties.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerBaseACLProperties](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclproperties)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consumer` |  |
+| `oauthAccessToken` |  |
+
+#### AIGatewayMCPServerConfig
+
+
+AIGatewayMCPServerConfig represents a union type for AIGatewayMCPServerConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayMCPServerConfigType](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconfigtype)_ | Type designates the type of configuration. |
+| `conversion-listener` _[AIGatewayMCPServerConversionListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)_ | ConversionListener configuration. |
+| `conversion-only` _[AIGatewayMCPServerConversionOnly](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)_ | ConversionOnly configuration. |
+| `listener` _[AIGatewayMCPServerListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)_ | Listener configuration. |
+| `passthrough-listener` _[AIGatewayMCPServerPassthroughListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)_ | PassthroughListener configuration. |
+| `upstream-server` _[AIGatewayMCPServerUpstreamServer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)_ | UpstreamServer configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverapispec)
+
+#### AIGatewayMCPServerConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerConfigType represents the type of AIGatewayMCPServerConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `conversion-listener` |  |
+| `conversion-only` |  |
+| `listener` |  |
+| `passthrough-listener` |  |
+| `upstream-server` |  |
+
+#### AIGatewayMCPServerConversionListener
+
+
+AIGatewayMCPServerConversionListener is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `access` _[AIGatewayMCPServerConversionListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)_ |  |
+| `config` _[AIGatewayMCPServerWithUpstreamNoProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)_ | Routing, logging, and server configuration for the MCP Server. |
+| `displayName` _string_ | The display name for the MCP Server. |
+| `enabled` _string_ | Whether the MCP Server is enabled. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `policies` _[]string_ | List of policy references. |
+| `tools` _[][AIGatewayMCPConversionTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconfig)
+
+#### AIGatewayMCPServerConversionListenerAccess
+
+
+AIGatewayMCPServerConversionListenerAccess represents a union type for access.
+Only one of the fields should be set based on the AclAttributeType.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aclAttributeType` _[AIGatewayMCPServerConversionListenerAccessType](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccesstype)_ | AclAttributeType designates the type of configuration. |
+| `consumer` _[AIGatewayMCPServerBaseACLPropertiesConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)_ | Consumer configuration. |
+| `oauthAccessToken` _[AIGatewayMCPServerBaseACLPropertiesOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)_ | Oauth configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+
+#### AIGatewayMCPServerConversionListenerAccessType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerConversionListenerAccessType represents the type of access.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consumer` |  |
+| `oauthAccessToken` |  |
+
+#### AIGatewayMCPServerConversionOnly
+
+
+AIGatewayMCPServerConversionOnly is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)_ | Routing, logging, and request body size limits for the MCP Server. |
+| `displayName` _string_ | The display name for the MCP Server. |
+| `enabled` _string_ | Whether the MCP Server is enabled. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `policies` _[]string_ | List of policy references. |
+| `tools` _[][AIGatewayMCPConversionTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconfig)
+
+#### AIGatewayMCPServerListener
+
+
+AIGatewayMCPServerListener is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `access` _[AIGatewayMCPServerListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)_ |  |
+| `config` _[AIGatewayMCPServerNoUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)_ | Routing, logging, and server configuration for the MCP Server. |
+| `displayName` _string_ | The display name for the MCP Server. |
+| `enabled` _string_ | Whether the MCP Server is enabled. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `policies` _[]string_ | List of policy references. |
+| `tools` _[][AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)_ | List of tools exposed by this MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconfig)
+
+#### AIGatewayMCPServerListenerAccess
+
+
+AIGatewayMCPServerListenerAccess represents a union type for access.
+Only one of the fields should be set based on the AclAttributeType.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aclAttributeType` _[AIGatewayMCPServerListenerAccessType](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccesstype)_ | AclAttributeType designates the type of configuration. |
+| `consumer` _[AIGatewayMCPServerBaseACLPropertiesConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)_ | Consumer configuration. |
+| `oauthAccessToken` _[AIGatewayMCPServerBaseACLPropertiesOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)_ | Oauth configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+
+#### AIGatewayMCPServerListenerAccessType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerListenerAccessType represents the type of access.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consumer` |  |
+| `oauthAccessToken` |  |
+
+#### AIGatewayMCPServerNoUpstreamConfig
+
+
+AIGatewayMCPServerNoUpstreamConfig Routing, logging, and server configuration
+for the MCP Server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `logging` _[AIGatewayMCPServerNoUpstreamConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfiglogging)_ | Configuration for AI Gateway logging. |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+| `server` _[AIGatewayMCPServerServerConfigBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+
+#### AIGatewayMCPServerNoUpstreamConfigLogging
+
+
+AIGatewayMCPServerNoUpstreamConfigLogging Configuration for AI Gateway
+logging.
+
+
+
+| Field | Description |
+| --- | --- |
+| `audits` _string_ |  |
+| `payloads` _string_ |  |
+| `statistics` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayMCPServerNoUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)
+
+#### AIGatewayMCPServerPassthroughListener
+
+
+AIGatewayMCPServerPassthroughListener is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `access` _[AIGatewayMCPServerPassthroughListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)_ |  |
+| `config` _[AIGatewayMCPServerWithUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)_ | Routing, logging, and server configuration for the MCP Server. |
+| `displayName` _string_ | The display name for the MCP Server. |
+| `enabled` _string_ | Whether the MCP Server is enabled. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `policies` _[]string_ | List of policy references. |
+| `tools` _[][AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)_ | List of tools exposed by this MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconfig)
+
+#### AIGatewayMCPServerPassthroughListenerAccess
+
+
+AIGatewayMCPServerPassthroughListenerAccess represents a union type for access.
+Only one of the fields should be set based on the AclAttributeType.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aclAttributeType` _[AIGatewayMCPServerPassthroughListenerAccessType](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccesstype)_ | AclAttributeType designates the type of configuration. |
+| `consumer` _[AIGatewayMCPServerBaseACLPropertiesConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)_ | Consumer configuration. |
+| `oauthAccessToken` _[AIGatewayMCPServerBaseACLPropertiesOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)_ | Oauth configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerPassthroughListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+
+#### AIGatewayMCPServerPassthroughListenerAccessType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerPassthroughListenerAccessType represents the type of access.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerPassthroughListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consumer` |  |
+| `oauthAccessToken` |  |
+
+
+
+#### AIGatewayMCPServerServerConfigBase
+
+
+AIGatewayMCPServerServerConfigBase Server-side configuration for the MCP
+Server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `forwardClientHeaders` _string_ | Whether to forward the client request headers to the upstream server when calling the tools. |
+| `session` _[AIGatewayMCPServerServerConfigBaseSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesession)_ | Enable managed session when Kong responds as MCP server in listener, conversion-listener, or upstream-server modes. This doesn't affect the passthrough-listener mode as the state in that mode is maintained by the upstream MCP servers. |
+| `tag` _string_ | The tag of the MCP server. This is used to filter the exported MCP tools. The field should contain exactly one tag. |
+| `timeout` _int_ | The timeout for calling the tools in milliseconds. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerNoUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)
+- [AIGatewayMCPServerWithUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
+
+#### AIGatewayMCPServerServerConfigBaseSession
+
+
+AIGatewayMCPServerServerConfigBaseSession Enable managed session when Kong
+responds as MCP server in listener, conversion-listener, or upstream-server
+modes.
+This doesn't affect the passthrough-listener mode as the state in that mode
+is maintained by the upstream MCP servers.
+
+
+
+| Field | Description |
+| --- | --- |
+| `client` _[AIGatewayMCPServerServerConfigBaseSessionClient](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesessionclient)_ | The configuration for client-side session storage. |
+| `managed` _string_ | If enabled, Kong will maintain managed sessions with the MCP server. |
+| `redis` _[AIGatewayRedisCloudConfiguration](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)_ | Config for connecting to a Cloud Provider's Redis instance. |
+| `sessionTtl` _int_ | The time-to-live (TTL) for each session in seconds. |
+| `strategy` _string_ | The strategy for the session. If the value is 'client', the session is encrypted into MCP session id assigned to the client. If the value is not 'client', the session is stored in the configured database. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerServerConfigBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)
+
+#### AIGatewayMCPServerServerConfigBaseSessionClient
+
+
+AIGatewayMCPServerServerConfigBaseSessionClient The configuration for
+client-side session storage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `secrets` _[]string_ | The secrets that are used in session encryption. Required when the strategy is 'client'. The first secret is used for encryption, while all secrets are used for decryption to support key rotation. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerServerConfigBaseSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesession)
+
+#### AIGatewayMCPServerSpec
+
+
+AIGatewayMCPServerSpec defines the desired state of AIGatewayMCPServer.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `apiSpec` _[AIGatewayMCPServerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayMCPServer](#konnect-konghq-com-v1alpha1-aigatewaymcpserver)
+
+#### AIGatewayMCPServerStatus
+
+
+AIGatewayMCPServerStatus defines the observed state of AIGatewayMCPServer.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayMCPServer](#konnect-konghq-com-v1alpha1-aigatewaymcpserver)
+
+#### AIGatewayMCPServerUpstreamServer
+
+
+AIGatewayMCPServerUpstreamServer is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `access` _[AIGatewayMCPServerUpstreamServerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)_ |  |
+| `config` _[AIGatewayMCPServerUpstreamServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)_ | Routing, logging, and server configuration for the MCP Server. |
+| `displayName` _string_ | The display name for the MCP Server. |
+| `enabled` _string_ | Whether the MCP Server is enabled. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `policies` _[]string_ | List of policy references. |
+| `tools` _[][AIGatewayMCPUpstreamTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)_ | List of tools exposed by this MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconfig)
+
+#### AIGatewayMCPServerUpstreamServerAccess
+
+
+AIGatewayMCPServerUpstreamServerAccess represents a union type for access.
+Only one of the fields should be set based on the AclAttributeType.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aclAttributeType` _[AIGatewayMCPServerUpstreamServerAccessType](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccesstype)_ | AclAttributeType designates the type of configuration. |
+| `consumer` _[AIGatewayMCPServerBaseACLPropertiesConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)_ | Consumer configuration. |
+| `oauthAccessToken` _[AIGatewayMCPServerBaseACLPropertiesOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)_ | Oauth configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
+
+#### AIGatewayMCPServerUpstreamServerAccessType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerUpstreamServerAccessType represents the type of access.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consumer` |  |
+| `oauthAccessToken` |  |
+
+#### AIGatewayMCPServerUpstreamServerConfig
+
+
+AIGatewayMCPServerUpstreamServerConfig Routing, logging, and server
+configuration for the MCP Server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `logging` _[AIGatewayMCPServerUpstreamServerConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfiglogging)_ | Configuration for AI Gateway logging. |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+| `server` _[AIGatewayMCPServerUpstreamServerServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfig)_ | Server-side configuration specific to `upstream-server` mode. |
+| `toolsCacheTtlSeconds` _int_ | The time-to-live (TTL) for the upstream tools cache in seconds. Set to `0` to refresh on every client call. |
+| `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
+
+#### AIGatewayMCPServerUpstreamServerConfigLogging
+
+
+AIGatewayMCPServerUpstreamServerConfigLogging Configuration for AI Gateway
+logging.
+
+
+
+| Field | Description |
+| --- | --- |
+| `audits` _string_ |  |
+| `payloads` _string_ |  |
+| `statistics` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+
+#### AIGatewayMCPServerUpstreamServerServerConfig
+
+
+AIGatewayMCPServerUpstreamServerServerConfig Server-side configuration
+specific to `upstream-server` mode.
+
+
+
+| Field | Description |
+| --- | --- |
+| `forwardClientHeaders` _string_ | Whether to forward the client request headers to the upstream server when calling the tools. |
+| `preserveUpstreamToolNames` _string_ | If enabled, the original upstream tool names are preserved as-is when Kong acts as an MCP server. If disabled (`false`), the service name will be prepended to the MCP tool names to avoid name collisions when multiple services are used. |
+| `session` _[AIGatewayMCPServerUpstreamServerServerConfigSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsession)_ | Enable managed session when Kong responds as MCP server in listener, conversion-listener, or upstream-server modes. This doesn't affect the passthrough-listener mode as the state in that mode is maintained by the upstream MCP servers. |
+| `tag` _string_ | The tag of the MCP server. This is used to filter the exported MCP tools. The field should contain exactly one tag. |
+| `timeout` _int_ | The timeout for calling the tools in milliseconds. |
+| `toolsListAuth` _[AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigtoolslistauth)_ | Configuration for an Upstream Server's MCP Server Tools' Authentication. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+
+#### AIGatewayMCPServerUpstreamServerServerConfigSession
+
+
+AIGatewayMCPServerUpstreamServerServerConfigSession Enable managed session
+when Kong responds as MCP server in listener, conversion-listener, or
+upstream-server modes.
+This doesn't affect the passthrough-listener mode as the state in that mode
+is maintained by the upstream MCP servers.
+
+
+
+| Field | Description |
+| --- | --- |
+| `client` _[AIGatewayMCPServerUpstreamServerServerConfigSessionClient](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsessionclient)_ | The configuration for client-side session storage. |
+| `managed` _string_ | If enabled, Kong will maintain managed sessions with the MCP server. |
+| `redis` _[AIGatewayRedisCloudConfiguration](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)_ | Config for connecting to a Cloud Provider's Redis instance. |
+| `sessionTtl` _int_ | The time-to-live (TTL) for each session in seconds. |
+| `strategy` _string_ | The strategy for the session. If the value is 'client', the session is encrypted into MCP session id assigned to the client. If the value is not 'client', the session is stored in the configured database. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfig)
+
+#### AIGatewayMCPServerUpstreamServerServerConfigSessionClient
+
+
+AIGatewayMCPServerUpstreamServerServerConfigSessionClient The configuration
+for client-side session storage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `secrets` _[]string_ | The secrets that are used in session encryption. Required when the strategy is 'client'. The first secret is used for encryption, while all secrets are used for decryption to support key rotation. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerServerConfigSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsession)
+
+#### AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth
+
+
+AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth represents a union type for tools_list_auth.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigtoolslistauthtype)_ | Type designates the type of configuration. |
+| `credentials` _[AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamservertooloauth2configcredentials)_ | Credentials configuration. |
+| `jwt` _[AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamservertooloauth2configjwt)_ | Jwt configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfig)
+
+#### AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType represents the type of tools_list_auth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigtoolslistauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `credentials` |  |
+| `jwt` |  |
+
+
+
+#### AIGatewayMCPServerUpstreamServerServerToolAuthConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerUpstreamServerServerToolAuthConfigType represents the type of AIGatewayMCPServerUpstreamServerServerToolAuthConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerServerToolAuthConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverservertoolauthconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `credentials` |  |
+| `jwt` |  |
+
+#### AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials
+
+
+AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `accessTokenHeader` _string_ | Header name used to send the fetched access token to the upstream MCP server. The value should include the header name and the token prefix if needed. |
+| `clientID` _string_ | The client ID for the OAuth 2.0 client-credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `clientSecret` _string_ | The client secret for the OAuth 2.0 client-credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `idTokenHeader` _string_ | Header name used to send the fetched ID token to the upstream MCP server. The value should include the header name and the token prefix if needed. Leave empty to omit the ID token when fetching the tools list. |
+| `scope` _string_ | The scopes for the OAuth 2.0 client-credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `tokenEndpoint` _string_ | The token endpoint URL for fetching the OAuth 2.0 access token using client-credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigtoolslistauth)
+- [AIGatewayMCPServerUpstreamServerServerToolAuthConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverservertoolauthconfig)
+
+#### AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt
+
+
+AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `accessTokenHeader` _string_ | Header name used to send the fetched access token to the upstream MCP server. The value should include the header name and the token prefix if needed. |
+| `idTokenHeader` _string_ | Header name used to send the fetched ID token to the upstream MCP server. The value should include the header name and the token prefix if needed. Leave empty to omit the ID token when fetching the tools list. |
+| `scope` _string_ | The scopes for the OAuth 2.0 client-credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigtoolslistauth)
+- [AIGatewayMCPServerUpstreamServerServerToolAuthConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverservertoolauthconfig)
+
+#### AIGatewayMCPServerWithUpstreamConfig
+
+
+AIGatewayMCPServerWithUpstreamConfig Routing, logging, and server
+configuration for the MCP Server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `logging` _[AIGatewayMCPServerWithUpstreamConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfiglogging)_ | Configuration for AI Gateway logging. |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `proxy` _[AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
+| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+| `server` _[AIGatewayMCPServerServerConfigBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
+| `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
+
+_Appears in:_
+
+- [AIGatewayMCPServerPassthroughListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+
+#### AIGatewayMCPServerWithUpstreamConfigLogging
+
+
+AIGatewayMCPServerWithUpstreamConfigLogging Configuration for AI Gateway
+logging.
+
+
+
+| Field | Description |
+| --- | --- |
+| `audits` _string_ |  |
+| `payloads` _string_ |  |
+| `statistics` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayMCPServerWithUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+
+#### AIGatewayMCPServerWithUpstreamNoProxyConfig
+
+
+AIGatewayMCPServerWithUpstreamNoProxyConfig Routing, logging, and server
+configuration for the MCP Server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfiglogging)_ | Configuration for AI Gateway logging. |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+| `server` _[AIGatewayMCPServerServerConfigBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
+| `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+
+#### AIGatewayMCPServerWithUpstreamNoProxyConfigLogging
+
+
+AIGatewayMCPServerWithUpstreamNoProxyConfigLogging Configuration for AI
+Gateway logging.
+
+
+
+| Field | Description |
+| --- | --- |
+| `audits` _string_ |  |
+| `payloads` _string_ |  |
+| `statistics` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
+
+#### AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig
+
+
+AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig Routing, logging,
+and request body size limits for the MCP Server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfiglogging)_ | Configuration for AI Gateway logging. |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+| `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionOnly](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
+
+#### AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging
+
+
+AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging
+Configuration for AI Gateway logging.
+
+
+
+| Field | Description |
+| --- | --- |
+| `audits` _string_ |  |
+| `payloads` _string_ |  |
+| `statistics` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
+
+#### AIGatewayMCPToolAnnotations
+
+
+AIGatewayMCPToolAnnotations is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `destructiveHint` _string_ | If true, the tool may perform destructive updates |
+| `idempotentHint` _string_ | If true, repeated calls with same args have no additional effect |
+| `openWorldHint` _string_ | If true, tool interacts with external entities |
+| `readOnlyHint` _string_ | If true, the tool does not modify its environment |
+| `title` _string_ | Human-readable title for the tool |
+
+_Appears in:_
+
+- [AIGatewayMCPConversionTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
+- [AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
+- [AIGatewayMCPUpstreamTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
+
+#### AIGatewayMCPToolBase
+
+
+AIGatewayMCPToolBase A tool exposed by the MCP Server, mapped to a backend
+HTTP endpoint.
+
+
+
+| Field | Description |
+| --- | --- |
+| `access` _[AIGatewayMCPToolBaseAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbaseaccess)_ |  |
+| `annotations` _[AIGatewayMCPToolAnnotations](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ |  |
+| `description` _string_ | A description of what the tool does. |
+| `headers` _[AIGatewayMCPToolHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolheaders)_ | The headers of the exported API. By default, Kong will extract the headers from API configuration. If the configured headers are not exactly matched, this field is required. |
+| `host` _string_ | The host of the exported API, which must match the route's hosts. It should be the route's host. By default, Kong will extract the host from API configuration. If the configured host is wildcard, this field is required. |
+| `method` _string_ | For conversion-only and conversion-listener modes, the method of the exported API, which must match the route's methods. |
+| `name` _string_ | Tool identifier. In passthrough-listener mode, used to match remote MCP Server tools for ACL enforcement. In other modes, it is also used as the tool name (overrides annotations.title if present). |
+| `parameters` _[][AIGatewayMCPToolParameter](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ |  |
+| `path` _string_ | The path of the exported API, which must match the route's paths. Path not starting with '/' are treated as relative path and the route path will be added as the prefix. By default, Kong will extract the path from API configuration. |
+| `query` _[AIGatewayMCPToolQuery](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
+| `requestBody` _[AIGatewayMCPToolRequestBody](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
+| `responses` _[AIGatewayMCPToolResponses](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
+| `scheme` _string_ | The scheme of the exported API. By default, Kong will extract the scheme from API configuration. If the configured scheme is not expected, this field can be used to override it. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+- [AIGatewayMCPServerPassthroughListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+
+#### AIGatewayMCPToolBaseAccess
+
+
+AIGatewayMCPToolBaseAccess is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Access control rules for allowing or denying consumer groups access to this tool. When configured, these will override the default access control rules defined on the MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
+
+#### AIGatewayMCPToolHeaders
+
+_Underlying type:_ `object`
+
+AIGatewayMCPToolHeaders The headers of the exported API.
+By default, Kong will extract the headers from API configuration.
+If the configured headers are not exactly matched, this field is required.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPConversionTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
+- [AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
+- [AIGatewayMCPUpstreamTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
+
+#### AIGatewayMCPToolParameter
+
+
+AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
+JSON format.
+For example, '[{"name": "city", "in": "query", "description": "Name of the
+city to get the weather for", "required": true, "schema": {"type":
+"string"}}]'.
+See https://swagger.io/docs/specification/v3_0/describing-parameters/ for
+more details.
+
+
+
+| Field | Description |
+| --- | --- |
+| `description` _string_ | A description of the parameter. |
+| `in` _string_ | The location of the parameter in the request. |
+| `name` _string_ | The name of the parameter. |
+| `required` _string_ | Whether this parameter is required. |
+| `schema` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | JSON Schema definition for the parameter value. See https://swagger.io/docs/specification/v3_0/describing-parameters/#schema-vs-content for more details. |
+
+_Appears in:_
+
+- [AIGatewayMCPConversionTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
+- [AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
+- [AIGatewayMCPUpstreamTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
+
+#### AIGatewayMCPToolQuery
+
+_Underlying type:_ `object`
+
+AIGatewayMCPToolQuery The query arguments of the exported API.
+If the generated query arguments are not exactly matched, this field is
+required.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPConversionTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
+- [AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
+- [AIGatewayMCPUpstreamTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
+
+#### AIGatewayMCPToolRequestBody
+
+_Underlying type:_ `object`
+
+AIGatewayMCPToolRequestBody The API requestBody specification defined in
+OpenAPI JSON format.
+For example,
+'{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
+See
+https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
+for more details.
+Note that `$ref` is not supported.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPConversionTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
+- [AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
+- [AIGatewayMCPUpstreamTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
+
+#### AIGatewayMCPToolResponses
+
+_Underlying type:_ `object`
+
+AIGatewayMCPToolResponses The API responses specification defined in OpenAPI
+JSON format.
+This specification will be used to validate the upstream response and map it
+back to the structuredOutput.
+For example,
+'{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
+See https://swagger.io/docs/specification/v3_0/describing-responses/ for more
+details.
+Only one non-error (status code < 400) response is supported.
+Note that `$ref` is not supported.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPConversionTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
+- [AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
+- [AIGatewayMCPUpstreamTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
+
+#### AIGatewayMCPUpstreamTool
+
+
+AIGatewayMCPUpstreamTool A tool exposed by an MCP Server in `upstream-server`
+mode.
+Extends the base tool with input/output schema overrides for the upstream
+server's advertised tool.
+
+
+
+| Field | Description |
+| --- | --- |
+| `access` _[AIGatewayMCPUpstreamToolAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtoolaccess)_ |  |
+| `annotations` _[AIGatewayMCPToolAnnotations](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ |  |
+| `description` _string_ | A description of what the tool does. |
+| `headers` _[AIGatewayMCPToolHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolheaders)_ | The headers of the exported API. By default, Kong will extract the headers from API configuration. If the configured headers are not exactly matched, this field is required. |
+| `host` _string_ | The host of the exported API, which must match the route's hosts. It should be the route's host. By default, Kong will extract the host from API configuration. If the configured host is wildcard, this field is required. |
+| `inputSchema` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | The entire `inputSchema` section for the tool. Overrides the upstream server's `inputSchema` for the same tool name, if present. |
+| `method` _string_ | When provided, the method of the exported API, which must match the route's methods. |
+| `name` _string_ | Tool identifier. In passthrough-listener mode, used to match remote MCP Server tools for ACL enforcement. In other modes, it is also used as the tool name (overrides annotations.title if present). |
+| `outputSchema` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | The entire `outputSchema` section for the tool. Overrides the upstream server's `outputSchema` for the same tool name, if present. |
+| `parameters` _[][AIGatewayMCPToolParameter](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ |  |
+| `path` _string_ | The path of the exported API, which must match the route's paths. Path not starting with '/' are treated as relative path and the route path will be added as the prefix. By default, Kong will extract the path from API configuration. |
+| `query` _[AIGatewayMCPToolQuery](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
+| `requestBody` _[AIGatewayMCPToolRequestBody](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
+| `responses` _[AIGatewayMCPToolResponses](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
+| `scheme` _string_ | The scheme of the exported API. By default, Kong will extract the scheme from API configuration. If the configured scheme is not expected, this field can be used to override it. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
+
+#### AIGatewayMCPUpstreamToolAccess
+
+
+AIGatewayMCPUpstreamToolAccess is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Access control rules for allowing or denying consumer groups access to this tool. When configured, these will override the default access control rules defined on the MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPUpstreamTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
 #### AIGatewayModelAPI
 
@@ -12115,6 +13249,7 @@ the upstream AI provider.
 
 _Appears in:_
 
+- [AIGatewayMCPServerWithUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
 - [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
 - [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
 
@@ -12208,6 +13343,7 @@ Cloud Provider's redis instance.
 _Appears in:_
 
 - [AIGatewayModelVectorDBConfigRedisCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthentication)
+- [AIGatewayRedisCloudConfigurationCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationcloudauthentication)
 
 #### AIGatewayRedisAzureAuthentication
 
@@ -12226,6 +13362,234 @@ Cloud Provider's redis instance.
 _Appears in:_
 
 - [AIGatewayModelVectorDBConfigRedisCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthentication)
+- [AIGatewayRedisCloudConfigurationCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationcloudauthentication)
+
+#### AIGatewayRedisCloudConfiguration
+
+
+AIGatewayRedisCloudConfiguration Config for connecting to a Cloud Provider's
+Redis instance.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cloudAuthentication` _[AIGatewayRedisCloudConfigurationCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationcloudauthentication)_ | Auth related config for connecting to a Cloud Provider's Redis instance. |
+| `cluster` _[AIGatewayRedisCloudConfigurationCluster](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationcluster)_ | Cluster configuration for the Redis connection. |
+| `connectTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `connectionIsProxied` _string_ | If the connection to Redis is proxied (e.g. Envoy), set it `true`. Set the `host` and `port` to point to the proxy address. |
+| `database` _int_ | Database to use for the Redis connection when using the `redis` strategy |
+| `host` _string_ | A string representing a host name, such as example.com. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `keepalive` _[AIGatewayRedisCloudConfigurationKeepalive](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationkeepalive)_ | Keepalive configuration for the Redis connection. |
+| `password` _string_ | Password to use for Redis connections. If undefined, no AUTH commands are sent to Redis. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `port` _[AIGatewayRedisCloudConfigurationPort](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationport)_ | An integer representing a port number between 0 and 65535, inclusive. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `readTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `sendTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `sentinel` _[AIGatewayRedisCloudConfigurationSentinel](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationsentinel)_ | Configuration for Redis Sentinel. |
+| `serverName` _string_ | A string representing an SNI (server name indication) value for TLS. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `ssl` _string_ | If set to true, uses SSL to connect to Redis. |
+| `sslVerify` _string_ | If set to true, verifies the validity of the server SSL certificate. If setting this parameter, also configure `lua_ssl_trusted_certificate` in `kong.conf` to specify the CA (or server) certificate used by your Redis server. You may also need to configure `lua_ssl_verify_depth` accordingly. |
+| `username` _string_ | Username to use for Redis connections. If undefined, ACL authentication won't be performed. This requires Redis v6.0.0+. To be compatible with Redis v5.x.y, you can set it to `default`. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayMCPServerServerConfigBaseSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesession)
+- [AIGatewayMCPServerUpstreamServerServerConfigSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsession)
+
+#### AIGatewayRedisCloudConfigurationCloudAuthentication
+
+
+AIGatewayRedisCloudConfigurationCloudAuthentication represents a union type for cloud_authentication.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayRedisCloudConfigurationCloudAuthenticationType](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationcloudauthenticationtype)_ | Type designates the type of configuration. |
+| `aws` _[AIGatewayRedisAWSAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayredisawsauthentication)_ | AWS configuration. |
+| `azure` _[AIGatewayRedisAzureAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayredisazureauthentication)_ | Azure configuration. |
+| `gcp` _[AIGatewayRedisGCPAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayredisgcpauthentication)_ | GCP configuration. |
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfiguration](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)
+
+#### AIGatewayRedisCloudConfigurationCloudAuthenticationType
+
+_Underlying type:_ `string`
+
+AIGatewayRedisCloudConfigurationCloudAuthenticationType represents the type of cloud_authentication.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfigurationCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationcloudauthentication)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `azure` |  |
+| `gcp` |  |
+
+#### AIGatewayRedisCloudConfigurationCluster
+
+
+AIGatewayRedisCloudConfigurationCluster Cluster configuration for the Redis
+connection.
+
+
+
+| Field | Description |
+| --- | --- |
+| `maxRedirections` _int_ | Maximum retry attempts for redirection. |
+| `nodes` _[][AIGatewayRedisCloudConfigurationClusterNodes](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationclusternodes)_ | Cluster addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Cluster. The minimum length of the array is 1 element. |
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfiguration](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)
+
+#### AIGatewayRedisCloudConfigurationClusterNodes
+
+
+AIGatewayRedisCloudConfigurationClusterNodes Cluster addresses to use for
+Redis connections when the `redis` strategy is defined.
+Defining this field implies using a Redis Cluster.
+The minimum length of the array is 1 element.
+
+
+
+| Field | Description |
+| --- | --- |
+| `ip` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfigurationCluster](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationcluster)
+
+#### AIGatewayRedisCloudConfigurationKeepalive
+
+
+AIGatewayRedisCloudConfigurationKeepalive Keepalive configuration for the
+Redis connection.
+
+
+
+| Field | Description |
+| --- | --- |
+| `backlog` _int_ | Limits the total number of opened connections for a pool. If the connection pool is full, connection queues above the limit go into the backlog queue. If the backlog queue is full, subsequent connect operations fail and return `nil`. Queued operations (subject to set timeouts) resume once the number of connections in the pool is less than `pool_size`. If latency is high or throughput is low, try increasing this value. Empirically, this value is larger than `pool_size`. |
+| `poolSize` _int_ | The size limit for every cosocket connection pool associated with every remote server, per worker process. If neither `pool_size` nor `backlog` is specified, no pool is created. If `pool_size` isn't specified but `backlog` is specified, then the pool uses the default value. Try to increase (e.g. 512) this value if latency is high or throughput is low. |
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfiguration](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)
+
+#### AIGatewayRedisCloudConfigurationPort
+
+
+AIGatewayRedisCloudConfigurationPort represents a union type for port.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayRedisCloudConfigurationPortType](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationporttype)_ | Type designates the type of configuration. |
+| `variant1` _[AIGatewayRedisCloudConfigurationPortVariant1](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationportvariant1)_ | Variant1 configuration. |
+| `variant2` _[AIGatewayRedisCloudConfigurationPortVariant2](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationportvariant2)_ | Variant2 configuration. |
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfiguration](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)
+
+#### AIGatewayRedisCloudConfigurationPortType
+
+_Underlying type:_ `string`
+
+AIGatewayRedisCloudConfigurationPortType represents the type of port.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfigurationPort](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationport)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `variant1` |  |
+| `variant2` |  |
+
+#### AIGatewayRedisCloudConfigurationPortVariant1
+
+_Underlying type:_ `integer`
+
+AIGatewayRedisCloudConfigurationPortVariant1 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfigurationPort](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationport)
+
+#### AIGatewayRedisCloudConfigurationPortVariant2
+
+_Underlying type:_ `string`
+
+AIGatewayRedisCloudConfigurationPortVariant2 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfigurationPort](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationport)
+
+#### AIGatewayRedisCloudConfigurationSentinel
+
+
+AIGatewayRedisCloudConfigurationSentinel Configuration for Redis Sentinel.
+
+
+
+| Field | Description |
+| --- | --- |
+| `master` _string_ | Sentinel master to use for Redis connections. Defining this value implies using Redis Sentinel. |
+| `nodes` _[][AIGatewayRedisCloudConfigurationSentinelNodes](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationsentinelnodes)_ | Sentinel node addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Sentinel. The minimum length of the array is 1 element. |
+| `password` _string_ | Sentinel password to authenticate with a Redis Sentinel instance. If undefined, no AUTH commands are sent to Redis Sentinels. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `role` _string_ | Sentinel role to use for Redis connections when the `redis` strategy is defined. Defining this value implies using Redis Sentinel. |
+| `username` _string_ | Sentinel username to authenticate with a Redis Sentinel instance. If undefined, ACL authentication won't be performed. This requires Redis v6.2.0+. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfiguration](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)
+
+#### AIGatewayRedisCloudConfigurationSentinelNodes
+
+
+AIGatewayRedisCloudConfigurationSentinelNodes Sentinel node addresses to use
+for Redis connections when the `redis` strategy is defined.
+Defining this field implies using a Redis Sentinel.
+The minimum length of the array is 1 element.
+
+
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGatewayRedisCloudConfigurationSentinel](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationsentinel)
 
 #### AIGatewayRedisGCPAuthentication
 
@@ -12242,6 +13606,7 @@ Cloud Provider's redis instance.
 _Appears in:_
 
 - [AIGatewayModelVectorDBConfigRedisCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthentication)
+- [AIGatewayRedisCloudConfigurationCloudAuthentication](#konnect-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationcloudauthentication)
 
 #### AIGatewayRouteConfig
 
@@ -12268,6 +13633,11 @@ AIGatewayRouteConfig Configuration for an AI Gateway route.
 _Appears in:_
 
 - [AIGatewayAgentConfig](#konnect-konghq-com-v1alpha1-types-aigatewayagentconfig)
+- [AIGatewayMCPServerNoUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)
+- [AIGatewayMCPServerUpstreamServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+- [AIGatewayMCPServerWithUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
 - [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
 - [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
 
@@ -13558,6 +14928,7 @@ _Appears in:_
 - [AIGatewayConsumerGroupStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupstatus)
 - [AIGatewayConsumerStatus](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerstatus)
 - [AIGatewayIdentityProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderstatus)
+- [AIGatewayMCPServerStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverstatus)
 - [AIGatewayModelProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderstatus)
 - [AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)
 - [AIGatewayPolicyStatus](#konnect-konghq-com-v1alpha1-types-aigatewaypolicystatus)
@@ -13949,6 +15320,11 @@ _Appears in:_
 - [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
 - [AIGatewayIdentityProviderKeyAuth](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
 - [AIGatewayIdentityProviderOpenIDConnect](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
+- [AIGatewayMCPServerConversionListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+- [AIGatewayMCPServerConversionOnly](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
+- [AIGatewayMCPServerListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+- [AIGatewayMCPServerPassthroughListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+- [AIGatewayMCPServerUpstreamServer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
@@ -14778,6 +16154,11 @@ _Appears in:_
 - [AIGatewayConsumerGroupAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
 - [AIGatewayIdentityProviderKeyAuth](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
 - [AIGatewayIdentityProviderOpenIDConnect](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
+- [AIGatewayMCPServerConversionListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+- [AIGatewayMCPServerConversionOnly](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
+- [AIGatewayMCPServerListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+- [AIGatewayMCPServerPassthroughListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+- [AIGatewayMCPServerUpstreamServer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
 - [AIGatewayModelAPI](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapi)
 - [AIGatewayModelModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)

@@ -84,6 +84,7 @@ func (g *Generator) generateEntityOpsFile(
 			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
 		needsStringsImport := createData != nil && len(createData.ResponseStatusFields) > 0
+		needsJSONImport := createData != nil && createData.RespRootUnion != nil
 
 		extraImportSet := make(map[string]string)
 		if deleteData != nil && deleteData.DeleteAsUpdate && deleteData.DeletePutReqImportPath != "" &&
@@ -103,6 +104,7 @@ func (g *Generator) generateEntityOpsFile(
 			NeedsOpsImport     bool
 			NeedsClientImport  bool
 			NeedsStringsImport bool
+			NeedsJSONImport    bool
 			ExtraImports       []opsFileImport
 		}{
 			APIAlias:           g.config.APIGroupPackageAlias,
@@ -110,6 +112,7 @@ func (g *Generator) generateEntityOpsFile(
 			NeedsOpsImport:     needsOpsImport,
 			NeedsClientImport:  needsClientImport,
 			NeedsStringsImport: needsStringsImport,
+			NeedsJSONImport:    needsJSONImport,
 			ExtraImports:       extraImports,
 		}
 		var content strings.Builder

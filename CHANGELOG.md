@@ -113,6 +113,8 @@
   [#4804](https://github.com/Kong/kong-operator/pull/4804)
   - introduce `AIGatewayConsumerGroup` CRD with reconciler.
   [#4822](https://github.com/Kong/kong-operator/pull/4822)
+  - introduce `AIGatewayMCPServer` CRD with reconciler.
+  [#4836](https://github.com/Kong/kong-operator/pull/4836)
 - GRPCRoute: enable GRPCRoute for on-prem gateway
   [#4364](https://github.com/Kong/kong-operator/pull/4364)
 

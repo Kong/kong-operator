@@ -51,6 +51,7 @@ resources:
   - konnect.konghq.com_aigatewayconsumergroups.yaml
   - konnect.konghq.com_aigatewayconsumers.yaml
   - konnect.konghq.com_aigatewayidentityproviders.yaml
+  - konnect.konghq.com_aigatewaymcpservers.yaml
   - konnect.konghq.com_aigatewaymodelproviders.yaml
   - konnect.konghq.com_aigatewaymodels.yaml
   - konnect.konghq.com_aigatewaypolicies.yaml
