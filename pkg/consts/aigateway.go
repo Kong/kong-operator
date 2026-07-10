@@ -39,17 +39,17 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
-	// AIGatewayContainerName is the name of the AI Gateway container in the DataPlane Deployment.
-	AIGatewayContainerName = "aigw"
+	// AIGatewayDataPlaneContainerName is the name of the AI Gateway container in the DataPlane Deployment.
+	AIGatewayDataPlaneContainerName = "aigw"
 
-	// RelatedImageAIGatewayEnvVar is the environment variable name for the AI Gateway container image,
+	// RelatedImageAIGatewayDataPlaneEnvVar is the environment variable name for the AI Gateway container image,
 	// following the operator-framework convention for related images.
-	RelatedImageAIGatewayEnvVar = "RELATED_IMAGE_AIGW"
+	RelatedImageAIGatewayDataPlaneEnvVar = "RELATED_IMAGE_AIGW"
 
-	// DefaultAIGatewayBaseImage is the base image name for the AI Gateway container.
-	DefaultAIGatewayBaseImage = "kong/kong-ai-gateway"
-	// DefaultAIGatewayTag is the default image tag for the AI Gateway container.
-	DefaultAIGatewayTag = "2.0.0"
-	// DefaultAIGatewayImage is the full default image reference for the AI Gateway container.
-	DefaultAIGatewayImage = DefaultAIGatewayBaseImage + ":" + DefaultAIGatewayTag
+	// DefaultAIGatewayDataPlaneBaseImage is the base image name for the AI Gateway container.
+	DefaultAIGatewayDataPlaneBaseImage = "kong/kong-ai-gateway"
+	// DefaultAIGatewayDataPlaneTag is the default image tag for the AI Gateway container.
+	DefaultAIGatewayDataPlaneTag = "2.0.0" // renovate: datasource=docker depName=kong/kong-ai-gateway
+	// DefaultAIGatewayDataPlaneImage is the full default image reference for the AI Gateway container.
+	DefaultAIGatewayDataPlaneImage = DefaultAIGatewayDataPlaneBaseImage + ":" + DefaultAIGatewayDataPlaneTag
 )
