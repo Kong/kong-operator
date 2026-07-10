@@ -58,4 +58,4 @@ metadata:
     konghq.com/secret: "true"
 type: Opaque
 stringData:
-  config: '{"llm_format": "openai", "max_request_body_size": 8000000, "prompts": {"append": null, "prepend": [{"content": "In short words.", "role": "user"}]}}'
+  config: '{"llm_format": "openai", "max_request_body_size": 8388608, "prompts": {"append": null, "prepend": [{"content": "In short words.", "role": "user"}]}}'
