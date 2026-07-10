@@ -99,8 +99,10 @@
   [#4760](https://github.com/Kong/kong-operator/pull/4760), [#4792](https://github.com/Kong/kong-operator/pull/4792), [#4848](https://github.com/Kong/kong-operator/pull/4848)
   - introduce `AIGatewayDataPlaneCertificate` CRD with reconciler
   [#4772](https://github.com/Kong/kong-operator/pull/4772)
-  - introduce `AIGatewayPolicy` CRD with reconciler.
+  - introduce `AIGatewayPolicy` CRD with reconciler. Configurations can be
+    sourced from a key in a Kubernetes `Secret`.
   [#4781](https://github.com/Kong/kong-operator/pull/4781)
+  [#4856](https://github.com/Kong/kong-operator/pull/4856)
   - introduce `AIGatewayAgent` CRD with reconciler.
   [#4776](https://github.com/Kong/kong-operator/pull/4776)
   - introduce `AIGatewayModelProvider` CRD with reconciler. Credentials can be sourced
