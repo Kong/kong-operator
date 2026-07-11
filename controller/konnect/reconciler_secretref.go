@@ -161,5 +161,21 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			return res, true, errStatus
 		}
 	}
+
+	// Every configured secretRef was resolved above without error, so mark
+	// SecretRefValid true. Without this, once a Secret becomes invalid and the
+	// condition flips to False, fixing the Secret never flips it back.
+	if len(secretRefs) > 0 && !deleting {
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, cl, ent,
+			konnectv1alpha1.SecretRefValidConditionType,
+			metav1.ConditionTrue,
+			konnectv1alpha1.SecretRefReasonValid,
+			"Referenced Secret(s) exist and contain the required key(s)",
+		); errStatus != nil || !res.IsZero() {
+			return res, true, errStatus
+		}
+	}
+
 	return ctrl.Result{}, false, nil
 }
