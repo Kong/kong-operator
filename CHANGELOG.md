@@ -137,6 +137,13 @@
 
 ### Fixes
 
+- DataPlane: fix false-positive warnings about operator-managed environment
+  variables (`KONG_CLUSTER_CERT`, `KONG_CLUSTER_CERT_KEY`) being set by the
+  user. The Konnect extension processor injects these variables into the
+  in-memory DataPlane spec as a staging area for deployment generation; the
+  check now runs before that mutation so it only inspects what the user
+  actually wrote to the DataPlane object in Kubernetes.
+  [#4888](https://github.com/Kong/kong-operator/pull/4888)
 - Gateway: stop overwriting the user-configured `KONG_STREAM_LISTEN` for TLS
   listeners. The operator now enforces only the listen port and the `ssl` token,
   preserving the bind address (e.g. `[::]` for IPv6) and any listen options
