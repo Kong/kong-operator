@@ -13,6 +13,6 @@ for file in $CHANGED_FILES; do
   fi
 done
 
-# echo "docs_only=$DOCS_ONLY" >> $GITHUB_OUTPUT
+echo "docs_only=$DOCS_ONLY" >> $GITHUB_OUTPUT
 echo "Changed files: $CHANGED_FILES"
 echo "Docs only: $DOCS_ONLY"
