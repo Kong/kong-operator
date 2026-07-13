@@ -4309,7 +4309,7 @@ AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 
 | Field | Description |
 | --- | --- |
-| `config` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Configuration for the policy. This is equivalent to the Kong 3 plugin configuration. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
+| `config` _[AIGatewayPolicyConfigDataSource](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyconfigdatasource)_ | Configuration for the policy. This is equivalent to the Kong 3 plugin configuration. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
 | `displayName` _string_ | The display name for this policy instance. |
 | `enabled` _string_ | Whether the policy is enabled. |
 | `global` _string_ | Whether the policy is globally applied to all resources. |
@@ -4321,6 +4321,24 @@ AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 _Appears in:_
 
 - [AIGatewayPolicySpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyspec)
+
+#### AIGatewayPolicyConfigDataSource
+
+
+AIGatewayPolicyConfigDataSource holds a sensitive value that can be provided either inline or
+sourced from a Kubernetes Secret.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[SensitiveDataSourceType](#konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data: 'inline' or 'secretRef'. |
+| `value` _*k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value contains the sensitive data provided inline. Required when type is 'inline'. |
+| `secretRef` _[SensitiveDataSecretRef](#konnect-konghq-com-v1alpha1-types-sensitivedatasecretref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
+
+_Appears in:_
+
+- [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
 
 
 
@@ -7398,6 +7416,7 @@ that holds a sensitive value for a CRD field.
 
 _Appears in:_
 
+- [AIGatewayPolicyConfigDataSource](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyconfigdatasource)
 - [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
 
 #### SensitiveDataSource
@@ -7435,6 +7454,7 @@ SensitiveDataSourceType is the type of source for the sensitive data.
 
 _Appears in:_
 
+- [AIGatewayPolicyConfigDataSource](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyconfigdatasource)
 - [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
 
 Allowed values:

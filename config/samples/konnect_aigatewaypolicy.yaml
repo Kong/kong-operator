@@ -47,10 +47,12 @@ spec:
     global: "Disabled"
     # Configuration for the policy. The configuration is specific to the policy type.
     config:
-      llm_format: openai
-      max_request_body_size: 8388608
-      prompts:
-        append: null
-        prepend:
-        - content: "In short words"
-          role: user
+      type: "inline"
+      value:
+        llm_format: openai
+        max_request_body_size: 8388608
+        prompts:
+          append: null
+          prepend:
+          - content: "In short words"
+            role: user

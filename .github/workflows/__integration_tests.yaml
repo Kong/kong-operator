@@ -33,7 +33,7 @@ jobs:
   integration-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0} {1} {2}', matrix.suite, matrix.router_flavor, inputs.cluster_version) }}
+    name: ${{ format('{0} {1} - {2}', matrix.suite, matrix.router_flavor, inputs.cluster_version) }}
     strategy:
       matrix:
         include:

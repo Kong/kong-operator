@@ -652,16 +652,17 @@ test.envtest:
 	$(MAKE) _test.envtest
 
 .PHONY: test.crds-validation
+CRDS_VALIDATION_TEST_PATHS ?= ./test/crdsvalidation/...
 test.crds-validation:
 	$(MAKE) _test.envtest \
 		GOTESTSUM_FORMAT=standard-verbose \
-		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+		ENVTEST_TEST_PATHS="$(CRDS_VALIDATION_TEST_PATHS)"
 
 .PHONY: test.crds-validation.pretty
 test.crds-validation.pretty:
 	$(MAKE) _test.envtest \
 		GOTESTSUM_FORMAT=testname \
-		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+		ENVTEST_TEST_PATHS="$(CRDS_VALIDATION_TEST_PATHS)"
 
 # Define a constant list of channels
 CHANNELS := ingress-controller-incubator gateway-operator kong-operator
