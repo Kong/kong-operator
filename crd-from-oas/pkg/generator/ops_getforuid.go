@@ -168,6 +168,14 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		matchFields = make([]opsGetForUIDMatchFieldData, 0, len(opsConfig.GetForUID.MatchFields))
 		for _, field := range opsConfig.GetForUID.MatchFields {
 			sensitive := g.isSensitiveMatchField(entityName, field.ObjectField)
+			if sensitive {
+				if valueGoType, ok := g.sensitiveMatchFieldValueType(entityName, field.ObjectField); ok && valueGoType != "string" {
+					return nil, fmt.Errorf(
+						"entity %q: getForUID.matchFields.objectField %q resolves to a non-string secret reference leaf (%s); matchSensitiveDataSourceField only supports string-valued SensitiveDataSource fields",
+						entityName, field.ObjectField, valueGoType,
+					)
+				}
+			}
 			matchFields = append(matchFields, opsGetForUIDMatchFieldData{
 				ObjectField:    field.ObjectField,
 				ResponseField:  field.ResponseField,

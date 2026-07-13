@@ -23,6 +23,9 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+{{- if .HasSecretRefs}}
+	corev1 "k8s.io/api/core/v1"
+{{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -72,6 +75,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 				),
 			)
 		},
+{{- if .HasSecretRefs}}
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&corev1.Secret{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForSecretRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+				),
+			)
+		},
+{{- end}}
 	}
 }
 
@@ -255,6 +268,9 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+{{- if .HasSecretRefs}}
+	corev1 "k8s.io/api/core/v1"
+{{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -304,6 +320,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 				),
 			)
 		},
+{{- if .HasSecretRefs}}
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&corev1.Secret{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForSecretRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+				),
+			)
+		},
+{{- end}}
 	}
 }
 
@@ -480,6 +506,10 @@ type reconcilerEntityMetadata struct {
 	APIGroupPackageAlias       string
 	ParentAPIGroupPackagePath  string
 	ParentAPIGroupPackageAlias string
+	// HasSecretRefs is true when the entity has at least one configured
+	// secretReferences entry (string-valued or dedicated-type), so the
+	// generated watch file should also watch corev1.Secret.
+	HasSecretRefs bool
 }
 
 type reconcilerConditionGroup struct {
@@ -700,6 +730,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		ParentAPIGroupPackagePath  string
 		ParentAPIGroupPackageAlias string
 		CrossRefs                  []crossRefWatchData
+		HasSecretRefs              bool
 	}{
 		EntityName:                 metadata.EntityName,
 		EntityNameLowerCamel:       metadata.EntityNameLowerCamel,
@@ -713,6 +744,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		ParentAPIGroupPackagePath:  metadata.ParentAPIGroupPackagePath,
 		ParentAPIGroupPackageAlias: metadata.ParentAPIGroupPackageAlias,
 		CrossRefs:                  crossRefs,
+		HasSecretRefs:              metadata.HasSecretRefs,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -810,6 +842,7 @@ func (g *Generator) reconcilerEntityMetadata(
 		APIGroupPackageAlias:       g.config.APIGroupPackageAlias,
 		ParentAPIGroupPackagePath:  g.config.APIGroupPackagePath,
 		ParentAPIGroupPackageAlias: g.config.APIGroupPackageAlias,
+		HasSecretRefs:              g.hasSecretRefs(entityName),
 	}
 
 	if rc.GetIsRoot() {

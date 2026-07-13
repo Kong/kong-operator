@@ -6,6 +6,7 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -37,6 +38,14 @@ func AIGatewayIdentityProviderReconciliationWatchOptions(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.AIGatewayIdentityProviderList](cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&corev1.Secret{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForSecretRef[konnectv1alpha1.AIGatewayIdentityProviderList](cl),
 				),
 			)
 		},

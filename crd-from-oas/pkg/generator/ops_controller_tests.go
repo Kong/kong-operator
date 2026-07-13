@@ -143,13 +143,27 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 		if g.referenceForField(entityName, jsonName(prop.Name)) != nil {
 			continue
 		}
-		if ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
+		if leafType, ok := g.entityAPISpecFieldSensitiveType(entityName, jsonName(prop.Name)); ok {
+			typeName := "SensitiveDataSource"
+			innerValue := `"test-value"`
+			if leafType.DedicatedTypeName != "" {
+				typeName = leafType.DedicatedTypeName
+				innerValue = controllerOpsTestValueForProperty(prop, leafType.ValueGoType, g.config.APIGroupPackageAlias)
+				if innerValue == "" {
+					// No simple literal representation for this value type (e.g. a
+					// free-form JSON object) — skip, matching how a non-sensitive
+					// field of the same complex type is already skipped below.
+					continue
+				}
+			}
 			testFields = append(testFields, opsControllerTestField{
 				FieldName: goFieldName(prop.Name),
 				TestValue: fmt.Sprintf(
-					`%s.SensitiveDataSource{Type: %s.SensitiveDataSourceTypeInline, Value: new("test-value")}`,
+					`%s.%s{Type: %s.SensitiveDataSourceTypeInline, Value: new(%s)}`,
 					g.config.APIGroupPackageAlias,
+					typeName,
 					g.config.APIGroupPackageAlias,
+					innerValue,
 				),
 			})
 			continue
