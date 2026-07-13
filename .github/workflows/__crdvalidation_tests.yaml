@@ -19,10 +19,24 @@ jobs:
   crd-validation-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0}', matrix.kubernetes-node-version) }}
+    name: ${{ format('{0} / {1}', matrix.kubernetes-node-version, matrix.crd_validation_test.name) }}
     strategy:
+      fail-fast: false
       matrix:
         kubernetes-node-version: ${{ fromJson(inputs.cluster_versions) }}
+        crd_validation_test:
+        - name: root
+          path: ./test/crdsvalidation
+        - name: aigateway.konghq.com
+          path: ./test/crdsvalidation/aigateway.konghq.com/...
+        - name: configuration.konghq.com
+          path: ./test/crdsvalidation/configuration.konghq.com/...
+        - name: eventgateway.konghq.com
+          path: ./test/crdsvalidation/eventgateway.konghq.com/...
+        - name: gateway-operator.konghq.com
+          path: ./test/crdsvalidation/gateway-operator.konghq.com/...
+        - name: konnect.konghq.com
+          path: ./test/crdsvalidation/konnect.konghq.com/...
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -78,7 +92,10 @@ jobs:
         # Remove patch number as envtest releases are not provided for every patch version
         VERSION="${VERSION%.*}"
         echo "Cluster version: $VERSION"
-        make test.crds-validation CLUSTER_VERSION=${VERSION}
+        make test.crds-validation \
+          CLUSTER_VERSION=${VERSION} \
+          CRDS_VALIDATION_TEST_PATHS="${{ matrix.crd_validation_test.path }}"
 
     - name: Run the API tests
+      if: ${{ matrix.crd_validation_test.name == 'root' }}
       run: make test.api
