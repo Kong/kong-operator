@@ -61,7 +61,7 @@ func TestCreateAIGatewayIdentityProvider_UsesSDKOpsConversion(t *testing.T) {
 		).
 		Return(&sdkkonnectops.CreateAiGatewayIdentityProviderResponse{
 			AIGatewayIdentityProvider: &sdkkonnectcomp.AIGatewayIdentityProvider{
-				AIGatewayIdentityProviderKeyAuthAIGatewayIdentityProviderKeyAuthConfig: &sdkkonnectcomp.AIGatewayIdentityProviderKeyAuthAIGatewayIdentityProviderKeyAuthConfig{
+				AIGatewayIdentityProviderKeyAuthResponse: &sdkkonnectcomp.AIGatewayIdentityProviderKeyAuthResponse{
 					ID: expectedID,
 				},
 			},
