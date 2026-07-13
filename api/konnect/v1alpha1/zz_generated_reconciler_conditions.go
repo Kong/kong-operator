@@ -19,6 +19,38 @@ const (
 	// yet programmed in Konnect.
 	AIGatewayConsumerRefReasonNotProgrammed = "NotProgrammed"
 
+	// AIGatewayConsumerGroupRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayConsumerGroup reference is valid and points to an existing
+	// AIGatewayConsumerGroup.
+	AIGatewayConsumerGroupRefValidConditionType = "AIGatewayConsumerGroupRefValid"
+
+	// AIGatewayConsumerGroupRefReasonValid is the reason used with the AIGatewayConsumerGroupRefValid
+	// condition type indicating that the AIGatewayConsumerGroup reference is valid.
+	AIGatewayConsumerGroupRefReasonValid = "Valid"
+	// AIGatewayConsumerGroupRefReasonInvalid is the reason used with the AIGatewayConsumerGroupRefValid
+	// condition type indicating that the AIGatewayConsumerGroup reference is invalid.
+	AIGatewayConsumerGroupRefReasonInvalid = "Invalid"
+	// AIGatewayConsumerGroupRefReasonNotProgrammed is the reason used with the AIGatewayConsumerGroupRefValid
+	// condition type indicating that the referenced AIGatewayConsumerGroup exists but is not
+	// yet programmed in Konnect.
+	AIGatewayConsumerGroupRefReasonNotProgrammed = "NotProgrammed"
+
+	// AIGatewayPolicyRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayPolicy reference is valid and points to an existing
+	// AIGatewayPolicy.
+	AIGatewayPolicyRefValidConditionType = "AIGatewayPolicyRefValid"
+
+	// AIGatewayPolicyRefReasonValid is the reason used with the AIGatewayPolicyRefValid
+	// condition type indicating that the AIGatewayPolicy reference is valid.
+	AIGatewayPolicyRefReasonValid = "Valid"
+	// AIGatewayPolicyRefReasonInvalid is the reason used with the AIGatewayPolicyRefValid
+	// condition type indicating that the AIGatewayPolicy reference is invalid.
+	AIGatewayPolicyRefReasonInvalid = "Invalid"
+	// AIGatewayPolicyRefReasonNotProgrammed is the reason used with the AIGatewayPolicyRefValid
+	// condition type indicating that the referenced AIGatewayPolicy exists but is not
+	// yet programmed in Konnect.
+	AIGatewayPolicyRefReasonNotProgrammed = "NotProgrammed"
+
 	// KonnectAIGatewayRefValidConditionType is the type of the condition that indicates
 	// whether the KonnectAIGateway reference is valid and points to an existing
 	// KonnectAIGateway.

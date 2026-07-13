@@ -23,10 +23,10 @@ spec:
     authRef:
       name: konnect-api-auth-1
 ---
-kind: AIGatewayAgent
+kind: AIGatewayPolicy
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: my-ai-agent
+  name: aigw-agent-policy-prompt-decorator
   namespace: default
 spec:
   aiGatewayRef:
@@ -34,15 +34,86 @@ spec:
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
-    name: my-ai-agent
+    name: aigw-agent-policy-prompt-decorator
+    displayName: AI Gateway Policy Prompt Decorator
+    type: ai-prompt-decorator
+    enabled: Enabled
+    global: Disabled
+    config:
+      type: "inline"
+      value:
+        llm_format: openai
+        max_request_body_size: 8388608
+        prompts:
+          append: null
+          prepend:
+            - content: "In short words"
+              role: user
+---
+kind: AIGatewayConsumer
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-agent-consumer
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: agent-dev-consumer
+    displayName: Dev Team Consumer
+    type: api-key
+---
+kind: AIGatewayConsumerGroup
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-agent-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: agent-dev-users
+    displayName: Dev Users Group
+---
+kind: AIGatewayAgent
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: sample-ai-agent
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: sample-ai-agent
     displayName: My AI Agent
     type: http
     enabled: Enabled
+    # References to AIGatewayPolicy CRs (by metadata.name) applied to this agent.
+    policies:
+      - name: aigw-agent-policy-prompt-decorator
+    # Access control: allow-list of AIGatewayConsumer / AIGatewayConsumerGroup
+    # CRs (referenced by metadata.name). The operator resolves each reference to
+    # the referenced CR's Konnect name at reconcile time.
+    access:
+      acls:
+        type: allow
+        allow:
+          allow:
+            - kind: AIGatewayConsumer
+              name: ai-gw-agent-consumer
+            - kind: AIGatewayConsumerGroup
+              name: ai-gw-agent-consumer-group
     config:
       url: https://my-upstream-agent.example.com
       route:
         paths:
-          - /my-ai-agent
+          - /sample-ai-agent
         methods:
           - GET
           - POST

@@ -143,7 +143,7 @@ type AIGatewayAllowACL struct {
 	// permitted access.
 	//
 	// +required
-	Allow []string `json:"allow,omitempty"`
+	Allow []AIGatewayACLRef `json:"allow,omitempty"`
 }
 
 // AIGatewayAzureEmbeddingsModelConfig Azure-specific configuration for a model.
@@ -228,7 +228,7 @@ type AIGatewayDenyACL struct {
 	// access.
 	//
 	// +required
-	Deny []string `json:"deny,omitempty"`
+	Deny []AIGatewayACLRef `json:"deny,omitempty"`
 }
 
 // AIGatewayEmbeddingsModelConfig represents a union type for AIGatewayEmbeddingsModelConfig.

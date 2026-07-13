@@ -10,6 +10,8 @@ import (
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -34,7 +36,6 @@ func testGeneratedAIGatewayConsumerForSDKOps() *konnectv1alpha1.AIGatewayConsume
 				Labels: konnectv1alpha1.PublicLabels{"test-key": "test-value"},
 				ManagedBy: konnectv1alpha1.ManagedBy{"test-key": "test-value"},
 				Name: "test-value",
-				Policies: []string{"test-value"},
 				Type: "api-key",
 			},
 		},
@@ -46,10 +47,11 @@ func TestCreateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumersSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayConsumerForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayConsumerRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayConsumerRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	expectedID := "aigatewayconsumer-id"
@@ -67,7 +69,7 @@ func TestCreateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createAIGatewayConsumer(ctx, sdk, obj))
+	require.NoError(t, createAIGatewayConsumer(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -76,10 +78,11 @@ func TestCreateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumersSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayConsumerForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayConsumerRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayConsumerRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	sdkErr := errors.New("sdk error")
@@ -93,7 +96,7 @@ func TestCreateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createAIGatewayConsumer(ctx, sdk, obj)
+	err = createAIGatewayConsumer(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -102,11 +105,12 @@ func TestUpdateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumersSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayConsumerForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewayconsumer-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayConsumerRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayConsumerRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 
@@ -122,7 +126,7 @@ func TestUpdateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayConsumerResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayConsumer(ctx, sdk, obj))
+	require.NoError(t, updateAIGatewayConsumer(ctx, cl, sdk, obj))
 }
 
 func TestUpdateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
@@ -130,11 +134,12 @@ func TestUpdateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumersSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayConsumerForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewayconsumer-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayConsumerRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayConsumerRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	sdkErr := errors.New("sdk error")
@@ -151,7 +156,7 @@ func TestUpdateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayConsumer(ctx, sdk, obj)
+	err = updateAIGatewayConsumer(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

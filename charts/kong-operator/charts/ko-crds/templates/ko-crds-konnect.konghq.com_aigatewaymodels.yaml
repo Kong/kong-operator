@@ -141,7 +141,30 @@ spec:
                                       List of Consumers, Consumer Groups, or Authenticated Groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumer
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: Namespace is reserved for future
+                                            cross-namespace support.
+                                          type: string
+                                      required:
+                                      - kind
+                                      - name
+                                      type: object
                                     type: array
                                 required:
                                 - allow
@@ -154,7 +177,30 @@ spec:
                                       List of Consumers, Consumer Groups, or Authenticated Groups that are denied
                                       access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumer
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: Namespace is reserved for future
+                                            cross-namespace support.
+                                          type: string
+                                      required:
+                                      - kind
+                                      - name
+                                      type: object
                                     type: array
                                 required:
                                 - deny
@@ -2739,7 +2785,30 @@ spec:
                                       List of Consumers, Consumer Groups, or Authenticated Groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumer
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: Namespace is reserved for future
+                                            cross-namespace support.
+                                          type: string
+                                      required:
+                                      - kind
+                                      - name
+                                      type: object
                                     type: array
                                 required:
                                 - allow
@@ -2752,7 +2821,30 @@ spec:
                                       List of Consumers, Consumer Groups, or Authenticated Groups that are denied
                                       access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumer
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: Namespace is reserved for future
+                                            cross-namespace support.
+                                          type: string
+                                      required:
+                                      - kind
+                                      - name
+                                      type: object
                                     type: array
                                 required:
                                 - deny

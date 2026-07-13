@@ -11,6 +11,12 @@ import (
 const (
 	// IndexFieldAIGatewayAgentOnKonnectAIGatewayRef is the index field for AIGatewayAgent -> KonnectAIGateway.
 	IndexFieldAIGatewayAgentOnKonnectAIGatewayRef = "aiGatewayAgentOnKonnectAIGatewayRef"
+	// IndexFieldAIGatewayAgentOnAIGatewayPolicyRef is the index field for AIGatewayAgent -> AIGatewayPolicy.
+	IndexFieldAIGatewayAgentOnAIGatewayPolicyRef = "aiGatewayAgentOnAIGatewayPolicyRef"
+	// IndexFieldAIGatewayAgentOnAIGatewayConsumerRef is the index field for AIGatewayAgent -> AIGatewayConsumer.
+	IndexFieldAIGatewayAgentOnAIGatewayConsumerRef = "aiGatewayAgentOnAIGatewayConsumerRef"
+	// IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef is the index field for AIGatewayAgent -> AIGatewayConsumerGroup.
+	IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef = "aiGatewayAgentOnAIGatewayConsumerGroupRef"
 )
 
 // OptionsForAIGatewayAgent returns required Index options for AIGatewayAgent reconciler.
@@ -20,6 +26,21 @@ func OptionsForAIGatewayAgent() []Option {
 			Object:         &konnectv1alpha1.AIGatewayAgent{},
 			Field:          IndexFieldAIGatewayAgentOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayAgentOnKonnectAIGatewayRef,
+		},
+		{
+			Object:         &konnectv1alpha1.AIGatewayAgent{},
+			Field:          IndexFieldAIGatewayAgentOnAIGatewayPolicyRef,
+			ExtractValueFn: aiGatewayAgentOnAIGatewayPolicyRef,
+		},
+		{
+			Object:         &konnectv1alpha1.AIGatewayAgent{},
+			Field:          IndexFieldAIGatewayAgentOnAIGatewayConsumerRef,
+			ExtractValueFn: aiGatewayAgentOnAIGatewayConsumerRef,
+		},
+		{
+			Object:         &konnectv1alpha1.AIGatewayAgent{},
+			Field:          IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef,
+			ExtractValueFn: aiGatewayAgentOnAIGatewayConsumerGroupRef,
 		},
 	}
 }
@@ -39,4 +60,81 @@ func aiGatewayAgentOnKonnectAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayAgentOnAIGatewayPolicyRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.AIGatewayAgent)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range ent.Spec.APISpec.Policies {
+		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayAgentOnAIGatewayConsumerRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.AIGatewayAgent)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent) {
+		if ref.Kind != "AIGatewayConsumer" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsDenyDeny(ent) {
+		if ref.Kind != "AIGatewayConsumer" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayAgentOnAIGatewayConsumerGroupRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.AIGatewayAgent)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent) {
+		if ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsDenyDeny(ent) {
+		if ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

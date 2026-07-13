@@ -74,7 +74,7 @@ type opsUpdateFuncData struct {
 	UpdateBodyField      string
 	UpdateReqBodyPointer bool // true when SDK body param is a pointer
 	NeedsClient          bool // true when the generated update function needs client.Client
-	HasReferences        bool // true when cross-CR references or parent ref replacement need ID injection
+	HasReferences        bool // true when parent ref replacement needs an entity-level request builder
 }
 
 func qualifiedSDKTypeName(importPath, typeName string) string {
@@ -173,7 +173,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		return nil, nil
 	}
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
-	needsClient := opsConfig.RequireClient
+	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName)
 
 	return &opsUpdateFuncData{
 		Entity:               entityName,
@@ -193,7 +193,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		UpdateBodyField:      callShape.BodyField,
 		UpdateReqBodyPointer: callShape.ReqBodyPointer,
 		NeedsClient:          needsClient,
-		HasReferences:        g.entityHasReferences(entityName) || g.entityHasParentRefReplacement(entityName),
+		HasReferences:        g.entityHasParentRefReplacement(entityName),
 		UpdateOmitsEntityID:  callShape.OmitsEntityID,
 	}, nil
 }

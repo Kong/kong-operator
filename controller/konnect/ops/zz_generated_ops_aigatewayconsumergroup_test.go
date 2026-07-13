@@ -10,6 +10,8 @@ import (
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -33,7 +35,6 @@ func testGeneratedAIGatewayConsumerGroupForSDKOps() *konnectv1alpha1.AIGatewayCo
 				Labels: konnectv1alpha1.PublicLabels{"test-key": "test-value"},
 				ManagedBy: konnectv1alpha1.ManagedBy{"test-key": "test-value"},
 				Name: "test-value",
-				Policies: []string{"test-value"},
 			},
 		},
 	}
@@ -44,10 +45,11 @@ func TestCreateAIGatewayConsumerGroup_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumerGroupsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayConsumerGroupForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayConsumerGroupRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayConsumerGroupRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	expectedID := "aigatewayconsumergroup-id"
@@ -65,7 +67,7 @@ func TestCreateAIGatewayConsumerGroup_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createAIGatewayConsumerGroup(ctx, sdk, obj))
+	require.NoError(t, createAIGatewayConsumerGroup(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -74,10 +76,11 @@ func TestCreateAIGatewayConsumerGroup_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumerGroupsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayConsumerGroupForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayConsumerGroupRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayConsumerGroupRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	sdkErr := errors.New("sdk error")
@@ -91,7 +94,7 @@ func TestCreateAIGatewayConsumerGroup_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createAIGatewayConsumerGroup(ctx, sdk, obj)
+	err = createAIGatewayConsumerGroup(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -100,11 +103,12 @@ func TestUpdateAIGatewayConsumerGroup_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumerGroupsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayConsumerGroupForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewayconsumergroup-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayConsumerGroupRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayConsumerGroupRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 
@@ -120,7 +124,7 @@ func TestUpdateAIGatewayConsumerGroup_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayConsumerGroup(ctx, sdk, obj))
+	require.NoError(t, updateAIGatewayConsumerGroup(ctx, cl, sdk, obj))
 }
 
 func TestUpdateAIGatewayConsumerGroup_PropagatesSDKError(t *testing.T) {
@@ -128,11 +132,12 @@ func TestUpdateAIGatewayConsumerGroup_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumerGroupsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayConsumerGroupForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewayconsumergroup-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayConsumerGroupRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayConsumerGroupRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	sdkErr := errors.New("sdk error")
@@ -149,7 +154,7 @@ func TestUpdateAIGatewayConsumerGroup_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayConsumerGroup(ctx, sdk, obj)
+	err = updateAIGatewayConsumerGroup(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

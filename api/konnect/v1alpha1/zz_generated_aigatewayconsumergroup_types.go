@@ -98,7 +98,7 @@ type AIGatewayConsumerGroupAPISpec struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 }
 
 // AIGatewayConsumerGroupStatus defines the observed state of AIGatewayConsumerGroup.

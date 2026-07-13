@@ -57,6 +57,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 				),
 			)
 		},
+		{{- range .CrossRefs}}
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&{{$.APIGroupPackageAlias}}.{{.RefKind}}{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueue{{$.EntityName}}For{{.RefKind}}(cl),
+				),
+			)
+		},
+		{{- end}}
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
@@ -95,7 +105,25 @@ func enqueue{{.EntityName}}ForKonnectAPIAuthConfiguration(
 		return objectListToReconcileRequests(l.Items)
 	}
 }
-`
+{{range .CrossRefs}}
+func enqueue{{$.EntityName}}For{{.RefKind}}(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*{{$.APIGroupPackageAlias}}.{{.RefKind}})
+		if !ok {
+			return nil
+		}
+		var l {{$.APIGroupPackageAlias}}.{{$.EntityName}}List
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexField{{$.EntityName}}On{{.RefKind}}Ref: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+{{end}}`
 
 // indexTemplate generates cache index for auth ref queries.
 const indexTemplate = sharedGeneratedFilePreamble + `
@@ -111,6 +139,10 @@ import (
 const (
 	// IndexField{{.EntityName}}OnAPIAuthConfiguration is the index field for {{.EntityName}} -> APIAuthConfiguration.
 	IndexField{{.EntityName}}OnAPIAuthConfiguration = "{{.EntityNameLowerCamel}}APIAuthConfigurationRef"
+	{{- range .CrossRefs}}
+	// IndexField{{$.EntityName}}On{{.RefKind}}Ref is the index field for {{$.EntityName}} -> {{.RefKind}}.
+	IndexField{{$.EntityName}}On{{.RefKind}}Ref = "{{$.EntityNameLowerCamel}}On{{.RefKind}}Ref"
+	{{- end}}
 )
 
 // OptionsFor{{.EntityName}} returns required Index options for {{.EntityName}} reconciler.
@@ -121,6 +153,13 @@ func OptionsFor{{.EntityName}}() []Option {
 			Field:          IndexField{{.EntityName}}OnAPIAuthConfiguration,
 			ExtractValueFn: {{.EntityNameLowerCamel}}APIAuthConfigurationRef,
 		},
+		{{- range .CrossRefs}}
+		{
+			Object:         &{{$.APIGroupPackageAlias}}.{{$.EntityName}}{},
+			Field:          IndexField{{$.EntityName}}On{{.RefKind}}Ref,
+			ExtractValueFn: {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref,
+		},
+		{{- end}}
 	}
 }
 
@@ -141,7 +180,35 @@ func {{.EntityNameLowerCamel}}APIAuthConfigurationRef(object client.Object) []st
 
 	return []string{namespace + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
 }
-`
+{{range .CrossRefs}}
+func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string {
+	ent, ok := object.(*{{$.APIGroupPackageAlias}}.{{$.EntityName}})
+	if !ok {
+		return nil
+	}
+	var out []string
+	{{- $cr := .}}
+	{{- range .AccessorExprs}}
+	for _, ref := range {{.}} {
+{{- if $cr.MultiKind}}
+		if ref.Kind != "{{$cr.RefKind}}" {
+			continue
+		}
+{{- else}}
+		if ref.Kind != "" && ref.Kind != "{{$cr.RefKind}}" {
+			continue
+		}
+{{- end}}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	{{- end}}
+	return out
+}
+{{end}}`
 
 // rbacEntity holds the data needed to generate RBAC markers for a single entity.
 type rbacEntity struct {
@@ -362,14 +429,27 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	if !ok {
 		return nil
 	}
-	if ent.{{.GoFieldPath}} == nil || ent.{{.GoFieldPath}}.NamespacedRef == nil {
-		return nil
+	var out []string
+	{{- $cr := .}}
+	{{- range .AccessorExprs}}
+	for _, ref := range {{.}} {
+{{- if $cr.MultiKind}}
+		if ref.Kind != "{{$cr.RefKind}}" {
+			continue
+		}
+{{- else}}
+		if ref.Kind != "" && ref.Kind != "{{$cr.RefKind}}" {
+			continue
+		}
+{{- end}}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
 	}
-	refNamespace := ent.GetNamespace()
-	if ent.{{.GoFieldPath}}.NamespacedRef.Namespace != nil && *ent.{{.GoFieldPath}}.NamespacedRef.Namespace != "" {
-		refNamespace = *ent.{{.GoFieldPath}}.NamespacedRef.Namespace
-	}
-	return []string{refNamespace + "/" + ent.{{.GoFieldPath}}.NamespacedRef.Name}
+	{{- end}}
+	return out
 }
 {{end}}`
 
@@ -397,13 +477,24 @@ const (
 {{ end }})
 `
 
-// crossRefWatchData holds per-cross-reference metadata for watch/index templates.
+// crossRefWatchData holds per-referenced-kind metadata for watch/index
+// templates. Entries are grouped by RefKind so that two reference fields
+// pointing at the same kind (e.g. ACL allow and deny both referencing
+// AIGatewayConsumer) share a single watch, index field and extractor rather
+// than emitting duplicate declarations.
 type crossRefWatchData struct {
-	// RefKind is the referenced entity kind, e.g. "EventGatewayBackendCluster".
+	// RefKind is the referenced entity kind, e.g. "AIGatewayConsumer".
 	RefKind string
-	// GoFieldPath is the Go struct field accessor from the entity root,
-	// e.g. "Spec.APISpec.Destination".
-	GoFieldPath string
+	// AccessorExprs are the Go expressions yielding the []<RefType> slices to
+	// scan for this kind, evaluated against a receiver named "ent". Top-level
+	// references use direct field access ("ent.Spec.APISpec.Policies"); nested
+	// references use the exported, nil-guarded accessor from the API package
+	// ("konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent)"). The
+	// extractor unions the refs of the matching kind across all expressions.
+	AccessorExprs []string
+	// MultiKind is true when any contributing reference may point to more than
+	// one kind, in which case Kind is required and always populated on each ref.
+	MultiKind bool
 }
 
 type reconcilerEntityMetadata struct {
@@ -553,20 +644,22 @@ func (g *Generator) generateReconcilerConditions(parsed *parser.ParsedSpec) (*Ge
 	for entityName, refs := range g.config.References {
 		_ = entityName
 		for _, ref := range refs {
-			if existing, ok := groupMap[ref.Kind]; ok {
-				if existing.ReferencedEntityName != ref.Kind {
-					return nil, fmt.Errorf(
-						"cross-reference condition prefix %q maps to both %q and %q",
-						ref.Kind,
-						existing.ReferencedEntityName,
-						ref.Kind,
-					)
+			for _, kind := range ref.Kinds {
+				if existing, ok := groupMap[kind]; ok {
+					if existing.ReferencedEntityName != kind {
+						return nil, fmt.Errorf(
+							"cross-reference condition prefix %q maps to both %q and %q",
+							kind,
+							existing.ReferencedEntityName,
+							kind,
+						)
+					}
+					continue
 				}
-				continue
-			}
-			groupMap[ref.Kind] = reconcilerConditionGroup{
-				Prefix:               ref.Kind,
-				ReferencedEntityName: ref.Kind,
+				groupMap[kind] = reconcilerConditionGroup{
+					Prefix:               kind,
+					ReferencedEntityName: kind,
+				}
 			}
 		}
 	}
@@ -693,25 +786,46 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 	return buf.String(), nil
 }
 
-// buildCrossRefWatchData builds crossRefWatchData entries for an entity's references.
+// buildCrossRefWatchData builds crossRefWatchData entries for an entity's
+// references, grouped by referenced kind. Two reference fields sharing a kind
+// contribute their accessor expressions to the same entry so exactly one watch,
+// index field and extractor is emitted per distinct kind.
 func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchData {
 	refs := g.templateReferences(entityName)
 	if len(refs) == 0 {
 		return nil
 	}
-	result := make([]crossRefWatchData, len(refs))
-	for i, ref := range refs {
-		// Convert path like "spec.apiSpec.destination" to Go field accessor "Spec.APISpec.Destination".
-		// goFieldName handles "_" separators; fixInitialisms corrects initialisms like "Api" → "API".
-		segments := strings.Split(ref.Path, ".")
-		goSegments := make([]string, len(segments))
-		for j, seg := range segments {
-			goSegments[j] = fixInitialisms(goFieldName(seg))
+	byKind := make(map[string]*crossRefWatchData)
+	var order []string
+	for _, ref := range refs {
+		// The extractor scans a []<RefType> slice for each contributing
+		// reference. Nested references cross intermediate (possibly nil)
+		// pointers, so they source their slice from the exported, nil-guarded
+		// accessor in the API package; top-level references access the spec
+		// field directly.
+		var expr string
+		if ref.NestedRef {
+			expr = fmt.Sprintf("%s.RefsAt%s%s(ent)", g.config.APIGroupPackageAlias, entityName, ref.GoResolverName)
+		} else {
+			expr = "ent.Spec.APISpec." + ref.GoFieldName
 		}
-		result[i] = crossRefWatchData{
-			RefKind:     ref.Kind,
-			GoFieldPath: strings.Join(goSegments, "."),
+		multiKind := len(ref.Kinds) > 1
+		for _, kind := range ref.Kinds {
+			cr, ok := byKind[kind]
+			if !ok {
+				cr = &crossRefWatchData{RefKind: kind}
+				byKind[kind] = cr
+				order = append(order, kind)
+			}
+			if multiKind {
+				cr.MultiKind = true
+			}
+			cr.AccessorExprs = append(cr.AccessorExprs, expr)
 		}
+	}
+	result := make([]crossRefWatchData, 0, len(order))
+	for _, kind := range order {
+		result = append(result, *byKind[kind])
 	}
 	return result
 }
