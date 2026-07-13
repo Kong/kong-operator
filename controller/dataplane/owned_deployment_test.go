@@ -499,6 +499,78 @@ func TestSetClusterCertVars(t *testing.T) {
 	assert.True(t, keyEnvFound, "KONG_CLUSTER_CERT_KEY env var not found")
 }
 
+// errorCountSink is a minimal logr.LogSink that counts Error() calls.
+type errorCountSink struct{ count *int }
+
+func (s errorCountSink) Init(logr.RuntimeInfo)             {}
+func (s errorCountSink) Enabled(int) bool                  { return true }
+func (s errorCountSink) Info(_ int, _ string, _ ...any)    {}
+func (s errorCountSink) Error(_ error, _ string, _ ...any) { *s.count++ }
+func (s errorCountSink) WithValues(_ ...any) logr.LogSink  { return s }
+func (s errorCountSink) WithName(_ string) logr.LogSink    { return s }
+
+func TestWarnOperatorManagedEnvVars(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
+
+	makeDP := func(envVars ...corev1.EnvVar) *operatorv1beta1.DataPlane {
+		return &operatorv1beta1.DataPlane{
+			ObjectMeta: metav1.ObjectMeta{Name: "dp", Namespace: "default"},
+			Spec: operatorv1beta1.DataPlaneSpec{
+				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+						DeploymentOptions: operatorv1beta1.DeploymentOptions{
+							PodTemplateSpec: &corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{
+										{Name: consts.DataPlaneProxyContainerName, Env: envVars},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name         string
+		dp           *operatorv1beta1.DataPlane
+		expectErrors int
+	}{
+		{
+			name:         "no managed env vars in spec — no warning",
+			dp:           makeDP(),
+			expectErrors: 0,
+		},
+		{
+			name:         "user sets KONG_CLUSTER_CERT — one warning",
+			dp:           makeDP(corev1.EnvVar{Name: envKongClusterCert, Value: "/some/path"}),
+			expectErrors: 1,
+		},
+		{
+			name: "user sets both managed env vars — two warnings",
+			dp: makeDP(
+				corev1.EnvVar{Name: envKongClusterCert, Value: "/some/path/tls.crt"},
+				corev1.EnvVar{Name: envKongClusterCertKey, Value: "/some/path/tls.key"},
+			),
+			expectErrors: 2,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			count := 0
+			logger := logr.New(errorCountSink{count: &count})
+			cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme).Build()
+			warnOperatorManagedEnvVars(t.Context(), logger, tc.dp, cl)
+			assert.Equal(t, tc.expectErrors, count)
+		})
+	}
+}
+
 func TestPodTemplateSpecHasRestartAnnotation(t *testing.T) {
 	testCases := []struct {
 		name           string

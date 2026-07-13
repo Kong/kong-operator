@@ -248,8 +248,6 @@ spec:
                               provider.
                               When multiple values are provided, the client ID and secrets pairs
                               correspond based on their locations in the array.
-                              This field is
-                              [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
                             items:
                               type: string
                             type: array
@@ -259,8 +257,6 @@ spec:
                               provider.
                               When multiple values are provided, the client ID and secrets pairs
                               correspond based on their locations in the array.
-                              This field is
-                              [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
                             items:
                               description: |-
                                 SensitiveDataSource holds a sensitive string value that can be provided

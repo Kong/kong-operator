@@ -646,8 +646,6 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	// provider.
 	// When multiple values are provided, the client ID and secrets pairs
 	// correspond based on their locations in the array.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
 	//
 	//
 	// +optional
@@ -656,8 +654,6 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	// provider.
 	// When multiple values are provided, the client ID and secrets pairs
 	// correspond based on their locations in the array.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
 	//
 	//
 	// +optional

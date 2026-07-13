@@ -20,6 +20,8 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -28,17 +30,17 @@ import (
 
 func TestKongSNI(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongSNI](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongSNI](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongSNI](&metricsmocks.MockRecorder{}),
 		),
 	)
@@ -58,7 +60,7 @@ func TestKongSNI(t *testing.T) {
 		t.Log("Creating KongCertificate and setting it to Programmed")
 		createdCert := deploy.KongCertificateAttachedToCPWithProgrammed(t, ctx, clientNamespaced, cp, "cert-12345")
 
-		w := SetupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK for creating SNI")
 		sdk.SNIsSDK.EXPECT().CreateSniWithCertificate(
@@ -82,7 +84,7 @@ func TestKongSNI(t *testing.T) {
 		)
 
 		t.Log("Waiting for SNI to be programmed and get Konnect ID")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(s *configurationv1alpha1.KongSNI) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(s *configurationv1alpha1.KongSNI) bool {
 			return s.GetKonnectID() == "sni-12345" && k8sutils.IsProgrammed(s)
 		}, "SNI didn't get Programmed status condition or didn't get the correct (sni-12345) Konnect ID assigned")
 
@@ -101,7 +103,7 @@ func TestKongSNI(t *testing.T) {
 		sniToPatch.Spec.Name = "test2.kong-sni.example.com"
 		require.NoError(t, clientNamespaced.Patch(ctx, sniToPatch, client.MergeFrom(createdSNI)))
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK for deleting SNI")
 		sdk.SNIsSDK.EXPECT().DeleteSniWithCertificate(
@@ -120,11 +122,11 @@ func TestKongSNI(t *testing.T) {
 			assert.True(c, apierrors.IsNotFound(
 				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(createdSNI), createdSNI),
 			))
-		}, waitTime, tickTime,
+		}, consts.WaitTime, consts.TickTime,
 			"KongSNI was not deleted",
 		)
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("Adopting an existing SNI", func(t *testing.T) {
@@ -135,7 +137,7 @@ func TestKongSNI(t *testing.T) {
 		t.Log("Creating KongCertificate and setting it to Programmed")
 		createdCert := deploy.KongCertificateAttachedToCPWithProgrammed(t, ctx, clientNamespaced, cp, certID)
 
-		w := SetupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating SNIs")
 		sdk.SNIsSDK.EXPECT().GetSniWithCertificate(
@@ -165,7 +167,7 @@ func TestKongSNI(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongSNI %s to get programmed and set Konnect ID", client.ObjectKeyFromObject(createdSNI))
-		WatchFor(t, ctx, w, apiwatch.Modified, func(sni *configurationv1alpha1.KongSNI) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(sni *configurationv1alpha1.KongSNI) bool {
 			return sni.Name == createdSNI.Name &&
 				k8sutils.IsProgrammed(sni) &&
 				sni.GetKonnectID() == sniID
@@ -183,6 +185,6 @@ func TestKongSNI(t *testing.T) {
 
 		t.Logf("Deleting KongSNI %s and waiting for it to disappear", client.ObjectKeyFromObject(createdSNI))
 		require.NoError(t, clientNamespaced.Delete(ctx, createdSNI))
-		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, createdSNI, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, createdSNI, consts.WaitTime, consts.TickTime)
 	})
 }
