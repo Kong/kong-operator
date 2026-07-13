@@ -17,13 +17,13 @@ env:
 
 jobs:
   crd-validation-tests:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0} / {1}', matrix.kubernetes-node-version, matrix.crd_validation_test.name) }}
+    name: ${{ matrix.crd_validation_test.name }} - ${{ matrix.cluster_version }}
     strategy:
       fail-fast: false
       matrix:
-        kubernetes-node-version: ${{ fromJson(inputs.cluster_versions) }}
+        cluster_version: ${{ fromJson(inputs.cluster_versions) }}
         crd_validation_test:
         - name: root
           path: ./test/crdsvalidation
@@ -86,7 +86,7 @@ jobs:
       env:
         GO_TEST_PARALLEL: 2
       run: |
-        VERSION="${{ matrix.kubernetes-node-version }}"
+        VERSION="${{ matrix.cluster_version }}"
         # Remove leading 'v'
         VERSION="${VERSION#v}"
         # Remove patch number as envtest releases are not provided for every patch version
