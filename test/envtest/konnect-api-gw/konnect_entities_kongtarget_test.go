@@ -18,6 +18,8 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -26,17 +28,17 @@ import (
 
 func TestKongTarget(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongTarget](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongTarget](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongTarget](&metricsmocks.MockRecorder{}),
 		),
 	)
@@ -64,9 +66,9 @@ func TestKongTarget(t *testing.T) {
 		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
-		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
+		envtest.UpdateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
-		w := SetupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Target creation")
 		sdk.TargetsSDK.EXPECT().CreateTargetWithUpstream(
@@ -90,11 +92,11 @@ func TestKongTarget(t *testing.T) {
 		)
 
 		t.Log("Waiting for Target to be programmed and get Konnect ID")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
 			return kt.GetKonnectID() == targetID && k8sutils.IsProgrammed(kt)
 		}, "KongTarget didn't get Programmed status condition or didn't get the correct (target-12345) Konnect ID assigned")
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on Target update")
 		sdk.TargetsSDK.EXPECT().UpsertTargetWithUpstream(
@@ -109,7 +111,7 @@ func TestKongTarget(t *testing.T) {
 		targetToPatch.Spec.Weight = 200
 		require.NoError(t, clientNamespaced.Patch(ctx, targetToPatch, client.MergeFrom(createdTarget)))
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on Target deletion")
 		sdk.TargetsSDK.EXPECT().DeleteTargetWithUpstream(
@@ -121,9 +123,9 @@ func TestKongTarget(t *testing.T) {
 
 		t.Log("Deleting KongTarget")
 		require.NoError(t, clientNamespaced.Delete(ctx, createdTarget))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, createdTarget, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdTarget, consts.WaitTime, consts.TickTime)
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("Adopting a target with an upstream", func(t *testing.T) {
@@ -136,9 +138,9 @@ func TestKongTarget(t *testing.T) {
 		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
-		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
+		envtest.UpdateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
 
-		w := SetupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating targets")
 		sdk.TargetsSDK.EXPECT().GetTargetWithUpstream(
@@ -166,7 +168,7 @@ func TestKongTarget(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongTarget %s/%s to set Konnect ID and programmed condition", ns.Name, createdTarget.Name)
-		WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
 			return createdTarget.Name == kt.Name &&
 				kt.GetKonnectID() == targetID && k8sutils.IsProgrammed(kt)
 		},
@@ -183,8 +185,8 @@ func TestKongTarget(t *testing.T) {
 
 		t.Log("Deleting KongTarget")
 		require.NoError(t, clientNamespaced.Delete(ctx, createdTarget))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, createdTarget, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdTarget, consts.WaitTime, consts.TickTime)
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, consts.WaitTime, consts.TickTime)
 	})
 }

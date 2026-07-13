@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
@@ -101,7 +102,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "12345", cp.Status.ID)
-			assert.True(t, ConditionsContainProgrammedTrue(cp.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedTrue(cp.Status.Conditions),
 				"Programmed condition should be set and it status should be true",
 			)
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
@@ -243,7 +244,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "12345", cp.Status.ID)
-			assert.True(t, ConditionsContainProgrammedTrue(cp.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedTrue(cp.Status.Conditions),
 				"Programmed condition should be set and it status should be true",
 			)
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
@@ -265,7 +266,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "12346", cpGroup.Status.ID)
-			assert.True(t, ConditionsContainProgrammedTrue(cpGroup.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedTrue(cpGroup.Status.Conditions),
 				"Programmed condition should be set and it status should be true",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
@@ -413,7 +414,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				),
 			)
 
-			assert.True(t, ConditionsContainProgrammedTrue(cp.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedTrue(cp.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
@@ -432,7 +433,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "123467", cpGroup.Status.ID)
-			assert.True(t, ConditionsContainProgrammedFalse(cpGroup.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedFalse(cpGroup.Status.Conditions),
 				"Programmed condition should be set and its status should be false because of an error returned by Konnect API when setting group members",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedFalse(cpGroup.Status.Conditions),
@@ -533,7 +534,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "123456", cp.Status.ID, "ID should be set")
-			assert.True(t, ConditionsContainProgrammedTrue(cp.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedTrue(cp.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
@@ -720,7 +721,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "group-123456", cpGroup.Status.ID, "ID should be set")
-			assert.True(t, ConditionsContainProgrammedTrue(cpGroup.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedTrue(cpGroup.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
@@ -809,7 +810,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			)
 
 			assert.Equal(t, "cpg-id", cpGroup.Status.ID, "ID should be set")
-			assert.True(t, ConditionsContainProgrammedTrue(cpGroup.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedTrue(cpGroup.Status.Conditions),
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
@@ -860,7 +861,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				),
 			)
 
-			assert.True(t, ConditionsContainProgrammedFalse(cp.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedFalse(cp.Status.Conditions),
 				"Programmed condition should be set to False due to network error",
 			)
 			assert.True(t,
@@ -909,7 +910,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					c.Reason == konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound
 			}), "APIAuthResolvedRef condition should be False with RefNotFound reason")
 
-			assert.True(t, ConditionsContainProgrammedFalse(cp.Status.Conditions),
+			assert.True(t, envtest.ConditionsContainProgrammedFalse(cp.Status.Conditions),
 				"Programmed condition should be set to False when APIAuth ref is not found",
 			)
 			assert.True(t,
@@ -963,13 +964,13 @@ func TestKonnectGatewayControlPlane_CrossNamespaceRefNotPermitted(t *testing.T) 
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, _ := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, _ := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	cl := mgr.GetClient()
 	factory := sdkmocks.NewMockSDKFactory(t)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, cl,
 			konnect.WithMetricRecorder[konnectv1alpha2.KonnectGatewayControlPlane](&metricsmocks.MockRecorder{})))
 
@@ -1010,7 +1011,7 @@ func TestKonnectGatewayControlPlane_CrossNamespaceRefNotPermitted(t *testing.T) 
 				c.Reason == konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotPermitted
 		}), "APIAuthResolvedRef condition should be False with RefNotPermitted reason")
 
-		assert.True(collect, ConditionsContainProgrammedFalse(cp.Status.Conditions),
+		assert.True(collect, envtest.ConditionsContainProgrammedFalse(cp.Status.Conditions),
 			"Programmed condition should be set to False when cross-namespace ref is not permitted",
 		)
 		assert.True(collect,
