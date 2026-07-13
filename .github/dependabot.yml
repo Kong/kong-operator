@@ -45,6 +45,11 @@ updates:
         applies-to: version-updates # Applies the group rule to version updates.
         patterns:
           - "github.com/aws/aws-sdk-go-v2/*"
+     codeql:
+        # Define patterns to include dependencies in the group (based on dependency name)
+        applies-to: version-updates # Applies the group rule to version updates
+        patterns:
+          - "github/codeql-action/*"
 - package-ecosystem: github-actions
   directory: /
   schedule:
