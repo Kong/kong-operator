@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -72,14 +73,40 @@ type EntityGVKConfig struct {
 	Group string `yaml:"group,omitempty"`
 }
 
-// ReferenceConfig configures a single inter-CR reference field.
+// ReferenceConfig declares a spec field that holds references to other CRs
+// in this API group, where the Konnect API accepts the referenced entity's
+// Konnect ID (or, in the future, Konnect name). This is deliberately NOT a
+// general type-override facility: the generator derives the ref struct, CRD
+// validation, SDK request resolution, and watch/index wiring from it.
 type ReferenceConfig struct {
-	// Kind is the Go type name of the referenced CRD (e.g. "EventGatewayBackendCluster").
-	// Used to name the resolved-ID status field: status.<lowerCamelCase(Kind)>.id.
-	Kind string `yaml:"kind"`
 	// Path is the dot-separated field path on the referring CR that holds the
-	// reference (e.g. "spec.apiSpec.destination"). Must start with "spec.apiSpec.".
+	// references (e.g. "spec.apiSpec.policies" or the nested
+	// "spec.apiSpec.access.acls.allow.allow"). Must start with "spec.apiSpec." and
+	// resolve to an array field, possibly through nested objects and oneOf/anyOf
+	// union variants.
 	Path string `yaml:"path"`
+	// Kinds lists the CRD kinds (in this API group) the field may reference.
+	// With a single kind, the generated ref struct's kind field is optional and
+	// defaulted; with multiple kinds it is required with an enum of Kinds.
+	Kinds []string `yaml:"kinds"`
+	// ResolvesTo selects what is pushed to Konnect for each reference:
+	// "id" (the referenced CR's Konnect ID) or "name" (its Konnect name).
+	ResolvesTo string `yaml:"resolvesTo"`
+	// RefTypeName names the generated ref struct. Required when Kinds has more
+	// than one entry (the name cannot be derived); must be empty otherwise
+	// (single-kind names derive as "<Kind>Ref").
+	RefTypeName string `yaml:"refTypeName,omitempty"`
+}
+
+// TypeName returns the Go type name of the generated ref struct.
+func (rc ReferenceConfig) TypeName() string {
+	if rc.RefTypeName != "" {
+		return rc.RefTypeName
+	}
+	if len(rc.Kinds) == 1 {
+		return rc.Kinds[0] + "Ref"
+	}
+	return ""
 }
 
 // SecretReferenceConfig configures a single sensitive field that can be provided
@@ -640,53 +667,102 @@ func (c *APIGroupVersionConfig) SchemaFieldOmissionsConfig() map[string]map[stri
 }
 
 func (c *APIGroupVersionConfig) validate() error {
-	if c.CommonTypes == nil || c.CommonTypes.ObjectRef == nil {
-		for _, tc := range c.Types {
-			if err := tc.validate(); err != nil {
-				return fmt.Errorf("type %q: %w", tc.Path, err)
-			}
+	if c.CommonTypes != nil && c.CommonTypes.ObjectRef != nil {
+		ref := c.CommonTypes.ObjectRef
+
+		// Default Generate to true when ObjectRef is present but Generate is not explicitly set.
+		if ref.Generate == nil && ref.Import == nil {
+			ref.Generate = new(true)
 		}
-		return nil
-	}
-	ref := c.CommonTypes.ObjectRef
 
-	// Default Generate to true when ObjectRef is present but Generate is not explicitly set.
-	if ref.Generate == nil && ref.Import == nil {
-		ref.Generate = new(true)
+		// Only flag mutual exclusion when generate is explicitly set to true.
+		if ref.Generate != nil && *ref.Generate && ref.Import != nil {
+			return fmt.Errorf("commonTypes.objectRef: generate and import are mutually exclusive")
+		}
+		// Require import when generate is explicitly set to false.
+		if ref.Generate != nil && !*ref.Generate && ref.Import == nil {
+			return fmt.Errorf("commonTypes.objectRef: import is required when generate is false")
+		}
+		if ref.Import != nil && ref.Import.Path == "" {
+			return fmt.Errorf("commonTypes.objectRef.import: path is required")
+		}
 	}
 
-	// Only flag mutual exclusion when generate is explicitly set to true.
-	if ref.Generate != nil && *ref.Generate && ref.Import != nil {
-		return fmt.Errorf("commonTypes.objectRef: generate and import are mutually exclusive")
-	}
-	// Require import when generate is explicitly set to false.
-	if ref.Generate != nil && !*ref.Generate && ref.Import == nil {
-		return fmt.Errorf("commonTypes.objectRef: import is required when generate is false")
-	}
-	if ref.Import != nil && ref.Import.Path == "" {
-		return fmt.Errorf("commonTypes.objectRef.import: path is required")
-	}
 	for _, tc := range c.Types {
 		if err := tc.validate(); err != nil {
 			return fmt.Errorf("type %q: %w", tc.Path, err)
 		}
 	}
+
+	if err := c.validateReferenceTypeConsistency(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
+// validateReferenceTypeConsistency ensures that every generated ref struct type
+// name (see ReferenceConfig.TypeName) is declared consistently across all types
+// in the API group-version: two references that share a type name must agree on
+// their Kinds (order-insensitive) and ResolvesTo.
+func (c *APIGroupVersionConfig) validateReferenceTypeConsistency() error {
+	seen := make(map[string]ReferenceConfig)
+	for _, tc := range c.Types {
+		for _, ref := range tc.References {
+			name := ref.TypeName()
+			if name == "" {
+				continue
+			}
+			prev, ok := seen[name]
+			if !ok {
+				seen[name] = ref
+				continue
+			}
+			if !equalKinds(prev.Kinds, ref.Kinds) || prev.ResolvesTo != ref.ResolvesTo {
+				return fmt.Errorf("reference type %q declared with conflicting kinds or resolvesTo", name)
+			}
+		}
+	}
+	return nil
+}
+
+// equalKinds reports whether two kind lists contain the same elements,
+// ignoring order.
+func equalKinds(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	as := append([]string(nil), a...)
+	bs := append([]string(nil), b...)
+	sort.Strings(as)
+	sort.Strings(bs)
+	for i := range as {
+		if as[i] != bs[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (tc *TypeConfig) validate() error {
-	seenRefKinds := make(map[string]bool)
-	for i, ref := range tc.References {
-		if ref.Kind == "" {
-			return fmt.Errorf("references[%d].kind is required", i)
-		}
+	for _, ref := range tc.References {
 		if !strings.HasPrefix(ref.Path, "spec.apiSpec.") {
-			return fmt.Errorf("references[%d].path must start with \"spec.apiSpec.\", got %q", i, ref.Path)
+			return fmt.Errorf("reference %q: path must start with \"spec.apiSpec.\"", ref.Path)
 		}
-		if seenRefKinds[ref.Kind] {
-			return fmt.Errorf("references[%d]: duplicate kind %q (each kind must appear at most once per type)", i, ref.Kind)
+		if len(ref.Kinds) == 0 {
+			return fmt.Errorf("reference %q: kinds must not be empty", ref.Path)
 		}
-		seenRefKinds[ref.Kind] = true
+		switch ref.ResolvesTo {
+		case "id", "name":
+		default:
+			return fmt.Errorf("reference %q: resolvesTo must be \"id\" or \"name\", got %q", ref.Path, ref.ResolvesTo)
+		}
+		if len(ref.Kinds) > 1 && ref.RefTypeName == "" {
+			return fmt.Errorf("reference %q: refTypeName is required when multiple kinds are configured", ref.Path)
+		}
+		if len(ref.Kinds) == 1 && ref.RefTypeName != "" {
+			return fmt.Errorf("reference %q: refTypeName must not be set when a single kind is configured", ref.Path)
+		}
 	}
 	seenSecretPaths := make(map[string]bool)
 	for i, sr := range tc.SecretReferences {

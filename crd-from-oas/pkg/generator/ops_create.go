@@ -27,7 +27,9 @@ type opsCreateFuncData struct {
 	CreateReqType        string
 	CreateReqBodyPointer bool
 	NeedsClient          bool
-	HasReferences        bool
+	// HasReferences is true when parent ref replacement needs an entity-level
+	// request builder (instead of the APISpec-level one).
+	HasReferences bool
 	// HasParentRefReplacement is true when a ParentRef.ReplacesAPISpecField is
 	// configured, meaning the SDK request body needs the replaced field injected
 	// from the resolved parent status ID.
@@ -96,7 +98,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		return nil, fmt.Errorf("entity %q: resolve create SDK interface: %w", entityName, err)
 	}
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
-	needsClient := opsConfig.RequireClient
+	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName)
 
 	parents, err := g.resolveParents(entityName, schema)
 	if err != nil {
@@ -144,7 +146,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		CreateReqType:        createReqType,
 		CreateReqBodyPointer: schema.CreateReqBodyPointer,
 		NeedsClient:          needsClient,
-		HasReferences:        g.entityHasReferences(entityName) || g.entityHasParentRefReplacement(entityName),
+		HasReferences:        g.entityHasParentRefReplacement(entityName),
 		RespField:            schema.SuccessResponseRef,
 		HasTags:              hasTags,
 		HasLabels:            hasLabels,

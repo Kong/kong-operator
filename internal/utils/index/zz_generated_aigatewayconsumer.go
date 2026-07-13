@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldAIGatewayConsumerOnKonnectAIGatewayRef is the index field for AIGatewayConsumer -> KonnectAIGateway.
 	IndexFieldAIGatewayConsumerOnKonnectAIGatewayRef = "aiGatewayConsumerOnKonnectAIGatewayRef"
+	// IndexFieldAIGatewayConsumerOnAIGatewayPolicyRef is the index field for AIGatewayConsumer -> AIGatewayPolicy.
+	IndexFieldAIGatewayConsumerOnAIGatewayPolicyRef = "aiGatewayConsumerOnAIGatewayPolicyRef"
 )
 
 // OptionsForAIGatewayConsumer returns required Index options for AIGatewayConsumer reconciler.
@@ -20,6 +22,11 @@ func OptionsForAIGatewayConsumer() []Option {
 			Object:         &konnectv1alpha1.AIGatewayConsumer{},
 			Field:          IndexFieldAIGatewayConsumerOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayConsumerOnKonnectAIGatewayRef,
+		},
+		{
+			Object:         &konnectv1alpha1.AIGatewayConsumer{},
+			Field:          IndexFieldAIGatewayConsumerOnAIGatewayPolicyRef,
+			ExtractValueFn: aiGatewayConsumerOnAIGatewayPolicyRef,
 		},
 	}
 }
@@ -39,4 +46,23 @@ func aiGatewayConsumerOnKonnectAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayConsumerOnAIGatewayPolicyRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.AIGatewayConsumer)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range ent.Spec.APISpec.Policies {
+		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

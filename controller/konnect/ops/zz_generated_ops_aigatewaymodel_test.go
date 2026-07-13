@@ -10,6 +10,8 @@ import (
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -43,10 +45,11 @@ func TestCreateAIGatewayModel_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayModelsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayModelForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayModelRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayModelRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedID := "aigatewaymodel-id"
 
@@ -65,7 +68,7 @@ func TestCreateAIGatewayModel_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createAIGatewayModel(ctx, sdk, obj))
+	require.NoError(t, createAIGatewayModel(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -74,10 +77,11 @@ func TestCreateAIGatewayModel_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayModelsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayModelForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayModelRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayModelRequest(ctx, cl)
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -90,7 +94,7 @@ func TestCreateAIGatewayModel_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createAIGatewayModel(ctx, sdk, obj)
+	err = createAIGatewayModel(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -99,11 +103,12 @@ func TestUpdateAIGatewayModel_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayModelsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayModelForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewaymodel-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayModelRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayModelRequest(ctx, cl)
 	require.NoError(t, err)
 
 	sdk.EXPECT().
@@ -118,7 +123,7 @@ func TestUpdateAIGatewayModel_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayModelResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayModel(ctx, sdk, obj))
+	require.NoError(t, updateAIGatewayModel(ctx, cl, sdk, obj))
 }
 
 func TestUpdateAIGatewayModel_PropagatesSDKError(t *testing.T) {
@@ -126,11 +131,12 @@ func TestUpdateAIGatewayModel_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayModelsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayModelForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewaymodel-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayModelRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayModelRequest(ctx, cl)
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -146,7 +152,7 @@ func TestUpdateAIGatewayModel_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayModel(ctx, sdk, obj)
+	err = updateAIGatewayModel(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

@@ -5,6 +5,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -14,6 +15,7 @@ import (
 
 func createAIGatewayConsumerGroup(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayConsumerGroupsSDK,
 	obj *konnectv1alpha1.AIGatewayConsumerGroup,
 ) error {
@@ -21,7 +23,7 @@ func createAIGatewayConsumerGroup(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreateAIGatewayConsumerGroupRequest()
+	req, err := obj.ToCreateAIGatewayConsumerGroupRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -41,6 +43,7 @@ func createAIGatewayConsumerGroup(
 
 func updateAIGatewayConsumerGroup(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayConsumerGroupsSDK,
 	obj *konnectv1alpha1.AIGatewayConsumerGroup,
 ) error {
@@ -49,7 +52,7 @@ func updateAIGatewayConsumerGroup(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToUpdateAIGatewayConsumerGroupRequest()
+	req, err := obj.ToUpdateAIGatewayConsumerGroupRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -62,7 +65,7 @@ func updateAIGatewayConsumerGroup(
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
-			return createAIGatewayConsumerGroup(ctx, sdk, obj)
+			return createAIGatewayConsumerGroup(ctx, cl, sdk, obj)
 		})
 	}
 	return nil

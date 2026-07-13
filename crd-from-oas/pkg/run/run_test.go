@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/generator"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
@@ -17,11 +18,13 @@ func TestCleanupLegacyGeneratedFiles(t *testing.T) {
 	legacyFuncs := filepath.Join(dir, "portal_funcs.go")
 	sharedReconcilerFuncs := filepath.Join(dir, "zz_generated_reconciler_funcs.go")
 	reconcilerConditions := filepath.Join(dir, "zz_generated_reconciler_conditions.go")
+	refSDKOpsTest := filepath.Join(dir, "zz_generated_portal_sdkops_test.go")
 	keepFile := filepath.Join(dir, "zz_generated_portal_funcs.go")
 
 	require.NoError(t, os.WriteFile(legacyFuncs, []byte("legacy"), 0o600))
 	require.NoError(t, os.WriteFile(sharedReconcilerFuncs, []byte("legacy"), 0o600))
 	require.NoError(t, os.WriteFile(reconcilerConditions, []byte("legacy"), 0o600))
+	require.NoError(t, os.WriteFile(refSDKOpsTest, []byte("stale"), 0o600))
 	require.NoError(t, os.WriteFile(keepFile, []byte("current"), 0o600))
 
 	parsed := &parser.ParsedSpec{
@@ -32,10 +35,15 @@ func TestCleanupLegacyGeneratedFiles(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, cleanupLegacyGeneratedFiles(t.TempDir(), dir, parsed))
+	references := map[string][]config.ReferenceConfig{
+		"Portal": {{Path: "spec.apiSpec.someRef"}},
+	}
+
+	require.NoError(t, cleanupLegacyGeneratedFiles(t.TempDir(), dir, parsed, references))
 	require.NoFileExists(t, legacyFuncs)
 	require.NoFileExists(t, sharedReconcilerFuncs)
 	require.NoFileExists(t, reconcilerConditions)
+	require.NoFileExists(t, refSDKOpsTest)
 	require.FileExists(t, keepFile)
 }
 

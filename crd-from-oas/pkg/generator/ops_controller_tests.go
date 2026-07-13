@@ -138,6 +138,11 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 		if skipProperty(prop) || prop.IsReference {
 			continue
 		}
+		// Configured inter-CR reference fields are typed ref slices; skip them
+		// here because generated reference-specific tests cover the ref path.
+		if g.referenceForField(entityName, jsonName(prop.Name)) != nil {
+			continue
+		}
 		if leafType, ok := g.entityAPISpecFieldSensitiveType(entityName, jsonName(prop.Name)); ok {
 			typeName := "SensitiveDataSource"
 			innerValue := `"test-value"`

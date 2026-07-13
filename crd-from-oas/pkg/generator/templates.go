@@ -104,7 +104,7 @@ type {{.EntityName}}APISpec struct {
 	// {{.}}
 {{- end}}
 {{- if isRefConfigField $prop}}
-	{{goFieldName $prop.Name}} *{{objectRefTypeName}} ` + "`" + `json:"{{jsonPropName $prop}},omitempty"` + "`" + `
+	{{goFieldName $prop.Name}} []{{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},omitempty"` + "`" + `
 {{- else if isRefProperty $prop}}
 	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{refJSONTag $prop}},omitempty"` + "`" + `
 {{- else}}
@@ -135,16 +135,11 @@ type {{.EntityName}}Status struct {
 	konnectv1alpha2.KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
 {{- else}}
 	KonnectEntityStatus ` + "`" + `json:",inline"` + "`" + `
-{{- end}}{{- if or .Schema.Dependencies .References .ParentRef}}{{"\n"}}{{range .Schema.Dependencies}}
+{{- end}}{{- if or .Schema.Dependencies .ParentRef}}{{"\n"}}{{range .Schema.Dependencies}}
 	// {{.EntityName}}ID is the Konnect ID of the parent {{.EntityName}}.
 	//
 	// +optional
 	{{.EntityName}}ID *KonnectEntityRef ` + "`" + `json:"{{statusIDJSONName .EntityName}},omitempty"` + "`" + `
-{{end}}{{range .References}}
-	// {{.Kind}} is the Konnect entity reference resolved from {{.Path}}.
-	//
-	// +optional
-	{{.Kind}} *KonnectEntityRef ` + "`" + `json:"{{lowerCamel .Kind}},omitempty"` + "`" + `
 {{end}}{{- if .EmitParentRefStatusField}}
 	// {{.ParentStatusEntityName}} is the Konnect entity reference for the parent {{.ParentStatusEntityName}}.
 	//
@@ -385,51 +380,6 @@ func (obj *{{.EntityName}}) GetKonnectAPIAuthConfigurationRef() {{.KonnectAPIAut
 	}
 }
 {{- end}}
-{{- range .References}}
-
-// Get{{.Kind}}ID returns the Konnect ID resolved for the referenced {{.Kind}}.
-func (obj *{{$.EntityName}}) Get{{.Kind}}ID() string {
-	if obj.Status.{{.Kind}} == nil {
-		return ""
-	}
-	return obj.Status.{{.Kind}}.ID
-}
-
-// Set{{.Kind}}ID sets the resolved Konnect ID for the referenced {{.Kind}}.
-func (obj *{{$.EntityName}}) Set{{.Kind}}ID(id string) {
-	if obj.Status.{{.Kind}} == nil {
-		obj.Status.{{.Kind}} = &KonnectEntityRef{}
-	}
-	obj.Status.{{.Kind}}.ID = id
-}
-{{- end}}
-{{- if .References}}
-
-// GetCrossReferences returns inter-CR references configured on {{.EntityName}}.
-func (obj *{{.EntityName}}) GetCrossReferences() []CrossReference {
-	refs := make([]CrossReference, 0, {{len .References}})
-{{- range .References}}
-	if obj.Spec.APISpec.{{.GoFieldName}} != nil {
-		refs = append(refs, CrossReference{
-			Kind:     "{{.Kind}}",
-			SpecPath: "{{.Path}}",
-			Ref:      obj.Spec.APISpec.{{.GoFieldName}},
-		})
-	}
-{{- end}}
-	return refs
-}
-
-// SetCrossReferenceID sets the resolved Konnect ID for the cross-reference identified by kind.
-func (obj *{{.EntityName}}) SetCrossReferenceID(kind, id string) {
-	switch kind {
-{{- range .References}}
-	case "{{.Kind}}":
-		obj.Set{{.Kind}}ID(id)
-{{- end}}
-	}
-}
-{{- end}}
 {{- if .AncestorDependencies}}
 
 // GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
@@ -468,10 +418,14 @@ import (
 	"context"
 {{- end}}
 	"encoding/json"
+{{- if .References}}
+	"errors"
+{{- end}}
 	"fmt"
 {{- if .NeedsClient}}
 
 {{if .NeedsSecretFetchImport}}	corev1 "k8s.io/api/core/v1"
+{{end}}{{if .References}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
 
@@ -633,6 +587,7 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	return data, nil
 }
 {{range .Methods}}
+{{- if not $.References}}
 // {{.MethodName}} converts the {{$.EntityName}}APISpec to the SDK type
 // {{.ImportAlias}}.{{.TypeName}} using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
@@ -644,8 +599,10 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	}
 {{- template "sdkOpsUnmarshalReturn" .}}
 }
+{{- end}}
 {{end}}
 {{- if .NeedsClient}}
+{{- if .SecretReferences}}
 func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*{{$.EntityName}}APISpec, error) {
 	if obj == nil {
 		return nil, fmt.Errorf("{{$.EntityName}} is nil")
@@ -770,24 +727,22 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 {{- end}}
 	return refs
 }
+{{- end}}
+{{- template "sdkOpsReferenceResolvers" $}}
 {{range .Methods}}
 // {{.MethodName}} converts the {{$.EntityName}} to the SDK type
-// {{.ImportAlias}}.{{.TypeName}}, resolving referenced Secrets via the provided client.
+// {{.ImportAlias}}.{{.TypeName}}{{if $.SecretReferences}}, resolving referenced Secrets{{end}}{{if $.References}}, resolving referenced CRs to Konnect IDs{{end}} via the provided client.
 func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
+{{- if $.References}}
+{{- if $.SecretReferences}}
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
 	}
-	return spec.{{.MethodName}}()
-}
-{{end}}
+{{- else}}
+	spec := &obj.Spec.APISpec
 {{- end}}
-{{- if .HasReferences}}
-{{range .Methods}}
-// {{.MethodName}} converts the {{$.EntityName}} to the SDK type
-// {{.ImportAlias}}.{{.TypeName}}, injecting resolved cross-reference IDs from status.
-func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}}, error) {
-	data, err := obj.Spec.APISpec.marshalSDKOpsPayload()
+	data, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
 	}
@@ -798,16 +753,29 @@ func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}},
 	if payload == nil {
 		payload = map[string]any{}
 	}
-	{{- range $.References}}
-	if id := obj.Get{{.Kind}}ID(); id != "" {
-		payload["{{.JSONFieldName}}"] = map[string]any{"id": id}
+{{- range $.References}}
+{{- if not .ACLNested}}
+	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
 	}
-	{{- end}}
+	// Always set: an empty list must explicitly clear the field in Konnect.
+	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}
+{{- end}}
+{{- end}}
+{{- template "sdkOpsACLRefInjections" $}}
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with references: %w", err)
 	}
 {{- template "sdkOpsUnmarshalReturn" .}}
+{{- else}}
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.{{.MethodName}}()
+{{- end}}
 }
 {{end}}
 {{- end}}
@@ -854,6 +822,172 @@ func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}},
 	}
 	return &target, nil
 {{- end}}
+{{- end}}` + sdkOpsReferenceSharedDefines
+
+// sdkOpsReferenceSharedDefines holds the named templates shared between the
+// standard and root-union SDK-ops templates for CR-reference support:
+// nil-guarded accessors, per-reference resolvers, ResolveKonnectReferences,
+// and ACL-specific SDK payload injection.
+const sdkOpsReferenceSharedDefines = `
+{{- define "sdkOpsReferenceResolvers"}}
+{{- range .References}}
+{{- $ref := .}}
+{{- if .NestedRef}}
+// RefsAt{{$.EntityName}}{{.GoResolverName}} returns the references at {{.Path}},
+// or nil when any ancestor is unset.
+func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeName}} {
+{{- $path := "obj.Spec.APISpec"}}
+{{- range .GoPathSegments}}
+{{- $path = printf "%s.%s" $path .Name}}
+{{- if .Pointer}}
+	if {{$path}} == nil {
+		return nil
+	}
+{{- end}}
+{{- end}}
+	return {{$path}}
+}
+{{end}}
+// resolve{{$.EntityName}}{{.GoResolverName}} resolves the CR references in {{.Path}}
+// to Konnect {{if .ResolvesToName}}names{{else}}IDs{{end}}.
+func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
+{{- if .NestedRef}}
+	refs := {{.RefsExpr}}
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+{{- else}}
+	resolved := make([]string, 0, len(obj.Spec.APISpec.{{.GoFieldName}}))
+	var errs []error
+	for _, ref := range obj.Spec.APISpec.{{.GoFieldName}} {
+{{- end}}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "{{.DefaultKind}}"
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+{{- if .MultiKind}}
+		var resolvedValue, konnectID string
+		switch kind {
+{{- range .Kinds}}
+		case "{{.}}":
+			var referenced {{.}}
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced {{.}} %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			konnectID = referenced.GetKonnectID()
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+{{- if $ref.ResolvesToName}}
+			resolvedValue = string(referenced.Spec.APISpec.Name)
+{{- else}}
+			resolvedValue = konnectID
+{{- end}}
+{{- end}}
+		default:
+			errs = append(errs, fmt.Errorf("unsupported reference kind %q at {{$ref.Path}}", kind))
+			continue
+		}
+		if konnectID == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, resolvedValue)
+{{- else}}
+		var referenced {{.DefaultKind}}
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+{{- if .ResolvesToName}}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+{{- else}}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, id)
+{{- end}}
+{{- end}}
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+{{- end}}
+{{- if $.References}}
+
+// ResolveKonnectReferences resolves every CR reference declared on the spec and
+// returns the joined resolution errors, or nil when all references resolve.
+func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var errs []error
+	{{- range $.References}}
+	if _, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	{{- end}}
+	return errors.Join(errs...)
+}
+{{- end}}
+{{- end}}
+{{- define "sdkOpsACLRefInjections"}}
+{{- range .ACLRefInjections}}
+	// {{.Path}} carries CR references: rebuild the "{{.SDKUnionKey}}" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if {{.Cond}} {
+		{{.UnionVar}} := {{.UnionExpr}}
+{{- range .ParentNavs}}
+		{{.Var}}, _ := {{.Parent}}["{{.Key}}"].(map[string]any)
+		if {{.Var}} == nil {
+			{{.Var}} = map[string]any{}
+		}
+{{- end}}
+		switch {
+{{- $group := .}}
+{{- range .Variants}}
+		case {{$group.UnionVar}}.Type == {{.TypeConst}}:
+			resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
+			}
+			{{$group.TargetVar}}["{{$group.SDKUnionKey}}"] = map[string]any{"{{.LeafSDKKey}}": resolved{{.ResolverName}}}
+{{- end}}
+		}
+{{- range .ParentNavsReversed}}
+		{{.Parent}}["{{.Key}}"] = {{.Var}}
+{{- end}}
+	}
+{{- end}}
 {{- end}}`
 
 const sdkOpsRootUnionTemplate = sharedGeneratedFilePreamble + `
@@ -865,10 +999,14 @@ import (
 	"context"
 {{- end}}
 	"encoding/json"
+{{- if .References}}
+	"errors"
+{{- end}}
 	"fmt"
 {{- if .NeedsClient}}
 
 {{if .NeedsSecretFetchImport}}	corev1 "k8s.io/api/core/v1"
+{{end}}{{if .References}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
 
@@ -1067,6 +1205,12 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	return data, variant, nil
 }
 {{range .Methods}}
+{{- if $.References}}
+// {{.FromPayloadMethodName}} builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *{{$.EntityName}}APISpec) {{.FromPayloadMethodName}}(payload map[string]any) (*{{.ImportAlias}}.{{.TypeName}}, error) {
+{{- else}}
 // {{.MethodName}} converts the {{$.EntityName}}APISpec to the SDK type
 // {{.ImportAlias}}.{{.TypeName}} using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
@@ -1076,6 +1220,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	if err != nil {
 		return nil, err
 	}
+{{- end}}
 {{- if .IsCreate}}
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
@@ -1175,6 +1320,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 }
 {{end}}
 {{- if .NeedsClient}}
+{{- if .SecretReferences}}
 
 func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*{{$.EntityName}}APISpec, error) {
 	if obj == nil {
@@ -1300,19 +1446,38 @@ func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretR
 {{- end}}
 	return refs
 }
+{{- end}}
+{{- template "sdkOpsReferenceResolvers" $}}
 {{range .Methods}}
 
 // {{.MethodName}} converts the {{$.EntityName}} to the SDK type
-// {{.ImportAlias}}.{{.TypeName}}, resolving referenced Secrets via the provided client.
+// {{.ImportAlias}}.{{.TypeName}}, resolving referenced {{if $.References}}{{if $.SecretReferences}}Secrets and CRs{{else}}CRs{{end}}{{else}}Secrets{{end}} via the provided client.
 func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
+{{- if $.References}}
+{{- if $.SecretReferences}}
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+{{- else}}
+	spec := &obj.Spec.APISpec
+{{- end}}
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+{{- template "sdkOpsACLRefInjections" $}}
+	return spec.{{.FromPayloadMethodName}}(payload)
+{{- else}}
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
 	}
 	return spec.{{.MethodName}}()
+{{- end}}
 }
 {{end}}
-{{- end}}`
+{{- end}}` + sdkOpsReferenceSharedDefines
 
 const sdkOpsTestTemplate = sharedGeneratedFilePreamble + `
 
@@ -2840,5 +3005,126 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 // {{.GetterName}} returns the SDK to operate {{.Entity}}.
 func (m generatedMockSDKWrapper) {{.GetterName}}() {{.Alias}}.{{.TypeName}} {
 	return m.{{.MockFieldName}}
+}
+{{end}}`
+
+// referencesFileTemplate generates the shared references file with ref structs,
+// the references-resolved condition constants, and resolution sentinel errors.
+const referencesFileTemplate = sharedGeneratedFilePreamble + `
+
+package {{.PackageName}}
+
+import "fmt"
+
+const (
+	// KonnectReferencesResolvedConditionType indicates whether all CR references
+	// declared on the entity's spec have been resolved to Konnect IDs/names.
+	KonnectReferencesResolvedConditionType = "KonnectReferencesResolved"
+
+	// KonnectReferencesResolvedReasonResolved indicates all references resolved.
+	KonnectReferencesResolvedReasonResolved = "Resolved"
+	// KonnectReferencesResolvedReasonNotFound indicates a referenced CR does not exist.
+	KonnectReferencesResolvedReasonNotFound = "ReferenceNotFound"
+	// KonnectReferencesResolvedReasonNotProgrammed indicates a referenced CR exists
+	// but has not been programmed in Konnect yet.
+	KonnectReferencesResolvedReasonNotProgrammed = "ReferenceNotProgrammed"
+	// KonnectReferencesResolvedReasonInvalid indicates a reference is invalid
+	// and cannot be resolved by waiting for the referenced CR to be programmed.
+	KonnectReferencesResolvedReasonInvalid = "ReferenceInvalid"
+	// KonnectReferencesResolvedReasonResolutionFailed indicates references failed
+	// for multiple reasons. The condition message contains per-reference details.
+	KonnectReferencesResolvedReasonResolutionFailed = "ReferenceResolutionFailed"
+)
+
+// ReferenceNotFoundError is returned when a referenced CR does not exist.
+//
+// +kubebuilder:object:generate=false
+type ReferenceNotFoundError struct {
+	Kind      string
+	Namespace string
+	Name      string
+	Err       error
+}
+
+func (e ReferenceNotFoundError) Error() string {
+	return fmt.Sprintf("%s %s/%s: %v", e.Kind, e.Namespace, e.Name, e.Err)
+}
+
+func (e ReferenceNotFoundError) Unwrap() error { return e.Err }
+
+// ReferenceNotProgrammedError is returned when a referenced CR exists but has
+// no Konnect ID yet.
+//
+// +kubebuilder:object:generate=false
+type ReferenceNotProgrammedError struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+func (e ReferenceNotProgrammedError) Error() string {
+	return fmt.Sprintf("%s %s/%s is not programmed in Konnect yet", e.Kind, e.Namespace, e.Name)
+}
+
+// ReferenceCrossNamespaceError is returned when a reference points to another
+// namespace. Cross-namespace references are rejected until explicit
+// cross-namespace support and authorization checks are implemented.
+//
+// +kubebuilder:object:generate=false
+type ReferenceCrossNamespaceError struct {
+	Kind              string
+	Namespace         string
+	Name              string
+	ReferrerNamespace string
+}
+
+func (e ReferenceCrossNamespaceError) Error() string {
+	return fmt.Sprintf("%s %s/%s uses cross-namespace reference from namespace %s, which is not supported yet", e.Kind, e.Namespace, e.Name, e.ReferrerNamespace)
+}
+
+// ReferenceDifferentGatewayError is returned when a reference points to a CR
+// programmed under a different AIGatewayControlPlane. References must stay
+// within the same Konnect Gateway because Konnect only accepts policy and ACL
+// references from the same AI Gateway.
+//
+// +kubebuilder:object:generate=false
+type ReferenceDifferentGatewayError struct {
+	Kind                string
+	Namespace           string
+	Name                string
+	ReferrerGatewayID   string
+	ReferencedGatewayID string
+}
+
+func (e ReferenceDifferentGatewayError) Error() string {
+	return fmt.Sprintf("%s %s/%s belongs to Gateway %q, not referrer Gateway %q", e.Kind, e.Namespace, e.Name, e.ReferencedGatewayID, e.ReferrerGatewayID)
+}
+{{range .RefTypes}}
+// {{.TypeName}} references {{.KindsSentence}} in the cluster. The referenced
+// object's Konnect {{.ResolvesTo}} is used where the Konnect API accepts it.
+type {{.TypeName}} struct {
+	// Kind is the kind of the referenced object.
+	//
+{{- if .SingleKind}}
+	// +optional
+	// +kubebuilder:validation:Enum={{.KindsEnum}}
+	// +kubebuilder:default={{.DefaultKind}}
+	Kind string ` + "`" + `json:"kind,omitempty"` + "`" + `
+{{- else}}
+	// +required
+	// +kubebuilder:validation:Enum={{.KindsEnum}}
+	Kind string ` + "`" + `json:"kind"` + "`" + `
+{{- end}}
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string ` + "`" + `json:"name"` + "`" + `
+
+	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+	Namespace string ` + "`" + `json:"namespace,omitempty"` + "`" + `
 }
 {{end}}`
