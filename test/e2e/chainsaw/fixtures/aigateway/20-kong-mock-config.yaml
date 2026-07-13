@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-mock-config
+  namespace: kong-aigateway-mock
+data:
+  # Two mock LLM providers, both backed by the same Ollama, isolated by api key.
+  # Both use the same route pattern: /provider-<x> (strip_path), forwarding to
+  # Ollama's /v1/chat/completions.
+  #   Provider A: route /provider-a, key test-ai-gateway-key   (ACL group provider-a)
+  #   Provider B: route /provider-b, key test-ai-gateway-key-b (ACL group provider-b)
+  # The ACL plugin ensures each key only works on its own provider's route.
+  kong.yml: |
+    _format_version: "3.0"
+    services:
+      - name: ollama-a
+        url: http://ollama.kong-aigateway-mock.svc.cluster.local:11434/v1/chat/completions
+        routes:
+          - name: chat-a
+            paths:
+              - /provider-a
+            strip_path: true
+            plugins:
+              - name: key-auth
+                config:
+                  key_names:
+                    - apikey
+              - name: acl
+                config:
+                  allow:
+                    - provider-a
+      - name: ollama-b
+        url: http://ollama.kong-aigateway-mock.svc.cluster.local:11434/v1/chat/completions
+        routes:
+          - name: chat-b
+            paths:
+              - /provider-b
+            strip_path: true
+            plugins:
+              - name: key-auth
+                config:
+                  key_names:
+                    - apikey
+              - name: acl
+                config:
+                  allow:
+                    - provider-b
+    consumers:
+      - username: ai-gateway-a
+        keyauth_credentials:
+          - key: test-ai-gateway-key
+        acls:
+          - group: provider-a
+      - username: ai-gateway-b
+        keyauth_credentials:
+          - key: test-ai-gateway-key-b
+        acls:
+          - group: provider-b
