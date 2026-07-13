@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
@@ -24,7 +25,7 @@ import (
 // TestKonnectEntityReconcilers tests Konnect entity reconcilers. The test cases are run against a real Kubernetes API
 // server provided by the envtest package and a mock Konnect SDK.
 func TestKonnectEntityReconcilers(t *testing.T) {
-	cfg, _ := Setup(t, t.Context(), scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, _ := envtest.Setup(t, t.Context(), scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	testNewKonnectEntityReconciler(t, cfg, konnectv1alpha2.KonnectGatewayControlPlane{}, konnectGatewayControlPlaneTestCases)
 }
@@ -56,11 +57,11 @@ func testNewKonnectEntityReconciler[
 
 		ctx := t.Context()
 
-		mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+		mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: NameFromT(t),
+				GenerateName: envtest.NameFromT(t),
 			},
 		}
 		require.NoError(t, mgr.GetClient().Create(ctx, ns))
@@ -69,7 +70,7 @@ func testNewKonnectEntityReconciler[
 		factory := sdkmocks.NewMockSDKFactory(t)
 		sdk := factory.SDK
 
-		StartReconcilers(ctx, t, mgr, logs,
+		envtest.StartReconcilers(ctx, t, mgr, logs,
 			konnect.NewKonnectEntityReconciler(
 				factory, logging.DevelopmentMode, cl,
 				konnect.WithMetricRecorder[T, TEnt](&metricsmocks.MockRecorder{})))

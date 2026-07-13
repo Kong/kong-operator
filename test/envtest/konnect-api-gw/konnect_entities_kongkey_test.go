@@ -24,6 +24,8 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -40,17 +42,17 @@ func TestKongKey(t *testing.T) {
 		keySetID   = "key-set-id"
 	)
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongKey](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongKey](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongKey](&metricsmocks.MockRecorder{}),
 		),
 	)
@@ -78,7 +80,7 @@ func TestKongKey(t *testing.T) {
 		},
 	}, nil)
 
-	w := SetupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
+	w := envtest.SetupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Run("without KongKeySet", func(t *testing.T) {
 		t.Log("Creating KongKey")
@@ -87,7 +89,7 @@ func TestKongKey(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongKey to be programmed")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKey) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKey) bool {
 			if c.GetName() != createdKey.GetName() {
 				return false
 			}
@@ -97,7 +99,7 @@ func TestKongKey(t *testing.T) {
 			})
 		}, "KongKey's Programmed condition should be true eventually")
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on KongKey update")
 		sdk.KeysSDK.EXPECT().UpsertKey(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertKeyRequest) bool {
@@ -110,7 +112,7 @@ func TestKongKey(t *testing.T) {
 		certToPatch.Spec.Tags = append(certToPatch.Spec.Tags, "addedTag")
 		require.NoError(t, clientNamespaced.Patch(ctx, certToPatch, client.MergeFrom(createdKey)))
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on KongKey deletion")
 		sdk.KeysSDK.EXPECT().DeleteKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), keyID).
@@ -119,7 +121,7 @@ func TestKongKey(t *testing.T) {
 		t.Log("Deleting KongKey")
 		require.NoError(t, cl.Delete(ctx, createdKey))
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("without KongKeySet but with conflict response", func(t *testing.T) {
@@ -162,7 +164,7 @@ func TestKongKey(t *testing.T) {
 		)
 
 		t.Log("Waiting for KongKey to be programmed")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongKey) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongKey) bool {
 			if k.GetName() != createdKey.GetName() {
 				return false
 			}
@@ -172,7 +174,7 @@ func TestKongKey(t *testing.T) {
 			})
 		}, "KongKey's Programmed condition should be true eventually")
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("with KongKeySet", func(t *testing.T) {
@@ -191,7 +193,7 @@ func TestKongKey(t *testing.T) {
 		)
 
 		t.Log("Waiting for KeySetRefValid condition to be false")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKey) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKey) bool {
 			if c.GetName() != createdKey.GetName() {
 				return false
 			}
@@ -218,10 +220,10 @@ func TestKongKey(t *testing.T) {
 		keySet := deploy.KongKeySet(t, ctx, clientNamespaced, keySetName,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
-		updateKongKeySetStatusWithProgrammed(t, ctx, clientNamespaced, keySet, keySetID, cp.GetKonnectStatus().GetKonnectID())
+		envtest.UpdateKongKeySetStatusWithProgrammed(t, ctx, clientNamespaced, keySet, keySetID, cp.GetKonnectStatus().GetKonnectID())
 
 		t.Log("Waiting for KongKey to be programmed and associated with KongKeySet")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKey) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKey) bool {
 			if c.GetName() != createdKey.GetName() {
 				return false
 			}
@@ -239,7 +241,7 @@ func TestKongKey(t *testing.T) {
 			return programmed && associated && keySetIDPopulated && exactlyZeroOwnerReference
 		}, "KongKey's Programmed and KeySetRefValid conditions should be true eventually")
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on KongKeySet deattachment")
 		sdk.KeysSDK.EXPECT().UpsertKey(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertKeyRequest) bool {
@@ -253,7 +255,7 @@ func TestKongKey(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, keyToPatch, client.MergeFrom(createdKey)))
 
 		t.Log("Waiting for KongKey to be deattached from KongKeySet")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKey) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKey) bool {
 			if c.GetName() != createdKey.GetName() {
 				return false
 			}
@@ -265,7 +267,7 @@ func TestKongKey(t *testing.T) {
 			return len(c.GetOwnerReferences()) == 0
 		}, "KongKey should be deattached from KongKeySet eventually")
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
@@ -277,7 +279,7 @@ func TestKongKey(t *testing.T) {
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
-		w := SetupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on KongKey creation")
 		sdk.KeysSDK.EXPECT().
@@ -305,18 +307,18 @@ func TestKongKey(t *testing.T) {
 				cg.Spec.Tags = append(cg.Spec.Tags, "test-1")
 			},
 		)
-		EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		WatchFor(t, ctx, w, apiwatch.Modified, ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, envtest.ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("Key didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")
 		require.NoError(t, clientNamespaced.Delete(ctx, cp))
 
 		t.Log("Waiting for KongKey to be get Programmed and ControlPlaneRefValid conditions with status=False")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongKey didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
 	})
@@ -326,7 +328,7 @@ func TestKongKey(t *testing.T) {
 		keyName := "adopted-key"
 		keyKID := "adopted-key-id"
 
-		w := SetupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating key set")
 		sdk.KeysSDK.EXPECT().GetKey(mock.Anything, keyKonnectID, cp.GetKonnectID()).Return(
@@ -353,7 +355,7 @@ func TestKongKey(t *testing.T) {
 		)
 
 		t.Logf("Waiting for KongKey %s to be programmed and set Konnect ID", client.ObjectKeyFromObject(createdKey))
-		WatchFor(t, ctx, w, apiwatch.Modified, func(key *configurationv1alpha1.KongKey) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(key *configurationv1alpha1.KongKey) bool {
 			return key.Name == createdKey.Name &&
 				k8sutils.IsProgrammed(key) &&
 				key.GetKonnectID() == keyKonnectID
@@ -366,6 +368,6 @@ func TestKongKey(t *testing.T) {
 
 		t.Logf("Deleting KongKey %s and waiting for it to disappear", client.ObjectKeyFromObject(createdKey))
 		require.NoError(t, clientNamespaced.Delete(ctx, createdKey))
-		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, createdKey, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, createdKey, consts.WaitTime, consts.TickTime)
 	})
 }

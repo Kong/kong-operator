@@ -23,6 +23,8 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -31,21 +33,21 @@ import (
 
 func TestKongVault(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongVault](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongVault](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongVault](&metricsmocks.MockRecorder{}),
 		),
 	}
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	ns2 := deploy.Namespace(t, ctx, mgr.GetClient())
 
@@ -78,7 +80,7 @@ func TestKongVault(t *testing.T) {
 		}),
 	)
 
-	vaultWatch := SetupWatch[configurationv1alpha1.KongVaultList](t, ctx, cl)
+	vaultWatch := envtest.SetupWatch[configurationv1alpha1.KongVaultList](t, ctx, cl)
 
 	t.Run("Cross namespace ref KongVault -> KonnectNamespacedRefControlPlane yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
 		const (
@@ -90,7 +92,7 @@ func TestKongVault(t *testing.T) {
 		createdVault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp2)
 
 		t.Log("Waiting for KongVault to get ResolvedRefs condition with status=False")
-		WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
 			if kv.GetName() != createdVault.GetName() {
 				return false
 			}
@@ -111,7 +113,7 @@ func TestKongVault(t *testing.T) {
 		}, "KongVault didn't get ResolvedRefs status condition set to False")
 
 		require.NoError(t, cl.Delete(ctx, createdVault))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, createdVault, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdVault, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("should create, update and delete vault successfully", func(t *testing.T) {
@@ -136,11 +138,11 @@ func TestKongVault(t *testing.T) {
 		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp)
 
 		t.Log("Waiting for KongVault to be programmed")
-		WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
 			return v.GetKonnectID() == vaultID && k8sutils.IsProgrammed(v)
 		}, "KongVault didn't get Programmed status condition or didn't get the correct (vault-12345) Konnect ID assigned")
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up mock SDK for vault update")
 		sdk.VaultSDK.EXPECT().UpsertVault(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertVaultRequest) bool {
@@ -154,7 +156,7 @@ func TestKongVault(t *testing.T) {
 		vaultToPatch.Spec.Description = vaultDespription
 		require.NoError(t, clientNamespaced.Patch(ctx, vaultToPatch, client.MergeFrom(vault)))
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up mock SDK for vault deletion")
 		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), vaultID).
@@ -163,7 +165,7 @@ func TestKongVault(t *testing.T) {
 		t.Log("Deleting KongVault")
 		require.NoError(t, cl.Delete(ctx, vault))
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("should correctly handle conflict on create", func(t *testing.T) {
@@ -214,7 +216,7 @@ func TestKongVault(t *testing.T) {
 		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp)
 
 		t.Log("Waiting for KongVault to be programmed")
-		WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
 			if v.GetName() != vault.GetName() {
 				return false
 			}
@@ -225,7 +227,7 @@ func TestKongVault(t *testing.T) {
 			})
 		}, "KongVault's Programmed condition should be true eventually")
 
-		EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("Adopting existing vault", func(t *testing.T) {
@@ -265,7 +267,7 @@ func TestKongVault(t *testing.T) {
 		)
 
 		t.Logf("Watching for vault %s to be programmed and set Konnect ID", createdVault.Name)
-		WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
 			return kv.Name == createdVault.Name &&
 				k8sutils.IsProgrammed(kv) &&
 				kv.GetKonnectID() == vaultID
@@ -278,6 +280,6 @@ func TestKongVault(t *testing.T) {
 
 		t.Logf("Deleting KongVault %s", createdVault.Name)
 		require.NoError(t, cl.Delete(ctx, createdVault))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, createdVault, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdVault, consts.WaitTime, consts.TickTime)
 	})
 }

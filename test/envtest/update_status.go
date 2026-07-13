@@ -90,7 +90,7 @@ func UpdateKongRouteStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongKeySetStatusWithProgrammed(
+func UpdateKongKeySetStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -108,7 +108,7 @@ func updateKongKeySetStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongUpstreamStatusWithProgrammed(
+func UpdateKongUpstreamStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
