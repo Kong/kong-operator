@@ -86,7 +86,9 @@ filtered="$(jq <<<"$vulns" -c '
   ))
 ')"
 
-text="$(jq <<<"$filtered" -r 'map("- \(.id) (aka \(.aliases | join(", ")))\n\n\t\(.details | gsub("\n"; "\n\t"))") | join("\n\n")')"
+# .aliases is absent on some OSV entries, default to [] so "join" does not
+# choke on null ("Cannot iterate over null (null)").
+text="$(jq <<<"$filtered" -r 'map("- \(.id) (aka \((.aliases // []) | join(", ")))\n\n\t\(.details | gsub("\n"; "\n\t"))") | join("\n\n")')"
 
 if [ -z "$text" ]; then
   printf 'No vulnerabilities found.\n'
