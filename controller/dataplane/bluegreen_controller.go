@@ -98,6 +98,8 @@ func (r *BlueGreenReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.DataPlane) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "dataplaneBlueGreen", r.LoggingMode)
 
+	warnOperatorManagedEnvVars(ctx, logger, dataplane, r.Client)
+
 	// Blue Green rollout strategy is not enabled, delegate to DataPlane controller.
 	if dataplane.Spec.Deployment.Rollout == nil || dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen == nil {
 		if err := r.prunePreviewSubresources(ctx, dataplane); err != nil {
@@ -143,6 +145,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operator
 	// DataPlane is ready and we can proceed with deploying preview resources.
 
 	// customize the dataplane with the extensions field
+
 	log.Trace(logger, "applying extensions")
 	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, dataplane, r.KonnectEnabled, &extensionskonnect.DataPlaneKonnectExtensionProcessor{})
 	if err != nil {
