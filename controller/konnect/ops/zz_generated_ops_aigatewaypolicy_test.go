@@ -10,6 +10,8 @@ import (
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -46,10 +48,11 @@ func TestCreateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayPolicyRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	expectedID := "aigatewaypolicy-id"
@@ -67,7 +70,7 @@ func TestCreateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createAIGatewayPolicy(ctx, sdk, obj))
+	require.NoError(t, createAIGatewayPolicy(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -76,10 +79,11 @@ func TestCreateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayPolicyRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	sdkErr := errors.New("sdk error")
@@ -93,7 +97,7 @@ func TestCreateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createAIGatewayPolicy(ctx, sdk, obj)
+	err = createAIGatewayPolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -102,11 +106,12 @@ func TestUpdateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewaypolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayPolicyRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 
@@ -122,7 +127,7 @@ func TestUpdateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayPolicyResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayPolicy(ctx, sdk, obj))
+	require.NoError(t, updateAIGatewayPolicy(ctx, cl, sdk, obj))
 }
 
 func TestUpdateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
@@ -130,11 +135,12 @@ func TestUpdateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewaypolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayPolicyRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	sdkErr := errors.New("sdk error")
@@ -151,7 +157,7 @@ func TestUpdateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayPolicy(ctx, sdk, obj)
+	err = updateAIGatewayPolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

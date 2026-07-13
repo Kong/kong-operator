@@ -661,6 +661,9 @@ apiGroupVersions:
         reconciler: {}
       - path: /v1/ai-gateways/{gatewayId}/policies
         name: AIGatewayPolicy
+        secretReferences:
+          - path: spec.apiSpec.config
+            type: Secret
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayPoliciesSDK

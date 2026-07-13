@@ -87,6 +87,13 @@ type Generator struct {
 	// entityDirectSensitiveLeaves maps entity name → JSON field name → secret reference config
 	// for leaf fields that are direct children of the entity's apiSpec (depth 1 paths).
 	entityDirectSensitiveLeaves map[string]map[string]config.SecretReferenceConfig
+	// schemaLeafValueTypes mirrors sensitiveSchemaLeaves, additionally recording
+	// each leaf's resolved value type so field emission can choose between the
+	// shared SensitiveDataSource type and a dedicated per-field type.
+	schemaLeafValueTypes map[string]map[string]sensitiveLeafType
+	// entityDirectLeafValueTypes mirrors entityDirectSensitiveLeaves, additionally
+	// recording each direct apiSpec-level leaf's resolved value type.
+	entityDirectLeafValueTypes map[string]map[string]sensitiveLeafType
 	// sensitiveObjectFieldParents maps entity name → object field path prefix
 	// (e.g. Spec.APISpec.TLS.ClientIdentity) → generated Go type name for the
 	// parent struct that contains the sensitive leaf.
@@ -103,6 +110,15 @@ type Generator struct {
 }
 
 const sensitiveDataSourceTypeName = "SensitiveDataSource"
+
+// sensitiveLeafType records the resolved value type for a single secret
+// reference leaf. ValueGoType "string" means the leaf keeps using the shared
+// SensitiveDataSource type; any other value means DedicatedTypeName is the
+// generated per-field union type name to use instead.
+type sensitiveLeafType struct {
+	ValueGoType       string
+	DedicatedTypeName string
+}
 
 // NewGenerator creates a new generator.
 func NewGenerator(config Config) *Generator {
@@ -192,6 +208,9 @@ func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 	g.sensitiveSchemaLeaves = make(map[string]map[string]config.SecretReferenceConfig)
 	g.entityDirectSensitiveLeaves = make(map[string]map[string]config.SecretReferenceConfig)
 	g.sensitiveObjectFieldParents = make(map[string]map[string]string)
+	g.sensitiveLeafSelectors = make(map[string]map[string][]SecretReferenceForTemplate)
+	g.schemaLeafValueTypes = make(map[string]map[string]sensitiveLeafType)
+	g.entityDirectLeafValueTypes = make(map[string]map[string]sensitiveLeafType)
 
 	for entityName, refs := range g.config.SecretReferences {
 		for _, ref := range refs {
@@ -204,6 +223,33 @@ func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 					g.entityDirectSensitiveLeaves[entityName] = make(map[string]config.SecretReferenceConfig)
 				}
 				g.entityDirectSensitiveLeaves[entityName][segments[0]] = ref
+
+				// Best-effort: resolve the field's value type when the entity
+				// schema is available. When it isn't (e.g. a test fixture that
+				// doesn't register a RequestBodies entry matching entityName),
+				// fall back to "string" — the pre-existing behavior — rather
+				// than failing generation.
+				valueGoType := "string"
+				var targetProp *parser.Property
+				if entitySchema := findEntitySchema(parsed, entityName); entitySchema != nil {
+					targetProp = findPropertyByJSONName(entitySchema.Properties, segments[0])
+				}
+				if targetProp != nil {
+					var err error
+					valueGoType, err = g.sensitiveLeafValueType(targetProp, ref.Path, parsed.Schemas)
+					if err != nil {
+						return err
+					}
+				}
+				leafGoField := goFieldName(segments[0])
+				if targetProp != nil {
+					leafGoField = goFieldName(targetProp.Name)
+				}
+				leafType := g.recordSensitiveLeafSelector(entityName, ref.Path, selectorAccumulator{}, leafGoField, valueGoType)
+				if g.entityDirectLeafValueTypes[entityName] == nil {
+					g.entityDirectLeafValueTypes[entityName] = make(map[string]sensitiveLeafType)
+				}
+				g.entityDirectLeafValueTypes[entityName][segments[0]] = leafType
 				continue
 			}
 
@@ -357,16 +403,26 @@ func (g *Generator) walkSensitiveLeafPath(
 			}
 			g.sensitiveObjectFieldParents[entityName][objectFieldPath] = schemaGoTypeName
 		}
+		valueGoType, err := g.sensitiveLeafValueType(targetProp, ref.Path, schemas)
+		if err != nil {
+			return err
+		}
 		// Record the structured selector for template generation.
 		leafGoField := goFieldName(targetProp.Name)
+		effectiveAcc, effectiveLeafGoField, effectiveValueGoType := acc, leafGoField, valueGoType
 		if isScalarArraySensitiveLeaf(targetProp) {
 			// The leaf itself is an array of secrets (e.g. "clientSecret: []string"):
 			// each element IS the SensitiveDataSource, so there's no per-element
 			// leaf field to select — record the array field itself as the slice.
-			g.recordSensitiveLeafSelector(entityName, ref.Path, acc.withSlice(leafGoField), "")
-		} else {
-			g.recordSensitiveLeafSelector(entityName, ref.Path, acc, leafGoField)
+			// Array-of-secrets is only supported for the shared (string) type;
+			// dedicated non-string per-field types don't extend to this shape.
+			effectiveAcc, effectiveLeafGoField, effectiveValueGoType = acc.withSlice(leafGoField), "", "string"
 		}
+		leafType := g.recordSensitiveLeafSelector(entityName, ref.Path, effectiveAcc, effectiveLeafGoField, effectiveValueGoType)
+		if g.schemaLeafValueTypes[schemaGoTypeName] == nil {
+			g.schemaLeafValueTypes[schemaGoTypeName] = make(map[string]sensitiveLeafType)
+		}
+		g.schemaLeafValueTypes[schemaGoTypeName][lookupJSON] = leafType
 		return nil
 	}
 
@@ -437,14 +493,65 @@ func (g *Generator) walkOneOfVariant(
 // recordSensitiveLeafSelector appends a selector for the given config path. A
 // single path can resolve to multiple selectors when it fans out across a "*"
 // wildcard union (one selector per matching variant).
-func (g *Generator) recordSensitiveLeafSelector(entityName, path string, acc selectorAccumulator, leafGoField string) {
+//
+// valueGoType is the Go type the leaf resolves to (as computed by
+// sensitiveLeafValueType). When it isn't "string", buildTemplate derives a
+// dedicated per-field union type name from the entity name and the leaf's Go
+// selector; string leaves keep using the shared SensitiveDataSource type as
+// before. The returned sensitiveLeafType is recorded by the caller into
+// schemaLeafValueTypes/entityDirectLeafValueTypes, which is what
+// writeDedicatedSensitiveTypesForSchema/Entity later read to emit the
+// dedicated struct definitions.
+func (g *Generator) recordSensitiveLeafSelector(entityName, path string, acc selectorAccumulator, leafGoField, valueGoType string) sensitiveLeafType {
 	if g.sensitiveLeafSelectors == nil {
 		g.sensitiveLeafSelectors = make(map[string]map[string][]SecretReferenceForTemplate)
 	}
 	if g.sensitiveLeafSelectors[entityName] == nil {
 		g.sensitiveLeafSelectors[entityName] = make(map[string][]SecretReferenceForTemplate)
 	}
-	g.sensitiveLeafSelectors[entityName][path] = append(g.sensitiveLeafSelectors[entityName][path], acc.buildTemplate(path, leafGoField))
+	tmpl := acc.buildTemplate(entityName, path, leafGoField, valueGoType)
+	g.sensitiveLeafSelectors[entityName][path] = append(g.sensitiveLeafSelectors[entityName][path], tmpl)
+	return sensitiveLeafType{ValueGoType: tmpl.ValueGoType, DedicatedTypeName: tmpl.DedicatedTypeName}
+}
+
+// sensitiveLeafValueType resolves the Go type that should back a secret
+// reference leaf's inline Value. It returns an error when the leaf has no
+// single-value shape (a oneOf union, or an object with nested properties,
+// inline or via $ref) since those can't unambiguously round-trip through an
+// inline-vs-secretRef wrapper.
+func (g *Generator) sensitiveLeafValueType(prop *parser.Property, path string, schemas map[string]*parser.Schema) (string, error) {
+	if len(prop.OneOf) > 0 {
+		return "", fmt.Errorf("secretReferences path %q: field is a union and cannot be a secret reference leaf", path)
+	}
+	if len(prop.Properties) > 0 {
+		return "", fmt.Errorf("secretReferences path %q: field is an object with nested properties and cannot be a secret reference leaf", path)
+	}
+	if prop.RefName != "" && !prop.IsReference {
+		refSchema := schemas[prop.RefName]
+		if refSchema == nil {
+			return "", fmt.Errorf("secretReferences path %q: schema %q not found", path, prop.RefName)
+		}
+		if len(refSchema.Properties) > 0 || len(refSchema.OneOf) > 0 {
+			return "", fmt.Errorf("secretReferences path %q: field references schema %q which is a struct/union and cannot be a secret reference leaf", path, prop.RefName)
+		}
+		// The $ref points at a plain scalar-aliased schema (e.g. a named string
+		// type). Resolve through to its underlying Go type instead of using
+		// g.goType(prop), which would otherwise return the alias's own type
+		// name (e.g. "GatewaySecret") — indistinguishable from a genuine struct.
+		return schemaToGoType(refSchema), nil
+	}
+	return strings.TrimPrefix(g.goType(prop), "*"), nil
+}
+
+// findPropertyByJSONName returns the property among props whose JSON name
+// (or raw name) matches jsonFieldName, or nil if none matches.
+func findPropertyByJSONName(props []*parser.Property, jsonFieldName string) *parser.Property {
+	for _, prop := range props {
+		if jsonName(prop.Name) == jsonFieldName || prop.Name == jsonFieldName {
+			return prop
+		}
+	}
+	return nil
 }
 
 // findEntitySchema finds the request body schema for the given entity name.
@@ -485,20 +592,61 @@ func isScalarArraySensitiveLeaf(prop *parser.Property) bool {
 		prop.Items.RefName == "" && len(prop.Items.Properties) == 0
 }
 
+// schemaFieldSensitiveType returns the resolved value type for a sensitive
+// leaf field within the given schema Go type name, and whether one was found.
+func (g *Generator) schemaFieldSensitiveType(schemaGoTypeName, jsonFieldName string) (sensitiveLeafType, bool) {
+	leaves, ok := g.schemaLeafValueTypes[schemaGoTypeName]
+	if !ok {
+		return sensitiveLeafType{}, false
+	}
+	lt, found := leaves[jsonFieldName]
+	return lt, found
+}
+
+// entityAPISpecFieldSensitiveType returns the resolved value type for a
+// direct apiSpec-level sensitive leaf field, and whether one was found.
+func (g *Generator) entityAPISpecFieldSensitiveType(entityName, jsonFieldName string) (sensitiveLeafType, bool) {
+	leaves, ok := g.entityDirectLeafValueTypes[entityName]
+	if !ok {
+		return sensitiveLeafType{}, false
+	}
+	lt, found := leaves[jsonFieldName]
+	return lt, found
+}
+
+// sensitiveGoTypeName returns the Go type name to emit for a sensitive leaf:
+// the shared SensitiveDataSource for string-valued leaves, or the dedicated
+// per-field type name otherwise.
+func (lt sensitiveLeafType) sensitiveGoTypeName() string {
+	if lt.DedicatedTypeName != "" {
+		return lt.DedicatedTypeName
+	}
+	return sensitiveDataSourceTypeName
+}
+
 // isSensitiveMatchField returns true if the given getForUID objectField path
 // (e.g. "Spec.APISpec.Certificate") resolves to a SensitiveDataSource leaf
 // for the given entity, so the template can emit matchSensitiveDataSourceField
 // instead of matchStringField.
 func (g *Generator) isSensitiveMatchField(entityName, objectField string) bool {
+	_, ok := g.sensitiveMatchFieldValueType(entityName, objectField)
+	return ok
+}
+
+// sensitiveMatchFieldValueType returns the resolved value type for a getForUID
+// objectField path (e.g. "Spec.APISpec.Certificate") when it resolves to a
+// secret reference leaf, and whether one was found.
+func (g *Generator) sensitiveMatchFieldValueType(entityName, objectField string) (string, bool) {
 	// Strip "Spec.APISpec." prefix and convert last segment to JSON name.
 	const prefix = "Spec.APISpec."
 	if !strings.HasPrefix(objectField, prefix) {
-		return false
+		return "", false
 	}
 	remainder := strings.TrimPrefix(objectField, prefix)
 	segments := strings.Split(remainder, ".")
 	if len(segments) == 1 {
-		return g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(segments[0]))
+		lt, ok := g.entityAPISpecFieldSensitiveType(entityName, jsonName(segments[0]))
+		return lt.ValueGoType, ok
 	}
 	// Nested: last segment is the leaf field; parent is a schema type.
 	// Prefer the parent type recorded while walking secret-reference paths so
@@ -512,7 +660,8 @@ func (g *Generator) isSensitiveMatchField(entityName, objectField string) bool {
 		parentGoType = goFieldName(segments[len(segments)-2])
 	}
 	leafJSON := jsonName(segments[len(segments)-1])
-	return g.isSchemaFieldSensitiveLeaf(parentGoType, leafJSON)
+	lt, ok := g.schemaFieldSensitiveType(parentGoType, leafJSON)
+	return lt.ValueGoType, ok
 }
 
 func (g *Generator) ensureInlineTypeNames(parsed *parser.ParsedSpec) {
@@ -654,6 +803,14 @@ type SecretReferenceForTemplate struct {
 	// SliceLeafField is the Go field name of the sensitive leaf inside each slice element.
 	// Used only when IsSlice is true.
 	SliceLeafField string
+	// ValueGoType is the Go type of the leaf's inline value, as derived from its
+	// OAS type (e.g. "string", "int", "apiextensionsv1.JSON"). "string" means the
+	// leaf keeps using the shared SensitiveDataSource type.
+	ValueGoType string
+	// DedicatedTypeName is the generated per-field union type name to use for
+	// this leaf instead of the shared SensitiveDataSource, e.g.
+	// "AIGatewayPolicyConfigDataSource". Empty when ValueGoType is "string".
+	DedicatedTypeName string
 }
 
 // selectorPart records one step in a Go field selector during sensitive-leaf path walking.
@@ -692,8 +849,19 @@ func (acc selectorAccumulator) withSlice(goName string) selectorAccumulator {
 	return acc.with(selectorPart{goName: goName, isSlice: true})
 }
 
-// buildTemplate constructs a SecretReferenceForTemplate from the accumulated path parts.
-func (acc selectorAccumulator) buildTemplate(path, leafGoField string) SecretReferenceForTemplate {
+// dedicatedSensitiveTypeName derives the generated per-field union type name
+// for a non-string secret reference leaf from the entity name and its Go
+// selector (dots stripped), e.g. entityName "AIGatewayPolicy" and selector
+// "Config" -> "AIGatewayPolicyConfigDataSource".
+func dedicatedSensitiveTypeName(entityName, selector string) string {
+	return entityName + strings.ReplaceAll(selector, ".", "") + "DataSource"
+}
+
+// buildTemplate constructs a SecretReferenceForTemplate from the accumulated
+// path parts. valueGoType is the leaf's resolved Go type ("string" reuses the
+// shared SensitiveDataSource type; anything else gets a dedicated type name
+// derived from entityName and the leaf's Go selector).
+func (acc selectorAccumulator) buildTemplate(entityName, path, leafGoField, valueGoType string) SecretReferenceForTemplate {
 	sliceIdx := -1
 	for i, p := range acc.parts {
 		if p.isSlice {
@@ -714,10 +882,17 @@ func (acc selectorAccumulator) buildTemplate(path, leafGoField string) SecretRef
 			}
 		}
 		names = append(names, leafGoField)
+		selector := strings.Join(names, ".")
+		dedicatedTypeName := ""
+		if valueGoType != "string" {
+			dedicatedTypeName = dedicatedSensitiveTypeName(entityName, selector)
+		}
 		return SecretReferenceForTemplate{
-			GoFieldSelector: strings.Join(names, "."),
-			Path:            path,
-			PointerGuards:   pointerGuards,
+			GoFieldSelector:   selector,
+			Path:              path,
+			PointerGuards:     pointerGuards,
+			ValueGoType:       valueGoType,
+			DedicatedTypeName: dedicatedTypeName,
 		}
 	}
 
@@ -735,13 +910,20 @@ func (acc selectorAccumulator) buildTemplate(path, leafGoField string) SecretRef
 	for i := 0; i <= sliceIdx; i++ {
 		parentParts[i] = acc.parts[i].goName
 	}
+	sliceParentSelector := strings.Join(parentParts, ".")
+	dedicatedTypeName := ""
+	if valueGoType != "string" {
+		dedicatedTypeName = dedicatedSensitiveTypeName(entityName, sliceParentSelector+"."+leafGoField)
+	}
 
 	return SecretReferenceForTemplate{
 		Path:                path,
 		IsSlice:             true,
 		PointerGuards:       pointerGuards,
-		SliceParentSelector: strings.Join(parentParts, "."),
+		SliceParentSelector: sliceParentSelector,
 		SliceLeafField:      leafGoField,
+		ValueGoType:         valueGoType,
+		DedicatedTypeName:   dedicatedTypeName,
 	}
 }
 
@@ -759,12 +941,32 @@ func (g *Generator) templateSecretReferences(entityName string) []SecretReferenc
 				continue
 			}
 		}
+		// Defensive fallback: every configured path is expected to be recorded by
+		// buildSensitiveLeaves above. Default to "string" (the pre-existing
+		// behavior) so an unexpected miss here doesn't wrongly route through the
+		// dedicated-type/manual-resolver path.
 		result = append(result, SecretReferenceForTemplate{
 			GoFieldSelector: pathToGoSelector(ref.Path),
 			Path:            ref.Path,
+			ValueGoType:     "string",
 		})
 	}
 	return result
+}
+
+// secretReferencesNeedCoreV1Import reports whether any of the given secret
+// references resolves to a string value — only those render the inline
+// Secret-fetch-and-convert code path in sdkOpsAPISpec that references
+// corev1.Secret. Non-string leaves resolve via a hand-written
+// valueFromSecretRef method instead, which doesn't need this import in the
+// generated file.
+func secretReferencesNeedCoreV1Import(refs []SecretReferenceForTemplate) bool {
+	for _, ref := range refs {
+		if ref.ValueGoType == "" || ref.ValueGoType == "string" {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Generator) entityAPISpecSensitiveLeaf(entityName, jsonFieldName string) bool {
@@ -1680,6 +1882,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				}
 				body.WriteString("}\n\n")
 				g.writeNestedInlineTypes(&body, schema.Properties, emittedNested, "", goName, schemaCursor)
+				g.writeDedicatedSensitiveTypesForSchema(&body, goName)
 				// Emit union type definitions for any property-level oneOf.
 				for _, prop := range schema.Properties {
 					if g.shouldSkipSchemaProperty(goName, prop) || len(prop.OneOf) == 0 {
@@ -1763,6 +1966,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					}
 					body.WriteString("}\n\n")
 					g.writeNestedInlineTypes(&body, schema.Items.Properties, emittedNested, "", elemTypeName, schemaCursor)
+					g.writeDedicatedSensitiveTypesForSchema(&body, elemTypeName)
 				}
 				body.WriteString(comment)
 				fmt.Fprintf(&body, "type %s []%s\n\n", goName, elemTypeName)
@@ -1868,7 +2072,8 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	case isSensitive && isScalarArraySensitiveLeaf(prop):
 		goType = "[]SensitiveDataSource"
 	case isSensitive:
-		goType = "SensitiveDataSource"
+		leafType, _ := g.schemaFieldSensitiveType(typeName, jsonFieldName)
+		goType = leafType.sensitiveGoTypeName()
 	case prop.RefName != "" && g.anyOfSchemaNames[prop.RefName]:
 		goType = "*" + fixInitialisms(prop.RefName)
 	case len(prop.OneOf) > 0:
@@ -1881,6 +2086,60 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 		goType = g.inlineTypeName("", typeName, prop.Name)
 	}
 	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType))
+}
+
+// writeDedicatedSensitiveTypesForSchema appends dedicated union type
+// definitions for every non-string secret reference leaf recorded against the
+// given schema Go type name (deterministically sorted by type name).
+func (g *Generator) writeDedicatedSensitiveTypesForSchema(buf *strings.Builder, schemaGoTypeName string) {
+	g.writeDedicatedSensitiveTypesFromLeaves(buf, g.schemaLeafValueTypes[schemaGoTypeName])
+}
+
+// writeDedicatedSensitiveTypesForEntity appends dedicated union type
+// definitions for every non-string secret reference leaf that's a direct
+// apiSpec-level field of the given entity (deterministically sorted by type name).
+func (g *Generator) writeDedicatedSensitiveTypesForEntity(buf *strings.Builder, entityName string) {
+	g.writeDedicatedSensitiveTypesFromLeaves(buf, g.entityDirectLeafValueTypes[entityName])
+}
+
+// writeDedicatedSensitiveTypesFromLeaves appends one dedicatedSensitiveDataSourceStructType
+// definition per distinct non-string leaf found in leaves.
+func (g *Generator) writeDedicatedSensitiveTypesFromLeaves(buf *strings.Builder, leaves map[string]sensitiveLeafType) {
+	if len(leaves) == 0 {
+		return
+	}
+	valueGoTypeByName := make(map[string]string, len(leaves))
+	for _, lt := range leaves {
+		if lt.DedicatedTypeName == "" {
+			continue
+		}
+		valueGoTypeByName[lt.DedicatedTypeName] = lt.ValueGoType
+	}
+	names := make([]string, 0, len(valueGoTypeByName))
+	for name := range valueGoTypeByName {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		valueGoType := valueGoTypeByName[name]
+		fmt.Fprintf(buf, dedicatedSensitiveDataSourceStructType, name, valueGoType, sensitiveValueTypeMarker(valueGoType))
+		buf.WriteString("\n\n")
+	}
+}
+
+// sensitiveValueTypeMarker returns the extra kubebuilder marker needed on a
+// dedicated SensitiveDataSource-like type's Value field for CEL's has() to
+// type-check it. apiextensionsv1.JSON has no inherent schema type (only
+// x-kubernetes-preserve-unknown-fields), which breaks the type's
+// "has(self.value)" XValidation rule; forcing type: object (accurate, since
+// goType() only produces apiextensionsv1.JSON for OAS type: object fields)
+// fixes it. Every other ValueGoType already carries its own concrete schema
+// type and needs nothing extra.
+func sensitiveValueTypeMarker(valueGoType string) string {
+	if valueGoType == "apiextensionsv1.JSON" {
+		return "\t// +kubebuilder:validation:Type=object\n"
+	}
+	return ""
 }
 
 // writeNestedInlineTypes emits Go type definitions for any property that is an
@@ -2091,15 +2350,19 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// so its name must be prefixed with the entity name to avoid package-scoped
 	// collisions (e.g. a bare "Config" type would clash across entities).
 	// anyOf union refs also need pointer treatment so omitempty omits zero values.
-	// Sensitive leaf fields are emitted as SensitiveDataSource regardless of their OAS type.
+	// Sensitive leaf fields are emitted as SensitiveDataSource (string leaves) or
+	// a dedicated per-field union type (non-string leaves) regardless of their
+	// original OAS type.
 	goTypeInCRD := func(prop *parser.Property) string {
-		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
-			// NOTE: direct apiSpec-level (single-segment path) secret leaves are
-			// always treated as scalar here, matching entityDirectSensitiveLeaves'
-			// selector, which buildSensitiveLeaves never walks against the schema
-			// (see the len(segments)==1 branch there). A direct array-of-strings
-			// leaf isn't supported yet — add self-slice recording there first.
-			return "SensitiveDataSource"
+		// NOTE: direct apiSpec-level (single-segment path) secret leaves are
+		// always treated as a single scalar value here, matching
+		// entityDirectSensitiveLeaves' selector, which buildSensitiveLeaves never
+		// walks against the schema (see the len(segments)==1 branch there). A
+		// direct array-of-secrets leaf isn't supported yet — add self-slice
+		// recording there first (see isScalarArraySensitiveLeaf's use in
+		// walkSensitiveLeafPath for the nested-path equivalent).
+		if leafType, ok := g.entityAPISpecFieldSensitiveType(entityName, jsonName(prop.Name)); ok {
+			return leafType.sensitiveGoTypeName()
 		}
 		if len(prop.OneOf) > 0 {
 			return "*" + entityName + goFieldName(prop.Name)
@@ -2261,6 +2524,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 	var nestedInlineTypes strings.Builder
 	g.writeNestedInlineTypes(&nestedInlineTypes, schema.Properties, emittedInlineAndUnionTypes, entityName, entityName+"APISpec", apiSpecCursor)
+	g.writeDedicatedSensitiveTypesForEntity(&nestedInlineTypes, entityName)
 	if nestedInlineTypes.Len() > 0 {
 		buf.WriteString("\n")
 		buf.WriteString(nestedInlineTypes.String())
@@ -3989,6 +4253,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		parentStatusEntityName = parentRefStatusEntityName(rootRefDependency(schema), rc)
 	}
 
+	secretReferences := g.templateSecretReferences(entityName)
 	data := struct {
 		APIVersion              string
 		EntityName              string
@@ -3998,6 +4263,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		Methods                 []sdkOpsMethod
 		NeedsClient             bool
 		SecretReferences        []SecretReferenceForTemplate
+		NeedsSecretFetchImport  bool
 		HasReferences           bool
 		References              []TemplateReferenceConfig
 		HasParentRefReplacement bool
@@ -4011,7 +4277,8 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		ConstFields:             constFields,
 		Methods:                 standardMethods,
 		NeedsClient:             opsConfig.RequireClient,
-		SecretReferences:        g.templateSecretReferences(entityName),
+		SecretReferences:        secretReferences,
+		NeedsSecretFetchImport:  secretReferencesNeedCoreV1Import(secretReferences),
 		HasReferences:           g.entityHasReferences(entityName),
 		References:              g.templateReferences(entityName),
 		HasParentRefReplacement: hasParentRefReplacement,
@@ -4268,28 +4535,31 @@ func (g *Generator) generateRootUnionSDKOps(
 
 	tmpl := template.Must(template.New("sdkops-root-union").Parse(sdkOpsRootUnionTemplate))
 	var buf strings.Builder
+	secretReferences := g.templateSecretReferences(entityName)
 	data := struct {
-		APIVersion       string
-		EntityName       string
-		UnionTypeName    string
-		Imports          []*sdkOpsImport
-		BoolFields       []sdkOpsBoolField
-		ConstFields      []sdkOpsConstField
-		Methods          []sdkOpsRootUnionMethod
-		Variants         []sdkOpsRootUnionVariant
-		NeedsClient      bool
-		SecretReferences []SecretReferenceForTemplate
+		APIVersion             string
+		EntityName             string
+		UnionTypeName          string
+		Imports                []*sdkOpsImport
+		BoolFields             []sdkOpsBoolField
+		ConstFields            []sdkOpsConstField
+		Methods                []sdkOpsRootUnionMethod
+		Variants               []sdkOpsRootUnionVariant
+		NeedsClient            bool
+		SecretReferences       []SecretReferenceForTemplate
+		NeedsSecretFetchImport bool
 	}{
-		APIVersion:       g.config.APIVersion,
-		EntityName:       entityName,
-		UnionTypeName:    rootUnionTypeName,
-		Imports:          imports,
-		BoolFields:       boolFields,
-		ConstFields:      constFields,
-		Methods:          rootUnionMethods,
-		Variants:         variants,
-		NeedsClient:      opsConfig.RequireClient,
-		SecretReferences: g.templateSecretReferences(entityName),
+		APIVersion:             g.config.APIVersion,
+		EntityName:             entityName,
+		UnionTypeName:          rootUnionTypeName,
+		Imports:                imports,
+		BoolFields:             boolFields,
+		ConstFields:            constFields,
+		Methods:                rootUnionMethods,
+		Variants:               variants,
+		NeedsClient:            opsConfig.RequireClient,
+		SecretReferences:       secretReferences,
+		NeedsSecretFetchImport: secretReferencesNeedCoreV1Import(secretReferences),
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
@@ -4348,16 +4618,28 @@ func (g *Generator) buildSDKOpsTestFields(entityName string, props []*parser.Pro
 		if skipProperty(prop) || prop.IsReference || shouldSkipSDKOpsTestField(prop, method) {
 			continue
 		}
-		if ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
-			// SensitiveDataSource field: emit an inline value; after flattenSensitiveData
-			// the JSON payload contains just the plain string.
+		if leafType, ok := g.entityAPISpecFieldSensitiveType(entityName, jsonName(prop.Name)); ok {
+			// Sensitive field: emit an inline value; after flattenSensitiveData
+			// the JSON payload contains just the plain (unwrapped) value.
+			typeName := "SensitiveDataSource"
+			innerValue, expectedValue := `"test-value"`, fmt.Sprintf("%q", "test-value")
+			if leafType.DedicatedTypeName != "" {
+				typeName = leafType.DedicatedTypeName
+				innerValue, expectedValue = testValuesForProperty(prop, leafType.ValueGoType)
+				if innerValue == "" || expectedValue == "" {
+					// No simple literal representation for this value type (e.g. a
+					// free-form JSON object) — skip, matching how a non-sensitive
+					// field of the same complex type is already skipped below.
+					continue
+				}
+			}
 			testFields = append(testFields, sdkOpsTestField{
 				FieldName: goFieldName(prop.Name),
 				// JSONName is the SDK payload key used in the generated
 				// payload["..."] check; prop.Name is already the OAS snake_case name.
 				JSONName:      prop.Name,
-				TestValue:     `SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")}`,
-				ExpectedValue: fmt.Sprintf("%q", "test-value"),
+				TestValue:     fmt.Sprintf("%s{Type: SensitiveDataSourceTypeInline, Value: new(%s)}", typeName, innerValue),
+				ExpectedValue: expectedValue,
 			})
 			continue
 		}

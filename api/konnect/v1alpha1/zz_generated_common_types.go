@@ -170,10 +170,11 @@ func nestedSDKUnionMemberForKey(object map[string]any, key string) (string, any,
 	return discriminatorValue, inner, true
 }
 
-// flattenSensitiveData recursively replaces any SensitiveDataSource JSON
-// object shape {"type": "inline|secretRef", "value": "X", ...} with the
-// bare string "X", translating the CRD wire format to the Konnect SDK
-// wire format which expects plain strings for sensitive fields.
+// flattenSensitiveData recursively replaces any SensitiveDataSource (or
+// dedicated per-field DataSource) JSON object shape
+// {"type": "inline|secretRef", "value": X, ...} with the bare value X,
+// translating the CRD wire format to the Konnect SDK wire format which
+// expects plain values (of whatever type X is) for sensitive fields.
 func flattenSensitiveData(v any) any {
 	switch x := v.(type) {
 	case map[string]any:
@@ -184,10 +185,8 @@ func flattenSensitiveData(v any) any {
 		if typ != "inline" && typ != "secretRef" {
 			return x
 		}
-		rawVal, hasVal := x["value"]
-		val, isString := rawVal.(string)
-		if hasVal && isString {
-			return val
+		if rawVal, hasVal := x["value"]; hasVal {
+			return rawVal
 		}
 		return x
 	case []any:
