@@ -83,6 +83,9 @@
 
 ### Added
 
+- `KongReferenceGrant`: support `spec.from[].namespaceSelector` to allow
+  cross-namespace references from namespaces selected by labels.
+  [#4407](https://github.com/Kong/kong-operator/issues/4407)
 - Konnect: allow root Konnect entities to reference `KonnectAPIAuthConfiguration`
   resources across namespaces using `authRef.namespace` and `KongReferenceGrant`.
   [#4839](https://github.com/Kong/kong-operator/pull/4839)

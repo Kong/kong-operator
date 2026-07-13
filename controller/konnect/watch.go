@@ -4,6 +4,8 @@ import (
 	"context"
 	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -384,7 +386,7 @@ func enqueueObjectsForKongReferenceGrant[
 		var e T
 		kind := e.GetTypeName()
 
-		var fromNamespaces []string
+		fromNamespaces := make(map[string]struct{})
 		for _, from := range krg.Spec.From {
 			if string(from.Group) != configurationv1alpha1.GroupVersion.Group &&
 				string(from.Group) != konnectv1alpha1.GroupVersion.Group &&
@@ -395,7 +397,14 @@ func enqueueObjectsForKongReferenceGrant[
 				continue
 			}
 
-			fromNamespaces = append(fromNamespaces, string(from.Namespace))
+			if from.NamespaceSelector != nil {
+				for _, ns := range namespacesMatchingSelector(ctx, cl, from.NamespaceSelector) {
+					fromNamespaces[ns] = struct{}{}
+				}
+				continue
+			}
+
+			fromNamespaces[string(from.Namespace)] = struct{}{}
 		}
 
 		if len(fromNamespaces) == 0 {
@@ -403,7 +412,7 @@ func enqueueObjectsForKongReferenceGrant[
 		}
 
 		var ret []reconcile.Request
-		for _, ns := range fromNamespaces {
+		for ns := range fromNamespaces {
 			var (
 				l    TList
 				lPtr TListPtr = &l
@@ -433,4 +442,26 @@ func enqueueObjectsForKongReferenceGrant[
 
 		return ret
 	}
+}
+
+func namespacesMatchingSelector(
+	ctx context.Context,
+	cl client.Client,
+	selector *metav1.LabelSelector,
+) []string {
+	labelSelector, err := metav1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return nil
+	}
+
+	var namespaces corev1.NamespaceList
+	if err := cl.List(ctx, &namespaces, client.MatchingLabelsSelector{Selector: labelSelector}); err != nil {
+		return nil
+	}
+
+	ret := make([]string, 0, len(namespaces.Items))
+	for _, namespace := range namespaces.Items {
+		ret = append(ret, namespace.Name)
+	}
+	return ret
 }
