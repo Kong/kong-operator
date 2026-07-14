@@ -9,16 +9,14 @@ import (
 )
 
 func TestEventGatewayListenerPolicyAPISpec_ToCreateEventGatewayListenerPolicyRequest(t *testing.T) {
-	spec := &EventGatewayListenerPolicyAPISpec{
-	}
+	spec := &EventGatewayListenerPolicyAPISpec{}
 	result, err := spec.ToCreateEventGatewayListenerPolicyRequest()
 	require.Error(t, err)
 	require.Nil(t, result)
 }
 
 func TestEventGatewayListenerPolicyAPISpec_ToUpdateEventGatewayListenerPolicyRequest(t *testing.T) {
-	spec := &EventGatewayListenerPolicyAPISpec{
-	}
+	spec := &EventGatewayListenerPolicyAPISpec{}
 	result, err := spec.ToUpdateEventGatewayListenerPolicyRequest()
 	require.Error(t, err)
 	require.Nil(t, result)

@@ -67,12 +67,12 @@ func TestEventGatewayVirtualClusterPolicyAPISpecUnmarshalJSON_DecodesUnionFields
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayVirtualClusterPolicyAPISpec)
+		assert  func(*testing.T, EventGatewayVirtualClusterPolicyAPISpec)
 	}{
 		{
-			name: "EventGatewayVirtualClusterPolicyConfig/acls",
+			name:    "EventGatewayVirtualClusterPolicyConfig/acls",
 			payload: []byte("{\"type\":\"acls\",\"acls\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterPolicyAPISpec) {
 				t.Helper()

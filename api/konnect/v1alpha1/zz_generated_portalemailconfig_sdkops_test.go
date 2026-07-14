@@ -11,9 +11,9 @@ import (
 
 func TestPortalEmailConfigAPISpec_ToPostPortalEmailConfig(t *testing.T) {
 	spec := &PortalEmailConfigAPISpec{
-		DomainName: new("test-value"),
-		FromEmail: new("test-value"),
-		FromName: new("test-value"),
+		DomainName:   new("test-value"),
+		FromEmail:    new("test-value"),
+		FromName:     new("test-value"),
 		ReplyToEmail: new("test-value"),
 	}
 	result, err := spec.ToPostPortalEmailConfig()
@@ -34,9 +34,9 @@ func TestPortalEmailConfigAPISpec_ToPostPortalEmailConfig(t *testing.T) {
 
 func TestPortalEmailConfigAPISpec_ToPatchPortalEmailConfig(t *testing.T) {
 	spec := &PortalEmailConfigAPISpec{
-		DomainName: new("test-value"),
-		FromEmail: new("test-value"),
-		FromName: new("test-value"),
+		DomainName:   new("test-value"),
+		FromEmail:    new("test-value"),
+		FromName:     new("test-value"),
 		ReplyToEmail: new("test-value"),
 	}
 	result, err := spec.ToPatchPortalEmailConfig()

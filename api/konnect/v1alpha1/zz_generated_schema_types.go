@@ -22,7 +22,6 @@ type AIGatewayAgentAccess struct {
 
 // AIGatewayAgentAccessAcls represents a union type for acls.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayAgentAccessAcls struct {
 	// Type designates the type of configuration.
 	//
@@ -47,7 +46,7 @@ type AIGatewayAgentAccessAclsType string
 // AIGatewayAgentAccessAclsType values.
 const (
 	AIGatewayAgentAccessAclsTypeAllow AIGatewayAgentAccessAclsType = "allow"
-	AIGatewayAgentAccessAclsTypeDeny AIGatewayAgentAccessAclsType = "deny"
+	AIGatewayAgentAccessAclsTypeDeny  AIGatewayAgentAccessAclsType = "deny"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -119,6 +118,7 @@ func (u *AIGatewayAgentAccessAcls) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayAgentAccess) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -233,7 +233,6 @@ type AIGatewayDenyACL struct {
 
 // AIGatewayEmbeddingsModelConfig represents a union type for AIGatewayEmbeddingsModelConfig.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayEmbeddingsModelConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -277,13 +276,13 @@ type AIGatewayEmbeddingsModelConfigType string
 
 // AIGatewayEmbeddingsModelConfigType values.
 const (
-	AIGatewayEmbeddingsModelConfigTypeAzure AIGatewayEmbeddingsModelConfigType = "azure"
-	AIGatewayEmbeddingsModelConfigTypeBedrock AIGatewayEmbeddingsModelConfigType = "bedrock"
-	AIGatewayEmbeddingsModelConfigTypeDatabricks AIGatewayEmbeddingsModelConfigType = "databricks"
-	AIGatewayEmbeddingsModelConfigTypeGemini AIGatewayEmbeddingsModelConfigType = "gemini"
+	AIGatewayEmbeddingsModelConfigTypeAzure       AIGatewayEmbeddingsModelConfigType = "azure"
+	AIGatewayEmbeddingsModelConfigTypeBedrock     AIGatewayEmbeddingsModelConfigType = "bedrock"
+	AIGatewayEmbeddingsModelConfigTypeDatabricks  AIGatewayEmbeddingsModelConfigType = "databricks"
+	AIGatewayEmbeddingsModelConfigTypeGemini      AIGatewayEmbeddingsModelConfigType = "gemini"
 	AIGatewayEmbeddingsModelConfigTypeHuggingface AIGatewayEmbeddingsModelConfigType = "huggingface"
-	AIGatewayEmbeddingsModelConfigTypeVercel AIGatewayEmbeddingsModelConfigType = "vercel"
-	AIGatewayEmbeddingsModelConfigTypeVertex AIGatewayEmbeddingsModelConfigType = "vertex"
+	AIGatewayEmbeddingsModelConfigTypeVercel      AIGatewayEmbeddingsModelConfigType = "vercel"
+	AIGatewayEmbeddingsModelConfigTypeVertex      AIGatewayEmbeddingsModelConfigType = "vertex"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -445,6 +444,7 @@ func (u *AIGatewayEmbeddingsModelConfig) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // AIGatewayEntityIdentifier Identifier for an AI Gateway entity.
 // In some cases, this may be the entity name or ID.
 type AIGatewayEntityIdentifier string
@@ -819,7 +819,6 @@ type AIGatewayMCPConversionToolAccess struct {
 
 // AIGatewayMCPServerBaseACLProperties represents a union type for AIGatewayMCPServerBaseACLProperties.
 // Only one of the fields should be set based on the AclAttributeType.
-//
 type AIGatewayMCPServerBaseACLProperties struct {
 	// AclAttributeType designates the type of configuration.
 	//
@@ -844,7 +843,7 @@ type AIGatewayMCPServerBaseACLPropertiesType string
 // AIGatewayMCPServerBaseACLPropertiesType values.
 const (
 	AIGatewayMCPServerBaseACLPropertiesTypeConsumer AIGatewayMCPServerBaseACLPropertiesType = "consumer"
-	AIGatewayMCPServerBaseACLPropertiesTypeOauth AIGatewayMCPServerBaseACLPropertiesType = "oauthAccessToken"
+	AIGatewayMCPServerBaseACLPropertiesTypeOauth    AIGatewayMCPServerBaseACLPropertiesType = "oauthAccessToken"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -916,6 +915,7 @@ func (u *AIGatewayMCPServerBaseACLProperties) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // AIGatewayMCPServerBaseACLPropertiesConsumer is a type alias.
 type AIGatewayMCPServerBaseACLPropertiesConsumer struct {
 	// Access control rules for allowing or denying consumer groups.
@@ -1016,7 +1016,6 @@ type AIGatewayMCPServerConversionListener struct {
 
 // AIGatewayMCPServerConversionListenerAccess represents a union type for access.
 // Only one of the fields should be set based on the AclAttributeType.
-//
 type AIGatewayMCPServerConversionListenerAccess struct {
 	// AclAttributeType designates the type of configuration.
 	//
@@ -1041,7 +1040,7 @@ type AIGatewayMCPServerConversionListenerAccessType string
 // AIGatewayMCPServerConversionListenerAccessType values.
 const (
 	AIGatewayMCPServerConversionListenerAccessTypeConsumer AIGatewayMCPServerConversionListenerAccessType = "consumer"
-	AIGatewayMCPServerConversionListenerAccessTypeOauth AIGatewayMCPServerConversionListenerAccessType = "oauthAccessToken"
+	AIGatewayMCPServerConversionListenerAccessTypeOauth    AIGatewayMCPServerConversionListenerAccessType = "oauthAccessToken"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -1113,6 +1112,7 @@ func (u *AIGatewayMCPServerConversionListenerAccess) UnmarshalJSON(data []byte) 
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayMCPServerConversionListener) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -1253,7 +1253,6 @@ type AIGatewayMCPServerListener struct {
 
 // AIGatewayMCPServerListenerAccess represents a union type for access.
 // Only one of the fields should be set based on the AclAttributeType.
-//
 type AIGatewayMCPServerListenerAccess struct {
 	// AclAttributeType designates the type of configuration.
 	//
@@ -1278,7 +1277,7 @@ type AIGatewayMCPServerListenerAccessType string
 // AIGatewayMCPServerListenerAccessType values.
 const (
 	AIGatewayMCPServerListenerAccessTypeConsumer AIGatewayMCPServerListenerAccessType = "consumer"
-	AIGatewayMCPServerListenerAccessTypeOauth AIGatewayMCPServerListenerAccessType = "oauthAccessToken"
+	AIGatewayMCPServerListenerAccessTypeOauth    AIGatewayMCPServerListenerAccessType = "oauthAccessToken"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -1350,6 +1349,7 @@ func (u *AIGatewayMCPServerListenerAccess) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayMCPServerListener) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -1473,7 +1473,6 @@ type AIGatewayMCPServerPassthroughListener struct {
 
 // AIGatewayMCPServerPassthroughListenerAccess represents a union type for access.
 // Only one of the fields should be set based on the AclAttributeType.
-//
 type AIGatewayMCPServerPassthroughListenerAccess struct {
 	// AclAttributeType designates the type of configuration.
 	//
@@ -1498,7 +1497,7 @@ type AIGatewayMCPServerPassthroughListenerAccessType string
 // AIGatewayMCPServerPassthroughListenerAccessType values.
 const (
 	AIGatewayMCPServerPassthroughListenerAccessTypeConsumer AIGatewayMCPServerPassthroughListenerAccessType = "consumer"
-	AIGatewayMCPServerPassthroughListenerAccessTypeOauth AIGatewayMCPServerPassthroughListenerAccessType = "oauthAccessToken"
+	AIGatewayMCPServerPassthroughListenerAccessTypeOauth    AIGatewayMCPServerPassthroughListenerAccessType = "oauthAccessToken"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -1570,6 +1569,7 @@ func (u *AIGatewayMCPServerPassthroughListenerAccess) UnmarshalJSON(data []byte)
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayMCPServerPassthroughListener) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -1730,7 +1730,6 @@ type AIGatewayMCPServerUpstreamServer struct {
 
 // AIGatewayMCPServerUpstreamServerAccess represents a union type for access.
 // Only one of the fields should be set based on the AclAttributeType.
-//
 type AIGatewayMCPServerUpstreamServerAccess struct {
 	// AclAttributeType designates the type of configuration.
 	//
@@ -1755,7 +1754,7 @@ type AIGatewayMCPServerUpstreamServerAccessType string
 // AIGatewayMCPServerUpstreamServerAccessType values.
 const (
 	AIGatewayMCPServerUpstreamServerAccessTypeConsumer AIGatewayMCPServerUpstreamServerAccessType = "consumer"
-	AIGatewayMCPServerUpstreamServerAccessTypeOauth AIGatewayMCPServerUpstreamServerAccessType = "oauthAccessToken"
+	AIGatewayMCPServerUpstreamServerAccessTypeOauth    AIGatewayMCPServerUpstreamServerAccessType = "oauthAccessToken"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -1827,6 +1826,7 @@ func (u *AIGatewayMCPServerUpstreamServerAccess) UnmarshalJSON(data []byte) erro
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayMCPServerUpstreamServer) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -1998,7 +1998,6 @@ type AIGatewayMCPServerUpstreamServerServerConfigSessionClient struct {
 
 // AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth represents a union type for tools_list_auth.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth struct {
 	// Type designates the type of configuration.
 	//
@@ -2023,7 +2022,7 @@ type AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType string
 // AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType values.
 const (
 	AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeCredentials AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType = "credentials"
-	AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeJwt AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType = "jwt"
+	AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeJwt         AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthType = "jwt"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -2095,6 +2094,7 @@ func (u *AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth) UnmarshalJSO
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayMCPServerUpstreamServerServerConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -2115,7 +2115,6 @@ func (s *AIGatewayMCPServerUpstreamServerServerConfig) UnmarshalJSON(data []byte
 
 // AIGatewayMCPServerUpstreamServerServerToolAuthConfig represents a union type for AIGatewayMCPServerUpstreamServerServerToolAuthConfig.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayMCPServerUpstreamServerServerToolAuthConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -2140,7 +2139,7 @@ type AIGatewayMCPServerUpstreamServerServerToolAuthConfigType string
 // AIGatewayMCPServerUpstreamServerServerToolAuthConfigType values.
 const (
 	AIGatewayMCPServerUpstreamServerServerToolAuthConfigTypeCredentials AIGatewayMCPServerUpstreamServerServerToolAuthConfigType = "credentials"
-	AIGatewayMCPServerUpstreamServerServerToolAuthConfigTypeJwt AIGatewayMCPServerUpstreamServerServerToolAuthConfigType = "jwt"
+	AIGatewayMCPServerUpstreamServerServerToolAuthConfigTypeJwt         AIGatewayMCPServerUpstreamServerServerToolAuthConfigType = "jwt"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -2212,6 +2211,7 @@ func (u *AIGatewayMCPServerUpstreamServerServerToolAuthConfig) UnmarshalJSON(dat
 	}
 	return nil
 }
+
 // AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials is a type alias.
 type AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials struct {
 	// Header name used to send the fetched access token to the upstream MCP
@@ -2931,7 +2931,6 @@ type AIGatewayModelAPIConfigModel struct {
 
 // AIGatewayModelAPIConfigBalancer represents a union type for balancer.
 // Only one of the fields should be set based on the Algorithm.
-//
 type AIGatewayModelAPIConfigBalancer struct {
 	// Algorithm designates the type of configuration.
 	//
@@ -2976,12 +2975,12 @@ type AIGatewayModelAPIConfigBalancerType string
 // AIGatewayModelAPIConfigBalancerType values.
 const (
 	AIGatewayModelAPIConfigBalancerTypeConsistentHashing AIGatewayModelAPIConfigBalancerType = "consistent-hashing"
-	AIGatewayModelAPIConfigBalancerTypeLeastConnections AIGatewayModelAPIConfigBalancerType = "least-connections"
-	AIGatewayModelAPIConfigBalancerTypeLowestLatency AIGatewayModelAPIConfigBalancerType = "lowest-latency"
-	AIGatewayModelAPIConfigBalancerTypeLowestUsage AIGatewayModelAPIConfigBalancerType = "lowest-usage"
-	AIGatewayModelAPIConfigBalancerTypePriority AIGatewayModelAPIConfigBalancerType = "priority"
-	AIGatewayModelAPIConfigBalancerTypeRoundRobin AIGatewayModelAPIConfigBalancerType = "round-robin"
-	AIGatewayModelAPIConfigBalancerTypeSemantic AIGatewayModelAPIConfigBalancerType = "semantic"
+	AIGatewayModelAPIConfigBalancerTypeLeastConnections  AIGatewayModelAPIConfigBalancerType = "least-connections"
+	AIGatewayModelAPIConfigBalancerTypeLowestLatency     AIGatewayModelAPIConfigBalancerType = "lowest-latency"
+	AIGatewayModelAPIConfigBalancerTypeLowestUsage       AIGatewayModelAPIConfigBalancerType = "lowest-usage"
+	AIGatewayModelAPIConfigBalancerTypePriority          AIGatewayModelAPIConfigBalancerType = "priority"
+	AIGatewayModelAPIConfigBalancerTypeRoundRobin        AIGatewayModelAPIConfigBalancerType = "round-robin"
+	AIGatewayModelAPIConfigBalancerTypeSemantic          AIGatewayModelAPIConfigBalancerType = "semantic"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -3143,6 +3142,7 @@ func (u *AIGatewayModelAPIConfigBalancer) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelAPIConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -3178,7 +3178,6 @@ type AIGatewayModelAccess struct {
 
 // AIGatewayModelAccessAcls represents a union type for acls.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelAccessAcls struct {
 	// Type designates the type of configuration.
 	//
@@ -3203,7 +3202,7 @@ type AIGatewayModelAccessAclsType string
 // AIGatewayModelAccessAclsType values.
 const (
 	AIGatewayModelAccessAclsTypeAllow AIGatewayModelAccessAclsType = "allow"
-	AIGatewayModelAccessAclsTypeDeny AIGatewayModelAccessAclsType = "deny"
+	AIGatewayModelAccessAclsTypeDeny  AIGatewayModelAccessAclsType = "deny"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -3275,6 +3274,7 @@ func (u *AIGatewayModelAccessAcls) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelAccess) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -3295,7 +3295,6 @@ func (s *AIGatewayModelAccess) UnmarshalJSON(data []byte) error {
 
 // AIGatewayModelBalancerConfig represents a union type for AIGatewayModelBalancerConfig.
 // Only one of the fields should be set based on the Algorithm.
-//
 type AIGatewayModelBalancerConfig struct {
 	// Algorithm designates the type of configuration.
 	//
@@ -3340,12 +3339,12 @@ type AIGatewayModelBalancerConfigType string
 // AIGatewayModelBalancerConfigType values.
 const (
 	AIGatewayModelBalancerConfigTypeConsistentHashing AIGatewayModelBalancerConfigType = "consistent-hashing"
-	AIGatewayModelBalancerConfigTypeLeastConnections AIGatewayModelBalancerConfigType = "least-connections"
-	AIGatewayModelBalancerConfigTypeLowestLatency AIGatewayModelBalancerConfigType = "lowest-latency"
-	AIGatewayModelBalancerConfigTypeLowestUsage AIGatewayModelBalancerConfigType = "lowest-usage"
-	AIGatewayModelBalancerConfigTypePriority AIGatewayModelBalancerConfigType = "priority"
-	AIGatewayModelBalancerConfigTypeRoundRobin AIGatewayModelBalancerConfigType = "round-robin"
-	AIGatewayModelBalancerConfigTypeSemantic AIGatewayModelBalancerConfigType = "semantic"
+	AIGatewayModelBalancerConfigTypeLeastConnections  AIGatewayModelBalancerConfigType = "least-connections"
+	AIGatewayModelBalancerConfigTypeLowestLatency     AIGatewayModelBalancerConfigType = "lowest-latency"
+	AIGatewayModelBalancerConfigTypeLowestUsage       AIGatewayModelBalancerConfigType = "lowest-usage"
+	AIGatewayModelBalancerConfigTypePriority          AIGatewayModelBalancerConfigType = "priority"
+	AIGatewayModelBalancerConfigTypeRoundRobin        AIGatewayModelBalancerConfigType = "round-robin"
+	AIGatewayModelBalancerConfigTypeSemantic          AIGatewayModelBalancerConfigType = "semantic"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -3507,6 +3506,7 @@ func (u *AIGatewayModelBalancerConfig) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // AIGatewayModelBalancerConsistentHashingConfig is a type alias.
 type AIGatewayModelBalancerConsistentHashingConfig struct {
 	//
@@ -4000,7 +4000,6 @@ type AIGatewayModelBalancerSemanticConfigEmbeddings struct {
 
 // AIGatewayModelBalancerSemanticConfigEmbeddingsConfig represents a union type for config.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -4044,13 +4043,13 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType string
 
 // AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType values.
 const (
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeAzure AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "azure"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeBedrock AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "bedrock"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeDatabricks AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "databricks"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeGemini AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "gemini"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeAzure       AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "azure"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeBedrock     AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "bedrock"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeDatabricks  AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "databricks"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeGemini      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "gemini"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeHuggingface AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "huggingface"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVercel AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vercel"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vertex"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVercel      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vercel"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vertex"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -4212,6 +4211,7 @@ func (u *AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) UnmarshalJSON(dat
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelBalancerSemanticConfigEmbeddings) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -4232,7 +4232,6 @@ func (s *AIGatewayModelBalancerSemanticConfigEmbeddings) UnmarshalJSON(data []by
 
 // AIGatewayModelBalancerSemanticConfigVectordb represents a union type for vectordb.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelBalancerSemanticConfigVectordb struct {
 	// Type designates the type of configuration.
 	//
@@ -4257,7 +4256,7 @@ type AIGatewayModelBalancerSemanticConfigVectordbType string
 // AIGatewayModelBalancerSemanticConfigVectordbType values.
 const (
 	AIGatewayModelBalancerSemanticConfigVectordbTypePgVector AIGatewayModelBalancerSemanticConfigVectordbType = "pgvector"
-	AIGatewayModelBalancerSemanticConfigVectordbTypeRedis AIGatewayModelBalancerSemanticConfigVectordbType = "redis"
+	AIGatewayModelBalancerSemanticConfigVectordbTypeRedis    AIGatewayModelBalancerSemanticConfigVectordbType = "redis"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -4329,6 +4328,7 @@ func (u *AIGatewayModelBalancerSemanticConfigVectordb) UnmarshalJSON(data []byte
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelBalancerSemanticConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -4499,7 +4499,6 @@ type AIGatewayModelModelConfigModel struct {
 
 // AIGatewayModelModelConfigBalancer represents a union type for balancer.
 // Only one of the fields should be set based on the Algorithm.
-//
 type AIGatewayModelModelConfigBalancer struct {
 	// Algorithm designates the type of configuration.
 	//
@@ -4544,12 +4543,12 @@ type AIGatewayModelModelConfigBalancerType string
 // AIGatewayModelModelConfigBalancerType values.
 const (
 	AIGatewayModelModelConfigBalancerTypeConsistentHashing AIGatewayModelModelConfigBalancerType = "consistent-hashing"
-	AIGatewayModelModelConfigBalancerTypeLeastConnections AIGatewayModelModelConfigBalancerType = "least-connections"
-	AIGatewayModelModelConfigBalancerTypeLowestLatency AIGatewayModelModelConfigBalancerType = "lowest-latency"
-	AIGatewayModelModelConfigBalancerTypeLowestUsage AIGatewayModelModelConfigBalancerType = "lowest-usage"
-	AIGatewayModelModelConfigBalancerTypePriority AIGatewayModelModelConfigBalancerType = "priority"
-	AIGatewayModelModelConfigBalancerTypeRoundRobin AIGatewayModelModelConfigBalancerType = "round-robin"
-	AIGatewayModelModelConfigBalancerTypeSemantic AIGatewayModelModelConfigBalancerType = "semantic"
+	AIGatewayModelModelConfigBalancerTypeLeastConnections  AIGatewayModelModelConfigBalancerType = "least-connections"
+	AIGatewayModelModelConfigBalancerTypeLowestLatency     AIGatewayModelModelConfigBalancerType = "lowest-latency"
+	AIGatewayModelModelConfigBalancerTypeLowestUsage       AIGatewayModelModelConfigBalancerType = "lowest-usage"
+	AIGatewayModelModelConfigBalancerTypePriority          AIGatewayModelModelConfigBalancerType = "priority"
+	AIGatewayModelModelConfigBalancerTypeRoundRobin        AIGatewayModelModelConfigBalancerType = "round-robin"
+	AIGatewayModelModelConfigBalancerTypeSemantic          AIGatewayModelModelConfigBalancerType = "semantic"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -4711,6 +4710,7 @@ func (u *AIGatewayModelModelConfigBalancer) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelModelConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -4844,7 +4844,6 @@ type AIGatewayModelProviderAzureConfig struct {
 
 // AIGatewayModelProviderAzureConfigAuth represents a union type for auth.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelProviderAzureConfigAuth struct {
 	// Type designates the type of configuration.
 	//
@@ -4941,6 +4940,7 @@ func (u *AIGatewayModelProviderAzureConfigAuth) UnmarshalJSON(data []byte) error
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelProviderAzureConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -5014,7 +5014,6 @@ type AIGatewayModelProviderBedrockConfig struct {
 
 // AIGatewayModelProviderBedrockConfigAuth represents a union type for auth.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelProviderBedrockConfigAuth struct {
 	// Type designates the type of configuration.
 	//
@@ -5038,7 +5037,7 @@ type AIGatewayModelProviderBedrockConfigAuthType string
 
 // AIGatewayModelProviderBedrockConfigAuthType values.
 const (
-	AIGatewayModelProviderBedrockConfigAuthTypeAWS AIGatewayModelProviderBedrockConfigAuthType = "aws"
+	AIGatewayModelProviderBedrockConfigAuthTypeAWS   AIGatewayModelProviderBedrockConfigAuthType = "aws"
 	AIGatewayModelProviderBedrockConfigAuthTypeBasic AIGatewayModelProviderBedrockConfigAuthType = "basic"
 )
 
@@ -5111,6 +5110,7 @@ func (u *AIGatewayModelProviderBedrockConfigAuth) UnmarshalJSON(data []byte) err
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelProviderBedrockConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -5637,7 +5637,6 @@ type AIGatewayModelProviderGeminiConfig struct {
 
 // AIGatewayModelProviderGeminiConfigAuth represents a union type for auth.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelProviderGeminiConfigAuth struct {
 	// Type designates the type of configuration.
 	//
@@ -5662,7 +5661,7 @@ type AIGatewayModelProviderGeminiConfigAuthType string
 // AIGatewayModelProviderGeminiConfigAuthType values.
 const (
 	AIGatewayModelProviderGeminiConfigAuthTypeBasic AIGatewayModelProviderGeminiConfigAuthType = "basic"
-	AIGatewayModelProviderGeminiConfigAuthTypeGCP AIGatewayModelProviderGeminiConfigAuthType = "gcp"
+	AIGatewayModelProviderGeminiConfigAuthTypeGCP   AIGatewayModelProviderGeminiConfigAuthType = "gcp"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -5734,6 +5733,7 @@ func (u *AIGatewayModelProviderGeminiConfigAuth) UnmarshalJSON(data []byte) erro
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelProviderGeminiConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -6190,7 +6190,6 @@ type AIGatewayModelProviderVertexConfig struct {
 
 // AIGatewayModelProviderVertexConfigAuth represents a union type for auth.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelProviderVertexConfigAuth struct {
 	// Type designates the type of configuration.
 	//
@@ -6215,7 +6214,7 @@ type AIGatewayModelProviderVertexConfigAuthType string
 // AIGatewayModelProviderVertexConfigAuthType values.
 const (
 	AIGatewayModelProviderVertexConfigAuthTypeBasic AIGatewayModelProviderVertexConfigAuthType = "basic"
-	AIGatewayModelProviderVertexConfigAuthTypeGCP AIGatewayModelProviderVertexConfigAuthType = "gcp"
+	AIGatewayModelProviderVertexConfigAuthTypeGCP   AIGatewayModelProviderVertexConfigAuthType = "gcp"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -6287,6 +6286,7 @@ func (u *AIGatewayModelProviderVertexConfigAuth) UnmarshalJSON(data []byte) erro
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelProviderVertexConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -6415,7 +6415,6 @@ type AIGatewayModelProviderXaiConfig struct {
 
 // AIGatewayModelVectorDBConfig represents a union type for AIGatewayModelVectorDBConfig.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelVectorDBConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -6440,7 +6439,7 @@ type AIGatewayModelVectorDBConfigType string
 // AIGatewayModelVectorDBConfigType values.
 const (
 	AIGatewayModelVectorDBConfigTypePgVector AIGatewayModelVectorDBConfigType = "pgvector"
-	AIGatewayModelVectorDBConfigTypeRedis AIGatewayModelVectorDBConfigType = "redis"
+	AIGatewayModelVectorDBConfigTypeRedis    AIGatewayModelVectorDBConfigType = "redis"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -6512,6 +6511,7 @@ func (u *AIGatewayModelVectorDBConfig) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // AIGatewayModelVectorDBConfigPgVector is a type alias.
 type AIGatewayModelVectorDBConfigPgVector struct {
 	// the database of the pgvector database
@@ -6862,7 +6862,6 @@ type AIGatewayModelVectorDBConfigRedisSentinelNodes struct {
 
 // AIGatewayModelVectorDBConfigRedisCloudAuthentication represents a union type for cloud_authentication.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelVectorDBConfigRedisCloudAuthentication struct {
 	// Type designates the type of configuration.
 	//
@@ -6890,9 +6889,9 @@ type AIGatewayModelVectorDBConfigRedisCloudAuthenticationType string
 
 // AIGatewayModelVectorDBConfigRedisCloudAuthenticationType values.
 const (
-	AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeAWS AIGatewayModelVectorDBConfigRedisCloudAuthenticationType = "aws"
+	AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeAWS   AIGatewayModelVectorDBConfigRedisCloudAuthenticationType = "aws"
 	AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeAzure AIGatewayModelVectorDBConfigRedisCloudAuthenticationType = "azure"
-	AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeGCP AIGatewayModelVectorDBConfigRedisCloudAuthenticationType = "gcp"
+	AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeGCP   AIGatewayModelVectorDBConfigRedisCloudAuthenticationType = "gcp"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -6982,6 +6981,7 @@ func (u *AIGatewayModelVectorDBConfigRedisCloudAuthentication) UnmarshalJSON(dat
 	}
 	return nil
 }
+
 // AIGatewayModelVectorDBConfigRedisPortVariant1 is a type alias.
 type AIGatewayModelVectorDBConfigRedisPortVariant1 int
 
@@ -6990,7 +6990,6 @@ type AIGatewayModelVectorDBConfigRedisPortVariant2 string
 
 // AIGatewayModelVectorDBConfigRedisPort represents a union type for port.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelVectorDBConfigRedisPort struct {
 	// Type designates the type of configuration.
 	//
@@ -7087,6 +7086,7 @@ func (u *AIGatewayModelVectorDBConfigRedisPort) UnmarshalJSON(data []byte) error
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelVectorDBConfigRedis) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -7538,7 +7538,6 @@ type AIGatewayRedisCloudConfigurationSentinelNodes struct {
 
 // AIGatewayRedisCloudConfigurationCloudAuthentication represents a union type for cloud_authentication.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayRedisCloudConfigurationCloudAuthentication struct {
 	// Type designates the type of configuration.
 	//
@@ -7566,9 +7565,9 @@ type AIGatewayRedisCloudConfigurationCloudAuthenticationType string
 
 // AIGatewayRedisCloudConfigurationCloudAuthenticationType values.
 const (
-	AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAWS AIGatewayRedisCloudConfigurationCloudAuthenticationType = "aws"
+	AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAWS   AIGatewayRedisCloudConfigurationCloudAuthenticationType = "aws"
 	AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAzure AIGatewayRedisCloudConfigurationCloudAuthenticationType = "azure"
-	AIGatewayRedisCloudConfigurationCloudAuthenticationTypeGCP AIGatewayRedisCloudConfigurationCloudAuthenticationType = "gcp"
+	AIGatewayRedisCloudConfigurationCloudAuthenticationTypeGCP   AIGatewayRedisCloudConfigurationCloudAuthenticationType = "gcp"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -7658,6 +7657,7 @@ func (u *AIGatewayRedisCloudConfigurationCloudAuthentication) UnmarshalJSON(data
 	}
 	return nil
 }
+
 // AIGatewayRedisCloudConfigurationPortVariant1 is a type alias.
 type AIGatewayRedisCloudConfigurationPortVariant1 int
 
@@ -7666,7 +7666,6 @@ type AIGatewayRedisCloudConfigurationPortVariant2 string
 
 // AIGatewayRedisCloudConfigurationPort represents a union type for port.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayRedisCloudConfigurationPort struct {
 	// Type designates the type of configuration.
 	//
@@ -7763,6 +7762,7 @@ func (u *AIGatewayRedisCloudConfigurationPort) UnmarshalJSON(data []byte) error 
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayRedisCloudConfiguration) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -8210,7 +8210,6 @@ type AIGatewayTargetCohereConfig struct {
 
 // AIGatewayTargetConfig represents a union type for AIGatewayTargetConfig.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayTargetConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -8302,25 +8301,25 @@ type AIGatewayTargetConfigType string
 
 // AIGatewayTargetConfigType values.
 const (
-	AIGatewayTargetConfigTypeAnthropic AIGatewayTargetConfigType = "anthropic"
-	AIGatewayTargetConfigTypeAzure AIGatewayTargetConfigType = "azure"
-	AIGatewayTargetConfigTypeBedrock AIGatewayTargetConfigType = "bedrock"
-	AIGatewayTargetConfigTypeCerebras AIGatewayTargetConfigType = "cerebras"
-	AIGatewayTargetConfigTypeCohere AIGatewayTargetConfigType = "cohere"
-	AIGatewayTargetConfigTypeDashscope AIGatewayTargetConfigType = "dashscope"
-	AIGatewayTargetConfigTypeDatabricks AIGatewayTargetConfigType = "databricks"
-	AIGatewayTargetConfigTypeDeepseek AIGatewayTargetConfigType = "deepseek"
-	AIGatewayTargetConfigTypeGemini AIGatewayTargetConfigType = "gemini"
+	AIGatewayTargetConfigTypeAnthropic   AIGatewayTargetConfigType = "anthropic"
+	AIGatewayTargetConfigTypeAzure       AIGatewayTargetConfigType = "azure"
+	AIGatewayTargetConfigTypeBedrock     AIGatewayTargetConfigType = "bedrock"
+	AIGatewayTargetConfigTypeCerebras    AIGatewayTargetConfigType = "cerebras"
+	AIGatewayTargetConfigTypeCohere      AIGatewayTargetConfigType = "cohere"
+	AIGatewayTargetConfigTypeDashscope   AIGatewayTargetConfigType = "dashscope"
+	AIGatewayTargetConfigTypeDatabricks  AIGatewayTargetConfigType = "databricks"
+	AIGatewayTargetConfigTypeDeepseek    AIGatewayTargetConfigType = "deepseek"
+	AIGatewayTargetConfigTypeGemini      AIGatewayTargetConfigType = "gemini"
 	AIGatewayTargetConfigTypeHuggingface AIGatewayTargetConfigType = "huggingface"
-	AIGatewayTargetConfigTypeKimi AIGatewayTargetConfigType = "kimi"
-	AIGatewayTargetConfigTypeLlama2 AIGatewayTargetConfigType = "llama2"
-	AIGatewayTargetConfigTypeMistral AIGatewayTargetConfigType = "mistral"
-	AIGatewayTargetConfigTypeOllama AIGatewayTargetConfigType = "ollama"
-	AIGatewayTargetConfigTypeOpenai AIGatewayTargetConfigType = "openai"
-	AIGatewayTargetConfigTypeVercel AIGatewayTargetConfigType = "vercel"
-	AIGatewayTargetConfigTypeVertex AIGatewayTargetConfigType = "vertex"
-	AIGatewayTargetConfigTypeVllm AIGatewayTargetConfigType = "vllm"
-	AIGatewayTargetConfigTypeXai AIGatewayTargetConfigType = "xai"
+	AIGatewayTargetConfigTypeKimi        AIGatewayTargetConfigType = "kimi"
+	AIGatewayTargetConfigTypeLlama2      AIGatewayTargetConfigType = "llama2"
+	AIGatewayTargetConfigTypeMistral     AIGatewayTargetConfigType = "mistral"
+	AIGatewayTargetConfigTypeOllama      AIGatewayTargetConfigType = "ollama"
+	AIGatewayTargetConfigTypeOpenai      AIGatewayTargetConfigType = "openai"
+	AIGatewayTargetConfigTypeVercel      AIGatewayTargetConfigType = "vercel"
+	AIGatewayTargetConfigTypeVertex      AIGatewayTargetConfigType = "vertex"
+	AIGatewayTargetConfigTypeVllm        AIGatewayTargetConfigType = "vllm"
+	AIGatewayTargetConfigTypeXai         AIGatewayTargetConfigType = "xai"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -8698,6 +8697,7 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // AIGatewayTargetDashscopeConfig Alibaba DashScope-specific configuration for a
 // model.
 type AIGatewayTargetDashscopeConfig struct {

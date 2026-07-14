@@ -11,10 +11,10 @@ import (
 
 func TestKonnectEventGatewayAPISpec_ToCreateGatewayRequest(t *testing.T) {
 	spec := &KonnectEventGatewayAPISpec{
-		Description: GatewayDescription("test-value"),
-		Labels: Labels{"test-key": "test-value"},
+		Description:       GatewayDescription("test-value"),
+		Labels:            Labels{"test-key": "test-value"},
 		MinRuntimeVersion: MinRuntimeVersion("test-value"),
-		Name: GatewayName("test-value"),
+		Name:              GatewayName("test-value"),
 	}
 	result, err := spec.ToCreateGatewayRequest()
 	require.NoError(t, err)
@@ -34,10 +34,10 @@ func TestKonnectEventGatewayAPISpec_ToCreateGatewayRequest(t *testing.T) {
 
 func TestKonnectEventGatewayAPISpec_ToUpdateGatewayRequest(t *testing.T) {
 	spec := &KonnectEventGatewayAPISpec{
-		Description: GatewayDescription("test-value"),
-		Labels: Labels{"test-key": "test-value"},
+		Description:       GatewayDescription("test-value"),
+		Labels:            Labels{"test-key": "test-value"},
 		MinRuntimeVersion: MinRuntimeVersion("test-value"),
-		Name: GatewayName("test-value"),
+		Name:              GatewayName("test-value"),
 	}
 	result, err := spec.ToUpdateGatewayRequest()
 	require.NoError(t, err)

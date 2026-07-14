@@ -38,7 +38,7 @@ func createKonnectAIGateway(
 	)
 	obj.Status.Endpoints = &konnectv1alpha1.KonnectAIGatewayEndpoints{
 		Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
-		Telemetry: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
+		Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
 	}
 	return nil
 }

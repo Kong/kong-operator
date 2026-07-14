@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // PortalCustomDomain is the Schema for the portalcustomdomains API.
@@ -104,7 +104,6 @@ type PortalCustomDomainStatus struct {
 
 // PortalCustomDomainSSL represents a union type for ssl.
 // Only one of the fields should be set based on the Type.
-//
 type PortalCustomDomainSSL struct {
 	// Type designates the type of configuration.
 	//
@@ -129,7 +128,7 @@ type PortalCustomDomainSSLType string
 // PortalCustomDomainSSLType values.
 const (
 	PortalCustomDomainSSLTypeWithCustomCertificate PortalCustomDomainSSLType = "withCustomCertificate"
-	PortalCustomDomainSSLTypeStandard PortalCustomDomainSSLType = "standard"
+	PortalCustomDomainSSLTypeStandard              PortalCustomDomainSSLType = "standard"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -219,4 +218,3 @@ func (s *PortalCustomDomainAPISpec) UnmarshalJSON(data []byte) error {
 	*s = PortalCustomDomainAPISpec(aux)
 	return nil
 }
-

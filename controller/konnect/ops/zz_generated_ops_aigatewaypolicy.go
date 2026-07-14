@@ -59,8 +59,8 @@ func updateAIGatewayPolicy(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
 	_, err = sdk.UpdateAiGatewayPolicy(ctx, sdkkonnectops.UpdateAiGatewayPolicyRequest{
-		GatewayID: parentID,
-		PolicyIDOrName: id,
+		GatewayID:                    parentID,
+		PolicyIDOrName:               id,
 		UpdateAIGatewayPolicyRequest: *req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

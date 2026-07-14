@@ -59,8 +59,8 @@ func updateEventGatewayBackendCluster(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
 	_, err = sdk.UpdateEventGatewayBackendCluster(ctx, sdkkonnectops.UpdateEventGatewayBackendClusterRequest{
-		GatewayID: parentID,
-		BackendClusterID: id,
+		GatewayID:                   parentID,
+		BackendClusterID:            id,
 		UpdateBackendClusterRequest: req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

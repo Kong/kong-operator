@@ -76,8 +76,8 @@ func updateAIGatewayModelProvider(
 	}
 
 	_, err = sdk.UpdateAiGatewayModelProvider(ctx, sdkkonnectops.UpdateAiGatewayModelProviderRequest{
-		GatewayID: parentID,
-		ModelProviderIDOrName: id,
+		GatewayID:                           parentID,
+		ModelProviderIDOrName:               id,
 		UpdateAIGatewayModelProviderRequest: *req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

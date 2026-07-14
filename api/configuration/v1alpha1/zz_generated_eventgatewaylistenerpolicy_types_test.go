@@ -68,12 +68,12 @@ func TestEventGatewayListenerPolicyAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayListenerPolicyAPISpec)
+		assert  func(*testing.T, EventGatewayListenerPolicyAPISpec)
 	}{
 		{
-			name: "EventGatewayListenerPolicyConfig/forward_to_virtual_cluster",
+			name:    "EventGatewayListenerPolicyConfig/forward_to_virtual_cluster",
 			payload: []byte("{\"type\":\"forwardToVirtualCluster\",\"forwardToVirtualCluster\":{}}"),
 			assert: func(t *testing.T, target EventGatewayListenerPolicyAPISpec) {
 				t.Helper()
@@ -89,7 +89,7 @@ func TestEventGatewayListenerPolicyAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 			},
 		},
 		{
-			name: "EventGatewayListenerPolicyConfig/tls_server",
+			name:    "EventGatewayListenerPolicyConfig/tls_server",
 			payload: []byte("{\"type\":\"tlsServer\",\"tlsServer\":{}}"),
 			assert: func(t *testing.T, target EventGatewayListenerPolicyAPISpec) {
 				t.Helper()

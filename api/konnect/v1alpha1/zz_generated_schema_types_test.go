@@ -2001,12 +2001,12 @@ func TestAIGatewayAgentAccessUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayAgentAccess)
+		assert  func(*testing.T, AIGatewayAgentAccess)
 	}{
 		{
-			name: "Acls/Allow",
+			name:    "Acls/Allow",
 			payload: []byte("{\"acls\":{\"type\":\"allow\",\"allow\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayAgentAccess) {
 				t.Helper()
@@ -2022,7 +2022,7 @@ func TestAIGatewayAgentAccessUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Acls/Deny",
+			name:    "Acls/Deny",
 			payload: []byte("{\"acls\":{\"type\":\"deny\",\"deny\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayAgentAccess) {
 				t.Helper()
@@ -2057,12 +2057,12 @@ func TestAIGatewayMCPServerConversionListenerUnmarshalJSON_DecodesUnionFields(t 
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayMCPServerConversionListener)
+		assert  func(*testing.T, AIGatewayMCPServerConversionListener)
 	}{
 		{
-			name: "Access/consumer",
+			name:    "Access/consumer",
 			payload: []byte("{\"access\":{\"aclAttributeType\":\"consumer\",\"consumer\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerConversionListener) {
 				t.Helper()
@@ -2078,7 +2078,7 @@ func TestAIGatewayMCPServerConversionListenerUnmarshalJSON_DecodesUnionFields(t 
 			},
 		},
 		{
-			name: "Access/oauth_access_token",
+			name:    "Access/oauth_access_token",
 			payload: []byte("{\"access\":{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerConversionListener) {
 				t.Helper()
@@ -2113,12 +2113,12 @@ func TestAIGatewayMCPServerListenerUnmarshalJSON_DecodesUnionFields(t *testing.T
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayMCPServerListener)
+		assert  func(*testing.T, AIGatewayMCPServerListener)
 	}{
 		{
-			name: "Access/consumer",
+			name:    "Access/consumer",
 			payload: []byte("{\"access\":{\"aclAttributeType\":\"consumer\",\"consumer\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerListener) {
 				t.Helper()
@@ -2134,7 +2134,7 @@ func TestAIGatewayMCPServerListenerUnmarshalJSON_DecodesUnionFields(t *testing.T
 			},
 		},
 		{
-			name: "Access/oauth_access_token",
+			name:    "Access/oauth_access_token",
 			payload: []byte("{\"access\":{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerListener) {
 				t.Helper()
@@ -2169,12 +2169,12 @@ func TestAIGatewayMCPServerPassthroughListenerUnmarshalJSON_DecodesUnionFields(t
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayMCPServerPassthroughListener)
+		assert  func(*testing.T, AIGatewayMCPServerPassthroughListener)
 	}{
 		{
-			name: "Access/consumer",
+			name:    "Access/consumer",
 			payload: []byte("{\"access\":{\"aclAttributeType\":\"consumer\",\"consumer\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerPassthroughListener) {
 				t.Helper()
@@ -2190,7 +2190,7 @@ func TestAIGatewayMCPServerPassthroughListenerUnmarshalJSON_DecodesUnionFields(t
 			},
 		},
 		{
-			name: "Access/oauth_access_token",
+			name:    "Access/oauth_access_token",
 			payload: []byte("{\"access\":{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerPassthroughListener) {
 				t.Helper()
@@ -2225,12 +2225,12 @@ func TestAIGatewayMCPServerUpstreamServerUnmarshalJSON_DecodesUnionFields(t *tes
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayMCPServerUpstreamServer)
+		assert  func(*testing.T, AIGatewayMCPServerUpstreamServer)
 	}{
 		{
-			name: "Access/consumer",
+			name:    "Access/consumer",
 			payload: []byte("{\"access\":{\"aclAttributeType\":\"consumer\",\"consumer\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServer) {
 				t.Helper()
@@ -2246,7 +2246,7 @@ func TestAIGatewayMCPServerUpstreamServerUnmarshalJSON_DecodesUnionFields(t *tes
 			},
 		},
 		{
-			name: "Access/oauth_access_token",
+			name:    "Access/oauth_access_token",
 			payload: []byte("{\"access\":{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServer) {
 				t.Helper()
@@ -2281,12 +2281,12 @@ func TestAIGatewayMCPServerUpstreamServerServerConfigUnmarshalJSON_DecodesUnionF
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayMCPServerUpstreamServerServerConfig)
+		assert  func(*testing.T, AIGatewayMCPServerUpstreamServerServerConfig)
 	}{
 		{
-			name: "ToolsListAuth/credentials",
+			name:    "ToolsListAuth/credentials",
 			payload: []byte("{\"toolsListAuth\":{\"type\":\"credentials\",\"credentials\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServerServerConfig) {
 				t.Helper()
@@ -2302,7 +2302,7 @@ func TestAIGatewayMCPServerUpstreamServerServerConfigUnmarshalJSON_DecodesUnionF
 			},
 		},
 		{
-			name: "ToolsListAuth/jwt",
+			name:    "ToolsListAuth/jwt",
 			payload: []byte("{\"toolsListAuth\":{\"type\":\"jwt\",\"jwt\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServerServerConfig) {
 				t.Helper()
@@ -2337,12 +2337,12 @@ func TestAIGatewayModelAPIConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayModelAPIConfig)
+		assert  func(*testing.T, AIGatewayModelAPIConfig)
 	}{
 		{
-			name: "Balancer/consistent-hashing",
+			name:    "Balancer/consistent-hashing",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelAPIConfig) {
 				t.Helper()
@@ -2358,7 +2358,7 @@ func TestAIGatewayModelAPIConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Balancer/least-connections",
+			name:    "Balancer/least-connections",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"least-connections\",\"least-connections\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelAPIConfig) {
 				t.Helper()
@@ -2374,7 +2374,7 @@ func TestAIGatewayModelAPIConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Balancer/lowest-latency",
+			name:    "Balancer/lowest-latency",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelAPIConfig) {
 				t.Helper()
@@ -2390,7 +2390,7 @@ func TestAIGatewayModelAPIConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Balancer/lowest-usage",
+			name:    "Balancer/lowest-usage",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"lowest-usage\",\"lowest-usage\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelAPIConfig) {
 				t.Helper()
@@ -2406,7 +2406,7 @@ func TestAIGatewayModelAPIConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Balancer/priority",
+			name:    "Balancer/priority",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"priority\",\"priority\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelAPIConfig) {
 				t.Helper()
@@ -2422,7 +2422,7 @@ func TestAIGatewayModelAPIConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Balancer/round-robin",
+			name:    "Balancer/round-robin",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"round-robin\",\"round-robin\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelAPIConfig) {
 				t.Helper()
@@ -2438,7 +2438,7 @@ func TestAIGatewayModelAPIConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Balancer/semantic",
+			name:    "Balancer/semantic",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"semantic\",\"semantic\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelAPIConfig) {
 				t.Helper()
@@ -2473,12 +2473,12 @@ func TestAIGatewayModelAccessUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayModelAccess)
+		assert  func(*testing.T, AIGatewayModelAccess)
 	}{
 		{
-			name: "Acls/Allow",
+			name:    "Acls/Allow",
 			payload: []byte("{\"acls\":{\"type\":\"allow\",\"allow\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelAccess) {
 				t.Helper()
@@ -2494,7 +2494,7 @@ func TestAIGatewayModelAccessUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Acls/Deny",
+			name:    "Acls/Deny",
 			payload: []byte("{\"acls\":{\"type\":\"deny\",\"deny\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelAccess) {
 				t.Helper()
@@ -2529,12 +2529,12 @@ func TestAIGatewayModelBalancerSemanticConfigUnmarshalJSON_DecodesUnionFields(t 
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayModelBalancerSemanticConfig)
+		assert  func(*testing.T, AIGatewayModelBalancerSemanticConfig)
 	}{
 		{
-			name: "Vectordb/pgvector",
+			name:    "Vectordb/pgvector",
 			payload: []byte("{\"vectordb\":{\"type\":\"pgvector\",\"pgvector\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelBalancerSemanticConfig) {
 				t.Helper()
@@ -2550,7 +2550,7 @@ func TestAIGatewayModelBalancerSemanticConfigUnmarshalJSON_DecodesUnionFields(t 
 			},
 		},
 		{
-			name: "Vectordb/redis",
+			name:    "Vectordb/redis",
 			payload: []byte("{\"vectordb\":{\"type\":\"redis\",\"redis\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelBalancerSemanticConfig) {
 				t.Helper()
@@ -2585,12 +2585,12 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayModelModelConfig)
+		assert  func(*testing.T, AIGatewayModelModelConfig)
 	}{
 		{
-			name: "Balancer/consistent-hashing",
+			name:    "Balancer/consistent-hashing",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"consistent-hashing\",\"consistent-hashing\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelModelConfig) {
 				t.Helper()
@@ -2606,7 +2606,7 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "Balancer/least-connections",
+			name:    "Balancer/least-connections",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"least-connections\",\"least-connections\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelModelConfig) {
 				t.Helper()
@@ -2622,7 +2622,7 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "Balancer/lowest-latency",
+			name:    "Balancer/lowest-latency",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"lowest-latency\",\"lowest-latency\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelModelConfig) {
 				t.Helper()
@@ -2638,7 +2638,7 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "Balancer/lowest-usage",
+			name:    "Balancer/lowest-usage",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"lowest-usage\",\"lowest-usage\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelModelConfig) {
 				t.Helper()
@@ -2654,7 +2654,7 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "Balancer/priority",
+			name:    "Balancer/priority",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"priority\",\"priority\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelModelConfig) {
 				t.Helper()
@@ -2670,7 +2670,7 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "Balancer/round-robin",
+			name:    "Balancer/round-robin",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"round-robin\",\"round-robin\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelModelConfig) {
 				t.Helper()
@@ -2686,7 +2686,7 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "Balancer/semantic",
+			name:    "Balancer/semantic",
 			payload: []byte("{\"balancer\":{\"algorithm\":\"semantic\",\"semantic\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelModelConfig) {
 				t.Helper()
@@ -2721,12 +2721,12 @@ func TestAIGatewayModelVectorDBConfigRedisUnmarshalJSON_DecodesUnionFields(t *te
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayModelVectorDBConfigRedis)
+		assert  func(*testing.T, AIGatewayModelVectorDBConfigRedis)
 	}{
 		{
-			name: "CloudAuthentication/aws",
+			name:    "CloudAuthentication/aws",
 			payload: []byte("{\"cloudAuthentication\":{\"type\":\"aws\",\"aws\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelVectorDBConfigRedis) {
 				t.Helper()
@@ -2742,7 +2742,7 @@ func TestAIGatewayModelVectorDBConfigRedisUnmarshalJSON_DecodesUnionFields(t *te
 			},
 		},
 		{
-			name: "CloudAuthentication/azure",
+			name:    "CloudAuthentication/azure",
 			payload: []byte("{\"cloudAuthentication\":{\"type\":\"azure\",\"azure\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelVectorDBConfigRedis) {
 				t.Helper()
@@ -2758,7 +2758,7 @@ func TestAIGatewayModelVectorDBConfigRedisUnmarshalJSON_DecodesUnionFields(t *te
 			},
 		},
 		{
-			name: "CloudAuthentication/gcp",
+			name:    "CloudAuthentication/gcp",
 			payload: []byte("{\"cloudAuthentication\":{\"type\":\"gcp\",\"gcp\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelVectorDBConfigRedis) {
 				t.Helper()
@@ -2774,7 +2774,7 @@ func TestAIGatewayModelVectorDBConfigRedisUnmarshalJSON_DecodesUnionFields(t *te
 			},
 		},
 		{
-			name: "Port/Variant1",
+			name:    "Port/Variant1",
 			payload: []byte("{\"port\":{\"type\":\"variant1\",\"variant1\":0}}"),
 			assert: func(t *testing.T, target AIGatewayModelVectorDBConfigRedis) {
 				t.Helper()
@@ -2790,7 +2790,7 @@ func TestAIGatewayModelVectorDBConfigRedisUnmarshalJSON_DecodesUnionFields(t *te
 			},
 		},
 		{
-			name: "Port/Variant2",
+			name:    "Port/Variant2",
 			payload: []byte("{\"port\":{\"type\":\"variant2\",\"variant2\":\"\"}}"),
 			assert: func(t *testing.T, target AIGatewayModelVectorDBConfigRedis) {
 				t.Helper()
@@ -2825,12 +2825,12 @@ func TestAIGatewayRedisCloudConfigurationUnmarshalJSON_DecodesUnionFields(t *tes
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayRedisCloudConfiguration)
+		assert  func(*testing.T, AIGatewayRedisCloudConfiguration)
 	}{
 		{
-			name: "CloudAuthentication/aws",
+			name:    "CloudAuthentication/aws",
 			payload: []byte("{\"cloudAuthentication\":{\"type\":\"aws\",\"aws\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
 				t.Helper()
@@ -2846,7 +2846,7 @@ func TestAIGatewayRedisCloudConfigurationUnmarshalJSON_DecodesUnionFields(t *tes
 			},
 		},
 		{
-			name: "CloudAuthentication/azure",
+			name:    "CloudAuthentication/azure",
 			payload: []byte("{\"cloudAuthentication\":{\"type\":\"azure\",\"azure\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
 				t.Helper()
@@ -2862,7 +2862,7 @@ func TestAIGatewayRedisCloudConfigurationUnmarshalJSON_DecodesUnionFields(t *tes
 			},
 		},
 		{
-			name: "CloudAuthentication/gcp",
+			name:    "CloudAuthentication/gcp",
 			payload: []byte("{\"cloudAuthentication\":{\"type\":\"gcp\",\"gcp\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
 				t.Helper()
@@ -2878,7 +2878,7 @@ func TestAIGatewayRedisCloudConfigurationUnmarshalJSON_DecodesUnionFields(t *tes
 			},
 		},
 		{
-			name: "Port/Variant1",
+			name:    "Port/Variant1",
 			payload: []byte("{\"port\":{\"type\":\"variant1\",\"variant1\":0}}"),
 			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
 				t.Helper()
@@ -2894,7 +2894,7 @@ func TestAIGatewayRedisCloudConfigurationUnmarshalJSON_DecodesUnionFields(t *tes
 			},
 		},
 		{
-			name: "Port/Variant2",
+			name:    "Port/Variant2",
 			payload: []byte("{\"port\":{\"type\":\"variant2\",\"variant2\":\"\"}}"),
 			assert: func(t *testing.T, target AIGatewayRedisCloudConfiguration) {
 				t.Helper()
@@ -2929,12 +2929,12 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayTarget)
+		assert  func(*testing.T, AIGatewayTarget)
 	}{
 		{
-			name: "Config/anthropic",
+			name:    "Config/anthropic",
 			payload: []byte("{\"config\":{\"type\":\"anthropic\",\"anthropic\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -2950,7 +2950,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/azure",
+			name:    "Config/azure",
 			payload: []byte("{\"config\":{\"type\":\"azure\",\"azure\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -2966,7 +2966,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/bedrock",
+			name:    "Config/bedrock",
 			payload: []byte("{\"config\":{\"type\":\"bedrock\",\"bedrock\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -2982,7 +2982,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/cerebras",
+			name:    "Config/cerebras",
 			payload: []byte("{\"config\":{\"type\":\"cerebras\",\"cerebras\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -2998,7 +2998,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/cohere",
+			name:    "Config/cohere",
 			payload: []byte("{\"config\":{\"type\":\"cohere\",\"cohere\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3014,7 +3014,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/dashscope",
+			name:    "Config/dashscope",
 			payload: []byte("{\"config\":{\"type\":\"dashscope\",\"dashscope\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3030,7 +3030,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/databricks",
+			name:    "Config/databricks",
 			payload: []byte("{\"config\":{\"type\":\"databricks\",\"databricks\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3046,7 +3046,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/deepseek",
+			name:    "Config/deepseek",
 			payload: []byte("{\"config\":{\"type\":\"deepseek\",\"deepseek\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3062,7 +3062,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/gemini",
+			name:    "Config/gemini",
 			payload: []byte("{\"config\":{\"type\":\"gemini\",\"gemini\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3078,7 +3078,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/huggingface",
+			name:    "Config/huggingface",
 			payload: []byte("{\"config\":{\"type\":\"huggingface\",\"huggingface\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3094,7 +3094,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/kimi",
+			name:    "Config/kimi",
 			payload: []byte("{\"config\":{\"type\":\"kimi\",\"kimi\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3110,7 +3110,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/llama2",
+			name:    "Config/llama2",
 			payload: []byte("{\"config\":{\"type\":\"llama2\",\"llama2\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3126,7 +3126,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/mistral",
+			name:    "Config/mistral",
 			payload: []byte("{\"config\":{\"type\":\"mistral\",\"mistral\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3142,7 +3142,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/ollama",
+			name:    "Config/ollama",
 			payload: []byte("{\"config\":{\"type\":\"ollama\",\"ollama\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3158,7 +3158,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/openai",
+			name:    "Config/openai",
 			payload: []byte("{\"config\":{\"type\":\"openai\",\"openai\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3174,7 +3174,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/vercel",
+			name:    "Config/vercel",
 			payload: []byte("{\"config\":{\"type\":\"vercel\",\"vercel\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3190,7 +3190,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/vertex",
+			name:    "Config/vertex",
 			payload: []byte("{\"config\":{\"type\":\"vertex\",\"vertex\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3206,7 +3206,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/vllm",
+			name:    "Config/vllm",
 			payload: []byte("{\"config\":{\"type\":\"vllm\",\"vllm\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()
@@ -3222,7 +3222,7 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "Config/xai",
+			name:    "Config/xai",
 			payload: []byte("{\"config\":{\"type\":\"xai\",\"xai\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayTarget) {
 				t.Helper()

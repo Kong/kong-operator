@@ -183,8 +183,6 @@ func (s *AIGatewayAgentAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	return data, nil
 }
 
-
-
 // resolveAIGatewayAgentPolicies resolves the CR references in spec.apiSpec.policies
 // to Konnect names.
 func resolveAIGatewayAgentPolicies(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error) {
@@ -227,6 +225,7 @@ func resolveAIGatewayAgentPolicies(ctx context.Context, cl client.Client, obj *A
 	}
 	return resolved, nil
 }
+
 // RefsAtAIGatewayAgentAccessAclsAllowAllow returns the references at spec.apiSpec.access.acls.allow.allow,
 // or nil when any ancestor is unset.
 func RefsAtAIGatewayAgentAccessAclsAllowAllow(obj *AIGatewayAgent) []AIGatewayACLRef {
@@ -307,6 +306,7 @@ func resolveAIGatewayAgentAccessAclsAllowAllow(ctx context.Context, cl client.Cl
 	}
 	return resolved, nil
 }
+
 // RefsAtAIGatewayAgentAccessAclsDenyDeny returns the references at spec.apiSpec.access.acls.deny.deny,
 // or nil when any ancestor is unset.
 func RefsAtAIGatewayAgentAccessAclsDenyDeny(obj *AIGatewayAgent) []AIGatewayACLRef {

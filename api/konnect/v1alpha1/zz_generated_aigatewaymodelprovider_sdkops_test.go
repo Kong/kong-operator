@@ -9,16 +9,14 @@ import (
 )
 
 func TestAIGatewayModelProviderAPISpec_ToCreateAIGatewayModelProviderRequest(t *testing.T) {
-	spec := &AIGatewayModelProviderAPISpec{
-	}
+	spec := &AIGatewayModelProviderAPISpec{}
 	result, err := spec.ToCreateAIGatewayModelProviderRequest()
 	require.Error(t, err)
 	require.Nil(t, result)
 }
 
 func TestAIGatewayModelProviderAPISpec_ToUpdateAIGatewayModelProviderRequest(t *testing.T) {
-	spec := &AIGatewayModelProviderAPISpec{
-	}
+	spec := &AIGatewayModelProviderAPISpec{}
 	result, err := spec.ToUpdateAIGatewayModelProviderRequest()
 	require.Error(t, err)
 	require.Nil(t, result)

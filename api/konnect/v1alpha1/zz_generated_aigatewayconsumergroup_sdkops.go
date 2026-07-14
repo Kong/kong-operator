@@ -34,8 +34,6 @@ func (s *AIGatewayConsumerGroupAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	return data, nil
 }
 
-
-
 // resolveAIGatewayConsumerGroupPolicies resolves the CR references in spec.apiSpec.policies
 // to Konnect names.
 func resolveAIGatewayConsumerGroupPolicies(ctx context.Context, cl client.Client, obj *AIGatewayConsumerGroup) ([]string, error) {

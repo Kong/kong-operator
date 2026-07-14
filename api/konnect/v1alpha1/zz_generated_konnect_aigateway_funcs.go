@@ -6,6 +6,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *KonnectAIGateway) GetKonnectLabels() map[string]string {
 	if obj.Spec.APISpec.Labels == nil {

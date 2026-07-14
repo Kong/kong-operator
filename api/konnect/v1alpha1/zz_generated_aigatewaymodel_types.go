@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // AIGatewayModel is the Schema for the aigatewaymodels API.
@@ -92,7 +92,6 @@ type AIGatewayModelStatus struct {
 
 // AIGatewayModelConfig represents a union type for AIGatewayModelConfig.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -116,7 +115,7 @@ type AIGatewayModelConfigType string
 
 // AIGatewayModelConfigType values.
 const (
-	AIGatewayModelConfigTypeAPI AIGatewayModelConfigType = "api"
+	AIGatewayModelConfigTypeAPI   AIGatewayModelConfigType = "api"
 	AIGatewayModelConfigTypeModel AIGatewayModelConfigType = "model"
 )
 
@@ -205,7 +204,6 @@ func (s *AIGatewayModelAPISpec) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -223,4 +221,3 @@ func (s *AIGatewayModelAPISpec) UnmarshalJSON(data []byte) error {
 	*s = AIGatewayModelAPISpec(aux)
 	return nil
 }
-

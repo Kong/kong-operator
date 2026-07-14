@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // AIGatewayModelProvider is the Schema for the aigatewaymodelproviders API.
@@ -92,7 +92,6 @@ type AIGatewayModelProviderStatus struct {
 
 // AIGatewayModelProviderConfig represents a union type for AIGatewayModelProviderConfig.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayModelProviderConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -184,25 +183,25 @@ type AIGatewayModelProviderConfigType string
 
 // AIGatewayModelProviderConfigType values.
 const (
-	AIGatewayModelProviderConfigTypeAnthropic AIGatewayModelProviderConfigType = "anthropic"
-	AIGatewayModelProviderConfigTypeAzure AIGatewayModelProviderConfigType = "azure"
-	AIGatewayModelProviderConfigTypeBedrock AIGatewayModelProviderConfigType = "bedrock"
-	AIGatewayModelProviderConfigTypeCerebras AIGatewayModelProviderConfigType = "cerebras"
-	AIGatewayModelProviderConfigTypeCohere AIGatewayModelProviderConfigType = "cohere"
-	AIGatewayModelProviderConfigTypeDashscope AIGatewayModelProviderConfigType = "dashscope"
-	AIGatewayModelProviderConfigTypeDatabricks AIGatewayModelProviderConfigType = "databricks"
-	AIGatewayModelProviderConfigTypeDeepseek AIGatewayModelProviderConfigType = "deepseek"
-	AIGatewayModelProviderConfigTypeGemini AIGatewayModelProviderConfigType = "gemini"
+	AIGatewayModelProviderConfigTypeAnthropic   AIGatewayModelProviderConfigType = "anthropic"
+	AIGatewayModelProviderConfigTypeAzure       AIGatewayModelProviderConfigType = "azure"
+	AIGatewayModelProviderConfigTypeBedrock     AIGatewayModelProviderConfigType = "bedrock"
+	AIGatewayModelProviderConfigTypeCerebras    AIGatewayModelProviderConfigType = "cerebras"
+	AIGatewayModelProviderConfigTypeCohere      AIGatewayModelProviderConfigType = "cohere"
+	AIGatewayModelProviderConfigTypeDashscope   AIGatewayModelProviderConfigType = "dashscope"
+	AIGatewayModelProviderConfigTypeDatabricks  AIGatewayModelProviderConfigType = "databricks"
+	AIGatewayModelProviderConfigTypeDeepseek    AIGatewayModelProviderConfigType = "deepseek"
+	AIGatewayModelProviderConfigTypeGemini      AIGatewayModelProviderConfigType = "gemini"
 	AIGatewayModelProviderConfigTypeHuggingface AIGatewayModelProviderConfigType = "huggingface"
-	AIGatewayModelProviderConfigTypeKimi AIGatewayModelProviderConfigType = "kimi"
-	AIGatewayModelProviderConfigTypeLlama2 AIGatewayModelProviderConfigType = "llama2"
-	AIGatewayModelProviderConfigTypeMistral AIGatewayModelProviderConfigType = "mistral"
-	AIGatewayModelProviderConfigTypeOllama AIGatewayModelProviderConfigType = "ollama"
-	AIGatewayModelProviderConfigTypeOpenai AIGatewayModelProviderConfigType = "openai"
-	AIGatewayModelProviderConfigTypeVercel AIGatewayModelProviderConfigType = "vercel"
-	AIGatewayModelProviderConfigTypeVertex AIGatewayModelProviderConfigType = "vertex"
-	AIGatewayModelProviderConfigTypeVllm AIGatewayModelProviderConfigType = "vllm"
-	AIGatewayModelProviderConfigTypeXai AIGatewayModelProviderConfigType = "xai"
+	AIGatewayModelProviderConfigTypeKimi        AIGatewayModelProviderConfigType = "kimi"
+	AIGatewayModelProviderConfigTypeLlama2      AIGatewayModelProviderConfigType = "llama2"
+	AIGatewayModelProviderConfigTypeMistral     AIGatewayModelProviderConfigType = "mistral"
+	AIGatewayModelProviderConfigTypeOllama      AIGatewayModelProviderConfigType = "ollama"
+	AIGatewayModelProviderConfigTypeOpenai      AIGatewayModelProviderConfigType = "openai"
+	AIGatewayModelProviderConfigTypeVercel      AIGatewayModelProviderConfigType = "vercel"
+	AIGatewayModelProviderConfigTypeVertex      AIGatewayModelProviderConfigType = "vertex"
+	AIGatewayModelProviderConfigTypeVllm        AIGatewayModelProviderConfigType = "vllm"
+	AIGatewayModelProviderConfigTypeXai         AIGatewayModelProviderConfigType = "xai"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -596,7 +595,6 @@ func (s *AIGatewayModelProviderAPISpec) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayModelProviderAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -614,4 +612,3 @@ func (s *AIGatewayModelProviderAPISpec) UnmarshalJSON(data []byte) error {
 	*s = AIGatewayModelProviderAPISpec(aux)
 	return nil
 }
-

@@ -4,13 +4,13 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -30,7 +30,7 @@ func testGeneratedAIGatewayMCPServerForSDKOps() *konnectv1alpha1.AIGatewayMCPSer
 		Spec: konnectv1alpha1.AIGatewayMCPServerSpec{
 			APISpec: konnectv1alpha1.AIGatewayMCPServerAPISpec{
 				AIGatewayMCPServerConfig: &konnectv1alpha1.AIGatewayMCPServerConfig{
-					Type: konnectv1alpha1.AIGatewayMCPServerConfigTypeConversionOnly,
+					Type:           konnectv1alpha1.AIGatewayMCPServerConfigTypeConversionOnly,
 					ConversionOnly: &konnectv1alpha1.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: konnectv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}},
 				},
 			},
@@ -110,8 +110,8 @@ func TestUpdateAIGatewayMCPServer_UsesSDKOpsConversion(t *testing.T) {
 		UpdateAiGatewayMcpServer(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayMcpServerRequest{
-				GatewayID: parentID,
-				McpServerIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                       parentID,
+				McpServerIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayMCPServerRequest: *expectedRequest,
 			},
 		).
@@ -138,8 +138,8 @@ func TestUpdateAIGatewayMCPServer_PropagatesSDKError(t *testing.T) {
 		UpdateAiGatewayMcpServer(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayMcpServerRequest{
-				GatewayID: parentID,
-				McpServerIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                       parentID,
+				McpServerIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayMCPServerRequest: *expectedRequest,
 			},
 		).
