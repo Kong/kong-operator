@@ -109,6 +109,38 @@ func (rc ReferenceConfig) TypeName() string {
 	return ""
 }
 
+// AssociationConfig declares a spec-level field holding references to other CRs
+// in this API group that the entity is associated with. Unlike ReferenceConfig
+// (which replaces an OpenAPI-derived field inside spec.apiSpec and injects the
+// resolved value into the SDK create/update body), an association is a new
+// top-level spec field (sibling of apiSpec) whose membership is enforced in
+// Konnect by a dedicated, hand-written ops helper.
+//
+// The generator emits the spec field, the referenced ref struct(s), and a call
+// site to the helper named by convention (enforce<Entity><GoFieldName>). The
+// enforcement SDK call itself lives in the hand-written helper.
+type AssociationConfig struct {
+	// Name is the lowerCamelCase JSON name of the top-level spec field, e.g.
+	// "consumerGroups". The Go field name is derived from it.
+	Name string `yaml:"name"`
+	// Kinds lists the CRD kinds (in this API group) the field may reference.
+	// A single kind emits a name-only ref struct (no kind field on the CRD);
+	// multiple kinds are not yet supported.
+	Kinds []string `yaml:"kinds"`
+	// SDKMethod is the SDK method the hand-written enforcement helper calls to
+	// push the membership set to Konnect (e.g.
+	// "UpdateAiGatewayConsumerGroupsForConsumer"). The generator does not emit
+	// the call itself — the helper (enforce<Entity><GoFieldName>) does — but it
+	// needs the name to wire the generated ops-controller test's mock expectation.
+	SDKMethod string `yaml:"sdkMethod"`
+}
+
+// RefTypeName returns the Go type name of the generated ref struct for a
+// single-kind association (e.g. "AIGatewayConsumerGroupRef").
+func (a AssociationConfig) RefTypeName() string {
+	return a.Kinds[0] + "Ref"
+}
+
 // SecretReferenceConfig configures a single sensitive field that can be provided
 // inline or sourced from a Kubernetes Secret.
 //
@@ -159,6 +191,10 @@ type TypeConfig struct {
 	// Each entry replaces the OpenAPI-derived field with a *commonv1alpha1.ObjectRef
 	// and emits a corresponding resolved-ID field on the status.
 	References []ReferenceConfig `yaml:"-"`
+	// Associations lists top-level spec fields (siblings of apiSpec) holding
+	// references to other CRs whose membership is enforced in Konnect by a
+	// hand-written ops helper. See AssociationConfig.
+	Associations []AssociationConfig `yaml:"associations,omitempty"`
 	// Ops maps operation names (e.g. "create", "update") to SDK type configurations.
 	// When set, conversion methods are generated on the entity's APISpec type.
 	Ops map[string]*OpConfig `yaml:"-"`
@@ -437,6 +473,7 @@ type typeConfigYAML struct {
 	SchemaFieldOmissions map[string][]string     `yaml:"schemaFieldOmissions,omitempty"`
 	CEL                  map[string]*FieldConfig `yaml:"cel,omitempty"`
 	References           []ReferenceConfig       `yaml:"references,omitempty"`
+	Associations         []AssociationConfig     `yaml:"associations,omitempty"`
 	SecretReferences     []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
 	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
 	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
@@ -456,6 +493,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		SchemaFieldOmissions: raw.SchemaFieldOmissions,
 		CEL:                  raw.CEL,
 		References:           raw.References,
+		Associations:         raw.Associations,
 		SecretReferences:     raw.SecretReferences,
 		Reconciler:           raw.Reconciler,
 	}
@@ -633,6 +671,23 @@ func (c *APIGroupVersionConfig) ReferencesConfig(pathToEntityName map[string]str
 	return result
 }
 
+// AssociationsConfig builds a mapping from entity name to association configs using the
+// provided pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) AssociationsConfig(pathToEntityName map[string]string) map[string][]AssociationConfig {
+	result := make(map[string][]AssociationConfig)
+	for _, tc := range c.Types {
+		if len(tc.Associations) == 0 {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = tc.Associations
+	}
+	return result
+}
+
 // SchemaFieldOmissionsConfig returns a normalized schema-type field omission set.
 func (c *APIGroupVersionConfig) SchemaFieldOmissionsConfig() map[string]map[string]bool {
 	if c == nil || len(c.Types) == 0 {
@@ -763,6 +818,25 @@ func (tc *TypeConfig) validate() error {
 		if len(ref.Kinds) == 1 && ref.RefTypeName != "" {
 			return fmt.Errorf("reference %q: refTypeName must not be set when a single kind is configured", ref.Path)
 		}
+	}
+	seenAssocNames := make(map[string]bool)
+	for i, a := range tc.Associations {
+		if a.Name == "" {
+			return fmt.Errorf("associations[%d].name must not be empty", i)
+		}
+		if len(a.Kinds) == 0 {
+			return fmt.Errorf("associations[%d]: kinds must not be empty", i)
+		}
+		if len(a.Kinds) > 1 {
+			return fmt.Errorf("associations[%d]: multi-kind associations are not yet supported", i)
+		}
+		if a.SDKMethod == "" {
+			return fmt.Errorf("associations[%d].sdkMethod must not be empty", i)
+		}
+		if seenAssocNames[a.Name] {
+			return fmt.Errorf("associations[%d]: duplicate name %q", i, a.Name)
+		}
+		seenAssocNames[a.Name] = true
 	}
 	seenSecretPaths := make(map[string]bool)
 	for i, sr := range tc.SecretReferences {

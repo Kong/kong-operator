@@ -56,6 +56,22 @@ type opsCreateFuncData struct {
 	SingletonNoID        bool
 	RespRootUnion        *opsCreateRootUnionResponseData
 	ResponseStatusFields []config.ResponseStatusFieldConfig
+	// Associations lists the top-level spec association fields whose membership
+	// is enforced by a hand-written helper called after the entity is created.
+	Associations []opsAssociationData
+}
+
+// opsAssociationData is the per-association template data for the ops
+// create/update func templates. The generated code calls a hand-written helper
+// named enforce<Entity><GoFieldName>.
+type opsAssociationData struct {
+	// GoFieldName is the Go spec field name, e.g. "ConsumerGroups".
+	GoFieldName string
+	// SDKMethod is the SDK method the hand-written helper calls; used by the
+	// generated ops-controller test to register the mock expectation.
+	SDKMethod string
+	// ResponseType is the SDK method's response struct name (SDKMethod+"Response").
+	ResponseType string
 }
 
 type opsCreateRootUnionResponseData struct {
@@ -98,7 +114,9 @@ func (g *Generator) generateOpsCreateFuncBody(
 		return nil, fmt.Errorf("entity %q: resolve create SDK interface: %w", entityName, err)
 	}
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
-	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName)
+	associations := g.opsAssociations(entityName)
+	// Association enforcement helpers need the controller-runtime client.
+	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName) || len(associations) > 0
 
 	parents, err := g.resolveParents(entityName, schema)
 	if err != nil {
@@ -158,7 +176,26 @@ func (g *Generator) generateOpsCreateFuncBody(
 		SingletonNoID:        isSingletonNoID(schema),
 		RespRootUnion:        respRootUnion,
 		ResponseStatusFields: opsConfig.ResponseStatusFields,
+		Associations:         associations,
 	}, nil
+}
+
+// opsAssociations returns the association template data for an entity's ops
+// create/update funcs, or nil when none are configured.
+func (g *Generator) opsAssociations(entityName string) []opsAssociationData {
+	assocs := g.entityAssociations(entityName)
+	if len(assocs) == 0 {
+		return nil
+	}
+	result := make([]opsAssociationData, len(assocs))
+	for i, a := range assocs {
+		result[i] = opsAssociationData{
+			GoFieldName:  goFieldName(a.Name),
+			SDKMethod:    a.SDKMethod,
+			ResponseType: a.SDKMethod + "Response",
+		}
+	}
+	return result
 }
 
 type flatInfo struct {

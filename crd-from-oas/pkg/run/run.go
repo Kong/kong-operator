@@ -151,6 +151,7 @@ func (r *Runner) Run(
 			ManualGetForUIDEntities:  manualGetForUIDEntities,
 			Categories:               agvConfig.Categories,
 			References:               agvConfig.ReferencesConfig(pathToEntityName),
+			Associations:             agvConfig.AssociationsConfig(pathToEntityName),
 		})
 
 		files, err := gen.Generate(parsed)

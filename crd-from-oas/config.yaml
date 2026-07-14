@@ -408,6 +408,14 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/consumers
         name: AIGatewayConsumer
+        # consumerGroups is a top-level spec field (sibling of apiSpec) listing the
+        # AIGatewayConsumerGroups this consumer belongs to. Membership is enforced
+        # in Konnect by the hand-written enforceAIGatewayConsumerConsumerGroups
+        # helper via UpdateAiGatewayConsumerGroupsForConsumer.
+        associations:
+          - name: consumerGroups
+            kinds: [AIGatewayConsumerGroup]
+            sdkMethod: UpdateAiGatewayConsumerGroupsForConsumer
         references:
           - path: spec.apiSpec.policies
             kinds: [AIGatewayPolicy]

@@ -38,6 +38,10 @@ func createAIGatewayConsumer(
 	}
 
 	obj.SetKonnectID(resp.AIGatewayConsumer.ID)
+
+	if err := enforceAIGatewayConsumerConsumerGroups(ctx, cl, sdk, obj, parentID); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -67,6 +71,10 @@ func updateAIGatewayConsumer(
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayConsumer(ctx, cl, sdk, obj)
 		})
+	}
+
+	if err := enforceAIGatewayConsumerConsumerGroups(ctx, cl, sdk, obj, parentID); err != nil {
+		return err
 	}
 	return nil
 }
