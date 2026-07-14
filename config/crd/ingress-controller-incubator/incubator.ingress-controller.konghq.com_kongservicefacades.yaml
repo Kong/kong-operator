@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: ingress-controller-incubator
-    kubernetes-configuration.konghq.com/version: v2.2.2
+    kubernetes-configuration.konghq.com/version: v2.2.3
   name: kongservicefacades.incubator.ingress-controller.konghq.com
 spec:
   group: incubator.ingress-controller.konghq.com
