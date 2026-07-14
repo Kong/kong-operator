@@ -6290,3 +6290,21 @@ func TestGenerateCRDType_NoMirrorByDefault(t *testing.T) {
 	// APISpec stays a value struct.
 	require.Contains(t, content, "APISpec PortalAPISpec `json:\"apiSpec,omitzero\"`")
 }
+
+func TestGenerateCRDType_MirrorImportsKonnectV1Alpha2WithoutRootReconciler(t *testing.T) {
+	schema := &parser.Schema{
+		Name:       "CreateKonnectEventGateway",
+		Properties: []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	content, err := g.generateCRDType("CreateKonnectEventGateway", schema)
+	require.NoError(t, err)
+	require.Contains(t, content, "konnectv1alpha2 \"github.com/kong/kong-operator/v2/api/konnect/v1alpha2\"")
+	require.Contains(t, content, "Mirror *konnectv1alpha2.MirrorSpec")
+}
