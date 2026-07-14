@@ -49,6 +49,11 @@ func (e KonnectEntityCreatedButRelationsFailedError) Is(target error) bool {
 	return ok && e.KonnectID == t.KonnectID && e.Reason == t.Reason
 }
 
+// Unwrap returns the underlying error.
+func (e KonnectEntityCreatedButRelationsFailedError) Unwrap() error {
+	return e.Err
+}
+
 // GetControlPlaneGroupMemberFailedError is an error type returned when
 // failed to get member of control plane group.
 type GetControlPlaneGroupMemberFailedError struct {

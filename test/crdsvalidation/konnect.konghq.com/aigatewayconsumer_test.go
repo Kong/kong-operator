@@ -79,4 +79,34 @@ func TestAIGatewayConsumer(t *testing.T) {
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("spec.consumerGroups validation", func(t *testing.T) {
+		common.TestCasesGroup[*konnectv1alpha1.AIGatewayConsumer]{
+			{
+				Name: "consumerGroups ref with name is valid",
+				TestObject: func() *konnectv1alpha1.AIGatewayConsumer {
+					obj := validAIGatewayConsumer(ns.Name)
+					obj.Spec.ConsumerGroups = []konnectv1alpha1.AIGatewayConsumerGroupRef{
+						{Name: "test-group"},
+					}
+					return obj
+				}(),
+				Assert: func(t *testing.T, obj *konnectv1alpha1.AIGatewayConsumer) {
+					require.Len(t, obj.Spec.ConsumerGroups, 1)
+					assert.Equal(t, "test-group", obj.Spec.ConsumerGroups[0].Name)
+				},
+			},
+			{
+				Name: "consumerGroups ref with empty name is invalid",
+				TestObject: func() *konnectv1alpha1.AIGatewayConsumer {
+					obj := validAIGatewayConsumer(ns.Name)
+					obj.Spec.ConsumerGroups = []konnectv1alpha1.AIGatewayConsumerGroupRef{
+						{Name: ""},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.consumerGroups[0].name in body should be at least 1 chars long"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
 }

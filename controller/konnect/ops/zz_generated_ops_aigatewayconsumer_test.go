@@ -69,6 +69,13 @@ func TestCreateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
+	// ConsumerGroups membership is enforced by the hand-written
+	// enforceAIGatewayConsumerConsumerGroups helper after create; allow its SDK call.
+	sdk.EXPECT().
+		UpdateAiGatewayConsumerGroupsForConsumer(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupsForConsumerResponse{}, nil).
+		Maybe()
+
 	require.NoError(t, createAIGatewayConsumer(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
@@ -95,6 +102,11 @@ func TestCreateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 		).
 		Return(nil, sdkErr).
 		Once()
+
+	sdk.EXPECT().
+		UpdateAiGatewayConsumerGroupsForConsumer(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupsForConsumerResponse{}, nil).
+		Maybe()
 
 	err = createAIGatewayConsumer(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
@@ -126,6 +138,13 @@ func TestUpdateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayConsumerResponse{}, nil).
 		Once()
 
+	// ConsumerGroups membership is enforced by the hand-written
+	// enforceAIGatewayConsumerConsumerGroups helper after update; allow its SDK call.
+	sdk.EXPECT().
+		UpdateAiGatewayConsumerGroupsForConsumer(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupsForConsumerResponse{}, nil).
+		Maybe()
+
 	require.NoError(t, updateAIGatewayConsumer(ctx, cl, sdk, obj))
 }
 
@@ -155,6 +174,11 @@ func TestUpdateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 		).
 		Return(nil, sdkErr).
 		Once()
+
+	sdk.EXPECT().
+		UpdateAiGatewayConsumerGroupsForConsumer(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupsForConsumerResponse{}, nil).
+		Maybe()
 
 	err = updateAIGatewayConsumer(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())

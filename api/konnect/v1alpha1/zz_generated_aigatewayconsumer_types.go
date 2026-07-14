@@ -46,10 +46,25 @@ type AIGatewayConsumerSpec struct {
 	// +required
 	AIGatewayRef commonv1alpha1.ObjectRef `json:"aiGatewayRef,omitzero"`
 
+	// ConsumerGroups is the list of AIGatewayConsumerGroup references this resource is associated with.
+	//
+	// +optional
+	// +listType=atomic
+	ConsumerGroups []AIGatewayConsumerGroupRef `json:"consumerGroups,omitempty"`
+
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
 	APISpec AIGatewayConsumerAPISpec `json:"apiSpec,omitzero"`
+}
+
+// AIGatewayConsumerGroupRef references a AIGatewayConsumerGroup in the cluster.
+type AIGatewayConsumerGroupRef struct {
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
 }
 
 // AIGatewayConsumerAPISpec defines the API spec fields for AIGatewayConsumer.
