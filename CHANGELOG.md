@@ -59,7 +59,6 @@
   the duplicte IDs.
   [#4876](https://github.com/Kong/kong-operator/pull/4876)
 
-
 ## [v2.1.8]
 
 > Release date: 2026-07-01
