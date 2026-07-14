@@ -20,8 +20,23 @@ func tagsSvc(name string, anns map[string]string) *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "ns", Annotations: anns}}
 }
 
+// tagsSvcIn builds a Service in an arbitrary namespace, for cases exercising
+// the per-ref namespace override.
+func tagsSvcIn(namespace, name string, anns map[string]string) *corev1.Service {
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace, Annotations: anns}}
+}
+
 func backendRef(name string) gwtypes.BackendRef {
 	return gwtypes.BackendRef{BackendObjectReference: gwtypes.BackendObjectReference{Name: gwtypes.ObjectName(name)}}
+}
+
+// backendRefIn builds a BackendRef with an explicit namespace override.
+func backendRefIn(name, namespace string) gwtypes.BackendRef {
+	ns := gwtypes.Namespace(namespace)
+	return gwtypes.BackendRef{BackendObjectReference: gwtypes.BackendObjectReference{
+		Name:      gwtypes.ObjectName(name),
+		Namespace: &ns,
+	}}
 }
 
 func TestTagsFromBackendRefs(t *testing.T) {
@@ -62,6 +77,12 @@ func TestTagsFromBackendRefs(t *testing.T) {
 			objects:  nil,
 			refs:     []gwtypes.BackendRef{backendRef("ghost")},
 			expected: nil,
+		},
+		{
+			name:     "ref namespace override resolves service in other namespace",
+			objects:  []runtime.Object{tagsSvcIn("other-ns", "svc-a", map[string]string{"konghq.com/tags": "x"})},
+			refs:     []gwtypes.BackendRef{backendRefIn("svc-a", "other-ns")},
+			expected: []string{"x"},
 		},
 	}
 	for _, tc := range tests {
