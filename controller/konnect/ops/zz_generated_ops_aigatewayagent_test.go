@@ -4,15 +4,15 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -32,11 +32,11 @@ func testGeneratedAIGatewayAgentForSDKOps() *konnectv1alpha1.AIGatewayAgent {
 		Spec: konnectv1alpha1.AIGatewayAgentSpec{
 			APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
 				DisplayName: "test-value",
-				Enabled: "Enabled",
-				Labels: konnectv1alpha1.PublicLabels{"test-key": "test-value"},
-				ManagedBy: konnectv1alpha1.ManagedBy{"test-key": "test-value"},
-				Name: "test-value",
-				Type: "a2a",
+				Enabled:     "Enabled",
+				Labels:      konnectv1alpha1.PublicLabels{"test-key": "test-value"},
+				ManagedBy:   konnectv1alpha1.ManagedBy{"test-key": "test-value"},
+				Name:        "test-value",
+				Type:        "a2a",
 			},
 		},
 	}
@@ -118,8 +118,8 @@ func TestUpdateAIGatewayAgent_UsesSDKOpsConversion(t *testing.T) {
 		UpdateAiGatewayAgent(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayAgentRequest{
-				GatewayID: parentID,
-				AgentIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                   parentID,
+				AgentIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayAgentRequest: *expectedRequest,
 			},
 		).
@@ -148,8 +148,8 @@ func TestUpdateAIGatewayAgent_PropagatesSDKError(t *testing.T) {
 		UpdateAiGatewayAgent(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayAgentRequest{
-				GatewayID: parentID,
-				AgentIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                   parentID,
+				AgentIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayAgentRequest: *expectedRequest,
 			},
 		).

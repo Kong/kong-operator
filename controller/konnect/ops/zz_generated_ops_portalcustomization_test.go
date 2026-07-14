@@ -4,13 +4,13 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -29,7 +29,7 @@ func testGeneratedPortalCustomizationForSDKOps() *konnectv1alpha1.PortalCustomiz
 		},
 		Spec: konnectv1alpha1.PortalCustomizationSpec{
 			APISpec: konnectv1alpha1.PortalCustomizationAPISpec{
-				Css: new("test-value"),
+				Css:    new("test-value"),
 				Layout: "test-value",
 				Robots: new("test-value"),
 			},
@@ -55,8 +55,7 @@ func TestCreatePortalCustomization_UsesSDKOpsConversion(t *testing.T) {
 			expectedRequest,
 		).
 		Return(&sdkkonnectops.ReplacePortalCustomizationResponse{
-			PortalCustomization: &sdkkonnectcomp.PortalCustomization{
-			},
+			PortalCustomization: &sdkkonnectcomp.PortalCustomization{},
 		}, nil).
 		Once()
 

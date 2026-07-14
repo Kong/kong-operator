@@ -59,8 +59,8 @@ func updateAIGatewayConsumer(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
 	_, err = sdk.UpdateAiGatewayConsumer(ctx, sdkkonnectops.UpdateAiGatewayConsumerRequest{
-		GatewayID: parentID,
-		ConsumerIDOrName: id,
+		GatewayID:                      parentID,
+		ConsumerIDOrName:               id,
 		UpdateAIGatewayConsumerRequest: *req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

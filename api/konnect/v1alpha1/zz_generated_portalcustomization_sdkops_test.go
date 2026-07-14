@@ -11,7 +11,7 @@ import (
 
 func TestPortalCustomizationAPISpec_ToCreatePortalCustomization(t *testing.T) {
 	spec := &PortalCustomizationAPISpec{
-		Css: new("test-value"),
+		Css:    new("test-value"),
 		Layout: "test-value",
 		Robots: new("test-value"),
 	}
@@ -32,7 +32,7 @@ func TestPortalCustomizationAPISpec_ToCreatePortalCustomization(t *testing.T) {
 
 func TestPortalCustomizationAPISpec_ToUpdatePortalCustomization(t *testing.T) {
 	spec := &PortalCustomizationAPISpec{
-		Css: new("test-value"),
+		Css:    new("test-value"),
 		Layout: "test-value",
 		Robots: new("test-value"),
 	}

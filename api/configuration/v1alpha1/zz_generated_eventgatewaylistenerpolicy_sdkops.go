@@ -205,7 +205,7 @@ func (s *EventGatewayListenerPolicyAPISpec) ToCreateEventGatewayListenerPolicyRe
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch variant {
 	case "EventGatewayTLSListen":
 		var member sdkkonnectcomp.EventGatewayTLSListenerPolicy
@@ -243,7 +243,7 @@ func (s *EventGatewayListenerPolicyAPISpec) ToUpdateEventGatewayListenerPolicyRe
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_ = variant
 	var body sdkkonnectcomp.EventGatewayListenerPolicyUpdate
 	if err := json.Unmarshal(data, &body); err != nil {
@@ -254,7 +254,6 @@ func (s *EventGatewayListenerPolicyAPISpec) ToUpdateEventGatewayListenerPolicyRe
 	}, nil
 }
 
-
 func (obj *EventGatewayListenerPolicy) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*EventGatewayListenerPolicyAPISpec, error) {
 	if obj == nil {
 		return nil, fmt.Errorf("EventGatewayListenerPolicy is nil")
@@ -263,57 +262,57 @@ func (obj *EventGatewayListenerPolicy) sdkOpsAPISpec(ctx context.Context, cl cli
 	apiSpec := obj.Spec.APISpec
 	// Resolve spec.apiSpec.tlsServer.config.certificates[].certificate
 	if apiSpec.EventGatewayListenerPolicyConfig != nil {
-	if apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
-	for i := range apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
-		src := apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Certificate
-		if src.Type == SensitiveDataSourceTypeSecretRef {
-			if src.SecretRef == nil {
-				return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.tlsServer.config.certificates[].certificate")
+		if apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+			for i := range apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
+				src := apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Certificate
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.tlsServer.config.certificates[].certificate")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Certificate.Value = &resolved
+				}
 			}
-			namespace := obj.GetNamespace()
-			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-				namespace = *src.SecretRef.Namespace
-			}
-			var secret corev1.Secret
-			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-			}
-			secretBytes, ok := secret.Data[src.SecretRef.Key]
-			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-			}
-			resolved := string(secretBytes)
-			apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Certificate.Value = &resolved
 		}
-	}
-	}
 	}
 	// Resolve spec.apiSpec.tlsServer.config.certificates[].key
 	if apiSpec.EventGatewayListenerPolicyConfig != nil {
-	if apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
-	for i := range apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
-		src := apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Key
-		if src.Type == SensitiveDataSourceTypeSecretRef {
-			if src.SecretRef == nil {
-				return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.tlsServer.config.certificates[].key")
+		if apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+			for i := range apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
+				src := apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Key
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.tlsServer.config.certificates[].key")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Key.Value = &resolved
+				}
 			}
-			namespace := obj.GetNamespace()
-			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-				namespace = *src.SecretRef.Namespace
-			}
-			var secret corev1.Secret
-			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-			}
-			secretBytes, ok := secret.Data[src.SecretRef.Key]
-			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-			}
-			resolved := string(secretBytes)
-			apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Key.Value = &resolved
 		}
-	}
-	}
 	}
 	return &apiSpec, nil
 }
@@ -325,26 +324,25 @@ func (obj *EventGatewayListenerPolicy) GetSensitiveDataSecretRefs() []SensitiveD
 	}
 	var refs []SensitiveDataSecretRef
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil {
-	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
-	for _, item := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
-		if item.Certificate.Type == SensitiveDataSourceTypeSecretRef && item.Certificate.SecretRef != nil {
-			refs = append(refs, *item.Certificate.SecretRef)
+		if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+			for _, item := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
+				if item.Certificate.Type == SensitiveDataSourceTypeSecretRef && item.Certificate.SecretRef != nil {
+					refs = append(refs, *item.Certificate.SecretRef)
+				}
+			}
 		}
-	}
-	}
 	}
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil {
-	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
-	for _, item := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
-		if item.Key.Type == SensitiveDataSourceTypeSecretRef && item.Key.SecretRef != nil {
-			refs = append(refs, *item.Key.SecretRef)
+		if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+			for _, item := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
+				if item.Key.Type == SensitiveDataSourceTypeSecretRef && item.Key.SecretRef != nil {
+					refs = append(refs, *item.Key.SecretRef)
+				}
+			}
 		}
-	}
-	}
 	}
 	return refs
 }
-
 
 // ToCreateEventGatewayListenerPolicyRequest converts the EventGatewayListenerPolicy to the SDK type
 // sdkkonnectoper.CreateEventGatewayListenerPolicyRequest, resolving referenced Secrets via the provided client.
@@ -355,7 +353,6 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 	}
 	return spec.ToCreateEventGatewayListenerPolicyRequest()
 }
-
 
 // ToUpdateEventGatewayListenerPolicyRequest converts the EventGatewayListenerPolicy to the SDK type
 // sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest, resolving referenced Secrets via the provided client.

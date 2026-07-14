@@ -56,8 +56,8 @@ func updateEventGatewayVirtualCluster(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
 	_, err = sdk.UpdateEventGatewayVirtualCluster(ctx, sdkkonnectops.UpdateEventGatewayVirtualClusterRequest{
-		GatewayID: parentID,
-		VirtualClusterID: id,
+		GatewayID:                   parentID,
+		VirtualClusterID:            id,
 		UpdateVirtualClusterRequest: req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

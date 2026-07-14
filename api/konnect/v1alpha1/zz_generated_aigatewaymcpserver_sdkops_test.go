@@ -9,16 +9,14 @@ import (
 )
 
 func TestAIGatewayMCPServerAPISpec_ToCreateAIGatewayMCPServerRequest(t *testing.T) {
-	spec := &AIGatewayMCPServerAPISpec{
-	}
+	spec := &AIGatewayMCPServerAPISpec{}
 	result, err := spec.ToCreateAIGatewayMCPServerRequest()
 	require.Error(t, err)
 	require.Nil(t, result)
 }
 
 func TestAIGatewayMCPServerAPISpec_ToUpdateAIGatewayMCPServerRequest(t *testing.T) {
-	spec := &AIGatewayMCPServerAPISpec{
-	}
+	spec := &AIGatewayMCPServerAPISpec{}
 	result, err := spec.ToUpdateAIGatewayMCPServerRequest()
 	require.Error(t, err)
 	require.Nil(t, result)

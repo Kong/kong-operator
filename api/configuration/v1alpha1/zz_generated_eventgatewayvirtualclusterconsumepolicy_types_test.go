@@ -71,12 +71,12 @@ func TestEventGatewayVirtualClusterConsumePolicyAPISpecUnmarshalJSON_DecodesUnio
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayVirtualClusterConsumePolicyAPISpec)
+		assert  func(*testing.T, EventGatewayVirtualClusterConsumePolicyAPISpec)
 	}{
 		{
-			name: "EventGatewayVirtualClusterConsumePolicyConfig/decrypt",
+			name:    "EventGatewayVirtualClusterConsumePolicyConfig/decrypt",
 			payload: []byte("{\"type\":\"decrypt\",\"decrypt\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterConsumePolicyAPISpec) {
 				t.Helper()
@@ -92,7 +92,7 @@ func TestEventGatewayVirtualClusterConsumePolicyAPISpecUnmarshalJSON_DecodesUnio
 			},
 		},
 		{
-			name: "EventGatewayVirtualClusterConsumePolicyConfig/decrypt_fields",
+			name:    "EventGatewayVirtualClusterConsumePolicyConfig/decrypt_fields",
 			payload: []byte("{\"type\":\"decryptFields\",\"decryptFields\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterConsumePolicyAPISpec) {
 				t.Helper()
@@ -108,7 +108,7 @@ func TestEventGatewayVirtualClusterConsumePolicyAPISpecUnmarshalJSON_DecodesUnio
 			},
 		},
 		{
-			name: "EventGatewayVirtualClusterConsumePolicyConfig/modify_headers",
+			name:    "EventGatewayVirtualClusterConsumePolicyConfig/modify_headers",
 			payload: []byte("{\"type\":\"modifyHeaders\",\"modifyHeaders\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterConsumePolicyAPISpec) {
 				t.Helper()
@@ -124,7 +124,7 @@ func TestEventGatewayVirtualClusterConsumePolicyAPISpecUnmarshalJSON_DecodesUnio
 			},
 		},
 		{
-			name: "EventGatewayVirtualClusterConsumePolicyConfig/schema_validation",
+			name:    "EventGatewayVirtualClusterConsumePolicyConfig/schema_validation",
 			payload: []byte("{\"type\":\"schemaValidation\",\"schemaValidation\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterConsumePolicyAPISpec) {
 				t.Helper()
@@ -140,7 +140,7 @@ func TestEventGatewayVirtualClusterConsumePolicyAPISpecUnmarshalJSON_DecodesUnio
 			},
 		},
 		{
-			name: "EventGatewayVirtualClusterConsumePolicyConfig/skip_record",
+			name:    "EventGatewayVirtualClusterConsumePolicyConfig/skip_record",
 			payload: []byte("{\"type\":\"skipRecord\",\"skipRecord\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterConsumePolicyAPISpec) {
 				t.Helper()

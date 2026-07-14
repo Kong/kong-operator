@@ -68,12 +68,12 @@ func TestAIGatewayModelAPISpecUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayModelAPISpec)
+		assert  func(*testing.T, AIGatewayModelAPISpec)
 	}{
 		{
-			name: "AIGatewayModelConfig/api",
+			name:    "AIGatewayModelConfig/api",
 			payload: []byte("{\"type\":\"api\",\"api\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelAPISpec) {
 				t.Helper()
@@ -89,7 +89,7 @@ func TestAIGatewayModelAPISpecUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "AIGatewayModelConfig/model",
+			name:    "AIGatewayModelConfig/model",
 			payload: []byte("{\"type\":\"model\",\"model\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelAPISpec) {
 				t.Helper()

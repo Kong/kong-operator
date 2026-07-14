@@ -11,13 +11,13 @@ import (
 
 func TestAIGatewayConsumerCredentialAPISpec_ToCreateAiGatewayConsumerCredentialRequest(t *testing.T) {
 	spec := &AIGatewayConsumerCredentialAPISpec{
-		APIKey: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")},
+		APIKey:      SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")},
 		DisplayName: "test-value",
-		Labels: PublicLabels{"test-key": "test-value"},
-		ManagedBy: ManagedBy{"test-key": "test-value"},
-		Name: AIGatewayEntityIdentifier("test-value"),
-		Ttl: 1,
-		Type: "api-key",
+		Labels:      PublicLabels{"test-key": "test-value"},
+		ManagedBy:   ManagedBy{"test-key": "test-value"},
+		Name:        AIGatewayEntityIdentifier("test-value"),
+		Ttl:         1,
+		Type:        "api-key",
 	}
 	result, err := spec.ToCreateAiGatewayConsumerCredentialRequest()
 	require.NoError(t, err)

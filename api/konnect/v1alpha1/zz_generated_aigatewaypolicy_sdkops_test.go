@@ -12,12 +12,12 @@ import (
 func TestAIGatewayPolicyAPISpec_ToCreateAIGatewayPolicyRequest(t *testing.T) {
 	spec := &AIGatewayPolicyAPISpec{
 		DisplayName: "test-value",
-		Enabled: "Enabled",
-		Global: "Enabled",
-		Labels: PublicLabels{"test-key": "test-value"},
-		ManagedBy: ManagedBy{"test-key": "test-value"},
-		Name: AIGatewayEntityIdentifier("test-value"),
-		Type: "test-value",
+		Enabled:     "Enabled",
+		Global:      "Enabled",
+		Labels:      PublicLabels{"test-key": "test-value"},
+		ManagedBy:   ManagedBy{"test-key": "test-value"},
+		Name:        AIGatewayEntityIdentifier("test-value"),
+		Type:        "test-value",
 	}
 	result, err := spec.ToCreateAIGatewayPolicyRequest()
 	require.NoError(t, err)
@@ -41,11 +41,11 @@ func TestAIGatewayPolicyAPISpec_ToCreateAIGatewayPolicyRequest(t *testing.T) {
 func TestAIGatewayPolicyAPISpec_ToUpdateAIGatewayPolicyRequest(t *testing.T) {
 	spec := &AIGatewayPolicyAPISpec{
 		DisplayName: "test-value",
-		Enabled: "Enabled",
-		Global: "Enabled",
-		Labels: PublicLabels{"test-key": "test-value"},
-		ManagedBy: ManagedBy{"test-key": "test-value"},
-		Name: AIGatewayEntityIdentifier("test-value"),
+		Enabled:     "Enabled",
+		Global:      "Enabled",
+		Labels:      PublicLabels{"test-key": "test-value"},
+		ManagedBy:   ManagedBy{"test-key": "test-value"},
+		Name:        AIGatewayEntityIdentifier("test-value"),
 	}
 	result, err := spec.ToUpdateAIGatewayPolicyRequest()
 	require.NoError(t, err)

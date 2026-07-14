@@ -1470,12 +1470,12 @@ func TestEventGatewayACLRuleUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayACLRule)
+		assert  func(*testing.T, EventGatewayACLRule)
 	}{
 		{
-			name: "ResourceNames/Stat",
+			name:    "ResourceNames/Stat",
 			payload: []byte("{\"resourceNames\":{\"type\":\"stat\",\"stat\":[]}}"),
 			assert: func(t *testing.T, target EventGatewayACLRule) {
 				t.Helper()
@@ -1491,7 +1491,7 @@ func TestEventGatewayACLRuleUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			},
 		},
 		{
-			name: "ResourceNames/Dynam",
+			name:    "ResourceNames/Dynam",
 			payload: []byte("{\"resourceNames\":{\"type\":\"dynam\",\"dynam\":\"\"}}"),
 			assert: func(t *testing.T, target EventGatewayACLRule) {
 				t.Helper()
@@ -1526,12 +1526,12 @@ func TestEventGatewayConsumeSchemaValidationPolicyUnmarshalJSON_DecodesUnionFiel
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayConsumeSchemaValidationPolicy)
+		assert  func(*testing.T, EventGatewayConsumeSchemaValidationPolicy)
 	}{
 		{
-			name: "Config/confluent_schema_registry",
+			name:    "Config/confluent_schema_registry",
 			payload: []byte("{\"config\":{\"type\":\"confluentSchemaRegistry\",\"confluentSchemaRegistry\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicy) {
 				t.Helper()
@@ -1547,7 +1547,7 @@ func TestEventGatewayConsumeSchemaValidationPolicyUnmarshalJSON_DecodesUnionFiel
 			},
 		},
 		{
-			name: "Config/json",
+			name:    "Config/json",
 			payload: []byte("{\"config\":{\"type\":\"json\",\"json\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicy) {
 				t.Helper()
@@ -1582,12 +1582,12 @@ func TestEventGatewayConsumeSchemaValidationPolicyJSONConfigUnmarshalJSON_Decode
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayConsumeSchemaValidationPolicyJSONConfig)
+		assert  func(*testing.T, EventGatewayConsumeSchemaValidationPolicyJSONConfig)
 	}{
 		{
-			name: "SchemaRegistry/Id",
+			name:    "SchemaRegistry/Id",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyJSONConfig) {
 				t.Helper()
@@ -1603,7 +1603,7 @@ func TestEventGatewayConsumeSchemaValidationPolicyJSONConfigUnmarshalJSON_Decode
 			},
 		},
 		{
-			name: "SchemaRegistry/Name",
+			name:    "SchemaRegistry/Name",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"name\",\"name\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyJSONConfig) {
 				t.Helper()
@@ -1638,12 +1638,12 @@ func TestEventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigUnmarshalJ
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig)
+		assert  func(*testing.T, EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig)
 	}{
 		{
-			name: "SchemaRegistry/Id",
+			name:    "SchemaRegistry/Id",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig) {
 				t.Helper()
@@ -1659,7 +1659,7 @@ func TestEventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigUnmarshalJ
 			},
 		},
 		{
-			name: "SchemaRegistry/Name",
+			name:    "SchemaRegistry/Name",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"name\",\"name\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig) {
 				t.Helper()
@@ -1694,12 +1694,12 @@ func TestEventGatewayEncryptConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayEncryptConfig)
+		assert  func(*testing.T, EventGatewayEncryptConfig)
 	}{
 		{
-			name: "EncryptionKey/aws",
+			name:    "EncryptionKey/aws",
 			payload: []byte("{\"encryptionKey\":{\"type\":\"aws\",\"aws\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayEncryptConfig) {
 				t.Helper()
@@ -1715,7 +1715,7 @@ func TestEventGatewayEncryptConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "EncryptionKey/static",
+			name:    "EncryptionKey/static",
 			payload: []byte("{\"encryptionKey\":{\"type\":\"static\",\"static\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayEncryptConfig) {
 				t.Helper()
@@ -1750,12 +1750,12 @@ func TestEventGatewayParsedRecordDecryptionSelectorUnmarshalJSON_DecodesUnionFie
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayParsedRecordDecryptionSelector)
+		assert  func(*testing.T, EventGatewayParsedRecordDecryptionSelector)
 	}{
 		{
-			name: "Paths/Array",
+			name:    "Paths/Array",
 			payload: []byte("{\"paths\":{\"type\":\"array\",\"array\":[]}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordDecryptionSelector) {
 				t.Helper()
@@ -1771,7 +1771,7 @@ func TestEventGatewayParsedRecordDecryptionSelectorUnmarshalJSON_DecodesUnionFie
 			},
 		},
 		{
-			name: "Paths/Expression",
+			name:    "Paths/Expression",
 			payload: []byte("{\"paths\":{\"type\":\"expression\",\"expression\":\"\"}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordDecryptionSelector) {
 				t.Helper()
@@ -1806,12 +1806,12 @@ func TestEventGatewayParsedRecordEncryptionSelectorUnmarshalJSON_DecodesUnionFie
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayParsedRecordEncryptionSelector)
+		assert  func(*testing.T, EventGatewayParsedRecordEncryptionSelector)
 	}{
 		{
-			name: "EncryptionKey/aws",
+			name:    "EncryptionKey/aws",
 			payload: []byte("{\"encryptionKey\":{\"type\":\"aws\",\"aws\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
 				t.Helper()
@@ -1827,7 +1827,7 @@ func TestEventGatewayParsedRecordEncryptionSelectorUnmarshalJSON_DecodesUnionFie
 			},
 		},
 		{
-			name: "EncryptionKey/static",
+			name:    "EncryptionKey/static",
 			payload: []byte("{\"encryptionKey\":{\"type\":\"static\",\"static\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
 				t.Helper()
@@ -1843,7 +1843,7 @@ func TestEventGatewayParsedRecordEncryptionSelectorUnmarshalJSON_DecodesUnionFie
 			},
 		},
 		{
-			name: "Paths/Array",
+			name:    "Paths/Array",
 			payload: []byte("{\"paths\":{\"type\":\"array\",\"array\":[]}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
 				t.Helper()
@@ -1859,7 +1859,7 @@ func TestEventGatewayParsedRecordEncryptionSelectorUnmarshalJSON_DecodesUnionFie
 			},
 		},
 		{
-			name: "Paths/Expression",
+			name:    "Paths/Expression",
 			payload: []byte("{\"paths\":{\"type\":\"expression\",\"expression\":\"\"}}"),
 			assert: func(t *testing.T, target EventGatewayParsedRecordEncryptionSelector) {
 				t.Helper()
@@ -1894,12 +1894,12 @@ func TestEventGatewayProduceSchemaValidationPolicyUnmarshalJSON_DecodesUnionFiel
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayProduceSchemaValidationPolicy)
+		assert  func(*testing.T, EventGatewayProduceSchemaValidationPolicy)
 	}{
 		{
-			name: "Config/confluent_schema_registry",
+			name:    "Config/confluent_schema_registry",
 			payload: []byte("{\"config\":{\"type\":\"confluentSchemaRegistry\",\"confluentSchemaRegistry\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicy) {
 				t.Helper()
@@ -1915,7 +1915,7 @@ func TestEventGatewayProduceSchemaValidationPolicyUnmarshalJSON_DecodesUnionFiel
 			},
 		},
 		{
-			name: "Config/json",
+			name:    "Config/json",
 			payload: []byte("{\"config\":{\"type\":\"json\",\"json\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicy) {
 				t.Helper()
@@ -1950,12 +1950,12 @@ func TestEventGatewayProduceSchemaValidationPolicyJSONConfigUnmarshalJSON_Decode
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayProduceSchemaValidationPolicyJSONConfig)
+		assert  func(*testing.T, EventGatewayProduceSchemaValidationPolicyJSONConfig)
 	}{
 		{
-			name: "SchemaRegistry/Id",
+			name:    "SchemaRegistry/Id",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicyJSONConfig) {
 				t.Helper()
@@ -1971,7 +1971,7 @@ func TestEventGatewayProduceSchemaValidationPolicyJSONConfigUnmarshalJSON_Decode
 			},
 		},
 		{
-			name: "SchemaRegistry/Name",
+			name:    "SchemaRegistry/Name",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"name\",\"name\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicyJSONConfig) {
 				t.Helper()
@@ -2006,12 +2006,12 @@ func TestEventGatewayProduceSchemaValidationPolicySchemaRegistryConfigUnmarshalJ
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig)
+		assert  func(*testing.T, EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig)
 	}{
 		{
-			name: "SchemaRegistry/Id",
+			name:    "SchemaRegistry/Id",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig) {
 				t.Helper()
@@ -2027,7 +2027,7 @@ func TestEventGatewayProduceSchemaValidationPolicySchemaRegistryConfigUnmarshalJ
 			},
 		},
 		{
-			name: "SchemaRegistry/Name",
+			name:    "SchemaRegistry/Name",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"name\",\"name\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig) {
 				t.Helper()
@@ -2062,12 +2062,12 @@ func TestForwardToVirtualClusterPolicyUnmarshalJSON_DecodesUnionFields(t *testin
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, ForwardToVirtualClusterPolicy)
+		assert  func(*testing.T, ForwardToVirtualClusterPolicy)
 	}{
 		{
-			name: "Config/port_mapping",
+			name:    "Config/port_mapping",
 			payload: []byte("{\"config\":{\"type\":\"portMapping\",\"portMapping\":{}}}"),
 			assert: func(t *testing.T, target ForwardToVirtualClusterPolicy) {
 				t.Helper()
@@ -2083,7 +2083,7 @@ func TestForwardToVirtualClusterPolicyUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "Config/sni",
+			name:    "Config/sni",
 			payload: []byte("{\"config\":{\"type\":\"sni\",\"sni\":{}}}"),
 			assert: func(t *testing.T, target ForwardToVirtualClusterPolicy) {
 				t.Helper()

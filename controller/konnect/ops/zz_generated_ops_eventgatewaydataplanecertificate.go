@@ -57,7 +57,7 @@ func updateEventGatewayDataPlaneCertificate(
 	}
 
 	_, err = sdk.UpdateEventGatewayDataPlaneCertificate(ctx, sdkkonnectops.UpdateEventGatewayDataPlaneCertificateRequest{
-		GatewayID: parentID,
+		GatewayID:     parentID,
 		CertificateID: id,
 		UpdateEventGatewayDataPlaneCertificateRequest: req,
 	})

@@ -56,8 +56,8 @@ func updateEventGatewayListener(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
 	_, err = sdk.UpdateEventGatewayListener(ctx, sdkkonnectops.UpdateEventGatewayListenerRequest{
-		GatewayID: parentID,
-		EventGatewayListenerID: id,
+		GatewayID:                         parentID,
+		EventGatewayListenerID:            id,
 		UpdateEventGatewayListenerRequest: req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

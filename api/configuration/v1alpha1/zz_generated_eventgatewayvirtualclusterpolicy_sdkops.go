@@ -182,7 +182,7 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) ToCreateEventGatewayVirtualClu
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch variant {
 	case "EventGatewayACLsPolicy":
 		var member sdkkonnectcomp.EventGatewayACLsPolicy
@@ -211,7 +211,7 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) ToUpdateEventGatewayVirtualClu
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_ = variant
 	var body sdkkonnectcomp.EventGatewayClusterPolicyModify
 	if err := json.Unmarshal(data, &body); err != nil {

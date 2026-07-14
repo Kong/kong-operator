@@ -71,12 +71,12 @@ func TestAIGatewayMCPServerAPISpecUnmarshalJSON_DecodesUnionFields(t *testing.T)
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayMCPServerAPISpec)
+		assert  func(*testing.T, AIGatewayMCPServerAPISpec)
 	}{
 		{
-			name: "AIGatewayMCPServerConfig/conversion-listener",
+			name:    "AIGatewayMCPServerConfig/conversion-listener",
 			payload: []byte("{\"type\":\"conversion-listener\",\"conversion-listener\":{}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerAPISpec) {
 				t.Helper()
@@ -92,7 +92,7 @@ func TestAIGatewayMCPServerAPISpecUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "AIGatewayMCPServerConfig/conversion-only",
+			name:    "AIGatewayMCPServerConfig/conversion-only",
 			payload: []byte("{\"type\":\"conversion-only\",\"conversion-only\":{}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerAPISpec) {
 				t.Helper()
@@ -108,7 +108,7 @@ func TestAIGatewayMCPServerAPISpecUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "AIGatewayMCPServerConfig/listener",
+			name:    "AIGatewayMCPServerConfig/listener",
 			payload: []byte("{\"type\":\"listener\",\"listener\":{}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerAPISpec) {
 				t.Helper()
@@ -124,7 +124,7 @@ func TestAIGatewayMCPServerAPISpecUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "AIGatewayMCPServerConfig/passthrough-listener",
+			name:    "AIGatewayMCPServerConfig/passthrough-listener",
 			payload: []byte("{\"type\":\"passthrough-listener\",\"passthrough-listener\":{}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerAPISpec) {
 				t.Helper()
@@ -140,7 +140,7 @@ func TestAIGatewayMCPServerAPISpecUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "AIGatewayMCPServerConfig/upstream-server",
+			name:    "AIGatewayMCPServerConfig/upstream-server",
 			payload: []byte("{\"type\":\"upstream-server\",\"upstream-server\":{}}"),
 			assert: func(t *testing.T, target AIGatewayMCPServerAPISpec) {
 				t.Helper()

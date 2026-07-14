@@ -68,12 +68,12 @@ func TestAIGatewayIdentityProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *tes
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayIdentityProviderAPISpec)
+		assert  func(*testing.T, AIGatewayIdentityProviderAPISpec)
 	}{
 		{
-			name: "AIGatewayIdentityProviderConfig/key-auth",
+			name:    "AIGatewayIdentityProviderConfig/key-auth",
 			payload: []byte("{\"type\":\"key-auth\",\"key-auth\":{}}"),
 			assert: func(t *testing.T, target AIGatewayIdentityProviderAPISpec) {
 				t.Helper()
@@ -89,7 +89,7 @@ func TestAIGatewayIdentityProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *tes
 			},
 		},
 		{
-			name: "AIGatewayIdentityProviderConfig/openid-connect",
+			name:    "AIGatewayIdentityProviderConfig/openid-connect",
 			payload: []byte("{\"type\":\"openid-connect\",\"openid-connect\":{}}"),
 			assert: func(t *testing.T, target AIGatewayIdentityProviderAPISpec) {
 				t.Helper()

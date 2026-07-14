@@ -11,12 +11,12 @@ import (
 
 func TestPortalPageAPISpec_ToCreatePortalPageRequest(t *testing.T) {
 	spec := &PortalPageAPISpec{
-		Content: PageContent("test-value"),
+		Content:     PageContent("test-value"),
 		Description: Description("test-value"),
-		Slug: PageSlug("test-value"),
-		Status: PublishedStatus("published"),
-		Title: PageTitle("test-value"),
-		Visibility: PageVisibilityStatus("public"),
+		Slug:        PageSlug("test-value"),
+		Status:      PublishedStatus("published"),
+		Title:       PageTitle("test-value"),
+		Visibility:  PageVisibilityStatus("public"),
 	}
 	result, err := spec.ToCreatePortalPageRequest()
 	require.NoError(t, err)
@@ -38,12 +38,12 @@ func TestPortalPageAPISpec_ToCreatePortalPageRequest(t *testing.T) {
 
 func TestPortalPageAPISpec_ToUpdatePortalPageRequest(t *testing.T) {
 	spec := &PortalPageAPISpec{
-		Content: PageContent("test-value"),
+		Content:     PageContent("test-value"),
 		Description: Description("test-value"),
-		Slug: PageSlug("test-value"),
-		Status: PublishedStatus("published"),
-		Title: PageTitle("test-value"),
-		Visibility: PageVisibilityStatus("public"),
+		Slug:        PageSlug("test-value"),
+		Status:      PublishedStatus("published"),
+		Title:       PageTitle("test-value"),
+		Visibility:  PageVisibilityStatus("public"),
 	}
 	result, err := spec.ToUpdatePortalPageRequest()
 	require.NoError(t, err)

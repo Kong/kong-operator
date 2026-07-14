@@ -1008,7 +1008,7 @@ func (s *AIGatewayMCPServerAPISpec) ToCreateAIGatewayMCPServerRequest() (*sdkkon
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch variant {
 	case "ConversionOnly":
 		var member sdkkonnectcomp.AIGatewayMCPServerConversionOnly
@@ -1063,7 +1063,7 @@ func (s *AIGatewayMCPServerAPISpec) ToUpdateAIGatewayMCPServerRequest() (*sdkkon
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var selected map[string]any
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return nil, fmt.Errorf("failed to decode selected AIGatewayMCPServer config: %w", err)

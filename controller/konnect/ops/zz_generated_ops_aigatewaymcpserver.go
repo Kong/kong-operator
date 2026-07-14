@@ -73,8 +73,8 @@ func updateAIGatewayMCPServer(
 	}
 
 	_, err = sdk.UpdateAiGatewayMcpServer(ctx, sdkkonnectops.UpdateAiGatewayMcpServerRequest{
-		GatewayID: parentID,
-		McpServerIDOrName: id,
+		GatewayID:                       parentID,
+		McpServerIDOrName:               id,
 		UpdateAIGatewayMCPServerRequest: *req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

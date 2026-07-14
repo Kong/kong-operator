@@ -11,9 +11,9 @@ import (
 
 func TestAIGatewayDataPlaneCertificateAPISpec_ToCreateAIGatewayDataPlaneCertificateRequest(t *testing.T) {
 	spec := &AIGatewayDataPlaneCertificateAPISpec{
-		Cert: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")},
+		Cert:        SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")},
 		Description: "test-value",
-		Title: "test-value",
+		Title:       "test-value",
 	}
 	result, err := spec.ToCreateAIGatewayDataPlaneCertificateRequest()
 	require.NoError(t, err)

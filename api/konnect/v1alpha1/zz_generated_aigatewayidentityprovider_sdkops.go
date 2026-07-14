@@ -230,7 +230,7 @@ func (s *AIGatewayIdentityProviderAPISpec) ToCreateAIGatewayIdentityProviderRequ
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch variant {
 	case "KeyAuth":
 		var member sdkkonnectcomp.AIGatewayIdentityProviderKeyAuth
@@ -264,7 +264,7 @@ func (s *AIGatewayIdentityProviderAPISpec) ToUpdateAIGatewayIdentityProviderRequ
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var selected map[string]any
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return nil, fmt.Errorf("failed to decode selected AIGatewayIdentityProvider config: %w", err)
@@ -293,7 +293,6 @@ func (s *AIGatewayIdentityProviderAPISpec) ToUpdateAIGatewayIdentityProviderRequ
 	}
 }
 
-
 func (obj *AIGatewayIdentityProvider) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*AIGatewayIdentityProviderAPISpec, error) {
 	if obj == nil {
 		return nil, fmt.Errorf("AIGatewayIdentityProvider is nil")
@@ -302,30 +301,30 @@ func (obj *AIGatewayIdentityProvider) sdkOpsAPISpec(ctx context.Context, cl clie
 	apiSpec := obj.Spec.APISpec
 	// Resolve spec.apiSpec.openid-connect.config.clientSecret
 	if apiSpec.AIGatewayIdentityProviderConfig != nil {
-	if apiSpec.AIGatewayIdentityProviderConfig.OpenIDConnect != nil {
-	for i := range apiSpec.AIGatewayIdentityProviderConfig.OpenIDConnect.Config.ClientSecret {
-		src := apiSpec.AIGatewayIdentityProviderConfig.OpenIDConnect.Config.ClientSecret[i]
-		if src.Type == SensitiveDataSourceTypeSecretRef {
-			if src.SecretRef == nil {
-				return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.openid-connect.config.clientSecret")
+		if apiSpec.AIGatewayIdentityProviderConfig.OpenIDConnect != nil {
+			for i := range apiSpec.AIGatewayIdentityProviderConfig.OpenIDConnect.Config.ClientSecret {
+				src := apiSpec.AIGatewayIdentityProviderConfig.OpenIDConnect.Config.ClientSecret[i]
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.openid-connect.config.clientSecret")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayIdentityProviderConfig.OpenIDConnect.Config.ClientSecret[i].Value = &resolved
+				}
 			}
-			namespace := obj.GetNamespace()
-			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-				namespace = *src.SecretRef.Namespace
-			}
-			var secret corev1.Secret
-			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-			}
-			secretBytes, ok := secret.Data[src.SecretRef.Key]
-			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-			}
-			resolved := string(secretBytes)
-			apiSpec.AIGatewayIdentityProviderConfig.OpenIDConnect.Config.ClientSecret[i].Value = &resolved
 		}
-	}
-	}
 	}
 	return &apiSpec, nil
 }
@@ -337,17 +336,16 @@ func (obj *AIGatewayIdentityProvider) GetSensitiveDataSecretRefs() []SensitiveDa
 	}
 	var refs []SensitiveDataSecretRef
 	if obj.Spec.APISpec.AIGatewayIdentityProviderConfig != nil {
-	if obj.Spec.APISpec.AIGatewayIdentityProviderConfig.OpenIDConnect != nil {
-	for _, item := range obj.Spec.APISpec.AIGatewayIdentityProviderConfig.OpenIDConnect.Config.ClientSecret {
-		if item.Type == SensitiveDataSourceTypeSecretRef && item.SecretRef != nil {
-			refs = append(refs, *item.SecretRef)
+		if obj.Spec.APISpec.AIGatewayIdentityProviderConfig.OpenIDConnect != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayIdentityProviderConfig.OpenIDConnect.Config.ClientSecret {
+				if item.Type == SensitiveDataSourceTypeSecretRef && item.SecretRef != nil {
+					refs = append(refs, *item.SecretRef)
+				}
+			}
 		}
-	}
-	}
 	}
 	return refs
 }
-
 
 // ToCreateAIGatewayIdentityProviderRequest converts the AIGatewayIdentityProvider to the SDK type
 // sdkkonnectcomp.CreateAIGatewayIdentityProviderRequest, resolving referenced Secrets via the provided client.
@@ -358,7 +356,6 @@ func (obj *AIGatewayIdentityProvider) ToCreateAIGatewayIdentityProviderRequest(c
 	}
 	return spec.ToCreateAIGatewayIdentityProviderRequest()
 }
-
 
 // ToUpdateAIGatewayIdentityProviderRequest converts the AIGatewayIdentityProvider to the SDK type
 // sdkkonnectcomp.UpdateAIGatewayIdentityProviderRequest, resolving referenced Secrets via the provided client.

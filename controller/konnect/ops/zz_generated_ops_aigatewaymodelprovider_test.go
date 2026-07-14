@@ -4,15 +4,15 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -32,7 +32,7 @@ func testGeneratedAIGatewayModelProviderForSDKOps() *konnectv1alpha1.AIGatewayMo
 		Spec: konnectv1alpha1.AIGatewayModelProviderSpec{
 			APISpec: konnectv1alpha1.AIGatewayModelProviderAPISpec{
 				AIGatewayModelProviderConfig: &konnectv1alpha1.AIGatewayModelProviderConfig{
-					Type: konnectv1alpha1.AIGatewayModelProviderConfigTypeAnthropic,
+					Type:      konnectv1alpha1.AIGatewayModelProviderConfigTypeAnthropic,
 					Anthropic: &konnectv1alpha1.AIGatewayModelProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: konnectv1alpha1.AIGatewayModelProviderAnthropicConfig{Auth: konnectv1alpha1.AIGatewayModelProviderConfigAuthBasic{Headers: []konnectv1alpha1.AIGatewayModelProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: konnectv1alpha1.SensitiveDataSource{Type: konnectv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")}}}}}},
 				},
 			},
@@ -115,8 +115,8 @@ func TestUpdateAIGatewayModelProvider_UsesSDKOpsConversion(t *testing.T) {
 		UpdateAiGatewayModelProvider(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayModelProviderRequest{
-				GatewayID: parentID,
-				ModelProviderIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                           parentID,
+				ModelProviderIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayModelProviderRequest: *expectedRequest,
 			},
 		).
@@ -144,8 +144,8 @@ func TestUpdateAIGatewayModelProvider_PropagatesSDKError(t *testing.T) {
 		UpdateAiGatewayModelProvider(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayModelProviderRequest{
-				GatewayID: parentID,
-				ModelProviderIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                           parentID,
+				ModelProviderIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayModelProviderRequest: *expectedRequest,
 			},
 		).

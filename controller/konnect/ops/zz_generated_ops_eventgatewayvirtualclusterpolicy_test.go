@@ -4,13 +4,13 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
@@ -30,7 +30,7 @@ func testGeneratedEventGatewayVirtualClusterPolicyForSDKOps() *configurationv1al
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicySpec{
 			APISpec: configurationv1alpha1.EventGatewayVirtualClusterPolicyAPISpec{
 				EventGatewayVirtualClusterPolicyConfig: &configurationv1alpha1.EventGatewayVirtualClusterPolicyConfig{
-					Type: configurationv1alpha1.EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy,
+					Type:                   configurationv1alpha1.EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy,
 					EventGatewayACLsPolicy: &configurationv1alpha1.EventGatewayACLsPolicy{Config: configurationv1alpha1.EventGatewayACLPolicyConfig{Rules: []configurationv1alpha1.EventGatewayACLRule{{Action: "allow", ResourceType: "topic", Operations: []configurationv1alpha1.EventGatewayACLOperation{{Name: "read"}}, ResourceNames: &configurationv1alpha1.EventGatewayACLRuleResourceNames{Type: configurationv1alpha1.EventGatewayACLRuleResourceNamesTypeStat, Stat: &configurationv1alpha1.EventGatewayACLRuleResourceNamesStaticArray{{Match: "orders.*"}}}}}}},
 				},
 			},
@@ -172,9 +172,9 @@ func TestDeleteEventGatewayVirtualClusterPolicy_UsesGeneratedSDKOps(t *testing.T
 		DeleteEventGatewayVirtualClusterClusterLevelPolicy(
 			mock.Anything,
 			sdkkonnectops.DeleteEventGatewayVirtualClusterClusterLevelPolicyRequest{
-				GatewayID: gatewayID,
+				GatewayID:        gatewayID,
 				VirtualClusterID: virtualClusterID,
-				PolicyID: obj.GetKonnectStatus().GetKonnectID(),
+				PolicyID:         obj.GetKonnectStatus().GetKonnectID(),
 			},
 		).
 		Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterClusterLevelPolicyResponse{}, nil).
@@ -200,9 +200,9 @@ func TestDeleteEventGatewayVirtualClusterPolicy_PropagatesSDKError(t *testing.T)
 		DeleteEventGatewayVirtualClusterClusterLevelPolicy(
 			mock.Anything,
 			sdkkonnectops.DeleteEventGatewayVirtualClusterClusterLevelPolicyRequest{
-				GatewayID: gatewayID,
+				GatewayID:        gatewayID,
 				VirtualClusterID: virtualClusterID,
-				PolicyID: obj.GetKonnectStatus().GetKonnectID(),
+				PolicyID:         obj.GetKonnectStatus().GetKonnectID(),
 			},
 		).
 		Return(nil, sdkErr).

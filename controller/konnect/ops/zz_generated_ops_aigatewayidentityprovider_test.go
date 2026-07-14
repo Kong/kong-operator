@@ -4,15 +4,15 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -32,7 +32,7 @@ func testGeneratedAIGatewayIdentityProviderForSDKOps() *konnectv1alpha1.AIGatewa
 		Spec: konnectv1alpha1.AIGatewayIdentityProviderSpec{
 			APISpec: konnectv1alpha1.AIGatewayIdentityProviderAPISpec{
 				AIGatewayIdentityProviderConfig: &konnectv1alpha1.AIGatewayIdentityProviderConfig{
-					Type: konnectv1alpha1.AIGatewayIdentityProviderConfigTypeKeyAuth,
+					Type:    konnectv1alpha1.AIGatewayIdentityProviderConfigTypeKeyAuth,
 					KeyAuth: &konnectv1alpha1.AIGatewayIdentityProviderKeyAuth{DisplayName: "test-display-name", Name: "test-identity-provider"},
 				},
 			},
@@ -115,8 +115,8 @@ func TestUpdateAIGatewayIdentityProvider_UsesSDKOpsConversion(t *testing.T) {
 		UpdateAiGatewayIdentityProvider(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayIdentityProviderRequest{
-				GatewayID: parentID,
-				IdentityProviderIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                              parentID,
+				IdentityProviderIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayIdentityProviderRequest: *expectedRequest,
 			},
 		).
@@ -144,8 +144,8 @@ func TestUpdateAIGatewayIdentityProvider_PropagatesSDKError(t *testing.T) {
 		UpdateAiGatewayIdentityProvider(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayIdentityProviderRequest{
-				GatewayID: parentID,
-				IdentityProviderIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                              parentID,
+				IdentityProviderIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayIdentityProviderRequest: *expectedRequest,
 			},
 		).

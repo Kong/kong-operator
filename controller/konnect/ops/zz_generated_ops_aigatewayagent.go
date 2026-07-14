@@ -59,8 +59,8 @@ func updateAIGatewayAgent(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
 	_, err = sdk.UpdateAiGatewayAgent(ctx, sdkkonnectops.UpdateAiGatewayAgentRequest{
-		GatewayID: parentID,
-		AgentIDOrName: id,
+		GatewayID:                   parentID,
+		AgentIDOrName:               id,
 		UpdateAIGatewayAgentRequest: *req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

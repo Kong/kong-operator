@@ -63,8 +63,8 @@ func deleteAIGatewayConsumerCredential(
 	id := obj.GetKonnectStatus().GetKonnectID()
 
 	_, err := sdk.DeleteAiGatewayConsumerCredential(ctx, sdkkonnectops.DeleteAiGatewayConsumerCredentialRequest{
-		GatewayID: gatewayID,
-		ConsumerID: consumerID,
+		GatewayID:    gatewayID,
+		ConsumerID:   consumerID,
 		CredentialID: id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
@@ -87,7 +87,7 @@ func getAIGatewayConsumerCredentialForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayConsumer", Op: GetOp}
 	}
 	resp, err := sdk.ListAiGatewayConsumerCredentials(ctx, sdkkonnectops.ListAiGatewayConsumerCredentialsRequest{
-		GatewayID: gatewayID,
+		GatewayID:  gatewayID,
 		ConsumerID: consumerID,
 	})
 	if err != nil {

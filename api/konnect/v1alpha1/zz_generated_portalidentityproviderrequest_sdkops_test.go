@@ -12,7 +12,7 @@ import (
 func TestPortalIdentityProviderRequestAPISpec_ToPortalCreateIdentityProvider(t *testing.T) {
 	spec := &PortalIdentityProviderRequestAPISpec{
 		Enabled: "Enabled",
-		Type: IdentityProviderType("oidc"),
+		Type:    IdentityProviderType("oidc"),
 	}
 	result, err := spec.ToPortalCreateIdentityProvider()
 	require.NoError(t, err)
@@ -31,7 +31,7 @@ func TestPortalIdentityProviderRequestAPISpec_ToPortalCreateIdentityProvider(t *
 func TestPortalIdentityProviderRequestAPISpec_ToPortalUpdateIdentityProvider(t *testing.T) {
 	spec := &PortalIdentityProviderRequestAPISpec{
 		Enabled: "Enabled",
-		Type: IdentityProviderType("oidc"),
+		Type:    IdentityProviderType("oidc"),
 	}
 	result, err := spec.ToPortalUpdateIdentityProvider()
 	require.NoError(t, err)
