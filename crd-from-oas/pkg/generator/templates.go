@@ -2186,6 +2186,34 @@ func create{{.Entity}}(
 	sdk sdkkonnectgo.{{.SDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .SupportsMirror}}
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		// Mirror: the entity already exists in Konnect; fetch it by ID instead of creating it.
+		id := string(obj.Spec.Mirror.Konnect.ID)
+		resp, err := sdk.{{.GetSDKMethod}}(ctx, id)
+		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
+			return errWrap
+		}
+		if resp == nil || resp.{{.RespField}} == nil {
+			return fmt.Errorf("failed getting mirrored %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+		obj.SetKonnectID(id)
+{{- if .ResponseStatusFields}}
+		const (
+			protocolHTTPS = "https://"
+			protocolHTTP  = "http://"
+		)
+{{- range .ResponseStatusFields}}
+		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
+{{- range .Fields}}
+			{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
+{{- end}}
+		}
+{{- end}}
+{{- end}}
+		return nil
+	}
+{{- end}}
 {{- range .Parents}}
 	{{.VarName}} := obj.{{.IDGetter}}()
 	if {{.VarName}} == "" {
