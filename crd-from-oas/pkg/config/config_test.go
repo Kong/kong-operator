@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLoadProjectConfig(t *testing.T) {
@@ -1202,4 +1203,57 @@ func TestReferenceConfigTypeName(t *testing.T) {
 		Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
 		RefTypeName: "AIGatewayACLRef",
 	}.TypeName())
+}
+
+func TestSourceConfig_Unmarshal(t *testing.T) {
+	const y = `
+path: /v1/event-gateways
+name: KonnectEventGateway
+source:
+  supportsMirror: true
+`
+	var tc TypeConfig
+	require.NoError(t, yaml.Unmarshal([]byte(y), &tc))
+	require.NotNil(t, tc.Source)
+	require.True(t, tc.Source.SupportsMirror)
+}
+
+func TestSourceConfig_AbsentIsNil(t *testing.T) {
+	const y = `
+path: /v1/event-gateways
+name: KonnectEventGateway
+`
+	var tc TypeConfig
+	require.NoError(t, yaml.Unmarshal([]byte(y), &tc))
+	require.Nil(t, tc.Source)
+}
+
+func TestSourceConfig_ValidateRootOnly(t *testing.T) {
+	child := &TypeConfig{
+		Path:   "/v1/event-gateways/{gatewayId}/listeners",
+		Source: &SourceConfig{SupportsMirror: true},
+	}
+	require.ErrorContains(t, child.validate(), "supportsMirror")
+
+	root := &TypeConfig{
+		Path:   "/v1/event-gateways",
+		Source: &SourceConfig{SupportsMirror: true},
+	}
+	require.NoError(t, root.validate())
+}
+
+func TestSourceConfigs_Accessor(t *testing.T) {
+	c := &APIGroupVersionConfig{
+		Types: []*TypeConfig{
+			{Path: "/v1/event-gateways", Source: &SourceConfig{SupportsMirror: true}},
+			{Path: "/v1/portals"},
+		},
+	}
+	got := c.SourceConfigs(map[string]string{
+		"/v1/event-gateways": "KonnectEventGateway",
+		"/v1/portals":        "Portal",
+	})
+	require.Contains(t, got, "KonnectEventGateway")
+	require.True(t, got["KonnectEventGateway"].SupportsMirror)
+	require.NotContains(t, got, "Portal")
 }
