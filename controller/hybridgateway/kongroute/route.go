@@ -128,6 +128,7 @@ func RoutesForHTTPRouteRule(
 		return nil, fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
 			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
 	}
+	tags := metadata.ExtractTags(httpRoute.Annotations)
 
 	for i, match := range rule.Matches {
 		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, namingParentRef, match, i)
@@ -144,6 +145,7 @@ func RoutesForHTTPRouteRule(
 			WithHosts(hostnames).
 			WithStripPath(stripPath).
 			WithPreserveHost(preserveHost).
+			WithSpecTags(tags).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
 		if priority := priorityForHeaderOnlyHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
@@ -380,6 +382,8 @@ func routesForTLSRouteRule(
 		protocol = sdkkonnectcomp.ProtocolsTLS
 	}
 
+	tags := metadata.ExtractTags(tlsRoute.Annotations)
+
 	routeBuilder := builder.NewKongRoute().WithName(routeName).
 		WithNamespace(metadata.NamespaceFromParentRef(tlsRoute, pRef)).
 		WithLabels(tlsRoute, pRef).
@@ -387,7 +391,8 @@ func routesForTLSRouteRule(
 		WithSpecName(routeName).
 		WithKongService(serviceName).
 		WithProtocols(protocol).
-		WithSNIs(hostnames)
+		WithSNIs(hostnames).
+		WithSpecTags(tags)
 
 	kongRoute, err := routeBuilder.Build()
 	if err != nil {
