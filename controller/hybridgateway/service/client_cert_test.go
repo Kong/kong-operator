@@ -280,6 +280,22 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 	serviceName := namegen.NewKongServiceNameForHTTPRouteRule(httpRoute, cp, rule)
 
 	certSecret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-client-cert",
+			Namespace: "test-ns",
+			Annotations: map[string]string{
+				"konghq.com/tags": "cc-tag",
+			},
+		},
+		Data: map[string][]byte{
+			"tls.crt": []byte("cert-data"),
+			"tls.key": []byte("key-data"),
+		},
+	}
+
+	// certSecretNoTags carries no konghq.com/tags annotation; used to prove that tags on
+	// the backend Service do not leak into the client-cert KongCertificate (Secret-only).
+	certSecretNoTags := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "my-client-cert", Namespace: "test-ns"},
 		Data: map[string][]byte{
 			"tls.crt": []byte("cert-data"),
@@ -295,6 +311,7 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 		wantCertName          string
 		wantClientCertRef     bool
 		wantServiceCertRefNil bool
+		wantTags              commonv1alpha1.Tags
 	}{
 		{
 			name:                  "no annotation - no cert",
@@ -313,6 +330,7 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 			wantCertNotNil:    true,
 			wantCertName:      serviceName,
 			wantClientCertRef: true,
+			wantTags:          commonv1alpha1.Tags{"cc-tag"},
 		},
 		{
 			name: "annotation + secret missing - no cert, service produced without ref",
@@ -343,6 +361,21 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 			wantCertNotNil:        false,
 			wantServiceCertRefNil: true,
 		},
+		{
+			// Secret-only invariant: tags on the backend Service must not leak into the
+			// client-cert KongCertificate when the Secret itself carries no tags.
+			name: "tags on backend Service do not leak into client-cert KongCertificate (Secret-only)",
+			svcAnnotations: map[string]string{
+				"konghq.com/client-cert": "my-client-cert",
+				"konghq.com/protocol":    "https",
+				"konghq.com/tags":        "svc-tag",
+			},
+			secrets:           []client.Object{&certSecretNoTags},
+			wantCertNotNil:    true,
+			wantCertName:      serviceName,
+			wantClientCertRef: true,
+			wantTags:          nil,
+		},
 	}
 
 	for _, tt := range tests {
@@ -369,6 +402,7 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 				assert.Equal(t, "test-ns", cert.Namespace)
 				require.NotNil(t, cert.Spec.SecretRef)
 				assert.Equal(t, "my-client-cert", cert.Spec.SecretRef.Name)
+				assert.Equal(t, tt.wantTags, cert.Spec.Tags, "client-cert KongCertificate tags must come solely from the Secret")
 			} else {
 				assert.Nil(t, cert, "expected KongCertificate to be nil")
 			}

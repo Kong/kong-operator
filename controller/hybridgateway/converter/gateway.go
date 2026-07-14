@@ -17,6 +17,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
@@ -303,15 +304,19 @@ func (c *gatewayConverter) processListenerCertificate(
 		return fmt.Errorf("invalid TLS secret %s/%s for listener %+v", secretNamespace, certRef.Name, listener)
 	}
 
+	// KongCertificate/KongSNI tags come solely from the TLS Secret's konghq.com/tags
+	// annotation. Tags on the Gateway or backend Service must not leak here.
+	certTags := metadata.ExtractTags(secret.GetAnnotations())
+
 	// Create the KongCertificate resource.
-	kongCert, err := c.buildKongCertificate(listener, certRef, secretNamespace)
+	kongCert, err := c.buildKongCertificate(listener, certRef, secretNamespace, certTags)
 	if err != nil {
 		return fmt.Errorf("failed to build KongCertificate: %w", err)
 	}
 	c.outputStore = append(c.outputStore, &kongCert)
 
 	// Create KongSNI resource for the listener's hostname.
-	kongSNI, err := c.buildKongSNI(listener, &kongCert)
+	kongSNI, err := c.buildKongSNI(listener, &kongCert, certTags)
 	if err != nil {
 		return fmt.Errorf("failed to build KongSNI: %w", err)
 	}
@@ -331,6 +336,7 @@ func (c *gatewayConverter) buildKongCertificate(
 	listener *gwtypes.Listener,
 	certRef gatewayv1.SecretObjectReference,
 	secretNamespace string,
+	tags []string,
 ) (configurationv1alpha1.KongCertificate, error) {
 
 	// Generate a name for the KongCertificate resource.
@@ -342,6 +348,7 @@ func (c *gatewayConverter) buildKongCertificate(
 		WithControlPlaneRef(*c.controlPlaneRef).
 		WithLabels(c.gateway, listener).
 		WithAnnotations(c.gateway).
+		WithSpecTags(tags).
 		WithOwner(c.gateway).
 		Build()
 
@@ -358,6 +365,7 @@ func (c *gatewayConverter) buildKongCertificate(
 func (c *gatewayConverter) buildKongSNI(
 	listener *gwtypes.Listener,
 	kongCert *configurationv1alpha1.KongCertificate,
+	tags []string,
 ) (configurationv1alpha1.KongSNI, error) {
 	// Determine hostname to create SNI for.
 	hostname := "*" // Default to wildcard if no hostname specified
@@ -372,6 +380,7 @@ func (c *gatewayConverter) buildKongSNI(
 		WithCertificateRef(kongCert.Name).
 		WithLabels(c.gateway, listener).
 		WithAnnotations(c.gateway).
+		WithSpecTags(tags).
 		WithOwner(c.gateway).
 		Build()
 

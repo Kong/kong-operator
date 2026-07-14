@@ -277,6 +277,10 @@ func buildClientCertificate[
 		return nil
 	}
 
+	// KongCertificate tags come solely from the client-cert Secret's konghq.com/tags
+	// annotation. Tags on the backend Service must not leak here.
+	certTags := metadata.ExtractTags(secret.GetAnnotations())
+
 	cert, err := builder.NewKongCertificate().
 		WithName(serviceName).
 		WithNamespace(serviceNamespace).
@@ -284,6 +288,7 @@ func buildClientCertificate[
 		WithControlPlaneRef(*cp).
 		WithLabelsForRoute(parentRoute, pRef).
 		WithAnnotationsForRoute(parentRoute, pRef).
+		WithSpecTags(certTags).
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongCertificate resource", "cert", serviceName)
