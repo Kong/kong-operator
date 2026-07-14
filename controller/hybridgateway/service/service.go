@@ -149,6 +149,8 @@ func ServiceForRuleWithName[
 
 	pRefNamespace := metadata.NamespaceFromParentRef(parentRoute, pRef)
 
+	tags := utils.TagsFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+
 	// Resolve client certificate from the backend Service annotations (first-wins).
 	certSecretName, certOwnerSvc := resolveClientCertFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	kongCertificate = buildClientCertificate(
@@ -181,7 +183,9 @@ func ServiceForRuleWithName[
 		WithWriteTimeout(writeTimeout).
 		WithRetries(retries).
 		WithClientCertificateRef(clientCertRefName(kongCertificate)).
-		WithControlPlaneRef(*cp).Build()
+		WithControlPlaneRef(*cp).
+		WithSpecTags(tags).
+		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
 		return nil, nil, nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)

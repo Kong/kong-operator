@@ -631,6 +631,86 @@ func TestUpstreamForRule_HostHeaderFirstWins(t *testing.T) {
 	assert.Equal(t, "first.example.com", *upstream.Spec.HostHeader)
 }
 
+func TestUpstreamForRule_TagsAnnotation(t *testing.T) {
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	makeRule := func(svcName string) gwtypes.HTTPRouteRule {
+		return gwtypes.HTTPRouteRule{
+			BackendRefs: []gwtypes.HTTPBackendRef{
+				{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name: gwtypes.ObjectName(svcName),
+							Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+						},
+					},
+				},
+			},
+		}
+	}
+
+	makeSvc := func(name, namespace string, anns map[string]string) *corev1.Service {
+		return &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        name,
+				Namespace:   namespace,
+				Annotations: anns,
+			},
+		}
+	}
+
+	tests := []struct {
+		name         string
+		backendSvc   *corev1.Service
+		expectedTags commonv1alpha1.Tags
+	}{
+		{
+			name: "annotation present",
+			backendSvc: makeSvc("test-svc", "test-namespace", map[string]string{
+				"konghq.com/tags": "team-a,prod",
+			}),
+			expectedTags: commonv1alpha1.Tags{"team-a", "prod"},
+		},
+		{
+			name:         "annotation absent",
+			backendSvc:   makeSvc("test-svc", "test-namespace", nil),
+			expectedTags: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := newTestScheme(t)
+			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.backendSvc).Build()
+
+			upstream, err := UpstreamForRule(context.Background(), logr.Discard(), cl, httpRoute, makeRule("test-svc"), pRef, cp)
+			require.NoError(t, err)
+			require.NotNil(t, upstream)
+
+			if tt.expectedTags == nil {
+				assert.Nil(t, upstream.Spec.Tags)
+			} else {
+				assert.Equal(t, tt.expectedTags, upstream.Spec.Tags)
+			}
+		})
+	}
+}
+
 func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
