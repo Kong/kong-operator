@@ -6235,3 +6235,58 @@ func TestEntitySupportsMirror(t *testing.T) {
 	require.False(t, g.entitySupportsMirror("Portal"))
 	require.False(t, g.entitySupportsMirror("Unknown"))
 }
+
+func TestGenerateCRDType_MirrorSpecFields(t *testing.T) {
+	schema := &parser.Schema{
+		Name: "CreateKonnectEventGateway",
+		Properties: []*parser.Property{
+			{Name: "name", Type: "string"},
+		},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventGateway": {IsRoot: new(true)},
+		},
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	content, err := g.generateCRDType("CreateKonnectEventGateway", schema)
+	require.NoError(t, err)
+
+	// Source + Mirror fields present, reusing shared types.
+	require.Contains(t, content, "Source *commonv1alpha1.EntitySource `json:\"source,omitempty\"`")
+	require.Contains(t, content, "Mirror *konnectv1alpha2.MirrorSpec `json:\"mirror,omitempty\"`")
+	// APISpec becomes an optional pointer.
+	require.Contains(t, content, "APISpec *KonnectEventGatewayAPISpec `json:\"apiSpec,omitempty\"`")
+	// Spec-level CEL.
+	require.Contains(t, content, "spec.source is immutable")
+	require.Contains(t, content, "mirror field must be set for type Mirror")
+	require.Contains(t, content, "mirror field cannot be set for type Origin")
+	require.Contains(t, content, "apiSpec must be set for type Origin")
+	require.Contains(t, content, "apiSpec cannot be set for type Mirror")
+	// commonv1alpha1 import present.
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+}
+
+func TestGenerateCRDType_NoMirrorByDefault(t *testing.T) {
+	schema := &parser.Schema{
+		Name:       "CreatePortal",
+		Properties: []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal": {IsRoot: new(true)},
+		},
+	})
+	content, err := g.generateCRDType("CreatePortal", schema)
+	require.NoError(t, err)
+	require.NotContains(t, content, "Mirror *konnectv1alpha2.MirrorSpec")
+	require.NotContains(t, content, "spec.source is immutable")
+	// APISpec stays a value struct.
+	require.Contains(t, content, "APISpec PortalAPISpec `json:\"apiSpec,omitzero\"`")
+}

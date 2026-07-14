@@ -2656,6 +2656,8 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
+		SupportsMirror            bool
+		NeedsCommonV1Alpha1Import bool
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -2677,6 +2679,10 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
+		SupportsMirror:            g.entitySupportsMirror(entityName),
+		NeedsCommonV1Alpha1Import: g.entitySupportsMirror(entityName) &&
+			(objectRefImport == nil ||
+				objectRefImport.Path != "github.com/kong/kong-operator/v2/api/common/v1alpha1"),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

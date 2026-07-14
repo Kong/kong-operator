@@ -23,6 +23,9 @@ import (
 {{- if .HasRootReconciler}}
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 {{- end}}
+{{- if .NeedsCommonV1Alpha1Import}}
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+{{- end}}
 )
 
 // {{.EntityName}} is the Schema for the {{.EntityName | lower}}s API.
@@ -60,12 +63,34 @@ type {{.EntityName}}List struct {
 }
 
 // {{.EntityName}}Spec defines the desired state of {{.EntityName}}.
+{{- if .SupportsMirror}}
+//
+// +kubebuilder:validation:XValidation:message="spec.source is immutable", rule="!has(self.source) && !has(oldSelf.source) ? true : self.source == oldSelf.source"
+// +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror", rule="self.source == 'Mirror' ? has(self.mirror) : true"
+// +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin", rule="self.source == 'Origin' ? !has(self.mirror) : true"
+// +kubebuilder:validation:XValidation:message="apiSpec must be set for type Origin", rule="self.source == 'Origin' ? has(self.apiSpec) : true"
+// +kubebuilder:validation:XValidation:message="apiSpec cannot be set for type Mirror", rule="self.source == 'Mirror' ? !has(self.apiSpec) : true"
+{{- end}}
 type {{.EntityName}}Spec struct {
 {{- if .HasRootReconciler}}
 	// KonnectConfiguration is the Konnect configuration for this entity.
 	//
 	// +required
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration ` + "`" + `json:"konnect"` + "`" + `
+{{- end}}
+{{- if .SupportsMirror}}
+
+	// Source represents the source type of the Konnect entity.
+	//
+	// +kubebuilder:validation:Enum=Origin;Mirror
+	// +optional
+	// +kubebuilder:default=Origin
+	Source *commonv1alpha1.EntitySource ` + "`" + `json:"source,omitempty"` + "`" + `
+
+	// Mirror is the Konnect Mirror configuration, only applicable when source is Mirror.
+	//
+	// +optional
+	Mirror *konnectv1alpha2.MirrorSpec ` + "`" + `json:"mirror,omitempty"` + "`" + `
 {{- end}}
 {{- if .ParentRef}}
 	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
@@ -92,7 +117,11 @@ type {{.EntityName}}Spec struct {
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
+{{- if .SupportsMirror}}
+	APISpec *{{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitempty"` + "`" + `
+{{- else}}
 	APISpec {{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitzero"` + "`" + `
+{{- end}}
 }
 {{- range .Associations}}
 
