@@ -364,7 +364,6 @@ func konnectExtensionTestCases(t *testing.T, cl client.Client, params KonnectExt
 		})
 
 		t.Run("automatic secret provisioning", func(t *testing.T) {
-			t.Skipf("Skip until flakiness is resolved, TODO: https://github.com/Kong/kong-operator/issues/4807")
 			konnectExtension := deploy.KonnectExtension(
 				t, ctx, params.client,
 				deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
@@ -467,7 +466,7 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 	dataPlane := builder.NewDataPlaneBuilder().
 		WithObjectMeta(metav1.ObjectMeta{
 			Namespace: p.namespace,
-			Name:      "test-konnect-extension",
+			Name:      "test-" + p.konnectExtension.Name,
 		}).
 		WithPodTemplateSpec(&corev1.PodTemplateSpec{
 			Spec: corev1.PodSpec{
@@ -509,14 +508,21 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 	}
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dpName, integration.GetClients().OperatorClient), waitTime, tickTime)
+	if !assert.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dpName, integration.GetClients().OperatorClient), waitTime, tickTime) {
+		require.NoError(t, cl.Get(ctx, dpName, dataPlane))
+		t.Errorf("dataplane %s did not become ready, status: %+v", dpName, dataPlane.Status)
+		return
+	}
 
 	t.Logf("verifying dataplane %s has ingress service", dpName)
 	var dpIngressService corev1.Service
-	require.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dpName, &dpIngressService, integration.GetClients(), client.MatchingLabels{
+	if !assert.Eventually(t, testutils.DataPlaneHasActiveService(t, ctx, dpName, &dpIngressService, integration.GetClients(), client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
-	}), waitTime, tickTime)
+	}), waitTime, tickTime) {
+		t.Errorf("dataplane ingress service %s did not become ready, status: %+v", client.ObjectKeyFromObject(&dpIngressService), dpIngressService.Status)
+		return
+	}
 
 	t.Log("verifying dataplane services receive IP addresses")
 	require.Eventually(t, func() bool {
