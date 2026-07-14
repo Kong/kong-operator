@@ -20,7 +20,7 @@ import (
 {{- if .ObjectRefImport}}
 	{{.ObjectRefImport.Alias}} "{{.ObjectRefImport.Path}}"
 {{- end}}
-{{- if .HasRootReconciler}}
+{{- if or .HasRootReconciler .SupportsMirror}}
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 {{- end}}
 {{- if .NeedsCommonV1Alpha1Import}}
