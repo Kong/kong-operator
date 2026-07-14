@@ -614,3 +614,18 @@ func TestKongRouteBuilder_MultipleErrors(t *testing.T) {
 	assert.Contains(t, err.Error(), "owner cannot be nil")
 	assert.Contains(t, err.Error(), assert.AnError.Error())
 }
+
+func TestKongRouteBuilder_WithSpecTags(t *testing.T) {
+	t.Run("nil leaves tags unset", func(t *testing.T) {
+		route := NewKongRoute().WithSpecTags(nil).MustBuild()
+		assert.Nil(t, route.Spec.Tags)
+	})
+	t.Run("empty leaves tags unset", func(t *testing.T) {
+		route := NewKongRoute().WithSpecTags([]string{}).MustBuild()
+		assert.Nil(t, route.Spec.Tags)
+	})
+	t.Run("sets tags", func(t *testing.T) {
+		route := NewKongRoute().WithSpecTags([]string{"foo", "bar"}).MustBuild()
+		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, route.Spec.Tags)
+	})
+}
