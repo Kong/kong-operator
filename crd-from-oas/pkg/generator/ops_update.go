@@ -78,6 +78,9 @@ type opsUpdateFuncData struct {
 	// Associations lists the top-level spec association fields whose membership
 	// is enforced by a hand-written helper called after the entity is updated.
 	Associations []opsAssociationData
+	// SupportsMirror is true when the entity opted into Origin+Mirror. The
+	// generated update function then early-returns a no-op for Mirror entities.
+	SupportsMirror bool
 }
 
 func qualifiedSDKTypeName(importPath, typeName string) string {
@@ -201,6 +204,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		HasReferences:        g.entityHasParentRefReplacement(entityName),
 		UpdateOmitsEntityID:  callShape.OmitsEntityID,
 		Associations:         associations,
+		SupportsMirror:       g.entitySupportsMirror(entityName),
 	}, nil
 }
 
