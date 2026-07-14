@@ -1,0 +1,12 @@
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ($aigw_dp_name)
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'KonnectAIGatewayResolved']):
+    - status: 'False'
+      reason: NotFound
+  (conditions[?type == 'Ready']):
+    - status: 'False'
+      reason: DependenciesNotReady
