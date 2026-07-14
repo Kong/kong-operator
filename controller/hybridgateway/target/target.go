@@ -561,6 +561,8 @@ func createTargetsFromValidBackendRefs[
 			logger := logger.WithValues("kongtarget", targetName)
 			log.Debug(logger, "Creating KongTarget for BackendRef")
 
+			tags := metadata.ExtractTags(vbRef.service.GetAnnotations())
+
 			target, err := builder.NewKongTarget().
 				WithName(targetName).
 				WithNamespace(metadata.NamespaceFromParentRef(parentRoute, pRef)).
@@ -569,6 +571,7 @@ func createTargetsFromValidBackendRefs[
 				WithUpstreamRef(upstreamName).
 				WithTarget(endpoint, port).
 				WithWeight(&weight).
+				WithSpecTags(tags).
 				Build()
 			if err != nil {
 				log.Error(logger, err, "Failed to build KongTarget resource")
