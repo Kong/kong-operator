@@ -34,7 +34,7 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 		dataPlane               *operatorv1beta1.DataPlane
 	}{
 		{
-			name: "not all replicas are ready",
+			name: "not all replicas are ready (.spec.replicas is set)",
 			dataPlane: &operatorv1beta1.DataPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:        "test-uid",
@@ -88,7 +88,9 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 									},
 								},
 							},
-							Spec: appsv1.DeploymentSpec{},
+							Spec: appsv1.DeploymentSpec{
+								Replicas: new(int32(2)),
+							},
 							Status: appsv1.DeploymentStatus{
 								Replicas:          2,
 								ReadyReplicas:     1,
@@ -660,6 +662,118 @@ func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
 			svc.Labels = tc.existingLabels
 			addLabelsForDataPlaneIngressService(svc, tc.dataplane)
 			require.Equal(t, tc.expectedLabels, svc.Labels)
+		})
+	}
+}
+
+func TestIsDeploymentReady(t *testing.T) {
+	testCases := []struct {
+		name           string
+		deployment     *appsv1.Deployment
+		expectedStatus metav1.ConditionStatus
+		expectedReady  bool
+	}{
+		{
+			name: "zero replicas in status",
+			deployment: &appsv1.Deployment{
+				Status: appsv1.DeploymentStatus{
+					Replicas: 0,
+				},
+			},
+			expectedStatus: metav1.ConditionFalse,
+			expectedReady:  false,
+		},
+		{
+			name: "available replicas less than spec replicas",
+			deployment: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(3)),
+				},
+				Status: appsv1.DeploymentStatus{
+					Replicas:          3,
+					AvailableReplicas: 1,
+				},
+			},
+			expectedStatus: metav1.ConditionFalse,
+			expectedReady:  false,
+		},
+		{
+			name: "available replicas equal to spec replicas",
+			deployment: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(3)),
+				},
+				Status: appsv1.DeploymentStatus{
+					Replicas:          3,
+					AvailableReplicas: 3,
+				},
+			},
+			expectedStatus: metav1.ConditionTrue,
+			expectedReady:  true,
+		},
+		{
+			name: "available replicas greater than spec replicas",
+			deployment: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(2)),
+				},
+				Status: appsv1.DeploymentStatus{
+					Replicas:          3,
+					AvailableReplicas: 3,
+				},
+			},
+			expectedStatus: metav1.ConditionTrue,
+			expectedReady:  true,
+		},
+		{
+			name: "spec replicas nil with non-zero status replicas",
+			deployment: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Replicas: nil,
+				},
+				Status: appsv1.DeploymentStatus{
+					Replicas:          1,
+					AvailableReplicas: 1,
+				},
+			},
+			expectedStatus: metav1.ConditionTrue,
+			expectedReady:  true,
+		},
+		{
+			name: "zero available replicas with non-zero spec",
+			deployment: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(1)),
+				},
+				Status: appsv1.DeploymentStatus{
+					Replicas:          1,
+					AvailableReplicas: 0,
+				},
+			},
+			expectedStatus: metav1.ConditionFalse,
+			expectedReady:  false,
+		},
+		{
+			name: "rolling update: status replicas exceed spec but available meets spec",
+			deployment: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(3)),
+				},
+				Status: appsv1.DeploymentStatus{
+					Replicas:          5, // old + new pods during rollout
+					AvailableReplicas: 3,
+				},
+			},
+			expectedStatus: metav1.ConditionTrue,
+			expectedReady:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status, ready := isDeploymentReady(tc.deployment)
+			assert.Equal(t, tc.expectedStatus, status)
+			assert.Equal(t, tc.expectedReady, ready)
 		})
 	}
 }
