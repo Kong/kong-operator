@@ -82,10 +82,11 @@
   ```
 
 - All the CRDs generated from Konnect OpenAPISpec with a parent reference now
-  has a CEL to validate that the parent reference is immutable when a resouce
-  has `Programmed` condition set to `True` in its status, meaning that it is
-  already configured in Konnect.
-  This breaks the already released EventGateway CRDs, including:
+  have a CEL validation rule which ensures that the parent reference is immutable
+  when a resource has `Programmed` condition set to `True` in its status,
+  meaning that it is already configured in Konnect.
+  This prevents the unsupported scenarios through breaking changes in the already
+  released EventGateway CRDs (Tech Preview), including
   - `EventGatewayVirtualCluster`
   - `EventGatewayVirtualClusterConsumePolicy`
   - `EventGatewayVirtualClusterPolicy`
