@@ -137,6 +137,13 @@
 
 ### Fixes
 
+- AIGateway/EventGateway: fix `AIGatewayDataPlane` and `KegDataPlane` not setting
+  `Ready=False` when a dependency condition is unmet. `ensureReadyStatus` was only
+  called on the happy path, so early-return branches (e.g. referenced
+  `KonnectAIGateway` not found) left the `Ready` condition unset. The call is now
+  deferred so it always runs, and a fast-path scan sets `Ready=False/DependenciesNotReady`
+  immediately when any other condition is already `False`.
+  [#4918](https://github.com/Kong/kong-operator/pull/4918)
 - DataPlane: fix false-positive warnings about operator-managed environment
   variables (`KONG_CLUSTER_CERT`, `KONG_CLUSTER_CERT_KEY`) being set by the
   user. The Konnect extension processor injects these variables into the
