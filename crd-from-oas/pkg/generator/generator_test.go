@@ -6221,3 +6221,17 @@ func TestGenerateReferencesFile_Empty(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, out)
 }
+
+func TestEntitySupportsMirror(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+			"Portal":              {SupportsMirror: false},
+		},
+	})
+	require.True(t, g.entitySupportsMirror("KonnectEventGateway"))
+	require.False(t, g.entitySupportsMirror("Portal"))
+	require.False(t, g.entitySupportsMirror("Unknown"))
+}
