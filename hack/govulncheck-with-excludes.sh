@@ -27,7 +27,11 @@ excludeVulns="$(jq -nc '[
   # pgx is an indirect dependency (via terratest, testcontainers, certificate-transparency-go)
   # and is not imported or used anywhere in our code.
   "GO-2026-4771",
-  "GO-2026-4772"
+  "GO-2026-4772",
+
+  # golang.org/x/crypto/openpgp is only used in our codebase for testing purposes,
+  # and is imported by KTF.
+  "GO-2026-5932"
 
 ]')"
 export excludeVulns
