@@ -16,12 +16,12 @@ import (
 
 func TestGetCACerts(t *testing.T) {
 	// validCACert is a self-signed certificate with the CA basic constraint set, so it can be translated.
-	validCACert, _ := certificate.MustGenerateCertPEMFormat(
+	validCACert, _ := certificate.MustGenerateSelfSignedCertPEMFormat(
 		certificate.WithCATrue(),
 		certificate.WithCommonName("ca.example.com"),
 	)
 	// nonCACert is a valid X.509 certificate but lacks the CA basic constraint, so it fails translation.
-	nonCACert, _ := certificate.MustGenerateCertPEMFormat(
+	nonCACert, _ := certificate.MustGenerateSelfSignedCertPEMFormat(
 		certificate.WithCommonName("leaf.example.com"),
 	)
 
