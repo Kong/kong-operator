@@ -2329,6 +2329,11 @@ func update{{.Entity}}(
 	sdk sdkkonnectgo.{{.UpdateSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .SupportsMirror}}
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
+{{- end}}
 {{- range .Parents}}
 	{{.VarName}} := obj.{{.IDGetter}}()
 	if {{.VarName}} == "" {
@@ -2405,6 +2410,11 @@ func delete{{.Entity}}(
 	sdk sdkkonnectgo.{{.DeleteSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .SupportsMirror}}
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
+{{- end}}
 {{- range .Parents}}
 	{{.VarName}} := obj.{{.IDGetter}}()
 	if {{.VarName}} == "" {
