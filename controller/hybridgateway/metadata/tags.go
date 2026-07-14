@@ -15,7 +15,7 @@ func ExtractTags(anns map[string]string) []string {
 		return nil
 	}
 	var tags []string
-	for _, t := range strings.Split(val, ",") {
+	for t := range strings.SplitSeq(val, ",") {
 		if t = strings.TrimSpace(t); t != "" {
 			tags = append(tags, t)
 		}
