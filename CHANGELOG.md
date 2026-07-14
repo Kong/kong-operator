@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.2.3](#223)
 - [v2.2.2](#v222)
 - [v2.2.1](#v221)
 - [v2.2.0](#v220)
@@ -51,6 +52,19 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+# [v2.2.3]
+
+> Relaese date: 2026-07-14
+
+### Fixes
+
+- Hybridgateway: Wait for cleanup of all child resources before removing the
+  finalizers of the parent resource
+  [#4785](https://github.com/Kong/kong-operator/pull/4785) [#4892](https://github.com/Kong/kong-operator/pull/4892)
+- Preserve only one CA certificate from secrets if there are multiple ones with
+  the duplicte IDs.
+  [#4877](https://github.com/Kong/kong-operator/pull/4877)
 
 ## [v2.2.2]
 
@@ -2375,6 +2389,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.2.3]: https://github.com/Kong/kong-operator/compare/v2.2.2..v2.2.3
 [v2.2.2]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.2.2
 [v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
 [v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
