@@ -31,7 +31,22 @@ excludeVulns="$(jq -nc '[
 
   # golang.org/x/crypto/openpgp is only used in our codebase for testing purposes,
   # and is imported by KTF.
-  "GO-2026-5932"
+  "GO-2026-5932",
+
+  # Moby docker cp / archive endpoint vulnerabilities (race conditions allowing bind-mount
+  # redirection, symlink-swap arbitrary file creation, and container-binary execution via the
+  # archive endpoint). These affect the Docker daemon archive/cp implementation itself.
+  # We only pull in github.com/docker/docker as a client-side dependency (via testcontainers-go,
+  # for spinning up containers in tests) and do not run a Docker daemon nor expose these
+  # endpoints ourselves. No fixed version exists for github.com/docker/docker or
+  # github.com/moby/moby - the only fix lives in the differently-named github.com/moby/moby/v2
+  # module, which is an engine binary and not intended to be imported as a Go library.
+  # https://pkg.go.dev/vuln/GO-2026-5617
+  "GO-2026-5617",
+  # https://pkg.go.dev/vuln/GO-2026-5668
+  "GO-2026-5668",
+  # https://pkg.go.dev/vuln/GO-2026-5746
+  "GO-2026-5746"
 
 ]')"
 export excludeVulns

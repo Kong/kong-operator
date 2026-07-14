@@ -12,8 +12,8 @@ require (
 	github.com/cert-manager/cert-manager v1.18.5
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a
-	github.com/docker/docker v28.3.3+incompatible
-	github.com/docker/go-connections v0.6.0
+	github.com/docker/docker v28.5.2+incompatible
+	github.com/docker/go-connections v0.5.0
 	github.com/dominikbraun/graph v0.23.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/go-logr/logr v1.4.3
@@ -192,7 +192,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx/v5 v5.7.1 // indirect
+	github.com/jackc/pgx/v5 v5.9.2 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.1-0.20220621161143-b0104c826a24 // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
