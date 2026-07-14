@@ -541,3 +541,18 @@ func TestKongServiceBuilder_WithClientCertificateRef(t *testing.T) {
 		})
 	}
 }
+
+func TestKongServiceBuilder_WithSpecTags(t *testing.T) {
+	t.Run("nil leaves tags unset", func(t *testing.T) {
+		svc := NewKongService().WithSpecTags(nil).MustBuild()
+		assert.Nil(t, svc.Spec.Tags)
+	})
+	t.Run("empty leaves tags unset", func(t *testing.T) {
+		svc := NewKongService().WithSpecTags([]string{}).MustBuild()
+		assert.Nil(t, svc.Spec.Tags)
+	})
+	t.Run("sets tags", func(t *testing.T) {
+		svc := NewKongService().WithSpecTags([]string{"foo", "bar"}).MustBuild()
+		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, svc.Spec.Tags)
+	})
+}

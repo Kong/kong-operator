@@ -106,6 +106,16 @@ func (b *KongTargetBuilder) WithOwner(owner client.Object) *KongTargetBuilder {
 	return b
 }
 
+// WithSpecTags sets the tags in the KongTarget spec.
+// A nil or empty slice leaves Spec.Tags unset.
+func (b *KongTargetBuilder) WithSpecTags(tags []string) *KongTargetBuilder {
+	if len(tags) == 0 {
+		return b
+	}
+	b.target.Spec.Tags = commonv1alpha1.Tags(tags)
+	return b
+}
+
 // Build returns the constructed KongTarget resource and any accumulated errors.
 func (b *KongTargetBuilder) Build() (configurationv1alpha1.KongTarget, error) {
 	if len(b.errors) > 0 {

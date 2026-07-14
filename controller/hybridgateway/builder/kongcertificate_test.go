@@ -3,6 +3,7 @@ package builder
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -153,4 +154,19 @@ func TestKongCertificateBuilder_WithAnnotationsForRoute(t *testing.T) {
 		}
 	}
 	require.True(t, found, "expected route annotation value 'my-ns/my-route' in annotations %v", cert.Annotations)
+}
+
+func TestKongCertificateBuilder_WithSpecTags(t *testing.T) {
+	t.Run("nil leaves tags unset", func(t *testing.T) {
+		cert := NewKongCertificate().WithSpecTags(nil).MustBuild()
+		assert.Nil(t, cert.Spec.Tags)
+	})
+	t.Run("empty leaves tags unset", func(t *testing.T) {
+		cert := NewKongCertificate().WithSpecTags([]string{}).MustBuild()
+		assert.Nil(t, cert.Spec.Tags)
+	})
+	t.Run("sets tags", func(t *testing.T) {
+		cert := NewKongCertificate().WithSpecTags([]string{"foo", "bar"}).MustBuild()
+		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, cert.Spec.Tags)
+	})
 }

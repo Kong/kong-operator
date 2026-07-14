@@ -3,9 +3,11 @@ package builder
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -91,4 +93,19 @@ func TestKongSNIBuilder_MustBuild_Success(t *testing.T) {
 	require.Equal(t, "ns-ok", sni.Namespace)
 	require.Equal(t, "ok.com", sni.Spec.Name)
 	require.Equal(t, "cert-ok", sni.Spec.CertificateRef.Name)
+}
+
+func TestKongSNIBuilder_WithSpecTags(t *testing.T) {
+	t.Run("nil leaves tags unset", func(t *testing.T) {
+		sni := NewKongSNI().WithSpecTags(nil).MustBuild()
+		assert.Nil(t, sni.Spec.Tags)
+	})
+	t.Run("empty leaves tags unset", func(t *testing.T) {
+		sni := NewKongSNI().WithSpecTags([]string{}).MustBuild()
+		assert.Nil(t, sni.Spec.Tags)
+	})
+	t.Run("sets tags", func(t *testing.T) {
+		sni := NewKongSNI().WithSpecTags([]string{"foo", "bar"}).MustBuild()
+		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, sni.Spec.Tags)
+	})
 }

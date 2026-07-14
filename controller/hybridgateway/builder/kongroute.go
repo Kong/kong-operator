@@ -195,6 +195,16 @@ func (b *KongRouteBuilder) WithAnnotations(route client.Object, parentRef *gwtyp
 	return b
 }
 
+// WithSpecTags sets the tags in the KongRoute spec.
+// A nil or empty slice leaves Spec.Tags unset.
+func (b *KongRouteBuilder) WithSpecTags(tags []string) *KongRouteBuilder {
+	if len(tags) == 0 {
+		return b
+	}
+	b.route.Spec.Tags = commonv1alpha1.Tags(tags)
+	return b
+}
+
 // Build returns the constructed KongRoute resource and any accumulated errors.
 func (b *KongRouteBuilder) Build() (configurationv1alpha1.KongRoute, error) {
 	if len(b.errors) > 0 {

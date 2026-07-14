@@ -95,6 +95,16 @@ func (b *KongUpstreamBuilder) WithHostHeader(v *string) *KongUpstreamBuilder {
 	return b
 }
 
+// WithSpecTags sets the tags in the KongUpstream spec.
+// A nil or empty slice leaves Spec.Tags unset.
+func (b *KongUpstreamBuilder) WithSpecTags(tags []string) *KongUpstreamBuilder {
+	if len(tags) == 0 {
+		return b
+	}
+	b.upstream.Spec.Tags = commonv1alpha1.Tags(tags)
+	return b
+}
+
 // Build returns the constructed KongUpstream resource and any accumulated errors.
 func (b *KongUpstreamBuilder) Build() (configurationv1alpha1.KongUpstream, error) {
 	if len(b.errors) > 0 {

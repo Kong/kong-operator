@@ -2526,6 +2526,65 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 				assert.Equal(t, 100, target.Spec.Weight)
 			},
 		},
+		{
+			name: "Backend ref whose Service has the tags annotation should tag the KongTarget",
+			httpRoute: createTestHTTPRoute("test-route", "test-namespace", []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("service1", "test-namespace", nil, new(int32(80))),
+			}),
+			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
+			upstreamName: "test-upstream",
+			validBackendRefs: []validBackendRef[gwtypes.HTTPBackendRef]{
+				{
+					backendRef: &gwtypes.HTTPBackendRef{
+						BackendRef: gwtypes.BackendRef{
+							BackendObjectReference: gwtypes.BackendObjectReference{
+								Name: "service1",
+								Kind: new(gwtypes.Kind("Service")),
+							},
+						},
+					},
+					service: &corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "test-namespace",
+							Annotations: map[string]string{
+								"konghq.com/tags": "svc-tag",
+							},
+						},
+					},
+					servicePort: &corev1.ServicePort{
+						Name: "http",
+						Port: 80,
+					},
+					readyEndpoints: []string{"10.0.0.1"},
+					targetPort:     8080,
+					weight:         100,
+				},
+			},
+			expectedTargets: 1,
+			expectedError:   false,
+			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
+				require.Len(t, targets, 1)
+				assert.Equal(t, commonv1alpha1.Tags{"svc-tag"}, targets[0].Spec.Tags)
+			},
+		},
+		{
+			name: "Backend ref whose Service has no tags annotation should leave KongTarget tags unset",
+			httpRoute: createTestHTTPRoute("test-route", "test-namespace", []gwtypes.HTTPBackendRef{
+				createTestHTTPBackendRef("service1", "test-namespace", nil, new(int32(80))),
+			}),
+			pRef:         &gwtypes.ParentReference{Name: "test-gateway"},
+			upstreamName: "test-upstream",
+			validBackendRefs: []validBackendRef[gwtypes.HTTPBackendRef]{
+				createTestvalidBackendRef("service1", "test-namespace", new(int32(100)), []string{"10.0.0.1"}),
+			},
+			expectedTargets: 1,
+			expectedError:   false,
+			validateResult: func(t *testing.T, targets []configurationv1alpha1.KongTarget) {
+				require.Len(t, targets, 1)
+				assert.Nil(t, targets[0].Spec.Tags)
+			},
+		},
 	}
 
 	for _, tt := range tests {

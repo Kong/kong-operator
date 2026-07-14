@@ -84,6 +84,7 @@ func UpstreamForRule[
 
 	policy := upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), rule)
 	hostHeader := resolveHostHeaderFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	tags := utils.TagsFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	logger = logger.WithValues("kongupstream", upstreamName)
 	log.Debug(logger, fmt.Sprintf("Creating KongUpstream for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 
@@ -95,6 +96,7 @@ func UpstreamForRule[
 		WithSpecName(upstreamName).
 		WithHostHeader(hostHeader).
 		WithControlPlaneRef(*cp).
+		WithSpecTags(tags).
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongUpstream resource")
