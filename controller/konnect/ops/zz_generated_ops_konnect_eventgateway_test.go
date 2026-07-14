@@ -4,13 +4,13 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -29,10 +29,10 @@ func testGeneratedKonnectEventGatewayForSDKOps() *konnectv1alpha1.KonnectEventGa
 		},
 		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 			APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
-				Description: "test-value",
-				Labels: konnectv1alpha1.Labels{"test-key": "test-value"},
+				Description:       "test-value",
+				Labels:            konnectv1alpha1.Labels{"test-key": "test-value"},
 				MinRuntimeVersion: "test-value",
-				Name: "test-value",
+				Name:              "test-value",
 			},
 		},
 	}

@@ -4,13 +4,13 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
@@ -29,10 +29,10 @@ func testGeneratedEventGatewayListenerForSDKOps() *configurationv1alpha1.EventGa
 		},
 		Spec: configurationv1alpha1.EventGatewayListenerSpec{
 			APISpec: configurationv1alpha1.EventGatewayListenerAPISpec{
-				Addresses: []string{"test-value"},
+				Addresses:   []string{"test-value"},
 				Description: "test-value",
-				Labels: configurationv1alpha1.Labels{"test-key": "test-value"},
-				Name: "test-value",
+				Labels:      configurationv1alpha1.Labels{"test-key": "test-value"},
+				Name:        "test-value",
 			},
 		},
 	}
@@ -111,8 +111,8 @@ func TestUpdateEventGatewayListener_UsesSDKOpsConversion(t *testing.T) {
 		UpdateEventGatewayListener(
 			mock.Anything,
 			sdkkonnectops.UpdateEventGatewayListenerRequest{
-				GatewayID: parentID,
-				EventGatewayListenerID: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                         parentID,
+				EventGatewayListenerID:            obj.GetKonnectStatus().GetKonnectID(),
 				UpdateEventGatewayListenerRequest: expectedRequest,
 			},
 		).
@@ -140,8 +140,8 @@ func TestUpdateEventGatewayListener_PropagatesSDKError(t *testing.T) {
 		UpdateEventGatewayListener(
 			mock.Anything,
 			sdkkonnectops.UpdateEventGatewayListenerRequest{
-				GatewayID: parentID,
-				EventGatewayListenerID: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                         parentID,
+				EventGatewayListenerID:            obj.GetKonnectStatus().GetKonnectID(),
 				UpdateEventGatewayListenerRequest: expectedRequest,
 			},
 		).

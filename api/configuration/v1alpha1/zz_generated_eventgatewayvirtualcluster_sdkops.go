@@ -61,7 +61,6 @@ func (s *EventGatewayVirtualClusterAPISpec) ToUpdateVirtualClusterRequest() (*sd
 	return &target, nil
 }
 
-
 // ToCreateVirtualClusterRequest converts the EventGatewayVirtualCluster to the SDK type
 // sdkkonnectcomp.CreateVirtualClusterRequest, injecting the resolved parent ID as destination.
 func (obj *EventGatewayVirtualCluster) ToCreateVirtualClusterRequest() (*sdkkonnectcomp.CreateVirtualClusterRequest, error) {

@@ -326,7 +326,7 @@ func (s *AIGatewayModelAPISpec) toCreateAIGatewayModelRequestFromPayload(payload
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch variant {
 	case "API":
 		var member sdkkonnectcomp.AIGatewayModelAPI
@@ -355,7 +355,7 @@ func (s *AIGatewayModelAPISpec) toUpdateAIGatewayModelRequestFromPayload(payload
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var selected map[string]any
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return nil, fmt.Errorf("failed to decode selected AIGatewayModel config: %w", err)
@@ -470,6 +470,7 @@ func resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx context.Context, cl client
 	}
 	return resolved, nil
 }
+
 // RefsAtAIGatewayModelAPIAccessAclsDenyDeny returns the references at spec.apiSpec.api.access.acls.deny.deny,
 // or nil when any ancestor is unset.
 func RefsAtAIGatewayModelAPIAccessAclsDenyDeny(obj *AIGatewayModel) []AIGatewayACLRef {
@@ -570,7 +571,6 @@ func (obj *AIGatewayModel) ResolveKonnectReferences(ctx context.Context, cl clie
 	return errors.Join(errs...)
 }
 
-
 // ToCreateAIGatewayModelRequest converts the AIGatewayModel to the SDK type
 // sdkkonnectcomp.CreateAIGatewayModelRequest, resolving referenced CRs via the provided client.
 func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayModelRequest, error) {
@@ -612,7 +612,6 @@ func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl
 	}
 	return spec.toCreateAIGatewayModelRequestFromPayload(payload)
 }
-
 
 // ToUpdateAIGatewayModelRequest converts the AIGatewayModel to the SDK type
 // sdkkonnectcomp.UpdateAIGatewayModelRequest, resolving referenced CRs via the provided client.

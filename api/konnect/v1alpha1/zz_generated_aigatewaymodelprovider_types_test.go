@@ -85,12 +85,12 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, AIGatewayModelProviderAPISpec)
+		assert  func(*testing.T, AIGatewayModelProviderAPISpec)
 	}{
 		{
-			name: "AIGatewayModelProviderConfig/anthropic",
+			name:    "AIGatewayModelProviderConfig/anthropic",
 			payload: []byte("{\"type\":\"anthropic\",\"anthropic\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -106,7 +106,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/azure",
+			name:    "AIGatewayModelProviderConfig/azure",
 			payload: []byte("{\"type\":\"azure\",\"azure\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -122,7 +122,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/bedrock",
+			name:    "AIGatewayModelProviderConfig/bedrock",
 			payload: []byte("{\"type\":\"bedrock\",\"bedrock\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -138,7 +138,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/cerebras",
+			name:    "AIGatewayModelProviderConfig/cerebras",
 			payload: []byte("{\"type\":\"cerebras\",\"cerebras\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -154,7 +154,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/cohere",
+			name:    "AIGatewayModelProviderConfig/cohere",
 			payload: []byte("{\"type\":\"cohere\",\"cohere\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -170,7 +170,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/dashscope",
+			name:    "AIGatewayModelProviderConfig/dashscope",
 			payload: []byte("{\"type\":\"dashscope\",\"dashscope\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -186,7 +186,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/databricks",
+			name:    "AIGatewayModelProviderConfig/databricks",
 			payload: []byte("{\"type\":\"databricks\",\"databricks\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -202,7 +202,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/deepseek",
+			name:    "AIGatewayModelProviderConfig/deepseek",
 			payload: []byte("{\"type\":\"deepseek\",\"deepseek\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -218,7 +218,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/gemini",
+			name:    "AIGatewayModelProviderConfig/gemini",
 			payload: []byte("{\"type\":\"gemini\",\"gemini\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -234,7 +234,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/huggingface",
+			name:    "AIGatewayModelProviderConfig/huggingface",
 			payload: []byte("{\"type\":\"huggingface\",\"huggingface\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -250,7 +250,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/kimi",
+			name:    "AIGatewayModelProviderConfig/kimi",
 			payload: []byte("{\"type\":\"kimi\",\"kimi\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -266,7 +266,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/llama2",
+			name:    "AIGatewayModelProviderConfig/llama2",
 			payload: []byte("{\"type\":\"llama2\",\"llama2\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -282,7 +282,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/mistral",
+			name:    "AIGatewayModelProviderConfig/mistral",
 			payload: []byte("{\"type\":\"mistral\",\"mistral\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -298,7 +298,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/ollama",
+			name:    "AIGatewayModelProviderConfig/ollama",
 			payload: []byte("{\"type\":\"ollama\",\"ollama\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -314,7 +314,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/openai",
+			name:    "AIGatewayModelProviderConfig/openai",
 			payload: []byte("{\"type\":\"openai\",\"openai\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -330,7 +330,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/vercel",
+			name:    "AIGatewayModelProviderConfig/vercel",
 			payload: []byte("{\"type\":\"vercel\",\"vercel\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -346,7 +346,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/vertex",
+			name:    "AIGatewayModelProviderConfig/vertex",
 			payload: []byte("{\"type\":\"vertex\",\"vertex\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -362,7 +362,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/vllm",
+			name:    "AIGatewayModelProviderConfig/vllm",
 			payload: []byte("{\"type\":\"vllm\",\"vllm\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()
@@ -378,7 +378,7 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 			},
 		},
 		{
-			name: "AIGatewayModelProviderConfig/xai",
+			name:    "AIGatewayModelProviderConfig/xai",
 			payload: []byte("{\"type\":\"xai\",\"xai\":{}}"),
 			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
 				t.Helper()

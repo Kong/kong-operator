@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // AIGatewayMCPServer is the Schema for the aigatewaymcpservers API.
@@ -92,7 +92,6 @@ type AIGatewayMCPServerStatus struct {
 
 // AIGatewayMCPServerConfig represents a union type for AIGatewayMCPServerConfig.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayMCPServerConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -128,11 +127,11 @@ type AIGatewayMCPServerConfigType string
 
 // AIGatewayMCPServerConfigType values.
 const (
-	AIGatewayMCPServerConfigTypeConversionListener AIGatewayMCPServerConfigType = "conversion-listener"
-	AIGatewayMCPServerConfigTypeConversionOnly AIGatewayMCPServerConfigType = "conversion-only"
-	AIGatewayMCPServerConfigTypeListener AIGatewayMCPServerConfigType = "listener"
+	AIGatewayMCPServerConfigTypeConversionListener  AIGatewayMCPServerConfigType = "conversion-listener"
+	AIGatewayMCPServerConfigTypeConversionOnly      AIGatewayMCPServerConfigType = "conversion-only"
+	AIGatewayMCPServerConfigTypeListener            AIGatewayMCPServerConfigType = "listener"
 	AIGatewayMCPServerConfigTypePassthroughListener AIGatewayMCPServerConfigType = "passthrough-listener"
-	AIGatewayMCPServerConfigTypeUpstreamServer AIGatewayMCPServerConfigType = "upstream-server"
+	AIGatewayMCPServerConfigTypeUpstreamServer      AIGatewayMCPServerConfigType = "upstream-server"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -274,7 +273,6 @@ func (s *AIGatewayMCPServerAPISpec) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayMCPServerAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -292,4 +290,3 @@ func (s *AIGatewayMCPServerAPISpec) UnmarshalJSON(data []byte) error {
 	*s = AIGatewayMCPServerAPISpec(aux)
 	return nil
 }
-

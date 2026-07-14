@@ -13,7 +13,7 @@ func TestEventGatewayDataPlaneCertificateAPISpec_ToCreateEventGatewayDataPlaneCe
 	spec := &EventGatewayDataPlaneCertificateAPISpec{
 		Certificate: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")},
 		Description: "test-value",
-		Name: "test-value",
+		Name:        "test-value",
 	}
 	result, err := spec.ToCreateEventGatewayDataPlaneCertificateRequest()
 	require.NoError(t, err)
@@ -34,7 +34,7 @@ func TestEventGatewayDataPlaneCertificateAPISpec_ToUpdateEventGatewayDataPlaneCe
 	spec := &EventGatewayDataPlaneCertificateAPISpec{
 		Certificate: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")},
 		Description: "test-value",
-		Name: "test-value",
+		Name:        "test-value",
 	}
 	result, err := spec.ToUpdateEventGatewayDataPlaneCertificateRequest()
 	require.NoError(t, err)

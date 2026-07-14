@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // AIGatewayIdentityProvider is the Schema for the aigatewayidentityproviders API.
@@ -92,7 +92,6 @@ type AIGatewayIdentityProviderStatus struct {
 
 // AIGatewayIdentityProviderConfig represents a union type for AIGatewayIdentityProviderConfig.
 // Only one of the fields should be set based on the Type.
-//
 type AIGatewayIdentityProviderConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -116,7 +115,7 @@ type AIGatewayIdentityProviderConfigType string
 
 // AIGatewayIdentityProviderConfigType values.
 const (
-	AIGatewayIdentityProviderConfigTypeKeyAuth AIGatewayIdentityProviderConfigType = "key-auth"
+	AIGatewayIdentityProviderConfigTypeKeyAuth       AIGatewayIdentityProviderConfigType = "key-auth"
 	AIGatewayIdentityProviderConfigTypeOpenIDConnect AIGatewayIdentityProviderConfigType = "openid-connect"
 )
 
@@ -205,7 +204,6 @@ func (s *AIGatewayIdentityProviderAPISpec) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *AIGatewayIdentityProviderAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -223,4 +221,3 @@ func (s *AIGatewayIdentityProviderAPISpec) UnmarshalJSON(data []byte) error {
 	*s = AIGatewayIdentityProviderAPISpec(aux)
 	return nil
 }
-

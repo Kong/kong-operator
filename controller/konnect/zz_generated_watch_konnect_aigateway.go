@@ -5,13 +5,13 @@ package konnect
 import (
 	"context"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // KonnectAIGatewayReconciliationWatchOptions returns the watch options for

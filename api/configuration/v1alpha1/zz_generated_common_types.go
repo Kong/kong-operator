@@ -198,7 +198,6 @@ func flattenSensitiveData(v any) any {
 	return v
 }
 
-
 // camelToSnakeCase converts a camelCase string to snake_case.
 // e.g. "bootstrapServers" → "bootstrap_servers", "defaultAPIVisibility" → "default_api_visibility"
 func camelToSnakeCase(s string) string {

@@ -52,12 +52,12 @@ func TestPortalCustomDomainAPISpecUnmarshalJSON_DecodesUnionFields(t *testing.T)
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, PortalCustomDomainAPISpec)
+		assert  func(*testing.T, PortalCustomDomainAPISpec)
 	}{
 		{
-			name: "SSL/WithCustomCertificate",
+			name:    "SSL/WithCustomCertificate",
 			payload: []byte("{\"ssl\":{\"type\":\"withCustomCertificate\",\"withCustomCertificate\":{}}}"),
 			assert: func(t *testing.T, target PortalCustomDomainAPISpec) {
 				t.Helper()
@@ -73,7 +73,7 @@ func TestPortalCustomDomainAPISpecUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			},
 		},
 		{
-			name: "SSL/Standard",
+			name:    "SSL/Standard",
 			payload: []byte("{\"ssl\":{\"type\":\"standard\",\"standard\":{}}}"),
 			assert: func(t *testing.T, target PortalCustomDomainAPISpec) {
 				t.Helper()

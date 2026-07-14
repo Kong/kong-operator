@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EventGatewayVirtualClusterPolicy is the Schema for the eventgatewayvirtualclusterpolicys API.
@@ -97,7 +97,6 @@ type EventGatewayVirtualClusterPolicyStatus struct {
 
 // EventGatewayVirtualClusterPolicyConfig represents a union type for EventGatewayVirtualClusterPolicyConfig.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayVirtualClusterPolicyConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -187,7 +186,6 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) MarshalJSON() ([]byte, error) 
 	return data, nil
 }
 
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayVirtualClusterPolicyAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -205,4 +203,3 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) UnmarshalJSON(data []byte) err
 	*s = EventGatewayVirtualClusterPolicyAPISpec(aux)
 	return nil
 }
-

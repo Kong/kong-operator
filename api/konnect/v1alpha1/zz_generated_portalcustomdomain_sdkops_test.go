@@ -11,7 +11,7 @@ import (
 
 func TestPortalCustomDomainAPISpec_ToCreatePortalCustomDomainRequest(t *testing.T) {
 	spec := &PortalCustomDomainAPISpec{
-		Enabled: "Enabled",
+		Enabled:  "Enabled",
 		Hostname: "test-value",
 	}
 	result, err := spec.ToCreatePortalCustomDomainRequest()
@@ -30,7 +30,7 @@ func TestPortalCustomDomainAPISpec_ToCreatePortalCustomDomainRequest(t *testing.
 
 func TestPortalCustomDomainAPISpec_ToUpdatePortalCustomDomainRequest(t *testing.T) {
 	spec := &PortalCustomDomainAPISpec{
-		Enabled: "Enabled",
+		Enabled:  "Enabled",
 		Hostname: "test-value",
 	}
 	result, err := spec.ToUpdatePortalCustomDomainRequest()

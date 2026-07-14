@@ -212,7 +212,7 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) ToCreateEventGatewayVir
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch variant {
 	case "ModifyHeadersPolicyCreate":
 		var member sdkkonnectcomp.EventGatewayModifyHeadersPolicyCreate
@@ -268,7 +268,7 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) ToUpdateEventGatewayVir
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_ = variant
 	var body sdkkonnectcomp.EventGatewayProducePolicyUpdate
 	if err := json.Unmarshal(data, &body); err != nil {

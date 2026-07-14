@@ -9,16 +9,14 @@ import (
 )
 
 func TestEventGatewayVirtualClusterConsumePolicyAPISpec_ToCreateEventGatewayVirtualClusterConsumePolicyRequest(t *testing.T) {
-	spec := &EventGatewayVirtualClusterConsumePolicyAPISpec{
-	}
+	spec := &EventGatewayVirtualClusterConsumePolicyAPISpec{}
 	result, err := spec.ToCreateEventGatewayVirtualClusterConsumePolicyRequest()
 	require.Error(t, err)
 	require.Nil(t, result)
 }
 
 func TestEventGatewayVirtualClusterConsumePolicyAPISpec_ToUpdateEventGatewayVirtualClusterConsumePolicyRequest(t *testing.T) {
-	spec := &EventGatewayVirtualClusterConsumePolicyAPISpec{
-	}
+	spec := &EventGatewayVirtualClusterConsumePolicyAPISpec{}
 	result, err := spec.ToUpdateEventGatewayVirtualClusterConsumePolicyRequest()
 	require.Error(t, err)
 	require.Nil(t, result)
