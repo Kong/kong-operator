@@ -1,4 +1,4 @@
-package envtest
+package konnectother
 
 import (
 	"testing"
@@ -18,6 +18,8 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -26,25 +28,25 @@ import (
 
 func TestPortalCustomDomain(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.Portal](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.Portal](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[konnectv1alpha1.Portal](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.PortalCustomDomain](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.PortalCustomDomain](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[konnectv1alpha1.PortalCustomDomain](&metricsmocks.MockRecorder{}),
 		),
 	}
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	t.Log("Setting up clients")
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
@@ -63,7 +65,7 @@ func TestPortalCustomDomain(t *testing.T) {
 			initialHostname = "developer.example.com"
 		)
 
-		portalWatch := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		portalWatch := envtest.SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 		sdk.PortalsSDK.EXPECT().
 			CreatePortal(mock.Anything, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortal) bool {
 				return req.DisplayName != nil && *req.DisplayName == displayName &&
@@ -83,17 +85,17 @@ func TestPortalCustomDomain(t *testing.T) {
 		})
 
 		t.Log("Waiting for Portal to be programmed")
-		WatchFor(t, ctx, portalWatch, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(portal),
-				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		envtest.WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portal),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 			),
 			"Portal didn't get Programmed status condition or Konnect ID",
 		)
-		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, consts.WaitTime, consts.TickTime)
 
-		domainWatch := SetupWatch[konnectv1alpha1.PortalCustomDomainList](t, ctx, cl, client.InNamespace(ns.Name))
+		domainWatch := envtest.SetupWatch[konnectv1alpha1.PortalCustomDomainList](t, ctx, cl, client.InNamespace(ns.Name))
 		domain := testEnvtestPortalCustomDomain(ns.Name, portal.GetName(), "Enabled", initialHostname)
 		expectedCreateRequest, err := domain.Spec.APISpec.ToCreatePortalCustomDomainRequest()
 		require.NoError(t, err)
@@ -110,10 +112,10 @@ func TestPortalCustomDomain(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, domain))
 
 		t.Log("Waiting for PortalCustomDomain to be programmed")
-		WatchFor(t, ctx, domainWatch, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(domain),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomDomain](),
+		envtest.WatchFor(t, ctx, domainWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(domain),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomDomain](),
 				func(p *konnectv1alpha1.PortalCustomDomain) bool {
 					return p.GetPortalID() == portalID &&
 						p.GetKonnectID() == "" &&
@@ -122,7 +124,7 @@ func TestPortalCustomDomain(t *testing.T) {
 			),
 			"PortalCustomDomain didn't get Programmed status condition, Portal ID, or cleanup finalizer",
 		)
-		EventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on PortalCustomDomain update")
 		domainToPatch := domain.DeepCopy()
@@ -138,10 +140,10 @@ func TestPortalCustomDomain(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, domainToPatch, client.MergeFrom(domain)))
 
 		t.Log("Waiting for PortalCustomDomain to be patched")
-		WatchFor(t, ctx, domainWatch, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(domain),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomDomain](),
+		envtest.WatchFor(t, ctx, domainWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(domain),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalCustomDomain](),
 				func(p *konnectv1alpha1.PortalCustomDomain) bool {
 					return p.Spec.APISpec.Enabled == "Disabled" &&
 						p.GetPortalID() == portalID &&
@@ -150,7 +152,7 @@ func TestPortalCustomDomain(t *testing.T) {
 			),
 			"PortalCustomDomain didn't get patched",
 		)
-		EventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on PortalCustomDomain deletion")
 		sdk.PortalCustomDomainsSDK.EXPECT().
@@ -159,8 +161,8 @@ func TestPortalCustomDomain(t *testing.T) {
 
 		t.Log("Deleting PortalCustomDomain")
 		require.NoError(t, clientNamespaced.Delete(ctx, domain))
-		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, domain, waitTime, tickTime)
-		EventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, domain, consts.WaitTime, consts.TickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalCustomDomainsSDK, consts.WaitTime, consts.TickTime)
 	})
 }
 

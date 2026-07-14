@@ -68,14 +68,14 @@ func ObjectHasConditionProgrammedSetToTrue[
 }
 
 func ConditionsContainProgrammedFalse(conds []metav1.Condition) bool {
-	return conditionsContainProgrammed(conds, metav1.ConditionFalse)
+	return ConditionsContainProgrammed(conds, metav1.ConditionFalse)
 }
 
 func ConditionsContainProgrammedTrue(conds []metav1.Condition) bool {
-	return conditionsContainProgrammed(conds, metav1.ConditionTrue)
+	return ConditionsContainProgrammed(conds, metav1.ConditionTrue)
 }
 
-func conditionsContainProgrammed(conds []metav1.Condition, status metav1.ConditionStatus) bool {
+func ConditionsContainProgrammed(conds []metav1.Condition, status metav1.ConditionStatus) bool {
 	return lo.ContainsBy(conds,
 		func(condition metav1.Condition) bool {
 			return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&

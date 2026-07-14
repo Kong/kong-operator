@@ -1,4 +1,4 @@
-package envtest
+package konnectother
 
 import (
 	"context"
@@ -18,6 +18,8 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -26,17 +28,17 @@ import (
 
 func TestPortal(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.Portal](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.Portal](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[konnectv1alpha1.Portal](&metricsmocks.MockRecorder{}),
 		),
 	)
@@ -59,7 +61,7 @@ func TestPortal(t *testing.T) {
 			initialDescription = "Portal created from envtest"
 		)
 
-		w := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on Portal creation")
 		sdk.PortalsSDK.EXPECT().
@@ -90,11 +92,11 @@ func TestPortal(t *testing.T) {
 		})
 
 		t.Log("Waiting for Portal to be programmed")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(portal),
-				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portal),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 				func(p *konnectv1alpha1.Portal) bool {
 					return controllerutil.ContainsFinalizer(p, konnect.KonnectCleanupFinalizer)
 				},
@@ -102,7 +104,7 @@ func TestPortal(t *testing.T) {
 			"Portal didn't get Programmed status condition, Konnect ID, or cleanup finalizer",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on Portal update")
 		sdk.PortalsSDK.EXPECT().
@@ -120,11 +122,11 @@ func TestPortal(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, portalToPatch, client.MergeFrom(portal)))
 
 		t.Log("Waiting for Portal to be patched")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(portal),
-				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portal),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 				func(p *konnectv1alpha1.Portal) bool {
 					return p.Spec.APISpec.DisplayName == updatedDisplayName
 				},
@@ -132,7 +134,7 @@ func TestPortal(t *testing.T) {
 			"Portal didn't get patched",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on Portal deletion")
 		sdk.PortalsSDK.EXPECT().
@@ -141,14 +143,14 @@ func TestPortal(t *testing.T) {
 
 		t.Log("Deleting Portal")
 		require.NoError(t, clientNamespaced.Delete(ctx, portal))
-		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, portal, waitTime, tickTime)
-		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, portal, consts.WaitTime, consts.TickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("should create Portal successfully on conflict when Portal with matching uid tag exists", func(t *testing.T) {
 		const portalID = "portal-conflict-id"
 
-		w := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		// Declared up-front so the ListPortals expectation closure below can
 		// read the Portal's UID after k8s assigns it on Create.
@@ -158,7 +160,7 @@ func TestPortal(t *testing.T) {
 			CreatePortal(mock.Anything, mock.Anything).
 			Return(nil, &sdkkonnecterrs.SDKError{
 				StatusCode: 400,
-				Body:       ErrBodyDataConstraintError,
+				Body:       consts.ErrBodyDataConstraintError,
 			})
 
 		sdk.PortalsSDK.EXPECT().
@@ -182,15 +184,15 @@ func TestPortal(t *testing.T) {
 		portal = deploy.Portal(t, ctx, clientNamespaced, apiAuth)
 
 		t.Log("Waiting for Portal to be programmed after UID conflict lookup")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(portal),
-				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portal),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 			),
 			"Portal didn't get Programmed status condition or Konnect ID after conflict resolution",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, consts.WaitTime, consts.TickTime)
 	})
 }

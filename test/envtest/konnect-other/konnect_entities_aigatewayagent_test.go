@@ -1,4 +1,4 @@
-package envtest
+package konnectother
 
 import (
 	"context"
@@ -17,11 +17,14 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -30,17 +33,17 @@ import (
 
 func TestAIGatewayAgent(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.AIGatewayAgent](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.AIGatewayAgent](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[konnectv1alpha1.AIGatewayAgent](&metricsmocks.MockRecorder{}),
 		),
 	)
@@ -67,7 +70,7 @@ func TestAIGatewayAgent(t *testing.T) {
 			agentURL           = "https://upstream.example.com"
 		)
 
-		w := SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on AIGatewayAgent creation")
 		sdk.AIGatewayAgentsSDK.EXPECT().
@@ -94,11 +97,11 @@ func TestAIGatewayAgent(t *testing.T) {
 		})
 
 		t.Log("Waiting for AIGatewayAgent to be programmed")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(agent),
-				ObjectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(agent),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
 				func(a *konnectv1alpha1.AIGatewayAgent) bool {
 					return a.GetGatewayID() == konnectAIGatewayID &&
 						controllerutil.ContainsFinalizer(a, konnect.KonnectCleanupFinalizer)
@@ -107,7 +110,7 @@ func TestAIGatewayAgent(t *testing.T) {
 			"AIGatewayAgent didn't get Programmed status condition, Konnect ID, parent ID, or cleanup finalizer",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on AIGatewayAgent update")
 		sdk.AIGatewayAgentsSDK.EXPECT().
@@ -127,11 +130,11 @@ func TestAIGatewayAgent(t *testing.T) {
 		agent = agentToPatch
 
 		t.Log("Waiting for AIGatewayAgent to be patched")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(agent),
-				ObjectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(agent),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
 				func(a *konnectv1alpha1.AIGatewayAgent) bool {
 					return a.Spec.APISpec.DisplayName == updatedDisplayName
 				},
@@ -139,7 +142,7 @@ func TestAIGatewayAgent(t *testing.T) {
 			"AIGatewayAgent didn't get patched",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on AIGatewayAgent deletion")
 		sdk.AIGatewayAgentsSDK.EXPECT().
@@ -148,8 +151,8 @@ func TestAIGatewayAgent(t *testing.T) {
 
 		t.Log("Deleting AIGatewayAgent")
 		require.NoError(t, clientNamespaced.Delete(ctx, agent))
-		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, agent, waitTime, tickTime)
-		EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, agent, consts.WaitTime, consts.TickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("should resolve ACL references after referenced consumer is programmed", func(t *testing.T) {
@@ -176,7 +179,7 @@ func TestAIGatewayAgent(t *testing.T) {
 		}
 		require.NoError(t, clientNamespaced.Create(ctx, consumer))
 
-		w := SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating AIGatewayAgent that references the consumer via an ACL allow rule")
 		agent := deploy.AIGatewayAgent(t, ctx, clientNamespaced, gateway, func(o client.Object) {
@@ -197,7 +200,7 @@ func TestAIGatewayAgent(t *testing.T) {
 		})
 
 		t.Log("Waiting for KonnectReferencesResolved=False with ReferenceNotProgrammed reason")
-		WatchFor(t, ctx, w, apiwatch.Modified,
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
 			func(a *konnectv1alpha1.AIGatewayAgent) bool {
 				if a.GetName() != agent.GetName() {
 					return false
@@ -230,10 +233,10 @@ func TestAIGatewayAgent(t *testing.T) {
 			}
 			consumer.SetKonnectID(consumerKonnectID)
 			assert.NoError(ct, clientNamespaced.Status().Update(ctx, consumer))
-		}, waitTime, tickTime)
+		}, consts.WaitTime, consts.TickTime)
 
 		t.Log("Waiting for the watch to re-enqueue the agent and flip KonnectReferencesResolved to True")
-		WatchFor(t, ctx, w, apiwatch.Modified,
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
 			func(a *konnectv1alpha1.AIGatewayAgent) bool {
 				if a.GetName() != agent.GetName() {
 					return false
@@ -246,13 +249,13 @@ func TestAIGatewayAgent(t *testing.T) {
 			"AIGatewayAgent KonnectReferencesResolved didn't flip to True after the consumer was programmed",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("should create AIGatewayAgent successfully on conflict when agent with matching uid label exists", func(t *testing.T) {
 		const agentID = "ai-agent-conflict-id"
 
-		w := SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		var agent *konnectv1alpha1.AIGatewayAgent
 
@@ -260,7 +263,7 @@ func TestAIGatewayAgent(t *testing.T) {
 			CreateAiGatewayAgent(mock.Anything, konnectAIGatewayID, mock.Anything).
 			Return(nil, &sdkkonnecterrs.SDKError{
 				StatusCode: 400,
-				Body:       ErrBodyDataConstraintError,
+				Body:       consts.ErrBodyDataConstraintError,
 			})
 
 		sdk.AIGatewayAgentsSDK.EXPECT().
@@ -286,11 +289,11 @@ func TestAIGatewayAgent(t *testing.T) {
 		agent = deploy.AIGatewayAgent(t, ctx, clientNamespaced, gateway)
 
 		t.Log("Waiting for AIGatewayAgent to be programmed after UID conflict lookup")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(agent),
-				ObjectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(agent),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
 				func(a *konnectv1alpha1.AIGatewayAgent) bool {
 					return a.GetGatewayID() == konnectAIGatewayID &&
 						controllerutil.ContainsFinalizer(a, konnect.KonnectCleanupFinalizer)
@@ -299,6 +302,29 @@ func TestAIGatewayAgent(t *testing.T) {
 			"AIGatewayAgent didn't get Programmed status condition or Konnect ID after conflict resolution",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, consts.WaitTime, consts.TickTime)
 	})
+}
+
+func updateKonnectAIGatewayStatusWithProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	obj *konnectv1alpha1.KonnectAIGateway,
+	id string,
+) {
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+			return
+		}
+		obj.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
+			ID:        id,
+			ServerURL: sdkmocks.SDKServerURL,
+			OrgID:     "org-id",
+		}
+		obj.Status.Conditions = []metav1.Condition{
+			envtest.ProgrammedCondition(obj.GetGeneration()),
+		}
+		assert.NoError(ct, cl.Status().Update(ctx, obj))
+	}, consts.WaitTime, consts.TickTime)
 }

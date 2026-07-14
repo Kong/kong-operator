@@ -1,4 +1,4 @@
-package envtest
+package gatewayapi
 
 import (
 	"testing"
