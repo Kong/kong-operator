@@ -9,11 +9,15 @@
 {{- if regexMatch $reg $typString }}
 {{- $apiGroupVersion := regexReplaceAll $reg $typString "${1}-konghq-com-${2}" -}}
 {{- $apiGroupVersion = $apiGroupVersion | trimAll "*[]" -}}
+{{- $slicePrefix := "" -}}
+{{- if hasPrefix "[]" $typString -}}
+{{- $slicePrefix = "[]" -}}
+{{- end -}}
 
 {{- if .GVK -}}
-[{{ $kind }}](#{{ $apiGroupVersion }}-{{ $kind | lower }})
+{{ $slicePrefix }}[{{ $kind }}](#{{ $apiGroupVersion }}-{{ $kind | lower }})
 {{- else -}}
-[{{ $kind }}](#{{ $apiGroupVersion }}-types-{{ $kind | lower }})
+{{ $slicePrefix }}[{{ $kind }}](#{{ $apiGroupVersion }}-types-{{ $kind | lower }})
 {{- end -}}
 
 {{- else -}}

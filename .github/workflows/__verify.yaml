@@ -42,7 +42,7 @@ jobs:
             lint-cache: false
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -51,7 +51,7 @@ jobs:
         fetch-depth: ${{ matrix.fetch_depth }}
 
     - name: Setup go
-      uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
       with:
         go-version-file: go.mod
         cache: false
@@ -69,7 +69,7 @@ jobs:
     # Restore-only, reusing the shared `go-build-*` cache written by the `build` job in
     # tests.yaml. We never save here to avoid creating additional caches.
     - name: Restore go build cache
-      uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v4
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v4
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}
@@ -86,7 +86,7 @@ jobs:
 
     - name: Restore lint cache
       if: ${{ matrix.lint-cache }}
-      uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v4
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v4
       with:
         path: |
           ${{ env.GO_MOD_CACHE }}

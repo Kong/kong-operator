@@ -72,7 +72,8 @@ spec:
   konnect:
     authRef:
       name: konnect-api-auth
-      namespace: konnect
+      # TODO: https://github.com/Kong/kong-operator/issues/4134
+      # namespace: konnect
 ---
 kind: EventGatewayListener
 apiVersion: configuration.konghq.com/v1alpha1

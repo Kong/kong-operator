@@ -29,12 +29,16 @@ jobs:
       fail-fast: false
       matrix:
         suite:
+        - gateway
         - hybridgateway
         - konnect
-        - eventgateway
+        - aigateway
+        # TODO: fix eventgateway suite and re-enable it in the matrix once they are stable again.
+        # TODO: https://github.com/Kong/kong-operator/issues/4757
+        # - eventgateway
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
     - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -79,11 +83,24 @@ jobs:
           --set image.tag=${{ env.TAG }} \
           --set env.enable_controller_konnect=true \
           --set env.enable_controller_kegdataplane=true \
+          --set env.enable_controller_aigatewaydataplane=true \
           --wait
+
+    - name: DNS lookup for us.control-plane.konghq.tech
+      run: dig us.control-plane.konghq.tech
+
+    - name: Apply chainsaw suite prerequisites
+      run: make test.e2e.chainsaw.prereq DIRNAME=${{ matrix.suite }}
+
+    - name: set kong ee version
+      run: |
+        echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=$(yq -ojson -r '.chainsaw.kong-ee' < test/test_dependencies.yaml )" >> $GITHUB_ENV
 
     - name: run chainsaw e2e tests
       id: chainsaw-tests
       env:
+        GATEWAY_IMAGE: ${{ env.TEST_KONG_IMAGE }}:${{ env.TEST_KONG_TAG }}
         KONNECT_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONNECT_SERVER_URL: us.api.konghq.tech
         TEST_ID: ${{ env.TEST_ID }}

@@ -1992,6 +1992,7 @@ type EventGatewayParsedRecordEncryptFieldsConfig struct {
 	// Selects which fields to encrypt and with what keys.
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=256
 	EncryptFields []EventGatewayParsedRecordEncryptionSelector `json:"encryptFields,omitempty"`
 	// Describes how to handle a failure in a policy applied to produced records.
 	// * `reject` - rejects the record batch.
@@ -2494,8 +2495,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -2524,8 +2523,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -2673,8 +2670,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -2703,8 +2698,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -2926,6 +2919,7 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=1
 	Certificates []TLSCertificate `json:"certificates,omitempty"`
 	// Configures mutual TLS (mTLS) client certificate verification.
 	// When set, the gateway
@@ -2981,6 +2975,90 @@ type EventGatewayTLSListenerPolicyConfigClientAuthentication struct {
 	//
 	// +required
 	TLSTrustBundles []TLSTrustBundleReference `json:"tlsTrustBundles,omitempty"`
+}
+
+// FetchKongIdentityPrincipal Fetches principal metadata from Kong Identity
+// after successful authentication.
+// The principal is looked up by a custom key matched against the authenticated
+// identity.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type FetchKongIdentityPrincipal struct {
+	// Kong Identity directory to use for principal lookup.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Directory string `json:"directory,omitzero"`
+	// Behavior when the Kong Identity principal lookup fails.
+	// * `error` - fail the authentication if the principal lookup fails.
+	// * `ignore` - proceed without principal metadata if the lookup fails.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;ignore
+	FailureMode FetchKongIdentityPrincipalFailureMode `json:"failureMode,omitzero"`
+	// Defines how to look up the principal in Kong Identity.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	FetchBy FetchKongIdentityPrincipalFetchBy `json:"fetchBy,omitzero"`
+}
+
+// FetchKongIdentityPrincipalFailureMode Behavior when the Kong Identity
+// principal lookup fails.
+// * `error` - fail the authentication if the principal lookup fails.
+// * `ignore` - proceed without principal metadata if the lookup fails.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type FetchKongIdentityPrincipalFailureMode string
+
+// FetchKongIdentityPrincipalFetchBy Defines how to look up the principal in
+// Kong Identity.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type FetchKongIdentityPrincipalFetchBy struct {
+	// The metadata key in Kong Identity to match the authenticated identity
+	// against.
+	// Value for the lookup is a `username` in case of `sasl_plain` or
+	// `sasl_scram`.
+	// In case of `client_certificate` it's a principal mapped by the listener
+	// TLSServer policy.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Key string `json:"key,omitzero"`
+}
+
+// FetchKongIdentityPrincipalOauthBearer Fetches principal metadata from Kong
+// Identity after successful OAUTHBEARER authentication.
+// The principal is looked up by the iss and sub claims from the JWT token.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type FetchKongIdentityPrincipalOauthBearer struct {
+	// Kong Identity directory to use for principal lookup.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Directory string `json:"directory,omitzero"`
+	// Behavior when the Kong Identity principal lookup fails.
+	// * `error` - fail the authentication if the principal lookup fails.
+	// * `ignore` - proceed without principal metadata if the lookup fails.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;ignore
+	FailureMode FetchKongIdentityPrincipalFailureMode `json:"failureMode,omitzero"`
 }
 
 // ForwardToClusterByPortMappingConfig The configuration to forward request to
@@ -3337,8 +3415,6 @@ type ProduceFailureMode string
 // ProduceKeyValidationAction Defines a behavior when record key is not valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
-//
-//
 // to help to identify the clients violating schema.
 type ProduceKeyValidationAction string
 
@@ -3346,8 +3422,6 @@ type ProduceKeyValidationAction string
 // valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
-//
-//
 // to help to identify the clients violating schema.
 type ProduceValueValidationAction string
 
@@ -3437,8 +3511,6 @@ type TLSVersionRange struct {
 // the gateway.
 // - `enforce_on_gateway` means the gateway enforces its own ACL policies for
 // this virtual cluster
-//
-//
 // and does not forward ACL-related commands to the backend cluster.
 // Note that if there are no ACL policies configured, all access is denied.
 // - `passthrough` tells the gateway to forward all ACL-related commands.
@@ -3480,6 +3552,15 @@ type VirtualClusterAuthenticationClaimsMapping struct {
 //
 // **Requires a minimum runtime version of `1.1`**.
 type VirtualClusterAuthenticationClientCertificate struct {
+	// Fetches principal metadata from Kong Identity after successful
+	// authentication.
+	// The principal is looked up by a custom key matched against the authenticated
+	// identity.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	FetchKongIdentityPrincipal FetchKongIdentityPrincipal `json:"fetchKongIdentityPrincipal,omitzero"`
 }
 
 // VirtualClusterAuthenticationJWKS JSON Web Key Set configuration for verifying
@@ -3512,6 +3593,14 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	//
 	// +optional
 	ClaimsMapping VirtualClusterAuthenticationClaimsMapping `json:"claimsMapping,omitzero"`
+	// Fetches principal metadata from Kong Identity after successful OAUTHBEARER
+	// authentication.
+	// The principal is looked up by the iss and sub claims from the JWT token.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	FetchKongIdentityPrincipal FetchKongIdentityPrincipalOauthBearer `json:"fetchKongIdentityPrincipal,omitzero"`
 	// JSON Web Key Set configuration for verifying token signatures.
 	//
 	// +optional
@@ -3519,18 +3608,12 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	// Methods to mediate authentication:
 	// * passthrough - pass authentication from the client through proxy to the
 	// backend cluster without any kind of
-	//
-	//
 	// validation
 	// * validate_forward - pass authentication from the client through proxy to
 	// the backend cluster.
-	//
-	//
 	// Proxy does the validation before forwarding it to the client.
 	// * terminate - terminate authentication at the proxy level and originate
 	// authentication to the backend cluster
-	//
-	//
 	// using the configuration defined at BackendCluster's authentication.
 	// SASL auth is not originated if authentication on the backend_cluster is not
 	// configured.
@@ -3577,6 +3660,15 @@ type VirtualClusterAuthenticationPrincipal struct {
 // VirtualClusterAuthenticationSaslPlain SASL/PLAIN authentication scheme for
 // the virtual cluster containing principals with username and password.
 type VirtualClusterAuthenticationSaslPlain struct {
+	// Fetches principal metadata from Kong Identity after successful
+	// authentication.
+	// The principal is looked up by a custom key matched against the authenticated
+	// identity.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	FetchKongIdentityPrincipal FetchKongIdentityPrincipal `json:"fetchKongIdentityPrincipal,omitzero"`
 	// The mediation type for SASL/PLAIN authentication.
 	//
 	// +required
@@ -3601,6 +3693,15 @@ type VirtualClusterAuthenticationSaslScram struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=sha256;sha512
 	Algorithm string `json:"algorithm,omitzero"`
+	// Fetches principal metadata from Kong Identity after successful
+	// authentication.
+	// The principal is looked up by a custom key matched against the authenticated
+	// identity.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	FetchKongIdentityPrincipal FetchKongIdentityPrincipal `json:"fetchKongIdentityPrincipal,omitzero"`
 }
 
 // VirtualClusterAuthenticationScheme represents a union type for VirtualClusterAuthenticationScheme.
@@ -3806,12 +3907,8 @@ type VirtualClusterNamespace struct {
 	Additional VirtualClusterNamespaceAdditionalProperties `json:"additional,omitzero"`
 	// * hide_prefix - the configured prefix is hidden from clients for topics and
 	// IDs when reading.
-	//
-	//
 	// Created resources are written with the prefix on the backend cluster.
 	// * enforce_prefix - the configured prefix remains visible to clients.
-	//
-	//
 	// Created resources must include the prefix or the request will fail.
 	//
 	//
@@ -4149,10 +4246,8 @@ type VirtualClusterReferenceByName struct {
 	Name VirtualClusterName `json:"name,omitzero"`
 }
 
-// VirtualClusterTopicAlias **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// A topic alias maps an alias name to a namespace-visible topic name.
+// VirtualClusterTopicAlias A topic alias maps an alias name to a
+// namespace-visible topic name.
 // Clients can produce to, consume from, and discover the topic under the alias
 // name.
 // The original topic name remains accessible.

@@ -27,6 +27,26 @@ func CreateGeneratedOps[
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
+	case *konnectv1alpha1.AIGatewayAgent:
+		return createAIGatewayAgent(ctx, cl, sdk.GetAIGatewayAgentsSDK(), ent)
+	case *konnectv1alpha1.AIGatewayConsumer:
+		return createAIGatewayConsumer(ctx, cl, sdk.GetAIGatewayConsumersSDK(), ent)
+	case *konnectv1alpha1.AIGatewayConsumerCredential:
+		return createAIGatewayConsumerCredential(ctx, cl, sdk.GetAIGatewayConsumersSDK(), ent)
+	case *konnectv1alpha1.AIGatewayConsumerGroup:
+		return createAIGatewayConsumerGroup(ctx, cl, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
+	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
+		return createAIGatewayDataPlaneCertificate(ctx, cl, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
+	case *konnectv1alpha1.AIGatewayIdentityProvider:
+		return createAIGatewayIdentityProvider(ctx, cl, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
+	case *konnectv1alpha1.AIGatewayMCPServer:
+		return createAIGatewayMCPServer(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
+	case *konnectv1alpha1.AIGatewayModel:
+		return createAIGatewayModel(ctx, cl, sdk.GetAIGatewayModelsSDK(), ent)
+	case *konnectv1alpha1.AIGatewayModelProvider:
+		return createAIGatewayModelProvider(ctx, cl, sdk.GetAIGatewayModelProvidersSDK(), ent)
+	case *konnectv1alpha1.AIGatewayPolicy:
+		return createAIGatewayPolicy(ctx, cl, sdk.GetAIGatewayPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return createEventGatewayBackendCluster(ctx, cl, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
@@ -43,6 +63,8 @@ func CreateGeneratedOps[
 		return createEventGatewayVirtualClusterPolicy(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return createEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
+	case *konnectv1alpha1.KonnectAIGateway:
+		return createKonnectAIGateway(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return createKonnectEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:

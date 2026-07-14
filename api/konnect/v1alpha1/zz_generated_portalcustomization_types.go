@@ -62,6 +62,11 @@ type PortalCustomizationAPISpec struct {
 	//
 	//
 	// +optional
+	Js Js `json:"js,omitzero"`
+
+	//
+	//
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Layout string `json:"layout,omitzero"`
 
@@ -69,6 +74,11 @@ type PortalCustomizationAPISpec struct {
 	//
 	// +optional
 	Menu Menu `json:"menu,omitzero"`
+
+	//
+	//
+	// +optional
+	PortalLayout PortalLayout `json:"portalLayout,omitzero"`
 
 	//
 	//
@@ -115,6 +125,20 @@ type PortalCustomizationStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }
 
+// Js is a type alias.
+type Js struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Custom *string `json:"custom,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=20
+	Scripts []string `json:"scripts,omitempty"`
+}
+
 // Menu is a type alias.
 type Menu struct {
 	//
@@ -129,6 +153,24 @@ type Menu struct {
 	//
 	// +optional
 	Main []PortalMenuItem `json:"main,omitempty"`
+}
+
+// PortalLayout is a type alias.
+type PortalLayout struct {
+	//
+	//
+	// +optional
+	Footer Footer `json:"footer,omitzero"`
+}
+
+// Footer is a type alias.
+type Footer struct {
+	// The unique name of a snippet in the portal to render in place of the default
+	// footer.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	SnippetName string `json:"snippetName,omitzero"`
 }
 
 // SpecRenderer is a type alias.

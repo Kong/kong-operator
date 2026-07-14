@@ -25,10 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/conversion"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/store"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
 	testutil "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
@@ -200,69 +197,6 @@ func deployIngressClass(ctx context.Context, t *testing.T, name string, client c
 		},
 	}
 	require.NoError(t, client.Create(ctx, ingress))
-}
-
-// deployGateway deploys a Gateway, GatewayClass, and ingress service for use in tests.
-func deployGatewayUsingGatewayClass(ctx context.Context, t *testing.T, client client.Client, gwc gatewayapi.GatewayClass) gatewayapi.Gateway {
-	ns := CreateNamespace(ctx, t, client)
-
-	publishSvc := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      PublishServiceName,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: builder.NewServicePort().
-				WithName("http").
-				WithProtocol(corev1.ProtocolTCP).
-				WithPort(8000).
-				IntoSlice(),
-		},
-	}
-	require.NoError(t, client.Create(ctx, &publishSvc))
-	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
-
-	gw := gatewayapi.Gateway{
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
-			Listeners: []gatewayapi.Listener{
-				{
-					Name:          "http",
-					Protocol:      gatewayapi.HTTPProtocolType,
-					Port:          gatewayapi.PortNumber(8000),
-					AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
-				},
-			},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    ns.Name,
-			GenerateName: "gw-",
-		},
-	}
-	require.NoError(t, client.Create(ctx, &gw))
-	t.Cleanup(func() { _ = client.Delete(ctx, &gw) })
-
-	return gw
-}
-
-func deployGateway(ctx context.Context, t *testing.T, client client.Client) (gatewayapi.Gateway, gatewayapi.GatewayClass) {
-	gwc := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
-			ControllerName: gateway.GetControllerName(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gwc-",
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
-		},
-	}
-	require.NoError(t, client.Create(ctx, &gwc))
-	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
-
-	gw := deployGatewayUsingGatewayClass(ctx, t, client, gwc)
-
-	return gw, gwc
 }
 
 // NameFromT returns a name suitable for use in Kubernetes resources for a given test.

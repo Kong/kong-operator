@@ -29,7 +29,7 @@ func testGeneratedEventGatewayVirtualClusterForSDKOps() *configurationv1alpha1.E
 		},
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			APISpec: configurationv1alpha1.EventGatewayVirtualClusterAPISpec{
-				AclMode: "test-value",
+				AclMode: "enforce_on_gateway",
 				Description: "test-value",
 				DNSLabel: "test-value",
 				Labels: configurationv1alpha1.Labels{"test-key": "test-value"},

@@ -546,7 +546,6 @@ func TestCleanOrphanedResources(t *testing.T) {
 		gvks                 []schema.GroupVersionKind
 		desired              []unstructured.Unstructured // what the converter reports as desired
 		existing             []unstructured.Unstructured // what's in the cluster
-		noWait               bool                        // true → orphanCleanupOptions{waitForDeletes: false}
 		runUntilDone         bool                        // loop until requeue=false
 		outputStoreErr       error
 		interceptorFn        *interceptor.Funcs
@@ -638,11 +637,11 @@ func TestCleanOrphanedResources(t *testing.T) {
 				serviceGVK: {"svc1"},
 			},
 		},
-		// --- gating: noWait=false (orphanCleanupOptions{waitForDeletes: true}) ---
+		// --- gating: orphanCleanupOptions{waitForDeletes: true} ---
 		{
 			// After deleting the orphan in GVK1, the function returns immediately without
 			// processing GVK2. A second call is needed to clean GVK2 orphans.
-			name:        "noWait=false: orphan deleted in GVK1 stops processing GVK2 in same pass",
+			name:        "orphan deleted in GVK1 stops processing GVK2 in same pass",
 			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
 			existing:    []unstructured.Unstructured{makeOrphan("r-orphan", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
 			wantRequeue: true,
@@ -653,38 +652,13 @@ func TestCleanOrphanedResources(t *testing.T) {
 		},
 		{
 			// An in-deletion object in GVK1 also triggers an early return, blocking GVK2.
-			name:        "noWait=false: in-deletion orphan in GVK1 stops processing GVK2",
+			name:        "in-deletion orphan in GVK1 stops processing GVK2",
 			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
 			existing:    []unstructured.Unstructured{makeDeletingOrphan("r-deleting", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
 			wantRequeue: true,
 			wantRemaining: map[schema.GroupVersionKind][]string{
 				routeGVK:   {"r-deleting"},
 				serviceGVK: {"svc-orphan"},
-			},
-		},
-		// --- gating: noWait=true (orphanCleanupOptions{waitForDeletes: false}) ---
-		{
-			// With noWait=true, GVK2 is processed even when GVK1 had orphans to delete.
-			name:        "noWait=true: orphan deleted in GVK1 continues to GVK2 in same pass",
-			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
-			existing:    []unstructured.Unstructured{makeOrphan("r-orphan", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
-			noWait:      true,
-			wantRequeue: false,
-			wantRemaining: map[schema.GroupVersionKind][]string{
-				routeGVK:   {},
-				serviceGVK: {},
-			},
-		},
-		{
-			// With noWait=true, an in-deletion GVK1 orphan does not block GVK2.
-			name:        "noWait=true: in-deletion orphan in GVK1 does not block GVK2",
-			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
-			existing:    []unstructured.Unstructured{makeDeletingOrphan("r-deleting", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
-			noWait:      true,
-			wantRequeue: false,
-			wantRemaining: map[schema.GroupVersionKind][]string{
-				routeGVK:   {"r-deleting"},
-				serviceGVK: {},
 			},
 		},
 		// --- error paths ---
@@ -748,7 +722,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 							outputStoreErr: tt.outputStoreErr,
 						},
 					}
-					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: !tt.noWait})
+					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 				} else {
 					conv := &fakeHTTPRouteConverter{
 						gvks:           tt.gvks,
@@ -756,7 +730,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 						desired:        tt.desired,
 						outputStoreErr: tt.outputStoreErr,
 					}
-					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: !tt.noWait})
+					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 				}
 				if !tt.runUntilDone || !requeue || err != nil {
 					break
@@ -836,25 +810,20 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 		require.Len(t, serviceList.Items, 1)
 	})
 
-	t.Run("route deletion cleanup does not wait for deleting child before later GVKs", func(t *testing.T) {
-		cl := newClient()
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false})
-		require.NoError(t, err)
-		require.False(t, requeue)
-
-		serviceList := &unstructured.UnstructuredList{}
-		serviceList.SetGroupVersionKind(gvks[1])
-		require.NoError(t, cl.List(ctx, serviceList))
-		require.Empty(t, serviceList.Items)
-	})
-
-	t.Run("route deletion cleanup retries when orphan delete conflicts", func(t *testing.T) {
+	t.Run("cleanup requeues when orphan delete conflicts", func(t *testing.T) {
+		conflictGVK := []schema.GroupVersionKind{
+			{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},
+		}
+		conflictService := newUnstructured("ns", "service", conflictGVK[0], ownerLabels)
+		conflictService.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
+		})
 		cl := fake.NewClientBuilder().
 			WithScheme(runtime.NewScheme()).
-			WithObjects(deletingRoute.DeepCopy(), service.DeepCopy()).
+			WithObjects(conflictService.DeepCopy()).
 			WithInterceptorFuncs(interceptor.Funcs{
 				Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-					if obj.GetName() == service.GetName() {
+					if obj.GetName() == conflictService.GetName() {
 						return apierrors.NewConflict(
 							schema.GroupResource{Group: "configuration.konghq.com", Resource: "kongservices"},
 							obj.GetName(),
@@ -866,12 +835,17 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 			}).
 			Build()
 
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false})
+		conflictConv := &fakeHTTPRouteConverter{
+			gvks: conflictGVK,
+			root: *root,
+		}
+
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, conflictConv, orphanCleanupOptions{waitForDeletes: true})
 		require.NoError(t, err)
 		require.True(t, requeue)
 
 		serviceList := &unstructured.UnstructuredList{}
-		serviceList.SetGroupVersionKind(gvks[1])
+		serviceList.SetGroupVersionKind(conflictGVK[0])
 		require.NoError(t, cl.List(ctx, serviceList))
 		require.Len(t, serviceList.Items, 1)
 	})

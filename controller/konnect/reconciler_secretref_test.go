@@ -58,8 +58,11 @@ func TestHandleSecretRef(t *testing.T) {
 					},
 				},
 			},
-			expectResult: false,
-			expectError:  false,
+			expectResult:        false,
+			expectError:         false,
+			expectConditionType: konnectv1alpha1.SecretRefValidConditionType,
+			expectCondition:     metav1.ConditionTrue,
+			expectReason:        konnectv1alpha1.SecretRefReasonValid,
 		},
 		{
 			name: "secret does not exist",
@@ -474,4 +477,75 @@ func TestHandleSecretRef(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestHandleSecretRef_RecoversToValidAfterFix ensures that once a referenced
+// Secret is fixed (created after being missing), SecretRefValid flips back to
+// True on the next reconcile instead of staying stuck at False forever.
+func TestHandleSecretRef_RecoversToValidAfterFix(t *testing.T) {
+	ctx := context.Background()
+	scheme := scheme.Get()
+
+	cert := &configurationv1alpha1.KongCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cert",
+			Namespace: "default",
+		},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+			Kind:       "KongCertificate",
+		},
+		Spec: configurationv1alpha1.KongCertificateSpec{
+			SecretRef: &commonv1alpha1.NamespacedRef{
+				Name: "test-secret",
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cert).
+		WithStatusSubresource(cert).
+		Build()
+
+	// First reconcile: the Secret doesn't exist yet, condition must go False.
+	_, hasResult, err := handleSecretRef(ctx, cl, cert)
+	require.Error(t, err)
+	assert.True(t, hasResult)
+
+	updated := &configurationv1alpha1.KongCertificate{}
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(cert), updated))
+	cond, found := findCondition(updated, string(konnectv1alpha1.SecretRefValidConditionType))
+	require.True(t, found)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, konnectv1alpha1.SecretRefReasonInvalid, cond.Reason)
+
+	// The Secret gets created; the next reconcile must flip the condition back
+	// to True instead of leaving the stale False value in place.
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: "default",
+		},
+	}
+	require.NoError(t, cl.Create(ctx, secret))
+
+	_, hasResult, err = handleSecretRef(ctx, cl, updated)
+	require.NoError(t, err)
+	assert.False(t, hasResult)
+
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(cert), updated))
+	cond, found = findCondition(updated, string(konnectv1alpha1.SecretRefValidConditionType))
+	require.True(t, found)
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, konnectv1alpha1.SecretRefReasonValid, cond.Reason)
+}
+
+func findCondition(cert *configurationv1alpha1.KongCertificate, condType string) (metav1.Condition, bool) {
+	for _, cond := range cert.Status.Conditions {
+		if cond.Type == condType {
+			return cond, true
+		}
+	}
+	return metav1.Condition{}, false
 }

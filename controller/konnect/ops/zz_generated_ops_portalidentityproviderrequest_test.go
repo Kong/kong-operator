@@ -30,7 +30,7 @@ func testGeneratedPortalIdentityProviderRequestForSDKOps() *konnectv1alpha1.Port
 		Spec: konnectv1alpha1.PortalIdentityProviderRequestSpec{
 			APISpec: konnectv1alpha1.PortalIdentityProviderRequestAPISpec{
 				Enabled: "Enabled",
-				Type: "test-value",
+				Type: "oidc",
 			},
 		},
 	}

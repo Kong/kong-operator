@@ -1,0 +1,744 @@
+package envtest
+
+import (
+	"errors"
+	"fmt"
+	"net/url"
+	"testing"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/google/uuid"
+	"github.com/samber/lo"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/konnect"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/deploy"
+	"github.com/kong/kong-operator/v2/test/helpers/eventually"
+	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
+	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
+)
+
+func TestKongService(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := envtest.Context(t, t.Context())
+	defer cancel()
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+
+	t.Log("Setting up the manager with reconcilers")
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
+	factory := sdkmocks.NewMockSDKFactory(t)
+	sdk := factory.SDK
+	envtest.StartReconcilers(ctx, t, mgr, logs,
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongService](consts.KonnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongService](&metricsmocks.MockRecorder{}),
+		),
+	)
+
+	ns2 := deploy.Namespace(t, ctx, mgr.GetClient())
+	t.Log("Setting up clients")
+	clientOptions := client.Options{
+		Scheme: scheme.Get(),
+	}
+	cl, err := client.NewWithWatch(mgr.GetConfig(), clientOptions)
+	require.NoError(t, err)
+	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
+
+	cl2, err := client.NewWithWatch(mgr.GetConfig(), clientOptions)
+	require.NoError(t, err)
+	clientNamespaced2 := client.NewNamespacedClient(mgr.GetClient(), ns2.Name)
+
+	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+	t.Run("adding, patching and deleting KongService", func(t *testing.T) {
+		const (
+			upstreamID = "kup-12345"
+			serviceID  = "service-12345"
+			host       = "example.com"
+			port       = int64(8081)
+		)
+
+		t.Log("Creating a KongUpstream and setting it to programmed")
+		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+		envtest.UpdateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
+
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.ServiceOutput{
+						ID: new(serviceID),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Creating a KongService")
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for Service to be programmed and get Konnect ID")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
+			return kt.GetKonnectID() == serviceID && k8sutils.IsProgrammed(kt)
+		}, "KongService didn't get Programmed status condition or didn't get the correct (service-12345) Konnect ID assigned")
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+
+		t.Log("Setting up SDK expectations on Service update")
+		sdk.ServicesSDK.EXPECT().
+			UpsertService(
+				mock.Anything,
+				mock.MatchedBy(func(req sdkkonnectops.UpsertServiceRequest) bool {
+					return req.ServiceID == serviceID && req.Service.Port != nil && *req.Service.Port == port
+				}),
+			).
+			Return(&sdkkonnectops.UpsertServiceResponse{}, nil)
+
+		t.Log("Patching KongService")
+		serviceToPatch := createdService.DeepCopy()
+		serviceToPatch.Spec.Port = port
+		require.NoError(t, clientNamespaced.Patch(ctx, serviceToPatch, client.MergeFrom(createdService)))
+
+		t.Log("Waiting for Service to be patched")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(createdService),
+				envtest.ObjectMatchesKonnectID[*configurationv1alpha1.KongService](serviceID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongService](),
+				func(s *configurationv1alpha1.KongService) bool {
+					return s.Spec.Port == port
+				},
+			),
+			"KongService didn't get patched",
+		)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+
+		t.Log("Setting up SDK expectations on Service deletion")
+		sdk.ServicesSDK.EXPECT().
+			DeleteService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				serviceID,
+			).
+			Return(&sdkkonnectops.DeleteServiceResponse{}, nil)
+
+		t.Log("Deleting KongService")
+		require.NoError(t, clientNamespaced.Delete(ctx, createdService))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdService, consts.WaitTime, consts.TickTime)
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("trying to attach KongService to KonnectGatewayControlPlane of type KIC fails (due to CP being read only)", func(t *testing.T) {
+		const (
+			upstreamID = "kup-kic-12345"
+			serviceID  = "service-12345"
+			host       = "example.com"
+			port       = int64(8081)
+		)
+
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
+			deploy.KonnectGatewayControlPlaneType(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController),
+		)
+		t.Log("Creating a KongUpstream and setting it to programmed")
+		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+		envtest.UpdateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
+
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		errBody := `{
+					"code": 7,
+					"message": "usage constraint error",
+					"details": [
+						{
+							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+							"messages": [
+								"operation not permitted on KIC cluster"
+							]
+						}
+					]
+				}`
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{},
+				sdkkonnecterrs.NewSDKError("API error occurred", 403, errBody, nil),
+			)
+
+		t.Log("Creating a KongService with ControlPlaneRef type=konnectNamespacedRef")
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+
+		t.Log("Waiting for Service to get the Programmed condition set to False")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
+			if kt.GetName() != createdService.GetName() {
+				return false
+			}
+			if kt.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
+				kt.GetControlPlaneRef().KonnectNamespacedRef == nil ||
+				kt.GetControlPlaneRef().KonnectNamespacedRef.Name != cp.GetName() {
+				return false
+			}
+
+			c, ok := k8sutils.GetCondition("Programmed", kt)
+			if !ok {
+				return false
+			}
+			return c.Status == metav1.ConditionFalse && c.Reason == "FailedToCreate"
+		}, "KongService should get the Programmed condition set to status=False due to using invalid (KIC) ControlPlaneRef")
+	})
+
+	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
+		const (
+			id   = "service-12345"
+			host = "example.com"
+			port = int64(8081)
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.ServiceOutput{
+						ID: new(id),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Creating a KongService")
+		created := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, envtest.ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+			fmt.Sprintf("KongService didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for Service to be get Programmed and ControlPlaneRefValid conditions with status=False")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			"KongService didn't get Programmed and/or ControlPlaneRefValid status condition set to False")
+	})
+
+	t.Run("detaching and reattaching the referenced CP correctly removes and readds the konnect cleanup finalizer", func(t *testing.T) {
+		const (
+			id   = "abc-12345678"
+			name = "name-3"
+			host = "example2.com"
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.ServiceOutput{
+						ID: new(id),
+					},
+				},
+				nil,
+			)
+
+		created := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, envtest.ConditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for object to be get Programmed and ControlPlaneRefValid conditions with status=False and konnect cleanup finalizer removed")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.AssertNot(envtest.ObjectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer)),
+				envtest.ConditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			),
+			"Object didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
+
+		id2 := uuid.New().String()
+		t.Log("Setting up SDK expectations on KongConsumer update (after KonnectGatewayControlPlane deletion)")
+		sdk.ServicesSDK.EXPECT().
+			UpsertService(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertServiceRequest) bool {
+				return r.ServiceID == id && r.Service.Host == host
+			})).
+			Return(&sdkkonnectops.UpsertServiceResponse{
+				Service: &sdkkonnectcomp.ServiceOutput{
+					ID: new(id2),
+				},
+			}, nil)
+
+		cp = deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
+			func(obj client.Object) {
+				cpNew := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
+				cpNew.Name = cp.Name
+			},
+		)
+
+		t.Log("Waiting for object to be get Programmed with status=True and konnect cleanup finalizer re added")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongService](),
+				envtest.ObjectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer),
+			),
+			"Object didn't get Programmed set to True",
+		)
+	})
+
+	t.Run("adopting a service in override mode then deleting it", func(t *testing.T) {
+		serviceKonnectID := uuid.NewString()
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating service")
+		sdk.ServicesSDK.EXPECT().GetService(
+			mock.Anything, serviceKonnectID, cp.GetKonnectID(),
+		).Return(
+			&sdkkonnectops.GetServiceResponse{
+				Service: &sdkkonnectcomp.ServiceOutput{
+					ID:   new(serviceKonnectID),
+					Host: "example.com",
+				},
+			}, nil,
+		)
+		sdk.ServicesSDK.EXPECT().UpsertService(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertServiceRequest) bool {
+				return req.ServiceID == serviceKonnectID
+			}),
+		).Return(&sdkkonnectops.UpsertServiceResponse{}, nil)
+
+		t.Log("Creating a KongService to adopt the existing service")
+		createdService := deploy.KongService(t, t.Context(), clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongService](commonv1alpha1.AdoptModeOverride, serviceKonnectID),
+		)
+
+		t.Logf("Waiting for the KongService %s/%s to be programmed and get Konnect ID", ns.Name, createdService.Name)
+		envtest.WatchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			return ks.Name == createdService.Name &&
+				ks.GetKonnectID() == serviceKonnectID && k8sutils.IsProgrammed(ks)
+		},
+			"Did not see KongService marked as Programmed and set Konnect ID",
+		)
+
+		t.Log("Setting up SDK expectations for deleting the service")
+		sdk.ServicesSDK.EXPECT().DeleteService(
+			mock.Anything,
+			cp.GetKonnectID(),
+			serviceKonnectID,
+		).Return(&sdkkonnectops.DeleteServiceResponse{}, nil)
+
+		t.Logf("Deleting the KongService %s/%s", ns.Name, createdService.Name)
+		require.NoError(t, clientNamespaced.Delete(t.Context(), createdService))
+
+		t.Log("Waiting for the SDK's DeleteService to be called")
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+
+		t.Log("Waiting for the KongService to disappear")
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdService, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("adopting a service with NotFound error returned from upstream", func(t *testing.T) {
+		serviceKonnectID := uuid.NewString()
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting service")
+		sdk.ServicesSDK.EXPECT().GetService(
+			mock.Anything, serviceKonnectID, cp.GetKonnectID(),
+		).Return(
+			nil, &sdkkonnecterrs.NotFoundError{
+				Title:  "NotFound",
+				Detail: fmt.Sprintf("Service %s not found", serviceKonnectID),
+			},
+		)
+
+		t.Log("Creating a KongService to adopt the existing service")
+		createdService := deploy.KongService(t, t.Context(), clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongService](commonv1alpha1.AdoptModeOverride, serviceKonnectID),
+		)
+
+		t.Logf("Waiting for the KongService %s/%s to be marked as not programmed", ns.Name, createdService.Name)
+		envtest.WatchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			return ks.Name == createdService.Name &&
+				envtest.ConditionsContainProgrammedFalse(ks.GetConditions()) &&
+				lo.ContainsBy(ks.GetConditions(), func(c metav1.Condition) bool {
+					return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType &&
+						c.Status == metav1.ConditionFalse
+				})
+		},
+			"Did not see KongService marked as not Programmed and not Adopted",
+		)
+	})
+
+	t.Run("adopting a service with the k8s-uid tag already exists in the upstream service", func(t *testing.T) {
+		serviceKonnectID := uuid.NewString()
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting service")
+		sdk.ServicesSDK.EXPECT().GetService(
+			mock.Anything, serviceKonnectID, cp.GetKonnectID(),
+		).Return(
+			&sdkkonnectops.GetServiceResponse{
+				Service: &sdkkonnectcomp.ServiceOutput{
+					ID:   new(serviceKonnectID),
+					Host: "example.com",
+					Tags: []string{
+						"k8s-group:configuration.konghq.com",
+						"k8s-version:v1alpha1",
+						"k8s-kind:KongService",
+						"k8s-uid:12345678-9999-0000-1111-abcdeffedcba",
+						"k8s-namespace:" + ns.Name,
+						"k8s-name:another-service",
+						"k8s-generation:1",
+					},
+				},
+			}, nil,
+		)
+
+		t.Log("Creating a KongService to adopt the existing service")
+		createdService := deploy.KongService(t, t.Context(), clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongService](commonv1alpha1.AdoptModeOverride, serviceKonnectID),
+		)
+
+		t.Logf("Waiting for the KongService %s/%s to be marked as not programmed", ns.Name, createdService.Name)
+		envtest.WatchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			return ks.Name == createdService.Name &&
+				envtest.ConditionsContainProgrammedFalse(ks.GetConditions()) &&
+				lo.ContainsBy(ks.GetConditions(), func(c metav1.Condition) bool {
+					return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType &&
+						c.Status == metav1.ConditionFalse
+				})
+		},
+			"Did not see KongService marked as not Programmed and not Adopted, conditions:",
+		)
+
+		t.Log(createdService.GetConditions())
+	})
+
+	t.Run("Cross namespace ref KongService -> KonnectNamespacedRefControlPlane yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl2, client.InNamespace(ns2.Name))
+
+		t.Log("Don't setting SDK expectations on Service creation as we do not expect any operations to be made upstream")
+
+		t.Log("Creating a KongService with ControlPlaneRef type=konnectID")
+		createdService := deploy.KongService(t, ctx, clientNamespaced2,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp, ns.Name),
+		)
+
+		t.Log("Waiting for Service to get ResolvedRefs condition with status=False")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+
+			cpRef := ks.GetControlPlaneRef()
+			if cpRef == nil {
+				return false
+			}
+
+			if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
+				cpRef.KonnectNamespacedRef == nil ||
+				cpRef.KonnectNamespacedRef.Name != cp.GetName() ||
+				cpRef.KonnectNamespacedRef.Namespace != cp.GetNamespace() {
+				return false
+			}
+			return k8sutils.HasConditionFalse(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, ks)
+		}, "KongService didn't get ResolvedRefs status condition set to False")
+	})
+
+	t.Run("Cross namespace ref KongService -> KonnectNamespacedRefControlPlane yields ResolvedRefs=True with valid KongReferenceGrant", func(t *testing.T) {
+		const (
+			host = "example1234566.com"
+			id   = "service-1234566"
+		)
+
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl2, client.InNamespace(ns2.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.ServiceOutput{
+						ID: new(id),
+					},
+				},
+				nil,
+			)
+
+		_ = deploy.KongReferenceGrant(t, ctx, clientNamespaced,
+			deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "KongService",
+				Namespace: configurationv1alpha1.Namespace(ns2.Name),
+			}),
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+				Kind:  "KonnectGatewayControlPlane",
+			}),
+		)
+
+		t.Log("Creating a KongService with ControlPlaneRef type=konnectID")
+		createdService := deploy.KongService(t, ctx, clientNamespaced2,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp, ns.Name),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for Service to get ResolvedRefs condition with status=False")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+
+			cpRef := ks.GetControlPlaneRef()
+			if cpRef == nil {
+				return false
+			}
+
+			if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
+				cpRef.KonnectNamespacedRef == nil ||
+				cpRef.KonnectNamespacedRef.Name != cp.GetName() ||
+				cpRef.KonnectNamespacedRef.Namespace != cp.GetNamespace() {
+				return false
+			}
+			return k8sutils.HasConditionTrue(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, ks)
+		}, "KongService didn't get ResolvedRefs status condition set to True")
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("network error on create sets Programmed condition to False", func(t *testing.T) {
+		const host = "network-error-test.com"
+
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations to return a network error on Service creation")
+		networkErr := &url.Error{
+			Op:  "Post",
+			URL: "https://us.api.konghq.com/v2/control-planes/" + cp.GetKonnectID() + "/core-entities/services",
+			Err: errors.New("dial tcp: lookup us.api.konghq.com: no such host"),
+		}
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(nil, networkErr)
+
+		t.Log("Creating a KongService")
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for Service to get Programmed condition with status=False due to network error")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+
+			c, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ks)
+			if !ok {
+				return false
+			}
+			// The cleanup finalizer must be present even though the Konnect create
+			// failed: it is added before the create (finalizer-first), so the entity
+			// can always be cleaned up. The previous behaviour (finalizer added only
+			// after a successful create) would leave no finalizer here.
+			return c.Status == metav1.ConditionFalse && c.Reason == "FailedToCreate" &&
+				envtest.ObjectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer)(ks)
+		}, "KongService should get Programmed=False on network error and still carry the cleanup finalizer")
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("network error on update sets Programmed condition to False", func(t *testing.T) {
+		const (
+			serviceID = "service-network-update-test"
+			host      = "network-error-update-test.com"
+			newPort   = int64(9090)
+		)
+
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation (success)")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.ServiceOutput{
+						ID: new(serviceID),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Creating a KongService")
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for Service to be programmed and get Konnect ID")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			return ks.GetName() == createdService.GetName() &&
+				ks.GetKonnectID() == serviceID &&
+				k8sutils.IsProgrammed(ks)
+		}, "KongService didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+
+		t.Log("Setting up SDK expectations to return a network error on Service update")
+		networkErr := &url.Error{
+			Op:  "Put",
+			URL: "https://us.api.konghq.com/v2/control-planes/" + cp.GetKonnectID() + "/core-entities/services/" + serviceID,
+			Err: errors.New("dial tcp: lookup us.api.konghq.com: no such host"),
+		}
+		sdk.ServicesSDK.EXPECT().
+			UpsertService(
+				mock.Anything,
+				mock.MatchedBy(func(req sdkkonnectops.UpsertServiceRequest) bool {
+					return req.ServiceID == serviceID && req.Service.Port != nil && *req.Service.Port == newPort
+				}),
+			).
+			Return(nil, networkErr).
+			Maybe()
+
+		t.Log("Patching KongService to trigger an update")
+		serviceToPatch := createdService.DeepCopy()
+		serviceToPatch.Spec.Port = newPort
+		require.NoError(t, clientNamespaced.Patch(ctx, serviceToPatch, client.MergeFrom(createdService)))
+
+		t.Log("Waiting for Service to get Programmed condition with status=False due to network error on update")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+
+			c, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ks)
+			if !ok {
+				return false
+			}
+			// After ops.Update sets the condition, the handleOpsErr in the reconciler
+			// patches the condition with KonnectAPIOpFailed reason, but then the reconciler
+			// continues and updates the status with FailedToUpdate. The final reason depends
+			// on which update wins. We check for ConditionFalse and that the message contains
+			// the network error.
+			return c.Status == metav1.ConditionFalse &&
+				c.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed
+		}, "KongService should get the Programmed condition set to status=False due to network error on update")
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+	})
+}

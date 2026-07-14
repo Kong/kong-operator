@@ -1,0 +1,301 @@
+# KonnectAIGateway cross-namespace KonnectAPIAuthConfigurationRef test.
+#
+# KonnectAIGateway carries a direct KonnectAPIAuthConfigurationRef (via
+# spec.konnect, an embedded KonnectConfiguration), making it another
+# representative of the direct KonnectAPIAuthConfigurationRef path in
+# GetAPIAuthRefNN, alongside KonnectGatewayControlPlane.
+#
+# Scenario A: AI Gateway and AuthConfig in the same namespace — baseline, no grant needed.
+#
+# Scenario B: AI Gateway in ns-A, AuthConfig in ns-B.
+#   A single AIGateway->AuthConfig grant is required.
+#
+# Scenario D: starting from Scenario B (Programmed=True), deleting the
+#   KongReferenceGrant reverts the AI Gateway to APIAuthResolvedRef=False/RefNotPermitted.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnectaigateway-cross-namespace
+spec:
+  description: |
+    Scenario A: KonnectAIGateway and KonnectAPIAuthConfiguration in the same namespace.
+    No grant needed; baseline sanity check.
+
+    Scenario B: KonnectAIGateway (ns-A) -> KonnectAPIAuthConfiguration (ns-B).
+    A single AIGateway->AuthConfig grant in ns-B is required.
+    Includes a negative assertion that the AI Gateway fails before the grant is added.
+
+    Scenario D: starting from Scenario B (Programmed=True), deleting the
+    KongReferenceGrant reverts the AI Gateway to APIAuthResolvedRef=False/RefNotPermitted
+    immediately, validating that the KongReferenceGrant watch is in place.
+
+  bindings:
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Namespace bindings.
+    - name: auth_namespace
+      value: (join('-', [$namespace, 'auth']))
+    # Scenario A resource names (both in test namespace).
+    - name: aigw0_name
+      value: (join('-', [$namespace, 'aigw0']))
+    - name: auth0_name
+      value: (join('-', [$namespace, 'auth0-konnect-api-auth']))
+    # Scenario B resource names (AI Gateway in test namespace, AuthConfig in auth_namespace).
+    - name: aigw_name
+      value: (join('-', [$namespace, 'aigw']))
+    - name: auth_name
+      value: (join('-', [$namespace, 'konnect-api-auth']))
+
+  steps:
+    # =========================================================================
+    # Scenario A: AI Gateway and AuthConfig in the same namespace. No grant needed.
+    # =========================================================================
+
+    - name: 1-create-auth-config-same-ns
+      description: Create KonnectAPIAuthConfiguration in the test namespace.
+      bindings:
+        - name: test_name
+          value: (join('-', [$namespace, 'auth0']))
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-and-assert-aigateway-same-ns
+      description: Create KonnectAIGateway with same-namespace authRef; assert it becomes Programmed.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw0_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  name: ($aigw0_name)
+                  displayName: ($aigw0_name)
+                konnect:
+                  authRef:
+                    name: ($auth0_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw0_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (id != null): true
+
+    - name: 3-cleanup-scenario-a
+      description: Delete AIGateway0. Auth config has no Konnect finalizer; chainsaw cleans it up at namespace teardown.
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              name: ($aigw0_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw0_name)
+                namespace: ($namespace)
+
+    # =========================================================================
+    # Scenario B: AI Gateway in test namespace, AuthConfig in auth_namespace.
+    # A single AIGateway->AuthConfig grant is required.
+    # =========================================================================
+
+    - name: 4-create-auth-namespace
+      description: Create namespace for KonnectAPIAuthConfiguration.
+      bindings:
+        - name: namespace_name
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 5-create-auth-config-cross-ns
+      description: Create KonnectAPIAuthConfiguration in auth_namespace.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+        - name: namespace
+          value: ($auth_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 6-create-aigateway-no-grant
+      description: Create KonnectAIGateway with cross-namespace authRef (no grant yet).
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  name: ($aigw_name)
+                  displayName: ($aigw_name)
+                konnect:
+                  authRef:
+                    name: ($auth_name)
+                    namespace: ($auth_namespace)
+
+    - name: 7-assert-aigateway-auth-grant-missing
+      description: Assert AI Gateway has APIAuthResolvedRef=False/RefNotPermitted because no grant exists.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 8-create-aigateway-to-auth-grant
+      description: Create KongReferenceGrant in auth_namespace allowing AI Gateway from test namespace to reference the AuthConfig.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'aigw-to-auth']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAIGateway
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 9-assert-aigateway-programmed
+      description: Assert AI Gateway is Programmed after the AIGateway->AuthConfig grant is in place.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'True'
+                    reason: ResolvedRef
+                (conditions[?type == 'APIAuthValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (id != null): true
+
+    # =========================================================================
+    # Scenario D: deleting the grant reverts the AI Gateway to ResolvedRefs=False/RefNotPermitted.
+    # =========================================================================
+
+    - name: 10-delete-aigateway-to-auth-grant
+      description: Delete the KongReferenceGrant to verify the AI Gateway reverts to RefNotPermitted.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'aigw-to-auth']))
+              namespace: ($auth_namespace)
+
+    - name: 11-assert-aigateway-reverts-to-not-permitted
+      description: Assert AI Gateway transitions back to APIAuthResolvedRef=False/RefNotPermitted after grant deletion.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'APIAuthResolvedRef']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+
+    - name: 12-recreate-aigateway-to-auth-grant
+      description: Recreate the grant so the AI Gateway can be deprovisioned cleanly during cleanup.
+      bindings:
+        - name: kong_reference_grant_name
+          value: (join('-', [$namespace, 'aigw-to-auth']))
+        - name: kong_reference_grant_namespace
+          value: ($auth_namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAIGateway
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAPIAuthConfiguration
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 13-cleanup-scenario-b
+      description: |
+        Delete AI Gateway in order; wait for it to be gone before deleting the grant.
+        The AI Gateway needs the AIGateway->AuthConfig grant during Konnect deprovisioning.
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              name: ($aigw_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: (join('-', [$namespace, 'aigw-to-auth']))
+              namespace: ($auth_namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnectaigateway-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($auth_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

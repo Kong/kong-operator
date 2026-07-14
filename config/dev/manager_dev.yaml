@@ -23,6 +23,7 @@ spec:
             - -zap-log-level=debug
             - -zap-devel=true
             - -enable-controller-kongplugininstallation
+            - -enable-controller-aigatewaydataplane
             - -enable-controller-konnect
             - -enable-controller-controlplaneextensions
           name: manager

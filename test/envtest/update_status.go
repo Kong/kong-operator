@@ -18,7 +18,7 @@ import (
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
-func updateKongConsumerStatusWithKonnectID(
+func UpdateKongConsumerStatusWithKonnectID(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -34,7 +34,7 @@ func updateKongConsumerStatusWithKonnectID(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongConsumerGroupStatusWithKonnectID(
+func UpdateKongConsumerGroupStatusWithKonnectID(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -50,7 +50,7 @@ func updateKongConsumerGroupStatusWithKonnectID(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongServiceStatusWithProgrammed(
+func UpdateKongServiceStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -69,7 +69,7 @@ func updateKongServiceStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongRouteStatusWithProgrammed(
+func UpdateKongRouteStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -90,7 +90,7 @@ func updateKongRouteStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongKeySetStatusWithProgrammed(
+func UpdateKongKeySetStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -108,7 +108,7 @@ func updateKongKeySetStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongUpstreamStatusWithProgrammed(
+func UpdateKongUpstreamStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -125,6 +125,29 @@ func updateKongUpstreamStatusWithProgrammed(
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
+}
+
+func updateKonnectAIGatewayStatusWithProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	obj *konnectv1alpha1.KonnectAIGateway,
+	id string,
+) {
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+			return
+		}
+		obj.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
+			ID:        id,
+			ServerURL: sdkmocks.SDKServerURL,
+			OrgID:     "org-id",
+		}
+		obj.Status.Conditions = []metav1.Condition{
+			programmedCondition(obj.GetGeneration()),
+		}
+		assert.NoError(ct, cl.Status().Update(ctx, obj))
+	}, waitTime, tickTime)
 }
 
 func updateKonnectEventGatewayStatusWithProgrammed(

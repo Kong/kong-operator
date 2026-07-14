@@ -22,11 +22,10 @@ import (
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/health"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/test/envtest/create"
 )
 
 const (
-	// PublishServiceName is the name of the publish service used in Gateway API tests.
-	PublishServiceName = "publish-svc"
 
 	// ManagerStartupWaitTime is the time to wait for the manager to start.
 	ManagerStartupWaitTime = 5 * time.Second
@@ -97,7 +96,7 @@ func WithGatewayToReconcile(gatewayNN string) func(cfg *managercfg.Config) {
 func WithPublishService(namespace string) func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
 		cfg.PublishService = mo.Some(k8stypes.NamespacedName{
-			Name:      PublishServiceName,
+			Name:      create.PublishServiceName,
 			Namespace: namespace,
 		})
 	}

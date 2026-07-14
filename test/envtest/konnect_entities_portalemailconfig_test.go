@@ -69,7 +69,7 @@ func TestPortalEmailConfig(t *testing.T) {
 			initialReplyToMail = "support@example.com"
 		)
 
-		portalWatch := setupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		portalWatch := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 		sdk.PortalsSDK.EXPECT().
 			CreatePortal(mock.Anything, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortal) bool {
 				return req.DisplayName != nil && *req.DisplayName == displayName &&
@@ -89,17 +89,17 @@ func TestPortalEmailConfig(t *testing.T) {
 		})
 
 		t.Log("Waiting for Portal to be programmed")
-		watchFor(t, ctx, portalWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(portal),
-				objectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(portal),
+				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 			),
 			"Portal didn't get Programmed status condition or Konnect ID",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
 
-		emailConfigWatch := setupWatch[konnectv1alpha1.PortalEmailConfigList](t, ctx, cl, client.InNamespace(ns.Name))
+		emailConfigWatch := SetupWatch[konnectv1alpha1.PortalEmailConfigList](t, ctx, cl, client.InNamespace(ns.Name))
 		emailConfig := testEnvtestPortalEmailConfig(
 			ns.Name,
 			portal.GetName(),
@@ -123,11 +123,11 @@ func TestPortalEmailConfig(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, emailConfig))
 
 		t.Log("Waiting for PortalEmailConfig to be programmed")
-		watchFor(t, ctx, emailConfigWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(emailConfig),
-				objectMatchesKonnectID[*konnectv1alpha1.PortalEmailConfig](emailConfigID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalEmailConfig](),
+		WatchFor(t, ctx, emailConfigWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(emailConfig),
+				ObjectMatchesKonnectID[*konnectv1alpha1.PortalEmailConfig](emailConfigID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalEmailConfig](),
 				func(p *konnectv1alpha1.PortalEmailConfig) bool {
 					return p.GetPortalID() == portalID &&
 						controllerutil.ContainsFinalizer(p, konnect.KonnectCleanupFinalizer)
@@ -135,7 +135,7 @@ func TestPortalEmailConfig(t *testing.T) {
 			),
 			"PortalEmailConfig didn't get Programmed status condition, Portal ID, Konnect ID, or cleanup finalizer",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on PortalEmailConfig update")
 		emailConfigToPatch := emailConfig.DeepCopy()
@@ -152,11 +152,11 @@ func TestPortalEmailConfig(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, emailConfigToPatch, client.MergeFrom(emailConfig)))
 
 		t.Log("Waiting for PortalEmailConfig to be patched")
-		watchFor(t, ctx, emailConfigWatch, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(emailConfig),
-				objectMatchesKonnectID[*konnectv1alpha1.PortalEmailConfig](emailConfigID),
-				objectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalEmailConfig](),
+		WatchFor(t, ctx, emailConfigWatch, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(emailConfig),
+				ObjectMatchesKonnectID[*konnectv1alpha1.PortalEmailConfig](emailConfigID),
+				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalEmailConfig](),
 				func(p *konnectv1alpha1.PortalEmailConfig) bool {
 					return p.Spec.APISpec.DomainName != nil && *p.Spec.APISpec.DomainName == updatedDomainName &&
 						p.Spec.APISpec.FromEmail != nil && *p.Spec.APISpec.FromEmail == updatedFromEmail
@@ -164,7 +164,7 @@ func TestPortalEmailConfig(t *testing.T) {
 			),
 			"PortalEmailConfig didn't get patched",
 		)
-		eventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on PortalEmailConfig deletion")
 		sdk.PortalEmailsSDK.EXPECT().
@@ -174,7 +174,7 @@ func TestPortalEmailConfig(t *testing.T) {
 		t.Log("Deleting PortalEmailConfig")
 		require.NoError(t, clientNamespaced.Delete(ctx, emailConfig))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, emailConfig, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, waitTime, tickTime)
 	})
 }
 

@@ -126,7 +126,6 @@ func normalizeEventGatewayListenerPolicySDKOpsBoolField(value any, path []string
 	}
 }
 
-
 func (s *EventGatewayListenerPolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -279,9 +278,9 @@ func (obj *EventGatewayListenerPolicy) sdkOpsAPISpec(ctx context.Context, cl cli
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			secretBytes, ok := secret.Data["tls.crt"]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", namespace, src.SecretRef.Name)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Certificate.Value = &resolved
@@ -306,9 +305,9 @@ func (obj *EventGatewayListenerPolicy) sdkOpsAPISpec(ctx context.Context, cl cli
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
 				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
 			}
-			secretBytes, ok := secret.Data["tls.key"]
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
 			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key 'tls.key'", namespace, src.SecretRef.Name)
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 			}
 			resolved := string(secretBytes)
 			apiSpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates[i].Key.Value = &resolved
@@ -329,10 +328,7 @@ func (obj *EventGatewayListenerPolicy) GetSensitiveDataSecretRefs() []SensitiveD
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
 	for _, item := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
 		if item.Certificate.Type == SensitiveDataSourceTypeSecretRef && item.Certificate.SecretRef != nil {
-			refs = append(refs, SensitiveDataSecretRef{
-				Ref: *item.Certificate.SecretRef,
-				Key: "tls.crt",
-			})
+			refs = append(refs, *item.Certificate.SecretRef)
 		}
 	}
 	}
@@ -341,10 +337,7 @@ func (obj *EventGatewayListenerPolicy) GetSensitiveDataSecretRefs() []SensitiveD
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
 	for _, item := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.Certificates {
 		if item.Key.Type == SensitiveDataSourceTypeSecretRef && item.Key.SecretRef != nil {
-			refs = append(refs, SensitiveDataSecretRef{
-				Ref: *item.Key.SecretRef,
-				Key: "tls.key",
-			})
+			refs = append(refs, *item.Key.SecretRef)
 		}
 	}
 	}

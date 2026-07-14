@@ -48,6 +48,9 @@ var commonSupportedFeatures = []features.FeatureName{
 // GetSupportedFeatures returns the supported features for the given router type.
 // The returned slice is safe for callers to mutate.
 func GetSupportedFeatures(routerType consts.RouterFlavor) ([]features.FeatureName, error) {
+	// Return a clone so callers cannot mutate the package-level slices
+	// (e.g. via slices.Sort), which are shared across all callers and would
+	// otherwise cause data races.
 	switch routerType {
 	case consts.RouterFlavorTraditionalCompatible:
 		return slices.Clone(traditionalCompatibleRouterSupportedFeatures), nil

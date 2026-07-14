@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/dataplane"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 )
 
 func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
@@ -104,17 +105,22 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	t.Logf("deploying ingress %s", ingress.Name)
 	require.NoError(t, ctrlClient.Create(ctx, ingress))
 
+	kongVersion, err := testenv.GetDependencyVersion("envtests.kong-ee")
+	require.NoError(t, err)
+
 	RunManager(ctx, t, restConfig,
 		AdminAPIOptFns(
 			mocks.WithConfigPostError(formatErrBody(t, ns.Name, ingress, service)),
-			mocks.WithVersion("3.12.0"),
+			mocks.WithVersion(kongVersion),
 		),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
 		WithKongUpstreamPolicyEnabled(),
 		WithProxySyncInterval(100*time.Millisecond),
-		// Add the init cache sync duration to prevent:
-		// Warning | KongConfigurationTranslationFailed | Service | httpbin | failed fetching KongUpstreamPolicy: KongUpstreamPolicy 800363bc-a654-497a-8467-061e56e22a8f/echo-drain-policy not found
+		// The init cache sync duration reduces the likelihood of:
+		// Warning | KongConfigurationTranslationFailed | Service | httpbin | failed fetching KongUpstreamPolicy: KongUpstreamPolicy <ns>/echo-drain-policy not found
+		// but it's a best-effort wait, not a barrier, so it cannot eliminate it under CI load.
+		// The event is tolerated as optional below (see optionalPredicates).
 		WithInitCacheSyncDuration(2*time.Second),
 	)
 
@@ -140,6 +146,11 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		warningPredicate(dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^referenced KongPlugin or KongClusterPlugin "foo" does not exist$`),
 		warningPredicate(dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^referenced KongPlugin or KongClusterPlugin "bar" does not exist$`),
 		warningPredicate(dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^no grant found to referenced "n1:p1" plugin in the requested remote KongPlugin bind$`),
+		// KongUpstreamPolicy cache-population race: on a slow runner the first config
+		// translation can fire before the KongUpstreamPolicy is loaded into the controller
+		// cache, producing a transient "not found" translation failure. WithInitCacheSyncDuration
+		// reduces its frequency but cannot eliminate it (best-effort wait, not a barrier).
+		warningPredicate(dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^failed fetching KongUpstreamPolicy: KongUpstreamPolicy [^/]+/echo-drain-policy not found$`),
 	}
 
 	assertExpectedEvents(ctx, t, ctrlClient, ns, t.Name(), predicatesToCheck, optionalPredicates)

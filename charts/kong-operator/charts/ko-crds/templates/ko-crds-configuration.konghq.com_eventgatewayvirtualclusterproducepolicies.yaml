@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.2.0
+    kubernetes-configuration.konghq.com/version: v2.2.1
   name: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -291,6 +291,7 @@ spec:
                               - encryptionKey
                               - paths
                               type: object
+                            maxItems: 256
                             type: array
                           failureMode:
                             description: |-
@@ -477,7 +478,6 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -535,7 +535,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -568,7 +567,6 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -626,7 +624,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject

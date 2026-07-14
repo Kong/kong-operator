@@ -257,7 +257,7 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 					},
 				},
 			},
-			expectedProtocol: sdkkonnectcomp.ProtocolGrpcs,
+			expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsGrpcs),
 		},
 		{
 			name: "backend service without protocol annotation defaults to http",

@@ -50,7 +50,7 @@ bin = "ktf"
 
 [tools."github:telepresenceio/telepresence"]
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
-version = "2.28.0"
+version = "2.29.2"
 [tools."github:telepresenceio/telepresence".platforms]
 linux-x64 = { asset_pattern = "telepresence-linux-amd64" }
 linux-arm64 = { asset_pattern = "telepresence-linux-arm64" }
@@ -58,7 +58,7 @@ macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
 [tools."aqua:helm/helm"]
 # renovate: datasource=github-releases depName=helm/helm
-version = "4.2.2"
+version = "4.2.3"
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git

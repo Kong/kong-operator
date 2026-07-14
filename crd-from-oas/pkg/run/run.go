@@ -163,7 +163,8 @@ func (r *Runner) Run(
 			return fmt.Errorf("failed to create output directory %q: %w", dir, err)
 		}
 
-		if err := cleanupLegacyGeneratedFiles(r.projectRoot, dir, parsed); err != nil {
+		references := agvConfig.ReferencesConfig(pathToEntityName)
+		if err := cleanupLegacyGeneratedFiles(r.projectRoot, dir, parsed, references); err != nil {
 			return fmt.Errorf("failed to remove obsolete generated files in %q: %w", dir, err)
 		}
 		if err := cleanupRenamedGeneratedFiles(r.projectRoot, dir, renamedGeneratedEntities); err != nil {
@@ -496,7 +497,12 @@ func generatedOpsTestFileName(entity string) string {
 	return "zz_generated_ops_" + generator.EntityFilePrefix(entity) + "_test.go"
 }
 
-func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedSpec) error {
+func cleanupLegacyGeneratedFiles(
+	projectRoot string,
+	dir string,
+	parsed *parser.ParsedSpec,
+	references map[string][]config.ReferenceConfig,
+) error {
 	for entityName := range parsed.RequestBodies {
 		entity := parser.GetEntityNameFromType(entityName)
 
@@ -536,6 +542,13 @@ func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedS
 				}
 			}
 		}
+
+		if len(references[entity]) > 0 {
+			prefix := generator.EntityFilePrefix(entity)
+			if err := removeFileIfExists(filepath.Join(dir, "zz_generated_"+prefix+"_sdkops_test.go")); err != nil {
+				return err
+			}
+		}
 	}
 
 	sharedReconcilerFuncsPath := filepath.Join(dir, "zz_generated_reconciler_funcs.go")
@@ -544,6 +557,10 @@ func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedS
 	}
 	reconcilerConditionsPath := filepath.Join(dir, "zz_generated_reconciler_conditions.go")
 	if err := removeFileIfExists(reconcilerConditionsPath); err != nil {
+		return err
+	}
+	referencesPath := filepath.Join(dir, "zz_generated_references.go")
+	if err := removeFileIfExists(referencesPath); err != nil {
 		return err
 	}
 

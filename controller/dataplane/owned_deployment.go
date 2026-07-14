@@ -139,20 +139,6 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, fmt.Errorf("failed to mount konnect cert: %w", err)
 	}
 
-	// Genreate an error log if the user is trying to set environment variables that are managed by the operator, as this may cause unexpected behavior.
-	for _, envVar := range operatorManangedEnvVars {
-		found, err := envVarExistsInPodTemplateSpec(ctx, envVar, dataplane, d.client)
-		if err != nil {
-			return nil, op.Noop, fmt.Errorf("failed to check if env var %s exists in PodTemplateSpec: %w", envVar, err)
-		}
-		if found {
-			d.logger.Error(fmt.Errorf("operator maanged environment variable %s exists in DataPlane spec", envVar),
-				"DataPlane contains operator managed environment variable. This may cause unexpected behavior as the operator also manages this variable.",
-				"envVar", envVar, "dataPlane", client.ObjectKeyFromObject(dataplane).String(),
-			)
-		}
-	}
-
 	// TODO https://github.com/kong/kong-operator/issues/128
 	// This is a workaround to avoid patches clobbering the wrong EnvVar. We want to find an improved patch mechanism
 	// that doesn't clobber EnvVars (and other array fields) it shouldn't.
@@ -297,6 +283,26 @@ func podTemplateSpecHasRestartAnnotation(template *corev1.PodTemplateSpec) (stri
 	}
 	v, ok := template.Annotations[restartAnnotationKey]
 	return v, ok && v != ""
+}
+
+// warnOperatorManagedEnvVars logs an error for each operator-managed env var found in the
+// DataPlane spec. Call this before any extension processors mutate the in-memory spec so
+// the check reflects only user-authored values.
+func warnOperatorManagedEnvVars(ctx context.Context, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, cl client.Client) {
+	for _, envVar := range operatorManangedEnvVars {
+		found, err := envVarExistsInPodTemplateSpec(ctx, envVar, dataplane, cl)
+		if err != nil {
+			logger.Error(err, "failed to check if operator managed env var exists in DataPlane spec", "envVar", envVar)
+			continue
+		}
+		if !found {
+			continue
+		}
+		logger.Error(fmt.Errorf("operator maanged environment variable %s exists in DataPlane spec", envVar),
+			"DataPlane contains operator managed environment variable. This may cause unexpected behavior as the operator also manages this variable.",
+			"envVar", envVar, "dataPlane", client.ObjectKeyFromObject(dataplane).String(),
+		)
+	}
 }
 
 // envVarExistsInPodTemplateSpec checks if an environment variable with the given name

@@ -132,7 +132,7 @@ func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reco
 	})
 	return &Reconciler{
 		Client:                   wrapped,
-		typeConverter:            managedfields.NewDeducedTypeConverter(),
+		TypeConverter:            managedfields.NewDeducedTypeConverter(),
 		eventRecorder:            recorder,
 		ClusterCASecretName:      testCASecretName,
 		ClusterCASecretNamespace: testCASecretNamespace,
@@ -184,7 +184,7 @@ func newProgrammedKonnectCert() *configurationv1alpha1.EventGatewayDataPlaneCert
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 				Certificate: configurationv1alpha1.SensitiveDataSource{
 					Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestDPName},
+					SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: reconcileTestDPName, Key: corev1.TLSCertKey},
 				},
 			},
 		},

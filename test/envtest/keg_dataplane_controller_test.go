@@ -4,30 +4,38 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/openapi"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/crdschema"
 	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
+	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
+
+// kegCRDGroups are the CRD groups whose types the KEG DataPlane controller
+// passes to ApplyIfChanged / ApplyStatusIfChanged, mirroring the set built in
+// modules/manager/run.go.
+var kegCRDGroups = map[string]struct{}{
+	"eventgateway.konghq.com":  {},
+	"configuration.konghq.com": {},
+	"konnect.konghq.com":       {},
+}
 
 func TestKEGDataPlaneReconciler(t *testing.T) {
 	t.Parallel()
@@ -38,16 +46,10 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 
 	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca")
 
-	// Wait for the CRD OpenAPI schemas to be served before starting the
-	// controller. envtest installs CRDs synchronously, but the API server
-	// exposes their OpenAPI schemas with a short propagation lag. The
-	// controller's SetupWithManager calls initTypeConverter which fetches
-	// those schemas.
-	waitForOpenAPISchemas(t, cfg,
-		"apis/configuration.konghq.com/v1alpha1",
-		"apis/eventgateway.konghq.com/v1alpha1",
-		"apis/konnect.konghq.com/v1alpha1",
-	)
+	// Builds the shared TypeConverter from the CRDs envtest already installed
+	// (in-process, apiserver-style; no OpenAPI publication lag to wait out).
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
+	require.NoError(t, err)
 
 	StartReconcilers(ctx, t, mgr, logs,
 		&egdataplane.Reconciler{
@@ -55,6 +57,11 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			ClusterCASecretName:      clusterCA.Name,
 			ClusterCASecretNamespace: clusterCA.Namespace,
 			CertTTL:                  consts.DefaultCertTTL,
+			TypeConverter:            ssaProvider,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
 		},
 	)
 
@@ -885,6 +892,38 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			return svcAfter.ResourceVersion != rvBefore
 		}, waitTime, tickTime, "Kafka Service was unexpectedly re-patched on a no-op reconcile")
 	})
+
+	t.Run("CRD schema reconciler: live CRD update rebuilds the shared TypeConverter without breaking SSA applies", func(t *testing.T) {
+		t.Parallel()
+
+		// Bump the KegDataPlane CRD's resourceVersion. This is watched by
+		// crdschema.Reconciler, which rebuilds and atomically swaps the shared
+		// TypeConverter that this same test's DataPlane controller uses for
+		// every ApplyIfChanged / ApplyStatusIfChanged call.
+		crd := &apiextensionsv1.CustomResourceDefinition{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "kegdataplanes.eventgateway.konghq.com"}, crd))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(crd), crd)) {
+				return
+			}
+			if crd.Labels == nil {
+				crd.Labels = map[string]string{}
+			}
+			crd.Labels["kong-operator-test/touch"] = "1"
+			assert.NoError(ct, cl.Update(ctx, crd))
+		}, waitTime, tickTime)
+
+		// A normal reconcile started right after must still succeed: the live
+		// Rebuild triggered above must not corrupt or race with concurrent
+		// SSA applies against the shared TypeConverterProvider.
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-crd-schema-reconciler", "konnect-id-crd-schema-reconciler", "egdp-crd-schema-reconciler",
+			eventgatewayv1alpha1.KegDataPlaneSpec{},
+		)
+		waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+
+		require.NoError(t, ssaProvider.Ready(nil))
+	})
 }
 
 // triggerReconcile forces a reconcile of obj by adding a test annotation.
@@ -991,30 +1030,6 @@ func kegGetEnvValue(t *testing.T, envVars []corev1.EnvVar, name string) string {
 	}
 	t.Fatalf("env var %q not found", name)
 	return ""
-}
-
-// waitForOpenAPISchemas polls the API server's OpenAPI v3 discovery endpoint
-// until all requested path keys (e.g. "apis/eventgateway.konghq.com/v1alpha1")
-// are present. envtest installs CRDs synchronously but the API server exposes
-// their OpenAPI schemas with a short propagation lag; calling this before
-// StartReconcilers ensures the controller's TypeConverter initialisation
-// succeeds.
-func waitForOpenAPISchemas(t *testing.T, cfg *rest.Config, pathKeys ...string) {
-	t.Helper()
-
-	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
-	require.NoError(t, err)
-	openAPIClient := openapi.NewClient(dc.RESTClient())
-
-	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		paths, err := openAPIClient.Paths()
-		if !assert.NoError(ct, err) {
-			return
-		}
-		for _, key := range pathKeys {
-			assert.Contains(ct, paths, key, "waiting for OpenAPI schema %s to be served", key)
-		}
-	}, 30*time.Second, 500*time.Millisecond, "OpenAPI schemas did not become available in time")
 }
 
 // createKEGClusterCASecret creates a self-signed CA Secret for use as the cluster CA

@@ -147,7 +147,43 @@ type SensitiveDataSource struct {
 	//
 	// +optional{{range .SensitiveDataSourceSecretRefValidations}}
 	// {{ . }}{{end}}
-	SecretRef *{{.NamespacedRefTypeName}} ` + "`" + `json:"secretRef,omitempty"` + "`" + `
+	SecretRef *SensitiveDataSecretRef ` + "`" + `json:"secretRef,omitempty"` + "`" + `
+}`
+
+// dedicatedSensitiveDataSourceStructType is a per-field variant of
+// sensitiveDataSourceStructType, emitted into an entity's own generated types
+// file (not common_types.go) for secret reference leaves whose OAS type isn't
+// string. It shares the SensitiveDataSourceType enum and SensitiveDataSecretRef
+// type with the common SensitiveDataSource, differing only in the Value field's
+// type. Rendered via [fmt.Sprintf] with (name, valueGoType, valueTypeMarker) —
+// plain string substitution rather than text/template, since callers build
+// this per-field (potentially many times per file) and shouldn't have to
+// thread template execution errors through generateSchemaTypes/generateCRDType.
+// valueTypeMarker is an optional extra kubebuilder marker line (with trailing
+// newline and indentation, or "") inserted just above the Value field — see
+// sensitiveValueTypeMarker.
+const dedicatedSensitiveDataSourceStructType = `// %[1]s holds a sensitive value that can be provided either inline or
+// sourced from a Kubernetes Secret.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.value) : has(self.secretRef)",message="value required when type=inline; secretRef required when type=secretRef"
+type %[1]s struct {
+	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
+	//
+	// +kubebuilder:validation:Enum=inline;secretRef
+	// +kubebuilder:default=inline
+	Type SensitiveDataSourceType ` + "`" + `json:"type"` + "`" + `
+
+	// Value contains the sensitive data provided inline.
+	// Required when type is 'inline'.
+	//
+	// +optional
+%[3]s	Value *%[2]s ` + "`" + `json:"value,omitempty"` + "`" + `
+
+	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+	// Required when type is 'secretRef'.
+	//
+	// +optional
+	SecretRef *SensitiveDataSecretRef ` + "`" + `json:"secretRef,omitempty"` + "`" + `
 }`
 
 const konnectEntityRefType = `// KonnectEntityRef is a reference to a Konnect entity.
@@ -160,14 +196,16 @@ type KonnectEntityRef struct {
 }`
 
 // flattenSensitiveDataHelper is a runtime helper emitted into common_types.go.
-// It replaces every JSON object matching the SensitiveDataSource wire shape
-// {"type": "inline"|"secretRef", "value": "<string>", ...} with just the bare
-// string value, so the Konnect SDK receives a plain string instead of the
-// structured CRD representation.
-const flattenSensitiveDataHelper = `// flattenSensitiveData recursively replaces any SensitiveDataSource JSON
-// object shape {"type": "inline|secretRef", "value": "X", ...} with the
-// bare string "X", translating the CRD wire format to the Konnect SDK
-// wire format which expects plain strings for sensitive fields.
+// It replaces every JSON object matching the SensitiveDataSource (or dedicated
+// per-field DataSource) wire shape {"type": "inline"|"secretRef", "value": X, ...}
+// with the bare value X, so the Konnect SDK receives a plain value instead of
+// the structured CRD representation. X may be a string, number, boolean,
+// object, or array — the shape check only inspects "type", not "value"'s kind.
+const flattenSensitiveDataHelper = `// flattenSensitiveData recursively replaces any SensitiveDataSource (or
+// dedicated per-field DataSource) JSON object shape
+// {"type": "inline|secretRef", "value": X, ...} with the bare value X,
+// translating the CRD wire format to the Konnect SDK wire format which
+// expects plain values (of whatever type X is) for sensitive fields.
 func flattenSensitiveData(v any) any {
 	switch x := v.(type) {
 	case map[string]any:
@@ -178,10 +216,8 @@ func flattenSensitiveData(v any) any {
 		if typ != "inline" && typ != "secretRef" {
 			return x
 		}
-		rawVal, hasVal := x["value"]
-		val, isString := rawVal.(string)
-		if hasVal && isString {
-			return val
+		if rawVal, hasVal := x["value"]; hasVal {
+			return rawVal
 		}
 		return x
 	case []any:
@@ -310,7 +346,7 @@ func camelToSnakeCase(s string) string {
 // camelCase (CRD K8s wire format) to snake_case (Konnect SDK wire format).
 func isSDKDiscriminatorKey(key string) bool {
 	switch key {
-	case "type", "op", "kind", "mode":
+	case "type", "op", "kind", "mode", "aclAttributeType":
 		return true
 	default:
 		return false
@@ -339,4 +375,56 @@ func renameKeysToSDK(v any) any {
 		return x
 	}
 	return v
+}`
+
+// injectSDKOpsConstFieldsHelper re-injects const discriminators (e.g. a nested
+// auth type="basic") that were stripped from the CRD structs because their
+// schema is also used as a discriminated-union member, but are still required
+// by the standalone ($ref) Konnect SDK request types. It runs after
+// renameKeysToSDK, so paths use snake_case segments; "[]" descends into every
+// array element and "{}" into every map value.
+const injectSDKOpsConstFieldsHelper = `// sdkOpsConstField describes a const discriminator to inject at a payload path.
+type sdkOpsConstField struct {
+	Path  []string
+	Key   string
+	Value string
+}
+
+// injectSDKOpsConstFields sets each const discriminator into the payload, only
+// when the key is absent, so user- or union-provided values are never overridden.
+func injectSDKOpsConstFields(payload map[string]any, fields []sdkOpsConstField) {
+	for _, f := range fields {
+		setSDKOpsConstAtPath(payload, f.Path, f.Key, f.Value)
+	}
+}
+
+func setSDKOpsConstAtPath(v any, path []string, key, value string) {
+	if len(path) == 0 {
+		if m, ok := v.(map[string]any); ok {
+			if _, exists := m[key]; !exists {
+				m[key] = value
+			}
+		}
+		return
+	}
+	switch segment := path[0]; segment {
+	case "[]":
+		if items, ok := v.([]any); ok {
+			for _, item := range items {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	case "{}":
+		if object, ok := v.(map[string]any); ok {
+			for _, item := range object {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	default:
+		if object, ok := v.(map[string]any); ok {
+			if child, ok := object[segment]; ok {
+				setSDKOpsConstAtPath(child, path[1:], key, value)
+			}
+		}
+	}
 }`

@@ -63,7 +63,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			updatedDescription = "Updated backend cluster description"
 		)
 
-		w := setupWatch[configurationv1alpha1.EventGatewayBackendClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.EventGatewayBackendClusterList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on EventGatewayBackendCluster creation")
 		sdk.EventGatewayBackendClustersSDK.EXPECT().
@@ -104,11 +104,11 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 		})
 
 		t.Log("Waiting for EventGatewayBackendCluster to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(backendCluster),
-				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayBackendCluster](backendClusterID),
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayBackendCluster](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(backendCluster),
+				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayBackendCluster](backendClusterID),
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayBackendCluster](),
 				func(bc *configurationv1alpha1.EventGatewayBackendCluster) bool {
 					return bc.GetGatewayID() == eventGatewayID &&
 						controllerutil.ContainsFinalizer(bc, konnect.KonnectCleanupFinalizer)
@@ -117,7 +117,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			"EventGatewayBackendCluster didn't get Programmed status condition, Konnect ID, parent ID, or cleanup finalizer",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayBackendClustersSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayBackendClustersSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayBackendCluster update")
 		sdk.EventGatewayBackendClustersSDK.EXPECT().
@@ -140,11 +140,11 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 		backendCluster = backendClusterToPatch
 
 		t.Log("Waiting for EventGatewayBackendCluster to be patched")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(backendCluster),
-				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayBackendCluster](backendClusterID),
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayBackendCluster](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(backendCluster),
+				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayBackendCluster](backendClusterID),
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayBackendCluster](),
 				func(bc *configurationv1alpha1.EventGatewayBackendCluster) bool {
 					return bc.Spec.APISpec.Description == updatedDescription
 				},
@@ -152,7 +152,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			"EventGatewayBackendCluster didn't get patched",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayBackendClustersSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayBackendClustersSDK, waitTime, tickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayBackendCluster deletion")
 		sdk.EventGatewayBackendClustersSDK.EXPECT().
@@ -162,13 +162,13 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 		t.Log("Deleting EventGatewayBackendCluster")
 		require.NoError(t, clientNamespaced.Delete(ctx, backendCluster))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, backendCluster, waitTime, tickTime)
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayBackendClustersSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayBackendClustersSDK, waitTime, tickTime)
 	})
 
 	t.Run("should create EventGatewayBackendCluster successfully on conflict when backend cluster with matching uid label exists", func(t *testing.T) {
 		const backendClusterID = "backend-cluster-conflict-id"
 
-		w := setupWatch[configurationv1alpha1.EventGatewayBackendClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := SetupWatch[configurationv1alpha1.EventGatewayBackendClusterList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		var backendCluster *configurationv1alpha1.EventGatewayBackendCluster
 
@@ -202,11 +202,11 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 		backendCluster = deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, gateway)
 
 		t.Log("Waiting for EventGatewayBackendCluster to be programmed after UID conflict lookup")
-		watchFor(t, ctx, w, apiwatch.Modified,
-			assertsAnd(
-				objectMatchesName(backendCluster),
-				objectMatchesKonnectID[*configurationv1alpha1.EventGatewayBackendCluster](backendClusterID),
-				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayBackendCluster](),
+		WatchFor(t, ctx, w, apiwatch.Modified,
+			AssertsAnd(
+				ObjectMatchesName(backendCluster),
+				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayBackendCluster](backendClusterID),
+				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayBackendCluster](),
 				func(bc *configurationv1alpha1.EventGatewayBackendCluster) bool {
 					return bc.GetGatewayID() == eventGatewayID &&
 						controllerutil.ContainsFinalizer(bc, konnect.KonnectCleanupFinalizer)
@@ -215,6 +215,6 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			"EventGatewayBackendCluster didn't get Programmed status condition or Konnect ID after conflict resolution",
 		)
 
-		eventuallyAssertSDKExpectations(t, sdk.EventGatewayBackendClustersSDK, waitTime, tickTime)
+		EventuallyAssertSDKExpectations(t, sdk.EventGatewayBackendClustersSDK, waitTime, tickTime)
 	})
 }

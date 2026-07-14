@@ -138,13 +138,32 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 		if skipProperty(prop) || prop.IsReference {
 			continue
 		}
-		if ok := g.entityAPISpecSensitiveLeaf(entityName, jsonName(prop.Name)); ok {
+		// Configured inter-CR reference fields are typed ref slices; skip them
+		// here because generated reference-specific tests cover the ref path.
+		if g.referenceForField(entityName, jsonName(prop.Name)) != nil {
+			continue
+		}
+		if leafType, ok := g.entityAPISpecFieldSensitiveType(entityName, jsonName(prop.Name)); ok {
+			typeName := "SensitiveDataSource"
+			innerValue := `"test-value"`
+			if leafType.DedicatedTypeName != "" {
+				typeName = leafType.DedicatedTypeName
+				innerValue = controllerOpsTestValueForProperty(prop, leafType.ValueGoType, g.config.APIGroupPackageAlias)
+				if innerValue == "" {
+					// No simple literal representation for this value type (e.g. a
+					// free-form JSON object) — skip, matching how a non-sensitive
+					// field of the same complex type is already skipped below.
+					continue
+				}
+			}
 			testFields = append(testFields, opsControllerTestField{
 				FieldName: goFieldName(prop.Name),
 				TestValue: fmt.Sprintf(
-					`%s.SensitiveDataSource{Type: %s.SensitiveDataSourceTypeInline, Value: new("test-value")}`,
+					`%s.%s{Type: %s.SensitiveDataSourceTypeInline, Value: new(%s)}`,
 					g.config.APIGroupPackageAlias,
+					typeName,
 					g.config.APIGroupPackageAlias,
+					innerValue,
 				),
 			})
 			continue
@@ -212,6 +231,50 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				apiAlias,
 			),
 		}
+	case "AIGatewayModel":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayModelConfig",
+			TypeConstName:   "AIGatewayModelConfigTypeAPI",
+			VariantField:    "API",
+			VariantTypeName: "AIGatewayModelAPI",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.AIGatewayModelAPI{DisplayName: "test-display-name", Name: "test-model", Capabilities: []string{"llm/v1/chat"}, Formats: []%[1]s.AIGatewayModelFormat{{Type: "openai"}}, Config: %[1]s.AIGatewayModelAPIConfig{Model: %[1]s.AIGatewayModelAPIConfigModel{Alias: "test-alias"}, Route: %[1]s.AIGatewayRouteConfig{Paths: []string{"/chat"}}}, Targets: []%[1]s.AIGatewayTarget{{Name: "target-model", Provider: "provider-1", Config: &%[1]s.AIGatewayTargetConfig{Type: %[1]s.AIGatewayTargetConfigTypeAnthropic, Anthropic: &%[1]s.AIGatewayTargetAnthropicConfig{}}}}}`,
+				apiAlias,
+			),
+		}
+	case "AIGatewayIdentityProvider":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayIdentityProviderConfig",
+			TypeConstName:   "AIGatewayIdentityProviderConfigTypeKeyAuth",
+			VariantField:    "KeyAuth",
+			VariantTypeName: "AIGatewayIdentityProviderKeyAuth",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.AIGatewayIdentityProviderKeyAuth{DisplayName: "test-display-name", Name: "test-identity-provider"}`,
+				apiAlias,
+			),
+		}
+	case "AIGatewayModelProvider":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayModelProviderConfig",
+			TypeConstName:   "AIGatewayModelProviderConfigTypeAnthropic",
+			VariantField:    "Anthropic",
+			VariantTypeName: "AIGatewayModelProviderAnthropic",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.AIGatewayModelProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: %[1]s.AIGatewayModelProviderAnthropicConfig{Auth: %[1]s.AIGatewayModelProviderConfigAuthBasic{Headers: []%[1]s.AIGatewayModelProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("test-value")}}}}}}`,
+				apiAlias,
+			),
+		}
+	case "AIGatewayMCPServer":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayMCPServerConfig",
+			TypeConstName:   "AIGatewayMCPServerConfigTypeConversionOnly",
+			VariantField:    "ConversionOnly",
+			VariantTypeName: "AIGatewayMCPServerConversionOnly",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: %[1]s.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}}`,
+				apiAlias,
+			),
+		}
 	}
 
 	rootUnionTypeName := goFieldName(entityName + "Config")
@@ -243,6 +306,20 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 func controllerOpsTestValueForProperty(prop *parser.Property, goType, apiAlias string) string {
 	if prop.Type == "boolean" {
 		return `"Enabled"`
+	}
+
+	// Enum-typed string fields must use a valid enum value; some SDK enum types
+	// reject unknown values during unmarshalling.
+	if len(prop.Enum) > 0 {
+		quoted := fmt.Sprintf("%q", fmt.Sprintf("%v", prop.Enum[0]))
+		switch {
+		case goType == "string":
+			return quoted
+		case goType == "*string":
+			return fmt.Sprintf("new(%s)", quoted)
+		case prop.RefName != "" && prop.Type == "string" && !strings.HasPrefix(goType, "*"):
+			return quoted
+		}
 	}
 
 	switch goType {

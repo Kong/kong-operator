@@ -549,7 +549,7 @@ func Test_ensureDeployment(t *testing.T) {
 			base := fake.NewClientBuilder().WithScheme(scheme).Build()
 			r := &Reconciler{
 				Client:        tc2.buildClient(base),
-				typeConverter: tc,
+				TypeConverter: tc,
 				eventRecorder: recorder,
 			}
 

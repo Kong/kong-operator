@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: kong-aigateway-mock
+  labels: { app: ollama }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: ollama }
+  template:
+    metadata:
+      labels: { app: ollama }
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:0.31.2
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              ollama serve &
+              pid=$!
+              until ollama ls >/dev/null 2>&1; do sleep 1; done
+              ollama pull qwen2.5:0.5b
+              ollama pull gemma3:270m
+              wait $pid
+          ports:
+            - containerPort: 11434
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "ollama ls | grep -q 'qwen2.5:0.5b' && ollama ls | grep -q 'gemma3:270m'"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 90
+          resources:
+            requests: { cpu: "500m", memory: "1Gi" }
+            limits: { memory: "2Gi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: kong-aigateway-mock
+spec:
+  selector: { app: ollama }
+  ports:
+    - name: http
+      port: 11434
+      targetPort: 11434

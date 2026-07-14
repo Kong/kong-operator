@@ -36,6 +36,18 @@ var PortalSDKOpsBoolFields = []PortalSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "create_default_content",
+		Path: []string{
+			"create_default_content",
+		},
+	},
+	{
+		Label: "mcp_server_enabled",
+		Path: []string{
+			"mcp_server_enabled",
+		},
+	},
+	{
 		Label: "notifications_developer_pii_visibility_enabled",
 		Path: []string{
 			"notifications_developer_pii_visibility_enabled",
@@ -134,7 +146,6 @@ func normalizePortalSDKOpsBoolField(value any, path []string) (any, error) {
 		return object, nil
 	}
 }
-
 
 func (s *PortalAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)

@@ -65,8 +65,9 @@ func (r *Reconciler) ensureKonnectCertificate(
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 				Certificate: configurationv1alpha1.SensitiveDataSource{
 					Type: configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-					SecretRef: &commonv1alpha1.NamespacedRef{
+					SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{
 						Name: certSecret.Name,
+						Key:  corev1.TLSCertKey,
 					},
 				},
 			},
@@ -75,7 +76,7 @@ func (r *Reconciler) ensureKonnectCertificate(
 
 	k8sutils.SetOwnerForObject(desired, egdp)
 
-	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		apimeta.SetStatusCondition(&egdp.Status.Conditions, metav1.Condition{
 			Type:               string(eventgatewayv1alpha1.KonnectCertificateRegisteredType),

@@ -90,7 +90,6 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.certificate
             type: Secret
-            key: tls.crt
         ops:
           requireClient: true
           create:
@@ -108,7 +107,6 @@ apiGroupVersions:
 		require.Len(t, konnect.Types[0].SecretReferences, 1)
 		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].SecretReferences[0].Path)
 		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
-		assert.Equal(t, "tls.crt", konnect.Types[0].SecretReferences[0].Key)
 		assert.True(t, konnect.Types[0].OpsRequireClient)
 		require.NotNil(t, konnect.Types[0].Ops)
 		assert.Equal(t,
@@ -792,7 +790,7 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
 					},
 					SecretReferences: []SecretReferenceConfig{
-						{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"},
+						{Path: "spec.apiSpec.certificate", Type: "Secret"},
 					},
 				},
 				{
@@ -1072,4 +1070,87 @@ apiGroupVersions:
 	require.Len(t, rc.AncestorEntityGVKs, 1)
 	assert.Equal(t, []string{"KonnectEventGateway"}, rc.AncestorEntityKinds())
 	assert.Equal(t, "konnect.konghq.com", rc.AncestorEntityGVKs[0].Group)
+}
+
+func TestReferenceConfigValidation(t *testing.T) {
+	base := func(mut func(*ReferenceConfig)) *APIGroupVersionConfig {
+		rc := ReferenceConfig{
+			Path:       "spec.apiSpec.policies",
+			Kinds:      []string{"AIGatewayPolicy"},
+			ResolvesTo: "id",
+		}
+		if mut != nil {
+			mut(&rc)
+		}
+		return &APIGroupVersionConfig{
+			Types: []*TypeConfig{{
+				Path:       "/v1/ai-gateways/{gatewayId}/agents",
+				Name:       "AIGatewayAgent",
+				References: []ReferenceConfig{rc},
+			}},
+		}
+	}
+
+	tests := []struct {
+		name    string
+		cfg     *APIGroupVersionConfig
+		wantErr string
+	}{
+		{name: "valid single-kind id ref", cfg: base(nil)},
+		{
+			name:    "empty kinds rejected",
+			cfg:     base(func(rc *ReferenceConfig) { rc.Kinds = nil }),
+			wantErr: "kinds must not be empty",
+		},
+		{
+			name:    "bad resolvesTo rejected",
+			cfg:     base(func(rc *ReferenceConfig) { rc.ResolvesTo = "uuid" }),
+			wantErr: `resolvesTo must be "id" or "name"`,
+		},
+		{
+			name: "resolvesTo name accepted",
+			cfg:  base(func(rc *ReferenceConfig) { rc.ResolvesTo = "name" }),
+		},
+		{
+			name: "nested path accepted",
+			cfg:  base(func(rc *ReferenceConfig) { rc.Path = "spec.apiSpec.access.acls.allow.allow" }),
+		},
+		{
+			name:    "path outside spec.apiSpec rejected",
+			cfg:     base(func(rc *ReferenceConfig) { rc.Path = "spec.policies" }),
+			wantErr: `must start with "spec.apiSpec."`,
+		},
+		{
+			name: "multi-kind requires refTypeName",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Kinds = []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"}
+			}),
+			wantErr: "refTypeName is required when multiple kinds",
+		},
+		{
+			name: "refTypeName forbidden for single kind",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.RefTypeName = "CustomRef"
+			}),
+			wantErr: "refTypeName must not be set when a single kind",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.validate()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestReferenceConfigTypeName(t *testing.T) {
+	require.Equal(t, "AIGatewayPolicyRef", ReferenceConfig{Kinds: []string{"AIGatewayPolicy"}}.TypeName())
+	require.Equal(t, "AIGatewayACLRef", ReferenceConfig{
+		Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+		RefTypeName: "AIGatewayACLRef",
+	}.TypeName())
 }

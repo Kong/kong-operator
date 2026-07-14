@@ -138,7 +138,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 					Route: kong.Route{
 						Name:      new("grpcroute.default.single-match-with-hostname.0.0"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
-						Paths:     kong.StringSlice("~/service0/method0"),
+						Paths:     kong.StringSlice("~/service0/method0$"),
 						Hosts:     kong.StringSlice("foo.com", "*.foo.com"),
 						Headers:   map[string][]string{},
 						Tags: kong.StringSlice(
@@ -191,7 +191,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 					Route: kong.Route{
 						Name:      new("grpcroute.default.multiple-matches.0.0"),
 						Protocols: kong.StringSlice("grpc", "grpcs"),
-						Paths:     kong.StringSlice("~/.+/method0"),
+						Paths:     kong.StringSlice("~/.+/method0$"),
 						Headers: map[string][]string{
 							"Version": {"2"},
 							"Client":  {"kong-test"},
@@ -218,6 +218,68 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						Headers:   map[string][]string{},
 						Tags: kong.StringSlice(
 							"k8s-name:multiple-matches",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1",
+						),
+					},
+				},
+			},
+		},
+		{
+			name:       "multiple exact method matches with overlapping method names",
+			objectName: "overlapping-exact-methods",
+			rule: gatewayapi.GRPCRouteRule{
+				Matches: []gatewayapi.GRPCRouteMatch{
+					{
+						Method: &gatewayapi.GRPCMethodMatch{
+							Service: new("gateway_api_conformance.echo_basic.grpcecho.GrpcEcho"),
+							Method:  new("Echo"),
+						},
+					},
+					{
+						Method: &gatewayapi.GRPCMethodMatch{
+							Service: new("gateway_api_conformance.echo_basic.grpcecho.GrpcEcho"),
+							Method:  new("EchoTwo"),
+						},
+					},
+				},
+			},
+			expectedRoutes: []kongstate.Route{
+				{
+					Ingress: util.K8sObjectInfo{
+						Name:             "overlapping-exact-methods",
+						Namespace:        "default",
+						GroupVersionKind: grpcRouteGVK,
+					},
+					Route: kong.Route{
+						Name:      new("grpcroute.default.overlapping-exact-methods.0.0"),
+						Protocols: kong.StringSlice("grpc", "grpcs"),
+						Paths:     kong.StringSlice("~/gateway_api_conformance\\.echo_basic\\.grpcecho\\.GrpcEcho/Echo$"),
+						Headers:   map[string][]string{},
+						Tags: kong.StringSlice(
+							"k8s-name:overlapping-exact-methods",
+							"k8s-namespace:default",
+							"k8s-kind:GRPCRoute",
+							"k8s-group:gateway.networking.k8s.io",
+							"k8s-version:v1",
+						),
+					},
+				},
+				{
+					Ingress: util.K8sObjectInfo{
+						Name:             "overlapping-exact-methods",
+						Namespace:        "default",
+						GroupVersionKind: grpcRouteGVK,
+					},
+					Route: kong.Route{
+						Name:      new("grpcroute.default.overlapping-exact-methods.0.1"),
+						Protocols: kong.StringSlice("grpc", "grpcs"),
+						Paths:     kong.StringSlice("~/gateway_api_conformance\\.echo_basic\\.grpcecho\\.GrpcEcho/EchoTwo$"),
+						Headers:   map[string][]string{},
+						Tags: kong.StringSlice(
+							"k8s-name:overlapping-exact-methods",
 							"k8s-namespace:default",
 							"k8s-kind:GRPCRoute",
 							"k8s-group:gateway.networking.k8s.io",

@@ -64,6 +64,41 @@ type KonnectEntityRef struct {
 	ID string `json:"id,omitzero"`
 }
 
+// SensitiveDataSourceType is the type of source for the sensitive data.
+type SensitiveDataSourceType string
+
+const (
+	// SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.
+	SensitiveDataSourceTypeInline SensitiveDataSourceType = "inline"
+	// SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.
+	SensitiveDataSourceTypeSecretRef SensitiveDataSourceType = "secretRef"
+)
+
+// SensitiveDataSource holds a sensitive string value that can be provided
+// either inline or sourced from a Kubernetes Secret.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.value) : has(self.secretRef)",message="value required when type=inline; secretRef required when type=secretRef"
+type SensitiveDataSource struct {
+	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
+	//
+	// +kubebuilder:validation:Enum=inline;secretRef
+	// +kubebuilder:default=inline
+	Type SensitiveDataSourceType `json:"type"`
+
+	// Value contains the sensitive data provided inline.
+	// Required when type is 'inline'.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=4096
+	Value *string `json:"value,omitempty"`
+
+	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+	// Required when type is 'secretRef'.
+	//
+	// +optional
+	SecretRef *SensitiveDataSecretRef `json:"secretRef,omitempty"`
+}
+
 // flattenSDKUnions recursively flattens nested discriminated-union shapes.
 // Object-valued members are rewritten from {"<disc>": "X", "X": {...}}
 // to {"<disc>": "X", ...}, while scalar and array members are rewritten to
@@ -135,10 +170,11 @@ func nestedSDKUnionMemberForKey(object map[string]any, key string) (string, any,
 	return discriminatorValue, inner, true
 }
 
-// flattenSensitiveData recursively replaces any SensitiveDataSource JSON
-// object shape {"type": "inline|secretRef", "value": "X", ...} with the
-// bare string "X", translating the CRD wire format to the Konnect SDK
-// wire format which expects plain strings for sensitive fields.
+// flattenSensitiveData recursively replaces any SensitiveDataSource (or
+// dedicated per-field DataSource) JSON object shape
+// {"type": "inline|secretRef", "value": X, ...} with the bare value X,
+// translating the CRD wire format to the Konnect SDK wire format which
+// expects plain values (of whatever type X is) for sensitive fields.
 func flattenSensitiveData(v any) any {
 	switch x := v.(type) {
 	case map[string]any:
@@ -149,10 +185,8 @@ func flattenSensitiveData(v any) any {
 		if typ != "inline" && typ != "secretRef" {
 			return x
 		}
-		rawVal, hasVal := x["value"]
-		val, isString := rawVal.(string)
-		if hasVal && isString {
-			return val
+		if rawVal, hasVal := x["value"]; hasVal {
+			return rawVal
 		}
 		return x
 	case []any:
@@ -188,7 +222,7 @@ func camelToSnakeCase(s string) string {
 // camelCase (CRD K8s wire format) to snake_case (Konnect SDK wire format).
 func isSDKDiscriminatorKey(key string) bool {
 	switch key {
-	case "type", "op", "kind", "mode":
+	case "type", "op", "kind", "mode", "aclAttributeType":
 		return true
 	default:
 		return false
@@ -217,4 +251,50 @@ func renameKeysToSDK(v any) any {
 		return x
 	}
 	return v
+}
+
+// sdkOpsConstField describes a const discriminator to inject at a payload path.
+type sdkOpsConstField struct {
+	Path  []string
+	Key   string
+	Value string
+}
+
+// injectSDKOpsConstFields sets each const discriminator into the payload, only
+// when the key is absent, so user- or union-provided values are never overridden.
+func injectSDKOpsConstFields(payload map[string]any, fields []sdkOpsConstField) {
+	for _, f := range fields {
+		setSDKOpsConstAtPath(payload, f.Path, f.Key, f.Value)
+	}
+}
+
+func setSDKOpsConstAtPath(v any, path []string, key, value string) {
+	if len(path) == 0 {
+		if m, ok := v.(map[string]any); ok {
+			if _, exists := m[key]; !exists {
+				m[key] = value
+			}
+		}
+		return
+	}
+	switch segment := path[0]; segment {
+	case "[]":
+		if items, ok := v.([]any); ok {
+			for _, item := range items {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	case "{}":
+		if object, ok := v.(map[string]any); ok {
+			for _, item := range object {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	default:
+		if object, ok := v.(map[string]any); ok {
+			if child, ok := object[segment]; ok {
+				setSDKOpsConstAtPath(child, path[1:], key, value)
+			}
+		}
+	}
 }

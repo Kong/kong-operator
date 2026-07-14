@@ -118,7 +118,7 @@ func TestEventGatewayDataPlaneCertificate_ToCreateEventGatewayDataPlaneCertifica
 	cert := testEventGatewayDataPlaneCertificate()
 	cert.Spec.APISpec.Certificate = configurationv1alpha1.SensitiveDataSource{
 		Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-		SecretRef: &commonv1alpha1.NamespacedRef{Name: "tls-secret"},
+		SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "tls-secret", Key: "tls.crt"},
 	}
 
 	cl := fake.NewClientBuilder().
@@ -146,7 +146,7 @@ func TestEventGatewayDataPlaneCertificate_ToUpdateEventGatewayDataPlaneCertifica
 	cert := testEventGatewayDataPlaneCertificate()
 	cert.Spec.APISpec.Certificate = configurationv1alpha1.SensitiveDataSource{
 		Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-		SecretRef: &commonv1alpha1.NamespacedRef{Name: "tls-secret"},
+		SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "tls-secret", Key: "tls.crt"},
 	}
 
 	cl := fake.NewClientBuilder().

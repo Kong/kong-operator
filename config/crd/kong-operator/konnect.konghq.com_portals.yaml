@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.2.0
+    kubernetes-configuration.konghq.com/version: v2.2.1
   name: portals.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -84,6 +84,13 @@ spec:
                     description: |-
                       Whether developer account registrations will be automatically approved, or
                       if they will be set to pending until approved by an admin.
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
+                  createDefaultContent:
+                    description: Use to create the portal page default content upon
+                      creation of this portal
                     enum:
                     - Enabled
                     - Disabled
@@ -201,6 +208,12 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     type: object
+                  mcpServerEnabled:
+                    description: Whether the portal has the MCP server enabled
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   name:
                     description: |-
                       The name of the portal, used to distinguish it from other portals.
@@ -251,6 +264,13 @@ spec:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration
                           resource.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the resource namespace.
                         maxLength: 253
                         minLength: 1
                         type: string

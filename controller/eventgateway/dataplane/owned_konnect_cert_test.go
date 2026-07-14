@@ -154,7 +154,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 						APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 							Certificate: configurationv1alpha1.SensitiveDataSource{
 								Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-								SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
+								SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: testCertSecretName, Key: corev1.TLSCertKey},
 							},
 						},
 					},
@@ -203,7 +203,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 						APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 							Certificate: configurationv1alpha1.SensitiveDataSource{
 								Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-								SecretRef: &commonv1alpha1.NamespacedRef{Name: testCertSecretName},
+								SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: testCertSecretName, Key: corev1.TLSCertKey},
 							},
 						},
 					},
@@ -257,7 +257,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 
 			r := &Reconciler{
 				Client:        cl,
-				typeConverter: managedfields.NewDeducedTypeConverter(),
+				TypeConverter: managedfields.NewDeducedTypeConverter(),
 				eventRecorder: events.NewFakeRecorder(10),
 			}
 
