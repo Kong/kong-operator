@@ -24,8 +24,9 @@ jobs:
     strategy:
       matrix:
         include:
+          - testcase: konnect-other
           - testcase: konnect-api-gw
-          - testcase: gateway
+          - testcase: gateway-api
           - testcase: .
     steps:
     - name: Harden Runner

@@ -1,4 +1,4 @@
-package envtest
+package konnectapigw
 
 import (
 	"context"

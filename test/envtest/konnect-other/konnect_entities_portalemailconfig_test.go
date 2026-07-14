@@ -1,4 +1,4 @@
-package envtest
+package konnectother
 
 import (
 	"testing"
@@ -18,6 +18,8 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -26,25 +28,25 @@ import (
 
 func TestPortalEmailConfig(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	reconcilers := []Reconciler{
+	reconcilers := []envtest.Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.Portal](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.Portal](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[konnectv1alpha1.Portal](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.PortalEmailConfig](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.PortalEmailConfig](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[konnectv1alpha1.PortalEmailConfig](&metricsmocks.MockRecorder{}),
 		),
 	}
-	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
 	t.Log("Setting up clients")
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
@@ -69,7 +71,7 @@ func TestPortalEmailConfig(t *testing.T) {
 			initialReplyToMail = "support@example.com"
 		)
 
-		portalWatch := SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		portalWatch := envtest.SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
 		sdk.PortalsSDK.EXPECT().
 			CreatePortal(mock.Anything, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortal) bool {
 				return req.DisplayName != nil && *req.DisplayName == displayName &&
@@ -89,17 +91,17 @@ func TestPortalEmailConfig(t *testing.T) {
 		})
 
 		t.Log("Waiting for Portal to be programmed")
-		WatchFor(t, ctx, portalWatch, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(portal),
-				ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+		envtest.WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portal),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
 			),
 			"Portal didn't get Programmed status condition or Konnect ID",
 		)
-		EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalsSDK, consts.WaitTime, consts.TickTime)
 
-		emailConfigWatch := SetupWatch[konnectv1alpha1.PortalEmailConfigList](t, ctx, cl, client.InNamespace(ns.Name))
+		emailConfigWatch := envtest.SetupWatch[konnectv1alpha1.PortalEmailConfigList](t, ctx, cl, client.InNamespace(ns.Name))
 		emailConfig := testEnvtestPortalEmailConfig(
 			ns.Name,
 			portal.GetName(),
@@ -123,11 +125,11 @@ func TestPortalEmailConfig(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, emailConfig))
 
 		t.Log("Waiting for PortalEmailConfig to be programmed")
-		WatchFor(t, ctx, emailConfigWatch, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(emailConfig),
-				ObjectMatchesKonnectID[*konnectv1alpha1.PortalEmailConfig](emailConfigID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalEmailConfig](),
+		envtest.WatchFor(t, ctx, emailConfigWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(emailConfig),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.PortalEmailConfig](emailConfigID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalEmailConfig](),
 				func(p *konnectv1alpha1.PortalEmailConfig) bool {
 					return p.GetPortalID() == portalID &&
 						controllerutil.ContainsFinalizer(p, konnect.KonnectCleanupFinalizer)
@@ -135,7 +137,7 @@ func TestPortalEmailConfig(t *testing.T) {
 			),
 			"PortalEmailConfig didn't get Programmed status condition, Portal ID, Konnect ID, or cleanup finalizer",
 		)
-		EventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on PortalEmailConfig update")
 		emailConfigToPatch := emailConfig.DeepCopy()
@@ -152,11 +154,11 @@ func TestPortalEmailConfig(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, emailConfigToPatch, client.MergeFrom(emailConfig)))
 
 		t.Log("Waiting for PortalEmailConfig to be patched")
-		WatchFor(t, ctx, emailConfigWatch, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(emailConfig),
-				ObjectMatchesKonnectID[*konnectv1alpha1.PortalEmailConfig](emailConfigID),
-				ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalEmailConfig](),
+		envtest.WatchFor(t, ctx, emailConfigWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(emailConfig),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.PortalEmailConfig](emailConfigID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalEmailConfig](),
 				func(p *konnectv1alpha1.PortalEmailConfig) bool {
 					return p.Spec.APISpec.DomainName != nil && *p.Spec.APISpec.DomainName == updatedDomainName &&
 						p.Spec.APISpec.FromEmail != nil && *p.Spec.APISpec.FromEmail == updatedFromEmail
@@ -164,7 +166,7 @@ func TestPortalEmailConfig(t *testing.T) {
 			),
 			"PortalEmailConfig didn't get patched",
 		)
-		EventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on PortalEmailConfig deletion")
 		sdk.PortalEmailsSDK.EXPECT().
@@ -173,8 +175,8 @@ func TestPortalEmailConfig(t *testing.T) {
 
 		t.Log("Deleting PortalEmailConfig")
 		require.NoError(t, clientNamespaced.Delete(ctx, emailConfig))
-		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, emailConfig, waitTime, tickTime)
-		EventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, emailConfig, consts.WaitTime, consts.TickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalEmailsSDK, consts.WaitTime, consts.TickTime)
 	})
 }
 
