@@ -1,6 +1,6 @@
 module github.com/kong/kong-operator/v2/crd-from-oas
 
-go 1.26.4
+go 1.26.5
 
 require (
 	github.com/caarlos0/env/v11 v11.4.1
