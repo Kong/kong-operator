@@ -2850,6 +2850,17 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	if g.entityHasReferences(entityName) && g.objectRefImported() {
 		imports = appendUniqueImportConfig(imports, g.config.CommonTypes.ObjectRef.Import)
 	}
+	supportsMirror := g.entitySupportsMirror(entityName)
+	if supportsMirror {
+		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+			Alias: "commonv1alpha1",
+			Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+		})
+		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+			Alias: defaultKonnectStatusAlias,
+			Path:  defaultKonnectStatusPackage,
+		})
+	}
 
 	funcsFuncMap := template.FuncMap{
 		"lowerCamel":  lowerCamelCase,
@@ -2923,6 +2934,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		AncestorDependencies               []*parser.Dependency
 		AncestorEntityTypes                []string
 		SingletonNoID                      bool
+		SupportsMirror                     bool
 	}{
 		EntityName:                entityName,
 		APIVersion:                g.config.APIVersion,
@@ -2956,6 +2968,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		AncestorDependencies:               ancestorDependencies,
 		AncestorEntityTypes:                ancestorEntityTypes,
 		SingletonNoID:                      isSingletonNoID(schema),
+		SupportsMirror:                     supportsMirror,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

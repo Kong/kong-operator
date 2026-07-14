@@ -238,6 +238,11 @@ import (
 ){{end}}{{if .KonnectLabelsField}}
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *{{.EntityName}}) GetKonnectLabels() map[string]string {
+{{- if .SupportsMirror}}
+	if obj.Spec.APISpec == nil {
+		return nil
+	}
+{{- end}}
 	if obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} == nil {
 		return nil
 	}
@@ -252,6 +257,14 @@ func (obj *{{.EntityName}}) GetKonnectLabels() map[string]string {
 
 // SetKonnectLabels sets the Konnect labels in the object's API spec.
 func (obj *{{.EntityName}}) SetKonnectLabels(labels map[string]string) {
+{{- if .SupportsMirror}}
+	if obj.Spec.APISpec == nil {
+		if labels == nil {
+			return
+		}
+		obj.Spec.APISpec = &{{.EntityName}}APISpec{}
+	}
+{{- end}}
 	if labels == nil {
 		obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} = nil
 		return
@@ -305,6 +318,18 @@ func (obj *{{.EntityName}}) GetConditions() []metav1.Condition {
 func (obj *{{.EntityName}}) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+{{- if .SupportsMirror}}
+
+// GetSource returns the source type (Origin or Mirror) of the {{.EntityName}}.
+func (obj *{{.EntityName}}) GetSource() *commonv1alpha1.EntitySource {
+	return obj.Spec.Source
+}
+
+// GetMirror returns the Konnect Mirror configuration of the {{.EntityName}}.
+func (obj *{{.EntityName}}) GetMirror() *konnectv1alpha2.MirrorSpec {
+	return obj.Spec.Mirror
+}
+{{- end}}
 {{- range .Dependencies}}
 
 // Get{{.EntityName}}ID returns the Konnect ID of the parent {{.EntityName}}.

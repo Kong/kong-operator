@@ -6308,3 +6308,39 @@ func TestGenerateCRDType_MirrorImportsKonnectV1Alpha2WithoutRootReconciler(t *te
 	require.Contains(t, content, "konnectv1alpha2 \"github.com/kong/kong-operator/v2/api/konnect/v1alpha2\"")
 	require.Contains(t, content, "Mirror *konnectv1alpha2.MirrorSpec")
 }
+
+func TestGenerateCRDFuncs_MirrorAccessors(t *testing.T) {
+	schema := &parser.Schema{
+		Name: "CreateKonnectEventGateway",
+		Properties: []*parser.Property{
+			{
+				Name: "labels",
+				Type: "object",
+				AdditionalProperties: &parser.Property{
+					Name: "value",
+					Type: "string",
+				},
+			},
+		},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventGateway": {IsRoot: new(true)},
+		},
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	content, err := g.generateCRDFuncs("CreateKonnectEventGateway", schema)
+	require.NoError(t, err)
+
+	require.Contains(t, content, "func (obj *KonnectEventGateway) GetSource() *commonv1alpha1.EntitySource {")
+	require.Contains(t, content, "return obj.Spec.Source")
+	require.Contains(t, content, "func (obj *KonnectEventGateway) GetMirror() *konnectv1alpha2.MirrorSpec {")
+	require.Contains(t, content, "return obj.Spec.Mirror")
+	// Label accessor nil-guards the pointer APISpec.
+	require.Contains(t, content, "if obj.Spec.APISpec == nil {")
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+}
