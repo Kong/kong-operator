@@ -33,15 +33,29 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-// ensureReadyStatus reads the owned Deployment's replica counts, copies them to the
-// AIGatewayDataPlane status, and evaluates whether all conditions are True to set
-// the Ready condition accordingly. Status is not patched here, the caller
-// is responsible for flushing via applyStatus.
+// ensureReadyStatus computes the Ready condition for an AIGatewayDataPlane.
+// It first checks whether any non-Ready condition is False; if so it sets
+// Ready=False immediately without fetching the Deployment. Otherwise it reads
+// the owned Deployment's replica counts and sets Ready based on readyReplicas.
+// Status is not patched here; the caller flushes via applyStatus.
 func ensureReadyStatus(
 	ctx context.Context,
 	cl client.Client,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
 ) error {
+	for _, c := range aigwdp.Status.Conditions {
+		if c.Type != string(aigatewayv1alpha1.ReadyType) && c.Status == metav1.ConditionFalse {
+			apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
+				Type:               string(aigatewayv1alpha1.ReadyType),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(aigatewayv1alpha1.DependenciesNotReadyReason),
+				Message:            c.Message,
+				ObservedGeneration: aigwdp.Generation,
+			})
+			return nil
+		}
+	}
+
 	deployment := &appsv1.Deployment{}
 	if err := cl.Get(ctx, client.ObjectKey{
 		Namespace: aigwdp.Namespace,

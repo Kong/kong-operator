@@ -81,7 +81,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 
 	log.Trace(logger, "reconciling AIGatewayDataPlane resource")
 
-	defer func() { err = errors.Join(err, r.applyStatus(ctx, logger, aigwdp)) }()
+	defer func() {
+		err = errors.Join(err, ensureReadyStatus(ctx, r.Client, aigwdp))
+		err = errors.Join(err, r.applyStatus(ctx, logger, aigwdp))
+	}()
 
 	// Resolve referenced KonnectAIGateway and set resolution condition.
 	aigatewaycp, err := r.resolveKonnectAIGateway(ctx, logger, aigwdp)
@@ -122,11 +125,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 
 	// Ensure the Ingress Service.
 	if err := r.ensureIngressService(ctx, logger, aigwdp); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Compute Ready condition; deferred applyStatus flushes status.
-	if err := ensureReadyStatus(ctx, r.Client, aigwdp); err != nil {
 		return ctrl.Result{}, err
 	}
 
