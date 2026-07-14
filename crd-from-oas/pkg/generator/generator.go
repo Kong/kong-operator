@@ -72,6 +72,11 @@ type Config struct {
 	// When set, a spec-level ref-list field and its ref struct(s) are emitted and
 	// the generated create/update ops call a hand-written enforcement helper.
 	Associations map[string][]config.AssociationConfig
+	// SourceConfig maps entity names to their Origin/Mirror source configuration.
+	// When an entry has SupportsMirror true, the generator emits Source/Mirror spec
+	// fields, spec-level CEL, an optional-pointer APISpec, GetSource/GetMirror
+	// accessors, and a Mirror short-circuit in the generated ops.
+	SourceConfig map[string]*config.SourceConfig
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -208,6 +213,13 @@ func (g *Generator) hasSecretRefs(entityName string) bool {
 // hasAnySecretRefs returns true if any entity in the config has SecretReferences.
 func (g *Generator) hasAnySecretRefs() bool {
 	return len(g.config.SecretReferences) > 0
+}
+
+// entitySupportsMirror reports whether the entity opted into Origin+Mirror via
+// source.supportsMirror in the config.
+func (g *Generator) entitySupportsMirror(entityName string) bool {
+	sc, ok := g.config.SourceConfig[entityName]
+	return ok && sc != nil && sc.SupportsMirror
 }
 
 // buildSensitiveLeaves pre-computes per-schema and per-entity maps of sensitive

@@ -152,6 +152,7 @@ func (r *Runner) Run(
 			Categories:               agvConfig.Categories,
 			References:               agvConfig.ReferencesConfig(pathToEntityName),
 			Associations:             agvConfig.AssociationsConfig(pathToEntityName),
+			SourceConfig:             agvConfig.SourceConfigs(pathToEntityName),
 		})
 
 		files, err := gen.Generate(parsed)
