@@ -87,25 +87,25 @@ yq: mise # Download yq locally if necessary.
 CONTROLLER_GEN_VERSION = $(shell $(YQ) -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-controller-tools/$(CONTROLLER_GEN_VERSION)/controller-gen
 .PHONY: controller-gen
-controller-gen: mise yq ## Download controller-gen locally if necessary.
+controller-gen: mise
 	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/controller-tools@$(CONTROLLER_GEN_VERSION)
 
 KUSTOMIZE_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["github:kubernetes-sigs/kustomize"].version' < $(MISE_FILE))
 KUSTOMIZE = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-kustomize/$(KUSTOMIZE_VERSION)/kustomize
 .PHONY: kustomize
-kustomize: mise yq ## Download kustomize locally if necessary.
+kustomize: mise
 	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/kustomize
 
 CLIENT_GEN_VERSION = $(shell $(YQ) -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
 CLIENT_GEN = $(PROJECT_DIR)/bin/installs/go-k8s-io-code-generator-cmd-client-gen/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
-client-gen: mise yq ## Download client-gen locally if necessary.
+client-gen: mise
 	$(MAKE) mise-install DEP_VER=go:k8s.io/code-generator/cmd/client-gen@$(CLIENT_GEN_VERSION)
 
 GOLANGCI_LINT_VERSION = $(shell $(YQ) -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/github-golangci-golangci-lint/$(GOLANGCI_LINT_VERSION)/golangci-lint
 .PHONY: golangci-lint
-golangci-lint: mise yq ## Download golangci-lint locally if necessary.
+golangci-lint: mise
 	$(MAKE) mise-install DEP_VER=github:golangci/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 .PHONY: golangci-lint-cache-path
@@ -119,49 +119,49 @@ go-fix:
 GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/github-gotestyourself-gotestsum/$(GOTESTSUM_VERSION)/gotestsum
 .PHONY: gotestsum
-gotestsum: mise yq ## Download gotestsum locally if necessary.
+gotestsum: mise
 	$(MAKE) mise-install DEP_VER=github:gotestyourself/gotestsum@$(GOTESTSUM_VERSION)
 
 CRD_REF_DOCS_VERSION = $(shell $(YQ) -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/github-elastic-crd-ref-docs/$(CRD_REF_DOCS_VERSION)/crd-ref-docs
 .PHONY: crd-ref-docs
-crd-ref-docs: yq ## Download crd-ref-docs locally if necessary.
+crd-ref-docs:
 	$(MAKE) mise-install DEP_VER=github:elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
 
 CRDIFY_VERSION = $(shell $(YQ) -r '.crdify' < $(TOOLS_VERSIONS_FILE))
 CRDIFY = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-crdify/$(CRDIFY_VERSION)/bin/crdify
 .PHONY: crdify
-crdify: mise yq ## Download crdify locally if necessary.
+crdify: mise
 	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/crdify@v$(CRDIFY_VERSION)
 
 SKAFFOLD_VERSION = $(shell $(YQ) -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/github-google-container-tools-skaffold/$(SKAFFOLD_VERSION)/skaffold
 .PHONY: skaffold
-skaffold: mise yq ## Download skaffold locally if necessary.
+skaffold: mise
 	$(MAKE) mise-install DEP_VER=github:GoogleContainerTools/skaffold@$(SKAFFOLD_VERSION)
 
 SETUP_ENVTEST_VERSION = $(shell $(YQ) -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-controller-runtime/$(SETUP_ENVTEST_VERSION)/setup-envtest
 .PHONY: setup-envtest
-setup-envtest: mise yq ## Download setup-envtest locally if necessary.
+setup-envtest: mise
 	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/controller-runtime@$(SETUP_ENVTEST_VERSION)
 
 ACTIONLINT_VERSION = $(shell $(YQ) -r '.actionlint' < $(TOOLS_VERSIONS_FILE))
 ACTIONLINT = $(PROJECT_DIR)/bin/installs/github-rhysd-actionlint/$(ACTIONLINT_VERSION)/actionlint
 .PHONY: download.actionlint
-download.actionlint: mise yq ## Download actionlint locally if necessary.
+download.actionlint: mise
 	$(MAKE) mise-install DEP_VER=github:rhysd/actionlint@$(ACTIONLINT_VERSION)
 
 SHELLCHECK_VERSION = $(shell $(YQ) -r '.shellcheck' < $(TOOLS_VERSIONS_FILE))
 SHELLCHECK = $(PROJECT_DIR)/bin/installs/github-koalaman-shellcheck/$(SHELLCHECK_VERSION)/shellcheck
 .PHONY: download.shellcheck
-download.shellcheck: mise yq ## Download shellcheck locally if necessary.
+download.shellcheck: mise
 	$(MAKE) mise-install DEP_VER=github:koalaman/shellcheck@$(SHELLCHECK_VERSION)
 
 GOVULNCHECK_VERSION = $(shell $(YQ) -r '.govulncheck' < $(TOOLS_VERSIONS_FILE))
 GOVULNCHECK = $(PROJECT_DIR)/bin/installs/go-golang-org-x-vuln-cmd-govulncheck/$(GOVULNCHECK_VERSION)/bin/govulncheck
 .PHONY: download.govulncheck
-download.govulncheck: mise yq ## Download govulncheck locally if necessary.
+download.govulncheck: mise
 	$(MAKE) mise-install DEP_VER=go:golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
 CHARTSNAP_VERSION = $(shell $(YQ) -ojson -r '.chartsnap' < $(TOOLS_VERSIONS_FILE))
@@ -178,37 +178,37 @@ download.kube-linter: mise yq
 TELEPRESENCE_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["github:telepresenceio/telepresence"].version' < $(MISE_FILE))
 TELEPRESENCE= $(PROJECT_DIR)/bin/installs/github-telepresenceio-telepresence/$(TELEPRESENCE_VERSION)/telepresence
 .PHONY: download.telepresence
-download.telepresence: mise yq ## Download telepresence locally if necessary.
+download.telepresence: mise
 	$(MAKE) mise-install DEP_VER=github:telepresenceio/telepresence
 
 MARKDOWNLINT_VERSION = $(shell $(YQ) -r '.markdownlint-cli2' < $(TOOLS_VERSIONS_FILE))
 MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_VERSION)/bin/markdownlint-cli2
 .PHONY: download.markdownlint-cli2
-download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
+download.markdownlint-cli2: mise
 	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
 HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:helm/helm"].version' < $(MISE_FILE))
 HELM = helm
 .PHONY: download.helm
-download.helm: mise yq ## Download helm locally if necessary.
+download.helm: mise
 	$(MAKE) mise-install-global DEP_VER=aqua:helm/helm
 
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
 .PHONY: download.kube-api-linter
-download.kube-api-linter: mise yq ## Download kube-api-linter locally if necessary.
+download.kube-api-linter: mise
 	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter@$(KUBE_API_LINTER_VERSION)
 
 CHAINSAW_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:kyverno/chainsaw"].version' < $(MISE_FILE))
 CHAINSAW = $(PROJECT_DIR)/bin/installs/aqua-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
 .PHONY: chainsaw
-chainsaw: mise yq ## Download chainsaw locally if necessary.
+chainsaw: mise
 	$(MAKE) mise-install DEP_VER=aqua:kyverno/chainsaw@$(CHAINSAW_VERSION)
 
 GRPCURL_VERSION = $(shell $(YQ) -r '.grpcurl' < $(TOOLS_VERSIONS_FILE))
 GRPCURL = $(PROJECT_DIR)/bin/installs/github-fullstorydev-grpcurl/$(GRPCURL_VERSION:v%=%)/grpcurl
 .PHONY: grpcurl
-grpcurl: mise yq ## Download grpcurl locally if necessary.
+grpcurl: mise
 	$(MAKE) mise-install DEP_VER=github:fullstorydev/grpcurl@$(GRPCURL_VERSION)
 
 .PHONY: use-setup-envtest
@@ -448,9 +448,9 @@ manifests.role: controller-gen
 
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
 .PHONY: manifests.versions
-manifests.versions: kustomize yq
-	$(YQ) eval '.appVersion = "$(VERSION)"' -i charts/kong-operator/Chart.yaml
-	$(YQ) eval '.image.tag = "$(VERSION)"' -i charts/kong-operator/values.yaml
+manifests.versions: kustomize
+	yq eval '.appVersion = "$(VERSION)"' -i charts/kong-operator/Chart.yaml
+	yq eval '.image.tag = "$(VERSION)"' -i charts/kong-operator/values.yaml
 	cd config/components/manager-image/ && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
 
 .PHONY: manifests.charts
@@ -473,7 +473,7 @@ ensure.go.pkg.downloaded.gateway-api:
 .PHONY: manifests.charts.kong-operator.role
 manifests.charts.kong-operator.role: manifests.role
 	cp $(CONFIG_RBAC_ROLE_DIR)/role.yaml $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
-	$(YQ) eval '.metadata.name = "{{ template \"kong.fullnamespacedname\" . }}-manager-role"' -i $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
+	yq eval '.metadata.name = "{{ template \"kong.fullnamespacedname\" . }}-manager-role"' -i $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
 
 .PHONY: manifests.charts.kong-operator.crds.operator
 manifests.charts.kong-operator.crds.operator: kustomize
@@ -504,7 +504,7 @@ manifests.charts.kong-operator.crds.gwapi-experimental: kustomize ensure.go.pkg.
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH) > $(GATEWAY_API_EXPERIMENTAL_CRDS_SUBCHART_MANIFEST_PATH)
 
 .PHONY: manifests.charts.print.chart.yaml
-manifests.charts.print.chart.yaml: yq
+manifests.charts.print.chart.yaml:
 	@echo "Generating $(CHART_YAML_PATH)"
 	@touch $(CHART_YAML_PATH)
 	@$(YQ) eval '.apiVersion = "v2"' -i $(CHART_YAML_PATH)
@@ -518,7 +518,7 @@ KONG_OPERATOR_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/Chart.yaml
 # NOTE: Below yq invocations are split into multiple lines to make it slightly more readable.
 # yq command lines splitting in Makefiles proves to be rather hard.
 .PHONY: manifests.charts.kong-operator.chart.yaml
-manifests.charts.kong-operator.chart.yaml: yq
+manifests.charts.kong-operator.chart.yaml:
 	@echo "Generating $(KONG_OPERATOR_CHART_YAML_PATH)"
 	@$(YQ) eval \
 		'.dependencies = [ {"name":"ko-crds","version":"$(shell $(YQ) -r '.version' < $(KONG_OPERATOR_CHART_DIR)/charts/ko-crds/Chart.yaml)"}]' \
@@ -792,7 +792,7 @@ PKG_LIST_KIC = ./ingress-controller/pkg/...,./ingress-controller/internal/...
 #
 # Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3754
 .PHONY: _test.integration-kic
-_test.integration-kic: mise yq
+_test.integration-kic: mise
 	TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 	TEST_DATABASE_MODE="$(DBMODE)" \
 	KONG_CONTROLLER_FEATURE_GATES="$(KONG_CONTROLLER_FEATURE_GATES)" \
@@ -1114,7 +1114,7 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 
 CERT_MANAGER_VERSION = $(shell $(YQ) -r '.cert-manager' < $(TOOLS_VERSIONS_FILE))
 .PHONY: install.helm.cert-manager
-install.helm.cert-manager: yq download.helm
+install.helm.cert-manager: download.helm
 	$(HELM) repo add jetstack https://charts.jetstack.io && \
 	$(HELM) repo update && \
 	$(HELM) upgrade --install \
