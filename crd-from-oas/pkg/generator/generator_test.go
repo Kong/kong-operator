@@ -6344,3 +6344,66 @@ func TestGenerateCRDFuncs_MirrorAccessors(t *testing.T) {
 	require.Contains(t, content, "if obj.Spec.APISpec == nil {")
 	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
 }
+
+func TestOpsCreateFuncBody_MirrorData(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+		},
+	}
+	data, err := g.generateOpsCreateFuncBody("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.True(t, data.SupportsMirror)
+	require.Equal(t, "GetEventGateway", data.GetSDKMethod)
+	require.Equal(t, "CreateEventGateway", data.SDKMethod)
+}
+
+func TestGenerateEntityOpsFile_MirrorBranch(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	content := res.File.Content
+	require.Contains(t, content, "*obj.Spec.Source == commonv1alpha1.EntitySourceMirror")
+	require.Contains(t, content, "sdk.GetEventGateway(ctx, id)")
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+}

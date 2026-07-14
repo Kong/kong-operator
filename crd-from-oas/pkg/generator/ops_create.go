@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -59,6 +60,13 @@ type opsCreateFuncData struct {
 	// Associations lists the top-level spec association fields whose membership
 	// is enforced by a hand-written helper called after the entity is created.
 	Associations []opsAssociationData
+	// SupportsMirror is true when the entity opted into Origin+Mirror. The
+	// generated create function then branches on obj.Spec.Source: Mirror fetches
+	// the existing Konnect entity by ID instead of creating it.
+	SupportsMirror bool
+	// GetSDKMethod is the SDK get-by-ID method name used by the Mirror branch,
+	// derived from SDKMethod by swapping the "Create" prefix for "Get".
+	GetSDKMethod string
 }
 
 // opsAssociationData is the per-association template data for the ops
@@ -177,6 +185,8 @@ func (g *Generator) generateOpsCreateFuncBody(
 		RespRootUnion:        respRootUnion,
 		ResponseStatusFields: opsConfig.ResponseStatusFields,
 		Associations:         associations,
+		SupportsMirror:       g.entitySupportsMirror(entityName),
+		GetSDKMethod:         "Get" + strings.TrimPrefix(sdkMethod, "Create"),
 	}, nil
 }
 
