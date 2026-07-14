@@ -151,6 +151,12 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		// cache, producing a transient "not found" translation failure. WithInitCacheSyncDuration
 		// reduces its frequency but cannot eliminate it (best-effort wait, not a barrier).
 		warningPredicate(dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^failed fetching KongUpstreamPolicy: KongUpstreamPolicy [^/]+/echo-drain-policy not found$`),
+		// Service backend cache-population race: the Ingress can be translated before the
+		// httpbin Service is loaded into the controller cache during the startup burst,
+		// producing transient backend-resolution translation failures. WithInitCacheSyncDuration
+		// reduces their frequency but cannot eliminate them (best-effort wait, not a barrier).
+		warningPredicate(dataplane.KongConfigurationTranslationFailedEventReason, "Ingress", ingress.Name, `^failed to resolve Kubernetes Service for backend: failed to fetch Service [^/]+/httpbin: Service [^/]+/httpbin not found$`),
+		warningPredicate(dataplane.KongConfigurationTranslationFailedEventReason, "Ingress", ingress.Name, `^can't add target for backend httpbin: no kubernetes service found$`),
 	}
 
 	assertExpectedEvents(ctx, t, ctrlClient, ns, t.Name(), predicatesToCheck, optionalPredicates)
