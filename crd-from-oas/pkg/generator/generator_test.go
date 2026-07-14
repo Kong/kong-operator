@@ -6447,3 +6447,41 @@ func TestGenerateEntityOpsFile_MirrorUpdateDeleteGuard(t *testing.T) {
 	require.Equal(t, 2, strings.Count(content,
 		"if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {\n\t\treturn nil\n\t}"))
 }
+
+func TestGenerateEntityOpsFile_MirrorImportWithoutCreateOp(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		UpdateOperationID:  "update-event-gateway",
+		UpdateTags:         []string{"event-gateways"},
+		DeleteOperationID:  "delete-event-gateway",
+		DeleteTags:         []string{"event-gateways"},
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest"},
+			"delete": {},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	content := res.File.Content
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+	require.Contains(t, content, "*obj.Spec.Source == commonv1alpha1.EntitySourceMirror")
+}
