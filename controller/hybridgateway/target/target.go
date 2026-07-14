@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // validBackendRef represents a BackendRef that has passed all validation checks.
@@ -561,7 +562,7 @@ func createTargetsFromValidBackendRefs[
 			logger := logger.WithValues("kongtarget", targetName)
 			log.Debug(logger, "Creating KongTarget for BackendRef")
 
-			tags := metadata.ExtractTags(vbRef.service.GetAnnotations())
+			tags := pkgmetadata.ExtractTags(vbRef.service)
 
 			target, err := builder.NewKongTarget().
 				WithName(targetName).

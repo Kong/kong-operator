@@ -17,7 +17,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
@@ -25,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	secretref "github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -306,7 +306,7 @@ func (c *gatewayConverter) processListenerCertificate(
 
 	// KongCertificate/KongSNI tags come solely from the TLS Secret's konghq.com/tags
 	// annotation. Tags on the Gateway or backend Service must not leak here.
-	certTags := metadata.ExtractTags(secret.GetAnnotations())
+	certTags := metadata.ExtractTags(secret)
 
 	// Create the KongCertificate resource.
 	kongCert, err := c.buildKongCertificate(listener, certRef, secretNamespace, certTags)

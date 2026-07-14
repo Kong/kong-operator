@@ -8,9 +8,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // TagsFromBackendRefs returns the konghq.com/tags of the first backend Service
@@ -39,7 +39,7 @@ func TagsFromBackendRefs(
 				"service", fmt.Sprintf("%s/%s", ns, ref.Name), "error", err)
 			continue
 		}
-		if tags := metadata.ExtractTags(svc.GetAnnotations()); len(tags) > 0 {
+		if tags := metadata.ExtractTags(svc); len(tags) > 0 {
 			return tags
 		}
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // ServiceForRule creates or updates a KongService for the given route rule.
@@ -279,7 +280,7 @@ func buildClientCertificate[
 
 	// KongCertificate tags come solely from the client-cert Secret's konghq.com/tags
 	// annotation. Tags on the backend Service must not leak here.
-	certTags := metadata.ExtractTags(secret.GetAnnotations())
+	certTags := pkgmetadata.ExtractTags(secret)
 
 	cert, err := builder.NewKongCertificate().
 		WithName(serviceName).
