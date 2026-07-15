@@ -2622,6 +2622,16 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		responseStatusFields = oc.ResponseStatusFields
 	}
 
+	var typeXValidations []string
+	if parentRef != nil {
+		fn := parentRef.FieldName
+		typeXValidations = []string{
+			fmt.Sprintf(
+				`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.%s == self.spec.%s", message="spec.%s is immutable when an entity is already Programmed"`,
+				fn, fn, fn, fn,
+			)}
+	}
+
 	var buf strings.Builder
 	data := struct {
 		EntityName                string
@@ -2644,6 +2654,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
+		TypeXValidations          []string
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -2665,6 +2676,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
+		TypeXValidations:          typeXValidations,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

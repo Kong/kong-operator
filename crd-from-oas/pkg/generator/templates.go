@@ -39,6 +39,9 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
+{{- range .TypeXValidations}}
+// {{.}}
+{{- end}}
 type {{.EntityName}} struct {
 	metav1.TypeMeta   ` + "`" + `json:",inline"` + "`" + `
 	metav1.ObjectMeta ` + "`" + `json:"metadata,omitzero"` + "`" + `
