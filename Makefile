@@ -845,7 +845,7 @@ CHAINSAW_FIXTURES_DIR ?= ./test/e2e/chainsaw/fixtures
 .PHONY: test.e2e.chainsaw.prereq
 test.e2e.chainsaw.prereq: export DIRNAME := $(DIRNAME)
 test.e2e.chainsaw.prereq: ## Apply prerequisite fixtures for a chainsaw suite (usage: DIRNAME=<suite>).
-	bash $(CHAINSAW_FIXTURES_DIR)/run-prereq.sh
+	DIRNAME=$(DIRNAME) $(CHAINSAW_FIXTURES_DIR)/run-prereq.sh
 
 .PHONY: test.e2e.chainsaw
 test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
