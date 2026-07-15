@@ -1,4 +1,4 @@
-package envtest
+package konnectother
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
@@ -30,15 +31,15 @@ import (
 // KongReferenceGrant in the Secret's namespace.
 func TestKonnectAPIAuthConfigurationReferenceGrant(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectAPIAuthConfigurationReconciler(controller.Options{}, factory, logging.DevelopmentMode, mgr.GetClient()),
 	)
 
@@ -77,7 +78,7 @@ func TestKonnectAPIAuthConfigurationReferenceGrant(t *testing.T) {
 		},
 	)
 
-	w := SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+	w := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 
 	t.Log("Creating a KonnectAPIAuthConfiguration referencing the Secret cross-namespace (no grant yet)")
 	apiAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
@@ -97,7 +98,7 @@ func TestKonnectAPIAuthConfigurationReferenceGrant(t *testing.T) {
 	require.NoError(t, clientNamespaced.Create(ctx, apiAuth))
 
 	t.Log("Waiting for KonnectAPIAuthConfiguration to have ResolvedRefs=False/RefNotPermitted (no grant)")
-	WatchFor(t, ctx, w, apiwatch.Modified, func(a *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+	envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(a *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 		if a.GetName() != apiAuth.GetName() {
 			return false
 		}
@@ -126,7 +127,7 @@ func TestKonnectAPIAuthConfigurationReferenceGrant(t *testing.T) {
 	)
 
 	t.Log("Waiting for KonnectAPIAuthConfiguration to become ResolvedRefs=True and APIAuthValid=True after the grant")
-	WatchFor(t, ctx, w, apiwatch.Modified, func(a *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+	envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(a *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 		if a.GetName() != apiAuth.GetName() {
 			return false
 		}

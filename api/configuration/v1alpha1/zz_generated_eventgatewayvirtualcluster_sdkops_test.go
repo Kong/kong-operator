@@ -11,11 +11,11 @@ import (
 
 func TestEventGatewayVirtualClusterAPISpec_ToCreateVirtualClusterRequest(t *testing.T) {
 	spec := &EventGatewayVirtualClusterAPISpec{
-		AclMode: VirtualClusterACLMode("enforce_on_gateway"),
+		AclMode:     VirtualClusterACLMode("enforce_on_gateway"),
 		Description: "test-value",
-		DNSLabel: VirtualClusterDNSLabel("test-value"),
-		Labels: Labels{"test-key": "test-value"},
-		Name: VirtualClusterName("test-value"),
+		DNSLabel:    VirtualClusterDNSLabel("test-value"),
+		Labels:      Labels{"test-key": "test-value"},
+		Name:        VirtualClusterName("test-value"),
 	}
 	result, err := spec.ToCreateVirtualClusterRequest()
 	require.NoError(t, err)
@@ -36,11 +36,11 @@ func TestEventGatewayVirtualClusterAPISpec_ToCreateVirtualClusterRequest(t *test
 
 func TestEventGatewayVirtualClusterAPISpec_ToUpdateVirtualClusterRequest(t *testing.T) {
 	spec := &EventGatewayVirtualClusterAPISpec{
-		AclMode: VirtualClusterACLMode("enforce_on_gateway"),
+		AclMode:     VirtualClusterACLMode("enforce_on_gateway"),
 		Description: "test-value",
-		DNSLabel: VirtualClusterDNSLabel("test-value"),
-		Labels: Labels{"test-key": "test-value"},
-		Name: VirtualClusterName("test-value"),
+		DNSLabel:    VirtualClusterDNSLabel("test-value"),
+		Labels:      Labels{"test-key": "test-value"},
+		Name:        VirtualClusterName("test-value"),
 	}
 	result, err := spec.ToUpdateVirtualClusterRequest()
 	require.NoError(t, err)

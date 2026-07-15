@@ -81,7 +81,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, egdp *eventgatewayv1alpha1.K
 
 	log.Trace(logger, "reconciling KegDataPlane resource")
 
-	defer func() { err = errors.Join(err, r.applyStatus(ctx, logger, egdp)) }()
+	defer func() {
+		err = errors.Join(err, ensureReadyStatus(ctx, r.Client, egdp))
+		err = errors.Join(err, r.applyStatus(ctx, logger, egdp))
+	}()
 
 	// Resolve referenced KonnectEventGateway and set resolution condition.
 	keg, err := r.resolveKonnectEventGateway(ctx, logger, egdp)
@@ -122,11 +125,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, egdp *eventgatewayv1alpha1.K
 
 	// Ensure the Kafka Service.
 	if err := r.ensureKafkaService(ctx, logger, egdp); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Compute Ready condition; deferred applyStatus flushes status.
-	if err := ensureReadyStatus(ctx, r.Client, egdp); err != nil {
 		return ctrl.Result{}, err
 	}
 

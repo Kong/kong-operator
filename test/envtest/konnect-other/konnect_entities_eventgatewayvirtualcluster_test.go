@@ -1,4 +1,4 @@
-package envtest
+package konnectother
 
 import (
 	"context"
@@ -21,6 +21,8 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -29,17 +31,17 @@ import (
 
 func TestEventGatewayVirtualCluster(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.EventGatewayVirtualCluster](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.EventGatewayVirtualCluster](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.EventGatewayVirtualCluster](&metricsmocks.MockRecorder{}),
 		),
 	)
@@ -56,7 +58,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 	eventGateway := deploy.KonnectEventGateway(t, ctx, clientNamespaced, apiAuth)
 
 	const expectedParentGateway = "gateway-12345"
-	updateKonnectEventGatewayStatusWithProgrammed(t, ctx, clientNamespaced, eventGateway, expectedParentGateway)
+	envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, clientNamespaced, eventGateway, expectedParentGateway)
 
 	t.Run("should create, update and delete EventGatewayVirtualCluster successfully", func(t *testing.T) {
 		const (
@@ -70,7 +72,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			initialDNSLabel         = "payments"
 		)
 
-		w := SetupWatch[configurationv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating EventGatewayBackendCluster and setting its status to programmed")
 		backendCluster := deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, eventGateway, deploy.WithName(backendClusterName))
@@ -78,7 +80,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			if !assert.NoError(ct, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(backendCluster), backendCluster)) {
 				return
 			}
-			backendCluster.Status.Conditions = []metav1.Condition{programmedCondition(backendCluster.GetGeneration())}
+			backendCluster.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(backendCluster.GetGeneration())}
 			backendCluster.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
 				ID:        backendClusterKonnectID,
 				ServerURL: sdkmocks.SDKServerURL,
@@ -86,7 +88,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			}
 			backendCluster.Status.GatewayID = &configurationv1alpha1.KonnectEntityRef{ID: expectedParentGateway}
 			require.NoError(ct, clientNamespaced.Status().Update(ctx, backendCluster))
-		}, waitTime, tickTime)
+		}, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualCluster creation")
 		sdk.EventGatewayVirtualClustersSDK.EXPECT().
@@ -123,11 +125,11 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 		})
 
 		t.Log("Waiting for EventGatewayVirtualCluster to be programmed")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(virtualCluster),
-				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
-				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(virtualCluster),
+				envtest.ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
 				func(vc *configurationv1alpha1.EventGatewayVirtualCluster) bool {
 					return vc.GetGatewayID() == expectedParentGateway &&
 						controllerutil.ContainsFinalizer(vc, konnect.KonnectCleanupFinalizer)
@@ -136,7 +138,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			"EventGatewayVirtualCluster didn't get Programmed status condition, parent Gateway ID, Konnect ID, or cleanup finalizer",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualCluster update")
 		sdk.EventGatewayVirtualClustersSDK.EXPECT().
@@ -160,11 +162,11 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 		require.NoError(t, clientNamespaced.Patch(ctx, virtualClusterToPatch, client.MergeFrom(virtualCluster)))
 
 		t.Log("Waiting for EventGatewayVirtualCluster to be patched")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(virtualCluster),
-				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
-				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(virtualCluster),
+				envtest.ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
 				func(vc *configurationv1alpha1.EventGatewayVirtualCluster) bool {
 					return vc.GetGatewayID() == expectedParentGateway &&
 						vc.Spec.APISpec.Name == updatedVirtualName &&
@@ -174,7 +176,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			"EventGatewayVirtualCluster didn't get patched",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualCluster deletion")
 		sdk.EventGatewayVirtualClustersSDK.EXPECT().
@@ -183,8 +185,8 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 
 		t.Log("Deleting EventGatewayVirtualCluster")
 		require.NoError(t, clientNamespaced.Delete(ctx, virtualCluster))
-		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, virtualCluster, waitTime, tickTime)
-		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, virtualCluster, consts.WaitTime, consts.TickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("should create EventGatewayVirtualCluster successfully on conflict when virtual cluster with matching uid tag exists", func(t *testing.T) {
@@ -193,7 +195,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			conflictBackendClusterKonnectID = "backend-cluster-conflict-konnect-id"
 		)
 
-		w := SetupWatch[configurationv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.EventGatewayVirtualClusterList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating EventGatewayBackendCluster 'backend-cluster' and setting its status to programmed")
 		conflictBackendCluster := deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, eventGateway, deploy.WithName("backend-cluster"))
@@ -201,7 +203,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			if !assert.NoError(ct, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(conflictBackendCluster), conflictBackendCluster)) {
 				return
 			}
-			conflictBackendCluster.Status.Conditions = []metav1.Condition{programmedCondition(conflictBackendCluster.GetGeneration())}
+			conflictBackendCluster.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(conflictBackendCluster.GetGeneration())}
 			conflictBackendCluster.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
 				ID:        conflictBackendClusterKonnectID,
 				ServerURL: sdkmocks.SDKServerURL,
@@ -209,7 +211,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			}
 			conflictBackendCluster.Status.GatewayID = &configurationv1alpha1.KonnectEntityRef{ID: expectedParentGateway}
 			assert.NoError(ct, clientNamespaced.Status().Update(ctx, conflictBackendCluster))
-		}, waitTime, tickTime)
+		}, consts.WaitTime, consts.TickTime)
 
 		var virtualCluster *configurationv1alpha1.EventGatewayVirtualCluster
 
@@ -217,7 +219,7 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			CreateEventGatewayVirtualCluster(mock.Anything, expectedParentGateway, mock.Anything).
 			Return(nil, &sdkkonnecterrs.SDKError{
 				StatusCode: 400,
-				Body:       ErrBodyDataConstraintError,
+				Body:       consts.ErrBodyDataConstraintError,
 			})
 
 		sdk.EventGatewayVirtualClustersSDK.EXPECT().
@@ -243,11 +245,11 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 		virtualCluster = deploy.EventGatewayVirtualCluster(t, ctx, clientNamespaced, conflictBackendCluster)
 
 		t.Log("Waiting for EventGatewayVirtualCluster to be programmed after UID conflict lookup")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(virtualCluster),
-				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
-				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(virtualCluster),
+				envtest.ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualCluster](virtualClusterID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualCluster](),
 				func(vc *configurationv1alpha1.EventGatewayVirtualCluster) bool {
 					return vc.GetGatewayID() == expectedParentGateway
 				},
@@ -255,6 +257,6 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			"EventGatewayVirtualCluster didn't get Programmed status condition, parent Gateway ID, or Konnect ID after conflict resolution",
 		)
 
-		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClustersSDK, consts.WaitTime, consts.TickTime)
 	})
 }

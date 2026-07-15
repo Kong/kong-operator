@@ -54,8 +54,8 @@ func updatePortalIdentityProviderRequest(
 	}
 
 	_, err = sdk.UpdatePortalIdentityProvider(ctx, sdkkonnectops.UpdatePortalIdentityProviderRequest{
-		PortalID: parentID,
-		ID: id,
+		PortalID:                     parentID,
+		ID:                           id,
 		PortalUpdateIdentityProvider: *req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

@@ -4,15 +4,15 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
@@ -32,7 +32,7 @@ func testGeneratedEventGatewayListenerPolicyForSDKOps() *configurationv1alpha1.E
 		Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 			APISpec: configurationv1alpha1.EventGatewayListenerPolicyAPISpec{
 				EventGatewayListenerPolicyConfig: &configurationv1alpha1.EventGatewayListenerPolicyConfig{
-					Type: configurationv1alpha1.EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen,
+					Type:                  configurationv1alpha1.EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen,
 					EventGatewayTLSListen: &configurationv1alpha1.EventGatewayTLSListenerPolicy{Config: configurationv1alpha1.EventGatewayTLSListenerPolicyConfig{Certificates: []configurationv1alpha1.TLSCertificate{{Certificate: configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("certificate")}, Key: configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("key")}}}}},
 				},
 			},
@@ -178,9 +178,9 @@ func TestDeleteEventGatewayListenerPolicy_UsesGeneratedSDKOps(t *testing.T) {
 		DeleteEventGatewayListenerPolicy(
 			mock.Anything,
 			sdkkonnectops.DeleteEventGatewayListenerPolicyRequest{
-				GatewayID: gatewayID,
+				GatewayID:  gatewayID,
 				ListenerID: eventGatewayListenerID,
-				PolicyID: obj.GetKonnectStatus().GetKonnectID(),
+				PolicyID:   obj.GetKonnectStatus().GetKonnectID(),
 			},
 		).
 		Return(&sdkkonnectops.DeleteEventGatewayListenerPolicyResponse{}, nil).
@@ -206,9 +206,9 @@ func TestDeleteEventGatewayListenerPolicy_PropagatesSDKError(t *testing.T) {
 		DeleteEventGatewayListenerPolicy(
 			mock.Anything,
 			sdkkonnectops.DeleteEventGatewayListenerPolicyRequest{
-				GatewayID: gatewayID,
+				GatewayID:  gatewayID,
 				ListenerID: eventGatewayListenerID,
-				PolicyID: obj.GetKonnectStatus().GetKonnectID(),
+				PolicyID:   obj.GetKonnectStatus().GetKonnectID(),
 			},
 		).
 		Return(nil, sdkErr).

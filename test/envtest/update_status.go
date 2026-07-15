@@ -63,7 +63,7 @@ func UpdateKongServiceStatusWithProgrammed(
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
 	obj.Status.Conditions = []metav1.Condition{
-		programmedCondition(obj.GetGeneration()),
+		ProgrammedCondition(obj.GetGeneration()),
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
@@ -84,7 +84,7 @@ func UpdateKongRouteStatusWithProgrammed(
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
 	obj.Status.Conditions = []metav1.Condition{
-		programmedCondition(obj.GetGeneration()),
+		ProgrammedCondition(obj.GetGeneration()),
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
@@ -102,7 +102,7 @@ func UpdateKongKeySetStatusWithProgrammed(
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
 	obj.Status.Conditions = []metav1.Condition{
-		programmedCondition(obj.GetGeneration()),
+		ProgrammedCondition(obj.GetGeneration()),
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
@@ -121,36 +121,13 @@ func UpdateKongUpstreamStatusWithProgrammed(
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
 	obj.Status.Conditions = []metav1.Condition{
-		programmedCondition(obj.GetGeneration()),
+		ProgrammedCondition(obj.GetGeneration()),
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKonnectAIGatewayStatusWithProgrammed(
-	t *testing.T,
-	ctx context.Context,
-	cl client.Client,
-	obj *konnectv1alpha1.KonnectAIGateway,
-	id string,
-) {
-	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
-			return
-		}
-		obj.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
-			ID:        id,
-			ServerURL: sdkmocks.SDKServerURL,
-			OrgID:     "org-id",
-		}
-		obj.Status.Conditions = []metav1.Condition{
-			programmedCondition(obj.GetGeneration()),
-		}
-		assert.NoError(ct, cl.Status().Update(ctx, obj))
-	}, waitTime, tickTime)
-}
-
-func updateKonnectEventGatewayStatusWithProgrammed(
+func UpdateKonnectEventGatewayStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -167,7 +144,7 @@ func updateKonnectEventGatewayStatusWithProgrammed(
 			OrgID:     "org-id",
 		}
 		obj.Status.Conditions = []metav1.Condition{
-			programmedCondition(obj.GetGeneration()),
+			ProgrammedCondition(obj.GetGeneration()),
 		}
 		assert.NoError(ct, cl.Status().Update(ctx, obj))
 	}, waitTime, tickTime)
@@ -184,7 +161,7 @@ func updateEventGatewayDataPlaneCertificateStatusWithProgrammed(
 			return
 		}
 		obj.Status.Conditions = []metav1.Condition{
-			programmedCondition(obj.GetGeneration()),
+			ProgrammedCondition(obj.GetGeneration()),
 		}
 		assert.NoError(ct, cl.Status().Update(ctx, obj))
 	}, waitTime, tickTime)
@@ -198,7 +175,7 @@ func konnectEntityStatus(id string) konnectv1alpha2.KonnectEntityStatus {
 	}
 }
 
-func programmedCondition(generation int64) metav1.Condition {
+func ProgrammedCondition(generation int64) metav1.Condition {
 	return k8sutils.NewConditionWithGeneration(
 		konnectv1alpha1.KonnectEntityProgrammedConditionType,
 		metav1.ConditionTrue,

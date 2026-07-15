@@ -52,12 +52,12 @@ func TestPortalIdentityProviderRequestAPISpecUnmarshalJSON_DecodesUnionFields(t 
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, PortalIdentityProviderRequestAPISpec)
+		assert  func(*testing.T, PortalIdentityProviderRequestAPISpec)
 	}{
 		{
-			name: "Config/OIDC",
+			name:    "Config/OIDC",
 			payload: []byte("{\"config\":{\"type\":\"oIDC\",\"oIDC\":{}}}"),
 			assert: func(t *testing.T, target PortalIdentityProviderRequestAPISpec) {
 				t.Helper()
@@ -73,7 +73,7 @@ func TestPortalIdentityProviderRequestAPISpecUnmarshalJSON_DecodesUnionFields(t 
 			},
 		},
 		{
-			name: "Config/PortalSAML",
+			name:    "Config/PortalSAML",
 			payload: []byte("{\"config\":{\"type\":\"portalSAML\",\"portalSAML\":{}}}"),
 			assert: func(t *testing.T, target PortalIdentityProviderRequestAPISpec) {
 				t.Helper()

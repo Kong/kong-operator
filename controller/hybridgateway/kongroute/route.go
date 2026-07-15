@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
@@ -128,6 +129,7 @@ func RoutesForHTTPRouteRule(
 		return nil, fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
 			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
 	}
+	tags := pkgmetadata.ExtractTags(httpRoute)
 
 	for i, match := range rule.Matches {
 		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, namingParentRef, match, i)
@@ -144,6 +146,7 @@ func RoutesForHTTPRouteRule(
 			WithHosts(hostnames).
 			WithStripPath(stripPath).
 			WithPreserveHost(preserveHost).
+			WithSpecTags(tags).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
 		if priority := priorityForHeaderOnlyHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
@@ -380,6 +383,8 @@ func routesForTLSRouteRule(
 		protocol = sdkkonnectcomp.ProtocolsTLS
 	}
 
+	tags := pkgmetadata.ExtractTags(tlsRoute)
+
 	routeBuilder := builder.NewKongRoute().WithName(routeName).
 		WithNamespace(metadata.NamespaceFromParentRef(tlsRoute, pRef)).
 		WithLabels(tlsRoute, pRef).
@@ -387,7 +392,8 @@ func routesForTLSRouteRule(
 		WithSpecName(routeName).
 		WithKongService(serviceName).
 		WithProtocols(protocol).
-		WithSNIs(hostnames)
+		WithSNIs(hostnames).
+		WithSpecTags(tags)
 
 	kongRoute, err := routeBuilder.Build()
 	if err != nil {

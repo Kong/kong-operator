@@ -68,6 +68,10 @@ type Config struct {
 	// When set, the matching spec field is replaced with *commonv1alpha1.ObjectRef
 	// and a resolved-ID status field is emitted.
 	References map[string][]config.ReferenceConfig
+	// Associations maps entity names to their top-level spec association fields.
+	// When set, a spec-level ref-list field and its ref struct(s) are emitted and
+	// the generated create/update ops call a hand-written enforcement helper.
+	Associations map[string][]config.AssociationConfig
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -2618,6 +2622,16 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		responseStatusFields = oc.ResponseStatusFields
 	}
 
+	var typeXValidations []string
+	if parentRef != nil {
+		fn := parentRef.FieldName
+		typeXValidations = []string{
+			fmt.Sprintf(
+				`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.%s == self.spec.%s", message="spec.%s is immutable when an entity is already Programmed"`,
+				fn, fn, fn, fn,
+			)}
+	}
+
 	var buf strings.Builder
 	data := struct {
 		EntityName                string
@@ -2632,6 +2646,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		Categories                []string
 		SingletonNoID             bool
 		References                []TemplateReferenceConfig
+		Associations              []TemplateAssociationConfig
 		ParentRef                 *config.ParentRefConfig
 		ParentRefGoFieldName      string
 		ParentRefJSONFieldName    string
@@ -2639,6 +2654,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
+		TypeXValidations          []string
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -2652,6 +2668,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		Categories:                categories,
 		SingletonNoID:             isSingletonNoID(schema),
 		References:                g.templateReferences(entityName),
+		Associations:              g.templateAssociations(entityName),
 		ParentRef:                 parentRef,
 		ParentRefGoFieldName:      parentRefGoFieldName,
 		ParentRefJSONFieldName:    parentRefJSONName,
@@ -2659,6 +2676,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
+		TypeXValidations:          typeXValidations,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -4114,6 +4132,39 @@ type GoPathSegment struct {
 	VariantProperties int
 }
 
+// TemplateAssociationConfig is the per-association data used by crdTypeTemplate
+// to emit a top-level spec field and its ref struct.
+type TemplateAssociationConfig struct {
+	// GoFieldName is the Go struct field name, e.g. "ConsumerGroups".
+	GoFieldName string
+	// JSONName is the CRD wire-format JSON key, e.g. "consumerGroups".
+	JSONName string
+	// RefTypeName is the generated ref struct name, e.g. "AIGatewayConsumerGroupRef".
+	RefTypeName string
+	// RefKinds is a human-readable enumeration of referenced kinds for generated
+	// doc comments, e.g. "AIGatewayConsumerGroup".
+	RefKinds string
+}
+
+// templateAssociations returns the associations for an entity with computed
+// Go field names and ref type names, or nil when none are configured.
+func (g *Generator) templateAssociations(entityName string) []TemplateAssociationConfig {
+	assocs := g.config.Associations[entityName]
+	if len(assocs) == 0 {
+		return nil
+	}
+	result := make([]TemplateAssociationConfig, len(assocs))
+	for i, a := range assocs {
+		result[i] = TemplateAssociationConfig{
+			GoFieldName: goFieldName(a.Name),
+			JSONName:    a.Name,
+			RefTypeName: a.RefTypeName(),
+			RefKinds:    strings.Join(a.Kinds, "/"),
+		}
+	}
+	return result
+}
+
 // TemplateReferenceConfig extends ReferenceConfig with Go-code computed fields
 // suitable for use in templates.
 type TemplateReferenceConfig struct {
@@ -4848,6 +4899,11 @@ func (g *Generator) unionVariantSchema(union *parser.Property, variant unionVari
 // entityHasReferences returns true if the entity has at least one configured reference.
 func (g *Generator) entityHasReferences(entityName string) bool {
 	return len(g.config.References[entityName]) > 0
+}
+
+// entityAssociations returns the association configs for the entity, if any.
+func (g *Generator) entityAssociations(entityName string) []config.AssociationConfig {
+	return g.config.Associations[entityName]
 }
 
 // entityHasParentRefReplacement returns true when the entity is configured with

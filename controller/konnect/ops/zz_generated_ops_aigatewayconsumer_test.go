@@ -4,15 +4,15 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -31,12 +31,12 @@ func testGeneratedAIGatewayConsumerForSDKOps() *konnectv1alpha1.AIGatewayConsume
 		},
 		Spec: konnectv1alpha1.AIGatewayConsumerSpec{
 			APISpec: konnectv1alpha1.AIGatewayConsumerAPISpec{
-				CustomID: "test-value",
+				CustomID:    "test-value",
 				DisplayName: "test-value",
-				Labels: konnectv1alpha1.PublicLabels{"test-key": "test-value"},
-				ManagedBy: konnectv1alpha1.ManagedBy{"test-key": "test-value"},
-				Name: "test-value",
-				Type: "api-key",
+				Labels:      konnectv1alpha1.PublicLabels{"test-key": "test-value"},
+				ManagedBy:   konnectv1alpha1.ManagedBy{"test-key": "test-value"},
+				Name:        "test-value",
+				Type:        "api-key",
 			},
 		},
 	}
@@ -69,6 +69,13 @@ func TestCreateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
+	// ConsumerGroups membership is enforced by the hand-written
+	// enforceAIGatewayConsumerConsumerGroups helper after create; allow its SDK call.
+	sdk.EXPECT().
+		UpdateAiGatewayConsumerGroupsForConsumer(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupsForConsumerResponse{}, nil).
+		Maybe()
+
 	require.NoError(t, createAIGatewayConsumer(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
@@ -96,6 +103,11 @@ func TestCreateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
+	sdk.EXPECT().
+		UpdateAiGatewayConsumerGroupsForConsumer(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupsForConsumerResponse{}, nil).
+		Maybe()
+
 	err = createAIGatewayConsumer(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
@@ -118,13 +130,20 @@ func TestUpdateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 		UpdateAiGatewayConsumer(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayConsumerRequest{
-				GatewayID: parentID,
-				ConsumerIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                      parentID,
+				ConsumerIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayConsumerRequest: *expectedRequest,
 			},
 		).
 		Return(&sdkkonnectops.UpdateAiGatewayConsumerResponse{}, nil).
 		Once()
+
+	// ConsumerGroups membership is enforced by the hand-written
+	// enforceAIGatewayConsumerConsumerGroups helper after update; allow its SDK call.
+	sdk.EXPECT().
+		UpdateAiGatewayConsumerGroupsForConsumer(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupsForConsumerResponse{}, nil).
+		Maybe()
 
 	require.NoError(t, updateAIGatewayConsumer(ctx, cl, sdk, obj))
 }
@@ -148,13 +167,18 @@ func TestUpdateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 		UpdateAiGatewayConsumer(
 			mock.Anything,
 			sdkkonnectops.UpdateAiGatewayConsumerRequest{
-				GatewayID: parentID,
-				ConsumerIDOrName: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                      parentID,
+				ConsumerIDOrName:               obj.GetKonnectStatus().GetKonnectID(),
 				UpdateAIGatewayConsumerRequest: *expectedRequest,
 			},
 		).
 		Return(nil, sdkErr).
 		Once()
+
+	sdk.EXPECT().
+		UpdateAiGatewayConsumerGroupsForConsumer(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupsForConsumerResponse{}, nil).
+		Maybe()
 
 	err = updateAIGatewayConsumer(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())

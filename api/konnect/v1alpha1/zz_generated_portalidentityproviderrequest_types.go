@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // PortalIdentityProviderRequest is the Schema for the portalidentityproviderrequests API.
@@ -107,7 +107,6 @@ type PortalIdentityProviderRequestStatus struct {
 
 // PortalIdentityProviderRequestConfig represents a union type for config.
 // Only one of the fields should be set based on the Type.
-//
 type PortalIdentityProviderRequestConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -131,7 +130,7 @@ type PortalIdentityProviderRequestConfigType string
 
 // PortalIdentityProviderRequestConfigType values.
 const (
-	PortalIdentityProviderRequestConfigTypeOIDC PortalIdentityProviderRequestConfigType = "oIDC"
+	PortalIdentityProviderRequestConfigTypeOIDC       PortalIdentityProviderRequestConfigType = "oIDC"
 	PortalIdentityProviderRequestConfigTypePortalSAML PortalIdentityProviderRequestConfigType = "portalSAML"
 )
 
@@ -222,4 +221,3 @@ func (s *PortalIdentityProviderRequestAPISpec) UnmarshalJSON(data []byte) error 
 	*s = PortalIdentityProviderRequestAPISpec(aux)
 	return nil
 }
-

@@ -429,6 +429,188 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 	)
 }
 
+func TestRoutesForHTTPRouteRule_TagsAnnotation(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	pRef := &gwtypes.ParentReference{
+		Name:      "test-gateway",
+		Namespace: (*gatewayv1.Namespace)(new("test-namespace")),
+	}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	// Rule with two matches so we can confirm tags land on every produced route.
+	prefix := gatewayv1.PathMatchPathPrefix
+	rule := gwtypes.HTTPRouteRule{
+		Matches: []gatewayv1.HTTPRouteMatch{
+			{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  &prefix,
+					Value: new("/test"),
+				},
+			},
+			{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  &prefix,
+					Value: new("/"),
+				},
+				Headers: []gatewayv1.HTTPHeaderMatch{{
+					Name:  "X-Foo",
+					Value: "bar",
+				}},
+			},
+		},
+	}
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    commonv1alpha1.Tags
+	}{
+		{
+			name:        "tags annotation present",
+			annotations: map[string]string{"konghq.com/tags": "r1,r2"},
+			expected:    commonv1alpha1.Tags{"r1", "r2"},
+		},
+		{
+			name:        "tags annotation absent",
+			annotations: nil,
+			expected:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-route",
+					Namespace:   "test-namespace",
+					Annotations: tt.annotations,
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{Name: "test-gateway"},
+						},
+					},
+				},
+			}
+
+			results, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, rule, 0, pRef, cpRef, nil, "test-service", []string{"example.com"})
+			require.NoError(t, err)
+			require.Len(t, results, 2)
+
+			for _, result := range results {
+				assert.Equal(t, tt.expected, result.Spec.Tags)
+			}
+		})
+	}
+}
+
+func TestRoutesForTLSRouteRule_TagsAnnotation(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	pRef := &gwtypes.ParentReference{
+		Name:      "test-gateway",
+		Namespace: (*gatewayv1.Namespace)(new("test-namespace")),
+	}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	rule := gwtypes.TLSRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "backend",
+				Port: new(gatewayv1.PortNumber(443)),
+			},
+		}},
+	}
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "tls", Protocol: gatewayv1.TLSProtocolType, Port: 443},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    commonv1alpha1.Tags
+	}{
+		{
+			name:        "tags annotation present",
+			annotations: map[string]string{"konghq.com/tags": "r1,r2"},
+			expected:    commonv1alpha1.Tags{"r1", "r2"},
+		},
+		{
+			name:        "tags annotation absent",
+			annotations: nil,
+			expected:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tlsRoute := &gwtypes.TLSRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-route",
+					Namespace:   "test-namespace",
+					Annotations: tt.annotations,
+				},
+				Spec: gatewayv1.TLSRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{Name: "test-gateway"},
+						},
+					},
+				},
+			}
+
+			results, err := RoutesForRule(ctx, logger, fakeClient, tlsRoute, rule, 0, pRef, cpRef, nil, "test-service", []string{"example.com"})
+			require.NoError(t, err)
+			require.Len(t, results, 1)
+			assert.Equal(t, tt.expected, results[0].Spec.Tags)
+		})
+	}
+}
+
 func TestRoutesForHTTPRouteRule_MalformedAnnotations(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()

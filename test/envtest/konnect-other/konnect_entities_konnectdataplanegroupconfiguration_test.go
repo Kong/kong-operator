@@ -1,4 +1,4 @@
-package envtest
+package konnectother
 
 import (
 	"testing"
@@ -17,6 +17,8 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/helpers/generate"
@@ -42,17 +44,17 @@ func dataplaneGroup(networkRef commonv1alpha1.ObjectRef) []konnectv1alpha1.Konne
 
 func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](&metricsmocks.MockRecorder{}),
 		),
 	)
@@ -77,7 +79,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		)
 
 		t.Log("Setting up a watch for KonnectCloudGatewayDataPlaneGroupConfiguration events")
-		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
 		const expectedCPGeo = sdkkonnectcomp.ControlPlaneGeoUs // US is the default used by the Mock SDK, we expect this to be propagated.
 		sdk.CloudGatewaysSDK.EXPECT().CreateConfiguration(
@@ -117,12 +119,12 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		)
 
 		t.Log("Waiting for KonnectCloudGatewayDataPlaneGroupConfiguration to be programmed and get Konnect ID")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(c *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(c *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration) bool {
 			return c.GetKonnectID() == id && k8sutils.IsProgrammed(c)
 		}, "KonnectCloudGatewayDataPlaneGroupConfiguration didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
 
 		t.Log("Checking SDK operations")
-		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, consts.WaitTime, consts.TickTime)
 
 		// NOTE: we delete the data plane group configuration by "creating" (using PUT)
 		// because Cloud Gateways DataPlane Group connfiguration API doesn't support
@@ -144,10 +146,10 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 
 		t.Log("Deleting")
 		require.NoError(t, clientNamespaced.Delete(ctx, dpg))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, dpg, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, dpg, consts.WaitTime, consts.TickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("namespacedRef adding and deleting", func(t *testing.T) {
@@ -163,7 +165,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		)
 
 		t.Log("Setting up a watch for KonnectCloudGatewayDataPlaneGroupConfiguration events")
-		w := SetupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
 		const expectedCPGeo = sdkkonnectcomp.ControlPlaneGeoUs // US is the default used by the Mock SDK, we expect this to be propagated.
 		sdk.CloudGatewaysSDK.EXPECT().CreateConfiguration(
@@ -198,12 +200,12 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		)
 
 		t.Log("Waiting for KonnectCloudGatewayDataPlaneGroupConfiguration to be programmed and get Konnect ID")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(c *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(c *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration) bool {
 			return c.GetKonnectID() == id && k8sutils.IsProgrammed(c)
 		}, "KonnectCloudGatewayDataPlaneGroupConfiguration didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
 
 		t.Log("Checking SDK operations")
-		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, consts.WaitTime, consts.TickTime)
 
 		// NOTE: we delete the data plane group configuration by "creating" (using PUT)
 		// because Cloud Gateways DataPlane Group connfiguration API doesn't support
@@ -225,9 +227,9 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 
 		t.Log("Deleting")
 		require.NoError(t, clientNamespaced.Delete(ctx, dpg))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, dpg, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, dpg, consts.WaitTime, consts.TickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, consts.WaitTime, consts.TickTime)
 	})
 }

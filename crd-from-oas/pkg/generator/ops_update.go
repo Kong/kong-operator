@@ -75,6 +75,9 @@ type opsUpdateFuncData struct {
 	UpdateReqBodyPointer bool // true when SDK body param is a pointer
 	NeedsClient          bool // true when the generated update function needs client.Client
 	HasReferences        bool // true when parent ref replacement needs an entity-level request builder
+	// Associations lists the top-level spec association fields whose membership
+	// is enforced by a hand-written helper called after the entity is updated.
+	Associations []opsAssociationData
 }
 
 func qualifiedSDKTypeName(importPath, typeName string) string {
@@ -173,7 +176,9 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		return nil, nil
 	}
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
-	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName)
+	associations := g.opsAssociations(entityName)
+	// Association enforcement helpers need the controller-runtime client.
+	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName) || len(associations) > 0
 
 	return &opsUpdateFuncData{
 		Entity:               entityName,
@@ -195,6 +200,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		NeedsClient:          needsClient,
 		HasReferences:        g.entityHasParentRefReplacement(entityName),
 		UpdateOmitsEntityID:  callShape.OmitsEntityID,
+		Associations:         associations,
 	}, nil
 }
 

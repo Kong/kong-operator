@@ -633,6 +633,42 @@ func TestGenerateCRDType_ReferenceFieldTypeSwap(t *testing.T) {
 	require.Contains(t, content, "+kubebuilder:validation:MaxItems=50")
 }
 
+func TestGenerateCRDType_Association(t *testing.T) {
+	schema := &parser.Schema{
+		Name:       "CreateAIGatewayConsumer",
+		Properties: []*parser.Property{},
+	}
+
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		Associations: map[string][]config.AssociationConfig{
+			"AIGatewayConsumer": {{
+				Name:  "consumerGroups",
+				Kinds: []string{"AIGatewayConsumerGroup"},
+			}},
+		},
+	})
+	content, err := g.generateCRDType("CreateAIGatewayConsumer", schema)
+	require.NoError(t, err)
+
+	// The top-level spec field is emitted (sibling of apiSpec) as a ref-struct list.
+	require.Contains(t, content, "ConsumerGroups []AIGatewayConsumerGroupRef `json:\"consumerGroups,omitempty\"`")
+	// The single-kind ref struct is emitted with only a Name field (no Kind).
+	require.Contains(t, content, "type AIGatewayConsumerGroupRef struct {")
+	require.Contains(t, content, "Name string `json:\"name\"`")
+	require.NotContains(t, content, "Kind string")
+}
+
+func TestGenerateCRDType_NoAssociationsByDefault(t *testing.T) {
+	schema := &parser.Schema{Name: "CreatePortal", Properties: []*parser.Property{}}
+	g := NewGenerator(Config{APIGroup: "konnect.konghq.com", APIVersion: "v1alpha1"})
+	content, err := g.generateCRDType("CreatePortal", schema)
+	require.NoError(t, err)
+	// Entities without an association opt-in must not gain any association field.
+	require.NotContains(t, content, "consumerGroups")
+}
+
 func TestGenerate_ReferencePathMustBeArray(t *testing.T) {
 	parsed := &parser.ParsedSpec{
 		RequestBodies: map[string]*parser.Schema{

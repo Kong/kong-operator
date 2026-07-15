@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -313,4 +314,19 @@ func TestKongTargetBuilder_MultipleErrors(t *testing.T) {
 
 	assert.Contains(t, err.Error(), "owner cannot be nil")
 	assert.Contains(t, err.Error(), assert.AnError.Error())
+}
+
+func TestKongTargetBuilder_WithSpecTags(t *testing.T) {
+	t.Run("nil leaves tags unset", func(t *testing.T) {
+		target := NewKongTarget().WithSpecTags(nil).MustBuild()
+		assert.Nil(t, target.Spec.Tags)
+	})
+	t.Run("empty leaves tags unset", func(t *testing.T) {
+		target := NewKongTarget().WithSpecTags([]string{}).MustBuild()
+		assert.Nil(t, target.Spec.Tags)
+	})
+	t.Run("sets tags", func(t *testing.T) {
+		target := NewKongTarget().WithSpecTags([]string{"foo", "bar"}).MustBuild()
+		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, target.Spec.Tags)
+	})
 }

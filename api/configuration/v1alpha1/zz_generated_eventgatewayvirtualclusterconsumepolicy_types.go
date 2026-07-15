@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EventGatewayVirtualClusterConsumePolicy is the Schema for the eventgatewayvirtualclusterconsumepolicys API.
@@ -21,6 +21,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef", message="spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed"
 type EventGatewayVirtualClusterConsumePolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -97,7 +98,6 @@ type EventGatewayVirtualClusterConsumePolicyStatus struct {
 
 // EventGatewayVirtualClusterConsumePolicyConfig represents a union type for EventGatewayVirtualClusterConsumePolicyConfig.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayVirtualClusterConsumePolicyConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -133,11 +133,11 @@ type EventGatewayVirtualClusterConsumePolicyConfigType string
 
 // EventGatewayVirtualClusterConsumePolicyConfigType values.
 const (
-	EventGatewayVirtualClusterConsumePolicyConfigTypeDecryptPolicy EventGatewayVirtualClusterConsumePolicyConfigType = "decrypt"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeDecryptPolicy                         EventGatewayVirtualClusterConsumePolicyConfigType = "decrypt"
 	EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordDecryptFieldsPolicyCreate EventGatewayVirtualClusterConsumePolicyConfigType = "decryptFields"
-	EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate EventGatewayVirtualClusterConsumePolicyConfigType = "modifyHeaders"
-	EventGatewayVirtualClusterConsumePolicyConfigTypeConsumeSchemaValidationPolicy EventGatewayVirtualClusterConsumePolicyConfigType = "schemaValidation"
-	EventGatewayVirtualClusterConsumePolicyConfigTypeSkipRecordPolicyCreate EventGatewayVirtualClusterConsumePolicyConfigType = "skipRecord"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate             EventGatewayVirtualClusterConsumePolicyConfigType = "modifyHeaders"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeConsumeSchemaValidationPolicy         EventGatewayVirtualClusterConsumePolicyConfigType = "schemaValidation"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeSkipRecordPolicyCreate                EventGatewayVirtualClusterConsumePolicyConfigType = "skipRecord"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -279,7 +279,6 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) MarshalJSON() ([]byte, 
 	return data, nil
 }
 
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -297,4 +296,3 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) UnmarshalJSON(data []by
 	*s = EventGatewayVirtualClusterConsumePolicyAPISpec(aux)
 	return nil
 }
-

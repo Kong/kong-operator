@@ -4,15 +4,15 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
@@ -31,9 +31,9 @@ func testGeneratedAIGatewayDataPlaneCertificateForSDKOps() *configurationv1alpha
 		},
 		Spec: configurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 			APISpec: configurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
-				Cert: configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")},
+				Cert:        configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")},
 				Description: "test-value",
-				Title: "test-value",
+				Title:       "test-value",
 			},
 		},
 	}

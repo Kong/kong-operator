@@ -1,4 +1,4 @@
-package envtest
+package konnectother
 
 import (
 	"errors"
@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
@@ -28,15 +29,15 @@ import (
 
 func TestKonnectAPIAuthConfiguration(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectAPIAuthConfigurationReconciler(controller.Options{}, factory, logging.DevelopmentMode, mgr.GetClient()),
 	)
 
@@ -62,12 +63,12 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				nil,
 			)
 
-		w := SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=true")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				r.Status.OrganizationID == "12345" &&
 				k8sutils.HasConditionTrue("APIAuthValid", r)
@@ -85,12 +86,12 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				},
 			)
 
-		w := SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=true")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
@@ -105,12 +106,12 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				nil,
 			)
 
-		w := SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
@@ -125,12 +126,12 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				nil,
 			)
 
-		w := SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
@@ -143,12 +144,12 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				nil,
 			)
 
-		w := SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")
@@ -161,12 +162,12 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				errors.New("some error"),
 			)
 
-		w := SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
 		t.Cleanup(func() { assert.NoError(t, cl.Delete(ctx, apiAuth)) })
 
 		t.Log("Waiting for KonnectAPIAuthConfiguration to be APIAuthValid=false")
-		WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
 				k8sutils.HasConditionFalse("APIAuthValid", r)
 		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid status condition set to false")

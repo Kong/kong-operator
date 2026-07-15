@@ -38,6 +38,10 @@ func createAIGatewayConsumer(
 	}
 
 	obj.SetKonnectID(resp.AIGatewayConsumer.ID)
+
+	if err := enforceAIGatewayConsumerConsumerGroups(ctx, cl, sdk, obj, parentID); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -59,14 +63,18 @@ func updateAIGatewayConsumer(
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
 	_, err = sdk.UpdateAiGatewayConsumer(ctx, sdkkonnectops.UpdateAiGatewayConsumerRequest{
-		GatewayID: parentID,
-		ConsumerIDOrName: id,
+		GatewayID:                      parentID,
+		ConsumerIDOrName:               id,
 		UpdateAIGatewayConsumerRequest: *req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayConsumer(ctx, cl, sdk, obj)
 		})
+	}
+
+	if err := enforceAIGatewayConsumerConsumerGroups(ctx, cl, sdk, obj, parentID); err != nil {
+		return err
 	}
 	return nil
 }

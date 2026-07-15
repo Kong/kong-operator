@@ -206,6 +206,22 @@ spec:
                 - name
                 - type
                 type: object
+              consumerGroups:
+                description: ConsumerGroups is the list of AIGatewayConsumerGroup
+                  references this resource is associated with.
+                items:
+                  description: AIGatewayConsumerGroupRef references a AIGatewayConsumerGroup
+                    in the cluster.
+                  properties:
+                    name:
+                      description: Name is the name of the referenced object.
+                      minLength: 1
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
             required:
             - aiGatewayRef
             type: object
@@ -306,6 +322,11 @@ spec:
         required:
         - metadata
         type: object
+        x-kubernetes-validations:
+        - message: spec.aiGatewayRef is immutable when an entity is already Programmed
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
+            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef
+            == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:

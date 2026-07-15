@@ -1,4 +1,4 @@
-package envtest
+package konnectother
 
 import (
 	"reflect"
@@ -20,6 +20,8 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -28,17 +30,17 @@ import (
 
 func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := Context(t, t.Context())
+	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
 	t.Log("Setting up the manager with reconcilers")
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](konnectInfiniteSyncTime),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](&metricsmocks.MockRecorder{}),
 		),
 	)
@@ -55,7 +57,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 	eventGateway := deploy.KonnectEventGateway(t, ctx, clientNamespaced, apiAuth)
 
 	const gatewayID = "gateway-12345"
-	updateKonnectEventGatewayStatusWithProgrammed(t, ctx, clientNamespaced, eventGateway, gatewayID)
+	envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, clientNamespaced, eventGateway, gatewayID)
 
 	t.Run("should create, update and delete EventGatewayVirtualClusterProducePolicy successfully", func(t *testing.T) {
 		const (
@@ -69,7 +71,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			updatedHeaderValue = "updated-value"
 		)
 
-		w := SetupWatch[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating EventGatewayBackendCluster and setting its status to programmed")
 		backendCluster := deploy.EventGatewayBackendCluster(t, ctx, clientNamespaced, eventGateway, deploy.WithName("backend-cluster-a"))
@@ -77,7 +79,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			if !assert.NoError(ct, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(backendCluster), backendCluster)) {
 				return
 			}
-			backendCluster.Status.Conditions = []metav1.Condition{programmedCondition(backendCluster.GetGeneration())}
+			backendCluster.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(backendCluster.GetGeneration())}
 			backendCluster.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
 				ID:        backendClusterID,
 				ServerURL: sdkmocks.SDKServerURL,
@@ -85,7 +87,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			}
 			backendCluster.Status.GatewayID = &configurationv1alpha1.KonnectEntityRef{ID: gatewayID}
 			require.NoError(ct, clientNamespaced.Status().Update(ctx, backendCluster))
-		}, waitTime, tickTime)
+		}, consts.WaitTime, consts.TickTime)
 
 		t.Log("Creating EventGatewayVirtualCluster and setting its status to programmed")
 		virtualCluster := deploy.EventGatewayVirtualCluster(t, ctx, clientNamespaced, backendCluster, deploy.WithName("virtual-cluster-a"))
@@ -93,7 +95,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			if !assert.NoError(ct, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(virtualCluster), virtualCluster)) {
 				return
 			}
-			virtualCluster.Status.Conditions = []metav1.Condition{programmedCondition(virtualCluster.GetGeneration())}
+			virtualCluster.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(virtualCluster.GetGeneration())}
 			virtualCluster.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
 				ID:        virtualClusterID,
 				ServerURL: sdkmocks.SDKServerURL,
@@ -101,7 +103,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			}
 			virtualCluster.Status.GatewayID = &configurationv1alpha1.KonnectEntityRef{ID: gatewayID}
 			require.NoError(ct, clientNamespaced.Status().Update(ctx, virtualCluster))
-		}, waitTime, tickTime)
+		}, consts.WaitTime, consts.TickTime)
 
 		policy := testEnvtestEventGatewayVirtualClusterProducePolicy(
 			ns.Name,
@@ -132,11 +134,11 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 		require.NoError(t, clientNamespaced.Create(ctx, policy))
 
 		t.Log("Waiting for EventGatewayVirtualClusterProducePolicy to be programmed")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(policy),
-				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](producePolicyID),
-				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(policy),
+				envtest.ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](producePolicyID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](),
 				func(p *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) bool {
 					cfg := p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig
 					return p.GetGatewayID() == gatewayID &&
@@ -152,7 +154,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			),
 			"EventGatewayVirtualClusterProducePolicy didn't get Programmed status condition, parent IDs, Konnect ID, or cleanup finalizer",
 		)
-		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualClusterProducePolicy update")
 		policyToPatch := policy.DeepCopy()
@@ -178,11 +180,11 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 		policy = policyToPatch
 
 		t.Log("Waiting for EventGatewayVirtualClusterProducePolicy to be patched")
-		WatchFor(t, ctx, w, apiwatch.Modified,
-			AssertsAnd(
-				ObjectMatchesName(policy),
-				ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](producePolicyID),
-				ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](),
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(policy),
+				envtest.ObjectMatchesKonnectID[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](producePolicyID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](),
 				func(p *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) bool {
 					cfg := p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig
 					return p.GetGatewayID() == gatewayID &&
@@ -196,7 +198,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			),
 			"EventGatewayVirtualClusterProducePolicy didn't get patched",
 		)
-		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, waitTime, tickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on EventGatewayVirtualClusterProducePolicy deletion")
 		sdk.EventGatewayVirtualClusterProducePoliciesSDK.EXPECT().
@@ -212,8 +214,8 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 
 		t.Log("Deleting EventGatewayVirtualClusterProducePolicy")
 		require.NoError(t, clientNamespaced.Delete(ctx, policy))
-		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, policy, waitTime, tickTime)
-		EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, policy, consts.WaitTime, consts.TickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.EventGatewayVirtualClusterProducePoliciesSDK, consts.WaitTime, consts.TickTime)
 	})
 }
 

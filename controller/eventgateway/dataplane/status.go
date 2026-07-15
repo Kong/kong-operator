@@ -33,15 +33,29 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-// ensureReadyStatus reads the owned Deployment's replica counts, copies them to the
-// DataPlane status, and evaluates whether all conditions are True to set
-// the Ready condition accordingly. Status is not patched here, the caller
-// is responsible for flushing via patchStatus.
+// ensureReadyStatus computes the Ready condition for a KegDataPlane.
+// It first checks whether any non-Ready condition is False; if so it sets
+// Ready=False immediately without fetching the Deployment. Otherwise it reads
+// the owned Deployment's replica counts and sets Ready based on readyReplicas.
+// Status is not patched here; the caller flushes via applyStatus.
 func ensureReadyStatus(
 	ctx context.Context,
 	cl client.Client,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 ) error {
+	for _, c := range egdp.Status.Conditions {
+		if c.Type != string(eventgatewayv1alpha1.ReadyType) && c.Status == metav1.ConditionFalse {
+			apimeta.SetStatusCondition(&egdp.Status.Conditions, metav1.Condition{
+				Type:               string(eventgatewayv1alpha1.ReadyType),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(eventgatewayv1alpha1.DependenciesNotReadyReason),
+				Message:            c.Message,
+				ObservedGeneration: egdp.Generation,
+			})
+			return nil
+		}
+	}
+
 	deployment := &appsv1.Deployment{}
 	if err := cl.Get(ctx, client.ObjectKey{
 		Namespace: egdp.Namespace,

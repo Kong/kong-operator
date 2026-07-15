@@ -1,4 +1,4 @@
-package envtest
+package konnectapigw
 
 import (
 	"fmt"
@@ -26,7 +26,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -501,12 +500,7 @@ func TestKongConsumer(t *testing.T) {
 			})).
 			Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
-		cp = deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
-			func(obj client.Object) {
-				cpNew := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
-				cpNew.Name = cp.Name
-			},
-		)
+		cp = deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 		t.Log("Patching KongConsumer to attach to new ControlPlane")
 		consumerToPatch := created.DeepCopy()

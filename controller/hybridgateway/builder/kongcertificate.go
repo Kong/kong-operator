@@ -132,6 +132,16 @@ func (b *KongCertificateBuilder) WithOwner(owner *gwtypes.Gateway) *KongCertific
 	return b
 }
 
+// WithSpecTags sets the tags in the KongCertificate spec.
+// A nil or empty slice leaves Spec.Tags unset.
+func (b *KongCertificateBuilder) WithSpecTags(tags []string) *KongCertificateBuilder {
+	if len(tags) == 0 {
+		return b
+	}
+	b.certificate.Spec.Tags = commonv1alpha1.Tags(tags)
+	return b
+}
+
 // Build returns the constructed KongCertificate resource and any accumulated errors.
 func (b *KongCertificateBuilder) Build() (configurationv1alpha1.KongCertificate, error) {
 	if len(b.errors) > 0 {

@@ -219,6 +219,16 @@ func (b *KongServiceBuilder) WithClientCertificateRef(name string) *KongServiceB
 	return b
 }
 
+// WithSpecTags sets the tags in the KongService spec.
+// A nil or empty slice leaves Spec.Tags unset.
+func (b *KongServiceBuilder) WithSpecTags(tags []string) *KongServiceBuilder {
+	if len(tags) == 0 {
+		return b
+	}
+	b.service.Spec.Tags = commonv1alpha1.Tags(tags)
+	return b
+}
+
 // Build returns the constructed KongService resource and any accumulated errors.
 func (b *KongServiceBuilder) Build() (configurationv1alpha1.KongService, error) {
 	if len(b.errors) > 0 {

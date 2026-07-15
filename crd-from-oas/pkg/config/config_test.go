@@ -621,6 +621,55 @@ func TestAPIGroupVersionConfig_NameOverrides(t *testing.T) {
 	})
 }
 
+func TestTypeConfig_ValidateAssociations(t *testing.T) {
+	t.Run("valid single-kind association", func(t *testing.T) {
+		tc := &TypeConfig{
+			Path:         "/v1/ai-gateways/{gatewayId}/consumers",
+			Associations: []AssociationConfig{{Name: "consumerGroups", Kinds: []string{"AIGatewayConsumerGroup"}, SDKMethod: "UpdateAiGatewayConsumerGroupsForConsumer"}},
+		}
+		require.NoError(t, tc.validate())
+	})
+	t.Run("empty name errors", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{{Kinds: []string{"X"}, SDKMethod: "M"}}}
+		require.ErrorContains(t, tc.validate(), "name must not be empty")
+	})
+	t.Run("empty kinds errors", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{{Name: "consumerGroups", SDKMethod: "M"}}}
+		require.ErrorContains(t, tc.validate(), "kinds must not be empty")
+	})
+	t.Run("multi-kind not yet supported", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{{Name: "x", Kinds: []string{"A", "B"}, SDKMethod: "M"}}}
+		require.ErrorContains(t, tc.validate(), "multi-kind associations are not yet supported")
+	})
+	t.Run("empty sdkMethod errors", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{{Name: "consumerGroups", Kinds: []string{"A"}}}}
+		require.ErrorContains(t, tc.validate(), "sdkMethod must not be empty")
+	})
+	t.Run("duplicate name errors", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{
+			{Name: "consumerGroups", Kinds: []string{"A"}, SDKMethod: "M"},
+			{Name: "consumerGroups", Kinds: []string{"A"}, SDKMethod: "M"},
+		}}
+		require.ErrorContains(t, tc.validate(), "duplicate name")
+	})
+}
+
+func TestAPIGroupVersionConfig_AssociationsConfig(t *testing.T) {
+	agv := &APIGroupVersionConfig{
+		Types: []*TypeConfig{
+			{Path: "/v1/ai-gateways/{gatewayId}/consumers", Associations: []AssociationConfig{{Name: "consumerGroups", Kinds: []string{"AIGatewayConsumerGroup"}}}},
+			{Path: "/v3/portals"},
+		},
+	}
+	got := agv.AssociationsConfig(map[string]string{
+		"/v1/ai-gateways/{gatewayId}/consumers": "AIGatewayConsumer",
+		"/v3/portals":                           "Portal",
+	})
+	require.Len(t, got, 1)
+	require.Equal(t, "consumerGroups", got["AIGatewayConsumer"][0].Name)
+	require.Equal(t, "AIGatewayConsumerGroupRef", got["AIGatewayConsumer"][0].RefTypeName())
+}
+
 func TestAPIGroupVersionConfig_GetPaths(t *testing.T) {
 	agv := &APIGroupVersionConfig{
 		Types: []*TypeConfig{

@@ -735,6 +735,21 @@ _Appears in:_
 
 - [AIGatewayConsumerGroupSpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupspec)
 
+#### AIGatewayConsumerGroupRef
+
+
+AIGatewayConsumerGroupRef references a AIGatewayConsumerGroup in the cluster.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referenced object. |
+
+_Appears in:_
+
+- [AIGatewayConsumerSpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerspec)
+
 #### AIGatewayConsumerGroupSpec
 
 
@@ -778,6 +793,7 @@ AIGatewayConsumerSpec defines the desired state of AIGatewayConsumer.
 | Field | Description |
 | --- | --- |
 | `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `consumerGroups` _[][AIGatewayConsumerGroupRef](#konnect-konghq-com-v1alpha1-types-aigatewayconsumergroupref)_ | ConsumerGroups is the list of AIGatewayConsumerGroup references this resource is associated with. |
 | `apiSpec` _[AIGatewayConsumerAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewayconsumerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_

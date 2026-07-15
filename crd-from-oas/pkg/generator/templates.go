@@ -39,6 +39,9 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
+{{- range .TypeXValidations}}
+// {{.}}
+{{- end}}
 type {{.EntityName}} struct {
 	metav1.TypeMeta   ` + "`" + `json:",inline"` + "`" + `
 	metav1.ObjectMeta ` + "`" + `json:"metadata,omitzero"` + "`" + `
@@ -80,12 +83,31 @@ type {{.EntityName}}Spec struct {
 	{{.FieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
 {{- end}}
 {{- end}}
+{{- range .Associations}}
+
+	// {{.GoFieldName}} is the list of {{.RefKinds}} references this resource is associated with.
+	//
+	// +optional
+	// +listType=atomic
+	{{.GoFieldName}} []{{.RefTypeName}} ` + "`" + `json:"{{.JSONName}},omitempty"` + "`" + `
+{{- end}}
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
 	APISpec {{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitzero"` + "`" + `
 }
+{{- range .Associations}}
+
+// {{.RefTypeName}} references a {{.RefKinds}} in the cluster.
+type {{.RefTypeName}} struct {
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string ` + "`" + `json:"name"` + "`" + `
+}
+{{- end}}
 
 // {{.EntityName}}APISpec defines the API spec fields for {{.EntityName}}.
 type {{.EntityName}}APISpec struct {
@@ -1642,6 +1664,15 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 {{- end}}
 		Once()
+{{- range .Create.Associations}}
+
+	// {{.GoFieldName}} membership is enforced by the hand-written
+	// enforce{{$.Entity}}{{.GoFieldName}} helper after create; allow its SDK call.
+	sdk.EXPECT().
+		{{.SDKMethod}}(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.{{.ResponseType}}{}, nil).
+		Maybe()
+{{- end}}
 
 	require.NoError(t, create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj))
 {{- if not .Create.SingletonNoID}}
@@ -1701,6 +1732,13 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 		).
 		Return(nil, sdkErr).
 		Once()
+{{- range .Create.Associations}}
+
+	sdk.EXPECT().
+		{{.SDKMethod}}(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.{{.ResponseType}}{}, nil).
+		Maybe()
+{{- end}}
 
 	err = create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
@@ -1771,6 +1809,15 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 		).
 		Return(&sdkkonnectops.{{.Update.ResponseType}}{}, nil).
 		Once()
+{{- range .Update.Associations}}
+
+	// {{.GoFieldName}} membership is enforced by the hand-written
+	// enforce{{$.Entity}}{{.GoFieldName}} helper after update; allow its SDK call.
+	sdk.EXPECT().
+		{{.SDKMethod}}(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.{{.ResponseType}}{}, nil).
+		Maybe()
+{{- end}}
 
 	require.NoError(t, update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj))
 }
@@ -1839,6 +1886,13 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 		).
 		Return(nil, sdkErr).
 		Once()
+{{- range .Update.Associations}}
+
+	sdk.EXPECT().
+		{{.SDKMethod}}(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.{{.ResponseType}}{}, nil).
+		Maybe()
+{{- end}}
 
 	err = update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
@@ -2175,6 +2229,12 @@ func create{{.Entity}}(
 {{- end}}
 	}
 {{- end}}
+{{- range .Associations}}
+
+	if err := enforce{{$.Entity}}{{.GoFieldName}}(ctx, cl, sdk, obj, {{(index $.Parents 0).VarName}}); err != nil {
+		return err
+	}
+{{- end}}
 	return nil
 }
 `
@@ -2244,6 +2304,12 @@ func update{{.Entity}}(
 			return create{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk, obj)
 		})
 	}
+{{- range .Associations}}
+
+	if err := enforce{{$.Entity}}{{.GoFieldName}}(ctx, cl, sdk, obj, {{(index $.Parents 0).VarName}}); err != nil {
+		return err
+	}
+{{- end}}
 	return nil
 }
 `

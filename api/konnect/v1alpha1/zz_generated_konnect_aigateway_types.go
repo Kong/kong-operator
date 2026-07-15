@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // KonnectAIGateway is the Schema for the konnectaigateways API.
@@ -111,7 +111,6 @@ type KonnectAIGatewayStatus struct {
 	//
 	// +optional
 	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
-
 
 	// Endpoints contains the Endpoints returned by the Konnect API.
 	//

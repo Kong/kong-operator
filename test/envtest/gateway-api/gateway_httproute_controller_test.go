@@ -1,11 +1,10 @@
-package envtest
+package gatewayapi
 
 import (
 	"context"
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -22,11 +21,8 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
-)
-
-const (
-	waitDuration = 5 * time.Second
-	tickDuration = 100 * time.Millisecond
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 )
 
 func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
@@ -35,17 +31,17 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithGatewayAPI, WithKong)
-	cfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	client := NewControllerClient(t, scheme, cfg)
+	scheme := envtest.Scheme(t, envtest.WithGatewayAPI, envtest.WithKong)
+	cfg, _ := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	client := envtest.NewControllerClient(t, scheme, cfg)
 
 	reconciler := &gateway.HTTPRouteReconciler{
 		Client:          client,
 		DataplaneClient: mocks.Dataplane{},
 	}
 
-	ns := CreateNamespace(ctx, t, client)
-	nsRoute := CreateNamespace(ctx, t, client)
+	ns := envtest.CreateNamespace(ctx, t, client)
+	nsRoute := envtest.CreateNamespace(ctx, t, client)
 
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -64,7 +60,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, &svc))
-	StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
+	envtest.StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 
 	gwc := gatewayapi.GatewayClass{
 		Spec: gatewayapi.GatewayClassSpec{
@@ -193,7 +189,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	t.Logf("verifying that HTTPRoute has ResolvedRefs set to Status False and Reason RefNotPermitted")
 	if !assert.Eventually(t,
 		containsInitial,
-		waitDuration, tickDuration,
+		consts.WaitTime, consts.TickTime,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
 	}
@@ -241,7 +237,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	)
 	if !assert.Eventually(t,
 		containsAccepted,
-		waitDuration, tickDuration,
+		consts.WaitTime, consts.TickTime,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
 	}
@@ -258,7 +254,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 
 	if !assert.Eventually(t,
 		containsDeleted,
-		waitDuration, tickDuration,
+		consts.WaitTime, consts.TickTime,
 	) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
 	}
@@ -270,19 +266,19 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithGatewayAPI, WithKong)
-	cfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	client := NewControllerClient(t, scheme, cfg)
+	scheme := envtest.Scheme(t, envtest.WithGatewayAPI, envtest.WithKong)
+	cfg, _ := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	client := envtest.NewControllerClient(t, scheme, cfg)
 
 	reconciler := &gateway.HTTPRouteReconciler{
 		Client:          client,
 		DataplaneClient: mocks.Dataplane{},
 	}
 
-	ns := CreateNamespace(ctx, t, client)
-	nsRoute := CreateNamespace(ctx, t, client)
+	ns := envtest.CreateNamespace(ctx, t, client)
+	nsRoute := envtest.CreateNamespace(ctx, t, client)
 
-	StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
+	envtest.StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 
 	gwc := gatewayapi.GatewayClass{
 		Spec: gatewayapi.GatewayClassSpec{
@@ -453,7 +449,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			}
 
 			return true
-		}, waitDuration, tickDuration, "expected stale status to be removed from HTTPRoute")
+		}, consts.WaitTime, consts.TickTime, "expected stale status to be removed from HTTPRoute")
 	})
 
 	t.Run("routes that were attached to Gateways that are reconciled by KIC and now become detached should have KIC Gateway refs cleared from status", func(t *testing.T) {
@@ -472,7 +468,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			}
 
 			return len(route.Status.Parents) == 0
-		}, waitDuration, tickDuration, "expected stale KIC Gateway parentRef to be removed from HTTPRoute status")
+		}, consts.WaitTime, consts.TickTime, "expected stale KIC Gateway parentRef to be removed from HTTPRoute status")
 	})
 
 	t.Run("routes attached to Gateways that are not reconciled by KIC should not have other Gateway refs cleared from status", func(t *testing.T) {
@@ -490,7 +486,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 			}
 
 			return false
-		}, waitDuration, tickDuration, "expected status to not be removed from HTTPRoute")
+		}, consts.WaitTime, consts.TickTime, "expected status to not be removed from HTTPRoute")
 	})
 }
 

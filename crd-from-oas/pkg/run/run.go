@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"go/format"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -150,6 +151,7 @@ func (r *Runner) Run(
 			ManualGetForUIDEntities:  manualGetForUIDEntities,
 			Categories:               agvConfig.Categories,
 			References:               agvConfig.ReferencesConfig(pathToEntityName),
+			Associations:             agvConfig.AssociationsConfig(pathToEntityName),
 		})
 
 		files, err := gen.Generate(parsed)
@@ -260,7 +262,7 @@ func (r *Runner) Run(
 			} else {
 				filePath = filepath.Join(dir, file.Name)
 			}
-			if err := os.WriteFile(filePath, []byte(file.Content), 0o600); err != nil {
+			if err := writeGeneratedFile(filePath, file.Content); err != nil {
 				return fmt.Errorf("failed to write file %q: %w", filePath, err)
 			}
 			logger.Info("generated file", "path", filePath)
@@ -446,11 +448,26 @@ func emitDispatcherFile(
 		return fmt.Errorf("failed to create output directory %q: %w", targetDir, err)
 	}
 	filePath := filepath.Join(targetDir, file.Name)
-	if err := os.WriteFile(filePath, []byte(file.Content), 0o600); err != nil {
+	if err := writeGeneratedFile(filePath, file.Content); err != nil {
 		return fmt.Errorf("failed to write file %q: %w", filePath, err)
 	}
 	logger.Info("generated file", "path", filePath)
 	return nil
+}
+
+// writeGeneratedFile writes generated content to disk, running gofmt on Go
+// source so every generated .go file is consistently formatted regardless of
+// which generator produced it.
+func writeGeneratedFile(filePath, content string) error {
+	data := []byte(content)
+	if strings.HasSuffix(filePath, ".go") {
+		formatted, err := format.Source(data)
+		if err != nil {
+			return fmt.Errorf("failed to format generated file %q: %w", filePath, err)
+		}
+		data = formatted
+	}
+	return os.WriteFile(filePath, data, 0o600)
 }
 
 // handWrittenOpsFileNames returns candidate hand-written ops file names for an
