@@ -2335,91 +2335,103 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 	}
 }
 
-func TestStripHybridRouteAnnotations(t *testing.T) {
+func TestHybridRouteAnnotationInfo(t *testing.T) {
 	tests := []struct {
-		name string
-		in   map[string]string
-		want map[string]string
+		name    string
+		wantKey string
+		wantRef string
+		runFn   func() (string, string)
 	}{
 		{
-			name: "removes hybrid-routes keys, keeps others",
-			in: map[string]string{
-				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/r1,ns/r2",
-				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns/t1",
-				consts.GatewayOperatorHybridGatewaysAnnotation:        "ns/gw",
-				"unrelated": "keep",
-			},
-			want: map[string]string{
-				consts.GatewayOperatorHybridGatewaysAnnotation: "ns/gw",
-				"unrelated": "keep",
+			name:    "HTTPRoute returns HTTPRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation,
+			wantRef: "ns/route-a",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "route-a", Namespace: "ns"},
+				})
 			},
 		},
 		{
-			name: "no annotations is a no-op",
-			in:   nil,
-			want: nil,
+			name:    "TLSRoute returns TLSRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesTLSRouteAnnotation,
+			wantRef: "ns/tls-route",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.TLSRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "tls-route", Namespace: "ns"},
+				})
+			},
+		},
+		{
+			name:    "Gateway returns empty strings",
+			wantKey: "",
+			wantRef: "",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "ns"},
+				})
+			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &unstructured.Unstructured{}
-			obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"})
-			if tt.in != nil {
-				obj.SetAnnotations(tt.in)
-			}
-			stripHybridRouteAnnotations(obj)
-			assert.Equal(t, tt.want, obj.GetAnnotations())
+			key, ref := tt.runFn()
+			assert.Equal(t, tt.wantKey, key)
+			assert.Equal(t, tt.wantRef, ref)
 		})
 	}
 }
 
-func TestReconcileSharedRouteAnnotations(t *testing.T) {
-	ctx := context.Background()
-	logger := logr.Discard()
+func TestMergeHybridRouteAnnotation(t *testing.T) {
 	upstreamGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"}
+	annotationKey := consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	routeRef := "ns/route-a"
 
-	root := gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "route-a",
-			Namespace: "ns",
+	tests := []struct {
+		name           string
+		existingAnns   map[string]string
+		desiredAnns    map[string]string
+		wantAnnotation string
+	}{
+		{
+			name:           "empty existing sets annotation to routeRef",
+			existingAnns:   nil,
+			desiredAnns:    nil,
+			wantAnnotation: "ns/route-a",
+		},
+		{
+			name:           "existing has other routes, appends routeRef",
+			existingAnns:   map[string]string{annotationKey: "ns/other-route"},
+			desiredAnns:    nil,
+			wantAnnotation: "ns/other-route,ns/route-a",
+		},
+		{
+			name:           "routeRef already present, annotation is unchanged",
+			existingAnns:   map[string]string{annotationKey: "ns/other-route,ns/route-a"},
+			desiredAnns:    nil,
+			wantAnnotation: "ns/other-route,ns/route-a",
+		},
+		{
+			name:           "desired already has unrelated annotations, only hybrid-routes key is set",
+			existingAnns:   nil,
+			desiredAnns:    map[string]string{"unrelated": "keep"},
+			wantAnnotation: "ns/route-a",
 		},
 	}
-	routeKey := client.ObjectKeyFromObject(&root).String()
-
-	// Desired KongUpstream (without the hybrid-routes annotation, as applied by enforceState).
-	desired := newUnstructured("ns", "up-1", upstreamGVK, nil)
-
-	// One shared upstream already exists with another Route recorded; the absent upstream is not
-	// created here but is reported back via the missing return value so the reconciler can requeue.
-	existing := newUnstructured("ns", "up-1", upstreamGVK, nil)
-	existing.SetAnnotations(map[string]string{
-		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/other-route",
-	})
-
-	missingDesired := newUnstructured("ns", "up-missing", upstreamGVK, nil)
-
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(&existing).Build()
-	fakeConv := &fakeHTTPRouteConverter{
-		root:    root,
-		desired: []unstructured.Unstructured{desired, missingDesired},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			desired := newUnstructured("ns", "up-1", upstreamGVK, nil)
+			if tt.desiredAnns != nil {
+				desired.SetAnnotations(tt.desiredAnns)
+			}
+			existing := newUnstructured("ns", "up-1", upstreamGVK, nil)
+			if tt.existingAnns != nil {
+				existing.SetAnnotations(tt.existingAnns)
+			}
+			mergeHybridRouteAnnotation(&desired, &existing, annotationKey, routeRef)
+			assert.Equal(t, tt.wantAnnotation, desired.GetAnnotations()[annotationKey])
+		})
 	}
-
-	annotationsMissing, err := reconcileSharedRouteAnnotations[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
-	require.NoError(t, err)
-	assert.True(t, annotationsMissing, "absent desired upstream must be reported missing so the reconciler requeues")
-
-	got := &unstructured.Unstructured{}
-	got.SetGroupVersionKind(upstreamGVK)
-	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "up-1"}, got))
-	assert.Equal(t, "ns/other-route,"+routeKey, got.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
-
-	// The missing upstream must not have been created.
-	missing := &unstructured.Unstructured{}
-	missing.SetGroupVersionKind(upstreamGVK)
-	err = cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "up-missing"}, missing)
-	assert.True(t, apierrors.IsNotFound(err))
 }
 
 func TestRequeueOnConflict(t *testing.T) {
