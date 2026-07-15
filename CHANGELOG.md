@@ -154,6 +154,15 @@
 
 ### Fixes
 
+- Hybridgateway: fix HTTPRoute/TLSRoute finalizer getting permanently stuck when
+  the Konnect controller updated a child resource (KongRoute, KongService,
+  KongUpstream) between Phase 4b's GET and its optimistic-lock PATCH, causing a
+  conflict error and requeue. If a route deletion event was processed before the
+  requeue fired, `HandleOrphanedResource` found the `hybrid-routes` annotation
+  absent and skipped cleanup, leaving the finalizer blocked indefinitely. The fix
+  bakes the annotation into the SSA Apply in Phase 4, eliminating the separate
+  Phase 4b PATCH and the race window it created.
+  [#4944](https://github.com/Kong/kong-operator/pull/4944)
 - AIGateway/EventGateway: fix `AIGatewayDataPlane` and `KegDataPlane` not setting
   `Ready=False` when a dependency condition is unmet. `ensureReadyStatus` was only
   called on the happy path, so early-return branches (e.g. referenced

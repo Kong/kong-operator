@@ -3,6 +3,7 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,39 +27,9 @@ import (
 )
 
 // hybridGatewayStateFieldManager is intentionally distinct from the historical
-// gateway-operator manager so omitting hybrid-routes annotations from apply
-// payloads does not delete annotation fields that older reconciles owned.
+// gateway-operator manager so that annotation fields owned by older reconciles
+// are not lost during an upgrade.
 const hybridGatewayStateFieldManager = controllerpkgssa.FieldManager + "-hybridgateway"
-
-// hybridRouteAnnotationKeys are the annotation keys whose value accumulates Route references
-// across multiple owners (multiple Routes, or multiple rules of the same Route, that share a Kong
-// resource). They are reconciled out-of-band with an optimistic-lock read-modify-write (see
-// metadata.AnnotationManager.EnsureRouteInAnnotation) instead of through server-side apply, which
-// cannot merge concurrent writers of a single comma-separated value. They must therefore be
-// stripped from the desired object before applying so SSA never owns or clobbers them.
-var hybridRouteAnnotationKeys = []string{
-	consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation,
-	consts.GatewayOperatorHybridRoutesTLSRouteAnnotation,
-}
-
-// stripHybridRouteAnnotations removes the accumulated hybrid-routes annotations from obj so that
-// server-side apply does not manage them. See hybridRouteAnnotationKeys for the rationale.
-func stripHybridRouteAnnotations(obj *unstructured.Unstructured) {
-	anns := obj.GetAnnotations()
-	if len(anns) == 0 {
-		return
-	}
-	changed := false
-	for _, k := range hybridRouteAnnotationKeys {
-		if _, ok := anns[k]; ok {
-			delete(anns, k)
-			changed = true
-		}
-	}
-	if changed {
-		obj.SetAnnotations(anns)
-	}
-}
 
 // translate performs the full translation process using the provided APIConverter.
 // Returns an integer representing the number of translated resources, and an error if the translation fails.
@@ -107,6 +78,9 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	}
 
 	log.Debug(logger, "Retrieved desired objects for enforcement", "objectCount", len(desiredObjects))
+
+	// Compute the hybrid-routes annotation info for the root object once, outside the per-resource loop.
+	routeAnnotationKey, routeRef := hybridRouteAnnotationInfo(conv.GetRootObject())
 
 	// Build lookup maps once so that per-object gating checks are O(1) instead of O(n).
 	desiredUpstreamNames := make(map[string]struct{}, len(desiredObjects))
@@ -275,11 +249,6 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		}
 		log.Debug(logger, "Processing desired object", "index", i, "kind", desired.GetKind(), "name", desired.GetName())
 
-		// The hybrid-routes annotation is reconciled out-of-band with an optimistic-lock
-		// read-modify-write (see reconcileSharedRouteAnnotations); strip it here so server-side
-		// apply never owns or overwrites the shared, accumulated value.
-		stripHybridRouteAnnotations(&desired)
-
 		// Get the existing object by name from the API server.
 		existing := &unstructured.Unstructured{}
 		existing.SetGroupVersionKind(desired.GetObjectKind().GroupVersionKind())
@@ -288,6 +257,14 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			Namespace: desired.GetNamespace(),
 			Name:      desired.GetName(),
 		}, existing)
+
+		// Merge the hybrid-routes annotation from the live object into the desired state so that SSA
+		// owns and persists it atomically with the rest of the resource. When the object does not
+		// exist yet, existing carries no annotations and the annotation is initialised to just this
+		// route ref. Gateway converters (empty routeAnnotationKey) skip this step.
+		if routeAnnotationKey != "" {
+			mergeHybridRouteAnnotation(&desired, existing, routeAnnotationKey, routeRef)
+		}
 
 		namespacedNameDesired := client.ObjectKeyFromObject(&desired)
 		namespacedNameExisting := client.ObjectKeyFromObject(existing)
@@ -410,53 +387,39 @@ func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, targets []
 	return true, nil
 }
 
-// reconcileSharedRouteAnnotations atomically ensures the root Route is recorded in the
-// hybrid-routes annotation of every Kong resource the converter currently desires.
-//
-// These annotations are intentionally not applied via server-side apply (see
-// stripHybridRouteAnnotations) because a single comma-separated value cannot be merged across
-// concurrent writers. Instead each entry is added here with an optimistic-lock read-modify-write
-// that is safe against Routes (or rules) sharing the same Kong resource reconciling concurrently.
-//
-// A desired resource that does not exist yet is reported back via the missing return value rather
-// than failing: on early reconciles enforceState has not created it yet, but in steady state
-// (enforceState applied nothing and is not waiting) a missing resource means another Route deleted
-// it concurrently before this Route recorded itself. The caller requeues in that case to recreate
-// it, because no watch event will re-trigger this Route on its own.
-func reconcileSharedRouteAnnotations[t converter.RootObject, tPtr converter.RootObjectPtr[t]](
-	ctx context.Context,
-	cl client.Client,
-	logger logr.Logger,
-	conv converter.APIConverter[t],
-) (missing bool, err error) {
-	logger = logger.WithValues("phase", "route-annotation-sync")
-
-	rootObj := conv.GetRootObject()
-	var rootObjPtr tPtr
-	switch v := any(&rootObj).(type) {
-	case tPtr:
-		rootObjPtr = v
-	default:
-		return false, fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
+// hybridRouteAnnotationInfo returns the annotation key and route reference string for the given
+// root object. Returns empty strings for Gateway objects, which do not use hybrid-routes annotations.
+func hybridRouteAnnotationInfo[t converter.RootObject](obj t) (annotationKey, routeRef string) {
+	switch o := any(obj).(type) {
+	case gwtypes.HTTPRoute:
+		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation, o.Namespace + "/" + o.Name
+	case gwtypes.TLSRoute:
+		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation, o.Namespace + "/" + o.Name
 	}
+	return "", ""
+}
 
-	desiredObjects, err := conv.GetOutputStore(ctx, logger)
-	if err != nil {
-		return false, fmt.Errorf("failed to get desired objects from converter for annotation sync: %w", err)
+// mergeHybridRouteAnnotation merges routeRef into the hybrid-routes annotation on desired,
+// seeding from existing's annotation to preserve other routes' entries.
+func mergeHybridRouteAnnotation(desired, existing *unstructured.Unstructured, annotationKey, routeRef string) {
+	current := ""
+	if anns := existing.GetAnnotations(); len(anns) > 0 {
+		current = anns[annotationKey]
 	}
-
-	am := metadata.NewAnnotationManager(logger)
-	for _, desired := range desiredObjects {
-		objMissing, err := am.EnsureRouteInAnnotation(
-			ctx, cl, desired.GroupVersionKind(), client.ObjectKeyFromObject(&desired), rootObjPtr,
-		)
-		if err != nil {
-			return false, fmt.Errorf("failed to ensure hybrid-routes annotation on %s %s: %w",
-				desired.GetKind(), client.ObjectKeyFromObject(&desired), err)
+	merged := current
+	if !strings.Contains(","+current+",", ","+routeRef+",") {
+		if current != "" {
+			merged = current + "," + routeRef
+		} else {
+			merged = routeRef
 		}
-		missing = missing || objMissing
 	}
-	return missing, nil
+	anns := desired.GetAnnotations()
+	if anns == nil {
+		anns = make(map[string]string)
+	}
+	anns[annotationKey] = merged
+	desired.SetAnnotations(anns)
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.

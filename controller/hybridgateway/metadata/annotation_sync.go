@@ -25,8 +25,7 @@ import (
 // To avoid that, the annotation is reconciled here with an optimistic-lock patch instead of
 // through server-side apply. Conflicts are surfaced to the reconciler, which requeues and
 // re-evaluates against the latest object. The desired objects applied by the reconciler
-// intentionally omit this annotation (see stripHybridRouteAnnotations) so that server-side apply
-// never owns or overwrites it.
+// include this annotation with the merged value so that server-side apply owns and persists it atomically.
 //
 // It is a no-op when the route kind is not tracked via the hybrid-routes annotation or when the
 // route is already present.
