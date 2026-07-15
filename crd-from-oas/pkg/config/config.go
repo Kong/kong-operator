@@ -147,7 +147,8 @@ func (a AssociationConfig) RefTypeName() string {
 // CEL, an optional-pointer APISpec, GetSource/GetMirror accessors, and a Mirror
 // short-circuit in the generated create/update/delete ops.
 type SourceConfig struct {
-	// SupportsMirror enables Origin+Mirror. Absent/false keeps Origin-only.
+	// SupportsMirror enables Origin+Mirror. When false (or when the source block
+	// is omitted entirely) the entity stays Origin-only.
 	SupportsMirror bool `yaml:"supportsMirror,omitempty"`
 }
 
