@@ -261,6 +261,8 @@ apiGroupVersions:
       # AI Gateway APIs
       - path: /v1/ai-gateways
         name: KonnectAIGateway
+        source:
+          supportsMirror: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewaysSDK

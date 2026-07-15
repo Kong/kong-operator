@@ -3,12 +3,16 @@
 package v1alpha1
 
 import (
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *KonnectAIGateway) GetKonnectLabels() map[string]string {
+	if obj.Spec.APISpec == nil {
+		return nil
+	}
 	if obj.Spec.APISpec.Labels == nil {
 		return nil
 	}
@@ -23,6 +27,12 @@ func (obj *KonnectAIGateway) GetKonnectLabels() map[string]string {
 
 // SetKonnectLabels sets the Konnect labels in the object's API spec.
 func (obj *KonnectAIGateway) SetKonnectLabels(labels map[string]string) {
+	if obj.Spec.APISpec == nil {
+		if labels == nil {
+			return
+		}
+		obj.Spec.APISpec = &KonnectAIGatewayAPISpec{}
+	}
 	if labels == nil {
 		obj.Spec.APISpec.Labels = nil
 		return
@@ -74,6 +84,16 @@ func (obj *KonnectAIGateway) GetConditions() []metav1.Condition {
 // SetConditions sets the Status Conditions.
 func (obj *KonnectAIGateway) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
+}
+
+// GetSource returns the source type (Origin or Mirror) of the KonnectAIGateway.
+func (obj *KonnectAIGateway) GetSource() *commonv1alpha1.EntitySource {
+	return obj.Spec.Source
+}
+
+// GetMirror returns the Konnect Mirror configuration of the KonnectAIGateway.
+func (obj *KonnectAIGateway) GetMirror() *konnectv1alpha2.MirrorSpec {
+	return obj.Spec.Mirror
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
