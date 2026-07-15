@@ -196,13 +196,13 @@ spec:
               rule: '!has(self.source) && !has(oldSelf.source) ? true : self.source
                 == oldSelf.source'
             - message: mirror field must be set for type Mirror
-              rule: 'self.source == ''Mirror'' ? has(self.mirror) : true'
+              rule: self.source != 'Mirror' || has(self.mirror)
             - message: mirror field cannot be set for type Origin
-              rule: 'self.source == ''Origin'' ? !has(self.mirror) : true'
+              rule: self.source != 'Origin' || !has(self.mirror)
             - message: apiSpec must be set for type Origin
-              rule: 'self.source == ''Origin'' ? has(self.apiSpec) : true'
+              rule: self.source != 'Origin' || has(self.apiSpec)
             - message: apiSpec cannot be set for type Mirror
-              rule: 'self.source == ''Mirror'' ? !has(self.apiSpec) : true'
+              rule: self.source != 'Mirror' || !has(self.apiSpec)
           status:
             description: KonnectAIGatewayStatus defines the observed state of KonnectAIGateway.
             properties:

@@ -69,10 +69,10 @@ type {{.EntityName}}List struct {
 {{- if .SupportsMirror}}
 //
 // +kubebuilder:validation:XValidation:message="spec.source is immutable", rule="!has(self.source) && !has(oldSelf.source) ? true : self.source == oldSelf.source"
-// +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror", rule="self.source == 'Mirror' ? has(self.mirror) : true"
-// +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin", rule="self.source == 'Origin' ? !has(self.mirror) : true"
-// +kubebuilder:validation:XValidation:message="apiSpec must be set for type Origin", rule="self.source == 'Origin' ? has(self.apiSpec) : true"
-// +kubebuilder:validation:XValidation:message="apiSpec cannot be set for type Mirror", rule="self.source == 'Mirror' ? !has(self.apiSpec) : true"
+// +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror", rule="self.source != 'Mirror' || has(self.mirror)"
+// +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin", rule="self.source != 'Origin' || !has(self.mirror)"
+// +kubebuilder:validation:XValidation:message="apiSpec must be set for type Origin", rule="self.source != 'Origin' || has(self.apiSpec)"
+// +kubebuilder:validation:XValidation:message="apiSpec cannot be set for type Mirror", rule="self.source != 'Mirror' || !has(self.apiSpec)"
 {{- end}}
 type {{.EntityName}}Spec struct {
 {{- if .HasRootReconciler}}
