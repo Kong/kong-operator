@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -17,6 +18,27 @@ func createKonnectAIGateway(
 	sdk sdkkonnectgo.AIGatewaysSDK,
 	obj *konnectv1alpha1.KonnectAIGateway,
 ) error {
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		// Mirror: the entity already exists in Konnect; fetch it by ID instead of creating it.
+		id := string(obj.Spec.Mirror.Konnect.ID)
+		resp, err := sdk.GetAiGateway(ctx, id)
+		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
+			return errWrap
+		}
+		if resp == nil || resp.AIGateway == nil {
+			return fmt.Errorf("failed getting mirrored %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+		obj.SetKonnectID(id)
+		const (
+			protocolHTTPS = "https://"
+			protocolHTTP  = "http://"
+		)
+		obj.Status.Endpoints = &konnectv1alpha1.KonnectAIGatewayEndpoints{
+			Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
+			Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
+		}
+		return nil
+	}
 	req, err := obj.Spec.APISpec.ToCreateAIGatewayRequest()
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
@@ -48,6 +70,9 @@ func updateKonnectAIGateway(
 	sdk sdkkonnectgo.AIGatewaysSDK,
 	obj *konnectv1alpha1.KonnectAIGateway,
 ) error {
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 	req, err := obj.Spec.APISpec.ToUpdateAIGatewayRequest()
 	if err != nil {
@@ -69,6 +94,9 @@ func deleteKonnectAIGateway(
 	sdk sdkkonnectgo.AIGatewaysSDK,
 	obj *konnectv1alpha1.KonnectAIGateway,
 ) error {
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 
 	_, err := sdk.DeleteAiGateway(ctx, id)

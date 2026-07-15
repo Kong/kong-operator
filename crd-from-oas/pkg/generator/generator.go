@@ -72,6 +72,11 @@ type Config struct {
 	// When set, a spec-level ref-list field and its ref struct(s) are emitted and
 	// the generated create/update ops call a hand-written enforcement helper.
 	Associations map[string][]config.AssociationConfig
+	// SourceConfig maps entity names to their Origin/Mirror source configuration.
+	// When an entry has SupportsMirror true, the generator emits Source/Mirror spec
+	// fields, spec-level CEL, an optional-pointer APISpec, GetSource/GetMirror
+	// accessors, and a Mirror short-circuit in the generated ops.
+	SourceConfig map[string]*config.SourceConfig
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -208,6 +213,13 @@ func (g *Generator) hasSecretRefs(entityName string) bool {
 // hasAnySecretRefs returns true if any entity in the config has SecretReferences.
 func (g *Generator) hasAnySecretRefs() bool {
 	return len(g.config.SecretReferences) > 0
+}
+
+// entitySupportsMirror reports whether the entity opted into Origin+Mirror via
+// source.supportsMirror in the config.
+func (g *Generator) entitySupportsMirror(entityName string) bool {
+	sc, ok := g.config.SourceConfig[entityName]
+	return ok && sc != nil && sc.SupportsMirror
 }
 
 // buildSensitiveLeaves pre-computes per-schema and per-entity maps of sensitive
@@ -2440,6 +2452,25 @@ func isScalarStringIntOneOf(variants []*parser.Property, schemas map[string]*par
 	return types["string"] && types["integer"]
 }
 
+// commonV1Alpha1ImportPath is the Go import path of the shared common/v1alpha1
+// package. It defines EntitySource, which backs the generated spec.source field
+// on mirror-capable entities.
+const commonV1Alpha1ImportPath = "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+
+// needsCommonV1Alpha1Import reports whether a generated types file must add an
+// explicit commonv1alpha1 import for the mirror spec.source field.
+//
+// It is needed only for mirror-capable entities (spec.source is emitted only for
+// them). Even then it is skipped when the ObjectRef import already brings in the
+// same package — that import points at commonV1Alpha1ImportPath too, so re-adding
+// it would produce a duplicate import in the generated file.
+func (g *Generator) needsCommonV1Alpha1Import(entityName string, objectRefImport *config.ImportConfig) bool {
+	if !g.entitySupportsMirror(entityName) {
+		return false
+	}
+	return objectRefImport == nil || objectRefImport.Path != commonV1Alpha1ImportPath
+}
+
 func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string, error) {
 	entityName := parser.GetEntityNameFromType(name)
 
@@ -2655,6 +2686,8 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
 		TypeXValidations          []string
+		SupportsMirror            bool
+		NeedsCommonV1Alpha1Import bool
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -2677,6 +2710,8 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
 		TypeXValidations:          typeXValidations,
+		SupportsMirror:            g.entitySupportsMirror(entityName),
+		NeedsCommonV1Alpha1Import: g.needsCommonV1Alpha1Import(entityName, objectRefImport),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -2832,6 +2867,17 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	if g.entityHasReferences(entityName) && g.objectRefImported() {
 		imports = appendUniqueImportConfig(imports, g.config.CommonTypes.ObjectRef.Import)
 	}
+	supportsMirror := g.entitySupportsMirror(entityName)
+	if supportsMirror {
+		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+			Alias: "commonv1alpha1",
+			Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+		})
+		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+			Alias: defaultKonnectStatusAlias,
+			Path:  defaultKonnectStatusPackage,
+		})
+	}
 
 	funcsFuncMap := template.FuncMap{
 		"lowerCamel":  lowerCamelCase,
@@ -2905,6 +2951,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		AncestorDependencies               []*parser.Dependency
 		AncestorEntityTypes                []string
 		SingletonNoID                      bool
+		SupportsMirror                     bool
 	}{
 		EntityName:                entityName,
 		APIVersion:                g.config.APIVersion,
@@ -2938,6 +2985,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		AncestorDependencies:               ancestorDependencies,
 		AncestorEntityTypes:                ancestorEntityTypes,
 		SingletonNoID:                      isSingletonNoID(schema),
+		SupportsMirror:                     supportsMirror,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

@@ -141,6 +141,17 @@ func (a AssociationConfig) RefTypeName() string {
 	return a.Kinds[0] + "Ref"
 }
 
+// SourceConfig declares whether a generated root CRD supports being a Mirror of
+// an existing Konnect entity in addition to the default Origin behavior. When
+// SupportsMirror is true the generator emits Source/Mirror spec fields, spec-level
+// CEL, an optional-pointer APISpec, GetSource/GetMirror accessors, and a Mirror
+// short-circuit in the generated create/update/delete ops.
+type SourceConfig struct {
+	// SupportsMirror enables Origin+Mirror. When false (or when the source block
+	// is omitted entirely) the entity stays Origin-only.
+	SupportsMirror bool `yaml:"supportsMirror,omitempty"`
+}
+
 // SecretReferenceConfig configures a single sensitive field that can be provided
 // inline or sourced from a Kubernetes Secret.
 //
@@ -229,6 +240,8 @@ type TypeConfig struct {
 	// When set, reconciler wiring files (interface methods, watch options,
 	// index files) are generated for this entity.
 	Reconciler *ReconcilerConfig `yaml:"reconciler,omitempty"`
+	// Source declares Origin/Mirror support for this (root) entity. Nil => Origin-only.
+	Source *SourceConfig `yaml:"-"`
 }
 
 // ParentRefConfig overrides the spec field for the parent reference when the
@@ -477,6 +490,7 @@ type typeConfigYAML struct {
 	SecretReferences     []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
 	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
 	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
+	Source               *SourceConfig           `yaml:"source,omitempty"`
 }
 
 // UnmarshalYAML preserves the in-memory Ops map shape while allowing
@@ -496,6 +510,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		Associations:         raw.Associations,
 		SecretReferences:     raw.SecretReferences,
 		Reconciler:           raw.Reconciler,
+		Source:               raw.Source,
 	}
 
 	if raw.Ops != nil {
@@ -623,6 +638,23 @@ func (c *APIGroupVersionConfig) ReconcilerConfigs(pathToEntityName map[string]st
 			continue
 		}
 		result[entityName] = tc.Reconciler
+	}
+	return result
+}
+
+// SourceConfigs builds a mapping from entity name to source config using the
+// provided pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) SourceConfigs(pathToEntityName map[string]string) map[string]*SourceConfig {
+	result := make(map[string]*SourceConfig)
+	for _, tc := range c.Types {
+		if tc.Source == nil {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = tc.Source
 	}
 	return result
 }
@@ -896,6 +928,9 @@ func (tc *TypeConfig) validate() error {
 		} else if err := validateGetForUIDMatchFields("ops.getForUID.matchFields", tc.OpsGetForUID.MatchFields); err != nil {
 			return err
 		}
+	}
+	if tc.Source != nil && tc.Source.SupportsMirror && strings.Contains(tc.Path, "{") {
+		return fmt.Errorf("source.supportsMirror is only supported on root entities (path %q has path parameters)", tc.Path)
 	}
 	return nil
 }

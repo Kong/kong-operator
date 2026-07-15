@@ -20,8 +20,11 @@ import (
 {{- if .ObjectRefImport}}
 	{{.ObjectRefImport.Alias}} "{{.ObjectRefImport.Path}}"
 {{- end}}
-{{- if .HasRootReconciler}}
+{{- if or .HasRootReconciler .SupportsMirror}}
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+{{- end}}
+{{- if .NeedsCommonV1Alpha1Import}}
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 {{- end}}
 )
 
@@ -63,12 +66,34 @@ type {{.EntityName}}List struct {
 }
 
 // {{.EntityName}}Spec defines the desired state of {{.EntityName}}.
+{{- if .SupportsMirror}}
+//
+// +kubebuilder:validation:XValidation:message="spec.source is immutable", rule="!has(self.source) && !has(oldSelf.source) ? true : self.source == oldSelf.source"
+// +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror", rule="self.source != 'Mirror' || has(self.mirror)"
+// +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin", rule="self.source != 'Origin' || !has(self.mirror)"
+// +kubebuilder:validation:XValidation:message="apiSpec must be set for type Origin", rule="self.source != 'Origin' || has(self.apiSpec)"
+// +kubebuilder:validation:XValidation:message="apiSpec cannot be set for type Mirror", rule="self.source != 'Mirror' || !has(self.apiSpec)"
+{{- end}}
 type {{.EntityName}}Spec struct {
 {{- if .HasRootReconciler}}
 	// KonnectConfiguration is the Konnect configuration for this entity.
 	//
 	// +required
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration ` + "`" + `json:"konnect"` + "`" + `
+{{- end}}
+{{- if .SupportsMirror}}
+
+	// Source represents the source type of the Konnect entity.
+	//
+	// +kubebuilder:validation:Enum=Origin;Mirror
+	// +optional
+	// +kubebuilder:default=Origin
+	Source *commonv1alpha1.EntitySource ` + "`" + `json:"source,omitempty"` + "`" + `
+
+	// Mirror is the Konnect Mirror configuration, only applicable when source is Mirror.
+	//
+	// +optional
+	Mirror *konnectv1alpha2.MirrorSpec ` + "`" + `json:"mirror,omitempty"` + "`" + `
 {{- end}}
 {{- if .ParentRef}}
 	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
@@ -95,7 +120,11 @@ type {{.EntityName}}Spec struct {
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
+{{- if .SupportsMirror}}
+	APISpec *{{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitempty"` + "`" + `
+{{- else}}
 	APISpec {{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitzero"` + "`" + `
+{{- end}}
 }
 {{- range .Associations}}
 
@@ -209,6 +238,11 @@ import (
 ){{end}}{{if .KonnectLabelsField}}
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *{{.EntityName}}) GetKonnectLabels() map[string]string {
+{{- if .SupportsMirror}}
+	if obj.Spec.APISpec == nil {
+		return nil
+	}
+{{- end}}
 	if obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} == nil {
 		return nil
 	}
@@ -223,6 +257,14 @@ func (obj *{{.EntityName}}) GetKonnectLabels() map[string]string {
 
 // SetKonnectLabels sets the Konnect labels in the object's API spec.
 func (obj *{{.EntityName}}) SetKonnectLabels(labels map[string]string) {
+{{- if .SupportsMirror}}
+	if obj.Spec.APISpec == nil {
+		if labels == nil {
+			return
+		}
+		obj.Spec.APISpec = &{{.EntityName}}APISpec{}
+	}
+{{- end}}
 	if labels == nil {
 		obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} = nil
 		return
@@ -276,6 +318,18 @@ func (obj *{{.EntityName}}) GetConditions() []metav1.Condition {
 func (obj *{{.EntityName}}) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+{{- if .SupportsMirror}}
+
+// GetSource returns the source type (Origin or Mirror) of the {{.EntityName}}.
+func (obj *{{.EntityName}}) GetSource() *commonv1alpha1.EntitySource {
+	return obj.Spec.Source
+}
+
+// GetMirror returns the Konnect Mirror configuration of the {{.EntityName}}.
+func (obj *{{.EntityName}}) GetMirror() *konnectv1alpha2.MirrorSpec {
+	return obj.Spec.Mirror
+}
+{{- end}}
 {{- range .Dependencies}}
 
 // Get{{.EntityName}}ID returns the Konnect ID of the parent {{.EntityName}}.
@@ -1578,7 +1632,7 @@ func testGenerated{{.Entity}}ForSDKOps() *{{.APIAlias}}.{{.Entity}} {
 			Generation: 3,
 		},
 		Spec: {{.APIAlias}}.{{.Entity}}Spec{
-			APISpec: {{.APIAlias}}.{{.Entity}}APISpec{
+			APISpec: {{if .SupportsMirror}}&{{end}}{{.APIAlias}}.{{.Entity}}APISpec{
 {{- range .FixtureFields}}
 				{{.FieldName}}: {{.TestValue}},
 {{- end}}
@@ -2132,6 +2186,34 @@ func create{{.Entity}}(
 	sdk sdkkonnectgo.{{.SDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .SupportsMirror}}
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		// Mirror: the entity already exists in Konnect; fetch it by ID instead of creating it.
+		id := string(obj.Spec.Mirror.Konnect.ID)
+		resp, err := sdk.{{.GetSDKMethod}}(ctx, id)
+		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
+			return errWrap
+		}
+		if resp == nil || resp.{{.RespField}} == nil {
+			return fmt.Errorf("failed getting mirrored %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+		obj.SetKonnectID(id)
+{{- if .ResponseStatusFields}}
+		const (
+			protocolHTTPS = "https://"
+			protocolHTTP  = "http://"
+		)
+{{- range .ResponseStatusFields}}
+		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
+{{- range .Fields}}
+			{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
+{{- end}}
+		}
+{{- end}}
+{{- end}}
+		return nil
+	}
+{{- end}}
 {{- range .Parents}}
 	{{.VarName}} := obj.{{.IDGetter}}()
 	if {{.VarName}} == "" {
@@ -2250,6 +2332,11 @@ func update{{.Entity}}(
 	sdk sdkkonnectgo.{{.UpdateSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .SupportsMirror}}
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
+{{- end}}
 {{- range .Parents}}
 	{{.VarName}} := obj.{{.IDGetter}}()
 	if {{.VarName}} == "" {
@@ -2326,6 +2413,11 @@ func delete{{.Entity}}(
 	sdk sdkkonnectgo.{{.DeleteSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .SupportsMirror}}
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
+{{- end}}
 {{- range .Parents}}
 	{{.VarName}} := obj.{{.IDGetter}}()
 	if {{.VarName}} == "" {

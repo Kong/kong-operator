@@ -55,6 +55,10 @@ type opsControllerTestFileData struct {
 	Delete                *opsControllerDeleteTestData
 	NeedsFakeClient       bool
 	NeedsComponentsImport bool
+	// SupportsMirror is true when the entity opted into Origin+Mirror. The
+	// generated Spec.APISpec field is then a pointer, so the fixture literal
+	// must take its address instead of embedding a value.
+	SupportsMirror bool
 }
 
 func (g *Generator) generateEntityOpsTestFile(
@@ -89,6 +93,7 @@ func (g *Generator) generateEntityOpsTestFile(
 		APIPackagePath: g.config.APIGroupPackagePath,
 		FixtureFields:  fixtureFields,
 		RootUnion:      rootUnion,
+		SupportsMirror: g.entitySupportsMirror(entityName),
 	}
 
 	if createData != nil {

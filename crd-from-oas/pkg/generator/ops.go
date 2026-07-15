@@ -91,6 +91,12 @@ func (g *Generator) generateEntityOpsFile(
 			!strings.HasSuffix(deleteData.DeletePutReqImportPath, "/operations") {
 			extraImportSet[deleteData.DeletePutReqImportPath] = sdkImportAlias(deleteData.DeletePutReqImportPath)
 		}
+		if (createData != nil && createData.SupportsMirror) ||
+			(updateData != nil && updateData.SupportsMirror) ||
+			(deleteData != nil && deleteData.SupportsMirror) {
+			const commonPath = "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+			extraImportSet[commonPath] = "commonv1alpha1"
+		}
 		extraImports := make([]opsFileImport, 0, len(extraImportSet))
 		for path, alias := range extraImportSet {
 			extraImports = append(extraImports, opsFileImport{Alias: alias, Path: path})
