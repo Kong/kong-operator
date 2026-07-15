@@ -123,6 +123,9 @@
   [#4822](https://github.com/Kong/kong-operator/pull/4822)
   - introduce `AIGatewayMCPServer` CRD with reconciler.
   [#4836](https://github.com/Kong/kong-operator/pull/4836)
+  - `KonnectAIGateway` now supports `spec.source: Mirror`, referencing an
+    existing Konnect AI Gateway by ID (`spec.mirror.konnect.id`) instead of
+    creating one. `Origin` (the default) is unchanged.
 - GRPCRoute: enable GRPCRoute for on-prem gateway
   [#4364](https://github.com/Kong/kong-operator/pull/4364)
 

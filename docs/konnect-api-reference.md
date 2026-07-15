@@ -5852,6 +5852,8 @@ KonnectAIGatewaySpec defines the desired state of KonnectAIGateway.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration is the Konnect configuration for this entity. |
+| `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
+| `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha2-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration, only applicable when source is Mirror. |
 | `apiSpec` _[KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -8063,6 +8065,7 @@ MirrorSpec contains the Konnect Mirror configuration.
 
 _Appears in:_
 
+- [KonnectAIGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanespec)
 
 #### ProvisioningMethod
