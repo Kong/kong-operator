@@ -218,8 +218,8 @@ spec:
                               referenced.
                             items:
                               description: |-
-                                AIGatewayIdentityProviderReference Reference to a provider instance.
-                                This is either the identity provider ID or the identity provider name.
+                                AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                by name.
                               type: string
                             type: array
                         type: object
@@ -715,25 +715,6 @@ spec:
                                             required:
                                             - upstreamURL
                                             type: object
-                                          databricks:
-                                            description: Databricks configuration.
-                                            properties:
-                                              upstreamURL:
-                                                description: The URL of the embeddings
-                                                  model.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                              workspaceInstanceID:
-                                                description: The Databricks workspace
-                                                  instance ID.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - upstreamURL
-                                            - workspaceInstanceID
-                                            type: object
                                           gemini:
                                             description: Gemini configuration.
                                             properties:
@@ -799,21 +780,31 @@ spec:
                                             required:
                                             - upstreamURL
                                             type: object
-                                          type:
-                                            description: Type designates the type
-                                              of configuration.
-                                            enum:
-                                            - azure
-                                            - bedrock
-                                            - databricks
-                                            - gemini
-                                            - huggingface
-                                            - vercel
-                                            - vertex
-                                            minLength: 1
-                                            type: string
-                                          vercel:
-                                            description: Vercel configuration.
+                                          mistral:
+                                            description: Mistral configuration.
+                                            properties:
+                                              format:
+                                                description: The request format to
+                                                  use when communicating with the
+                                                  Mistral model.
+                                                enum:
+                                                - ollama
+                                                - openai
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - format
+                                            - upstreamURL
+                                            type: object
+                                          ollama:
+                                            description: Ollama configuration.
                                             properties:
                                               upstreamURL:
                                                 description: The URL of the embeddings
@@ -824,6 +815,32 @@ spec:
                                             required:
                                             - upstreamURL
                                             type: object
+                                          openai:
+                                            description: Openai configuration.
+                                            properties:
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - upstreamURL
+                                            type: object
+                                          type:
+                                            description: Type designates the type
+                                              of configuration.
+                                            enum:
+                                            - azure
+                                            - bedrock
+                                            - gemini
+                                            - huggingface
+                                            - mistral
+                                            - ollama
+                                            - openai
+                                            - vertex
+                                            minLength: 1
+                                            type: string
                                           vertex:
                                             description: Vertex configuration.
                                             properties:
@@ -872,9 +889,8 @@ spec:
                                         minLength: 1
                                         type: string
                                       provider:
-                                        description: |-
-                                          Reference to a model provider instance.
-                                          This is either the model provider ID or the model provider name.
+                                        description: Reference to a model provider
+                                          instance by name.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -1637,7 +1653,6 @@ spec:
                                 type: array
                             type: object
                         required:
-                        - model
                         - route
                         type: object
                       displayName:
@@ -2729,9 +2744,8 @@ spec:
                               minLength: 1
                               type: string
                             provider:
-                              description: |-
-                                Reference to a model provider instance.
-                                This is either the model provider ID or the model provider name.
+                              description: Reference to a model provider instance
+                                by name.
                               maxLength: 253
                               minLength: 1
                               type: string
@@ -2862,8 +2876,8 @@ spec:
                               referenced.
                             items:
                               description: |-
-                                AIGatewayIdentityProviderReference Reference to a provider instance.
-                                This is either the identity provider ID or the identity provider name.
+                                AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                by name.
                               type: string
                             type: array
                         type: object
@@ -3358,25 +3372,6 @@ spec:
                                             required:
                                             - upstreamURL
                                             type: object
-                                          databricks:
-                                            description: Databricks configuration.
-                                            properties:
-                                              upstreamURL:
-                                                description: The URL of the embeddings
-                                                  model.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                              workspaceInstanceID:
-                                                description: The Databricks workspace
-                                                  instance ID.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - upstreamURL
-                                            - workspaceInstanceID
-                                            type: object
                                           gemini:
                                             description: Gemini configuration.
                                             properties:
@@ -3442,21 +3437,31 @@ spec:
                                             required:
                                             - upstreamURL
                                             type: object
-                                          type:
-                                            description: Type designates the type
-                                              of configuration.
-                                            enum:
-                                            - azure
-                                            - bedrock
-                                            - databricks
-                                            - gemini
-                                            - huggingface
-                                            - vercel
-                                            - vertex
-                                            minLength: 1
-                                            type: string
-                                          vercel:
-                                            description: Vercel configuration.
+                                          mistral:
+                                            description: Mistral configuration.
+                                            properties:
+                                              format:
+                                                description: The request format to
+                                                  use when communicating with the
+                                                  Mistral model.
+                                                enum:
+                                                - ollama
+                                                - openai
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - format
+                                            - upstreamURL
+                                            type: object
+                                          ollama:
+                                            description: Ollama configuration.
                                             properties:
                                               upstreamURL:
                                                 description: The URL of the embeddings
@@ -3467,6 +3472,32 @@ spec:
                                             required:
                                             - upstreamURL
                                             type: object
+                                          openai:
+                                            description: Openai configuration.
+                                            properties:
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - upstreamURL
+                                            type: object
+                                          type:
+                                            description: Type designates the type
+                                              of configuration.
+                                            enum:
+                                            - azure
+                                            - bedrock
+                                            - gemini
+                                            - huggingface
+                                            - mistral
+                                            - ollama
+                                            - openai
+                                            - vertex
+                                            minLength: 1
+                                            type: string
                                           vertex:
                                             description: Vertex configuration.
                                             properties:
@@ -3515,9 +3546,8 @@ spec:
                                         minLength: 1
                                         type: string
                                       provider:
-                                        description: |-
-                                          Reference to a model provider instance.
-                                          This is either the model provider ID or the model provider name.
+                                        description: Reference to a model provider
+                                          instance by name.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -4288,7 +4318,6 @@ spec:
                                 type: array
                             type: object
                         required:
-                        - model
                         - route
                         type: object
                       displayName:
@@ -5380,9 +5409,8 @@ spec:
                               minLength: 1
                               type: string
                             provider:
-                              description: |-
-                                Reference to a model provider instance.
-                                This is either the model provider ID or the model provider name.
+                              description: Reference to a model provider instance
+                                by name.
                               maxLength: 253
                               minLength: 1
                               type: string

@@ -238,6 +238,13 @@ spec:
                             items:
                               type: string
                             type: array
+                          cacheTokensSalt:
+                            description: |-
+                              Salt used for generating the cache key that is used for caching the token
+                              endpoint requests.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
                           clientID:
                             description: |-
                               An array of strings representing the client id for the OpenID Connect
@@ -343,6 +350,8 @@ spec:
                             - Enabled
                             - Disabled
                             type: string
+                        required:
+                        - cacheTokensSalt
                         type: object
                       displayName:
                         description: The display name for this identity provider instance.

@@ -9691,24 +9691,6 @@ _Appears in:_
 
 - [AIGatewayConsumer](#konnect-konghq-com-v1alpha1-aigatewayconsumer)
 
-#### AIGatewayDatabricksEmbeddingsModelConfig
-
-
-AIGatewayDatabricksEmbeddingsModelConfig Databricks-specific configuration
-for a model.
-
-
-
-| Field | Description |
-| --- | --- |
-| `upstreamURL` _string_ | The URL of the embeddings model. |
-| `workspaceInstanceID` _string_ | The Databricks workspace instance ID. |
-
-_Appears in:_
-
-- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
-- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
-
 #### AIGatewayDenyACL
 
 
@@ -9746,10 +9728,11 @@ Allowed values:
 | --- | --- |
 | `azure` |  |
 | `bedrock` |  |
-| `databricks` |  |
 | `gemini` |  |
 | `huggingface` |  |
-| `vercel` |  |
+| `mistral` |  |
+| `ollama` |  |
+| `openai` |  |
 | `vertex` |  |
 
 #### AIGatewayEntityIdentifier
@@ -9964,6 +9947,7 @@ list of properties
 | Field | Description |
 | --- | --- |
 | `authMethods` _[]string_ | Types of credentials/grants to enable. |
+| `cacheTokensSalt` _string_ | Salt used for generating the cache key that is used for caching the token endpoint requests. |
 | `clientID` _[]string_ | An array of strings representing the client id for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. |
 | `clientSecret` _[][SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | An array of strings representing the client secret for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. |
 | `consumerClaims` _[]string_ | An array containing an array of string paths representing the location of the claim in a nested object. For example, to map to user.info.id, set [ "user", "info", "id" ]. |
@@ -9980,8 +9964,8 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-AIGatewayIdentityProviderReference Reference to a provider instance.
-This is either the identity provider ID or the identity provider name.
+AIGatewayIdentityProviderReference Reference to a identity provider instance
+by name.
 
 
 
@@ -11138,6 +11122,24 @@ _Appears in:_
 
 - [AIGatewayMCPUpstreamTool](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
+#### AIGatewayMistralEmbeddingsModelConfig
+
+
+AIGatewayMistralEmbeddingsModelConfig Mistral-specific configuration for a
+model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `format` _string_ | The request format to use when communicating with the Mistral model. |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
 #### AIGatewayModelAPI
 
 
@@ -11545,7 +11547,7 @@ for this model.
 | `allowAuthOverride` _string_ | When enabled, request-level auth parameters (such as API keys or bearer tokens) will override the static values defined for the provider. |
 | `config` _[AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)_ | Configuration for an embeddings model. |
 | `name` _string_ | The name of the embeddings model. |
-| `provider` _[AIGatewayModelProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderreference)_ | Reference to a model provider instance. This is either the model provider ID or the model provider name. |
+| `provider` _[AIGatewayModelProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderreference)_ | Reference to a model provider instance by name. |
 
 _Appears in:_
 
@@ -11564,10 +11566,11 @@ Only one of the fields should be set based on the Type.
 | `type` _[AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfigtype)_ | Type designates the type of configuration. |
 | `azure` _[AIGatewayAzureEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayazureembeddingsmodelconfig)_ | Azure configuration. |
 | `bedrock` _[AIGatewayBedrockEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaybedrockembeddingsmodelconfig)_ | Bedrock configuration. |
-| `databricks` _[AIGatewayDatabricksEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaydatabricksembeddingsmodelconfig)_ | Databricks configuration. |
 | `gemini` _[AIGatewayGeminiEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaygeminiembeddingsmodelconfig)_ | Gemini configuration. |
 | `huggingface` _[AIGatewayHuggingfaceEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayhuggingfaceembeddingsmodelconfig)_ | Huggingface configuration. |
-| `vercel` _[AIGatewayVercelEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayvercelembeddingsmodelconfig)_ | Vercel configuration. |
+| `mistral` _[AIGatewayMistralEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymistralembeddingsmodelconfig)_ | Mistral configuration. |
+| `ollama` _[AIGatewayOllamaEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayollamaembeddingsmodelconfig)_ | Ollama configuration. |
+| `openai` _[AIGatewayOpenaiEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayopenaiembeddingsmodelconfig)_ | Openai configuration. |
 | `vertex` _[AIGatewayVertexEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayvertexembeddingsmodelconfig)_ | Vertex configuration. |
 
 _Appears in:_
@@ -11593,10 +11596,11 @@ Allowed values:
 | --- | --- |
 | `azure` |  |
 | `bedrock` |  |
-| `databricks` |  |
 | `gemini` |  |
 | `huggingface` |  |
-| `vercel` |  |
+| `mistral` |  |
+| `ollama` |  |
+| `openai` |  |
 | `vertex` |  |
 
 #### AIGatewayModelBalancerSemanticConfigVectordb
@@ -12659,8 +12663,8 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-AIGatewayModelProviderReference Reference to a model provider instance.
-This is either the model provider ID or the model provider name.
+AIGatewayModelProviderReference Reference to a model provider instance by
+name.
 
 
 
@@ -13209,6 +13213,40 @@ Allowed values:
 | `pgvector` |  |
 | `redis` |  |
 
+#### AIGatewayOllamaEmbeddingsModelConfig
+
+
+AIGatewayOllamaEmbeddingsModelConfig Ollama-specific configuration for a
+model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
+#### AIGatewayOpenaiEmbeddingsModelConfig
+
+
+AIGatewayOpenaiEmbeddingsModelConfig Openai-specific configuration for a
+model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `upstreamURL` _string_ | The URL of the embeddings model. |
+
+_Appears in:_
+
+- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
+- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
 #### AIGatewayPolicyAPISpec
 
 
@@ -13726,7 +13764,7 @@ AIGatewayTarget A target instance a model entry routes requests to.
 | `allowAuthOverride` _string_ | When enabled, request-level auth parameters (such as API keys or bearer tokens) will override the static values defined for the provider. |
 | `config` _[AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)_ | Configuration for a target model. |
 | `name` _string_ | The name of the model defined in the upstream provider that will be executed. |
-| `provider` _[AIGatewayModelProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderreference)_ | Reference to a model provider instance. This is either the model provider ID or the model provider name. |
+| `provider` _[AIGatewayModelProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderreference)_ | Reference to a model provider instance by name. |
 | `semanticDescription` _string_ | The semantic description of the target, required if using semantic load balancing. Specially, setting this to 'CATCHALL' will indicate such target to be used when no other targets match the semantic threshold. |
 | `weight` _int_ | The weight this target gets within the upstream load balancer |
 
@@ -14268,23 +14306,6 @@ AIGatewayTargetXaiConfig Xai-specific configuration for a model.
 _Appears in:_
 
 - [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
-
-#### AIGatewayVercelEmbeddingsModelConfig
-
-
-AIGatewayVercelEmbeddingsModelConfig Vercel AI Gateway-specific configuration
-for a model.
-
-
-
-| Field | Description |
-| --- | --- |
-| `upstreamURL` _string_ | The URL of the embeddings model. |
-
-_Appears in:_
-
-- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
-- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
 
 #### AIGatewayVertexEmbeddingsModelConfig
 

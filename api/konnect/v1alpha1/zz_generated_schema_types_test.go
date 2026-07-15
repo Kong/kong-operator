@@ -59,19 +59,6 @@ func TestAIGatewayBedrockEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayDatabricksEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayDatabricksEmbeddingsModelConfig
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
 func TestAIGatewayDenyACL_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -414,6 +401,19 @@ func TestAIGatewayMCPUpstreamTool_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayMCPUpstreamTool
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMistralEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMistralEmbeddingsModelConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -917,6 +917,32 @@ func TestAIGatewayModelVectorDBConfigRedis_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayOllamaEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayOllamaEmbeddingsModelConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayOpenaiEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayOpenaiEmbeddingsModelConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayProxyConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1268,19 +1294,6 @@ func TestAIGatewayTargetXaiConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayVercelEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayVercelEmbeddingsModelConfig
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
 func TestAIGatewayVertexEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1435,10 +1448,11 @@ func TestAIGatewayEmbeddingsModelConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	}{
 		{name: "azure", payload: []byte("{\"type\":\"azure\",\"azure\":{}}")},
 		{name: "bedrock", payload: []byte("{\"type\":\"bedrock\",\"bedrock\":{}}")},
-		{name: "databricks", payload: []byte("{\"type\":\"databricks\",\"databricks\":{}}")},
 		{name: "gemini", payload: []byte("{\"type\":\"gemini\",\"gemini\":{}}")},
 		{name: "huggingface", payload: []byte("{\"type\":\"huggingface\",\"huggingface\":{}}")},
-		{name: "vercel", payload: []byte("{\"type\":\"vercel\",\"vercel\":{}}")},
+		{name: "mistral", payload: []byte("{\"type\":\"mistral\",\"mistral\":{}}")},
+		{name: "ollama", payload: []byte("{\"type\":\"ollama\",\"ollama\":{}}")},
+		{name: "openai", payload: []byte("{\"type\":\"openai\",\"openai\":{}}")},
 		{name: "vertex", payload: []byte("{\"type\":\"vertex\",\"vertex\":{}}")},
 	}
 
