@@ -13,6 +13,11 @@
 // 1. It has a label `created_in_tests` with value `true`.
 // 2. It was created more than 1h ago.
 //
+// An AI Gateway is considered orphaned when all conditions are satisfied:
+// 1. It has a label `k8s-kind` with value `KonnectAIGateway` (automatically added by Kong Operator).
+// 2. It has a `test` label set.
+// 3. It was created more than 1h ago.
+//
 // A system account is considered orphaned when all conditions are satisfied:
 // 1. It is not managed by Konnect.
 // 2. It was created more than 1h ago.
@@ -135,6 +140,7 @@ func resolveCleanupFuncs(mode string) ([]func(context.Context, logr.Logger) erro
 
 		return []func(context.Context, logr.Logger) error{
 			cleanupKonnectEventGateways(sdk),
+			cleanupKonnectAIGateways(sdk),
 			cleanupKonnectControlPlanes(sdk),
 			cleanupKonnectSystemAccounts(sdk),
 		}, nil
@@ -147,6 +153,7 @@ func resolveCleanupFuncs(mode string) ([]func(context.Context, logr.Logger) erro
 		return []func(context.Context, logr.Logger) error{
 			cleanupGKEClusters,
 			cleanupKonnectEventGateways(sdk),
+			cleanupKonnectAIGateways(sdk),
 			cleanupKonnectControlPlanes(sdk),
 			cleanupKonnectSystemAccounts(sdk),
 		}, nil
