@@ -39,7 +39,7 @@ spec:
     - name: aigw_dp_name
       value: (join('-', [($test_name), 'dp']))
     - name: aigw_dp_image
-      value: env('AIGW_DP_IMAGE')
+      value: (env('AIGW_DP_IMAGE'))
   steps:
     - name: Create-auth-secret
       use:
