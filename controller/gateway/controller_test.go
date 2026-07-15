@@ -511,11 +511,13 @@ func TestProvisionControlPlane_UpdatesExtensionsWhenOnlyExtensionsDiffer(t *test
 // PodTemplateSpec, silently ignoring Scaling, so a scaling-only change from the
 // GatewayConfiguration was never detected and the patch was skipped forever.
 func Test_deploymentOptionsDeepEqual_Scaling(t *testing.T) {
-	original := &operatorv1beta1.DeploymentOptions{
-		Scaling: &operatorv1beta1.Scaling{
-			HorizontalScaling: &operatorv1beta1.HorizontalScaling{
-				MinReplicas: new(int32(2)),
-				MaxReplicas: 3,
+	original := &operatorv1beta1.DataPlaneDeploymentOptions{
+		DeploymentOptions: operatorv1beta1.DeploymentOptions{
+			Scaling: &operatorv1beta1.Scaling{
+				HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+					MinReplicas: new(int32(2)),
+					MaxReplicas: 3,
+				},
 			},
 		},
 	}
@@ -528,6 +530,20 @@ func Test_deploymentOptionsDeepEqual_Scaling(t *testing.T) {
 	assert.False(t, deploymentOptionsDeepEqual(original, changed),
 		"a scaling-only change must not be reported as equal, or the DataPlane's "+
 			"scaling never gets patched by provisionDataPlane")
+}
+
+func Test_deploymentOptionsDeepEqual_Hardened(t *testing.T) {
+	original := &operatorv1beta1.DataPlaneDeploymentOptions{
+		Hardened: commonv1alpha1.HardeningStateDisabled,
+	}
+	changed := original.DeepCopy()
+	changed.Hardened = commonv1alpha1.HardeningStateEnabled
+
+	assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+		"identical DeploymentOptions must be reported as equal")
+	assert.False(t, deploymentOptionsDeepEqual(original, changed),
+		"a hardened-only change must not be reported as equal, or the DataPlane's "+
+			"hardened setting never gets patched by provisionDataPlane")
 }
 
 func Test_setDataPlaneOptionsDefaults(t *testing.T) {

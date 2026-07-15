@@ -7154,6 +7154,7 @@ resource "Deployment") which are created and managed for the DataPlane resource.
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v1beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
 | `rollout` _[Rollout](#gateway-operator-konghq-com-v1beta1-types-rollout)_ | Rollout describes a custom rollout strategy. |
+| `hardened` _[HardeningState](#common-konghq-com-v1alpha1-types-hardeningstate)_ | Hardened indicates whether the operator should apply a hardened security context (non-root user, read-only root filesystem, dropped capabilities) and the related volumes and environment variables to the DataPlane's proxy container.<br /><br />Enabling this on an existing DataPlane causes a rolling restart of its Pods. |
 
 _Appears in:_
 
@@ -8480,6 +8481,7 @@ resource "Deployment") which are created and managed for the DataPlane resource.
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v2beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
 | `rollout` _[Rollout](#gateway-operator-konghq-com-v2beta1-types-rollout)_ | Rollout describes a custom rollout strategy. |
+| `hardened` _[HardeningState](#common-konghq-com-v1alpha1-types-hardeningstate)_ | Hardened indicates whether the operator should apply a hardened security context (non-root user, read-only root filesystem, dropped capabilities) and the related volumes and environment variables to the DataPlane's proxy container.<br /><br />Enabling this on an existing DataPlane causes a rolling restart of its Pods. |
 
 _Appears in:_
 

@@ -69,6 +69,23 @@
 - EventGateway CRDs: added `EventGatewaySchemaRegistry` CRD and reconciliation logic.
   [#5017](https://github.com/Kong/kong-operator/pull/5017)
 
+### Changed
+
+- Security: harden container for `AIGatewayDataPlane` and `KegDataPlane`
+  runtime `Deployment` with a tight security context:
+  - disallows privilege escalation
+  - drop all capabilities (except for `NET_BIND_SERVICE` to allow binding to ports < 1024)
+  - run as non-root user
+  - read-only root filesystem
+  This change enforces patching of `Deployment`s, which causes
+  a rolling restart of the underlying `Pod`s when updating operator to this version.
+  For `DataPlane`, the same hardening is available but opt-in: set
+  `spec.deployment.hardened: Enabled` (or for Gateway-managed `DataPlane`s,
+  `spec.dataPlaneOptions.deployment.hardened: Enabled` on the `GatewayConfiguration`)
+  to enable it. Note that, after operator upgrade, `DataPlane`s' `Deployment`s
+  will be rolled out regardless and `Pod`s will be recreated.
+  [#4953](https://github.com/Kong/kong-operator/pull/4953)
+
 ## [v2.3.0-rc.2]
 
 > Release date: 2026-07-16

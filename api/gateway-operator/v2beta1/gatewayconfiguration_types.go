@@ -164,6 +164,18 @@ type DataPlaneDeploymentOptions struct {
 	//
 	// +optional
 	Rollout *Rollout `json:"rollout,omitempty"`
+
+	// Hardened indicates whether the operator should apply a hardened
+	// security context (non-root user, read-only root filesystem, dropped
+	// capabilities) and the related volumes and environment variables to
+	// the DataPlane's proxy container.
+	//
+	// Enabling this on an existing DataPlane causes a rolling restart of
+	// its Pods.
+	//
+	// +optional
+	// +kubebuilder:default=disabled
+	Hardened commonv1alpha1.HardeningState `json:"hardened,omitempty"`
 }
 
 // GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.

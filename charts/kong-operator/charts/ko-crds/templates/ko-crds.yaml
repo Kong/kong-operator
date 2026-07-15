@@ -18340,6 +18340,20 @@ spec:
                       DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
                       resource "Deployment") which are created and managed for the DataPlane resource.
                     properties:
+                      hardened:
+                        default: disabled
+                        description: |-
+                          Hardened indicates whether the operator should apply a hardened
+                          security context (non-root user, read-only root filesystem, dropped
+                          capabilities) and the related volumes and environment variables to
+                          the DataPlane's proxy container.
+
+                          Enabling this on an existing DataPlane causes a rolling restart of
+                          its Pods.
+                        enum:
+                        - enabled
+                        - disabled
+                        type: string
                       podTemplateSpec:
                         description: |-
                           PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
@@ -28576,6 +28590,20 @@ spec:
                       DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
                       resource "Deployment") which are created and managed for the DataPlane resource.
                     properties:
+                      hardened:
+                        default: disabled
+                        description: |-
+                          Hardened indicates whether the operator should apply a hardened
+                          security context (non-root user, read-only root filesystem, dropped
+                          capabilities) and the related volumes and environment variables to
+                          the DataPlane's proxy container.
+
+                          Enabling this on an existing DataPlane causes a rolling restart of
+                          its Pods.
+                        enum:
+                        - enabled
+                        - disabled
+                        type: string
                       podTemplateSpec:
                         description: |-
                           PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
