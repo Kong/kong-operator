@@ -1,13 +1,14 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  name: aigateway-ai-proxy
+  name: aigatewaydataplane-lifecycle
 spec:
   description: |
-    AI GW 1.1 — AI Proxy Advanced. Stands up the Konnect AIGateway control plane, an
-    OpenAI-compatible provider + model exposing /aigw11/chat pointed at the shared mock
-    upstream, and an in-cluster AIGatewayDataPlane, then drives a real chat-completions
-    request and asserts a 200 response carrying the X-Kong-LLM-Model header.
+    Lifecycle test for AIGatewayDataPlane cross-reference, condition correctness,
+    and watch reconciliation.
+    1. Creates DataPlane before its KonnectAIGateway → asserts KonnectAIGatewayResolved=False/NotFound.
+    2. Creates KonnectAIGateway → asserts watch fires → DataPlane reaches Ready=True.
+    3. Deletes KonnectAIGateway → asserts DataPlane conditions degrade
   bindings:
     - name: test_name
       value: ($namespace)
@@ -38,46 +39,42 @@ spec:
     - name: Create-konnect-api-auth
       use:
         template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-dataplane-before-parent
+      try:
+        - apply:
+            file: 03-aigatewaydataplane.yaml
+        - assert:
+            file: 03-assert-not-found.yaml
     - name: Create-konnect-aigateway
       bindings:
         - name: auth_name
           value: ($konnect_auth_name)
       use:
         template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
-    - name: Create-provider-and-model
+    - name: Assert-watch-fired
       try:
-        - apply:
-            file: 02-aigateway-provider-model.yaml
         - assert:
-            file: 02-aigateway-provider-model-assert.yaml
-    - name: Create-aigateway-dataplane
+            file: 05-assert-ready.yaml
+    - name: Delete-konnect-aigateway
       bindings:
-        - name: namespace
-          value: ($namespace)
+        - name: resource_type
+          value: konnectaigateway
+        - name: resource_name
+          value: ($aigw_cp_name)
+        - name: resource_namespace
+          value: ($aigw_cp_namespace)
       use:
-        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
-    - name: Drive-chat-completion-traffic
+        template: ../../common/_step_templates/delete-resource-non-blocking.yaml
+    - name: Assert-dataplane-degraded
       try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
-              - name: ROUTE_PATH
-                value: /aigw11/chat
-              - name: MODEL_ALIAS
-                value: qwen2.5:0.5b
-              - name: EXPECT_HEADER
-                value: X-Kong-LLM-Model
-            content: |
-              bash ../../common/scripts/aigw_chat_completion.sh
+        - assert:
+            file: 07-assert-degraded.yaml
   catch:
     - description: Capture debug snapshot on test failure.
       script:
         env:
           - name: TEST_NAME
-            value: aigateway-ai-proxy
+            value: aigatewaydataplane-lifecycle
           - name: NAMESPACE
             value: ($namespace)
           - name: OPERATOR_NAMESPACE

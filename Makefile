@@ -850,6 +850,7 @@ test.e2e.chainsaw.prereq: ## Apply prerequisite fixtures for a chainsaw suite (u
 .PHONY: test.e2e.chainsaw
 test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
 	GATEWAY_IMAGE=kong/kong-gateway:$(shell $(YQ) -ojson -r '.chainsaw.kong-ee' < $(TEST_DEPENDENCIES_FILE)) \
+	AIGW_DP_IMAGE=kong/kong-ai-gateway-dev:$(shell $(YQ) -ojson -r '.chainsaw.aigw-dp' < $(TEST_DEPENDENCIES_FILE)) \
 	GRPCURL_BIN=$(GRPCURL) \
 		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
 
