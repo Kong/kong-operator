@@ -13,6 +13,16 @@ The script will delete Konnect Control Planes that meet **all** of the following
 
 **Warning**: All Control Planes managed by Kong Operator (with label `k8s-kind:KonnectGatewayControlPlane`) in the configured Konnect organization will be pruned by this script.
 
+## Konnect AI Gateways Cleanup
+
+The script will delete Konnect AI Gateways that meet **all** of the following conditions:
+
+1. Has the label `k8s-kind:KonnectAIGateway` (automatically added by Kong Operator)
+2. Has a `test` label set
+3. Was created more than 1 hour ago
+
+**Warning**: All Konnect AI Gateways managed by Kong Operator (with label `k8s-kind:KonnectAIGateway`) and a `test` label in the configured Konnect organization will be pruned by this script.
+
 ## Usage
 
 ```bash

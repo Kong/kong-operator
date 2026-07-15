@@ -4,6 +4,8 @@
 #   - aigw_cp_name: Name of the KonnectAIGateway to create.
 #   - aigw_cp_namespace: Namespace where the KonnectAIGateway will be created.
 #   - auth_name: Name of the KonnectAPIAuthConfiguration to reference (same namespace).
+#   - test_name: Identifier used for the "test" label so the hack/cleanup script can find and
+#     prune this AI Gateway from Konnect if it's left behind by a cancelled/crashed test run.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
@@ -22,6 +24,8 @@ spec:
               name: ($aigw_cp_name)
               displayName: ($aigw_cp_name)
               description: AIGateway chainsaw e2e control plane
+              labels:
+                test: ($test_name)
             konnect:
               authRef:
                 name: ($auth_name)
