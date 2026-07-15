@@ -31,7 +31,7 @@ spec:
     - name: aigw_dp_name
       value: (join('-', [($test_name), 'dp']))
     - name: aigw_dp_image
-      value: (env('AIGW_DP_IMAGE') || 'kong/kong-ai-gateway-dev:2.0.1-rc.1')
+      value: (env('AIGW_DP_IMAGE'))
     - name: echo_deployment_name
       value: echo
     - name: echo_deployment_namespace
