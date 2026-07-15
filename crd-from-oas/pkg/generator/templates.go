@@ -1632,7 +1632,7 @@ func testGenerated{{.Entity}}ForSDKOps() *{{.APIAlias}}.{{.Entity}} {
 			Generation: 3,
 		},
 		Spec: {{.APIAlias}}.{{.Entity}}Spec{
-			APISpec: {{.APIAlias}}.{{.Entity}}APISpec{
+			APISpec: {{if .SupportsMirror}}&{{end}}{{.APIAlias}}.{{.Entity}}APISpec{
 {{- range .FixtureFields}}
 				{{.FieldName}}: {{.TestValue}},
 {{- end}}
