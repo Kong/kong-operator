@@ -307,6 +307,11 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 	return obj.Get{{.SetParentIDEntityName}}Ref()
 }
 
+// SetParentRef sets the reference to the parent entity.
+func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
+	obj.Spec.{{.ParentRefGoFieldName}} = ref
+}
+
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
 	obj.Set{{.ParentStatusEntityName}}ID(id)
@@ -332,6 +337,11 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 {{- else}}
 	return obj.Get{{.RootRefDependency.EntityName}}Ref()
 {{- end}}
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
+	obj.Spec.{{.RootRefDependency.FieldName}} = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

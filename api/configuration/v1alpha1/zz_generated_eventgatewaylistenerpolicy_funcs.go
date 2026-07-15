@@ -91,6 +91,11 @@ func (obj *EventGatewayListenerPolicy) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayListenerRef()
 }
 
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayListenerPolicy) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.EventGatewayListenerRef = ref
+}
+
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *EventGatewayListenerPolicy) SetParentID(id string) {
 	obj.SetEventGatewayListenerID(id)

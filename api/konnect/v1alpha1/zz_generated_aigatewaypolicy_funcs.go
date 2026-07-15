@@ -104,6 +104,11 @@ func (obj *AIGatewayPolicy) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetKonnectAIGatewayRef()
 }
 
+// SetParentRef sets the reference to the parent entity.
+func (obj *AIGatewayPolicy) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.AIGatewayRef = ref
+}
+
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *AIGatewayPolicy) SetParentID(id string) {
 	obj.SetGatewayID(id)
