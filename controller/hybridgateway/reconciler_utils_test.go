@@ -24,6 +24,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -472,6 +473,79 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			assert.Equal(t, tt.wantWaiting, waiting)
 		})
 	}
+}
+
+func TestEnforceState_HybridRouteAnnotationConverges(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+	annotationKey := consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	gvk := schema.GroupVersionKind{
+		Group:   "configuration.konghq.com",
+		Version: "v1alpha1",
+		Kind:    "KongService",
+	}
+
+	makeDesired := func(routeRef string) unstructured.Unstructured {
+		service := newUnstructured("ns", "shared-service", gvk, nil)
+		service.SetAnnotations(map[string]string{annotationKey: routeRef})
+		_ = unstructured.SetNestedField(service.Object, "example.com", "spec", "host")
+		_ = unstructured.SetNestedField(service.Object, int64(80), "spec", "port")
+		_ = unstructured.SetNestedField(service.Object, "http", "spec", "protocol")
+		return service
+	}
+	makeConverter := func(routeName string) *fakeHTTPRouteConverter {
+		routeRef := "ns/" + routeName
+		return &fakeHTTPRouteConverter{
+			desired: []unstructured.Unstructured{makeDesired(routeRef)},
+			root: gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: routeName},
+			},
+		}
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithReturnManagedFields().
+		Build()
+
+	applied, waiting, err := enforceState(ctx, cl, logger, makeConverter("route-a"))
+	require.NoError(t, err)
+	require.True(t, applied)
+	require.False(t, waiting)
+
+	applied, waiting, err = enforceState(ctx, cl, logger, makeConverter("route-b"))
+	require.NoError(t, err)
+	require.True(t, applied)
+	require.False(t, waiting)
+
+	var service unstructured.Unstructured
+	service.SetGroupVersionKind(gvk)
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "shared-service"}, &service))
+	assert.Equal(t, "ns/route-a,ns/route-b", service.GetAnnotations()[annotationKey])
+
+	converged := makeDesired("ns/route-a,ns/route-b")
+	converged.SetManagedFields([]metav1.ManagedFieldsEntry{{
+		Manager:    controllerpkgssa.FieldManager,
+		Operation:  metav1.ManagedFieldsOperationApply,
+		APIVersion: gvk.GroupVersion().String(),
+		FieldsType: "FieldsV1",
+		FieldsV1: &metav1.FieldsV1{Raw: []byte(
+			`{"f:metadata":{"f:annotations":{".":{},"f:gateway-operator.konghq.com/hybrid-routes":{}}},"f:spec":{"f:host":{},"f:port":{},"f:protocol":{}}}`,
+		)},
+	}})
+	cl = fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithReturnManagedFields().
+		WithObjects(&converged).
+		Build()
+
+	applied, waiting, err = enforceState(ctx, cl, logger, makeConverter("route-a"))
+	require.NoError(t, err)
+	assert.False(t, applied)
+	assert.False(t, waiting)
+
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "shared-service"}, &service))
+	assert.Equal(t, "ns/route-a,ns/route-b", service.GetAnnotations()[annotationKey])
 }
 
 func TestCleanOrphanedResources(t *testing.T) {
@@ -2313,6 +2387,108 @@ func TestMergeHybridGatewayAnnotation(t *testing.T) {
 			}
 
 			mergeHybridGatewayAnnotation(&desired, &existing)
+
+			assert.Equal(t, tt.wantAnnotation, desired.GetAnnotations()[annotationKey])
+		})
+	}
+}
+
+func TestHybridRouteAnnotationInfo(t *testing.T) {
+	tests := []struct {
+		name    string
+		wantKey string
+		wantRef string
+		runFn   func() (string, string)
+	}{
+		{
+			name:    "HTTPRoute returns HTTPRoute annotation key and namespace/name",
+			wantKey: consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation,
+			wantRef: "ns/route-a",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "route-a", Namespace: "ns"},
+				})
+			},
+		},
+		{
+			name:    "TLSRoute returns TLSRoute annotation key and namespace/name",
+			wantKey: consts.GatewayOperatorHybridRoutesTLSRouteAnnotation,
+			wantRef: "ns/tls-route",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.TLSRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "tls-route", Namespace: "ns"},
+				})
+			},
+		},
+		{
+			name: "Gateway returns empty strings",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: "ns"},
+				})
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			key, ref := tt.runFn()
+			assert.Equal(t, tt.wantKey, key)
+			assert.Equal(t, tt.wantRef, ref)
+		})
+	}
+}
+
+func TestMergeHybridRouteAnnotation(t *testing.T) {
+	gvk := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"}
+	annotationKey := consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	routeRef := "ns/route-a"
+
+	tests := []struct {
+		name           string
+		existing       string
+		desired        string
+		wantAnnotation string
+	}{
+		{
+			name:           "empty existing sets route reference",
+			wantAnnotation: routeRef,
+		},
+		{
+			name:           "existing route is preserved",
+			existing:       "ns/other-route",
+			wantAnnotation: "ns/other-route,ns/route-a",
+		},
+		{
+			name:           "route reference is not duplicated",
+			existing:       "ns/other-route,ns/route-a",
+			wantAnnotation: "ns/other-route,ns/route-a",
+		},
+		{
+			name:           "route references are sorted",
+			existing:       "ns/route-b",
+			wantAnnotation: "ns/route-a,ns/route-b",
+		},
+		{
+			name:           "desired annotation is replaced with merged live state",
+			existing:       "ns/other-route",
+			desired:        "ns/stale-route",
+			wantAnnotation: "ns/other-route,ns/route-a",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			existing := newUnstructured("ns", "upstream", gvk, nil)
+			if tt.existing != "" {
+				existing.SetAnnotations(map[string]string{annotationKey: tt.existing})
+			}
+			desired := newUnstructured("ns", "upstream", gvk, nil)
+			if tt.desired != "" {
+				desired.SetAnnotations(map[string]string{annotationKey: tt.desired})
+			}
+
+			mergeHybridRouteAnnotation(&desired, &existing, annotationKey, routeRef)
 
 			assert.Equal(t, tt.wantAnnotation, desired.GetAnnotations()[annotationKey])
 		})

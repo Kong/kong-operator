@@ -75,6 +75,9 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 
 	log.Debug(logger, "Retrieved desired objects for enforcement", "objectCount", len(desiredObjects))
 
+	// Compute the hybrid-routes annotation info for the root object once, outside the per-resource loop.
+	routeAnnotationKey, routeRef := hybridRouteAnnotationInfo(conv.GetRootObject())
+
 	// Build lookup maps once so that per-object gating checks are O(1) instead of O(n).
 	desiredUpstreamNames := make(map[string]struct{}, len(desiredObjects))
 	desiredTargetsByUpstream := make(map[string][]unstructured.Unstructured, len(desiredObjects))
@@ -257,6 +260,14 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// comparing or applying the desired state.
 		mergeHybridGatewayAnnotation(&desired, existing)
 
+		// Merge the hybrid-routes annotation from the live object into the desired state so that SSA
+		// owns and persists it atomically with the rest of the resource. When the object does not
+		// exist yet, existing carries no annotations and the annotation is initialized to just this
+		// route ref. Gateway converters (empty routeAnnotationKey) skip this step.
+		if routeAnnotationKey != "" {
+			mergeHybridRouteAnnotation(&desired, existing, routeAnnotationKey, routeRef)
+		}
+
 		namespacedNameDesired := client.ObjectKeyFromObject(&desired)
 		namespacedNameExisting := client.ObjectKeyFromObject(existing)
 
@@ -376,6 +387,33 @@ func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, targets []
 		}
 	}
 	return true, nil
+}
+
+// hybridRouteAnnotationInfo returns the annotation key and route reference string for the given
+// root object. Returns empty strings for Gateway objects, which do not use hybrid-routes annotations.
+func hybridRouteAnnotationInfo[t converter.RootObject](obj t) (annotationKey, routeRef string) {
+	switch o := any(obj).(type) {
+	case gwtypes.HTTPRoute:
+		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation, o.Namespace + "/" + o.Name
+	case gwtypes.TLSRoute:
+		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation, o.Namespace + "/" + o.Name
+	}
+	return "", ""
+}
+
+// mergeHybridRouteAnnotation merges routeRef into the hybrid-routes annotation on desired,
+// seeding from existing's annotation to preserve other routes' entries.
+func mergeHybridRouteAnnotation(desired, existing *unstructured.Unstructured, annotationKey, routeRef string) {
+	current := ""
+	if annotations := existing.GetAnnotations(); len(annotations) > 0 {
+		current = annotations[annotationKey]
+	}
+	annotations := desired.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations[annotationKey] = mergeCommaSeparatedValues(current, routeRef)
+	desired.SetAnnotations(annotations)
 }
 
 // mergeHybridGatewayAnnotation preserves Gateway references already present on
