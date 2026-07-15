@@ -2452,6 +2452,25 @@ func isScalarStringIntOneOf(variants []*parser.Property, schemas map[string]*par
 	return types["string"] && types["integer"]
 }
 
+// commonV1Alpha1ImportPath is the Go import path of the shared common/v1alpha1
+// package. It defines EntitySource, which backs the generated spec.source field
+// on mirror-capable entities.
+const commonV1Alpha1ImportPath = "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+
+// needsCommonV1Alpha1Import reports whether a generated types file must add an
+// explicit commonv1alpha1 import for the mirror spec.source field.
+//
+// It is needed only for mirror-capable entities (spec.source is emitted only for
+// them). Even then it is skipped when the ObjectRef import already brings in the
+// same package — that import points at commonV1Alpha1ImportPath too, so re-adding
+// it would produce a duplicate import in the generated file.
+func (g *Generator) needsCommonV1Alpha1Import(entityName string, objectRefImport *config.ImportConfig) bool {
+	if !g.entitySupportsMirror(entityName) {
+		return false
+	}
+	return objectRefImport == nil || objectRefImport.Path != commonV1Alpha1ImportPath
+}
+
 func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string, error) {
 	entityName := parser.GetEntityNameFromType(name)
 
@@ -2692,9 +2711,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ResponseStatusFields:      responseStatusFields,
 		TypeXValidations:          typeXValidations,
 		SupportsMirror:            g.entitySupportsMirror(entityName),
-		NeedsCommonV1Alpha1Import: g.entitySupportsMirror(entityName) &&
-			(objectRefImport == nil ||
-				objectRefImport.Path != "github.com/kong/kong-operator/v2/api/common/v1alpha1"),
+		NeedsCommonV1Alpha1Import: g.needsCommonV1Alpha1Import(entityName, objectRefImport),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
