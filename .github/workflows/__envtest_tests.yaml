@@ -95,12 +95,12 @@ jobs:
     - name: collect test coverage
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: coverage-envtest-tests
+        name: coverage-envtest-tests-${{ matrix.testcase }}
         path: coverage.envtest.out
 
     - name: collect test report
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: tests-report-envtest-tests
+        name: tests-report-envtest-tests-${{ matrix.testcase }}
         path: envtest-tests.xml
