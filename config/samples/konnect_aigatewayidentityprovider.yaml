@@ -71,6 +71,7 @@ spec:
       displayName: My OpenID Connect Identity Provider
       config:
         issuer: https://my-idp.example.com/.well-known/openid-configuration
+        cacheTokensSalt: my-cache-salt
         clientID:
           - my-client-id
         clientSecret:

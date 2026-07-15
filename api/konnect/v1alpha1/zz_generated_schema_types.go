@@ -205,23 +205,6 @@ type AIGatewayBedrockEmbeddingsModelConfig struct {
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
 }
 
-// AIGatewayDatabricksEmbeddingsModelConfig Databricks-specific configuration
-// for a model.
-type AIGatewayDatabricksEmbeddingsModelConfig struct {
-	// The URL of the embeddings model.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	UpstreamURL string `json:"upstreamURL,omitzero"`
-	// The Databricks workspace instance ID.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	WorkspaceInstanceID string `json:"workspaceInstanceID,omitzero"`
-}
-
 // AIGatewayDenyACL is a type alias.
 type AIGatewayDenyACL struct {
 	// List of Consumers, Consumer Groups, or Authenticated Groups that are denied
@@ -238,7 +221,7 @@ type AIGatewayEmbeddingsModelConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=azure;bedrock;databricks;gemini;huggingface;vercel;vertex
+	// +kubebuilder:validation:Enum=azure;bedrock;gemini;huggingface;mistral;ollama;openai;vertex
 	Type AIGatewayEmbeddingsModelConfigType `json:"type,omitempty"`
 
 	// Azure configuration.
@@ -249,10 +232,6 @@ type AIGatewayEmbeddingsModelConfig struct {
 	//
 	// +optional
 	Bedrock *AIGatewayBedrockEmbeddingsModelConfig `json:"bedrock,omitempty"`
-	// Databricks configuration.
-	//
-	// +optional
-	Databricks *AIGatewayDatabricksEmbeddingsModelConfig `json:"databricks,omitempty"`
 	// Gemini configuration.
 	//
 	// +optional
@@ -261,10 +240,18 @@ type AIGatewayEmbeddingsModelConfig struct {
 	//
 	// +optional
 	Huggingface *AIGatewayHuggingfaceEmbeddingsModelConfig `json:"huggingface,omitempty"`
-	// Vercel configuration.
+	// Mistral configuration.
 	//
 	// +optional
-	Vercel *AIGatewayVercelEmbeddingsModelConfig `json:"vercel,omitempty"`
+	Mistral *AIGatewayMistralEmbeddingsModelConfig `json:"mistral,omitempty"`
+	// Ollama configuration.
+	//
+	// +optional
+	Ollama *AIGatewayOllamaEmbeddingsModelConfig `json:"ollama,omitempty"`
+	// Openai configuration.
+	//
+	// +optional
+	Openai *AIGatewayOpenaiEmbeddingsModelConfig `json:"openai,omitempty"`
 	// Vertex configuration.
 	//
 	// +optional
@@ -278,10 +265,11 @@ type AIGatewayEmbeddingsModelConfigType string
 const (
 	AIGatewayEmbeddingsModelConfigTypeAzure       AIGatewayEmbeddingsModelConfigType = "azure"
 	AIGatewayEmbeddingsModelConfigTypeBedrock     AIGatewayEmbeddingsModelConfigType = "bedrock"
-	AIGatewayEmbeddingsModelConfigTypeDatabricks  AIGatewayEmbeddingsModelConfigType = "databricks"
 	AIGatewayEmbeddingsModelConfigTypeGemini      AIGatewayEmbeddingsModelConfigType = "gemini"
 	AIGatewayEmbeddingsModelConfigTypeHuggingface AIGatewayEmbeddingsModelConfigType = "huggingface"
-	AIGatewayEmbeddingsModelConfigTypeVercel      AIGatewayEmbeddingsModelConfigType = "vercel"
+	AIGatewayEmbeddingsModelConfigTypeMistral     AIGatewayEmbeddingsModelConfigType = "mistral"
+	AIGatewayEmbeddingsModelConfigTypeOllama      AIGatewayEmbeddingsModelConfigType = "ollama"
+	AIGatewayEmbeddingsModelConfigTypeOpenai      AIGatewayEmbeddingsModelConfigType = "openai"
 	AIGatewayEmbeddingsModelConfigTypeVertex      AIGatewayEmbeddingsModelConfigType = "vertex"
 )
 
@@ -310,14 +298,6 @@ func (u AIGatewayEmbeddingsModelConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["bedrock"] = raw
 		}
-	case AIGatewayEmbeddingsModelConfigTypeDatabricks:
-		if u.Databricks != nil {
-			raw, err := json.Marshal(u.Databricks)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig databricks: %w", err)
-			}
-			m["databricks"] = raw
-		}
 	case AIGatewayEmbeddingsModelConfigTypeGemini:
 		if u.Gemini != nil {
 			raw, err := json.Marshal(u.Gemini)
@@ -334,13 +314,29 @@ func (u AIGatewayEmbeddingsModelConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["huggingface"] = raw
 		}
-	case AIGatewayEmbeddingsModelConfigTypeVercel:
-		if u.Vercel != nil {
-			raw, err := json.Marshal(u.Vercel)
+	case AIGatewayEmbeddingsModelConfigTypeMistral:
+		if u.Mistral != nil {
+			raw, err := json.Marshal(u.Mistral)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig vercel: %w", err)
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig mistral: %w", err)
 			}
-			m["vercel"] = raw
+			m["mistral"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeOllama:
+		if u.Ollama != nil {
+			raw, err := json.Marshal(u.Ollama)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig ollama: %w", err)
+			}
+			m["ollama"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeOpenai:
+		if u.Openai != nil {
+			raw, err := json.Marshal(u.Openai)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig openai: %w", err)
+			}
+			m["openai"] = raw
 		}
 	case AIGatewayEmbeddingsModelConfigTypeVertex:
 		if u.Vertex != nil {
@@ -391,16 +387,6 @@ func (u *AIGatewayEmbeddingsModelConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig bedrock: %w", err)
 		}
 		u.Bedrock = &val
-	case "databricks":
-		payload, ok := raw["databricks"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayDatabricksEmbeddingsModelConfig
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig databricks: %w", err)
-		}
-		u.Databricks = &val
 	case "gemini":
 		payload, ok := raw["gemini"]
 		if !ok || len(payload) == 0 {
@@ -421,16 +407,36 @@ func (u *AIGatewayEmbeddingsModelConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig huggingface: %w", err)
 		}
 		u.Huggingface = &val
-	case "vercel":
-		payload, ok := raw["vercel"]
+	case "mistral":
+		payload, ok := raw["mistral"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayVercelEmbeddingsModelConfig
+		var val AIGatewayMistralEmbeddingsModelConfig
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig vercel: %w", err)
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig mistral: %w", err)
 		}
-		u.Vercel = &val
+		u.Mistral = &val
+	case "ollama":
+		payload, ok := raw["ollama"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayOllamaEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig ollama: %w", err)
+		}
+		u.Ollama = &val
+	case "openai":
+		payload, ok := raw["openai"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayOpenaiEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig openai: %w", err)
+		}
+		u.Openai = &val
 	case "vertex":
 		payload, ok := raw["vertex"]
 		if !ok || len(payload) == 0 {
@@ -642,6 +648,14 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	//
 	// +optional
 	AuthMethods []string `json:"authMethods,omitempty"`
+	// Salt used for generating the cache key that is used for caching the token
+	// endpoint requests.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	CacheTokensSalt string `json:"cacheTokensSalt,omitzero"`
 	// An array of strings representing the client id for the OpenID Connect
 	// provider.
 	// When multiple values are provided, the client ID and secrets pairs
@@ -688,8 +702,8 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	SSLVerify string `json:"sslVerify,omitzero"`
 }
 
-// AIGatewayIdentityProviderReference Reference to a provider instance.
-// This is either the identity provider ID or the identity provider name.
+// AIGatewayIdentityProviderReference Reference to a identity provider instance
+// by name.
 type AIGatewayIdentityProviderReference string
 
 // AIGatewayMCPACLs Access control rules for MCP resources.
@@ -2794,6 +2808,24 @@ type AIGatewayMCPUpstreamToolAccess struct {
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
 }
 
+// AIGatewayMistralEmbeddingsModelConfig Mistral-specific configuration for a
+// model.
+type AIGatewayMistralEmbeddingsModelConfig struct {
+	// The request format to use when communicating with the Mistral model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=ollama;openai
+	Format string `json:"format,omitzero"`
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
 // AIGatewayModelAPI Configuration for proxying asynchronous requests/responses
 // to/from an AI Gateway model using the files and batches APIs.
 type AIGatewayModelAPI struct {
@@ -2884,7 +2916,7 @@ type AIGatewayModelAPIConfig struct {
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
 	//
 	//
-	// +required
+	// +optional
 	Model AIGatewayModelAPIConfigModel `json:"model,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
@@ -3989,8 +4021,7 @@ type AIGatewayModelBalancerSemanticConfigEmbeddings struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
-	// Reference to a model provider instance.
-	// This is either the model provider ID or the model provider name.
+	// Reference to a model provider instance by name.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -4005,7 +4036,7 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=azure;bedrock;databricks;gemini;huggingface;vercel;vertex
+	// +kubebuilder:validation:Enum=azure;bedrock;gemini;huggingface;mistral;ollama;openai;vertex
 	Type AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType `json:"type,omitempty"`
 
 	// Azure configuration.
@@ -4016,10 +4047,6 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
 	//
 	// +optional
 	Bedrock *AIGatewayBedrockEmbeddingsModelConfig `json:"bedrock,omitempty"`
-	// Databricks configuration.
-	//
-	// +optional
-	Databricks *AIGatewayDatabricksEmbeddingsModelConfig `json:"databricks,omitempty"`
 	// Gemini configuration.
 	//
 	// +optional
@@ -4028,10 +4055,18 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
 	//
 	// +optional
 	Huggingface *AIGatewayHuggingfaceEmbeddingsModelConfig `json:"huggingface,omitempty"`
-	// Vercel configuration.
+	// Mistral configuration.
 	//
 	// +optional
-	Vercel *AIGatewayVercelEmbeddingsModelConfig `json:"vercel,omitempty"`
+	Mistral *AIGatewayMistralEmbeddingsModelConfig `json:"mistral,omitempty"`
+	// Ollama configuration.
+	//
+	// +optional
+	Ollama *AIGatewayOllamaEmbeddingsModelConfig `json:"ollama,omitempty"`
+	// Openai configuration.
+	//
+	// +optional
+	Openai *AIGatewayOpenaiEmbeddingsModelConfig `json:"openai,omitempty"`
 	// Vertex configuration.
 	//
 	// +optional
@@ -4045,10 +4080,11 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType string
 const (
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeAzure       AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "azure"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeBedrock     AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "bedrock"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeDatabricks  AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "databricks"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeGemini      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "gemini"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeHuggingface AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "huggingface"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVercel      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vercel"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeMistral     AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "mistral"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOllama      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "ollama"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "openai"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vertex"
 )
 
@@ -4077,14 +4113,6 @@ func (u AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) MarshalJSON() ([]b
 			}
 			m["bedrock"] = raw
 		}
-	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeDatabricks:
-		if u.Databricks != nil {
-			raw, err := json.Marshal(u.Databricks)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig databricks: %w", err)
-			}
-			m["databricks"] = raw
-		}
 	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeGemini:
 		if u.Gemini != nil {
 			raw, err := json.Marshal(u.Gemini)
@@ -4101,13 +4129,29 @@ func (u AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) MarshalJSON() ([]b
 			}
 			m["huggingface"] = raw
 		}
-	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVercel:
-		if u.Vercel != nil {
-			raw, err := json.Marshal(u.Vercel)
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeMistral:
+		if u.Mistral != nil {
+			raw, err := json.Marshal(u.Mistral)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vercel: %w", err)
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig mistral: %w", err)
 			}
-			m["vercel"] = raw
+			m["mistral"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOllama:
+		if u.Ollama != nil {
+			raw, err := json.Marshal(u.Ollama)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig ollama: %w", err)
+			}
+			m["ollama"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai:
+		if u.Openai != nil {
+			raw, err := json.Marshal(u.Openai)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig openai: %w", err)
+			}
+			m["openai"] = raw
 		}
 	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex:
 		if u.Vertex != nil {
@@ -4158,16 +4202,6 @@ func (u *AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) UnmarshalJSON(dat
 			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig bedrock: %w", err)
 		}
 		u.Bedrock = &val
-	case "databricks":
-		payload, ok := raw["databricks"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayDatabricksEmbeddingsModelConfig
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig databricks: %w", err)
-		}
-		u.Databricks = &val
 	case "gemini":
 		payload, ok := raw["gemini"]
 		if !ok || len(payload) == 0 {
@@ -4188,16 +4222,36 @@ func (u *AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) UnmarshalJSON(dat
 			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig huggingface: %w", err)
 		}
 		u.Huggingface = &val
-	case "vercel":
-		payload, ok := raw["vercel"]
+	case "mistral":
+		payload, ok := raw["mistral"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayVercelEmbeddingsModelConfig
+		var val AIGatewayMistralEmbeddingsModelConfig
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vercel: %w", err)
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig mistral: %w", err)
 		}
-		u.Vercel = &val
+		u.Mistral = &val
+	case "ollama":
+		payload, ok := raw["ollama"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayOllamaEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig ollama: %w", err)
+		}
+		u.Ollama = &val
+	case "openai":
+		payload, ok := raw["openai"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayOpenaiEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig openai: %w", err)
+		}
+		u.Openai = &val
 	case "vertex":
 		payload, ok := raw["vertex"]
 		if !ok || len(payload) == 0 {
@@ -4223,7 +4277,7 @@ func (s *AIGatewayModelBalancerSemanticConfigEmbeddings) UnmarshalJSON(data []by
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddings: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Databricks == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Vercel == nil && aux.Config.Vertex == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Vertex == nil {
 		aux.Config = nil
 	}
 	*s = AIGatewayModelBalancerSemanticConfigEmbeddings(aux)
@@ -4447,7 +4501,7 @@ type AIGatewayModelModelConfig struct {
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
 	//
 	//
-	// +required
+	// +optional
 	Model AIGatewayModelModelConfigModel `json:"model,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
@@ -6077,8 +6131,8 @@ type AIGatewayModelProviderOpenaiConfig struct {
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderReference Reference to a model provider instance.
-// This is either the model provider ID or the model provider name.
+// AIGatewayModelProviderReference Reference to a model provider instance by
+// name.
 type AIGatewayModelProviderReference string
 
 // AIGatewayModelProviderVercel Configuration for an upstream model provider.
@@ -7109,6 +7163,28 @@ func (s *AIGatewayModelVectorDBConfigRedis) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// AIGatewayOllamaEmbeddingsModelConfig Ollama-specific configuration for a
+// model.
+type AIGatewayOllamaEmbeddingsModelConfig struct {
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayOpenaiEmbeddingsModelConfig Openai-specific configuration for a
+// model.
+type AIGatewayOpenaiEmbeddingsModelConfig struct {
+	// The URL of the embeddings model.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
 // AIGatewayProxyConfig HTTP/HTTPS proxy configuration for outbound requests to
 // the upstream AI provider.
 type AIGatewayProxyConfig struct {
@@ -7904,8 +7980,7 @@ type AIGatewayTarget struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
-	// Reference to a model provider instance.
-	// This is either the model provider ID or the model provider name.
+	// Reference to a model provider instance by name.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -9343,17 +9418,6 @@ type AIGatewayTargetXaiConfig struct {
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	UpstreamURL string `json:"upstreamURL,omitzero"`
-}
-
-// AIGatewayVercelEmbeddingsModelConfig Vercel AI Gateway-specific configuration
-// for a model.
-type AIGatewayVercelEmbeddingsModelConfig struct {
-	// The URL of the embeddings model.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
