@@ -75,10 +75,10 @@ func findOrphanedAIGateways(
 			log.Info("AIGateway has no creation timestamp, skipping", "name", aiGateway.Name)
 			continue
 		}
-		orphanedAfter := aiGateway.CreatedAt.Add(timeUntilControlPlaneOrphaned)
-		if !time.Now().After(orphanedAfter) {
+		orphanedTime := aiGateway.CreatedAt.Add(timeUntilControlPlaneOrphaned)
+		if orphanedTime.After(time.Now()) {
 			log.Info("AIGateway is not old enough to be considered orphaned, skipping",
-				"name", aiGateway.Name, "created_at", aiGateway.CreatedAt,
+				"name", aiGateway.Name, "id", aiGateway.ID, "created_at", aiGateway.CreatedAt,
 			)
 			continue
 		}
