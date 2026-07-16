@@ -17,7 +17,8 @@ env:
 
 jobs:
   crd-validation-tests:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    # NOTE: This job can take longer than the default timeout so we bump it to 15 minutes.
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 15) }}
     runs-on: ubuntu-latest
     name: ${{ matrix.crd_validation_test.name }} - ${{ matrix.cluster_version }}
     strategy:

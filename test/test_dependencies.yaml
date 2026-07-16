@@ -29,4 +29,4 @@ chainsaw:
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.14.0.9'
   # renovate: datasource=docker depName=kong/kong-ai-gateway-dev versioning=docker
-  aigw-dp: '2.0.1-rc.2'
+  aigw-dp: '2.0.1-rc.3'
