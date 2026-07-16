@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Test stub mimicking `gateway-changelog generate`. Ignores all flags.
+set -euo pipefail
+cat <<'EOF'
+
+# stub-title
+
+### Features
+
+- Stub feature entry.
+  [#99](https://github.com/Kong/kong-operator/pull/99)
+EOF

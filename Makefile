@@ -140,6 +140,11 @@ CHANGELOG_BIN = $(PROJECT_DIR)/bin/installs/github-kong-gateway-changelog/$(CHAN
 changelog-tool: mise yq ## Download the gateway-changelog generator locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:Kong/gateway-changelog@$(CHANGELOG_VERSION)
 
+.PHONY: changelog
+changelog: changelog-tool ## Assemble CHANGELOG.md for a release from fragments. Usage: make changelog VERSION=vX.Y.Z
+	@test -n "$(VERSION)" || (echo "VERSION is required, e.g. make changelog VERSION=v2.4.0" && exit 1)
+	CHANGELOG_BIN="$(CHANGELOG_BIN)" REPO="Kong/kong-operator" ./scripts/changelog/generate.sh "$(VERSION)"
+
 SKAFFOLD_VERSION = $(shell $(YQ) -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/github-google-container-tools-skaffold/$(SKAFFOLD_VERSION)/skaffold
 .PHONY: skaffold
