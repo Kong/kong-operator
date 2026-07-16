@@ -25,4 +25,43 @@ scripts/changelog/normalize-section.sh "$here/normalize/raw.md" "v2.4.0" "2026-0
 check "normalize-section" "$out" "$here/normalize/expected.md"
 rm -f "$out"
 
+# --- generate test (uses stub tool + isolated work dir) ---
+work="$(mktemp -d)"
+mkdir -p "$work/changelog/unreleased/kong-operator"
+cat > "$work/CHANGELOG.md" <<'EOF'
+# Changelog
+
+## Table of Contents
+
+- [v2.3.0](#v230)
+
+## [v2.3.0]
+
+> Release date: 2026-07-01
+
+### Fixes
+
+- Old fix.
+  [#1](https://github.com/Kong/kong-operator/pull/1)
+EOF
+cat > "$work/changelog/unreleased/kong-operator/99.yaml" <<'EOF'
+message: Stub feature entry.
+type: feature
+EOF
+repo_root="$PWD"
+(
+  cd "$work"
+  CHANGELOG_BIN="$repo_root/scripts/changelog/tests/stub-changelog" \
+  RELEASE_DATE="2026-08-01" \
+  "$repo_root/scripts/changelog/generate.sh" "v2.4.0"
+)
+# fragment archived
+[ -f "$work/changelog/v2.4.0/99.yaml" ] && echo "ok   - generate: fragment archived" || { echo "FAIL - generate: fragment not archived"; fail=1; }
+[ -z "$(ls -A "$work/changelog/unreleased/kong-operator" | grep -v '^\.gitkeep$' || true)" ] && echo "ok   - generate: unreleased drained" || { echo "FAIL - generate: unreleased not drained"; fail=1; }
+# section + TOC present
+grep -q '^- \[v2.4.0\](#v240)$' "$work/CHANGELOG.md" && echo "ok   - generate: toc entry" || { echo "FAIL - generate: no toc entry"; fail=1; }
+grep -q '^## \[v2.4.0\]$' "$work/CHANGELOG.md" && echo "ok   - generate: section heading" || { echo "FAIL - generate: no section heading"; fail=1; }
+grep -q '^> Release date: 2026-08-01$' "$work/CHANGELOG.md" && echo "ok   - generate: release date" || { echo "FAIL - generate: no release date"; fail=1; }
+rm -rf "$work"
+
 exit "$fail"
