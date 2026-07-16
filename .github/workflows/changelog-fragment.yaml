@@ -1,0 +1,144 @@
+name: Changelog fragment
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  scaffold:
+    name: Scaffold changelog fragment
+    runs-on: ubuntu-latest
+    # Skip forks: the bot cannot push to a fork's head branch.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          token: ${{ secrets.PAT_GITHUB }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Compute fragment from PR title
+        id: frag
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labels = (pr.labels || []).map(l => l.name);
+            if (labels.includes('skip-changelog')) {
+              core.info('skip-changelog label present; skipping');
+              core.setOutput('create', 'false');
+              return;
+            }
+            const title = pr.title || '';
+            const m = title.match(/^(\w+)(?:\(([^)]*)\))?(!)?:\s*(.+)$/);
+            if (!m) {
+              core.info('PR title is not conventional; leaving to verify gate');
+              core.setOutput('create', 'false');
+              return;
+            }
+            const [, ccType, ccScope, bang, subject] = m;
+            const body = pr.body || '';
+            const typeMap = { feat: 'feature', fix: 'bugfix', perf: 'performance' };
+            const skip = ['docs','test','chore','ci','refactor','style','build'];
+            let type = typeMap[ccType];
+            if ((ccScope || '').split(',').map(s=>s.trim()).includes('deps')) type = 'dependency';
+            if (bang || /BREAKING CHANGE/.test(body)) type = 'breaking_change';
+            if (!type) {
+              if (skip.includes(ccType)) { core.info(`non-releasable type '${ccType}'`); }
+              else { core.info(`unmapped type '${ccType}'`); }
+              core.setOutput('create', 'false');
+              return;
+            }
+            const allowedScopes = ['dataplane','controlplane','gateway','hybridgateway','konnect','aigateway','eventgateway','crd','deps'];
+            const scope = (ccScope && allowedScopes.includes(ccScope)) ? ccScope : '';
+            core.setOutput('create', 'true');
+            core.setOutput('number', String(pr.number));
+            core.setOutput('type', type);
+            core.setOutput('scope', scope);
+            core.setOutput('message', subject);
+
+      - name: Write and push fragment if missing
+        if: ${{ steps.frag.outputs.create == 'true' }}
+        env:
+          NUM: ${{ steps.frag.outputs.number }}
+          TYPE: ${{ steps.frag.outputs.type }}
+          SCOPE: ${{ steps.frag.outputs.scope }}
+          MESSAGE: ${{ steps.frag.outputs.message }}
+        run: |
+          set -euo pipefail
+          dir="changelog/unreleased/kong-operator"
+          file="${dir}/${NUM}.yaml"
+          if [ -f "$file" ]; then
+            echo "Fragment $file already exists; leaving author edits intact."
+            exit 0
+          fi
+          mkdir -p "$dir"
+          {
+            printf 'message: %s\n' "$MESSAGE"
+            printf 'type: %s\n' "$TYPE"
+            if [ -n "$SCOPE" ]; then printf 'scope: %s\n' "$SCOPE"; fi
+          } > "$file"
+          git config user.name "Kong's Team k8s bot"
+          git config user.email "team-k8s+github-bot@konghq.com"
+          git add "$file"
+          git commit -m "chore(changelog): add fragment for #${NUM}"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
+
+  changelog-present:
+    name: changelog-present
+    runs-on: ubuntu-latest
+    needs: scaffold
+    # Always evaluate the gate (also on forks, where scaffold is skipped).
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+      - name: Require a fragment unless exempt
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const pr = context.payload.pull_request;
+            const labels = (pr.labels || []).map(l => l.name);
+            if (labels.includes('skip-changelog')) {
+              core.info('skip-changelog label present; gate passes');
+              return;
+            }
+            const title = pr.title || '';
+            const m = title.match(/^(\w+)(?:\(([^)]*)\))?(!)?:\s*(.+)$/);
+            if (!m) {
+              core.setFailed("PR title is not a Conventional Commit (e.g. 'fix(dataplane): ...'). Fix the title or add the 'skip-changelog' label.");
+              return;
+            }
+            const ccType = m[1];
+            const skip = ['docs','test','chore','ci','refactor','style','build'];
+            if (skip.includes(ccType)) {
+              core.info(`non-releasable type '${ccType}'; gate passes`);
+              return;
+            }
+            const out = execSync('ls changelog/unreleased/kong-operator/ 2>/dev/null || true').toString();
+            const hasFragment = out.split('\n').some(n => /\.ya?ml$/.test(n) && n !== 'CHANGELOG_TEMPLATE.yaml');
+            if (!hasFragment) {
+              core.setFailed("No changelog fragment found. The bot adds one automatically for in-repo PRs; fork authors must add changelog/unreleased/kong-operator/<PR>.yaml, or apply the 'skip-changelog' label.");
+              return;
+            }
+            core.info('changelog fragment present; gate passes');
