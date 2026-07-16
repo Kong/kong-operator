@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.3.0-rc.1](#v230-rc1)
 - [v2.2.1](#v221)
 - [v2.2.0](#v220)
 - [v2.1.8](#v218)
@@ -51,7 +52,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.3.0-rc.1]
+
+> Release date: 2026-07-15
 
 ### Breaking changes
 
@@ -133,6 +136,11 @@
   [#4804](https://github.com/Kong/kong-operator/pull/4804)
   - introduce `AIGatewayConsumerGroup` CRD with reconciler.
   [#4822](https://github.com/Kong/kong-operator/pull/4822)
+  - allow `AIGatewayConsumer` resources to reference `AIGatewayConsumerGroup`
+    resources.
+  [#4910](https://github.com/Kong/kong-operator/pull/4910)
+  - introduce `AIGatewayIdentityProvider` CRD with reconciler.
+  [#4852](https://github.com/Kong/kong-operator/pull/4852)
   - introduce `AIGatewayMCPServer` CRD with reconciler.
   [#4836](https://github.com/Kong/kong-operator/pull/4836)
   - `KonnectAIGateway` now supports `spec.source: Mirror`, referencing an
@@ -155,6 +163,8 @@
   [#4530](https://github.com/Kong/kong-operator/pull/4530)
 - Conformance: enable GRPCRoute conformance tests for on-prem.
   [#4673](https://github.com/Kong/kong-operator/pull/4673)
+- Kong Event Gateway v1.2.0 is the default KEG DataPlane image.
+  [#4941](https://github.com/Kong/kong-operator/issues/4941)
 
 ### Fixes
 
@@ -2587,6 +2597,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.3.0-rc.1]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.3.0-rc.1
 [v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
 [v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
 [v2.1.8]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.1.8
