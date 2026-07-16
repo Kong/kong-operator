@@ -47,9 +47,11 @@ const (
 	RelatedImageAIGatewayDataPlaneEnvVar = "RELATED_IMAGE_AIGW"
 
 	// DefaultAIGatewayDataPlaneBaseImage is the base image name for the AI Gateway container.
-	DefaultAIGatewayDataPlaneBaseImage = "kong/kong-ai-gateway"
+	// The current AI GW 2.0 is in Beta, so we will temporarily use this registry.
+	// Once the GA version is released, we will switch back to kong/kong-ai-gateway.
+	DefaultAIGatewayDataPlaneBaseImage = "kong/kong-ai-gateway-dev"
 	// DefaultAIGatewayDataPlaneTag is the default image tag for the AI Gateway container.
-	DefaultAIGatewayDataPlaneTag = "2.0.0" // renovate: datasource=docker depName=kong/kong-ai-gateway
+	DefaultAIGatewayDataPlaneTag = "2.0.1-rc.3" // renovate: datasource=docker depName=kong/kong-ai-gateway-dev
 	// DefaultAIGatewayDataPlaneImage is the full default image reference for the AI Gateway container.
 	DefaultAIGatewayDataPlaneImage = DefaultAIGatewayDataPlaneBaseImage + ":" + DefaultAIGatewayDataPlaneTag
 )
