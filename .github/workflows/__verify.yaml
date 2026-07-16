@@ -40,6 +40,10 @@ jobs:
             make-target: verify.crd-breaking-changes
             fetch_depth: 0
             lint-cache: false
+          - name: changelog
+            make-target: verify.changelog
+            fetch_depth: 1
+            lint-cache: false
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0

@@ -64,4 +64,16 @@ grep -q '^## \[v2.4.0\]$' "$work/CHANGELOG.md" && echo "ok   - generate: section
 grep -q '^> Release date: 2026-08-01$' "$work/CHANGELOG.md" && echo "ok   - generate: release date" || { echo "FAIL - generate: no release date"; fail=1; }
 rm -rf "$work"
 
+# --- verify test ---
+if scripts/changelog/verify.sh "$here/verify/good" >/dev/null 2>&1; then
+  echo "ok   - verify: accepts good fragments"
+else
+  echo "FAIL - verify: rejected good fragments"; fail=1
+fi
+if scripts/changelog/verify.sh "$here/verify/bad" >/dev/null 2>&1; then
+  echo "FAIL - verify: accepted bad fragment"; fail=1
+else
+  echo "ok   - verify: rejects bad fragments"
+fi
+
 exit "$fail"
