@@ -134,6 +134,12 @@ CRDIFY = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-crdify/$(CRDIFY_VERSION)/bin
 crdify: mise yq ## Download crdify locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/crdify@v$(CRDIFY_VERSION)
 
+CHANGELOG_VERSION = $(shell $(YQ) -r '.changelog' < $(TOOLS_VERSIONS_FILE))
+CHANGELOG_BIN = $(PROJECT_DIR)/bin/installs/github-kong-gateway-changelog/$(CHANGELOG_VERSION:v%=%)/changelog
+.PHONY: changelog-tool
+changelog-tool: mise yq ## Download the gateway-changelog generator locally if necessary.
+	$(MAKE) mise-install DEP_VER=github:Kong/gateway-changelog@$(CHANGELOG_VERSION)
+
 SKAFFOLD_VERSION = $(shell $(YQ) -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/github-google-container-tools-skaffold/$(SKAFFOLD_VERSION)/skaffold
 .PHONY: skaffold

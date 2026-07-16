@@ -1,0 +1,15 @@
+# Copy this file to <your-PR-number>.yaml and fill it in.
+# In practice the changelog bot pre-fills it from your PR title; edit only if
+# the one-line title does not capture the change well.
+
+# Required. Human-readable description. May span multiple lines for rich prose.
+message: |
+  Short description of the change. Prefer complete sentences; include
+  migration notes here when behaviour changes.
+
+# Required. One of: feature, bugfix, dependency, deprecation, breaking_change, performance
+type: bugfix
+
+# Optional. One of: dataplane, controlplane, gateway, hybridgateway, konnect,
+# aigateway, eventgateway, crd, deps. Omit when there is no meaningful scope.
+scope: dataplane
