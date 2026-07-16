@@ -1,0 +1,28 @@
+# An AIGatewayPolicy resource with inline config that adds a custom header to the response of an API.
+# Required bindings:
+#   - namespace: The namespace where the AIGatewayPolicy resource will be created.
+#   - aigw_cp_name: The name of the AIGateway control plane resource to which this policy will be applied. Should be in the same namespace as the AIGatewayPolicy resource.
+#   - aigw_policy_name: The name of the AIGatewayPolicy resource to be created.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($aigw_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+      namespace: ($namespace)
+  apiSpec:
+    type: response-transformer
+    displayName: "AIGateway Policy Response Transformer"
+    enabled: "Enabled"
+    global: "Disabled"
+    name: ($aigw_policy_name)
+    config:
+      type: inline
+      value:
+        add:
+          headers:
+            - "Modified-By:Kong-Operator-Chainsaw-Test"

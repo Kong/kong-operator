@@ -1,0 +1,64 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-policy
+spec:
+  description: |
+    Konnect AIGateway - Policy. Stands up the Konnect AIGateway control plane
+    and creates policies to test the AIGatewayPolicy CRD. Then check for the policies
+    on Konnect to validate that they were created successfully.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: Create-aigateway-policy
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-inline-config']))
+      try:
+        - apply:
+            file: 01-aigateway-policy-inline-config.yaml
+        - assert:
+            file: 00-assert-aigateway-policy-programmed.yaml
+    # TODO: Add a step to attach the policy to an API and verify that the policy is applied correctly.
+    - name: Create-aigateway-policy-secretRef-config.yaml
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-secretref-config']))
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-secretref-config-secret']))
+      try:
+        - apply:
+            file: 02-aigateway-policy-secretRef-config.yaml
+        - assert:
+            file: 00-assert-aigateway-policy-programmed.yaml
+     # TODO: Add a step to attach the policy to an API and verify that the policy is applied correctly.
+     # TODO: Add a step to update the SecretRef config and verify that the policy is updated correctly.
