@@ -48,6 +48,17 @@ raw="$(mktemp)"
 
 section="$(mktemp)"
 "$here/normalize-section.sh" "$raw" "$version" "$release_date" > "$section"
+
+# Guard against a tool run that silently produced no entries (e.g. all
+# fragments were skipped because of an unrecognized file extension). Merging
+# an empty section and then archiving the fragments anyway would look like a
+# successful release but silently drop every change. Fail loudly instead.
+if ! grep -qE '^- ' "$section"; then
+  echo "ERROR: generated section for ${version} has no entries — refusing to archive fragments; check fragment file extensions and tool output" >&2
+  rm -f "$raw" "$section"
+  exit 1
+fi
+
 "$here/merge-changelog.sh" "$changelog" "$section" "$version"
 rm -f "$raw" "$section"
 
