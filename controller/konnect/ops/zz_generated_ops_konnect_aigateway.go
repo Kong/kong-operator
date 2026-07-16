@@ -37,6 +37,9 @@ func createKonnectAIGateway(
 			Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
 			Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
 		}
+		if v := resp.AIGateway.ConfigHash; v != nil {
+			obj.Status.ConfigHash = *v
+		}
 		return nil
 	}
 	req, err := obj.Spec.APISpec.ToCreateAIGatewayRequest()
@@ -62,6 +65,9 @@ func createKonnectAIGateway(
 		Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
 		Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
 	}
+	if v := resp.AIGateway.ConfigHash; v != nil {
+		obj.Status.ConfigHash = *v
+	}
 	return nil
 }
 
@@ -80,11 +86,24 @@ func updateKonnectAIGateway(
 	}
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
-	_, err = sdk.UpdateAiGateway(ctx, id, *req)
+	resp, err := sdk.UpdateAiGateway(ctx, id, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createKonnectAIGateway(ctx, sdk, obj)
 		})
+	}
+	const (
+		protocolHTTPS = "https://"
+		protocolHTTP  = "http://"
+	)
+	if resp != nil && resp.AIGateway != nil {
+		obj.Status.Endpoints = &konnectv1alpha1.KonnectAIGatewayEndpoints{
+			Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
+			Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
+		}
+		if v := resp.AIGateway.ConfigHash; v != nil {
+			obj.Status.ConfigHash = *v
+		}
 	}
 	return nil
 }

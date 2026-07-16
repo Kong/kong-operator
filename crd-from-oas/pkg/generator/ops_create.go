@@ -57,6 +57,11 @@ type opsCreateFuncData struct {
 	SingletonNoID        bool
 	RespRootUnion        *opsCreateRootUnionResponseData
 	ResponseStatusFields []config.ResponseStatusFieldConfig
+	// HasNestedResponseStatusFields is true when at least one ResponseStatusFields
+	// entry generates a nested struct (i.e. has Fields, not a scalar RespPath).
+	// Gates emission of the protocolHTTPS/protocolHTTP consts, which only the
+	// nested TrimPrefix path uses.
+	HasNestedResponseStatusFields bool
 	// Associations lists the top-level spec association fields whose membership
 	// is enforced by a hand-written helper called after the entity is created.
 	Associations []opsAssociationData
@@ -164,29 +169,30 @@ func (g *Generator) generateOpsCreateFuncBody(
 	}
 
 	return &opsCreateFuncData{
-		Entity:               entityName,
-		APIAlias:             g.config.APIGroupPackageAlias,
-		SDKInterface:         sdkInterface,
-		SDKMethod:            sdkMethod,
-		CreateReqMethod:      createReqMethod,
-		CreateReqType:        createReqType,
-		CreateReqBodyPointer: schema.CreateReqBodyPointer,
-		NeedsClient:          needsClient,
-		HasReferences:        g.entityHasParentRefReplacement(entityName),
-		RespField:            schema.SuccessResponseRef,
-		HasTags:              hasTags,
-		HasLabels:            hasLabels,
-		LabelsPointer:        labelsPointer,
-		Parents:              parents,
-		CreateFullyWrapped:   createFullyWrapped,
-		CreateBodyField:      createBodyField,
-		RespIDIsPointer:      schema.RespIDIsPointer,
-		SingletonNoID:        isSingletonNoID(schema),
-		RespRootUnion:        respRootUnion,
-		ResponseStatusFields: opsConfig.ResponseStatusFields,
-		Associations:         associations,
-		SupportsMirror:       g.entitySupportsMirror(entityName),
-		GetSDKMethod:         "Get" + strings.TrimPrefix(sdkMethod, "Create"),
+		Entity:                        entityName,
+		APIAlias:                      g.config.APIGroupPackageAlias,
+		SDKInterface:                  sdkInterface,
+		SDKMethod:                     sdkMethod,
+		CreateReqMethod:               createReqMethod,
+		CreateReqType:                 createReqType,
+		CreateReqBodyPointer:          schema.CreateReqBodyPointer,
+		NeedsClient:                   needsClient,
+		HasReferences:                 g.entityHasParentRefReplacement(entityName),
+		RespField:                     schema.SuccessResponseRef,
+		HasTags:                       hasTags,
+		HasLabels:                     hasLabels,
+		LabelsPointer:                 labelsPointer,
+		Parents:                       parents,
+		CreateFullyWrapped:            createFullyWrapped,
+		CreateBodyField:               createBodyField,
+		RespIDIsPointer:               schema.RespIDIsPointer,
+		SingletonNoID:                 isSingletonNoID(schema),
+		RespRootUnion:                 respRootUnion,
+		ResponseStatusFields:          opsConfig.ResponseStatusFields,
+		HasNestedResponseStatusFields: hasNestedResponseStatusFields(opsConfig.ResponseStatusFields),
+		Associations:                  associations,
+		SupportsMirror:                g.entitySupportsMirror(entityName),
+		GetSDKMethod:                  "Get" + strings.TrimPrefix(sdkMethod, "Create"),
 	}, nil
 }
 

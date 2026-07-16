@@ -26,6 +26,17 @@ type opsFileImport struct {
 	Path  string
 }
 
+// hasNestedResponseStatusFields reports whether any entry generates a nested
+// status struct (has Fields) rather than a scalar RespPath field.
+func hasNestedResponseStatusFields(fields []config.ResponseStatusFieldConfig) bool {
+	for _, f := range fields {
+		if len(f.Fields) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // generateEntityOpsFile emits a zz_generated_ops_<entity>.go file containing
 // create<Entity>, update<Entity>, delete<Entity>, and get<Entity>ForUID
 // functions (whichever are configured). It returns the file plus metadata for
@@ -83,7 +94,8 @@ func (g *Generator) generateEntityOpsFile(
 			deleteNeedsOpsImport ||
 			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
-		needsStringsImport := createData != nil && len(createData.ResponseStatusFields) > 0
+		needsStringsImport := (createData != nil && createData.HasNestedResponseStatusFields) ||
+			(updateData != nil && updateData.HasNestedResponseStatusFields)
 		needsJSONImport := createData != nil && createData.RespRootUnion != nil
 
 		extraImportSet := make(map[string]string)
