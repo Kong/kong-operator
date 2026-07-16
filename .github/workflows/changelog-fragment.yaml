@@ -81,11 +81,15 @@ jobs:
             exit 0
           fi
           mkdir -p "$dir"
-          {
-            printf 'message: %s\n' "$MESSAGE"
-            printf 'type: %s\n' "$TYPE"
-            if [ -n "$SCOPE" ]; then printf 'scope: %s\n' "$SCOPE"; fi
-          } > "$file"
+          # Build the fragment with yq so the PR-title-derived MESSAGE is safely
+          # YAML-escaped (raw printf interpolation broke on titles containing ": "
+          # or " #123", producing invalid or silently truncated YAML).
+          yq -n '
+            .message = strenv(MESSAGE) |
+            .type = strenv(TYPE) |
+            .scope = strenv(SCOPE) |
+            del(.scope | select(. == ""))
+          ' > "$file"
           git config user.name "Kong's Team k8s bot"
           git config user.email "team-k8s+github-bot@konghq.com"
           git add "$file"
@@ -129,10 +133,19 @@ jobs:
               core.setFailed("PR title is not a Conventional Commit (e.g. 'fix(dataplane): ...'). Fix the title or add the 'skip-changelog' label.");
               return;
             }
-            const ccType = m[1];
+            // Mirror scaffold's "Compute fragment from PR title" step exactly: the raw
+            // conventional-commit type is only exempt from the fragment requirement if
+            // none of scaffold's overrides (deps-scope -> dependency, !/BREAKING CHANGE
+            // -> breaking_change) would have forced a fragment to be created.
+            const [, ccType, ccScope, bang, subject] = m;
+            const body = pr.body || '';
+            const typeMap = { feat: 'feature', fix: 'bugfix', perf: 'performance' };
             const skip = ['docs','test','chore','ci','refactor','style','build'];
-            if (skip.includes(ccType)) {
-              core.info(`non-releasable type '${ccType}'; gate passes`);
+            let type = typeMap[ccType];
+            if ((ccScope || '').split(',').map(s=>s.trim()).includes('deps')) type = 'dependency';
+            if (bang || /BREAKING CHANGE/.test(body)) type = 'breaking_change';
+            if (!type) {
+              core.info(`non-releasable type '${ccType}' (no override fired); gate passes`);
               return;
             }
             const out = execSync('ls changelog/unreleased/kong-operator/ 2>/dev/null || true').toString();
