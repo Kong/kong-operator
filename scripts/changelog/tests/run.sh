@@ -19,4 +19,10 @@ scripts/changelog/merge-changelog.sh "$tmp" "$here/merge/section.md" "v2.4.0"
 check "merge-changelog" "$tmp" "$here/merge/expected-changelog.md"
 rm -f "$tmp"
 
+# --- normalize test ---
+out="$(mktemp)"
+scripts/changelog/normalize-section.sh "$here/normalize/raw.md" "v2.4.0" "2026-08-01" > "$out"
+check "normalize-section" "$out" "$here/normalize/expected.md"
+rm -f "$out"
+
 exit "$fail"
