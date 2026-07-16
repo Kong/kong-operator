@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.3.0-rc.2](#v230-rc2)
 - [v2.3.0-rc.1](#v230-rc1)
 - [v2.2.1](#v221)
 - [v2.2.0](#v220)
@@ -51,6 +52,16 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [v2.3.0-rc.2]
+
+> Release date: 2026-07-16
+
+### Changed
+
+- AIGateway: update the default AI Gateway DataPlane image to
+  `kong/kong-ai-gateway-dev:2.0.1-rc.3`.
+  [#4965](https://github.com/Kong/kong-operator/pull/4965)
 
 ## [v2.3.0-rc.1]
 
@@ -2597,6 +2608,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.3.0-rc.2]: https://github.com/Kong/kong-operator/compare/v2.3.0-rc.1..v2.3.0-rc.2
 [v2.3.0-rc.1]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.3.0-rc.1
 [v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
 [v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
