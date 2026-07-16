@@ -226,7 +226,11 @@ branch and catch incompatible schema changes before CI does.
    make verify.crd-breaking-changes
    ```
 
-6. **Update CHANGELOG.md** - For significant changes, add release notes
+6. **Add a changelog fragment** - Do NOT edit `CHANGELOG.md` directly. PRs carry a
+   per-PR fragment at `changelog/unreleased/kong-operator/<PR>.yaml`; the changelog
+   bot scaffolds it from your Conventional Commit title. Edit it for richer prose.
+   Exempt with the `skip-changelog` label or a non-releasable type. `CHANGELOG.md`
+   is generated at release time via `make changelog`. See `changelog/README.md`.
 
 ### Verify Before Commit
 

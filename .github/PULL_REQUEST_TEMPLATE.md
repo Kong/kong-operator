@@ -6,8 +6,10 @@ Fixes #
 
 **Special notes for your reviewer**:
 
-**PR Readiness Checklist**:
+## Changelog
 
-Complete these before marking the PR as `ready to review`:
+- [ ] This PR has a changelog fragment, or is exempt (non-releasable type, or `skip-changelog` label).
 
-- [ ] the `CHANGELOG.md` release notes have been updated to reflect significant changes
+The changelog bot adds `changelog/unreleased/kong-operator/<PR>.yaml` automatically
+from your Conventional Commit title. Edit it if the one-line title is not enough.
+Do **not** edit `CHANGELOG.md` directly. See `changelog/README.md`.
