@@ -91,6 +91,11 @@ func (obj *EventGatewayVirtualClusterProducePolicy) GetParentRef() commonv1alpha
 	return obj.GetEventGatewayVirtualClusterRef()
 }
 
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayVirtualClusterProducePolicy) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.EventGatewayVirtualClusterRef = ref
+}
+
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *EventGatewayVirtualClusterProducePolicy) SetParentID(id string) {
 	obj.SetVirtualClusterID(id)

@@ -75,6 +75,11 @@ func (obj *PortalPage) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetPortalRef()
 }
 
+// SetParentRef sets the reference to the parent entity.
+func (obj *PortalPage) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.PortalRef = ref
+}
+
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *PortalPage) SetParentID(id string) {
 	obj.SetPortalID(id)

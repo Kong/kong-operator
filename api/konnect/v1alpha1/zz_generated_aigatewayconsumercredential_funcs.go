@@ -120,6 +120,11 @@ func (obj *AIGatewayConsumerCredential) GetParentRef() commonv1alpha1.ObjectRef 
 	return obj.GetAIGatewayConsumerRef()
 }
 
+// SetParentRef sets the reference to the parent entity.
+func (obj *AIGatewayConsumerCredential) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.AIGatewayConsumerRef = ref
+}
+
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *AIGatewayConsumerCredential) SetParentID(id string) {
 	obj.SetConsumerID(id)
