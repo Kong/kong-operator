@@ -127,7 +127,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -332,6 +336,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -667,6 +674,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1004,6 +1014,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1023,7 +1036,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -1228,6 +1245,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1247,7 +1267,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -1452,6 +1476,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1471,7 +1498,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -1676,6 +1707,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1695,7 +1729,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -1900,6 +1938,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1919,7 +1960,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -2124,6 +2169,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -2456,6 +2504,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -2475,7 +2526,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -2680,6 +2735,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -2699,7 +2757,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -2904,6 +2966,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -2923,7 +2988,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -3128,6 +3197,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -3147,7 +3219,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -3352,6 +3428,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -3371,7 +3450,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -3576,6 +3659,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -3595,7 +3681,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -3800,6 +3890,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -3843,7 +3936,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -4048,6 +4145,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -4380,6 +4480,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -4399,7 +4502,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -4604,6 +4711,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -4623,7 +4733,11 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: Basic auth config for an upstream model provider.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -4828,6 +4942,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.

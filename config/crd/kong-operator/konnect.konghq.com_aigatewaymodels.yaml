@@ -123,18 +123,25 @@ spec:
                     description: API configuration.
                     properties:
                       access:
-                        description: Access control configuration for a model.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Access control configuration for a model.
                         properties:
                           acls:
-                            description: Access control rules. Configure exactly one
-                              of `allow` or `deny`.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Access control rules. Configure exactly one of `allow` or `deny`.
                             properties:
                               allow:
                                 description: Allow configuration.
                                 properties:
                                   allow:
                                     description: |-
-                                      List of Consumers, Consumer Groups, or Authenticated Groups that are
+                                      List of Consumer Groups Names, or Authenticated Groups Names that are
                                       permitted access.
                                     items:
                                       description: |-
@@ -170,7 +177,7 @@ spec:
                                 properties:
                                   deny:
                                     description: |-
-                                      List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+                                      List of Consumer Groups Names, or Authenticated Groups Names that are denied
                                       access.
                                     items:
                                       description: |-
@@ -235,6 +242,9 @@ spec:
                         properties:
                           balancer:
                             description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
                               Configuration for a model's load balancer when multiple target models are
                               configured.
                             properties:
@@ -648,8 +658,11 @@ spec:
                                         - Disabled
                                         type: string
                                       config:
-                                        description: Configuration for an embeddings
-                                          model.
+                                        description: |-
+                                          **Pre-release Feature**
+                                          This feature is currently in beta and is subject to change.
+
+                                          Configuration for an embeddings model.
                                         properties:
                                           azure:
                                             description: Azure configuration.
@@ -669,11 +682,9 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                             required:
                                             - deploymentID
-                                            - upstreamURL
                                             type: object
                                           bedrock:
                                             description: Bedrock configuration.
@@ -705,22 +716,22 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                               videoOutputS3URI:
                                                 description: S3 URI for storing video
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: Configuration for a model
-                                                  hosted on Google Cloud Project.
+                                                description: |-
+                                                  **Pre-release Feature**
+                                                  This feature is currently in beta and is subject to change.
+
+                                                  Configuration for a model hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -749,10 +760,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           huggingface:
                                             description: Huggingface configuration.
@@ -761,7 +769,6 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                               useCache:
                                                 description: Whether to use the Hugging
@@ -777,31 +784,15 @@ spec:
                                                 - Enabled
                                                 - Disabled
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           mistral:
                                             description: Mistral configuration.
                                             properties:
-                                              format:
-                                                description: The request format to
-                                                  use when communicating with the
-                                                  Mistral model.
-                                                enum:
-                                                - ollama
-                                                - openai
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
                                               upstreamURL:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - format
-                                            - upstreamURL
                                             type: object
                                           ollama:
                                             description: Ollama configuration.
@@ -810,10 +801,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           openai:
                                             description: Openai configuration.
@@ -822,10 +810,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           type:
                                             description: Type designates the type
@@ -845,8 +830,11 @@ spec:
                                             description: Vertex configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: Configuration for a model
-                                                  hosted on Google Cloud Project.
+                                                description: |-
+                                                  **Pre-release Feature**
+                                                  This feature is currently in beta and is subject to change.
+
+                                                  Configuration for a model hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -875,10 +863,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                         required:
                                         - type
@@ -946,8 +931,11 @@ spec:
                                     minimum: 10
                                     type: integer
                                   vectordb:
-                                    description: Configuration for the vector database
-                                      used by the model.
+                                    description: |-
+                                      **Pre-release Feature**
+                                      This feature is currently in beta and is subject to change.
+
+                                      Configuration for the vector database used by the model.
                                     properties:
                                       pgvector:
                                         description: PgVector configuration.
@@ -1445,7 +1433,11 @@ spec:
                             - algorithm
                             type: object
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for AI Gateway logging.
                             properties:
                               payloads:
                                 enum:
@@ -1463,10 +1455,15 @@ spec:
                               to 0 for unlimited.
                             type: integer
                           model:
-                            description: AIGatewayModelAPIConfigModel is a type alias.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
                             properties:
                               alias:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   An alias for the model, used to select the target virtual model when passed
                                   in the "model" parameter of the request body.
                                   When not set, this defaults to the AI Gateway model's name.
@@ -1550,7 +1547,11 @@ spec:
                             maxLength: 253
                             type: string
                           route:
-                            description: Configuration for an AI Gateway route.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -1719,6 +1720,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -1747,7 +1751,11 @@ spec:
                               - Disabled
                               type: string
                             config:
-                              description: Configuration for a target model.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
+                                Configuration for a target model.
                               properties:
                                 anthropic:
                                   description: Anthropic configuration.
@@ -2164,8 +2172,11 @@ spec:
                                         outputs.
                                       type: integer
                                     gcpEnvironment:
-                                      description: Configuration for a model hosted
-                                        on Google Cloud Project.
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+
+                                        Configuration for a model hosted on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
@@ -2582,8 +2593,11 @@ spec:
                                         outputs.
                                       type: integer
                                     gcpEnvironment:
-                                      description: Configuration for a model hosted
-                                        on Google Cloud Project.
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+
+                                        Configuration for a model hosted on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
@@ -2781,18 +2795,25 @@ spec:
                     description: Model configuration.
                     properties:
                       access:
-                        description: Access control configuration for a model.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Access control configuration for a model.
                         properties:
                           acls:
-                            description: Access control rules. Configure exactly one
-                              of `allow` or `deny`.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Access control rules. Configure exactly one of `allow` or `deny`.
                             properties:
                               allow:
                                 description: Allow configuration.
                                 properties:
                                   allow:
                                     description: |-
-                                      List of Consumers, Consumer Groups, or Authenticated Groups that are
+                                      List of Consumer Groups Names, or Authenticated Groups Names that are
                                       permitted access.
                                     items:
                                       description: |-
@@ -2828,7 +2849,7 @@ spec:
                                 properties:
                                   deny:
                                     description: |-
-                                      List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+                                      List of Consumer Groups Names, or Authenticated Groups Names that are denied
                                       access.
                                     items:
                                       description: |-
@@ -2892,6 +2913,9 @@ spec:
                         properties:
                           balancer:
                             description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
                               Configuration for a model's load balancer when multiple target models are
                               configured.
                             properties:
@@ -3305,8 +3329,11 @@ spec:
                                         - Disabled
                                         type: string
                                       config:
-                                        description: Configuration for an embeddings
-                                          model.
+                                        description: |-
+                                          **Pre-release Feature**
+                                          This feature is currently in beta and is subject to change.
+
+                                          Configuration for an embeddings model.
                                         properties:
                                           azure:
                                             description: Azure configuration.
@@ -3326,11 +3353,9 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                             required:
                                             - deploymentID
-                                            - upstreamURL
                                             type: object
                                           bedrock:
                                             description: Bedrock configuration.
@@ -3362,22 +3387,22 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                               videoOutputS3URI:
                                                 description: S3 URI for storing video
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: Configuration for a model
-                                                  hosted on Google Cloud Project.
+                                                description: |-
+                                                  **Pre-release Feature**
+                                                  This feature is currently in beta and is subject to change.
+
+                                                  Configuration for a model hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -3406,10 +3431,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           huggingface:
                                             description: Huggingface configuration.
@@ -3418,7 +3440,6 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                               useCache:
                                                 description: Whether to use the Hugging
@@ -3434,31 +3455,15 @@ spec:
                                                 - Enabled
                                                 - Disabled
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           mistral:
                                             description: Mistral configuration.
                                             properties:
-                                              format:
-                                                description: The request format to
-                                                  use when communicating with the
-                                                  Mistral model.
-                                                enum:
-                                                - ollama
-                                                - openai
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
                                               upstreamURL:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - format
-                                            - upstreamURL
                                             type: object
                                           ollama:
                                             description: Ollama configuration.
@@ -3467,10 +3472,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           openai:
                                             description: Openai configuration.
@@ -3479,10 +3481,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           type:
                                             description: Type designates the type
@@ -3502,8 +3501,11 @@ spec:
                                             description: Vertex configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: Configuration for a model
-                                                  hosted on Google Cloud Project.
+                                                description: |-
+                                                  **Pre-release Feature**
+                                                  This feature is currently in beta and is subject to change.
+
+                                                  Configuration for a model hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -3532,10 +3534,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                         required:
                                         - type
@@ -3603,8 +3602,11 @@ spec:
                                     minimum: 10
                                     type: integer
                                   vectordb:
-                                    description: Configuration for the vector database
-                                      used by the model.
+                                    description: |-
+                                      **Pre-release Feature**
+                                      This feature is currently in beta and is subject to change.
+
+                                      Configuration for the vector database used by the model.
                                     properties:
                                       pgvector:
                                         description: PgVector configuration.
@@ -4102,7 +4104,11 @@ spec:
                             - algorithm
                             type: object
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for AI Gateway logging.
                             properties:
                               payloads:
                                 enum:
@@ -4120,19 +4126,26 @@ spec:
                               to 0 for unlimited.
                             type: integer
                           model:
-                            description: AIGatewayModelModelConfigModel is a type
-                              alias.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
                             properties:
                               alias:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   An alias for the model, used to select the target virtual model when passed
                                   in the "model" parameter of the request body.
                                   When not set, this defaults to the AI Gateway model's name.
                                 maxLength: 253
                                 type: string
                               nameHeader:
-                                description: Display the model name selected in the
-                                  X-Kong-LLM-Model response header
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Display the model name selected in the X-Kong-LLM-Model response header
                                 enum:
                                 - Enabled
                                 - Disabled
@@ -4215,7 +4228,11 @@ spec:
                             maxLength: 253
                             type: string
                           route:
-                            description: Configuration for an AI Gateway route.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -4384,6 +4401,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -4412,7 +4432,11 @@ spec:
                               - Disabled
                               type: string
                             config:
-                              description: Configuration for a target model.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
+                                Configuration for a target model.
                               properties:
                                 anthropic:
                                   description: Anthropic configuration.
@@ -4829,8 +4853,11 @@ spec:
                                         outputs.
                                       type: integer
                                     gcpEnvironment:
-                                      description: Configuration for a model hosted
-                                        on Google Cloud Project.
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+
+                                        Configuration for a model hosted on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
@@ -5247,8 +5274,11 @@ spec:
                                         outputs.
                                       type: integer
                                     gcpEnvironment:
-                                      description: Configuration for a model hosted
-                                        on Google Cloud Project.
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+
+                                        Configuration for a model hosted on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
