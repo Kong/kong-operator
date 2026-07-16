@@ -75,7 +75,7 @@ jobs:
         run: |
           set -euo pipefail
           dir="changelog/unreleased/kong-operator"
-          file="${dir}/${NUM}.yaml"
+          file="${dir}/${NUM}.yml"
           if [ -f "$file" ]; then
             echo "Fragment $file already exists; leaving author edits intact."
             exit 0
@@ -151,7 +151,7 @@ jobs:
             const out = execSync('ls changelog/unreleased/kong-operator/ 2>/dev/null || true').toString();
             const hasFragment = out.split('\n').some(n => /\.ya?ml$/.test(n) && n !== 'CHANGELOG_TEMPLATE.yaml');
             if (!hasFragment) {
-              core.setFailed("No changelog fragment found. The bot adds one automatically for in-repo PRs; fork authors must add changelog/unreleased/kong-operator/<PR>.yaml, or apply the 'skip-changelog' label.");
+              core.setFailed("No changelog fragment found. The bot adds one automatically for in-repo PRs; fork authors must add changelog/unreleased/kong-operator/<PR>.yml, or apply the 'skip-changelog' label.");
               return;
             }
             core.info('changelog fragment present; gate passes');

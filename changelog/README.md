@@ -7,7 +7,7 @@ edit `CHANGELOG.md` directly in feature PRs.**
 
 1. Open a PR with a [Conventional Commits](https://www.conventionalcommits.org/)
    title, e.g. `fix(dataplane): stop false-positive env warnings`.
-2. The changelog bot commits `changelog/unreleased/kong-operator/<PR-number>.yaml`
+2. The changelog bot commits `changelog/unreleased/kong-operator/<PR-number>.yml`
    to your branch, pre-filled from the title.
 3. Edit that file if the one-line title does not capture the change. Rich,
    multi-line `message` prose is encouraged.
