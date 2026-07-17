@@ -63,7 +63,8 @@ spec:
             - /aigw11/chat
       targets:
         - name: qwen2.5:0.5b
-          provider: openai-provider
+          provider:
+            name: openai-provider
           config:
             type: openai
             openai:
