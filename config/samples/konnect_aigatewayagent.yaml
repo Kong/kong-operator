@@ -50,21 +50,6 @@ spec:
             - content: "In short words"
               role: user
 ---
-kind: AIGatewayConsumer
-apiVersion: konnect.konghq.com/v1alpha1
-metadata:
-  name: ai-gw-agent-consumer
-  namespace: default
-spec:
-  aiGatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: ai-gw-cp-1
-  apiSpec:
-    name: agent-dev-consumer
-    displayName: Dev Team Consumer
-    type: api-key
----
 kind: AIGatewayConsumerGroup
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
@@ -97,7 +82,7 @@ spec:
     # References to AIGatewayPolicy CRs (by metadata.name) applied to this agent.
     policies:
       - name: aigw-agent-policy-prompt-decorator
-    # Access control: allow-list of AIGatewayConsumer / AIGatewayConsumerGroup
+    # Access control: allow-list of AIGatewayConsumerGroup
     # CRs (referenced by metadata.name). The operator resolves each reference to
     # the referenced CR's Konnect name at reconcile time.
     access:
@@ -105,8 +90,6 @@ spec:
         type: allow
         allow:
           allow:
-            - kind: AIGatewayConsumer
-              name: ai-gw-agent-consumer
             - kind: AIGatewayConsumerGroup
               name: ai-gw-agent-consumer-group
     config:

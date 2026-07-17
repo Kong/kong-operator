@@ -13,7 +13,7 @@ import (
 )
 
 // aclReferencesScheme returns a scheme with the konnect v1alpha1 types
-// registered so a fake client can serve referenced AIGatewayConsumer CRs.
+// registered so a fake client can serve referenced AIGatewayConsumerGroup CRs.
 func aclReferencesScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
@@ -21,13 +21,13 @@ func aclReferencesScheme(t *testing.T) *runtime.Scheme {
 	return scheme
 }
 
-// programmedConsumer builds an AIGatewayConsumer that already has a Konnect ID
+// programmedConsumerGroup builds an AIGatewayConsumerGroup that already has a Konnect ID
 // and a Konnect name, i.e. a reference target that resolves successfully.
-func programmedConsumer(name, namespace, konnectName, konnectID string) *konnectv1alpha1.AIGatewayConsumer {
-	c := &konnectv1alpha1.AIGatewayConsumer{
+func programmedConsumerGroup(name, namespace, konnectName, konnectID string) *konnectv1alpha1.AIGatewayConsumerGroup {
+	c := &konnectv1alpha1.AIGatewayConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-		Spec: konnectv1alpha1.AIGatewayConsumerSpec{
-			APISpec: konnectv1alpha1.AIGatewayConsumerAPISpec{
+		Spec: konnectv1alpha1.AIGatewayConsumerGroupSpec{
+			APISpec: konnectv1alpha1.AIGatewayConsumerGroupAPISpec{
 				Name: konnectv1alpha1.AIGatewayEntityIdentifier(konnectName),
 			},
 		},
@@ -65,13 +65,13 @@ func testAgentWithPolicyRef(namespace string, ref konnectv1alpha1.AIGatewayPolic
 }
 
 // TestToCreateAIGatewayAgentRequest_ResolvesACLAllowRefs verifies that an agent
-// with a single allow ACL reference to a programmed AIGatewayConsumer resolves
-// to the consumer's Konnect name in the SDK request's access.acls.allow.allow
-// union arm.
+// with a single allow ACL reference to a programmed AIGatewayConsumerGroup
+// resolves to the consumer group's Konnect name in the SDK request's
+// access.acls.allow.allow union arm.
 func TestToCreateAIGatewayAgentRequest_ResolvesACLAllowRefs(t *testing.T) {
 	t.Parallel()
 
-	consumer := programmedConsumer("consumer-1", "ns", "konnect-consumer-name", "kid-consumer-1")
+	consumerGroup := programmedConsumerGroup("consumer-group-1", "ns", "konnect-consumer-group-name", "kid-consumer-group-1")
 
 	agent := &konnectv1alpha1.AIGatewayAgent{
 		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "ns"},
@@ -83,7 +83,7 @@ func TestToCreateAIGatewayAgentRequest_ResolvesACLAllowRefs(t *testing.T) {
 						Type: konnectv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
 						Allow: &konnectv1alpha1.AIGatewayAllowACL{
 							Allow: []konnectv1alpha1.AIGatewayACLRef{
-								{Kind: "AIGatewayConsumer", Name: "consumer-1"},
+								{Kind: "AIGatewayConsumerGroup", Name: "consumer-group-1"},
 							},
 						},
 					},
@@ -92,25 +92,25 @@ func TestToCreateAIGatewayAgentRequest_ResolvesACLAllowRefs(t *testing.T) {
 		},
 	}
 
-	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumer).Build()
+	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumerGroup).Build()
 
 	req, err := agent.ToCreateAIGatewayAgentRequest(t.Context(), cl)
 	require.NoError(t, err)
 	require.NotNil(t, req.Access)
 	require.NotNil(t, req.Access.Acls)
 	require.NotNil(t, req.Access.Acls.AIGatewayAllowACL, "the allow union arm must be selected")
-	assert.Equal(t, []string{"konnect-consumer-name"}, req.Access.Acls.AIGatewayAllowACL.Allow)
+	assert.Equal(t, []string{"konnect-consumer-group-name"}, req.Access.Acls.AIGatewayAllowACL.Allow)
 	assert.Nil(t, req.Access.Acls.AIGatewayDenyACL, "the deny union arm must not be set")
 }
 
 // TestToCreateAIGatewayAgentRequest_ACLRefNotProgrammed asserts the reference
-// resolution surfaces a not-programmed error when the referenced consumer has
+// resolution surfaces a not-programmed error when the referenced consumer group has
 // no Konnect ID yet.
 func TestToCreateAIGatewayAgentRequest_ACLRefNotProgrammed(t *testing.T) {
 	t.Parallel()
 
-	consumer := &konnectv1alpha1.AIGatewayConsumer{
-		ObjectMeta: metav1.ObjectMeta{Name: "consumer-1", Namespace: "ns"},
+	consumerGroup := &konnectv1alpha1.AIGatewayConsumerGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "consumer-group-1", Namespace: "ns"},
 	}
 
 	agent := &konnectv1alpha1.AIGatewayAgent{
@@ -122,7 +122,7 @@ func TestToCreateAIGatewayAgentRequest_ACLRefNotProgrammed(t *testing.T) {
 						Type: konnectv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
 						Allow: &konnectv1alpha1.AIGatewayAllowACL{
 							Allow: []konnectv1alpha1.AIGatewayACLRef{
-								{Kind: "AIGatewayConsumer", Name: "consumer-1"},
+								{Kind: "AIGatewayConsumerGroup", Name: "consumer-group-1"},
 							},
 						},
 					},
@@ -131,7 +131,7 @@ func TestToCreateAIGatewayAgentRequest_ACLRefNotProgrammed(t *testing.T) {
 		},
 	}
 
-	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumer).Build()
+	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumerGroup).Build()
 
 	_, err := agent.ToCreateAIGatewayAgentRequest(t.Context(), cl)
 	require.Error(t, err)
@@ -194,7 +194,7 @@ func TestToCreateAIGatewayAgentRequest_RejectsPolicyRefFromDifferentGateway(t *t
 func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *testing.T) {
 	t.Parallel()
 
-	consumer := programmedConsumer("consumer-1", "default", "konnect-consumer-name", "kid-consumer-1")
+	consumerGroup := programmedConsumerGroup("consumer-group-1", "default", "konnect-consumer-group-name", "kid-consumer-group-1")
 
 	model := testGeneratedAIGatewayModelForSDKOps()
 	model.Spec.APISpec.API.Access = konnectv1alpha1.AIGatewayModelAccess{
@@ -203,22 +203,22 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 			Type: konnectv1alpha1.AIGatewayModelAccessAclsTypeAllow,
 			Allow: &konnectv1alpha1.AIGatewayAllowACL{
 				Allow: []konnectv1alpha1.AIGatewayACLRef{
-					{Kind: "AIGatewayConsumer", Name: "consumer-1"},
+					{Kind: "AIGatewayConsumerGroup", Name: "consumer-group-1"},
 				},
 			},
 		},
 	}
 
-	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumer).Build()
+	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumerGroup).Build()
 
 	req, err := model.ToCreateAIGatewayModelRequest(t.Context(), cl)
 	require.NoError(t, err)
 	require.NotNil(t, req.AIGatewayModelAPI, "the api union arm must be selected")
 
-	// The resolved acls arm is present with the consumer's Konnect name.
+	// The resolved acls arm is present with the consumer group's Konnect name.
 	require.NotNil(t, req.AIGatewayModelAPI.Access.Acls)
 	require.NotNil(t, req.AIGatewayModelAPI.Access.Acls.AIGatewayAllowACL)
-	assert.Equal(t, []string{"konnect-consumer-name"}, req.AIGatewayModelAPI.Access.Acls.AIGatewayAllowACL.Allow)
+	assert.Equal(t, []string{"konnect-consumer-group-name"}, req.AIGatewayModelAPI.Access.Acls.AIGatewayAllowACL.Allow)
 
 	// The identity_providers sibling survived the union rebuild.
 	assert.Equal(t, []string{"idp-1"}, req.AIGatewayModelAPI.Access.IdentityProviders)

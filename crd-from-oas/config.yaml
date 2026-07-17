@@ -310,11 +310,11 @@ apiGroupVersions:
         name: AIGatewayModel
         references:
           - path: spec.apiSpec.api.access.acls.allow.allow
-            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
             resolvesTo: name
           - path: spec.apiSpec.api.access.acls.deny.deny
-            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
             resolvesTo: name
         ops:
@@ -385,11 +385,11 @@ apiGroupVersions:
             kinds: [AIGatewayPolicy]
             resolvesTo: name
           - path: spec.apiSpec.access.acls.allow.allow
-            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
             resolvesTo: name
           - path: spec.apiSpec.access.acls.deny.deny
-            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
             resolvesTo: name
         ops:

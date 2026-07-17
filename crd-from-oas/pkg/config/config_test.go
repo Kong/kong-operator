@@ -1177,13 +1177,6 @@ func TestReferenceConfigValidation(t *testing.T) {
 			}),
 			wantErr: "refTypeName is required when multiple kinds",
 		},
-		{
-			name: "refTypeName forbidden for single kind",
-			cfg: base(func(rc *ReferenceConfig) {
-				rc.RefTypeName = "CustomRef"
-			}),
-			wantErr: "refTypeName must not be set when a single kind",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -272,11 +272,11 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 	})
 }
 
-// TestGenerateWatchAndIndex_DedupSharedKinds verifies that two reference fields
-// pointing at the same kinds (ACL allow and deny, each referencing
-// AIGatewayConsumer and AIGatewayConsumerGroup) collapse to exactly one watch,
-// index field and extractor per distinct kind, unioning both accessors.
-func TestGenerateWatchAndIndex_DedupSharedKinds(t *testing.T) {
+// TestGenerateWatchAndIndex_DedupSharedKind verifies that two reference fields
+// pointing at the same ACL kind (allow and deny, each referencing
+// AIGatewayConsumerGroup) collapse to exactly one watch, index field and
+// extractor, unioning both accessors.
+func TestGenerateWatchAndIndex_DedupSharedKind(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion:           "v1alpha1",
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
@@ -285,13 +285,13 @@ func TestGenerateWatchAndIndex_DedupSharedKinds(t *testing.T) {
 			"AIGatewayAgent": {
 				{
 					Path:        "spec.apiSpec.access.acls.allow.allow",
-					Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+					Kinds:       []string{"AIGatewayConsumerGroup"},
 					RefTypeName: "AIGatewayACLRef",
 					ResolvesTo:  "name",
 				},
 				{
 					Path:        "spec.apiSpec.access.acls.deny.deny",
-					Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+					Kinds:       []string{"AIGatewayConsumerGroup"},
 					RefTypeName: "AIGatewayACLRef",
 					ResolvesTo:  "name",
 				},
@@ -316,10 +316,8 @@ func TestGenerateWatchAndIndex_DedupSharedKinds(t *testing.T) {
 	_, err = format.Source([]byte(watchOut))
 	require.NoError(t, err, "generated watch must be valid Go source")
 
-	// Exactly one enqueue func and one Watches registration per distinct kind.
-	assert.Equal(t, 1, strings.Count(watchOut, "func enqueueAIGatewayAgentForAIGatewayConsumer("))
+	// Exactly one enqueue func and one Watches registration for the shared kind.
 	assert.Equal(t, 1, strings.Count(watchOut, "func enqueueAIGatewayAgentForAIGatewayConsumerGroup("))
-	assert.Equal(t, 1, strings.Count(watchOut, "&konnectv1alpha1.AIGatewayConsumer{}"))
 	assert.Equal(t, 1, strings.Count(watchOut, "&konnectv1alpha1.AIGatewayConsumerGroup{}"))
 
 	indexOut, err := g.generateIndex(metadata, rc)
@@ -327,18 +325,15 @@ func TestGenerateWatchAndIndex_DedupSharedKinds(t *testing.T) {
 	_, err = format.Source([]byte(indexOut))
 	require.NoError(t, err, "generated index must be valid Go source")
 
-	// Exactly one index field const and one extractor func per distinct kind.
-	assert.Equal(t, 1, strings.Count(indexOut, "IndexFieldAIGatewayAgentOnAIGatewayConsumerRef ="))
+	// Exactly one index field const and one extractor func for the shared kind.
 	assert.Equal(t, 1, strings.Count(indexOut, "IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef ="))
-	assert.Equal(t, 1, strings.Count(indexOut, "func aiGatewayAgentOnAIGatewayConsumerRef("))
 	assert.Equal(t, 1, strings.Count(indexOut, "func aiGatewayAgentOnAIGatewayConsumerGroupRef("))
 
 	// Each extractor unions the allow and deny accessors from the API package.
 	assert.Contains(t, indexOut, "konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent)")
 	assert.Contains(t, indexOut, "konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsDenyDeny(ent)")
-	// Multi-kind references require the kind to be populated (no empty-kind match).
-	assert.Contains(t, indexOut, `if ref.Kind != "AIGatewayConsumer" {`)
-	assert.Contains(t, indexOut, `if ref.Kind != "AIGatewayConsumerGroup" {`)
+	// Single-kind references accept the defaulted/empty kind.
+	assert.Contains(t, indexOut, `if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {`)
 }
 
 func TestGenerateReconcilerConditions(t *testing.T) {

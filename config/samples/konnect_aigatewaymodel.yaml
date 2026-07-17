@@ -25,21 +25,6 @@ spec:
     authRef:
       name: konnect-api-auth-1
 ---
-kind: AIGatewayConsumer
-apiVersion: konnect.konghq.com/v1alpha1
-metadata:
-  name: ai-gw-model-consumer
-  namespace: default
-spec:
-  aiGatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: ai-gw-cp-1
-  apiSpec:
-    name: model-dev-consumer
-    displayName: Dev Team Consumer
-    type: api-key
----
 kind: AIGatewayConsumerGroup
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
@@ -74,7 +59,7 @@ spec:
         - type: openai
       capabilities:
         - files
-      # Access control: allow-list of AIGatewayConsumer / AIGatewayConsumerGroup
+      # Access control: allow-list of AIGatewayConsumerGroup
       # CRs (referenced by metadata.name), resolved to the referenced CR's
       # Konnect name at reconcile time.
       access:
@@ -82,8 +67,6 @@ spec:
           type: allow
           allow:
             allow:
-              - kind: AIGatewayConsumer
-                name: ai-gw-model-consumer
               - kind: AIGatewayConsumerGroup
                 name: ai-gw-model-consumer-group
       config:
