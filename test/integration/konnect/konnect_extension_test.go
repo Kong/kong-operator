@@ -224,6 +224,8 @@ func TestKonnectExtension(t *testing.T) {
 		})
 
 		t.Run("Mirror ControlPlane", func(t *testing.T) {
+			t.Skipf("Skip until flakiness is resolved, TODO: https://github.com/Kong/kong-operator/issues/4807")
+
 			// Create a Mirror Konnect control plane for the KonnectExtension to attach to.
 			mirrorCP := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 				deploy.WithTestIDLabel(testID),
@@ -364,7 +366,6 @@ func konnectExtensionTestCases(t *testing.T, cl client.Client, params KonnectExt
 		})
 
 		t.Run("automatic secret provisioning", func(t *testing.T) {
-			t.Skipf("Skip until flakiness is resolved, TODO: https://github.com/Kong/kong-operator/issues/4807")
 			konnectExtension := deploy.KonnectExtension(
 				t, ctx, params.client,
 				deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),

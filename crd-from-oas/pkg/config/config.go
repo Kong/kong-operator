@@ -847,9 +847,6 @@ func (tc *TypeConfig) validate() error {
 		if len(ref.Kinds) > 1 && ref.RefTypeName == "" {
 			return fmt.Errorf("reference %q: refTypeName is required when multiple kinds are configured", ref.Path)
 		}
-		if len(ref.Kinds) == 1 && ref.RefTypeName != "" {
-			return fmt.Errorf("reference %q: refTypeName must not be set when a single kind is configured", ref.Path)
-		}
 	}
 	seenAssocNames := make(map[string]bool)
 	for i, a := range tc.Associations {

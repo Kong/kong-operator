@@ -146,14 +146,14 @@ spec:
                                   permitted access.
                                 items:
                                   description: |-
-                                    AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                    AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                     object's Konnect name is used where the Konnect API accepts it.
                                   properties:
                                     kind:
+                                      default: AIGatewayConsumerGroup
                                       description: Kind is the kind of the referenced
                                         object.
                                       enum:
-                                      - AIGatewayConsumer
                                       - AIGatewayConsumerGroup
                                       type: string
                                     name:
@@ -166,7 +166,6 @@ spec:
                                         cross-namespace support.
                                       type: string
                                   required:
-                                  - kind
                                   - name
                                   type: object
                                 type: array
@@ -182,14 +181,14 @@ spec:
                                   access.
                                 items:
                                   description: |-
-                                    AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                    AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                     object's Konnect name is used where the Konnect API accepts it.
                                   properties:
                                     kind:
+                                      default: AIGatewayConsumerGroup
                                       description: Kind is the kind of the referenced
                                         object.
                                       enum:
-                                      - AIGatewayConsumer
                                       - AIGatewayConsumerGroup
                                       type: string
                                     name:
@@ -202,7 +201,6 @@ spec:
                                         cross-namespace support.
                                       type: string
                                   required:
-                                  - kind
                                   - name
                                   type: object
                                 type: array
