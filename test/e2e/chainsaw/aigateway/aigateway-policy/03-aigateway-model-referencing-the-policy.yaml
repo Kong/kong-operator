@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-provider-credentials
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  apikey: test-ai-gateway-key
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: openai-provider
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openai
+    openai:
+      name: openai-provider
+      displayName: OpenAI (mock)
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: secretRef
+                secretRef:
+                  name: openai-provider-credentials
+                  key: apikey
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: aigw11-model
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: aigw11-model
+      displayName: AI GW 1.1 mock model
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          alias: qwen2.5:0.5b
+          nameHeader: Enabled
+          policies:
+            - ($aigw_policy_name)
+        route:
+          paths:
+            - /aigw11/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider: openai-provider
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a

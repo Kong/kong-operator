@@ -26,6 +26,10 @@ spec:
       value: (join('-', [($test_name), 'cp']))
     - name: aigw_cp_namespace
       value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
   steps:
     - name: Create-auth-secret
       use:
@@ -39,6 +43,12 @@ spec:
           value: ($konnect_auth_name)
       use:
         template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
     - name: Create-aigateway-policy
       bindings:
         - name: aigw_policy_name
@@ -48,7 +58,29 @@ spec:
             file: 01-aigateway-policy-inline-config.yaml
         - assert:
             file: 00-assert-aigateway-policy-programmed.yaml
-    # TODO: Add a step to attach the policy to an API and verify that the policy is applied correctly.
+    - name: Create-aigateway-model-provider-referencing-the-policy
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-inline-config']))
+      try:
+        - apply:
+            file: 03-aigateway-model-referencing-the-policy.yaml
+    - name: Verify-aigateway-policy-inline-config-is-applied
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /aigw11/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: EXPECT_HEADER
+                value: "Modified-By-Policy-Inline"
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
     - name: Create-aigateway-policy-secretRef-config.yaml
       bindings:
         - name: aigw_policy_name
@@ -60,5 +92,61 @@ spec:
             file: 02-aigateway-policy-secretRef-config.yaml
         - assert:
             file: 00-assert-aigateway-policy-programmed.yaml
-     # TODO: Add a step to attach the policy to an API and verify that the policy is applied correctly.
-     # TODO: Add a step to update the SecretRef config and verify that the policy is updated correctly.
+    - name: Update-aigateway-model-to-reference-the-new-policy
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-secretref-config']))
+      try:
+        - apply:
+            file: 03-aigateway-model-referencing-the-policy.yaml
+    - name: Verify-aigateway-policy-secretRef-config-is-applied
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /aigw11/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: EXPECT_HEADER
+                value: "Modified-By-Policy-Secretref"
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+    - name: Update-secret-to-change-the-policy-config
+      bindings:
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-secretref-config-secret']))
+      try:
+        - apply:
+            file: 04-update-secret-for-aigateway-policy-secretRef-config.yaml
+    - name: Verify-aigateway-policy-secretRef-config-is-applied-after-secret-update
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /aigw11/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: EXPECT_HEADER
+                value: "Modified-By-Policy-Secretref-Updated"
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-ai-policy
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

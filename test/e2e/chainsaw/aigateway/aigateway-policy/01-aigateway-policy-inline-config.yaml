@@ -25,4 +25,4 @@ spec:
       value:
         add:
           headers:
-            - "Modified-By:Kong-Operator-Chainsaw-Test"
+            - "Modified-By-Policy-Inline:Kong-Operator-Chainsaw-Test"
