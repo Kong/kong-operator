@@ -419,7 +419,7 @@ In this section you will find types that the CRDs rely on.
 #### AIGatewayACLRef
 
 
-AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
 object's Konnect name is used where the Konnect API accepts it.
 
 
