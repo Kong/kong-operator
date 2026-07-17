@@ -442,7 +442,7 @@ type ResponseStatusFieldConfig struct {
 	// Fields lists the scalar sub-fields of the new status struct. Mutually
 	// exclusive with RespPath.
 	Fields []ResponseStatusSubField `yaml:"fields,omitempty"`
-	// RespPath, when set, makes this a scalar string status field populated
+	// RespPath, when set, makes this a scalar *string status field populated
 	// directly from resp.{RespField}.{RespPath} (a *string on the SDK response
 	// type). Mutually exclusive with Fields.
 	RespPath string `yaml:"respPath,omitempty"`

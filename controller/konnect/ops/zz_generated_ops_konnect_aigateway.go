@@ -37,9 +37,7 @@ func createKonnectAIGateway(
 			Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
 			Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
 		}
-		if v := resp.AIGateway.ConfigHash; v != nil {
-			obj.Status.ConfigHash = *v
-		}
+		obj.Status.ConfigHash = resp.AIGateway.ConfigHash
 		return nil
 	}
 	req, err := obj.Spec.APISpec.ToCreateAIGatewayRequest()
@@ -65,9 +63,7 @@ func createKonnectAIGateway(
 		Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
 		Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
 	}
-	if v := resp.AIGateway.ConfigHash; v != nil {
-		obj.Status.ConfigHash = *v
-	}
+	obj.Status.ConfigHash = resp.AIGateway.ConfigHash
 	return nil
 }
 
@@ -101,9 +97,7 @@ func updateKonnectAIGateway(
 			Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
 			Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
 		}
-		if v := resp.AIGateway.ConfigHash; v != nil {
-			obj.Status.ConfigHash = *v
-		}
+		obj.Status.ConfigHash = resp.AIGateway.ConfigHash
 	}
 	return nil
 }

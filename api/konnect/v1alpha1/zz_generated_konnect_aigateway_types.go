@@ -139,7 +139,7 @@ type KonnectAIGatewayStatus struct {
 	// ConfigHash contains the ConfigHash returned by the Konnect API.
 	//
 	// +optional
-	ConfigHash string `json:"configHash,omitempty"`
+	ConfigHash *string `json:"configHash,omitempty"`
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional

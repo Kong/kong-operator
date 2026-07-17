@@ -5957,7 +5957,7 @@ KonnectAIGatewayStatus defines the observed state of KonnectAIGateway.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `endpoints` _[KonnectAIGatewayEndpoints](#konnect-konghq-com-v1alpha1-types-konnectaigatewayendpoints)_ | Endpoints contains the Endpoints returned by the Konnect API. |
-| `configHash` _string_ | ConfigHash contains the ConfigHash returned by the Konnect API. |
+| `configHash` _*string_ | ConfigHash contains the ConfigHash returned by the Konnect API. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_

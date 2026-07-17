@@ -203,7 +203,7 @@ type {{.EntityName}}Status struct {
 	//
 	// +optional
 {{- if .RespPath}}
-	{{.StatusField}} string ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
+	{{.StatusField}} *string ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
 {{- else}}
 	{{.StatusField}} *{{$.EntityName}}{{.StatusField}} ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
 {{- end}}
@@ -2319,9 +2319,7 @@ func create{{.Entity}}(
 {{- end}}
 {{- range .ResponseStatusFields}}
 {{- if .RespPath}}
-		if v := resp.{{$.RespField}}.{{.RespPath}}; v != nil {
-			obj.Status.{{.StatusField}} = *v
-		}
+		obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
 {{- else}}
 		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
 {{- range .Fields}}
@@ -2425,9 +2423,7 @@ func create{{.Entity}}(
 {{- end}}
 {{- range .ResponseStatusFields}}
 {{- if .RespPath}}
-	if v := resp.{{$.RespField}}.{{.RespPath}}; v != nil {
-		obj.Status.{{.StatusField}} = *v
-	}
+	obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
 {{- else}}
 	obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
 {{- range .Fields}}
@@ -2526,9 +2522,7 @@ func update{{.Entity}}(
 	if resp != nil && resp.{{.RespField}} != nil {
 {{- range .ResponseStatusFields}}
 {{- if .RespPath}}
-		if v := resp.{{$.RespField}}.{{.RespPath}}; v != nil {
-			obj.Status.{{.StatusField}} = *v
-		}
+		obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
 {{- else}}
 		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
 {{- range .Fields}}
