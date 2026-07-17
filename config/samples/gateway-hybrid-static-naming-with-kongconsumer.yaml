@@ -5,7 +5,7 @@ metadata:
 spec:
   type: token
   token: kpat_XXXXXXXXXXXXXXXXXXX
-  serverURL: us.api.konghq.tech
+  serverURL: us.api.konghq.com
 ---
 kind: GatewayConfiguration
 apiVersion: gateway-operator.konghq.com/v2beta1
