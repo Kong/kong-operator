@@ -192,7 +192,6 @@
     {
       "description": "Disable Go dependencies updates (still handled by dependabot)",
       "matchManagers": ["gomod"],
-      "matchDepNames": ["go"],
       "matchBaseBranches": [
         "$default",
         "release/2.1.x",
