@@ -14,13 +14,11 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 		AuthenticationEnabled:   "Enabled",
 		AutoApproveApplications: "Enabled",
 		AutoApproveDevelopers:   "Enabled",
-		CreateDefaultContent:    "Enabled",
 		DefaultAPIVisibility:    "public",
 		DefaultPageVisibility:   "public",
 		Description:             new("test-value"),
 		DisplayName:             "test-value",
 		Labels:                  LabelsUpdate{"test-key": "test-value"},
-		McpServerEnabled:        "Enabled",
 		Name:                    "test-value",
 		NotificationsDeveloperPiiVisibilityEnabled: "Enabled",
 		RBACEnabled: "Enabled",
@@ -39,13 +37,11 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 	require.Equal(t, true, payload["authentication_enabled"])
 	require.Equal(t, true, payload["auto_approve_applications"])
 	require.Equal(t, true, payload["auto_approve_developers"])
-	require.Equal(t, true, payload["create_default_content"])
 	require.Equal(t, "public", payload["default_api_visibility"])
 	require.Equal(t, "public", payload["default_page_visibility"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
-	require.Equal(t, true, payload["mcp_server_enabled"])
 	require.Equal(t, "test-value", payload["name"])
 	require.Equal(t, true, payload["notifications_developer_pii_visibility_enabled"])
 	require.Equal(t, true, payload["rbac_enabled"])
@@ -57,13 +53,11 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 		AuthenticationEnabled:   "Enabled",
 		AutoApproveApplications: "Enabled",
 		AutoApproveDevelopers:   "Enabled",
-		CreateDefaultContent:    "Enabled",
 		DefaultAPIVisibility:    "public",
 		DefaultPageVisibility:   "public",
 		Description:             new("test-value"),
 		DisplayName:             "test-value",
 		Labels:                  LabelsUpdate{"test-key": "test-value"},
-		McpServerEnabled:        "Enabled",
 		Name:                    "test-value",
 		NotificationsDeveloperPiiVisibilityEnabled: "Enabled",
 		RBACEnabled: "Enabled",
@@ -82,13 +76,11 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 	require.Equal(t, true, payload["authentication_enabled"])
 	require.Equal(t, true, payload["auto_approve_applications"])
 	require.Equal(t, true, payload["auto_approve_developers"])
-	require.Equal(t, true, payload["create_default_content"])
 	require.Equal(t, "public", payload["default_api_visibility"])
 	require.Equal(t, "public", payload["default_page_visibility"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
-	require.Equal(t, true, payload["mcp_server_enabled"])
 	require.Equal(t, "test-value", payload["name"])
 	require.Equal(t, true, payload["notifications_developer_pii_visibility_enabled"])
 	require.Equal(t, true, payload["rbac_enabled"])

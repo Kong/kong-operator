@@ -88,13 +88,6 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
-                  createDefaultContent:
-                    description: Use to create the portal page default content upon
-                      creation of this portal
-                    enum:
-                    - Enabled
-                    - Disabled
-                    type: string
                   defaultAPIVisibility:
                     description: |-
                       The default visibility of APIs in the portal.
@@ -208,12 +201,6 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     type: object
-                  mcpServerEnabled:
-                    description: Whether the portal has the MCP server enabled
-                    enum:
-                    - Enabled
-                    - Disabled
-                    type: string
                   name:
                     description: |-
                       The name of the portal, used to distinguish it from other portals.

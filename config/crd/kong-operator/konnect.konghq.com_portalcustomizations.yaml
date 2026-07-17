@@ -63,18 +63,6 @@ spec:
                   css:
                     maxLength: 253
                     type: string
-                  js:
-                    description: Js is a type alias.
-                    properties:
-                      custom:
-                        maxLength: 253
-                        type: string
-                      scripts:
-                        items:
-                          type: string
-                        maxItems: 20
-                        type: array
-                    type: object
                   layout:
                     maxLength: 253
                     type: string
@@ -210,20 +198,6 @@ spec:
                           - visibility
                           type: object
                         type: array
-                    type: object
-                  portalLayout:
-                    description: PortalLayout is a type alias.
-                    properties:
-                      footer:
-                        description: Footer is a type alias.
-                        properties:
-                          snippetName:
-                            description: |-
-                              The unique name of a snippet in the portal to render in place of the default
-                              footer.
-                            maxLength: 512
-                            type: string
-                        type: object
                     type: object
                   robots:
                     maxLength: 253

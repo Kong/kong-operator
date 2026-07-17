@@ -120,18 +120,25 @@ spec:
                   spec fields.
                 properties:
                   access:
-                    description: Access control configuration for an agent.
+                    description: |-
+                      **Pre-release Feature**
+                      This feature is currently in beta and is subject to change.
+
+                      Access control configuration for an agent.
                     properties:
                       acls:
-                        description: Access control rules. Configure exactly one of
-                          `allow` or `deny`.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Access control rules. Configure exactly one of `allow` or `deny`.
                         properties:
                           allow:
                             description: Allow configuration.
                             properties:
                               allow:
                                 description: |-
-                                  List of Consumers, Consumer Groups, or Authenticated Groups that are
+                                  List of Consumer Groups Names, or Authenticated Groups Names that are
                                   permitted access.
                                 items:
                                   description: |-
@@ -167,7 +174,7 @@ spec:
                             properties:
                               deny:
                                 description: |-
-                                  List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+                                  List of Consumer Groups Names, or Authenticated Groups Names that are denied
                                   access.
                                 items:
                                   description: |-
@@ -215,7 +222,11 @@ spec:
                       The structure varies depending on the agent type.
                     properties:
                       logging:
-                        description: Configuration for AI Gateway logging.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Configuration for AI Gateway logging.
                         properties:
                           maxPayloadSize:
                             description: |-
@@ -238,7 +249,11 @@ spec:
                           0 for unlimited.
                         type: integer
                       route:
-                        description: Configuration for an AI Gateway route.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Configuration for an AI Gateway route.
                         properties:
                           headers:
                             description: |-
@@ -394,6 +409,9 @@ spec:
                     type: object
                   name:
                     description: |-
+                      **Pre-release Feature**
+                      This feature is currently in beta and is subject to change.
+
                       A user-defined unique identifier for this agent, used as a stable
                       human-readable reference.
                       This value is immutable after creation.
