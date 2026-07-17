@@ -209,9 +209,4 @@ type AIGatewayAgentConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }

@@ -31,14 +31,6 @@ var AIGatewayAgentSDKOpsBoolFields = []AIGatewayAgentSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "config.logging.statistics",
-		Path: []string{
-			"config",
-			"logging",
-			"statistics",
-		},
-	},
-	{
 		Label: "config.route.preserve_host",
 		Path: []string{
 			"config",

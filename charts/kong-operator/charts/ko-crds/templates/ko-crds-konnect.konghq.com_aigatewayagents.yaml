@@ -240,11 +240,6 @@ spec:
                             - Enabled
                             - Disabled
                             type: string
-                          statistics:
-                            enum:
-                            - Enabled
-                            - Disabled
-                            type: string
                         type: object
                       maxRequestBodySize:
                         description: Maximum size of request body to parse. Set to

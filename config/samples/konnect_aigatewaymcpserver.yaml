@@ -49,7 +49,6 @@ spec:
             - /mcp/flights
         logging:
           payloads: Disabled
-          statistics: Enabled
       labels:
         domain: flights
 ---

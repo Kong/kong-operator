@@ -708,6 +708,13 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	//
 	// +optional
 	ConsumerClaims [][]string `json:"consumerClaims,omitempty"`
+	// The claim used for consumer groups mapping.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	//
+	//
+	// +optional
+	ConsumerGroupsClaim []string `json:"consumerGroupsClaim,omitempty"`
 	// Do not terminate the request if consumer mapping fails.
 	//
 	//
@@ -1513,11 +1520,6 @@ type AIGatewayMCPServerNoUpstreamConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
 // AIGatewayMCPServerPassthroughListener **Pre-release Feature**
@@ -2039,11 +2041,6 @@ type AIGatewayMCPServerUpstreamServerConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
 // AIGatewayMCPServerUpstreamServerServerConfig Server-side configuration
@@ -2514,11 +2511,6 @@ type AIGatewayMCPServerWithUpstreamConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
 // AIGatewayMCPServerWithUpstreamNoProxyConfig **Pre-release Feature**
@@ -2578,11 +2570,6 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
 // AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig **Pre-release
@@ -2637,11 +2624,6 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
 // AIGatewayMCPToolAnnotations **Pre-release Feature**
@@ -3171,11 +3153,6 @@ type AIGatewayModelAPIConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
 // AIGatewayModelAPIConfigModel **Pre-release Feature**
@@ -4797,11 +4774,6 @@ type AIGatewayModelModelConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
 // AIGatewayModelModelConfigModel **Pre-release Feature**

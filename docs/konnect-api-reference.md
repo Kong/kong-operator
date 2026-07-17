@@ -545,7 +545,6 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | --- | --- |
 | `maxPayloadSize` _int_ | Maximum size in bytes for logged request/response payloads. Payloads exceeding this size will be truncated. |
 | `payloads` _string_ |  |
-| `statistics` _string_ |  |
 
 _Appears in:_
 
@@ -1083,6 +1082,7 @@ list of properties
 | `clientID` _[]string_ | An array of strings representing the client id for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. |
 | `clientSecret` _[][SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | An array of strings representing the client secret for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. |
 | `consumerClaims` _[]string_ | An array containing an array of string paths representing the location of the claim in a nested object. For example, to map to user.info.id, set [ "user", "info", "id" ]. |
+| `consumerGroupsClaim` _[]string_ | The claim used for consumer groups mapping. If multiple values are set, it means the claim is inside a nested object of the token payload. |
 | `consumerOptional` _string_ | Do not terminate the request if consumer mapping fails. |
 | `issuer` _string_ | URL that identifies the OpenID Provider |
 | `scopes` _[]string_ | This field is referenceable. |
@@ -1505,7 +1505,6 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | --- | --- |
 | `audits` _string_ |  |
 | `payloads` _string_ |  |
-| `statistics` _string_ |  |
 
 _Appears in:_
 
@@ -1763,7 +1762,6 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | --- | --- |
 | `audits` _string_ |  |
 | `payloads` _string_ |  |
-| `statistics` _string_ |  |
 
 _Appears in:_
 
@@ -1964,7 +1962,6 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | --- | --- |
 | `audits` _string_ |  |
 | `payloads` _string_ |  |
-| `statistics` _string_ |  |
 
 _Appears in:_
 
@@ -2002,7 +1999,6 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | --- | --- |
 | `audits` _string_ |  |
 | `payloads` _string_ |  |
-| `statistics` _string_ |  |
 
 _Appears in:_
 
@@ -2041,7 +2037,6 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | --- | --- |
 | `audits` _string_ |  |
 | `payloads` _string_ |  |
-| `statistics` _string_ |  |
 
 _Appears in:_
 
@@ -2393,7 +2388,6 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | Field | Description |
 | --- | --- |
 | `payloads` _string_ |  |
-| `statistics` _string_ |  |
 
 _Appears in:_
 
@@ -2958,7 +2952,6 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | Field | Description |
 | --- | --- |
 | `payloads` _string_ |  |
-| `statistics` _string_ |  |
 
 _Appears in:_
 
@@ -4459,7 +4452,7 @@ AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this policy instance, used as a stable human-readable reference. This value is immutable after creation. |
-| `type` _string_ | The type of the Policy. This is equivalent to the Kong 3 plugin name. Some examples are: 'ai-sanitizer', 'ai-prompt-guard', and 'openid-connect'. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
+| `type` _string_ | The type of the Policy. This is equivalent to the Kong 3 plugin name. Some examples are: 'ai-sanitizer', 'ai-prompt-guard', and 'rate-limiting'. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
 
 _Appears in:_
 
