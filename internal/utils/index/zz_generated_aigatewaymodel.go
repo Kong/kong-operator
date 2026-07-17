@@ -15,6 +15,8 @@ const (
 	IndexFieldAIGatewayModelOnAIGatewayPolicyRef = "aiGatewayModelOnAIGatewayPolicyRef"
 	// IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef is the index field for AIGatewayModel -> AIGatewayConsumerGroup.
 	IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef = "aiGatewayModelOnAIGatewayConsumerGroupRef"
+	// IndexFieldAIGatewayModelOnAIGatewayModelProviderRef is the index field for AIGatewayModel -> AIGatewayModelProvider.
+	IndexFieldAIGatewayModelOnAIGatewayModelProviderRef = "aiGatewayModelOnAIGatewayModelProviderRef"
 )
 
 // OptionsForAIGatewayModel returns required Index options for AIGatewayModel reconciler.
@@ -34,6 +36,11 @@ func OptionsForAIGatewayModel() []Option {
 			Object:         &konnectv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef,
 			ExtractValueFn: aiGatewayModelOnAIGatewayConsumerGroupRef,
+		},
+		{
+			Object:         &konnectv1alpha1.AIGatewayModel{},
+			Field:          IndexFieldAIGatewayModelOnAIGatewayModelProviderRef,
+			ExtractValueFn: aiGatewayModelOnAIGatewayModelProviderRef,
 		},
 	}
 }
@@ -102,6 +109,35 @@ func aiGatewayModelOnAIGatewayConsumerGroupRef(object client.Object) []string {
 	}
 	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelAPIAccessAclsDenyDeny(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayModelOnAIGatewayModelProviderRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.AIGatewayModel)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelAPITargetsProvider(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayModelProvider" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelModelTargetsProvider(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayModelProvider" {
 			continue
 		}
 		ns := ref.Namespace

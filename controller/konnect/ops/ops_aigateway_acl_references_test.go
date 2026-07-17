@@ -36,6 +36,19 @@ func programmedConsumerGroup(name, namespace, konnectName, konnectID string) *ko
 	return c
 }
 
+// programmedModelProvider builds an AIGatewayModelProvider that already has a
+// Konnect ID, i.e. a reference target that resolves successfully. Its
+// resolvesTo:name Konnect name is left empty (GetKonnectName's union type
+// switch returns "" when the provider config isn't set), which is fine here
+// since these tests only need the reference to resolve, not a specific name.
+func programmedModelProvider(name, namespace, konnectID string) *konnectv1alpha1.AIGatewayModelProvider {
+	p := &konnectv1alpha1.AIGatewayModelProvider{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+	}
+	p.SetKonnectID(konnectID)
+	return p
+}
+
 func programmedPolicy(name, namespace, konnectID, gatewayID, specName string) *konnectv1alpha1.AIGatewayPolicy {
 	p := &konnectv1alpha1.AIGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
@@ -195,6 +208,9 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 	t.Parallel()
 
 	consumerGroup := programmedConsumerGroup("consumer-group-1", "default", "konnect-consumer-group-name", "kid-consumer-group-1")
+	// testGeneratedAIGatewayModelForSDKOps's fixture targets a provider named
+	// "provider-1" in the model's own ("default") namespace.
+	provider := programmedModelProvider("provider-1", "default", "kid-provider-1")
 
 	model := testGeneratedAIGatewayModelForSDKOps()
 	model.Spec.APISpec.API.Access = konnectv1alpha1.AIGatewayModelAccess{
@@ -209,7 +225,7 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 		},
 	}
 
-	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumerGroup).Build()
+	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumerGroup, provider).Build()
 
 	req, err := model.ToCreateAIGatewayModelRequest(t.Context(), cl)
 	require.NoError(t, err)

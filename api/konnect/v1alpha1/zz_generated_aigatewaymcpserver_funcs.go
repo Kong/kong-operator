@@ -24,6 +24,37 @@ func (obj *AIGatewayMCPServer) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the AIGatewayMCPServer's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *AIGatewayMCPServer) GetKonnectName() string {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.AIGatewayMCPServerConfig.Type {
+	case AIGatewayMCPServerConfigTypeConversionListener:
+		if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
+			return string(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Name)
+		}
+	case AIGatewayMCPServerConfigTypeConversionOnly:
+		if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
+			return string(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly.Name)
+		}
+	case AIGatewayMCPServerConfigTypeListener:
+		if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
+			return string(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Name)
+		}
+	case AIGatewayMCPServerConfigTypePassthroughListener:
+		if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
+			return string(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Name)
+		}
+	case AIGatewayMCPServerConfigTypeUpstreamServer:
+		if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+			return string(obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Name)
+		}
+	}
+	return ""
+}
+
 // GetTypeName returns the AIGatewayMCPServer Kind name.
 func (obj AIGatewayMCPServer) GetTypeName() string {
 	return "AIGatewayMCPServer"

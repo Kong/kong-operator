@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func testGeneratedAIGatewayPolicyForSDKOps() *konnectv1alpha1.AIGatewayPolicy {
@@ -48,7 +48,7 @@ func TestCreateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -79,7 +79,7 @@ func TestCreateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -106,7 +106,7 @@ func TestUpdateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -135,7 +135,7 @@ func TestUpdateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)

@@ -2782,9 +2782,26 @@ spec:
                             provider:
                               description: Reference to a model provider instance
                                 by name.
-                              maxLength: 253
-                              minLength: 1
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayModelProvider
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayModelProvider
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: Namespace is reserved for future cross-namespace
+                                    support.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             semanticDescription:
                               description: |-
                                 The semantic description of the target, required if using semantic load
@@ -5481,9 +5498,26 @@ spec:
                             provider:
                               description: Reference to a model provider instance
                                 by name.
-                              maxLength: 253
-                              minLength: 1
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayModelProvider
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayModelProvider
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: Namespace is reserved for future cross-namespace
+                                    support.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             semanticDescription:
                               description: |-
                                 The semantic description of the target, required if using semantic load

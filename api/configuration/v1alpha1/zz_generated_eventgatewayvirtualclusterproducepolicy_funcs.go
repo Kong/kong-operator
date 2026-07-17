@@ -24,6 +24,33 @@ func (obj *EventGatewayVirtualClusterProducePolicy) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayVirtualClusterProducePolicy's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayVirtualClusterProducePolicy) GetKonnectName() string {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.Type {
+	case EventGatewayVirtualClusterProducePolicyConfigTypeEncryptPolicy:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Name)
+		}
+	case EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Name)
+		}
+	case EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ModifyHeadersPolicyCreate != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ModifyHeadersPolicyCreate.Name)
+		}
+	case EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Name)
+		}
+	}
+	return ""
+}
+
 // GetTypeName returns the EventGatewayVirtualClusterProducePolicy Kind name.
 func (obj EventGatewayVirtualClusterProducePolicy) GetTypeName() string {
 	return "EventGatewayVirtualClusterProducePolicy"

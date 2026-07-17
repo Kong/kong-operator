@@ -1156,7 +1156,7 @@ func resolveAIGatewayMCPServerConversionListenerPolicies(ctx context.Context, cl
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
@@ -1212,7 +1212,7 @@ func resolveAIGatewayMCPServerConversionOnlyPolicies(ctx context.Context, cl cli
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
@@ -1268,7 +1268,7 @@ func resolveAIGatewayMCPServerListenerPolicies(ctx context.Context, cl client.Cl
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
@@ -1324,7 +1324,7 @@ func resolveAIGatewayMCPServerPassthroughListenerPolicies(ctx context.Context, c
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
@@ -1380,7 +1380,7 @@ func resolveAIGatewayMCPServerUpstreamServerPolicies(ctx context.Context, cl cli
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err

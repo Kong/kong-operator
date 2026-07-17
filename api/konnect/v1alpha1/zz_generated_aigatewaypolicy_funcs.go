@@ -53,6 +53,12 @@ func (obj *AIGatewayPolicy) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the AIGatewayPolicy's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *AIGatewayPolicy) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the AIGatewayPolicy Kind name.
 func (obj AIGatewayPolicy) GetTypeName() string {
 	return "AIGatewayPolicy"

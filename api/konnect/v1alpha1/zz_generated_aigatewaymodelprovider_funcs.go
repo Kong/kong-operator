@@ -24,6 +24,93 @@ func (obj *AIGatewayModelProvider) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the AIGatewayModelProvider's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *AIGatewayModelProvider) GetKonnectName() string {
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.AIGatewayModelProviderConfig.Type {
+	case AIGatewayModelProviderConfigTypeAnthropic:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic.Name)
+		}
+	case AIGatewayModelProviderConfigTypeAzure:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.Name)
+		}
+	case AIGatewayModelProviderConfigTypeBedrock:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.Name)
+		}
+	case AIGatewayModelProviderConfigTypeCerebras:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras.Name)
+		}
+	case AIGatewayModelProviderConfigTypeCohere:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere.Name)
+		}
+	case AIGatewayModelProviderConfigTypeDashscope:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope.Name)
+		}
+	case AIGatewayModelProviderConfigTypeDatabricks:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks.Name)
+		}
+	case AIGatewayModelProviderConfigTypeDeepseek:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek.Name)
+		}
+	case AIGatewayModelProviderConfigTypeGemini:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.Name)
+		}
+	case AIGatewayModelProviderConfigTypeHuggingface:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface.Name)
+		}
+	case AIGatewayModelProviderConfigTypeKimi:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi.Name)
+		}
+	case AIGatewayModelProviderConfigTypeLlama2:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2 != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2.Name)
+		}
+	case AIGatewayModelProviderConfigTypeMistral:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.Name)
+		}
+	case AIGatewayModelProviderConfigTypeOllama:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama.Name)
+		}
+	case AIGatewayModelProviderConfigTypeOpenai:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.Name)
+		}
+	case AIGatewayModelProviderConfigTypeVercel:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.Name)
+		}
+	case AIGatewayModelProviderConfigTypeVertex:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Name)
+		}
+	case AIGatewayModelProviderConfigTypeVllm:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm.Name)
+		}
+	case AIGatewayModelProviderConfigTypeXai:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai.Name)
+		}
+	}
+	return ""
+}
+
 // GetTypeName returns the AIGatewayModelProvider Kind name.
 func (obj AIGatewayModelProvider) GetTypeName() string {
 	return "AIGatewayModelProvider"

@@ -249,7 +249,7 @@ func TestGenerateSDKOps_NestedSingleKindNameResolver(t *testing.T) {
 	require.Contains(t, content, `kind = "AIGatewayConsumerGroup"`)
 	require.NotContains(t, content, "switch kind {")
 	// resolvesTo:name selects the Konnect name as the resolved value.
-	require.Contains(t, content, "string(referenced.Spec.APISpec.Name)")
+	require.Contains(t, content, "resolved = append(resolved, referenced.GetKonnectName())")
 	// Programmed check applies in name mode too.
 	require.Contains(t, content, `ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name}`)
 }
@@ -386,9 +386,17 @@ func modelRootUnionParsedSpec() *parser.ParsedSpec {
 		aclsUnion,
 		{Name: "identity_providers", Type: "array", Items: &parser.Property{Type: "string"}},
 	}}
+	// modelTarget mirrors the real AIGatewayTarget: a named, shared schema
+	// (referenced by $ref from the array, not inlined) whose provider field
+	// is a required scalar.
+	modelTarget := &parser.Schema{Properties: []*parser.Property{
+		{Name: "provider", Type: "string", Required: true},
+	}}
 	modelAPI := &parser.Schema{Properties: []*parser.Property{
 		{Name: "access", Type: "object", RefName: "AIGatewayModelAccess"},
 		{Name: "name", Type: "string"},
+		// targets is a non-leaf array of objects.
+		{Name: "targets", Type: "array", Items: &parser.Property{RefName: "AIGatewayTarget"}},
 	}}
 	modelModel := &parser.Schema{Properties: []*parser.Property{
 		{Name: "name", Type: "string"},
@@ -414,6 +422,7 @@ func modelRootUnionParsedSpec() *parser.ParsedSpec {
 			"AIGatewayModelAccess": modelAccess,
 			"AIGatewayAllowACL":    allowACL,
 			"AIGatewayDenyACL":     denyACL,
+			"AIGatewayTarget":      modelTarget,
 		},
 	}
 }
@@ -446,7 +455,7 @@ func TestRefFieldTarget_RootUnionPath(t *testing.T) {
 	require.Equal(t, "allow", field)
 	require.Equal(t, []GoPathSegment{
 		{Name: "AIGatewayModelConfig", Pointer: true, UnionWrapper: true, UnionTypeName: "AIGatewayModelConfig"},
-		{Name: "API", Pointer: true, JSONKey: "api", UnionVariant: true, VariantProperties: 2},
+		{Name: "API", Pointer: true, JSONKey: "api", UnionVariant: true, VariantProperties: 3},
 		{Name: "Access", Pointer: false, JSONKey: "access"},
 		{Name: "Acls", Pointer: true, JSONKey: "acls", UnionWrapper: true, UnionTypeName: "AIGatewayModelAccessAcls"},
 		{Name: "Allow", Pointer: true, JSONKey: "allow", UnionVariant: true, VariantProperties: 1},
@@ -458,6 +467,91 @@ func TestRefFieldTarget_RootUnionPath(t *testing.T) {
 		Path: "spec.apiSpec.nope.access.acls.allow.allow",
 	})
 	require.ErrorContains(t, err, "spec.apiSpec.nope.access.acls.allow.allow")
+}
+
+// TestRefFieldTarget_ScalarInArray verifies that a reference path resolves a
+// scalar leaf sitting inside a single non-leaf array of objects (e.g.
+// "api.targets.provider": "targets" is the array, not the leaf — "provider"
+// is a plain field on each element). The array segment is tagged Array: true,
+// which is what lets the final-segment check allow a non-array leaf, and lets
+// downstream code (the accessor/injection) range the array instead of
+// returning it directly.
+func TestRefFieldTarget_ScalarInArray(t *testing.T) {
+	parsed := modelRootUnionParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, nil)
+
+	typeName, field, goPath, err := g.refFieldTarget("AIGatewayModel", config.ReferenceConfig{
+		Path: "spec.apiSpec.api.targets.provider",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "AIGatewayTarget", typeName)
+	require.Equal(t, "provider", field)
+	require.Equal(t, []GoPathSegment{
+		{Name: "AIGatewayModelConfig", Pointer: true, UnionWrapper: true, UnionTypeName: "AIGatewayModelConfig"},
+		{Name: "API", Pointer: true, JSONKey: "api", UnionVariant: true, VariantProperties: 3},
+		{Name: "Targets", Pointer: false, JSONKey: "targets", Array: true},
+		{Name: "Provider", Pointer: false, JSONKey: "provider"},
+	}, goPath)
+
+	// A scalar final segment with no array ancestor is still a config error.
+	_, _, _, err = g.refFieldTarget("AIGatewayModel", config.ReferenceConfig{ //nolint:dogsled // only the error matters here
+		Path: "spec.apiSpec.api.name",
+	})
+	require.ErrorContains(t, err, "must be an array property")
+}
+
+// TestGenerateSDKOps_ScalarInArrayAccessorAndInjection verifies the two pieces
+// specific to a scalar leaf ref-ified inside a non-leaf array: the RefsAt
+// accessor ranges the array collecting one ref per element (instead of the
+// linear branch's direct field access, which can't select a field on a
+// slice), and the SDK payload injection overwrites each array element's own
+// leaf key in place instead of a single top-level or nested key.
+func TestGenerateSDKOps_ScalarInArrayAccessorAndInjection(t *testing.T) {
+	parsed := modelRootUnionParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+		"AIGatewayModel": {
+			{
+				Path:        "spec.apiSpec.api.targets.provider",
+				Kinds:       []string{"AIGatewayModelProvider"},
+				ResolvesTo:  "name",
+				RefTypeName: "AIGatewayModelProviderRef",
+			},
+		},
+	})
+	schema := parsed.RequestBodies["AIGatewayModel"]
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayModelRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayModel", schema, opsConfig)
+	require.NoError(t, err)
+
+	// Generated file stays parseable Go.
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	// Ranging accessor: nil-guard down to the array, then collect one ref per
+	// element instead of returning the array itself.
+	require.Contains(t, content, "func RefsAtAIGatewayModelAPITargetsProvider(obj *AIGatewayModel) []AIGatewayModelProviderRef {")
+	require.Contains(t, content, "if obj.Spec.APISpec.AIGatewayModelConfig == nil {")
+	require.Contains(t, content, "if obj.Spec.APISpec.AIGatewayModelConfig.API == nil {")
+	require.Contains(t, content, "var refs []AIGatewayModelProviderRef")
+	require.Contains(t, content, "for i := range obj.Spec.APISpec.AIGatewayModelConfig.API.Targets {")
+	require.Contains(t, content, "refs = append(refs, obj.Spec.APISpec.AIGatewayModelConfig.API.Targets[i].Provider)")
+
+	// Payload injection: nil-guard down to "api", range the "targets" array,
+	// and overwrite each element's own "provider" key in place — skipping
+	// elements without one and stopping once the resolved values run out.
+	require.Contains(t, content, "resolvedAPITargetsProvider, err := resolveAIGatewayModelAPITargetsProvider(ctx, cl, obj)")
+	require.Contains(t, content, `if arr, ok := api["targets"].([]any); ok {`)
+	require.Contains(t, content, `if _, has := el["provider"]; !has {`)
+	require.Contains(t, content, `el["provider"] = resolvedAPITargetsProvider[ri]`)
+	// The array is never rebuilt wholesale (that would drop sibling keys like
+	// each target's own "name" and "config").
+	require.NotContains(t, content, `payload["api"] = map[string]any`)
 }
 
 // TestGenerateSDKOps_ACLRefPayloadInjection verifies the client-needing builder
