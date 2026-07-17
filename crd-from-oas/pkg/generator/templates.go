@@ -293,6 +293,34 @@ func (obj *{{.EntityName}}) SetKonnectID(id string) {
 func (obj *{{.EntityName}}) GetKonnectID() string {
 	return obj.Status.ID
 }
+{{- if .NameAccessor}}
+
+// GetKonnectName returns the {{.EntityName}}'s identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *{{.EntityName}}) GetKonnectName() string {
+{{- if .SupportsMirror}}
+	if obj.Spec.APISpec == nil {
+		return ""
+	}
+{{- end}}
+{{- if .NameAccessor.IsUnion}}
+	if obj.Spec.APISpec.{{.NameAccessor.WrapperFieldName}} == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.{{.NameAccessor.WrapperFieldName}}.Type {
+{{- range .NameAccessor.Variants}}
+	case {{.TypeConst}}:
+		if obj.Spec.APISpec.{{$.NameAccessor.WrapperFieldName}}.{{.FieldName}} != nil {
+			return string(obj.Spec.APISpec.{{$.NameAccessor.WrapperFieldName}}.{{.FieldName}}.Name)
+		}
+{{- end}}
+	}
+	return ""
+{{- else}}
+	return string(obj.Spec.APISpec.Name)
+{{- end}}
+}
+{{- end}}
 
 // GetTypeName returns the {{.EntityName}} Kind name.
 func (obj {{.EntityName}}) GetTypeName() string {
@@ -922,6 +950,25 @@ const sdkOpsReferenceSharedDefines = `
 // RefsAt{{$.EntityName}}{{.GoResolverName}} returns the references at {{.Path}},
 // or nil when any ancestor is unset.
 func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeName}} {
+{{- if .NestedArrayScalar}}
+{{- range .ArrayGuardExprs}}
+	if {{.}} == nil {
+		return nil
+	}
+{{- end}}
+	var refs []{{.TypeName}}
+	for i := range {{.ArrayPath}} {
+{{- if .ArrayLeafPointer}}
+		if {{.ArrayPath}}[i].{{.ArrayLeafName}} == nil {
+			continue
+		}
+		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafName}})
+{{- else}}
+		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafName}})
+{{- end}}
+	}
+	return refs
+{{- else}}
 {{- $path := "obj.Spec.APISpec"}}
 {{- range .GoPathSegments}}
 {{- $path = printf "%s.%s" $path .Name}}
@@ -932,6 +979,7 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeN
 {{- end}}
 {{- end}}
 	return {{$path}}
+{{- end}}
 }
 {{end}}
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the CR references in {{.Path}}
@@ -979,7 +1027,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 				continue
 			}
 {{- if $ref.ResolvesToName}}
-			resolvedValue = string(referenced.Spec.APISpec.Name)
+			resolvedValue = referenced.GetKonnectName()
 {{- else}}
 			resolvedValue = konnectID
 {{- end}}
@@ -1012,7 +1060,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 {{- else}}
 		id := referenced.GetKonnectID()
 		if id == "" {
@@ -1052,6 +1100,11 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 	// value in the SDK payload from the CRD ACL union's selected variant with the
 	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
 	// CRD union leaves the payload untouched.
+{{- else if .ArrayKey}}
+	// {{.Path}} carries a CR reference: inject the resolved Konnect values into
+	// each element of the "{{.ArrayKey}}" array in the SDK payload, preserving
+	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
 {{- else}}
 	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
@@ -1079,6 +1132,29 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 			{{$inj.TargetVar}}["{{$inj.SDKUnionKey}}"] = map[string]any{"{{.LeafSDKKey}}": resolved{{.ResolverName}}}
 {{- end}}
 		}
+{{- else if .ArrayKey}}
+{{- range .Variants}}
+		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
+		}
+		if arr, ok := {{$inj.TargetVar}}["{{$inj.ArrayKey}}"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := el["{{.LeafSDKKey}}"]; !has {
+					continue
+				}
+				if ri < len(resolved{{.ResolverName}}) {
+					el["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
+					ri++
+				}
+			}
+		}
+{{- end}}
 {{- else}}
 {{- range .Variants}}
 		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
@@ -1640,12 +1716,14 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 {{- if .NeedsFakeClient}}
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 {{- end}}
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	{{.APIAlias}} "{{.APIPackagePath}}"
+{{- if .NeedsFakeClient}}
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+{{- end}}
 )
 
 func testGenerated{{.Entity}}ForSDKOps() *{{.APIAlias}}.{{.Entity}} {
@@ -1683,7 +1761,7 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.{{.Create.MockConstructorName}}(t)
 {{- if .Create.NeedsClient}}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
 {{- end}}
 	obj := testGenerated{{.Entity}}ForSDKOps()
 {{- range .Create.Parents}}
@@ -1769,7 +1847,7 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.{{.Create.MockConstructorName}}(t)
 {{- if .Create.NeedsClient}}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
 {{- end}}
 	obj := testGenerated{{.Entity}}ForSDKOps()
 {{- range .Create.Parents}}
@@ -1835,7 +1913,7 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.{{.Update.MockConstructorName}}(t)
 {{- if .Update.NeedsClient}}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
 {{- end}}
 	obj := testGenerated{{.Entity}}ForSDKOps()
 {{- range .Update.Parents}}
@@ -1911,7 +1989,7 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.{{.Update.MockConstructorName}}(t)
 {{- if .Update.NeedsClient}}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
 {{- end}}
 	obj := testGenerated{{.Entity}}ForSDKOps()
 {{- range .Update.Parents}}

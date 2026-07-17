@@ -218,7 +218,7 @@ func resolveAIGatewayAgentPolicies(ctx context.Context, cl client.Client, obj *A
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
@@ -274,7 +274,7 @@ func resolveAIGatewayAgentAccessAclsAllowAllow(ctx context.Context, cl client.Cl
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
@@ -330,7 +330,7 @@ func resolveAIGatewayAgentAccessAclsDenyDeny(ctx context.Context, cl client.Clie
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err

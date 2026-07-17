@@ -8401,9 +8401,7 @@ type AIGatewayTarget struct {
 	// Reference to a model provider instance by name.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Provider AIGatewayModelProviderReference `json:"provider,omitzero"`
+	Provider AIGatewayModelProviderRef `json:"provider,omitzero"`
 	// The semantic description of the target, required if using semantic load
 	// balancing.
 	// Specially, setting this to 'CATCHALL' will indicate such target to be used

@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func testGeneratedAIGatewayModelForSDKOps() *konnectv1alpha1.AIGatewayModel {
@@ -33,7 +33,7 @@ func testGeneratedAIGatewayModelForSDKOps() *konnectv1alpha1.AIGatewayModel {
 			APISpec: konnectv1alpha1.AIGatewayModelAPISpec{
 				AIGatewayModelConfig: &konnectv1alpha1.AIGatewayModelConfig{
 					Type: konnectv1alpha1.AIGatewayModelConfigTypeAPI,
-					API:  &konnectv1alpha1.AIGatewayModelAPI{DisplayName: "test-display-name", Name: "test-model", Capabilities: []string{"llm/v1/chat"}, Formats: []konnectv1alpha1.AIGatewayModelFormat{{Type: "openai"}}, Config: konnectv1alpha1.AIGatewayModelAPIConfig{Model: konnectv1alpha1.AIGatewayModelAPIConfigModel{Alias: "test-alias"}, Route: konnectv1alpha1.AIGatewayRouteConfig{Paths: []string{"/chat"}}}, Targets: []konnectv1alpha1.AIGatewayTarget{{Name: "target-model", Provider: "provider-1", Config: &konnectv1alpha1.AIGatewayTargetConfig{Type: konnectv1alpha1.AIGatewayTargetConfigTypeAnthropic, Anthropic: &konnectv1alpha1.AIGatewayTargetAnthropicConfig{}}}}},
+					API:  &konnectv1alpha1.AIGatewayModelAPI{DisplayName: "test-display-name", Name: "test-model", Capabilities: []string{"llm/v1/chat"}, Formats: []konnectv1alpha1.AIGatewayModelFormat{{Type: "openai"}}, Config: konnectv1alpha1.AIGatewayModelAPIConfig{Model: konnectv1alpha1.AIGatewayModelAPIConfigModel{Alias: "test-alias"}, Route: konnectv1alpha1.AIGatewayRouteConfig{Paths: []string{"/chat"}}}, Targets: []konnectv1alpha1.AIGatewayTarget{{Name: "target-model", Provider: konnectv1alpha1.AIGatewayModelProviderRef{Name: "provider-1"}, Config: &konnectv1alpha1.AIGatewayTargetConfig{Type: konnectv1alpha1.AIGatewayTargetConfigTypeAnthropic, Anthropic: &konnectv1alpha1.AIGatewayTargetAnthropicConfig{}}}}},
 				},
 			},
 		},
@@ -45,7 +45,11 @@ func TestCreateAIGatewayModel_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayModelsSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *konnectv1alpha1.AIGatewayModelProvider {
+		p := &konnectv1alpha1.AIGatewayModelProvider{ObjectMeta: metav1.ObjectMeta{Name: "provider-1", Namespace: "default"}}
+		p.SetKonnectID("provider-1-kid")
+		return p
+	}()).Build()
 	obj := testGeneratedAIGatewayModelForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -77,7 +81,11 @@ func TestCreateAIGatewayModel_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayModelsSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *konnectv1alpha1.AIGatewayModelProvider {
+		p := &konnectv1alpha1.AIGatewayModelProvider{ObjectMeta: metav1.ObjectMeta{Name: "provider-1", Namespace: "default"}}
+		p.SetKonnectID("provider-1-kid")
+		return p
+	}()).Build()
 	obj := testGeneratedAIGatewayModelForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -103,7 +111,11 @@ func TestUpdateAIGatewayModel_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayModelsSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *konnectv1alpha1.AIGatewayModelProvider {
+		p := &konnectv1alpha1.AIGatewayModelProvider{ObjectMeta: metav1.ObjectMeta{Name: "provider-1", Namespace: "default"}}
+		p.SetKonnectID("provider-1-kid")
+		return p
+	}()).Build()
 	obj := testGeneratedAIGatewayModelForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -131,7 +143,11 @@ func TestUpdateAIGatewayModel_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayModelsSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *konnectv1alpha1.AIGatewayModelProvider {
+		p := &konnectv1alpha1.AIGatewayModelProvider{ObjectMeta: metav1.ObjectMeta{Name: "provider-1", Namespace: "default"}}
+		p.SetKonnectID("provider-1-kid")
+		return p
+	}()).Build()
 	obj := testGeneratedAIGatewayModelForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)

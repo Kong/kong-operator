@@ -12704,6 +12704,24 @@ _Appears in:_
 
 - [AIGatewayModelProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
 
+#### AIGatewayModelProviderRef
+
+
+AIGatewayModelProviderRef references an AIGatewayModelProvider in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)
+
 #### AIGatewayModelProviderReference
 
 _Underlying type:_ `string`
@@ -12717,7 +12735,6 @@ name.
 _Appears in:_
 
 - [AIGatewayModelBalancerSemanticConfigEmbeddings](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddings)
-- [AIGatewayTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytarget)
 
 #### AIGatewayModelProviderSpec
 
@@ -13822,7 +13839,7 @@ AIGatewayTarget A target instance a model entry routes requests to.
 | `allowAuthOverride` _string_ | When enabled, request-level auth parameters (such as API keys or bearer tokens) will override the static values defined for the provider. |
 | `config` _[AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a target model. |
 | `name` _string_ | The name of the model defined in the upstream provider that will be executed. |
-| `provider` _[AIGatewayModelProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderreference)_ | Reference to a model provider instance by name. |
+| `provider` _[AIGatewayModelProviderRef](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderref)_ | Reference to a model provider instance by name. |
 | `semanticDescription` _string_ | The semantic description of the target, required if using semantic load balancing. Specially, setting this to 'CATCHALL' will indicate such target to be used when no other targets match the semantic threshold. |
 | `weight` _int_ | The weight this target gets within the upstream load balancer |
 

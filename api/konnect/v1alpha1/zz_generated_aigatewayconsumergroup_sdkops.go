@@ -69,7 +69,7 @@ func resolveAIGatewayConsumerGroupPolicies(ctx context.Context, cl client.Client
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err

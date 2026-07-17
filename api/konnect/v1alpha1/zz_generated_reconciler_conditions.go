@@ -35,6 +35,22 @@ const (
 	// yet programmed in Konnect.
 	AIGatewayConsumerGroupRefReasonNotProgrammed = "NotProgrammed"
 
+	// AIGatewayModelProviderRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayModelProvider reference is valid and points to an existing
+	// AIGatewayModelProvider.
+	AIGatewayModelProviderRefValidConditionType = "AIGatewayModelProviderRefValid"
+
+	// AIGatewayModelProviderRefReasonValid is the reason used with the AIGatewayModelProviderRefValid
+	// condition type indicating that the AIGatewayModelProvider reference is valid.
+	AIGatewayModelProviderRefReasonValid = "Valid"
+	// AIGatewayModelProviderRefReasonInvalid is the reason used with the AIGatewayModelProviderRefValid
+	// condition type indicating that the AIGatewayModelProvider reference is invalid.
+	AIGatewayModelProviderRefReasonInvalid = "Invalid"
+	// AIGatewayModelProviderRefReasonNotProgrammed is the reason used with the AIGatewayModelProviderRefValid
+	// condition type indicating that the referenced AIGatewayModelProvider exists but is not
+	// yet programmed in Konnect.
+	AIGatewayModelProviderRefReasonNotProgrammed = "NotProgrammed"
+
 	// AIGatewayPolicyRefValidConditionType is the type of the condition that indicates
 	// whether the AIGatewayPolicy reference is valid and points to an existing
 	// AIGatewayPolicy.

@@ -158,7 +158,8 @@ spec:
         env: test
       targets:
         - name: gpt-4o-mini
-          provider: openai-provider
+          provider:
+            name: ai-gw-provider-openai
           config:
             type: openai
             openai:

@@ -4667,7 +4667,6 @@ func TestBuildOpsControllerRootUnionFixture_AIGatewayModelUsesValidFixture(t *te
 	assert.Equal(t, "API", fixture.VariantField)
 	assert.Contains(t, fixture.VariantValue, "AIGatewayModelAPI{DisplayName:")
 	assert.Contains(t, fixture.VariantValue, "Capabilities: []string{\"llm/v1/chat\"}")
-	assert.Contains(t, fixture.VariantValue, "AIGatewayTargetConfigTypeAnthropic")
 }
 
 func TestGenerateEntityOpsFile_ControllerOpsTestsUseSafeNamedRefLiterals(t *testing.T) {

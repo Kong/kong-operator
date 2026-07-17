@@ -2196,8 +2196,15 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	switch {
 	case isSensitive && isScalarArraySensitiveLeaf(prop):
 		goType = "[]SensitiveDataSource"
-	case refTypeName != "":
+	case refTypeName != "" && prop.Type == "array":
 		goType = "[]" + refTypeName
+	case refTypeName != "" && (!prop.Required || prop.Nullable):
+		// Scalar leaf ref-ified inside a non-leaf array (see refFieldTarget):
+		// the "many" cardinality already comes from the enclosing array, so
+		// this leaf is one ref per element, not a slice.
+		goType = "*" + refTypeName
+	case refTypeName != "":
+		goType = refTypeName
 	case isSensitive:
 		leafType, _ := g.schemaFieldSensitiveType(typeName, jsonFieldName)
 		goType = leafType.sensitiveGoTypeName()
@@ -2952,6 +2959,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		AncestorEntityTypes                []string
 		SingletonNoID                      bool
 		SupportsMirror                     bool
+		NameAccessor                       *TemplateNameAccessor
 	}{
 		EntityName:                entityName,
 		APIVersion:                g.config.APIVersion,
@@ -2986,6 +2994,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		AncestorEntityTypes:                ancestorEntityTypes,
 		SingletonNoID:                      isSingletonNoID(schema),
 		SupportsMirror:                     supportsMirror,
+		NameAccessor:                       g.entityNameAccessor(schema),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -4178,6 +4187,11 @@ type GoPathSegment struct {
 	// schema; only set when UnionVariant is true. SDK payload injection uses it
 	// to refuse rebuilding a union value whose member has sibling fields.
 	VariantProperties int
+	// Array is true when this hop is a non-leaf array-of-objects the walk
+	// descended through (e.g. "targets" in "api.targets.provider"). The final
+	// segment's cardinality then comes from this array rather than the leaf
+	// itself, so the leaf is ref-ified as a scalar, not a slice.
+	Array bool
 }
 
 // TemplateAssociationConfig is the per-association data used by crdTypeTemplate
@@ -4257,6 +4271,25 @@ type TemplateReferenceConfig struct {
 	// ResolvesToName is true when references resolve to the referenced CR's Konnect
 	// name rather than its Konnect ID.
 	ResolvesToName bool
+	// NestedArrayScalar is true when the reference path resolves to a scalar
+	// leaf inside a single non-leaf array of objects (e.g. "api.targets.provider").
+	// Such references need a ranging RefsAt accessor instead of the linear one
+	// (see ArrayGuardExprs/ArrayPath/ArrayLeafName/ArrayLeafPointer below).
+	NestedArrayScalar bool
+	// ArrayGuardExprs are the Go expressions to nil-guard, in order, before
+	// ranging ArrayPath (one per pointer segment preceding and including the
+	// array). Only set when NestedArrayScalar is true.
+	ArrayGuardExprs []string
+	// ArrayPath is the Go expression for the enclosing array itself, e.g.
+	// "obj.Spec.APISpec.AIGatewayModelConfig.API.Targets". Only set when
+	// NestedArrayScalar is true.
+	ArrayPath string
+	// ArrayLeafName is the Go field name of the scalar leaf on the array's
+	// element type, e.g. "Provider". Only set when NestedArrayScalar is true.
+	ArrayLeafName string
+	// ArrayLeafPointer is true when the leaf field on the element type is a
+	// pointer (the leaf is optional). Only set when NestedArrayScalar is true.
+	ArrayLeafPointer bool
 }
 
 // templateReferences returns the references for an entity with computed Go field names.
@@ -4294,18 +4327,42 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 				goPathSegments = goPath
 			}
 		}
+		nestedArrayScalar := isNestedArrayScalar(goPathSegments)
+		var arrayGuardExprs []string
+		var arrayPath, arrayLeafName string
+		var arrayLeafPointer bool
+		if nestedArrayScalar {
+			var pathBuilder strings.Builder
+			pathBuilder.WriteString("obj.Spec.APISpec")
+			for _, seg := range goPathSegments[:len(goPathSegments)-1] {
+				pathBuilder.WriteByte('.')
+				pathBuilder.WriteString(seg.Name)
+				if seg.Pointer {
+					arrayGuardExprs = append(arrayGuardExprs, pathBuilder.String())
+				}
+			}
+			arrayPath = pathBuilder.String()
+			leaf := goPathSegments[len(goPathSegments)-1]
+			arrayLeafName = leaf.Name
+			arrayLeafPointer = leaf.Pointer
+		}
 		result[i] = TemplateReferenceConfig{
-			ReferenceConfig:  ref,
-			GoFieldName:      goFieldNameStr,
-			JSONFieldName:    tail,
-			SDKJSONFieldName: sdkJSONKey(tail),
-			DefaultKind:      defaultKind,
-			GoResolverName:   goResolverName,
-			NestedRef:        nested,
-			RefsExpr:         refsExpr,
-			GoPathSegments:   goPathSegments,
-			MultiKind:        len(ref.Kinds) > 1,
-			ResolvesToName:   ref.ResolvesTo == "name",
+			ReferenceConfig:   ref,
+			GoFieldName:       goFieldNameStr,
+			JSONFieldName:     tail,
+			SDKJSONFieldName:  sdkJSONKey(tail),
+			DefaultKind:       defaultKind,
+			GoResolverName:    goResolverName,
+			NestedRef:         nested,
+			RefsExpr:          refsExpr,
+			GoPathSegments:    goPathSegments,
+			MultiKind:         len(ref.Kinds) > 1,
+			ResolvesToName:    ref.ResolvesTo == "name",
+			NestedArrayScalar: nestedArrayScalar,
+			ArrayGuardExprs:   arrayGuardExprs,
+			ArrayPath:         arrayPath,
+			ArrayLeafName:     arrayLeafName,
+			ArrayLeafPointer:  arrayLeafPointer,
 		}
 	}
 	return result
@@ -4394,6 +4451,12 @@ type TemplateRefInjection struct {
 	// configured AIGatewayACLRef allow/deny reference sharing that union, or
 	// exactly one for a direct injection.
 	Variants []TemplateRefVariant
+	// ArrayKey is TargetVar's own key holding the enclosing array, set only
+	// when a scalar leaf is ref-ified inside a non-leaf array of objects
+	// (e.g. "api.targets.provider"). The write ranges TargetVar[ArrayKey] and
+	// overwrites each element's own LeafSDKKey in place, rather than
+	// overwriting TargetVar's own key wholesale.
+	ArrayKey string
 }
 
 // refInjections computes the SDK payload injection plan for every nested
@@ -4447,12 +4510,20 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		return nil, fmt.Errorf("reference path %q: nested reference could not be resolved to a Go field-access chain", ref.Path)
 	}
 	isACL := ref.TypeName() == "AIGatewayACLRef"
+	// isArrayElement is true for a scalar leaf ref-ified inside a non-leaf
+	// array of objects (e.g. "api.targets.provider"): the write target is the
+	// enclosing array, whose elements get their own leaf key overwritten in
+	// place, rather than a single key holding the whole resolved value.
+	isArrayElement := !isACL && isNestedArrayScalar(segs)
 
-	// writeIdx is the segment whose own JSON key gets overwritten: the
-	// innermost "access.acls" union wrapper for AIGatewayACLRef, or the
-	// leaf itself for everything else.
+	// writeIdx is the segment whose own JSON key gets overwritten (or, for
+	// isArrayElement, whose key holds the array ranged in place): the
+	// innermost "access.acls" union wrapper for AIGatewayACLRef, the
+	// enclosing array for isArrayElement, or the leaf itself for everything
+	// else.
 	var writeIdx int
-	if isACL {
+	switch {
+	case isACL:
 		// Check the supported-shape suffix before relying on writeIdx —
 		// an AIGatewayACLRef path that doesn't reach a union at all (e.g.
 		// a plain $ref hop) must fail here, not by indexing with -1 below.
@@ -4465,8 +4536,12 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 				writeIdx = i
 			}
 		}
-	} else {
+	case isArrayElement:
+		writeIdx = len(segs) - 2
+	default:
 		writeIdx = len(segs) - 1
+	}
+	if !isACL {
 		// A property-level union (a JSON key of its own, e.g.
 		// "access.acls") is unwrapped nowhere else in the SDK payload
 		// builder, so a non-ACL reference passing through one would
@@ -4480,7 +4555,9 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 	}
 
 	var variant TemplateRefVariant
-	if isACL {
+	arrayKey := ""
+	switch {
+	case isACL:
 		if writeIdx < 0 || len(segs) != writeIdx+3 || !segs[writeIdx+1].UnionVariant {
 			return nil, fmt.Errorf("reference path %q: AIGatewayACLRef SDK payload injection requires the leaf array directly on the ACL union variant member", ref.Path)
 		}
@@ -4500,7 +4577,16 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 			TypeConst:     segs[writeIdx].UnionTypeName + "Type" + segs[writeIdx+1].Name,
 			RefPath:       ref.Path,
 		}
-	} else {
+	case isArrayElement:
+		leaf := segs[len(segs)-1]
+		variant = TemplateRefVariant{
+			GoMemberField: leaf.Name,
+			LeafSDKKey:    sdkJSONKey(leaf.JSONKey),
+			ResolverName:  ref.GoResolverName,
+			RefPath:       ref.Path,
+		}
+		arrayKey = sdkJSONKey(segs[writeIdx].JSONKey)
+	default:
 		variant = TemplateRefVariant{
 			GoMemberField: segs[writeIdx].Name,
 			LeafSDKKey:    ref.SDKJSONFieldName,
@@ -4559,6 +4645,7 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		ParentNavs:         navs,
 		ParentNavsReversed: reversed,
 		Variants:           []TemplateRefVariant{variant},
+		ArrayKey:           arrayKey,
 	}
 	if isACL {
 		pathParts := strings.Split(ref.Path, ".")
@@ -4575,6 +4662,24 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 func isSupportedAIGatewayACLRefPath(path string) bool {
 	return strings.HasSuffix(path, ".access.acls.allow.allow") ||
 		strings.HasSuffix(path, ".access.acls.deny.deny")
+}
+
+// isNestedArrayScalar reports whether goPath resolves a scalar leaf sitting
+// directly inside exactly one non-leaf array of objects (e.g.
+// "api.targets.provider": ..., Array(targets), leaf(provider)). Any prefix of
+// object/union hops before the array is fine — they are already handled
+// generically by the pointer nil-guards in the generated accessor.
+func isNestedArrayScalar(goPath []GoPathSegment) bool {
+	if len(goPath) < 2 {
+		return false
+	}
+	arrayCount := 0
+	for _, seg := range goPath {
+		if seg.Array {
+			arrayCount++
+		}
+	}
+	return arrayCount == 1 && goPath[len(goPath)-2].Array
 }
 
 // goLocalVarFromKey derives a Go local-variable name from a payload key, e.g.
@@ -4845,6 +4950,11 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 	var union *parser.Property
 	var unionPrefix string
 	var goPathSegments []GoPathSegment
+	// sawArray tracks whether the walk has descended through a non-leaf array
+	// of objects (see the Array segments below), which allows the final
+	// segment to be a scalar rather than an array (its "many" cardinality
+	// comes from the enclosing array instead).
+	var sawArray bool
 
 	// Root-level oneOf: the entity schema is itself a discriminated union. The
 	// generated APISpec embeds a *<Entity>Config union wrapper (inline in JSON,
@@ -4909,10 +5019,14 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 		}
 
 		if final {
-			if prop.Type != "array" {
+			if prop.Type != "array" && !sawArray {
 				return "", "", nil, fmt.Errorf("reference path %q must be an array property, got %q", ref.Path, prop.Type)
 			}
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			// A scalar leaf inside a non-leaf array (sawArray) is ref-ified as
+			// one scalar per element; it is a pointer when the leaf field
+			// itself is optional (an array-typed leaf is never a pointer).
+			leafPointer := prop.Type != "array" && (!prop.Required || prop.Nullable)
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: leafPointer, JSONKey: jsonName(prop.Name)})
 			return typeName, jsonName(prop.Name), goPathSegments, nil
 		}
 
@@ -4946,7 +5060,8 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			typeName = g.inlineTypeName(entityName, typeName, prop.Name)
 			schema = &parser.Schema{Properties: prop.Properties}
 		case prop.Type == "array" && prop.Items != nil && prop.Items.RefName != "":
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name), Array: true})
+			sawArray = true
 			itemSchema := g.parsed.Schemas[prop.Items.RefName]
 			if itemSchema == nil {
 				return "", "", nil, fmt.Errorf("reference path %q: schema %q not found", ref.Path, prop.Items.RefName)
@@ -4954,7 +5069,8 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			schema = itemSchema
 			typeName = fixInitialisms(prop.Items.RefName)
 		case prop.Type == "array" && prop.Items != nil && len(prop.Items.Properties) > 0:
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name), Array: true})
+			sawArray = true
 			typeName = g.inlineTypeName(entityName, typeName, prop.Name)
 			schema = &parser.Schema{Properties: prop.Items.Properties}
 		default:
@@ -5027,6 +5143,84 @@ func (g *Generator) unionVariantSchema(union *parser.Property, variant unionVari
 		return s, fixInitialisms(refName), nil
 	}
 	return nil, "", fmt.Errorf("cannot descend into union variant %q", variant.discValue)
+}
+
+// TemplateNameAccessor describes how the generated GetKonnectName() method
+// reads an entity's "name" property. Ordinary entities have it as a
+// top-level field; root-oneOf entities (e.g. AIGatewayModelProvider, whose
+// request schema is a discriminated union of provider types) carry "name" on
+// each variant instead, so GetKonnectName() switches on the union's type.
+type TemplateNameAccessor struct {
+	// IsUnion is true when "name" must be read from a root-level discriminated
+	// union's selected variant rather than a shared top-level field.
+	IsUnion bool
+	// WrapperFieldName is the Go (embedded) field name of the root-union
+	// wrapper, e.g. "AIGatewayModelProviderConfig". Only set when IsUnion.
+	WrapperFieldName string
+	// Variants are the union arms that have their own "name" property. Arms
+	// without one are skipped: GetKonnectName() falls through to "" for them.
+	// Only set when IsUnion.
+	Variants []TemplateNameAccessorVariant
+}
+
+// TemplateNameAccessorVariant is one union arm with its own "name" property.
+type TemplateNameAccessorVariant struct {
+	// TypeConst is the discriminator constant selecting this variant.
+	TypeConst string
+	// FieldName is the variant's Go field name on the union wrapper.
+	FieldName string
+}
+
+// entityNameAccessor determines how to read entityName's "name" property for
+// the generated GetKonnectName() method (see crdFuncsTemplate), accounting
+// for root-oneOf entities whose "name" lives on each variant. Returns nil
+// when no "name" property is reachable, in which case no GetKonnectName() is
+// emitted.
+func (g *Generator) entityNameAccessor(schema *parser.Schema) *TemplateNameAccessor {
+	if !hasRootOneOf(schema) {
+		for _, p := range schema.Properties {
+			if jsonName(p.Name) == "name" {
+				return &TemplateNameAccessor{}
+			}
+		}
+		return nil
+	}
+	if g.parsed == nil {
+		// unionVariantSchema needs the parsed spec to resolve each variant's
+		// schema; without it there's no way to tell which variants carry
+		// "name", so skip generating GetKonnectName() rather than guess.
+		return nil
+	}
+
+	union := buildRootUnionProperty(schema)
+	typeName := generatedUnionTypeName(union, "")
+	variants := buildUnionVariants(union, typeName)
+	fieldVariants := buildUnionFieldVariants(variants, typeName)
+	result := &TemplateNameAccessor{IsUnion: true, WrapperFieldName: typeName}
+	for i, v := range variants {
+		variantSchema, _, err := g.unionVariantSchema(union, v)
+		if err != nil {
+			continue
+		}
+		hasName := false
+		for _, p := range variantSchema.Properties {
+			if jsonName(p.Name) == "name" {
+				hasName = true
+				break
+			}
+		}
+		if !hasName {
+			continue
+		}
+		result.Variants = append(result.Variants, TemplateNameAccessorVariant{
+			TypeConst: fieldVariants[i].TypeConst,
+			FieldName: fieldVariants[i].FieldName,
+		})
+	}
+	if len(result.Variants) == 0 {
+		return nil
+	}
+	return result
 }
 
 // entityHasReferences returns true if the entity has at least one configured reference.

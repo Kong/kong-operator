@@ -24,6 +24,12 @@ func (obj *PortalTeam) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the PortalTeam's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *PortalTeam) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the PortalTeam Kind name.
 func (obj PortalTeam) GetTypeName() string {
 	return "PortalTeam"

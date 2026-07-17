@@ -24,6 +24,21 @@ func (obj *EventGatewayVirtualClusterPolicy) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayVirtualClusterPolicy's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayVirtualClusterPolicy) GetKonnectName() string {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.Type {
+	case EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.EventGatewayACLsPolicy != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.EventGatewayACLsPolicy.Name)
+		}
+	}
+	return ""
+}
+
 // GetTypeName returns the EventGatewayVirtualClusterPolicy Kind name.
 func (obj EventGatewayVirtualClusterPolicy) GetTypeName() string {
 	return "EventGatewayVirtualClusterPolicy"

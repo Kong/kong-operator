@@ -24,6 +24,25 @@ func (obj *AIGatewayIdentityProvider) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the AIGatewayIdentityProvider's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *AIGatewayIdentityProvider) GetKonnectName() string {
+	if obj.Spec.APISpec.AIGatewayIdentityProviderConfig == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.AIGatewayIdentityProviderConfig.Type {
+	case AIGatewayIdentityProviderConfigTypeKeyAuth:
+		if obj.Spec.APISpec.AIGatewayIdentityProviderConfig.KeyAuth != nil {
+			return string(obj.Spec.APISpec.AIGatewayIdentityProviderConfig.KeyAuth.Name)
+		}
+	case AIGatewayIdentityProviderConfigTypeOpenIDConnect:
+		if obj.Spec.APISpec.AIGatewayIdentityProviderConfig.OpenIDConnect != nil {
+			return string(obj.Spec.APISpec.AIGatewayIdentityProviderConfig.OpenIDConnect.Name)
+		}
+	}
+	return ""
+}
+
 // GetTypeName returns the AIGatewayIdentityProvider Kind name.
 func (obj AIGatewayIdentityProvider) GetTypeName() string {
 	return "AIGatewayIdentityProvider"

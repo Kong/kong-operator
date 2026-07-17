@@ -24,6 +24,12 @@ func (obj *EventGatewayDataPlaneCertificate) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayDataPlaneCertificate's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayDataPlaneCertificate) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the EventGatewayDataPlaneCertificate Kind name.
 func (obj EventGatewayDataPlaneCertificate) GetTypeName() string {
 	return "EventGatewayDataPlaneCertificate"

@@ -323,6 +323,14 @@ apiGroupVersions:
             kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
             resolvesTo: name
+          - path: spec.apiSpec.api.targets.provider
+            kinds: [AIGatewayModelProvider]
+            refTypeName: AIGatewayModelProviderRef
+            resolvesTo: name
+          - path: spec.apiSpec.model.targets.provider
+            kinds: [AIGatewayModelProvider]
+            refTypeName: AIGatewayModelProviderRef
+            resolvesTo: name
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelsSDK

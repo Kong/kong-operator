@@ -53,6 +53,12 @@ func (obj *EventGatewayVirtualCluster) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayVirtualCluster's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayVirtualCluster) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the EventGatewayVirtualCluster Kind name.
 func (obj EventGatewayVirtualCluster) GetTypeName() string {
 	return "EventGatewayVirtualCluster"

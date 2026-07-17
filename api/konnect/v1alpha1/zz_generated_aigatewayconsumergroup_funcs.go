@@ -53,6 +53,12 @@ func (obj *AIGatewayConsumerGroup) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the AIGatewayConsumerGroup's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *AIGatewayConsumerGroup) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the AIGatewayConsumerGroup Kind name.
 func (obj AIGatewayConsumerGroup) GetTypeName() string {
 	return "AIGatewayConsumerGroup"
