@@ -4392,14 +4392,22 @@ func aclRefInjections(refs []TemplateReferenceConfig) ([]TemplateACLRefInjection
 	groupIndex := map[string]int{}
 	for _, ref := range refs {
 		segs := ref.GoPathSegments
-		hasUnion := false
+		// A UnionWrapper segment with no JSON key of its own is the synthesized
+		// root-union wrapper (see GoPathSegment.JSONKey): its "type"/variant-key
+		// wrapping is stripped elsewhere by selectedSDKOpsPayload, so a leaf
+		// reached only through it (e.g. a "policies" field directly on a root-union
+		// variant) needs no ACL-style reconstruction and is left to
+		// nestedRefInjections. A UnionWrapper segment WITH a JSON key is a
+		// property-level oneOf/anyOf (like "access.acls") whose nesting nobody else
+		// unwraps, so only AIGatewayACLRef may traverse it here.
+		hasPropertyLevelUnion := false
 		for _, seg := range segs {
-			if seg.UnionWrapper {
-				hasUnion = true
+			if seg.UnionWrapper && seg.JSONKey != "" {
+				hasPropertyLevelUnion = true
 				break
 			}
 		}
-		if hasUnion && ref.TypeName() != "AIGatewayACLRef" {
+		if hasPropertyLevelUnion && ref.TypeName() != "AIGatewayACLRef" {
 			return nil, fmt.Errorf("reference path %q: SDK-union references must use refTypeName AIGatewayACLRef", ref.Path)
 		}
 		if ref.TypeName() == "AIGatewayACLRef" && !isSupportedAIGatewayACLRefPath(ref.Path) {
@@ -4505,6 +4513,108 @@ func aclRefInjections(refs []TemplateReferenceConfig) ([]TemplateACLRefInjection
 func isSupportedAIGatewayACLRefPath(path string) bool {
 	return strings.HasSuffix(path, ".access.acls.allow.allow") ||
 		strings.HasSuffix(path, ".access.acls.deny.deny")
+}
+
+// TemplateNestedRefInjection describes the SDK payload injection block for a
+// nested, non-ACL reference: a single leaf array field reached through one or
+// more pointer/union hops below spec.apiSpec (e.g. a "policies" field sitting
+// directly on a root-union variant member). Unlike TemplateACLRefInjection,
+// there is no sibling arm to choose between, so the generated code simply
+// overwrites the leaf's key in the map already produced by JSON-marshaling the
+// spec, preserving every sibling key at every level. A nil ancestor pointer
+// means that part of the union/object wasn't configured, so the payload is
+// left untouched.
+type TemplateNestedRefInjection struct {
+	// Path is the configured reference path, used in the generated comment.
+	Path string
+	// Cond guards the whole block: nil checks for every pointer hop up to and
+	// including the leaf's immediate parent, joined with &&.
+	Cond string
+	// TargetVar is the variable holding the parent payload map of the leaf
+	// (the last ParentNavs var, or "payload" when every hop up to the leaf's
+	// parent was an inline hop with no JSON key of its own).
+	TargetVar string
+	// ParentNavs are the sibling-preserving navigation hops from "payload"
+	// down to TargetVar, in descent order.
+	ParentNavs []TemplateACLRefParentNav
+	// ParentNavsReversed are the same hops in write-back (innermost-first) order.
+	ParentNavsReversed []TemplateACLRefParentNav
+	// LeafSDKKey is the SDK payload key of the leaf array field.
+	LeafSDKKey string
+	// ResolverName is the resolver-name suffix (TemplateReferenceConfig.GoResolverName).
+	ResolverName string
+}
+
+// nestedRefInjections computes the SDK payload injection plan for every
+// nested reference whose type is not AIGatewayACLRef (which aclRefInjections
+// handles separately, since it must reconstruct a discriminated sub-value
+// instead of overwriting a single key). Each reference is independent: there
+// is no grouping by union ancestor, because there is no sibling arm to switch
+// on — the leaf's key is set directly in whatever map the payload already has
+// at that path.
+func nestedRefInjections(refs []TemplateReferenceConfig) ([]TemplateNestedRefInjection, error) {
+	usedVars := map[string]bool{
+		"payload": true, "data": true, "err": true,
+		"obj": true, "ctx": true, "cl": true, "spec": true,
+	}
+	var injections []TemplateNestedRefInjection
+	for _, ref := range refs {
+		if !ref.NestedRef || ref.TypeName() == "AIGatewayACLRef" {
+			continue
+		}
+		segs := ref.GoPathSegments
+		if len(segs) < 2 {
+			return nil, fmt.Errorf("reference path %q: nested reference could not be resolved to a Go field-access chain", ref.Path)
+		}
+		leafParentIdx := len(segs) - 2
+
+		var conds []string
+		var names []string
+		for j := 0; j <= leafParentIdx; j++ {
+			if segs[j].UnionWrapper && segs[j].JSONKey != "" {
+				// A property-level union (e.g. "access.acls") is unwrapped nowhere
+				// else, so overwriting a single key here would leave its
+				// CRD-side "type" wrapper and variant-key nesting in the SDK
+				// payload untouched — only AIGatewayACLRef's dedicated
+				// reconstruction handles that shape correctly.
+				return nil, fmt.Errorf("reference path %q: nested references through a property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+			}
+			names = append(names, segs[j].Name)
+			if segs[j].Pointer {
+				conds = append(conds, "obj.Spec.APISpec."+strings.Join(names, ".")+" != nil")
+			}
+		}
+
+		parent := "payload"
+		var navs []TemplateACLRefParentNav
+		for _, seg := range segs[:leafParentIdx+1] {
+			if seg.JSONKey == "" {
+				continue
+			}
+			navVar := uniqueLocalVar(goLocalVarFromKey(seg.JSONKey), usedVars)
+			navs = append(navs, TemplateACLRefParentNav{Var: navVar, Key: sdkJSONKey(seg.JSONKey), Parent: parent})
+			parent = navVar
+		}
+		reversed := make([]TemplateACLRefParentNav, 0, len(navs))
+		for _, v := range slices.Backward(navs) {
+			reversed = append(reversed, v)
+		}
+
+		cond := "true"
+		if len(conds) > 0 {
+			cond = strings.Join(conds, " && ")
+		}
+		injections = append(injections, TemplateNestedRefInjection{
+			Path:               ref.Path,
+			Cond:               cond,
+			TargetVar:          parent,
+			ParentNavs:         navs,
+			ParentNavsReversed: reversed,
+			LeafSDKKey:         ref.SDKJSONFieldName,
+			ResolverName:       ref.GoResolverName,
+		})
+	}
+	return injections, nil
 }
 
 // goLocalVarFromKey derives a Go local-variable name from a payload key, e.g.
@@ -4619,11 +4729,26 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 				return err
 			}
 			if len(goPath) > 1 {
-				if ref.TypeName() != "AIGatewayACLRef" {
-					return fmt.Errorf("reference path %q: nested references must use refTypeName AIGatewayACLRef", ref.Path)
-				}
-				if !isSupportedAIGatewayACLRefPath(ref.Path) {
-					return fmt.Errorf("reference path %q: AIGatewayACLRef references only support paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
+				// Nested AIGatewayACLRef references reconstruct a discriminated
+				// "access.acls" sub-value (rather than overwriting a single key), so
+				// they're restricted to the one shape aclRefInjections supports. Every
+				// other nested reference (e.g. a "policies" leaf sitting directly on a
+				// root-union variant member) is handled generically by
+				// nestedRefInjections, which only needs a resolvable Go field-access
+				// chain ending in an array leaf — already guaranteed by refFieldTarget —
+				// as long as it doesn't pass through a property-level union (like
+				// "access.acls"), whose CRD-side "type" wrapper and variant-key
+				// nesting only AIGatewayACLRef's reconstruction unwraps correctly.
+				if ref.TypeName() == "AIGatewayACLRef" {
+					if !isSupportedAIGatewayACLRefPath(ref.Path) {
+						return fmt.Errorf("reference path %q: AIGatewayACLRef references only support paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
+					}
+				} else {
+					for _, seg := range goPath[:len(goPath)-1] {
+						if seg.UnionWrapper && seg.JSONKey != "" {
+							return fmt.Errorf("reference path %q: nested references through a property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+						}
+					}
 				}
 			}
 			target := refTarget{schemaType: schemaType, field: field}
@@ -5223,6 +5348,10 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)
 	}
+	nestedInjections, err := nestedRefInjections(references)
+	if err != nil {
+		return "", fmt.Errorf("entity %s: %w", entityName, err)
+	}
 
 	secretReferences := g.templateSecretReferences(entityName)
 	data := struct {
@@ -5238,6 +5367,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		HasReferences           bool
 		References              []TemplateReferenceConfig
 		ACLRefInjections        []TemplateACLRefInjection
+		NestedRefInjections     []TemplateNestedRefInjection
 		HasParentRefReplacement bool
 		ParentRefReplacesField  string
 		ParentStatusEntityName  string
@@ -5254,6 +5384,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		HasReferences:           g.entityHasReferences(entityName),
 		References:              references,
 		ACLRefInjections:        aclInjections,
+		NestedRefInjections:     nestedInjections,
 		HasParentRefReplacement: hasParentRefReplacement,
 		ParentRefReplacesField:  parentRefReplacesField,
 		ParentStatusEntityName:  parentStatusEntityName,
@@ -5512,6 +5643,10 @@ func (g *Generator) generateRootUnionSDKOps(
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)
 	}
+	nestedInjections, err := nestedRefInjections(references)
+	if err != nil {
+		return "", fmt.Errorf("entity %s: %w", entityName, err)
+	}
 
 	tmpl := template.Must(template.New("sdkops-root-union").Parse(sdkOpsRootUnionTemplate))
 	var buf strings.Builder
@@ -5530,6 +5665,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		NeedsSecretFetchImport bool
 		References             []TemplateReferenceConfig
 		ACLRefInjections       []TemplateACLRefInjection
+		NestedRefInjections    []TemplateNestedRefInjection
 	}{
 		APIVersion:             g.config.APIVersion,
 		EntityName:             entityName,
@@ -5544,6 +5680,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		NeedsSecretFetchImport: secretReferencesNeedCoreV1Import(secretReferences),
 		References:             references,
 		ACLRefInjections:       aclInjections,
+		NestedRefInjections:    nestedInjections,
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
@@ -6212,9 +6349,12 @@ func formatSchemaComment(name, desc string) string {
 	return strings.Join(result, "\n") + "\n"
 }
 
-// goFieldName converts property name to Go field name (PascalCase).
+// goFieldName converts property name to Go field name (PascalCase). Both "_"
+// and "-" are treated as word separators, since discriminator values (e.g.
+// "conversion-listener") use kebab-case while most OAS property names use
+// snake_case.
 func goFieldName(name string) string {
-	parts := strings.Split(name, "_")
+	parts := strings.FieldsFunc(name, func(r rune) bool { return r == '_' || r == '-' })
 	for i, part := range parts {
 		if len(part) > 0 {
 			// Handle common acronyms

@@ -840,7 +840,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 		payload = map[string]any{}
 	}
 {{- range $.References}}
-{{- if not .ACLNested}}
+{{- if not .NestedRef}}
 	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
 	if err != nil {
 		return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
@@ -850,6 +850,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 {{- end}}
 {{- end}}
 {{- template "sdkOpsACLRefInjections" $}}
+{{- template "sdkOpsNestedRefInjections" $}}
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with references: %w", err)
@@ -1069,6 +1070,30 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 			{{$group.TargetVar}}["{{$group.SDKUnionKey}}"] = map[string]any{"{{.LeafSDKKey}}": resolved{{.ResolverName}}}
 {{- end}}
 		}
+{{- range .ParentNavsReversed}}
+		{{.Parent}}["{{.Key}}"] = {{.Var}}
+{{- end}}
+	}
+{{- end}}
+{{- end}}
+{{- define "sdkOpsNestedRefInjections"}}
+{{- range .NestedRefInjections}}
+	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if {{.Cond}} {
+{{- range .ParentNavs}}
+		{{.Var}}, _ := {{.Parent}}["{{.Key}}"].(map[string]any)
+		if {{.Var}} == nil {
+			{{.Var}} = map[string]any{}
+		}
+{{- end}}
+		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
+		}
+		{{.TargetVar}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}
 {{- range .ParentNavsReversed}}
 		{{.Parent}}["{{.Key}}"] = {{.Var}}
 {{- end}}
@@ -1553,6 +1578,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 		return nil, err
 	}
 {{- template "sdkOpsACLRefInjections" $}}
+{{- template "sdkOpsNestedRefInjections" $}}
 	return spec.{{.FromPayloadMethodName}}(payload)
 {{- else}}
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)

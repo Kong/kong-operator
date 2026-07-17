@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldAIGatewayMCPServerOnKonnectAIGatewayRef is the index field for AIGatewayMCPServer -> KonnectAIGateway.
 	IndexFieldAIGatewayMCPServerOnKonnectAIGatewayRef = "aiGatewayMCPServerOnKonnectAIGatewayRef"
+	// IndexFieldAIGatewayMCPServerOnAIGatewayPolicyRef is the index field for AIGatewayMCPServer -> AIGatewayPolicy.
+	IndexFieldAIGatewayMCPServerOnAIGatewayPolicyRef = "aiGatewayMCPServerOnAIGatewayPolicyRef"
 )
 
 // OptionsForAIGatewayMCPServer returns required Index options for AIGatewayMCPServer reconciler.
@@ -20,6 +22,11 @@ func OptionsForAIGatewayMCPServer() []Option {
 			Object:         &konnectv1alpha1.AIGatewayMCPServer{},
 			Field:          IndexFieldAIGatewayMCPServerOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayMCPServerOnKonnectAIGatewayRef,
+		},
+		{
+			Object:         &konnectv1alpha1.AIGatewayMCPServer{},
+			Field:          IndexFieldAIGatewayMCPServerOnAIGatewayPolicyRef,
+			ExtractValueFn: aiGatewayMCPServerOnAIGatewayPolicyRef,
 		},
 	}
 }
@@ -39,4 +46,63 @@ func aiGatewayMCPServerOnKonnectAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayMCPServerOnAIGatewayPolicyRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.AIGatewayMCPServer)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerConversionListenerPolicies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerConversionOnlyPolicies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerListenerPolicies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerPolicies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerPolicies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

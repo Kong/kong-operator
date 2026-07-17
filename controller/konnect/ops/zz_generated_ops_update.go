@@ -40,7 +40,7 @@ func UpdateGeneratedOps[
 	case *konnectv1alpha1.AIGatewayIdentityProvider:
 		return updateAIGatewayIdentityProvider(ctx, cl, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayMCPServer:
-		return updateAIGatewayMCPServer(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
+		return updateAIGatewayMCPServer(ctx, cl, sdk.GetAIGatewayMCPServersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:
 		return updateAIGatewayModel(ctx, cl, sdk.GetAIGatewayModelsSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModelProvider:

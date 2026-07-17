@@ -75,6 +75,11 @@ spec:
         route:
           paths:
             - /v1/chat/completions
+      # References to AIGatewayPolicy CRs (by metadata.name). The operator
+      # resolves each reference to the referenced CR's Konnect name at
+      # reconcile time.
+      # policies:
+      #   - name: pii-sanitizer-policy
       labels:
         app: test1
         env: test
