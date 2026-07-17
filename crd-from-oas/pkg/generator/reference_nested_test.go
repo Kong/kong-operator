@@ -156,7 +156,7 @@ func TestReferenceForFieldOnlyMatchesTopLevelAPISpecFields(t *testing.T) {
 		"AIGatewayAgent": {
 			{
 				Path:        "spec.apiSpec.access.acls.allow.allow",
-				Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+				Kinds:       []string{"AIGatewayConsumerGroup"},
 				ResolvesTo:  "name",
 				RefTypeName: "AIGatewayACLRef",
 			},
@@ -187,7 +187,7 @@ func TestGenerateSchemaTypes_RefifiesSharedSchemaFields(t *testing.T) {
 
 	aclRef := config.ReferenceConfig{
 		Path:        "spec.apiSpec.access.acls.allow.allow",
-		Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+		Kinds:       []string{"AIGatewayConsumerGroup"},
 		ResolvesTo:  "name",
 		RefTypeName: "AIGatewayACLRef",
 	}
@@ -215,17 +215,18 @@ func TestGenerateSchemaTypes_RefifiesSharedSchemaFields(t *testing.T) {
 	require.Contains(t, out, "+kubebuilder:validation:MaxItems=8")
 }
 
-// TestGenerateSDKOps_NestedMultiKindNameResolver verifies the resolver generated
-// for a nested, multi-kind, resolvesTo:name reference: it is named by the full Go
-// path, dispatches on kind, and resolves each reference to the Konnect name.
-func TestGenerateSDKOps_NestedMultiKindNameResolver(t *testing.T) {
+// TestGenerateSDKOps_NestedSingleKindNameResolver verifies the resolver
+// generated for a nested, single-kind, resolvesTo:name reference: it is named by
+// the full Go path, defaults the kind, and resolves each reference to the
+// Konnect name.
+func TestGenerateSDKOps_NestedSingleKindNameResolver(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
 		References: map[string][]config.ReferenceConfig{
 			"AIGatewayAgent": {
 				{
 					Path:        "spec.apiSpec.access.acls.allow.allow",
-					Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+					Kinds:       []string{"AIGatewayConsumerGroup"},
 					ResolvesTo:  "name",
 					RefTypeName: "AIGatewayACLRef",
 				},
@@ -251,16 +252,14 @@ func TestGenerateSDKOps_NestedMultiKindNameResolver(t *testing.T) {
 	require.Contains(t, content, "func resolveAIGatewayAgentAccessAclsAllowAllow(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error)")
 	// Nested refs source through the generated nil-guarded accessor.
 	require.Contains(t, content, "refs := RefsAtAIGatewayAgentAccessAclsAllowAllow(obj)")
-	// Multi-kind dispatch.
-	require.Contains(t, content, "switch kind {")
-	require.Contains(t, content, `case "AIGatewayConsumer":`)
-	require.Contains(t, content, `case "AIGatewayConsumerGroup":`)
-	require.Contains(t, content, `kind = "AIGatewayConsumer"`)
+	// Single-kind references default empty kind to AIGatewayConsumerGroup and do
+	// not emit multi-kind dispatch.
+	require.Contains(t, content, `kind = "AIGatewayConsumerGroup"`)
+	require.NotContains(t, content, "switch kind {")
 	// resolvesTo:name selects the Konnect name as the resolved value.
 	require.Contains(t, content, "string(referenced.Spec.APISpec.Name)")
 	// Programmed check applies in name mode too.
-	require.Contains(t, content, "ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name}")
-	require.Contains(t, content, `fmt.Errorf("unsupported reference kind %q at spec.apiSpec.access.acls.allow.allow", kind)`)
+	require.Contains(t, content, `ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name}`)
 }
 
 // TestGenerateSDKOps_NestedRefAccessor verifies that a nested reference emits a
@@ -273,7 +272,7 @@ func TestGenerateSDKOps_NestedRefAccessor(t *testing.T) {
 		"AIGatewayAgent": {
 			{
 				Path:        "spec.apiSpec.access.acls.allow.allow",
-				Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+				Kinds:       []string{"AIGatewayConsumerGroup"},
 				ResolvesTo:  "name",
 				RefTypeName: "AIGatewayACLRef",
 			},
@@ -341,7 +340,7 @@ func TestValidateReferences_EmbedderConsistency(t *testing.T) {
 
 	aclRef := config.ReferenceConfig{
 		Path:        "spec.apiSpec.access.acls.allow.allow",
-		Kinds:       []string{"AIGatewayConsumer"},
+		Kinds:       []string{"AIGatewayConsumerGroup"},
 		ResolvesTo:  "id",
 		RefTypeName: "AIGatewayACLRef",
 	}
@@ -432,7 +431,7 @@ func aiGatewayACLReferences(paths ...string) []config.ReferenceConfig {
 	for _, p := range paths {
 		refs = append(refs, config.ReferenceConfig{
 			Path:        p,
-			Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+			Kinds:       []string{"AIGatewayConsumerGroup"},
 			ResolvesTo:  "name",
 			RefTypeName: "AIGatewayACLRef",
 		})
@@ -658,7 +657,7 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 		parsed := agentModelParsedSpec()
 		ref := config.ReferenceConfig{
 			Path:        "spec.apiSpec.access.acls.allow.allow",
-			Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+			Kinds:       []string{"AIGatewayConsumerGroup"},
 			ResolvesTo:  "name",
 			RefTypeName: "OtherACLRef",
 		}
@@ -691,7 +690,7 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 		parsed := agentModelParsedSpec()
 		ref := config.ReferenceConfig{
 			Path:        "spec.apiSpec.access.throttle.limits",
-			Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+			Kinds:       []string{"AIGatewayConsumerGroup"},
 			ResolvesTo:  "name",
 			RefTypeName: "AIGatewayACLRef",
 		}
