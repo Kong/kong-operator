@@ -88,8 +88,8 @@ spec:
       # References to AIGatewayPolicy CRs (by metadata.name). The operator
       # resolves each reference to the referenced CR's Konnect name at
       # reconcile time.
-      policies:
-        - name: pii-sanitizer-policy
+      # policies:
+      #   - name: ai-gw-policy-1
       labels:
         domain: flights
 ---
