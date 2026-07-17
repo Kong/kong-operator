@@ -840,7 +840,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 		payload = map[string]any{}
 	}
 {{- range $.References}}
-{{- if not .ACLNested}}
+{{- if not .NestedRef}}
 	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
 	if err != nil {
 		return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
@@ -849,7 +849,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}
 {{- end}}
 {{- end}}
-{{- template "sdkOpsACLRefInjections" $}}
+{{- template "sdkOpsRefInjections" $}}
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with references: %w", err)
@@ -1044,31 +1044,50 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 }
 {{- end}}
 {{- end}}
-{{- define "sdkOpsACLRefInjections"}}
-{{- range .ACLRefInjections}}
+{{- define "sdkOpsRefInjections"}}
+{{- range .RefInjections}}
+{{- $inj := .}}
+{{- if .UnionVar}}
 	// {{.Path}} carries CR references: rebuild the "{{.SDKUnionKey}}" union
 	// value in the SDK payload from the CRD ACL union's selected variant with the
 	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
 	// CRD union leaves the payload untouched.
+{{- else}}
+	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+{{- end}}
 	if {{.Cond}} {
+{{- if .UnionVar}}
 		{{.UnionVar}} := {{.UnionExpr}}
+{{- end}}
 {{- range .ParentNavs}}
 		{{.Var}}, _ := {{.Parent}}["{{.Key}}"].(map[string]any)
 		if {{.Var}} == nil {
 			{{.Var}} = map[string]any{}
 		}
 {{- end}}
+{{- if .UnionVar}}
 		switch {
-{{- $group := .}}
 {{- range .Variants}}
-		case {{$group.UnionVar}}.Type == {{.TypeConst}}:
+		case {{$inj.UnionVar}}.Type == {{.TypeConst}}:
 			resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
 			}
-			{{$group.TargetVar}}["{{$group.SDKUnionKey}}"] = map[string]any{"{{.LeafSDKKey}}": resolved{{.ResolverName}}}
+			{{$inj.TargetVar}}["{{$inj.SDKUnionKey}}"] = map[string]any{"{{.LeafSDKKey}}": resolved{{.ResolverName}}}
 {{- end}}
 		}
+{{- else}}
+{{- range .Variants}}
+		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
+		}
+		{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}
+{{- end}}
+{{- end}}
 {{- range .ParentNavsReversed}}
 		{{.Parent}}["{{.Key}}"] = {{.Var}}
 {{- end}}
@@ -1552,7 +1571,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	if err != nil {
 		return nil, err
 	}
-{{- template "sdkOpsACLRefInjections" $}}
+{{- template "sdkOpsRefInjections" $}}
 	return spec.{{.FromPayloadMethodName}}(payload)
 {{- else}}
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)

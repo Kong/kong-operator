@@ -85,8 +85,11 @@ spec:
           description: Get real-time status for a given flight number
           method: GET
           path: /flights/{flightNumber}/status
+      # References to AIGatewayPolicy CRs (by metadata.name). The operator
+      # resolves each reference to the referenced CR's Konnect name at
+      # reconcile time.
       # policies:
-      #   - pii-sanitizer-policy # must reference a policy that already exists in Konnect
+      #   - name: ai-gw-policy-1
       labels:
         domain: flights
 ---

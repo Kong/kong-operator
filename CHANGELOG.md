@@ -59,6 +59,9 @@
 
 ### Changed
 
+- AIGateway: Reference `AIGatewayPolicy` resources by `AIGatewayPolicyRef` in
+  the nested fields of `AIGatewayModel` and `AIGatewayMCPServer`.
+  [#4990](https://github.com/Kong/kong-operator/pull/4990)
 - AIGateway: update the default AI Gateway DataPlane image to
   `kong/kong-ai-gateway-dev:2.0.1-rc.3`.
   [#4965](https://github.com/Kong/kong-operator/pull/4965)

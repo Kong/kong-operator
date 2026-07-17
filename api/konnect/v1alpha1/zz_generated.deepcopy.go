@@ -1455,7 +1455,7 @@ func (in *AIGatewayMCPServerConversionListener) DeepCopyInto(out *AIGatewayMCPSe
 	}
 	if in.Policies != nil {
 		in, out := &in.Policies, &out.Policies
-		*out = make([]string, len(*in))
+		*out = make([]AIGatewayPolicyRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Tools != nil {
@@ -1522,7 +1522,7 @@ func (in *AIGatewayMCPServerConversionOnly) DeepCopyInto(out *AIGatewayMCPServer
 	}
 	if in.Policies != nil {
 		in, out := &in.Policies, &out.Policies
-		*out = make([]string, len(*in))
+		*out = make([]AIGatewayPolicyRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Tools != nil {
@@ -1601,7 +1601,7 @@ func (in *AIGatewayMCPServerListener) DeepCopyInto(out *AIGatewayMCPServerListen
 	}
 	if in.Policies != nil {
 		in, out := &in.Policies, &out.Policies
-		*out = make([]string, len(*in))
+		*out = make([]AIGatewayPolicyRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Tools != nil {
@@ -1706,7 +1706,7 @@ func (in *AIGatewayMCPServerPassthroughListener) DeepCopyInto(out *AIGatewayMCPS
 	}
 	if in.Policies != nil {
 		in, out := &in.Policies, &out.Policies
-		*out = make([]string, len(*in))
+		*out = make([]AIGatewayPolicyRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Tools != nil {
@@ -1896,7 +1896,7 @@ func (in *AIGatewayMCPServerUpstreamServer) DeepCopyInto(out *AIGatewayMCPServer
 	}
 	if in.Policies != nil {
 		in, out := &in.Policies, &out.Policies
-		*out = make([]string, len(*in))
+		*out = make([]AIGatewayPolicyRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Tools != nil {
@@ -2539,7 +2539,7 @@ func (in *AIGatewayModelAPI) DeepCopyInto(out *AIGatewayModelAPI) {
 	}
 	if in.Policies != nil {
 		in, out := &in.Policies, &out.Policies
-		*out = make([]string, len(*in))
+		*out = make([]AIGatewayPolicyRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Targets != nil {
@@ -3134,7 +3134,7 @@ func (in *AIGatewayModelModel) DeepCopyInto(out *AIGatewayModelModel) {
 	}
 	if in.Policies != nil {
 		in, out := &in.Policies, &out.Policies
-		*out = make([]string, len(*in))
+		*out = make([]AIGatewayPolicyRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Targets != nil {

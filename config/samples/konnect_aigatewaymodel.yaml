@@ -39,6 +39,79 @@ spec:
     name: model-dev-users
     displayName: Dev Users Group
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-credentials
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+data:
+  token: QmVhcmVyIHNrLXh4eHh4eHh4eHh4eHh4eHh4eHh4
+---
+kind: AIGatewayModelProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-openai
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: openai
+    openai:
+      name: openai-provider
+      displayName: OpenAI
+      config:
+        auth:
+          headers:
+            - name: Authorization
+              # Credential referenced from a Kubernetes Secret. The Secret must
+              # exist in the same namespace as this AIGatewayModelProvider (or set
+              # secretRef.namespace) and contain the key below.
+              value:
+                type: secretRef
+                secretRef:
+                  name: openai-credentials
+                  key: token
+---
+kind: AIGatewayPolicy
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-policy-prompt-decorator
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    displayName: "AIGateway Policy Prompt Decorator"
+    # Name of the policy. The name must be unique within the control plane.
+    name: aigw-policy-prompt-decorator
+    # Type of the policy.
+    type: ai-sanitizer
+    enabled: "Enabled"
+    # Set to "Enabled" to enable the policy globally.
+    global: "Disabled"
+    # Configuration for the policy. The configuration is specific to the policy type.
+    config:
+      type: "inline"
+      value:
+        anonymize:
+        - email
+        - phone
+        - ssn
+        - creditcard
+        - custom
+        custom_patterns:
+        - name: github_token
+          regex: ghp_[A-Za-z0-9]{36}
+          score: 0.9
+---
 kind: AIGatewayModel
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
@@ -75,6 +148,11 @@ spec:
         route:
           paths:
             - /v1/chat/completions
+      # References to AIGatewayPolicy CRs (by metadata.name). The operator
+      # resolves each reference to the referenced CR's Konnect name at
+      # reconcile time.
+      policies:
+       - name: ai-gw-policy-prompt-decorator
       labels:
         app: test1
         env: test

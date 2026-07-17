@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldAIGatewayModelOnKonnectAIGatewayRef is the index field for AIGatewayModel -> KonnectAIGateway.
 	IndexFieldAIGatewayModelOnKonnectAIGatewayRef = "aiGatewayModelOnKonnectAIGatewayRef"
+	// IndexFieldAIGatewayModelOnAIGatewayPolicyRef is the index field for AIGatewayModel -> AIGatewayPolicy.
+	IndexFieldAIGatewayModelOnAIGatewayPolicyRef = "aiGatewayModelOnAIGatewayPolicyRef"
 	// IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef is the index field for AIGatewayModel -> AIGatewayConsumerGroup.
 	IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef = "aiGatewayModelOnAIGatewayConsumerGroupRef"
 )
@@ -22,6 +24,11 @@ func OptionsForAIGatewayModel() []Option {
 			Object:         &konnectv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayModelOnKonnectAIGatewayRef,
+		},
+		{
+			Object:         &konnectv1alpha1.AIGatewayModel{},
+			Field:          IndexFieldAIGatewayModelOnAIGatewayPolicyRef,
+			ExtractValueFn: aiGatewayModelOnAIGatewayPolicyRef,
 		},
 		{
 			Object:         &konnectv1alpha1.AIGatewayModel{},
@@ -46,6 +53,35 @@ func aiGatewayModelOnKonnectAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayModelOnAIGatewayPolicyRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.AIGatewayModel)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelAPIPolicies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelModelPolicies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }
 
 func aiGatewayModelOnAIGatewayConsumerGroupRef(object client.Object) []string {

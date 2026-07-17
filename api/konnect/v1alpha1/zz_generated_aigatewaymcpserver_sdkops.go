@@ -3,8 +3,13 @@
 package v1alpha1
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
@@ -995,15 +1000,10 @@ func (s *AIGatewayMCPServerAPISpec) selectedSDKOpsPayload(payload map[string]any
 	return data, variant, nil
 }
 
-// ToCreateAIGatewayMCPServerRequest converts the AIGatewayMCPServerAPISpec to the SDK type
-// sdkkonnectcomp.CreateAIGatewayMCPServerRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayMCPServerAPISpec) ToCreateAIGatewayMCPServerRequest() (*sdkkonnectcomp.CreateAIGatewayMCPServerRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toCreateAIGatewayMCPServerRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *AIGatewayMCPServerAPISpec) toCreateAIGatewayMCPServerRequestFromPayload(payload map[string]any) (*sdkkonnectcomp.CreateAIGatewayMCPServerRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -1050,15 +1050,10 @@ func (s *AIGatewayMCPServerAPISpec) ToCreateAIGatewayMCPServerRequest() (*sdkkon
 	}
 }
 
-// ToUpdateAIGatewayMCPServerRequest converts the AIGatewayMCPServerAPISpec to the SDK type
-// sdkkonnectcomp.UpdateAIGatewayMCPServerRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayMCPServerAPISpec) ToUpdateAIGatewayMCPServerRequest() (*sdkkonnectcomp.UpdateAIGatewayMCPServerRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toUpdateAIGatewayMCPServerRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *AIGatewayMCPServerAPISpec) toUpdateAIGatewayMCPServerRequestFromPayload(payload map[string]any) (*sdkkonnectcomp.UpdateAIGatewayMCPServerRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -1111,4 +1106,488 @@ func (s *AIGatewayMCPServerAPISpec) ToUpdateAIGatewayMCPServerRequest() (*sdkkon
 	default:
 		return nil, fmt.Errorf("unsupported AIGatewayMCPServer config variant %q", variant)
 	}
+}
+
+// RefsAtAIGatewayMCPServerConversionListenerPolicies returns the references at spec.apiSpec.conversion-listener.policies,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerPolicies(obj *AIGatewayMCPServer) []AIGatewayPolicyRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Policies
+}
+
+// resolveAIGatewayMCPServerConversionListenerPolicies resolves the CR references in spec.apiSpec.conversion-listener.policies
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerPolicies(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerPolicies(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayPolicy"
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayPolicy
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionOnlyPolicies returns the references at spec.apiSpec.conversion-only.policies,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionOnlyPolicies(obj *AIGatewayMCPServer) []AIGatewayPolicyRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly.Policies
+}
+
+// resolveAIGatewayMCPServerConversionOnlyPolicies resolves the CR references in spec.apiSpec.conversion-only.policies
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionOnlyPolicies(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionOnlyPolicies(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayPolicy"
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayPolicy
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerListenerPolicies returns the references at spec.apiSpec.listener.policies,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerPolicies(obj *AIGatewayMCPServer) []AIGatewayPolicyRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Policies
+}
+
+// resolveAIGatewayMCPServerListenerPolicies resolves the CR references in spec.apiSpec.listener.policies
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerPolicies(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerPolicies(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayPolicy"
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayPolicy
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerPolicies returns the references at spec.apiSpec.passthrough-listener.policies,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerPolicies(obj *AIGatewayMCPServer) []AIGatewayPolicyRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Policies
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerPolicies resolves the CR references in spec.apiSpec.passthrough-listener.policies
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerPolicies(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerPolicies(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayPolicy"
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayPolicy
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerUpstreamServerPolicies returns the references at spec.apiSpec.upstream-server.policies,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerUpstreamServerPolicies(obj *AIGatewayMCPServer) []AIGatewayPolicyRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Policies
+}
+
+// resolveAIGatewayMCPServerUpstreamServerPolicies resolves the CR references in spec.apiSpec.upstream-server.policies
+// to Konnect names.
+func resolveAIGatewayMCPServerUpstreamServerPolicies(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerUpstreamServerPolicies(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayPolicy"
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayPolicy
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// ResolveKonnectReferences resolves every CR reference declared on the spec and
+// returns the joined resolution errors, or nil when all references resolve.
+func (obj *AIGatewayMCPServer) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var errs []error
+	if _, err := resolveAIGatewayMCPServerConversionListenerPolicies(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionOnlyPolicies(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerPolicies(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerPolicies(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerUpstreamServerPolicies(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// ToCreateAIGatewayMCPServerRequest converts the AIGatewayMCPServer to the SDK type
+// sdkkonnectcomp.CreateAIGatewayMCPServerRequest, resolving referenced CRs via the provided client.
+func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayMCPServerRequest, error) {
+	spec := &obj.Spec.APISpec
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.conversion-listener.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
+		conversionListener, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener == nil {
+			conversionListener = map[string]any{}
+		}
+		resolvedConversionListenerPolicies, err := resolveAIGatewayMCPServerConversionListenerPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.policies references: %w", err)
+		}
+		conversionListener["policies"] = resolvedConversionListenerPolicies
+		payload["conversion-listener"] = conversionListener
+	}
+	// spec.apiSpec.conversion-only.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
+		conversionOnly, _ := payload["conversion-only"].(map[string]any)
+		if conversionOnly == nil {
+			conversionOnly = map[string]any{}
+		}
+		resolvedConversionOnlyPolicies, err := resolveAIGatewayMCPServerConversionOnlyPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-only.policies references: %w", err)
+		}
+		conversionOnly["policies"] = resolvedConversionOnlyPolicies
+		payload["conversion-only"] = conversionOnly
+	}
+	// spec.apiSpec.listener.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
+		listener, _ := payload["listener"].(map[string]any)
+		if listener == nil {
+			listener = map[string]any{}
+		}
+		resolvedListenerPolicies, err := resolveAIGatewayMCPServerListenerPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.policies references: %w", err)
+		}
+		listener["policies"] = resolvedListenerPolicies
+		payload["listener"] = listener
+	}
+	// spec.apiSpec.passthrough-listener.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
+		passthroughListener, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener == nil {
+			passthroughListener = map[string]any{}
+		}
+		resolvedPassthroughListenerPolicies, err := resolveAIGatewayMCPServerPassthroughListenerPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.policies references: %w", err)
+		}
+		passthroughListener["policies"] = resolvedPassthroughListenerPolicies
+		payload["passthrough-listener"] = passthroughListener
+	}
+	// spec.apiSpec.upstream-server.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer == nil {
+			upstreamServer = map[string]any{}
+		}
+		resolvedUpstreamServerPolicies, err := resolveAIGatewayMCPServerUpstreamServerPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.policies references: %w", err)
+		}
+		upstreamServer["policies"] = resolvedUpstreamServerPolicies
+		payload["upstream-server"] = upstreamServer
+	}
+	return spec.toCreateAIGatewayMCPServerRequestFromPayload(payload)
+}
+
+// ToUpdateAIGatewayMCPServerRequest converts the AIGatewayMCPServer to the SDK type
+// sdkkonnectcomp.UpdateAIGatewayMCPServerRequest, resolving referenced CRs via the provided client.
+func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateAIGatewayMCPServerRequest, error) {
+	spec := &obj.Spec.APISpec
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.conversion-listener.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
+		conversionListener, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener == nil {
+			conversionListener = map[string]any{}
+		}
+		resolvedConversionListenerPolicies, err := resolveAIGatewayMCPServerConversionListenerPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.policies references: %w", err)
+		}
+		conversionListener["policies"] = resolvedConversionListenerPolicies
+		payload["conversion-listener"] = conversionListener
+	}
+	// spec.apiSpec.conversion-only.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
+		conversionOnly, _ := payload["conversion-only"].(map[string]any)
+		if conversionOnly == nil {
+			conversionOnly = map[string]any{}
+		}
+		resolvedConversionOnlyPolicies, err := resolveAIGatewayMCPServerConversionOnlyPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-only.policies references: %w", err)
+		}
+		conversionOnly["policies"] = resolvedConversionOnlyPolicies
+		payload["conversion-only"] = conversionOnly
+	}
+	// spec.apiSpec.listener.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
+		listener, _ := payload["listener"].(map[string]any)
+		if listener == nil {
+			listener = map[string]any{}
+		}
+		resolvedListenerPolicies, err := resolveAIGatewayMCPServerListenerPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.policies references: %w", err)
+		}
+		listener["policies"] = resolvedListenerPolicies
+		payload["listener"] = listener
+	}
+	// spec.apiSpec.passthrough-listener.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
+		passthroughListener, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener == nil {
+			passthroughListener = map[string]any{}
+		}
+		resolvedPassthroughListenerPolicies, err := resolveAIGatewayMCPServerPassthroughListenerPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.policies references: %w", err)
+		}
+		passthroughListener["policies"] = resolvedPassthroughListenerPolicies
+		payload["passthrough-listener"] = passthroughListener
+	}
+	// spec.apiSpec.upstream-server.policies carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer == nil {
+			upstreamServer = map[string]any{}
+		}
+		resolvedUpstreamServerPolicies, err := resolveAIGatewayMCPServerUpstreamServerPolicies(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.policies references: %w", err)
+		}
+		upstreamServer["policies"] = resolvedUpstreamServerPolicies
+		payload["upstream-server"] = upstreamServer
+	}
+	return spec.toUpdateAIGatewayMCPServerRequestFromPayload(payload)
 }

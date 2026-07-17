@@ -309,6 +309,12 @@ apiGroupVersions:
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
         references:
+          - path: spec.apiSpec.api.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.model.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
           - path: spec.apiSpec.api.access.acls.allow.allow
             kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
@@ -470,6 +476,22 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/mcp-servers
         name: AIGatewayMCPServer
+        references:
+          - path: spec.apiSpec.conversion-listener.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.conversion-only.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.listener.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.passthrough-listener.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.upstream-server.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayMCPServersSDK

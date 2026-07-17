@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -15,6 +16,7 @@ import (
 
 func createAIGatewayMCPServer(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayMCPServersSDK,
 	obj *konnectv1alpha1.AIGatewayMCPServer,
 ) error {
@@ -22,7 +24,7 @@ func createAIGatewayMCPServer(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreateAIGatewayMCPServerRequest()
+	req, err := obj.ToCreateAIGatewayMCPServerRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -59,6 +61,7 @@ func createAIGatewayMCPServer(
 
 func updateAIGatewayMCPServer(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayMCPServersSDK,
 	obj *konnectv1alpha1.AIGatewayMCPServer,
 ) error {
@@ -67,7 +70,7 @@ func updateAIGatewayMCPServer(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToUpdateAIGatewayMCPServerRequest()
+	req, err := obj.ToUpdateAIGatewayMCPServerRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -79,7 +82,7 @@ func updateAIGatewayMCPServer(
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
-			return createAIGatewayMCPServer(ctx, sdk, obj)
+			return createAIGatewayMCPServer(ctx, cl, sdk, obj)
 		})
 	}
 	return nil

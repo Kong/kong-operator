@@ -1090,7 +1090,7 @@ type AIGatewayMCPServerConversionListener struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -1272,7 +1272,7 @@ type AIGatewayMCPServerConversionOnly struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -1342,7 +1342,7 @@ type AIGatewayMCPServerListener struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -1583,7 +1583,7 @@ type AIGatewayMCPServerPassthroughListener struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -1853,7 +1853,7 @@ type AIGatewayMCPServerUpstreamServer struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -3107,7 +3107,7 @@ type AIGatewayModelAPI struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// One or more backend models that this model entry routes to.
 	//
 	// +required
@@ -4733,7 +4733,7 @@ type AIGatewayModelModel struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// One or more backend models that this model entry routes to.
 	//
 	// +required
