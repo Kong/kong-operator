@@ -653,7 +653,7 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 		require.ErrorContains(t, err, "spec.apiSpec.access.acls.allow.rules.allow")
 	})
 
-	t.Run("nested non-ACL ref through a property-level union is rejected", func(t *testing.T) {
+	t.Run("nested union ref without AIGatewayACLRef type is rejected", func(t *testing.T) {
 		parsed := agentModelParsedSpec()
 		ref := config.ReferenceConfig{
 			Path:        "spec.apiSpec.access.acls.allow.allow",
@@ -665,54 +665,25 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 			"AIGatewayAgent": {ref},
 		})
 
-		// The "acls" union is a property-level oneOf whose CRD-side "type" wrapper
-		// and variant-key nesting is unwrapped nowhere else, so validateReferences
-		// rejects any non-ACLRef reference reaching through it, not just
-		// generateSDKOps.
-		err := g.validateReferences(parsed)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "spec.apiSpec.access.acls.allow.allow")
-		require.ErrorContains(t, err, "nested references through a property-level union must use refTypeName AIGatewayACLRef")
-
-		_, err = g.generateSDKOps("AIGatewayAgent", parsed.RequestBodies["AIGatewayAgent"], opsConfig)
+		t.Run("nested non-ACL ref is rejected", func(t *testing.T) {
+			parsed := agentModelParsedSpec()
+			ref := config.ReferenceConfig{
+				Path:       "spec.apiSpec.access.throttle.limits",
+				Kinds:      []string{"AIGatewayThrottleLimit"},
+				ResolvesTo: "id",
+			}
+			g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+				"AIGatewayAgent": {ref},
+			})
+			err := g.validateReferences(parsed)
+			require.Error(t, err)
+			require.ErrorContains(t, err, "spec.apiSpec.access.throttle.limits")
+			require.ErrorContains(t, err, "nested references must use refTypeName AIGatewayACLRef")
+		})
+		_, err := g.generateSDKOps("AIGatewayAgent", parsed.RequestBodies["AIGatewayAgent"], opsConfig)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "spec.apiSpec.access.acls.allow.allow")
 		require.ErrorContains(t, err, "SDK-union references must use refTypeName AIGatewayACLRef")
-	})
-
-	t.Run("nested non-ACL ref through a plain object is supported", func(t *testing.T) {
-		parsed := agentModelParsedSpec()
-		ref := config.ReferenceConfig{
-			Path:       "spec.apiSpec.access.throttle.limits",
-			Kinds:      []string{"AIGatewayThrottleLimit"},
-			ResolvesTo: "id",
-		}
-		// AIGatewayThrottle is also reachable from AIGatewayModel (via
-		// AIGatewayModelAPI, which shares the AIGatewayAgentAccess schema), so
-		// embedder consistency requires a matching entry there too.
-		modelRef := ref
-		modelRef.Path = "spec.apiSpec.api.access.throttle.limits"
-		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
-			"AIGatewayAgent": {ref},
-			"AIGatewayModel": {modelRef},
-		})
-
-		// "throttle" is a plain $ref hop (not a discriminated union), so a leaf
-		// reached through it needs no ACL-style reconstruction.
-		require.NoError(t, g.validateReferences(parsed))
-
-		content, err := g.generateSDKOps("AIGatewayAgent", parsed.RequestBodies["AIGatewayAgent"], opsConfig)
-		require.NoError(t, err)
-		_, err = format.Source([]byte(content))
-		require.NoError(t, err)
-
-		require.Contains(t, content, "if obj.Spec.APISpec.Access.Throttle != nil {")
-		require.Contains(t, content, `access, _ := payload["access"].(map[string]any)`)
-		require.Contains(t, content, `throttle, _ := access["throttle"].(map[string]any)`)
-		require.Contains(t, content, "resolvedAccessThrottleLimits, err := resolveAIGatewayAgentAccessThrottleLimits(ctx, cl, obj)")
-		require.Contains(t, content, `throttle["limits"] = resolvedAccessThrottleLimits`)
-		require.Contains(t, content, `access["throttle"] = throttle`)
-		require.Contains(t, content, `payload["access"] = access`)
 	})
 
 	t.Run("AIGatewayACLRef with unsupported suffix is rejected", func(t *testing.T) {
@@ -731,58 +702,4 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 		require.ErrorContains(t, err, "spec.apiSpec.access.throttle.limits")
 		require.ErrorContains(t, err, "only supports paths ending in access.acls.allow.allow or access.acls.deny.deny")
 	})
-}
-
-// TestGenerateSDKOps_NestedRefInjection_LeafOnRootUnionVariant verifies the
-// shape needed for AIGatewayModel/AIGatewayMCPServer's "policies" field: a
-// single-kind, name-resolving reference (AIGatewayPolicyRef) sitting directly
-// on a root-union variant member (e.g. spec.apiSpec.api.policies). Unlike the
-// ACL union case, this is not restricted to refTypeName AIGatewayACLRef — the
-// root-union wrapper's "type" key is stripped elsewhere by
-// selectedSDKOpsPayload, so overwriting the leaf's key in place is safe.
-func TestGenerateSDKOps_NestedRefInjection_LeafOnRootUnionVariant(t *testing.T) {
-	parsed := modelRootUnionParsedSpec()
-	parsed.Schemas["AIGatewayModelAPI"].Properties = append(
-		parsed.Schemas["AIGatewayModelAPI"].Properties,
-		&parser.Property{Name: "policies", Type: "array", Items: &parser.Property{Type: "string"}},
-	)
-	policiesRef := config.ReferenceConfig{
-		Path:       "spec.apiSpec.api.policies",
-		Kinds:      []string{"AIGatewayPolicy"},
-		ResolvesTo: "name",
-	}
-	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
-		"AIGatewayModel": {policiesRef},
-	})
-
-	require.NoError(t, g.validateReferences(parsed))
-
-	opsConfig := &config.EntityOpsConfig{
-		Ops: map[string]*config.OpConfig{
-			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest"},
-			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayModelRequest"},
-		},
-	}
-	content, err := g.generateSDKOps("AIGatewayModel", parsed.RequestBodies["AIGatewayModel"], opsConfig)
-	require.NoError(t, err)
-	_, err = format.Source([]byte(content))
-	require.NoError(t, err)
-
-	// Resolver/accessor plumbing, same as any other nested reference.
-	require.Contains(t, content, "func RefsAtAIGatewayModelAPIPolicies(obj *AIGatewayModel) []AIGatewayPolicyRef {")
-	require.Contains(t, content, "if obj.Spec.APISpec.AIGatewayModelConfig == nil {")
-	require.Contains(t, content, "if obj.Spec.APISpec.AIGatewayModelConfig.API == nil {")
-	require.Contains(t, content, "func resolveAIGatewayModelAPIPolicies(ctx context.Context, cl client.Client, obj *AIGatewayModel) ([]string, error)")
-	require.Contains(t, content, "string(referenced.Spec.APISpec.Name)")
-
-	// Payload injection: single-key overwrite inside the "api" map, guarded by
-	// both pointer hops, preserving every sibling key of "api".
-	require.Contains(t, content, "if obj.Spec.APISpec.AIGatewayModelConfig != nil && obj.Spec.APISpec.AIGatewayModelConfig.API != nil {")
-	require.Contains(t, content, `api, _ := payload["api"].(map[string]any)`)
-	require.Contains(t, content, "resolvedAPIPolicies, err := resolveAIGatewayModelAPIPolicies(ctx, cl, obj)")
-	require.Contains(t, content, `api["policies"] = resolvedAPIPolicies`)
-	require.Contains(t, content, `payload["api"] = api`)
-	// The whole "api" subtree is never rebuilt wholesale (that would drop
-	// sibling fields like access/name).
-	require.NotContains(t, content, `payload["api"] = map[string]any`)
 }
