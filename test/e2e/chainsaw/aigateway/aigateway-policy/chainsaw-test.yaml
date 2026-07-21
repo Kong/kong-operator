@@ -49,7 +49,8 @@ spec:
           value: ($namespace)
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
-    - name: Create-aigateway-policy
+    - name: Create-aigateway-policy-with-inline-config
+      description: Create an AIGatewayPolicy resource with inline config that adds a custom header to the response of an API.
       bindings:
         - name: aigw_policy_name
           value: (join('-', [($test_name), 'policy-inline-config']))
@@ -58,7 +59,8 @@ spec:
             file: 01-aigateway-policy-inline-config.yaml
         - assert:
             file: 00-assert-aigateway-policy-programmed.yaml
-    - name: Create-aigateway-model-provider-referencing-the-policy
+    - name: Create-aigateway-model-referencing-the-policy
+      description: Create an AIGatewayModel that references the AIGatewayPolicy created in the previous step.
       bindings:
         - name: aigw_policy_name
           value: (join('-', [($test_name), 'policy-inline-config']))
@@ -66,6 +68,7 @@ spec:
         - apply:
             file: 03-aigateway-model-referencing-the-policy.yaml
     - name: Verify-aigateway-policy-inline-config-is-applied
+      description: Verify that the AIGatewayPolicy with inline config is applied by checking for the custom header in the response of an API.
       try:
         - script:
             env:
@@ -81,7 +84,8 @@ spec:
                 value: "Modified-By-Policy-Inline"
             content: |
               bash ../../common/scripts/aigw_chat_completion.sh
-    - name: Create-aigateway-policy-secretRef-config.yaml
+    - name: Create-aigateway-policy-secretRef-config
+      description: Create an AIGatewayPolicy resource with secretRef config that adds a custom header to the response of an API.
       bindings:
         - name: aigw_policy_name
           value: (join('-', [($test_name), 'policy-secretref-config']))
@@ -100,6 +104,7 @@ spec:
         - apply:
             file: 03-aigateway-model-referencing-the-policy.yaml
     - name: Verify-aigateway-policy-secretRef-config-is-applied
+      description: Verify that the AIGatewayPolicy with secretRef config is applied by checking for the custom header in the response of an API.
       try:
         - script:
             env:
@@ -116,6 +121,7 @@ spec:
             content: |
               bash ../../common/scripts/aigw_chat_completion.sh
     - name: Update-secret-to-change-the-policy-config
+      description: Update the secret referenced by the AIGatewayPolicy with secretRef config to change the custom header value in the response of an API.
       bindings:
         - name: aigw_policy_secretref_name
           value: (join('-', [($test_name), 'policy-secretref-config-secret']))
@@ -123,6 +129,7 @@ spec:
         - apply:
             file: 04-update-secret-for-aigateway-policy-secretRef-config.yaml
     - name: Verify-aigateway-policy-secretRef-config-is-applied-after-secret-update
+      description: Verify that the AIGatewayPolicy with secretRef config is applied after the secret update by checking for the updated custom header in the response of an API.
       try:
         - script:
             env:
