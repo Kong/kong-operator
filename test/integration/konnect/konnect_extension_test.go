@@ -22,6 +22,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/pkg/builder"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	resourceutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
@@ -224,8 +225,6 @@ func TestKonnectExtension(t *testing.T) {
 		})
 
 		t.Run("Mirror ControlPlane", func(t *testing.T) {
-			t.Skipf("Skip until flakiness is resolved, TODO: https://github.com/Kong/kong-operator/issues/4807")
-
 			// Create a Mirror Konnect control plane for the KonnectExtension to attach to.
 			mirrorCP := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 				deploy.WithTestIDLabel(testID),
@@ -482,10 +481,7 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 								Value: "debug",
 							},
 						},
-						ReadinessProbe: &corev1.Probe{
-							InitialDelaySeconds: 1,
-							PeriodSeconds:       1,
-						},
+						ReadinessProbe: resourceutils.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 					},
 				},
 			},
