@@ -1446,11 +1446,6 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              statistics:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
                             type: object
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
@@ -4148,11 +4143,6 @@ spec:
                               Configuration for AI Gateway logging.
                             properties:
                               payloads:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              statistics:
                                 enum:
                                 - Enabled
                                 - Disabled

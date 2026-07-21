@@ -1109,6 +1109,11 @@ func (in *AIGatewayIdentityProviderOpenIDConnectConfig) DeepCopyInto(out *AIGate
 			}
 		}
 	}
+	if in.ConsumerGroupsClaim != nil {
+		in, out := &in.ConsumerGroupsClaim, &out.ConsumerGroupsClaim
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Scopes != nil {
 		in, out := &in.Scopes, &out.Scopes
 		*out = make([]string, len(*in))

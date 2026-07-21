@@ -8,7 +8,7 @@ require (
 	// TODO: change when SDK for AIGateway will be available in the main branch,
 	// for now develop against the branch dev-ai-gateway.
 	// see: https://github.com/Kong/kong-operator/issues/4756
-	github.com/Kong/sdk-konnect-go v0.43.0
+	github.com/Kong/sdk-konnect-go v0.44.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.21.0

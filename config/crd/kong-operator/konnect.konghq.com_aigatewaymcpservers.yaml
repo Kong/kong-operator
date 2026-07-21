@@ -263,11 +263,6 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              statistics:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
                             type: object
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
@@ -1167,11 +1162,6 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              statistics:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
                             type: object
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
@@ -1758,11 +1748,6 @@ spec:
                                 - Disabled
                                 type: string
                               payloads:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              statistics:
                                 enum:
                                 - Enabled
                                 - Disabled
@@ -2764,11 +2749,6 @@ spec:
                                 - Disabled
                                 type: string
                               payloads:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              statistics:
                                 enum:
                                 - Enabled
                                 - Disabled
@@ -3860,11 +3840,6 @@ spec:
                                 - Disabled
                                 type: string
                               payloads:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              statistics:
                                 enum:
                                 - Enabled
                                 - Disabled

@@ -41,15 +41,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "conversion-listener.config.logging.statistics",
-		Path: []string{
-			"conversion-listener",
-			"config",
-			"logging",
-			"statistics",
-		},
-	},
-	{
 		Label: "conversion-listener.config.route.preserve_host",
 		Path: []string{
 			"conversion-listener",
@@ -214,15 +205,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "conversion-only.config.logging.statistics",
-		Path: []string{
-			"conversion-only",
-			"config",
-			"logging",
-			"statistics",
-		},
-	},
-	{
 		Label: "conversion-only.config.route.preserve_host",
 		Path: []string{
 			"conversion-only",
@@ -332,15 +314,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"config",
 			"logging",
 			"payloads",
-		},
-	},
-	{
-		Label: "listener.config.logging.statistics",
-		Path: []string{
-			"listener",
-			"config",
-			"logging",
-			"statistics",
 		},
 	},
 	{
@@ -508,15 +481,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "passthrough-listener.config.logging.statistics",
-		Path: []string{
-			"passthrough-listener",
-			"config",
-			"logging",
-			"statistics",
-		},
-	},
-	{
 		Label: "passthrough-listener.config.route.preserve_host",
 		Path: []string{
 			"passthrough-listener",
@@ -678,15 +642,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"config",
 			"logging",
 			"payloads",
-		},
-	},
-	{
-		Label: "upstream-server.config.logging.statistics",
-		Path: []string{
-			"upstream-server",
-			"config",
-			"logging",
-			"statistics",
 		},
 	},
 	{

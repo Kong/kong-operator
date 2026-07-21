@@ -332,6 +332,14 @@ spec:
                                 type: string
                               type: array
                             type: array
+                          consumerGroupsClaim:
+                            description: |-
+                              The claim used for consumer groups mapping.
+                              If multiple values are set, it means the claim is inside a nested object of
+                              the token payload.
+                            items:
+                              type: string
+                            type: array
                           consumerOptional:
                             description: Do not terminate the request if consumer
                               mapping fails.

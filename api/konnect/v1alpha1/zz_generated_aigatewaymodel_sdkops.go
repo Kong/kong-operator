@@ -32,15 +32,6 @@ var AIGatewayModelSDKOpsBoolFields = []AIGatewayModelSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "api.config.logging.statistics",
-		Path: []string{
-			"api",
-			"config",
-			"logging",
-			"statistics",
-		},
-	},
-	{
 		Label: "api.config.route.preserve_host",
 		Path: []string{
 			"api",
@@ -99,15 +90,6 @@ var AIGatewayModelSDKOpsBoolFields = []AIGatewayModelSDKOpsBoolField{
 			"config",
 			"logging",
 			"payloads",
-		},
-	},
-	{
-		Label: "model.config.logging.statistics",
-		Path: []string{
-			"model",
-			"config",
-			"logging",
-			"statistics",
 		},
 	},
 	{

@@ -123,7 +123,7 @@ type AIGatewayPolicyAPISpec struct {
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 
 	// The type of the Policy. This is equivalent to the Kong 3 plugin name.
-	// Some examples are: 'ai-sanitizer', 'ai-prompt-guard', and 'openid-connect'.
+	// Some examples are: 'ai-sanitizer', 'ai-prompt-guard', and 'rate-limiting'.
 	// Note: Plugins have been renamed to Policies in Kong AI Gateway.
 	// Policy types and configuration documentation can be found in the [Developer
 	// Docs](https://developer.konghq.com/plugins/).
