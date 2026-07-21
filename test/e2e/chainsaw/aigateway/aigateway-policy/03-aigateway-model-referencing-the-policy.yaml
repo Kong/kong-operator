@@ -58,11 +58,12 @@ spec:
         model:
           alias: qwen2.5:0.5b
           nameHeader: Enabled
-          policies:
-            - ($aigw_policy_name)
         route:
           paths:
             - /aigw11/chat
+      policies:
+        - name: ($aigw_policy_name)
+          namespace: ($namespace)
       targets:
         - name: qwen2.5:0.5b
           provider: openai-provider
