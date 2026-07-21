@@ -138,6 +138,60 @@ spec:
                 value: "Modified-By-Policy-Secretref-Updated"
             content: |
               bash ../../common/scripts/aigw_chat_completion.sh
+    - name: Delete-aigateway-model-and-policies-and-wait-for-konnect-cleanup
+      description: |
+        Explicitly delete the AIGatewayModel first (it references both policies
+        and the provider by name), then the provider and both AIGatewayPolicy
+        resources, waiting for each to be fully removed (Konnect-side finalizer
+        cleared) before the implicit end-of-test cleanup runs. Doing this inside
+        try: - in referrer-before-referee order - instead of relying on
+        chainsaw's default reverse-creation-order cleanup avoids deleting a
+        policy/provider while the model still references it, and ensures the
+        top-level catch: fires and captures a debug snapshot if any Konnect-side
+        deletion hangs.
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              name: aigw11-model
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayModelProvider
+              name: openai-provider
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              name: (join('-', [($test_name), 'policy-inline-config']))
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              name: (join('-', [($test_name), 'policy-secretref-config']))
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayModelProvider
+              metadata:
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                namespace: ($namespace)
   catch:
     - description: Capture debug snapshot on test failure.
       script:
