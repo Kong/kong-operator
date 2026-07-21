@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.11](#v2011)
 - [v2.0.10](#v2010)
 - [v2.0.9](#v209)
 - [v2.0.8](#v208)
@@ -39,6 +40,16 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [v2.0.11]
+
+> Release date: 2026-07-21
+
+### Fixes
+
+- Preserve only one CA certificate from secrets if there are multiple ones with
+  the duplicte IDs.
+  [#4875](https://github.com/Kong/kong-operator/pull/4875)
 
 ## [v2.0.10]
 
@@ -1466,6 +1477,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.11]: https://github.com/Kong/kong-operator/compare/v2.0.11..v2.0.10
 [v2.0.10]: https://github.com/Kong/kong-operator/compare/v2.0.10..v2.0.9
 [v2.0.9]: https://github.com/Kong/kong-operator/compare/v2.0.9..v2.0.8
 [v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
