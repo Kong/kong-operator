@@ -85,6 +85,8 @@
   to enable it. Note that, after operator upgrade, `DataPlane`s' `Deployment`s
   will be rolled out regardless and `Pod`s will be recreated.
   [#4953](https://github.com/Kong/kong-operator/pull/4953)
+- Add timeouts to `ControlPlane`'s health check server
+  [#5023](https://github.com/Kong/kong-operator/pull/5023)
 
 ## [v2.3.0-rc.2]
 
