@@ -24,7 +24,6 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -175,51 +174,31 @@ func generateBaseDeployment(
 		return nil, err
 	}
 
-	const tmpVolumeName = "tmp"
-
 	container := corev1.Container{
 		Name:  consts.AIGatewayDataPlaneContainerName,
 		Image: image,
 		Env:   envVars,
-		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: new(false),
-			Capabilities: &corev1.Capabilities{
-				Drop: []corev1.Capability{"NET_RAW"},
-			},
-		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      KonnectCertVolumeName,
 				MountPath: KonnectCertMountPath,
 				ReadOnly:  true,
 			},
-			{
-				Name:      tmpVolumeName,
-				MountPath: "/tmp",
-			},
 		},
 		ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
 	}
+	container, volumes := k8sresources.HardenContainerWithSecurityContext(container, k8sresources.DataPlaneTypeAIGateway)
 
-	tmpSizeLimit := resource.MustParse("1Gi")
-	volumes := []corev1.Volume{
-		{
+	volumes = append(
+		volumes,
+		corev1.Volume{
 			Name: KonnectCertVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: certSecretName,
 				},
 			},
-		},
-		{
-			Name: tmpVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					SizeLimit: &tmpSizeLimit,
-				},
-			},
-		},
-	}
+		})
 
 	var replicas *int32
 	if aigwdp.Spec.Deployment != nil {

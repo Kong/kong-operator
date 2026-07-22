@@ -1095,7 +1095,7 @@ func dataPlaneSpecDeepEqual(specCurrent, specExpected *operatorv1beta1.DataPlane
 		reflect.DeepEqual(specCurrent.PluginsToInstall, specExpected.PluginsToInstall)
 
 	// TODO: Doesn't take .Rollout field into account.
-	return deploymentOptionsDeepEqual(&specCurrent.Deployment.DeploymentOptions, &specExpected.Deployment.DeploymentOptions) &&
+	return deploymentOptionsDeepEqual(&specCurrent.Deployment, &specExpected.Deployment) &&
 		compare.NetworkOptionsDeepEqual(&specCurrent.Network, &specExpected.Network) &&
 		compare.DataPlaneResourceOptionsDeepEqual(&specCurrent.Resources, &specExpected.Resources) &&
 		extensionsEqual &&
@@ -1106,7 +1106,7 @@ func controlPlaneSpecDeepEqual(spec1, spec2 *gwtypes.ControlPlaneOptions) bool {
 	return reflect.DeepEqual(spec1, spec2)
 }
 
-func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {
+func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DataPlaneDeploymentOptions, envVarsToIgnore ...string) bool { //nolint:unparam
 	if o1 == nil && o2 == nil {
 		return true
 	}
@@ -1120,6 +1120,10 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVa
 	}
 
 	if !reflect.DeepEqual(o1.Scaling, o2.Scaling) {
+		return false
+	}
+
+	if o1.Hardened != o2.Hardened {
 		return false
 	}
 
