@@ -53,6 +53,17 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Dataplane: Fixed the method to compare whether dataplane options are deep
+  equal to ensure that `HorizontalPodAutoscaler` is updated when it is changed
+  in `GatewayConfiguration`. Also fixed the calculation of the spec hash in the
+  `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
+  is changed in dataplane options.
+  [#5003](https://github.com/Kong/kong-operator/pull/5003)
+
 ## [v2.3.0-rc.2]
 
 > Release date: 2026-07-16
@@ -120,6 +131,9 @@
 - Konnect: allow root Konnect entities to reference `KonnectAPIAuthConfiguration`
   resources across namespaces using `authRef.namespace` and `KongReferenceGrant`.
   [#4839](https://github.com/Kong/kong-operator/pull/4839)
+- Hybridgateway: add controller plumbing for Gateway API `TCPRoute` resources,
+  preparing hybrid gateway mode for TCPRoute translation support.
+  [#4335](https://github.com/Kong/kong-operator/issues/4335)
 - API: expose `trafficDistribution` and `internalTrafficPolicy` in `DataPlane`,
   `GatewayConfiguration` and `KegDataPlane` `ServiceOptions`. Both fields are
   propagated to the managed Kubernetes Service during reconciliation.

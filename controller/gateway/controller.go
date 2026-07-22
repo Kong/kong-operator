@@ -1119,6 +1119,10 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVa
 		return false
 	}
 
+	if !reflect.DeepEqual(o1.Scaling, o2.Scaling) {
+		return false
+	}
+
 	opts := []cmp.Option{
 		cmp.Comparer(k8sresources.ResourceRequirementsEqual),
 		cmp.Comparer(func(a, b []corev1.EnvVar) bool {
