@@ -81,6 +81,14 @@ type opsUpdateFuncData struct {
 	// SupportsMirror is true when the entity opted into Origin+Mirror. The
 	// generated update function then early-returns a no-op for Mirror entities.
 	SupportsMirror bool
+	// RespField is the field name on the SDK update response wrapper holding
+	// the updated entity (schema.UpdateSuccessResponseRef). Only set when
+	// ResponseStatusFields is non-empty.
+	RespField            string
+	ResponseStatusFields []config.ResponseStatusFieldConfig
+	// HasNestedResponseStatusFields is true when at least one ResponseStatusFields
+	// entry generates a nested struct (i.e. has Fields, not a scalar RespPath).
+	HasNestedResponseStatusFields bool
 }
 
 func qualifiedSDKTypeName(importPath, typeName string) string {
@@ -183,28 +191,35 @@ func (g *Generator) generateOpsUpdateFuncBody(
 	// Association enforcement helpers need the controller-runtime client.
 	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName) || len(associations) > 0
 
+	if len(opsConfig.ResponseStatusFields) > 0 && schema.UpdateSuccessResponseRef == "" {
+		return nil, fmt.Errorf("entity %q: ops.responseStatusFields requires a 2xx response ref for update op", entityName)
+	}
+
 	return &opsUpdateFuncData{
-		Entity:               entityName,
-		APIAlias:             g.config.APIGroupPackageAlias,
-		UpdateSDKInterface:   callShape.SDKInterface,
-		UpdateSDKMethod:      callShape.SDKMethod,
-		UpdateReqMethod:      callShape.ReqMethod,
-		UpdateReqType:        callShape.ReqType,
-		HasTags:              hasTags,
-		HasLabels:            hasLabels,
-		LabelsPointer:        labelsPointer,
-		Parents:              callShape.Parents,
-		UpdateWrapped:        callShape.Wrapped,
-		UpdateFullyWrapped:   callShape.FullyWrapped,
-		ParentIDField:        callShape.ParentIDField,
-		EntityIDField:        callShape.EntityIDField,
-		UpdateBodyField:      callShape.BodyField,
-		UpdateReqBodyPointer: callShape.ReqBodyPointer,
-		NeedsClient:          needsClient,
-		HasReferences:        g.entityHasParentRefReplacement(entityName),
-		UpdateOmitsEntityID:  callShape.OmitsEntityID,
-		Associations:         associations,
-		SupportsMirror:       g.entitySupportsMirror(entityName),
+		Entity:                        entityName,
+		APIAlias:                      g.config.APIGroupPackageAlias,
+		UpdateSDKInterface:            callShape.SDKInterface,
+		UpdateSDKMethod:               callShape.SDKMethod,
+		UpdateReqMethod:               callShape.ReqMethod,
+		UpdateReqType:                 callShape.ReqType,
+		HasTags:                       hasTags,
+		HasLabels:                     hasLabels,
+		LabelsPointer:                 labelsPointer,
+		Parents:                       callShape.Parents,
+		UpdateWrapped:                 callShape.Wrapped,
+		UpdateFullyWrapped:            callShape.FullyWrapped,
+		ParentIDField:                 callShape.ParentIDField,
+		EntityIDField:                 callShape.EntityIDField,
+		UpdateBodyField:               callShape.BodyField,
+		UpdateReqBodyPointer:          callShape.ReqBodyPointer,
+		NeedsClient:                   needsClient,
+		HasReferences:                 g.entityHasParentRefReplacement(entityName),
+		UpdateOmitsEntityID:           callShape.OmitsEntityID,
+		Associations:                  associations,
+		SupportsMirror:                g.entitySupportsMirror(entityName),
+		RespField:                     schema.UpdateSuccessResponseRef,
+		ResponseStatusFields:          opsConfig.ResponseStatusFields,
+		HasNestedResponseStatusFields: hasNestedResponseStatusFields(opsConfig.ResponseStatusFields),
 	}, nil
 }
 

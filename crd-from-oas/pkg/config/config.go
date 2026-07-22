@@ -439,8 +439,13 @@ type ResponseStatusFieldConfig struct {
 	StatusField string `yaml:"statusField"`
 	// StatusJSON is the json tag for the status field, e.g. "endpoints".
 	StatusJSON string `yaml:"statusJSON"`
-	// Fields lists the scalar sub-fields of the new status struct.
-	Fields []ResponseStatusSubField `yaml:"fields"`
+	// Fields lists the scalar sub-fields of the new status struct. Mutually
+	// exclusive with RespPath.
+	Fields []ResponseStatusSubField `yaml:"fields,omitempty"`
+	// RespPath, when set, makes this a scalar *string status field populated
+	// directly from resp.{RespField}.{RespPath} (a *string on the SDK response
+	// type). Mutually exclusive with Fields.
+	RespPath string `yaml:"respPath,omitempty"`
 }
 
 // ResponseStatusSubField is one scalar field in a response-derived status struct.
@@ -924,6 +929,17 @@ func (tc *TypeConfig) validate() error {
 			}
 		} else if err := validateGetForUIDMatchFields("ops.getForUID.matchFields", tc.OpsGetForUID.MatchFields); err != nil {
 			return err
+		}
+	}
+	for i, f := range tc.OpsResponseStatusFields {
+		if f.StatusField == "" {
+			return fmt.Errorf("ops.responseStatusFields[%d].statusField is required", i)
+		}
+		if f.StatusJSON == "" {
+			return fmt.Errorf("ops.responseStatusFields[%d].statusJSON is required", i)
+		}
+		if len(f.Fields) > 0 == (f.RespPath != "") {
+			return fmt.Errorf("ops.responseStatusFields[%d] (%s): exactly one of fields or respPath is required", i, f.StatusField)
 		}
 	}
 	if tc.Source != nil && tc.Source.SupportsMirror && strings.Contains(tc.Path, "{") {

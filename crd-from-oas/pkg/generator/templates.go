@@ -202,7 +202,11 @@ type {{.EntityName}}Status struct {
 	// {{.StatusField}} contains the {{.StatusField}} returned by the Konnect API.
 	//
 	// +optional
+{{- if .RespPath}}
+	{{.StatusField}} *string ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
+{{- else}}
 	{{.StatusField}} *{{$.EntityName}}{{.StatusField}} ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
+{{- end}}
 {{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
@@ -210,6 +214,7 @@ type {{.EntityName}}Status struct {
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitzero"` + "`" + `
 }
 {{- range .ResponseStatusFields}}
+{{- if not .RespPath}}
 
 // {{$.EntityName}}{{.StatusField}} holds the {{.StatusField}} from the Konnect API response.
 type {{$.EntityName}}{{.StatusField}} struct {
@@ -220,6 +225,7 @@ type {{$.EntityName}}{{.StatusField}} struct {
 	{{.Name}} string ` + "`" + `json:"{{.JSON}},omitempty"` + "`" + `
 {{- end}}
 }
+{{- end}}
 {{- end}}
 `
 
@@ -2305,12 +2311,16 @@ func create{{.Entity}}(
 			return fmt.Errorf("failed getting mirrored %s: %w", obj.GetTypeName(), ErrNilResponse)
 		}
 		obj.SetKonnectID(id)
-{{- if .ResponseStatusFields}}
+{{- if .HasNestedResponseStatusFields}}
 		const (
 			protocolHTTPS = "https://"
 			protocolHTTP  = "http://"
 		)
+{{- end}}
 {{- range .ResponseStatusFields}}
+{{- if .RespPath}}
+		obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
+{{- else}}
 		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
 {{- range .Fields}}
 			{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
@@ -2405,18 +2415,22 @@ func create{{.Entity}}(
 
 	obj.SetKonnectID(resp.{{.RespField}}.ID)
 {{- end}}
-{{- if .ResponseStatusFields}}
+{{- if .HasNestedResponseStatusFields}}
 	const (
 		protocolHTTPS = "https://"
 		protocolHTTP  = "http://"
 	)
 {{- end}}
 {{- range .ResponseStatusFields}}
+{{- if .RespPath}}
+	obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
+{{- else}}
 	obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
 {{- range .Fields}}
 		{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
 {{- end}}
 	}
+{{- end}}
 {{- end}}
 {{- range .Associations}}
 
@@ -2478,26 +2492,47 @@ func update{{.Entity}}(
 {{- end}}
 	req.{{.EntityIDField}} = id
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, *req)
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, *req)
 {{- else if .UpdateWrapped}}
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 		{{.EntityIDField}}: id,
 		{{.UpdateBodyField}}: {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}},
 	})
 {{- else if .UpdateOmitsEntityID}}
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
 {{- else}}
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
 {{- end}}
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return create{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk, obj)
 		})
 	}
+{{- if .ResponseStatusFields}}
+{{- if .HasNestedResponseStatusFields}}
+	const (
+		protocolHTTPS = "https://"
+		protocolHTTP  = "http://"
+	)
+{{- end}}
+	if resp != nil && resp.{{.RespField}} != nil {
+{{- range .ResponseStatusFields}}
+{{- if .RespPath}}
+		obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
+{{- else}}
+		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
+{{- range .Fields}}
+			{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
+{{- end}}
+		}
+{{- end}}
+{{- end}}
+	}
+{{- end}}
 {{- range .Associations}}
 
 	if err := enforce{{$.Entity}}{{.GoFieldName}}(ctx, cl, sdk, obj, {{(index $.Parents 0).VarName}}); err != nil {

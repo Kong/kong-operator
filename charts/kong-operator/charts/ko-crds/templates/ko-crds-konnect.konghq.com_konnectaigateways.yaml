@@ -267,6 +267,10 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              configHash:
+                description: ConfigHash contains the ConfigHash returned by the Konnect
+                  API.
+                type: string
               endpoints:
                 description: Endpoints contains the Endpoints returned by the Konnect
                   API.
