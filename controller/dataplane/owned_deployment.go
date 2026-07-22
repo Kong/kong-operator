@@ -152,7 +152,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	// apply default envvars and restore the hacked-out ones
 	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, config.KongDefaults)
 
-	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), dataplane.Spec); err != nil {
+	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), deploymentRelevantDataPlaneSpec(dataplane)); err != nil {
 		return nil, op.Noop, err
 	}
 
@@ -362,6 +362,17 @@ func isRecentDeploymentRestart(template *corev1.PodTemplateSpec, logger logr.Log
 	return restartTimeStr, false
 }
 
+// deploymentRelevantDataPlaneSpec returns a copy of the DataPlane's spec with fields
+// that have no bearing on the generated Deployment zeroed out. It's used as the input
+// for the Deployment's spec-hash annotation, so that changes to fields the Deployment
+// doesn't care about (e.g. Scaling, which only affects the HPA) don't cause a spurious
+// Deployment update that would pre-empt reconciliation of those other resources.
+func deploymentRelevantDataPlaneSpec(dataplane *operatorv1beta1.DataPlane) operatorv1beta1.DataPlaneSpec {
+	spec := *dataplane.Spec.DeepCopy()
+	spec.Deployment.Scaling = nil
+	return spec
+}
+
 // reconcileDataPlaneDeployment takes any existing DataPlane Deployment and a desired DataPlane Deployment and
 // reconciles the existing state to the desired state by either updating an existing Deployment, creating a new one,
 // or doing nothing.
@@ -380,7 +391,7 @@ func reconcileDataPlaneDeployment(
 		// existing Deployment with the spec hash of the desired Deployment. If
 		// the hashes match, we skip the update.
 		if !enforceConfig {
-			match, err := k8sresources.SpecHashMatchesAnnotation(dataplane.Spec, existing)
+			match, err := k8sresources.SpecHashMatchesAnnotation(deploymentRelevantDataPlaneSpec(dataplane), existing)
 			if err != nil {
 				return op.Noop, nil, err
 			}

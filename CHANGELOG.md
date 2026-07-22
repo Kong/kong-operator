@@ -53,6 +53,17 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Dataplane: Fixed the method to compare whether dataplane options are deep
+  equal to ensure that `HorizontalPodAutoscaler` is updated when it is changed
+  in `GatewayConfiguration`. Also fixed the calculation of the spec hash in the
+  `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
+  is changed in dataplane options.
+  [#5003](https://github.com/Kong/kong-operator/pull/5003)
+
 ## [v2.3.0-rc.2]
 
 > Release date: 2026-07-16
