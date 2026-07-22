@@ -1992,8 +1992,18 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				body.WriteString("}\n\n")
 				g.writeNestedInlineTypes(&body, schema.Properties, emittedNested, "", goName, schemaCursor)
 				g.writeDedicatedSensitiveTypesForSchema(&body, goName)
-				// Emit union type definitions for any property-level oneOf.
+				// Emit union type definitions for any property-level oneOf, except
+				// fields ref-ified by schemaTypeRefFields: writeSchemaTypeField
+				// already swapped those to the generated ref struct type (e.g.
+				// *EventGatewaySchemaRegistryRef), so no oneOf sub-type or its
+				// UnmarshalJSON override should be emitted for them.
+				refFieldsForType := g.schemaTypeRefFields()[goName]
+				unionProps := make([]*parser.Property, 0, len(schema.Properties))
 				for _, prop := range schema.Properties {
+					if refFieldsForType[jsonName(prop.Name)] != "" {
+						continue
+					}
+					unionProps = append(unionProps, prop)
 					if g.shouldSkipSchemaProperty(goName, prop) || len(prop.OneOf) == 0 {
 						continue
 					}
@@ -2003,7 +2013,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					}
 					g.writeUnionTypeDefinition(&body, prop, goName, emittedNested, "", propCursor)
 				}
-				if wrapper := emitUnionWrapperUnmarshalJSON(goName, buildUnionFieldSpecs(schema.Properties, goName)); wrapper != "" {
+				if wrapper := emitUnionWrapperUnmarshalJSON(goName, buildUnionFieldSpecs(unionProps, goName)); wrapper != "" {
 					body.WriteString(wrapper)
 				}
 			case schema.Type == "boolean":
@@ -2811,7 +2821,20 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 			unionSpecs = appendUniqueUnionFieldSpec(unionSpecs, seenUnionTypes, rootSpec)
 		}
 
-		fields := buildUnionFieldSpecs(schema.Properties, goName)
+		// Exclude fields ref-ified by schemaTypeRefFields: writeSchemaTypeField
+		// already swapped those to the generated ref struct type (e.g.
+		// *EventGatewaySchemaRegistryRef), so no oneOf sub-type or its
+		// MarshalJSON/UnmarshalJSON test should be generated for them (mirrors
+		// the same exclusion in generateSchemaTypes).
+		refFieldsForType := g.schemaTypeRefFields()[goName]
+		unionTestProps := make([]*parser.Property, 0, len(schema.Properties))
+		for _, prop := range schema.Properties {
+			if refFieldsForType[jsonName(prop.Name)] != "" {
+				continue
+			}
+			unionTestProps = append(unionTestProps, prop)
+		}
+		fields := buildUnionFieldSpecs(unionTestProps, goName)
 		if len(fields) == 0 {
 			continue
 		}
@@ -4192,6 +4215,12 @@ type GoPathSegment struct {
 	// segment's cardinality then comes from this array rather than the leaf
 	// itself, so the leaf is ref-ified as a scalar, not a slice.
 	Array bool
+	// ObjectRefLeaf is true when this is the final segment and it resolves to
+	// a single object-typed field (a oneOf, or a $ref to a oneOf schema) rather
+	// than an array — e.g. "schemaValidation.config.json.schemaRegistry",
+	// whose OAS leaf is a $ref to a oneOf-by-id/by-name reference object. Such
+	// a leaf is ref-ified as a single *<RefType>, not a slice.
+	ObjectRefLeaf bool
 }
 
 // TemplateAssociationConfig is the per-association data used by crdTypeTemplate
@@ -4290,6 +4319,18 @@ type TemplateReferenceConfig struct {
 	// ArrayLeafPointer is true when the leaf field on the element type is a
 	// pointer (the leaf is optional). Only set when NestedArrayScalar is true.
 	ArrayLeafPointer bool
+	// SingleValueObjectRef is true when the reference path resolves to a single
+	// object-typed leaf (e.g. "schemaValidation.config.json.schemaRegistry",
+	// whose OAS leaf is a $ref to a oneOf-by-id/by-name reference object)
+	// rather than an array. The RefsAt accessor wraps the single *<RefType>
+	// leaf in a one-element slice so the existing []string resolver plumbing
+	// is reused unchanged; injection then wraps the resolved value back into
+	// an {"<ObjectWrapKey>": value} object (see ObjectWrap on TemplateRefInjection).
+	SingleValueObjectRef bool
+	// ObjectWrapKey is the SDK payload key the resolved value is wrapped
+	// under for a SingleValueObjectRef (e.g. "name" or "id", from ResolvesTo).
+	// Only set when SingleValueObjectRef is true.
+	ObjectWrapKey string
 }
 
 // templateReferences returns the references for an entity with computed Go field names.
@@ -4346,23 +4387,31 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			arrayLeafName = leaf.Name
 			arrayLeafPointer = leaf.Pointer
 		}
+		var singleValueObjectRef bool
+		var objectWrapKey string
+		if len(goPathSegments) > 0 && goPathSegments[len(goPathSegments)-1].ObjectRefLeaf {
+			singleValueObjectRef = true
+			objectWrapKey = ref.ResolvesTo
+		}
 		result[i] = TemplateReferenceConfig{
-			ReferenceConfig:   ref,
-			GoFieldName:       goFieldNameStr,
-			JSONFieldName:     tail,
-			SDKJSONFieldName:  sdkJSONKey(tail),
-			DefaultKind:       defaultKind,
-			GoResolverName:    goResolverName,
-			NestedRef:         nested,
-			RefsExpr:          refsExpr,
-			GoPathSegments:    goPathSegments,
-			MultiKind:         len(ref.Kinds) > 1,
-			ResolvesToName:    ref.ResolvesTo == "name",
-			NestedArrayScalar: nestedArrayScalar,
-			ArrayGuardExprs:   arrayGuardExprs,
-			ArrayPath:         arrayPath,
-			ArrayLeafName:     arrayLeafName,
-			ArrayLeafPointer:  arrayLeafPointer,
+			ReferenceConfig:      ref,
+			GoFieldName:          goFieldNameStr,
+			JSONFieldName:        tail,
+			SDKJSONFieldName:     sdkJSONKey(tail),
+			DefaultKind:          defaultKind,
+			GoResolverName:       goResolverName,
+			NestedRef:            nested,
+			RefsExpr:             refsExpr,
+			GoPathSegments:       goPathSegments,
+			MultiKind:            len(ref.Kinds) > 1,
+			ResolvesToName:       ref.ResolvesTo == "name",
+			NestedArrayScalar:    nestedArrayScalar,
+			ArrayGuardExprs:      arrayGuardExprs,
+			ArrayPath:            arrayPath,
+			ArrayLeafName:        arrayLeafName,
+			ArrayLeafPointer:     arrayLeafPointer,
+			SingleValueObjectRef: singleValueObjectRef,
+			ObjectWrapKey:        objectWrapKey,
 		}
 	}
 	return result
@@ -4457,6 +4506,14 @@ type TemplateRefInjection struct {
 	// overwrites each element's own LeafSDKKey in place, rather than
 	// overwriting TargetVar's own key wholesale.
 	ArrayKey string
+	// ObjectWrap is true when the reference resolves to a single object-typed
+	// leaf (e.g. "schemaValidation.config.json.schemaRegistry"). The write
+	// wraps the single resolved value as {"<ObjectWrapKey>": value} instead of
+	// writing the resolved slice/string directly.
+	ObjectWrap bool
+	// ObjectWrapKey is the key the resolved value is wrapped under (e.g. "name"
+	// or "id"). Only set when ObjectWrap is true.
+	ObjectWrapKey string
 }
 
 // refInjections computes the SDK payload injection plan for every nested
@@ -4515,6 +4572,15 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 	// enclosing array, whose elements get their own leaf key overwritten in
 	// place, rather than a single key holding the whole resolved value.
 	isArrayElement := !isACL && isNestedArrayScalar(segs)
+	// isObjectRefLeaf is true when the leaf itself is a single object-typed
+	// reference (see GoPathSegment.ObjectRefLeaf), e.g.
+	// "schemaValidation.config.json.schemaRegistry". Passing through a
+	// property-level union en route to it is safe: Cond already nil-guards
+	// every union-variant pointer hop up to and including the leaf, so the
+	// injection only runs when that variant (and the leaf) is actually set,
+	// and the write overwrites the leaf's own key in place rather than
+	// reconstructing the union itself (unlike AIGatewayACLRef).
+	isObjectRefLeaf := !isACL && !isArrayElement && segs[len(segs)-1].ObjectRefLeaf
 
 	// writeIdx is the segment whose own JSON key gets overwritten (or, for
 	// isArrayElement, whose key holds the array ranged in place): the
@@ -4541,7 +4607,7 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 	default:
 		writeIdx = len(segs) - 1
 	}
-	if !isACL {
+	if !isACL && !isObjectRefLeaf {
 		// A property-level union (a JSON key of its own, e.g.
 		// "access.acls") is unwrapped nowhere else in the SDK payload
 		// builder, so a non-ACL reference passing through one would
@@ -4653,6 +4719,10 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		injection.UnionVar = uniqueLocalVar(goLocalVarFromKey(segs[writeIdx].JSONKey), usedVars)
 		injection.UnionExpr = "obj.Spec.APISpec." + groupKey
 		injection.SDKUnionKey = sdkJSONKey(segs[writeIdx].JSONKey)
+	}
+	if isObjectRefLeaf {
+		injection.ObjectWrap = true
+		injection.ObjectWrapKey = ref.ObjectWrapKey
 	}
 
 	groupIndex[groupKey] = len(groups)
@@ -4804,11 +4874,16 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 				// as long as it doesn't pass through a property-level union (like
 				// "access.acls"), whose CRD-side "type" wrapper and variant-key
 				// nesting only AIGatewayACLRef's reconstruction unwraps correctly.
+				// An ObjectRefLeaf is exempt from this restriction: it overwrites its
+				// own key in place with a plain object value, and flattenSDKUnions
+				// (see zz_generated_common_types.go) already collapses any number of
+				// ancestor type/value union wrappers generically, so no reconstruction
+				// is needed regardless of how many unions the path passes through.
 				if ref.TypeName() == "AIGatewayACLRef" {
 					if !isSupportedAIGatewayACLRefPath(ref.Path) {
 						return fmt.Errorf("reference path %q: AIGatewayACLRef references only support paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
 					}
-				} else {
+				} else if !goPath[len(goPath)-1].ObjectRefLeaf {
 					for _, seg := range goPath[:len(goPath)-1] {
 						if seg.UnionWrapper && seg.JSONKey != "" {
 							return fmt.Errorf("reference path %q: nested references through a property-level union must use refTypeName AIGatewayACLRef", ref.Path)
@@ -5019,14 +5094,19 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 		}
 
 		if final {
-			if prop.Type != "array" && !sawArray {
+			// An object-ref leaf is a single object field (an inline oneOf, or a
+			// $ref to a oneOf schema, e.g. SchemaRegistryReference's by-id/by-name
+			// variants) standing in for one reference, rather than an array of them.
+			objectRefLeaf := prop.Type != "array" && (len(prop.OneOf) > 0 || len(prop.AnyOf) > 0 ||
+				(prop.RefName != "" && refTargetHasRootOneOf(g.parsed, prop.RefName)))
+			if prop.Type != "array" && !sawArray && !objectRefLeaf {
 				return "", "", nil, fmt.Errorf("reference path %q must be an array property, got %q", ref.Path, prop.Type)
 			}
-			// A scalar leaf inside a non-leaf array (sawArray) is ref-ified as
-			// one scalar per element; it is a pointer when the leaf field
-			// itself is optional (an array-typed leaf is never a pointer).
+			// A scalar leaf inside a non-leaf array (sawArray), or a single
+			// object-ref leaf, is a pointer when the leaf field itself is
+			// optional (an array-typed leaf is never a pointer).
 			leafPointer := prop.Type != "array" && (!prop.Required || prop.Nullable)
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: leafPointer, JSONKey: jsonName(prop.Name)})
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: leafPointer, JSONKey: jsonName(prop.Name), ObjectRefLeaf: objectRefLeaf})
 			return typeName, jsonName(prop.Name), goPathSegments, nil
 		}
 
@@ -5043,6 +5123,27 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			})
 			union = prop
 			unionPrefix = typeName
+		case prop.RefName != "" && !prop.IsReference && refTargetHasRootOneOf(g.parsed, prop.RefName):
+			// $ref to a discriminated-union schema (e.g. a "config" property
+			// whose value is itself a oneOf component schema): descend as a
+			// union, mirroring the entity root-oneOf handling above, rather
+			// than as a plain object.
+			refSchema := g.parsed.Schemas[prop.RefName]
+			u := &parser.Property{
+				Name:                 fixInitialisms(prop.RefName),
+				OneOf:                refSchema.OneOf,
+				Discriminator:        refSchema.Discriminator,
+				DiscriminatorMapping: refSchema.DiscriminatorMapping,
+			}
+			goPathSegments = append(goPathSegments, GoPathSegment{
+				Name:          goFieldName(prop.Name),
+				Pointer:       true,
+				JSONKey:       jsonName(prop.Name),
+				UnionWrapper:  true,
+				UnionTypeName: u.Name,
+			})
+			union = u
+			unionPrefix = ""
 		case prop.RefName != "" && !prop.IsReference:
 			// $ref properties whose target schema is anyOf-registered are
 			// rendered as a pointer (see goTypeInCRD/writeSchemaField's
@@ -6664,6 +6765,13 @@ func isRefProperty(prop *parser.Property) bool {
 // hasRootOneOf returns true if the schema has root-level oneOf (i.e., the schema itself is a union type).
 func hasRootOneOf(schema *parser.Schema) bool {
 	return len(schema.OneOf) > 0
+}
+
+// refTargetHasRootOneOf reports whether refName names a schema with root-level
+// oneOf, tolerating an unresolved refName (returns false rather than panicking).
+func refTargetHasRootOneOf(parsed *parser.ParsedSpec, refName string) bool {
+	schema := parsed.Schemas[refName]
+	return schema != nil && hasRootOneOf(schema)
 }
 
 // skipProperty returns true if the property should be skipped in CRD generation.
