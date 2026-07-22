@@ -1,0 +1,59 @@
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1
+    description: Test Event Gateway CP
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cp-event-1-schema-registry-password
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  password: password123
+---
+kind: EventGatewaySchemaRegistry
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-schema-registry
+  namespace: default
+spec:
+  apiSpec:
+    type: confluent
+    confluent:
+      name: cp-event-1-schema-registry
+      description: Test Event Gateway Schema Registry
+      labels:
+        app: test1
+      config:
+        authentication:
+          type: basic
+          basic:
+            password:
+              type: secretRef
+              secretRef:
+                name: cp-event-1-schema-registry-password
+                key: password
+            username: username123
+        endpoint: https://test-schema-registry.konghq.tech
+        schemaType: json
+        timeoutSeconds: 10
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1
+
+

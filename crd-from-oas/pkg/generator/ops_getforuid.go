@@ -160,8 +160,8 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		listResponseNilCheck = "resp == nil"
 	}
 
-	_, hasLabels, _ := metadataFields(schema)
-	hasName := schemaHasNameProperty(schema)
+	_, hasLabels, _ := metadataFields(schema, opsConfig)
+	hasName := schemaHasNameProperty(schema, opsConfig)
 	matchFields := make([]opsGetForUIDMatchFieldData, 0)
 	var rootUnion *opsGetForUIDRootUnionData
 	if opsConfig != nil && opsConfig.GetForUID != nil {
@@ -252,11 +252,37 @@ func isArrayMatchField(schema *parser.Schema, goName string) bool {
 // schemaHasNameProperty reports whether the request body schema declares a
 // "name" string property, used as a UID-match fallback when the SDK list
 // response type lacks GetLabels() / tags.
-func schemaHasNameProperty(schema *parser.Schema) bool {
+//
+// When the schema is a root-level discriminated union, a "name" property
+// declared inside any variant also counts — unless the entity opted out via
+// ops.skipRootUnionMetadataFields. See metadataFields.
+func schemaHasNameProperty(schema *parser.Schema, opsConfig *config.EntityOpsConfig) bool {
 	if schema == nil {
 		return false
 	}
-	for _, prop := range schema.Properties {
+	if hasNameProperty(schema.Properties) {
+		return true
+	}
+	if len(schema.Properties) > 0 || len(schema.OneOf) == 0 {
+		return false
+	}
+	if opsConfig != nil && opsConfig.SkipRootUnionMetadataFields {
+		return false
+	}
+	for _, variant := range schema.OneOf {
+		if variant == nil {
+			continue
+		}
+		if hasNameProperty(variant.Properties) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasNameProperty reports whether props declares a "name" string property.
+func hasNameProperty(props []*parser.Property) bool {
+	for _, prop := range props {
 		if prop == nil {
 			continue
 		}

@@ -69,6 +69,24 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+      - path: /v1/event-gateways/{gatewayId}/schema-registries
+        name: EventGatewaySchemaRegistry
+        secretReferences:
+          - path: spec.apiSpec.confluent.config.authentication.basic.password
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewaySchemaRegistriesSDK
+            fieldName: EventGatewaySchemaRegistries
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.SchemaRegistryCreate
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewaySchemaRegistryRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -95,6 +113,10 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
             fieldName: EventGatewayListenerPolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle) once create/update
+          # label injection has been reviewed for this entity.
+          skipRootUnionMetadataFields: true
           getForUID:
             listItemsSource: slice
             rootUnion:
@@ -186,6 +208,11 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
             fieldName: EventGatewayVirtualClusterProducePolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterProducePolicyRequest
           update:
@@ -212,6 +239,11 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK
             fieldName: EventGatewayVirtualClusterConsumePolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterConsumePolicyRequest
           update:
@@ -231,6 +263,11 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterPoliciesSDK
             fieldName: EventGatewayVirtualClusterPolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterClusterLevelPolicyRequest
           update:
@@ -294,6 +331,11 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayIdentityProvidersSDK
             fieldName: AIGatewayIdentityProviders
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayIdentityProviderRequest
           update:
@@ -338,6 +380,10 @@ apiGroupVersions:
           # List responses are root unions whose wrapper does not expose top-level
           # GetID/GetLabels accessors, so conflict lookup stays hand-written for now.
           skipGetForUID: true
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle) once create/update
+          # label injection has been reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest
           update:
@@ -380,6 +426,12 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelProvidersSDK
             fieldName: AIGatewayModelProviders
+          # TODO: this entity has 19 union variants; root-union metadata
+          # detection cannot resolve a single injection field today (the
+          # generator requires exactly one union member). Needs generator
+          # support for multi-variant label injection before this can be
+          # enabled, and a getForUID match strategy.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelProviderRequest
           update:
@@ -507,6 +559,10 @@ apiGroupVersions:
           # List responses are root unions whose wrapper does not expose top-level
           # GetID/GetLabels accessors, so conflict lookup stays hand-written for now.
           skipGetForUID: true
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle) once create/update
+          # label injection has been reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayMCPServerRequest
           update:

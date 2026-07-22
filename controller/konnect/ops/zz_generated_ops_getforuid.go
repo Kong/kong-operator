@@ -69,6 +69,8 @@ func getForUID[
 		return getEventGatewayListenerForUID(ctx, sdk.GetEventGatewayListenersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayListenerPolicy:
 		return getEventGatewayListenerPolicyForUID(ctx, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
+	case *configurationv1alpha1.EventGatewaySchemaRegistry:
+		return getEventGatewaySchemaRegistryForUID(ctx, sdk.GetEventGatewaySchemaRegistriesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:
 		return getEventGatewayVirtualClusterForUID(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:

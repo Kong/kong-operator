@@ -5343,6 +5343,12 @@ type sdkOpsMethod struct {
 	ImportAlias string
 	ImportPath  string
 
+	// OpName is the config op name ("create", "update", ...) this method was
+	// built from. Used to tell create and update methods apart reliably;
+	// MethodName can't be pattern-matched for this because the SDK request
+	// type name doesn't always start with "Create" (e.g. "SchemaRegistryCreate").
+	OpName string
+
 	NestedUnionFields []sdkOpsNestedUnionField
 
 	// IsOperationsWrapped is true when the method's SDK type is in the operations
@@ -5638,8 +5644,9 @@ func (g *Generator) generateRootUnionSDKOps(
 
 	rootUnionMethods := make([]sdkOpsRootUnionMethod, 0, len(methods))
 	hasUpdateMethod := false
+	updateIsOperationsWrapped := false
 	for _, method := range methods {
-		isCreate := strings.HasPrefix(method.MethodName, "ToCreate")
+		isCreate := method.OpName == "create"
 		if !isCreate {
 			hasUpdateMethod = true
 		}
@@ -5648,9 +5655,13 @@ func (g *Generator) generateRootUnionSDKOps(
 			IsCreate:              isCreate,
 			FromPayloadMethodName: strings.ToLower(method.MethodName[:1]) + method.MethodName[1:] + "FromPayload",
 		}
-		m.IsOperationsWrapped = isOperationsWrapped
+		// Operations-wrapping is per-method: create and update can target
+		// different SDK type shapes (e.g. EventGatewaySchemaRegistry's create
+		// is a bare components union while its update is operations-wrapped).
+		methodIsOperationsWrapped := strings.Contains(method.ImportAlias, "sdkkonnectoper")
+		m.IsOperationsWrapped = methodIsOperationsWrapped
 		m.ComponentsImportAlias = componentsImportAlias
-		if isOperationsWrapped {
+		if methodIsOperationsWrapped {
 			bodyInfo, err := ParseSDKRequestBodyInfo(method.ImportPath, method.TypeName)
 			if err != nil {
 				return "", fmt.Errorf("failed to inspect SDK request body for %s %s: %w", entityName, method.TypeName, err)
@@ -5658,6 +5669,9 @@ func (g *Generator) generateRootUnionSDKOps(
 			m.BodyTypeName = bodyInfo.TypeName
 			m.BodyFieldName = bodyInfo.FieldName
 			m.BodyFieldPointer = bodyInfo.Pointer
+			if !isCreate {
+				updateIsOperationsWrapped = true
+			}
 		}
 		rootUnionMethods = append(rootUnionMethods, m)
 	}
@@ -5687,7 +5701,7 @@ func (g *Generator) generateRootUnionSDKOps(
 	// the OAS shape misclassifies variants whose only required $ref property is a
 	// scalar (e.g. a named string), which the SDK collapses to a plain type.
 	updateSDKTypeIsUnion := false
-	if hasUpdateMethod && !isOperationsWrapped && updateMethodTypeName != "" {
+	if hasUpdateMethod && !updateIsOperationsWrapped && updateMethodTypeName != "" {
 		memberFields, err := ParseSDKUnionMemberFieldNames(updateMethodImportPath, updateMethodTypeName)
 		if err != nil {
 			return "", fmt.Errorf("failed to inspect SDK update type %s for %s: %w", updateMethodTypeName, entityName, err)
@@ -5729,14 +5743,14 @@ func (g *Generator) generateRootUnionSDKOps(
 		// "openid-connect"). Use the discriminator-derived spelling so
 		// generated constructor calls match the SDK exactly.
 		ctorSuffix := pascalFromKebab(discValue)
-		if hasUpdateMethod && !isOperationsWrapped && updateSDKTypeIsUnion {
+		if hasUpdateMethod && !updateIsOperationsWrapped && updateSDKTypeIsUnion {
 			// The SDK update request is a discriminated union (same shape as
 			// create); rebuild the selected variant directly via its update
 			// constructor instead of targeting a nested payload field.
 			updateVariantTypeName = fixInitialisms(variantRefName)
 			updateConstructorName = "Create" + updateMethodTypeName + ctorSuffix
 			updateDirectUnion = true
-		} else if hasUpdateMethod && !isOperationsWrapped {
+		} else if hasUpdateMethod && !updateIsOperationsWrapped {
 			updatePayloadProp, err := findRootUnionUpdatePayloadProperty(variant.Properties)
 			if err != nil {
 				// Heuristic: when a root-union update variant exposes multiple required
@@ -6035,6 +6049,7 @@ func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sd
 			TypeName:    typeName,
 			ImportAlias: alias,
 			ImportPath:  importPath,
+			OpName:      opName,
 		})
 	}
 

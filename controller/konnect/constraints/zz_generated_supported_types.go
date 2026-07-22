@@ -24,6 +24,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewayListener |
 		configurationv1alpha1.EventGatewayListenerPolicy |
+		configurationv1alpha1.EventGatewaySchemaRegistry |
 		configurationv1alpha1.EventGatewayVirtualCluster |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterPolicy |

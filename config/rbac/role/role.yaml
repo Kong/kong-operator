@@ -181,6 +181,8 @@ rules:
   - eventgatewaylistenerpolicies/status
   - eventgatewaylisteners/finalizers
   - eventgatewaylisteners/status
+  - eventgatewayschemaregistries/finalizers
+  - eventgatewayschemaregistries/status
   - eventgatewayvirtualclusterconsumepolicies/finalizers
   - eventgatewayvirtualclusterconsumepolicies/status
   - eventgatewayvirtualclusterpolicies/finalizers
@@ -224,6 +226,7 @@ rules:
   - eventgatewaybackendclusters
   - eventgatewaylistenerpolicies
   - eventgatewaylisteners
+  - eventgatewayschemaregistries
   - eventgatewayvirtualclusterconsumepolicies
   - eventgatewayvirtualclusterpolicies
   - eventgatewayvirtualclusterproducepolicies

@@ -28,6 +28,7 @@ func generatedIndexOptionsForKonnectEntities(
 		index.OptionsForEventGatewayDataPlaneCertificate(),
 		index.OptionsForEventGatewayListener(),
 		index.OptionsForEventGatewayListenerPolicy(),
+		index.OptionsForEventGatewaySchemaRegistry(),
 		index.OptionsForEventGatewayVirtualCluster(),
 		index.OptionsForEventGatewayVirtualClusterConsumePolicy(),
 		index.OptionsForEventGatewayVirtualClusterPolicy(),

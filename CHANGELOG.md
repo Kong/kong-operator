@@ -64,6 +64,11 @@
   is changed in dataplane options.
   [#5003](https://github.com/Kong/kong-operator/pull/5003)
 
+### Added
+
+- EventGateway CRDs: added `EventGatewaySchemaRegistry` CRD and reconciliation logic.
+  [#5017](https://github.com/Kong/kong-operator/pull/5017)
+
 ## [v2.3.0-rc.2]
 
 > Release date: 2026-07-16

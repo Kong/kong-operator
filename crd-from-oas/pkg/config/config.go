@@ -214,6 +214,9 @@ type TypeConfig struct {
 	OpsRequireClient bool `yaml:"-"`
 	// OpsSkipGetForUID skips generation of the getForUID function for this entity.
 	OpsSkipGetForUID bool `yaml:"-"`
+	// OpsSkipRootUnionMetadataFields opts an entity out of labels/tags/name
+	// detection inside root-union (discriminated-union) request-body variants.
+	OpsSkipRootUnionMetadataFields bool `yaml:"-"`
 	// OpsUseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	OpsUseUIDTagFilter bool `yaml:"-"`
@@ -462,6 +465,11 @@ type typeOpsYAML struct {
 	// Use when the SDK list endpoint does not support UID-label filtering, or
 	// when the hand-written implementation already exists.
 	SkipGetForUID bool `yaml:"skipGetForUID,omitempty"`
+	// SkipRootUnionMetadataFields opts an entity out of labels/tags/name
+	// detection inside root-union (discriminated-union) request-body variants.
+	// Defaults to false (detection enabled). Set true to preserve pre-existing
+	// generated output for entities not yet reviewed for this behavior.
+	SkipRootUnionMetadataFields bool `yaml:"skipRootUnionMetadataFields,omitempty"`
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool `yaml:"useUIDTagFilter,omitempty"`
@@ -517,6 +525,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.Ops = raw.Ops.Operations
 		tc.OpsRequireClient = raw.Ops.RequireClient
 		tc.OpsSkipGetForUID = raw.Ops.SkipGetForUID
+		tc.OpsSkipRootUnionMetadataFields = raw.Ops.SkipRootUnionMetadataFields
 		tc.OpsUseUIDTagFilter = raw.Ops.UseUIDTagFilter
 		tc.OpsListCallStylePositional = raw.Ops.ListCallStylePositional
 		tc.OpsGetForUID = raw.Ops.GetForUID
@@ -536,6 +545,9 @@ type EntityOpsConfig struct {
 	RequireClient bool
 	// SkipGetForUID skips generation of the getForUID function for this entity.
 	SkipGetForUID bool
+	// SkipRootUnionMetadataFields opts an entity out of labels/tags/name
+	// detection inside root-union (discriminated-union) request-body variants.
+	SkipRootUnionMetadataFields bool
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool
@@ -675,7 +687,8 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		result[entityName] = &EntityOpsConfig{
 			Ops:                     tc.Ops,
 			RequireClient:           requireClient,
-			SkipGetForUID:           tc.OpsSkipGetForUID,
+			SkipGetForUID:               tc.OpsSkipGetForUID,
+			SkipRootUnionMetadataFields: tc.OpsSkipRootUnionMetadataFields,
 			UseUIDTagFilter:         tc.OpsUseUIDTagFilter,
 			ListCallStylePositional: tc.OpsListCallStylePositional,
 			GetForUID:               tc.OpsGetForUID,
