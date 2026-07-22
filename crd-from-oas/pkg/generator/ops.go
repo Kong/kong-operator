@@ -79,7 +79,7 @@ func (g *Generator) generateEntityOpsFile(
 		deleteNeedsOpsImport := deleteData != nil &&
 			(deleteData.DeleteFullyWrapped ||
 				(deleteData.DeleteAsUpdate && (deleteData.DeletePutWrapped || deleteData.DeletePutFullyWrapped)))
-		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) ||
+		needsOpsImport := (updateData != nil && updateData.UpdateWrapped && !updateData.UpdateFullyWrapped) ||
 			deleteNeedsOpsImport ||
 			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
@@ -492,11 +492,41 @@ func isSingletonNoID(schema *parser.Schema) bool {
 // metadata injection in the generated create function. labelsPointer is true
 // when the labels map uses nullable string values (map[string]*string in the
 // SDK), which requires the pointer-valued helper variant.
-func metadataFields(schema *parser.Schema) (hasTags, hasLabels, labelsPointer bool) {
+//
+// When the schema is a root-level discriminated union (no properties of its
+// own, only oneOf variants), tags/labels declared inside any variant also
+// count — unless the entity opted out via ops.skipRootUnionMetadataFields
+// (see EntityOpsConfig.SkipRootUnionMetadataFields), which preserves prior
+// generated output for entities not yet reviewed for this behavior.
+func metadataFields(schema *parser.Schema, opsConfig *config.EntityOpsConfig) (hasTags, hasLabels, labelsPointer bool) {
 	if schema == nil {
 		return false, false, false
 	}
-	for _, prop := range schema.Properties {
+	hasTags, hasLabels, labelsPointer = scanMetadataProperties(schema.Properties)
+	if len(schema.Properties) > 0 || len(schema.OneOf) == 0 {
+		return hasTags, hasLabels, labelsPointer
+	}
+	if opsConfig != nil && opsConfig.SkipRootUnionMetadataFields {
+		return hasTags, hasLabels, labelsPointer
+	}
+	for _, variant := range schema.OneOf {
+		if variant == nil {
+			continue
+		}
+		vTags, vLabels, vPointer := scanMetadataProperties(variant.Properties)
+		hasTags = hasTags || vTags
+		if vLabels {
+			hasLabels = true
+			labelsPointer = labelsPointer || vPointer
+		}
+	}
+	return hasTags, hasLabels, labelsPointer
+}
+
+// scanMetadataProperties reports whether props declares a "tags" array
+// property or a "labels" object/map property. See metadataFields.
+func scanMetadataProperties(props []*parser.Property) (hasTags, hasLabels, labelsPointer bool) {
+	for _, prop := range props {
 		if prop == nil {
 			continue
 		}

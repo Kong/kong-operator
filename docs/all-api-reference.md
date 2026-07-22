@@ -541,6 +541,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
 - [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
+- [EventGatewaySchemaRegistry](#configuration-konghq-com-v1alpha1-eventgatewayschemaregistry)
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
 - [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
@@ -641,6 +642,21 @@ EventGatewayListenerPolicy is the Schema for the eventgatewaylistenerpolicys API
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)_ |  |
 | `status` _[EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)_ |  |
+
+### EventGatewaySchemaRegistry
+
+
+EventGatewaySchemaRegistry is the Schema for the eventgatewayschemaregistrys API.
+
+<!-- event_gateway_schema_registry description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewaySchemaRegistry`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewaySchemaRegistrySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryspec)_ |  |
+| `status` _[EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)_ |  |
 
 ### EventGatewayVirtualCluster
 
@@ -2780,6 +2796,87 @@ Allowed values:
 | `id` |  |
 | `name` |  |
 
+#### EventGatewaySchemaRegistryAPISpec
+
+
+EventGatewaySchemaRegistryAPISpec defines the API spec fields for EventGatewaySchemaRegistry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewaySchemaRegistrySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryspec)
+
+#### EventGatewaySchemaRegistryConfig
+
+
+EventGatewaySchemaRegistryConfig represents a union type for EventGatewaySchemaRegistryConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewaySchemaRegistryConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryconfigtype)_ | Type designates the type of configuration. |
+| `confluent` _[SchemaRegistryConfluent](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluent)_ | SchemaRegistryConfluent configuration. |
+
+_Appears in:_
+
+- [EventGatewaySchemaRegistryAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryapispec)
+
+#### EventGatewaySchemaRegistryConfigType
+
+_Underlying type:_ `string`
+
+EventGatewaySchemaRegistryConfigType represents the type of EventGatewaySchemaRegistryConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewaySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `confluent` |  |
+
+#### EventGatewaySchemaRegistrySpec
+
+
+EventGatewaySchemaRegistrySpec defines the desired state of EventGatewaySchemaRegistry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `apiSpec` _[EventGatewaySchemaRegistryAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewaySchemaRegistry](#configuration-konghq-com-v1alpha1-eventgatewayschemaregistry)
+
+#### EventGatewaySchemaRegistryStatus
+
+
+EventGatewaySchemaRegistryStatus defines the observed state of EventGatewaySchemaRegistry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewaySchemaRegistry](#configuration-konghq-com-v1alpha1-eventgatewayschemaregistry)
+
 #### EventGatewaySkipRecordPolicyCreate
 
 
@@ -3443,6 +3540,7 @@ _Appears in:_
 - [BackendClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)
 - [BackendClusterAuthenticationSaslScram](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)
 - [BackendClusterTLS](#configuration-konghq-com-v1alpha1-types-backendclustertls)
+- [SchemaRegistryAuthenticationBasic](#configuration-konghq-com-v1alpha1-types-schemaregistryauthenticationbasic)
 - [VirtualClusterAuthenticationPrincipal](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationprincipal)
 
 #### Group
@@ -4670,6 +4768,7 @@ _Appears in:_
 - [EventGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatestatus)
 - [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
+- [EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
 - [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
 - [EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
@@ -4706,6 +4805,7 @@ _Appears in:_
 - [EventGatewayTLSListenerPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)
 - [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
 - [ForwardToVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)
+- [SchemaRegistryConfluent](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluent)
 
 #### LabelsValue
 
@@ -4894,6 +4994,118 @@ _Appears in:_
 
 - [KongReferenceGrantSpec](#configuration-konghq-com-v1alpha1-types-kongreferencegrantspec)
 
+#### SchemaRegistryAuthenticationBasic
+
+
+SchemaRegistryAuthenticationBasic Basic authentication scheme for the schema
+registry with username and password.
+
+
+
+| Field | Description |
+| --- | --- |
+| `password` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | A sensitive value containing the secret or a reference to a secret as a template string expression. If the value is provided as plain text, it is encrypted at rest and omitted from API responses. If provided as an expression, the expression itself is stored and returned by the API. |
+| `username` _[GatewaySecretReferenceOrLiteral](#configuration-konghq-com-v1alpha1-types-gatewaysecretreferenceorliteral)_ | A literal value or a reference to an existing secret as a template string expression. The value is stored and returned by the API as-is, not treated as sensitive information. |
+
+_Appears in:_
+
+- [SchemaRegistryAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-schemaregistryauthenticationscheme)
+- [SchemaRegistryConfluentConfigAuthentication](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfigauthentication)
+
+
+
+#### SchemaRegistryAuthenticationSchemeType
+
+_Underlying type:_ `string`
+
+SchemaRegistryAuthenticationSchemeType represents the type of SchemaRegistryAuthenticationScheme.
+
+
+
+
+_Appears in:_
+
+- [SchemaRegistryAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-schemaregistryauthenticationscheme)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `basic` |  |
+
+#### SchemaRegistryConfluent
+
+
+SchemaRegistryConfluent A Confluent schema registry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[SchemaRegistryConfluentConfig](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfig)_ | The configuration of the schema registry. |
+| `description` _string_ | A human-readable description of the virtual cluster. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | The unique name of the schema registry. |
+
+_Appears in:_
+
+- [EventGatewaySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryconfig)
+
+#### SchemaRegistryConfluentConfig
+
+
+SchemaRegistryConfluentConfig The configuration of [Confluent Schema
+Registry](https://github.com/confluentinc/schema-registry)
+
+
+
+| Field | Description |
+| --- | --- |
+| `authentication` _[SchemaRegistryConfluentConfigAuthentication](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfigauthentication)_ | The authentication configuration for the schema registry. |
+| `endpoint` _string_ | The endpoint of the Confluent schema registry. |
+| `schemaType` _string_ | The format of the message. |
+| `timeoutSeconds` _int_ | Total time in seconds from establishing connection to receive a response from schema registry. |
+
+_Appears in:_
+
+- [SchemaRegistryConfluent](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluent)
+
+#### SchemaRegistryConfluentConfigAuthentication
+
+
+SchemaRegistryConfluentConfigAuthentication represents a union type for authentication.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[SchemaRegistryConfluentConfigAuthenticationType](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfigauthenticationtype)_ | Type designates the type of configuration. |
+| `basic` _[SchemaRegistryAuthenticationBasic](#configuration-konghq-com-v1alpha1-types-schemaregistryauthenticationbasic)_ | SchemaRegistryAuthenticationBasic configuration. |
+
+_Appears in:_
+
+- [SchemaRegistryConfluentConfig](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfig)
+
+#### SchemaRegistryConfluentConfigAuthenticationType
+
+_Underlying type:_ `string`
+
+SchemaRegistryConfluentConfigAuthenticationType represents the type of authentication.
+
+
+
+
+_Appears in:_
+
+- [SchemaRegistryConfluentConfigAuthentication](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfigauthentication)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `basic` |  |
+
 
 
 #### SchemaRegistryReferenceByID
@@ -4968,6 +5180,7 @@ _Appears in:_
 - [AIGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-aigatewaydataplanecertificateapispec)
 - [BackendClusterTLSClientIdentity](#configuration-konghq-com-v1alpha1-types-backendclustertlsclientidentity)
 - [EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)
+- [SchemaRegistryAuthenticationBasic](#configuration-konghq-com-v1alpha1-types-schemaregistryauthenticationbasic)
 - [TLSCertificate](#configuration-konghq-com-v1alpha1-types-tlscertificate)
 
 #### SensitiveDataSourceType

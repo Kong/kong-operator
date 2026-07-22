@@ -295,6 +295,17 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				apiAlias,
 			),
 		}
+	case "EventGatewaySchemaRegistry":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "EventGatewaySchemaRegistryConfig",
+			TypeConstName:   "EventGatewaySchemaRegistryConfigTypeSchemaRegistryConfluent",
+			VariantField:    "SchemaRegistryConfluent",
+			VariantTypeName: "SchemaRegistryConfluent",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.SchemaRegistryConfluent{Name: "test-schema-registry", Config: %[1]s.SchemaRegistryConfluentConfig{SchemaType: "avro", Endpoint: "https://schema-registry.example.com"}}`,
+				apiAlias,
+			),
+		}
 	case "AIGatewayMCPServer":
 		return &opsControllerRootUnionFixture{
 			UnionTypeName:   "AIGatewayMCPServerConfig",

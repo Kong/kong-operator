@@ -1777,13 +1777,14 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
-	{{$reqBody}}.Tags = GenerateTagsForObject(obj, {{$reqBody}}.Tags...)
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
 {{- else if .Create.HasLabels}}
 {{- if .Create.LabelsPointer}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabels(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -1863,13 +1864,14 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
-	{{$reqBody}}.Tags = GenerateTagsForObject(obj, {{$reqBody}}.Tags...)
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
 {{- else if .Create.HasLabels}}
 {{- if .Create.LabelsPointer}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabels(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -1931,13 +1933,14 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
-	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
 {{- else if .Update.HasLabels}}
 {{- if .Update.LabelsPointer}}
-	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -2007,13 +2010,14 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
-	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
 {{- else if .Update.HasLabels}}
 {{- if .Update.LabelsPointer}}
-	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -2338,13 +2342,26 @@ func create{{.Entity}}(
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
 {{- $reqBody := "req"}}{{if and .CreateFullyWrapped .CreateBodyField}}{{$reqBody = printf "req.%s" .CreateBodyField}}{{end}}
+{{- $labelsTarget := $reqBody}}{{if .LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .LabelsUnionField}}{{end}}
 {{- if .HasTags}}
-	{{$reqBody}}.Tags = GenerateTagsForObject(obj, {{$reqBody}}.Tags...)
+{{- if .LabelsUnionField}}
+	if {{$reqBody}}.{{.LabelsUnionField}} != nil {
+{{- end}}
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
+{{- if .LabelsUnionField}}
+	}
+{{- end}}
 {{- else if .HasLabels}}
+{{- if .LabelsUnionField}}
+	if {{$reqBody}}.{{.LabelsUnionField}} != nil {
+{{- end}}
 {{- if .LabelsPointer}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabels(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
+{{- if .LabelsUnionField}}
+	}
 {{- end}}
 {{- end}}
 {{- if .CreateFullyWrapped}}
@@ -2463,13 +2480,26 @@ func update{{.Entity}}(
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
+{{- $labelsTarget := "req"}}{{if .LabelsFieldPath}}{{$labelsTarget = printf "req.%s" .LabelsFieldPath}}{{end}}
 {{- if .HasTags}}
-	req.Tags = GenerateTagsForObject(obj, req.Tags...)
+{{- if .LabelsFieldGuard}}
+	if {{.LabelsFieldGuard}} {
+{{- end}}
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
+{{- if .LabelsFieldGuard}}
+	}
+{{- end}}
 {{- else if .HasLabels}}
+{{- if .LabelsFieldGuard}}
+	if {{.LabelsFieldGuard}} {
+{{- end}}
 {{- if .LabelsPointer}}
-	req.Labels = WithKubernetesMetadataLabelsPtr(obj, req.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
+{{- if .LabelsFieldGuard}}
+	}
 {{- end}}
 {{- end}}
 {{- if .UpdateFullyWrapped}}

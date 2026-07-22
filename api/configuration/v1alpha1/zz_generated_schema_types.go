@@ -3439,6 +3439,259 @@ type ProduceKeyValidationAction string
 // to help to identify the clients violating schema.
 type ProduceValueValidationAction string
 
+// SchemaRegistryAuthenticationBasic Basic authentication scheme for the schema
+// registry with username and password.
+type SchemaRegistryAuthenticationBasic struct {
+	// A sensitive value containing the secret or a reference to a secret as a
+	// template string expression.
+	// If the value is provided as plain text, it is encrypted at rest and omitted
+	// from API responses.
+	// If provided as an expression, the expression itself is stored and returned
+	// by the API.
+	//
+	//
+	// +required
+	Password SensitiveDataSource `json:"password,omitzero"`
+	// A literal value or a reference to an existing secret as a template string
+	// expression.
+	// The value is stored and returned by the API as-is, not treated as sensitive
+	// information.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Username GatewaySecretReferenceOrLiteral `json:"username,omitzero"`
+}
+
+// SchemaRegistryAuthenticationScheme represents a union type for SchemaRegistryAuthenticationScheme.
+// Only one of the fields should be set based on the Type.
+type SchemaRegistryAuthenticationScheme struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=basic
+	Type SchemaRegistryAuthenticationSchemeType `json:"type,omitempty"`
+
+	// SchemaRegistryAuthenticationBasic configuration.
+	//
+	// +optional
+	SchemaRegistryAuthenticationBasic *SchemaRegistryAuthenticationBasic `json:"basic,omitempty"`
+}
+
+// SchemaRegistryAuthenticationSchemeType represents the type of SchemaRegistryAuthenticationScheme.
+type SchemaRegistryAuthenticationSchemeType string
+
+// SchemaRegistryAuthenticationSchemeType values.
+const (
+	SchemaRegistryAuthenticationSchemeTypeSchemaRegistryAuthenticationBasic SchemaRegistryAuthenticationSchemeType = "basic"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u SchemaRegistryAuthenticationScheme) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling SchemaRegistryAuthenticationScheme type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case SchemaRegistryAuthenticationSchemeTypeSchemaRegistryAuthenticationBasic:
+		if u.SchemaRegistryAuthenticationBasic != nil {
+			raw, err := json.Marshal(u.SchemaRegistryAuthenticationBasic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling SchemaRegistryAuthenticationScheme basic: %w", err)
+			}
+			m["basic"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *SchemaRegistryAuthenticationScheme) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling SchemaRegistryAuthenticationScheme: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = SchemaRegistryAuthenticationSchemeType(probe.Type)
+	switch probe.Type {
+	case "basic":
+		payload, ok := raw["basic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryAuthenticationBasic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling SchemaRegistryAuthenticationScheme basic: %w", err)
+		}
+		u.SchemaRegistryAuthenticationBasic = &val
+	}
+	return nil
+}
+
+// SchemaRegistryConfluent A Confluent schema registry.
+type SchemaRegistryConfluent struct {
+	// The configuration of the schema registry.
+	//
+	// +required
+	Config SchemaRegistryConfluentConfig `json:"config,omitzero"`
+	// A human-readable description of the virtual cluster.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// The unique name of the schema registry.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+}
+
+// SchemaRegistryConfluentConfig The configuration of [Confluent Schema
+// Registry](https://github.com/confluentinc/schema-registry)
+type SchemaRegistryConfluentConfig struct {
+	// The authentication configuration for the schema registry.
+	//
+	// +optional
+	Authentication *SchemaRegistryConfluentConfigAuthentication `json:"authentication,omitempty"`
+	// The endpoint of the Confluent schema registry.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Endpoint string `json:"endpoint,omitzero"`
+	// The format of the message.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=avro;json
+	SchemaType string `json:"schemaType,omitzero"`
+	// Total time in seconds from establishing connection to receive a response
+	// from schema registry.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	TimeoutSeconds int `json:"timeoutSeconds,omitzero"`
+}
+
+// SchemaRegistryConfluentConfigAuthentication represents a union type for authentication.
+// Only one of the fields should be set based on the Type.
+type SchemaRegistryConfluentConfigAuthentication struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=basic
+	Type SchemaRegistryConfluentConfigAuthenticationType `json:"type,omitempty"`
+
+	// SchemaRegistryAuthenticationBasic configuration.
+	//
+	// +optional
+	SchemaRegistryAuthenticationBasic *SchemaRegistryAuthenticationBasic `json:"basic,omitempty"`
+}
+
+// SchemaRegistryConfluentConfigAuthenticationType represents the type of authentication.
+type SchemaRegistryConfluentConfigAuthenticationType string
+
+// SchemaRegistryConfluentConfigAuthenticationType values.
+const (
+	SchemaRegistryConfluentConfigAuthenticationTypeSchemaRegistryAuthenticationBasic SchemaRegistryConfluentConfigAuthenticationType = "basic"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u SchemaRegistryConfluentConfigAuthentication) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling SchemaRegistryConfluentConfigAuthentication type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case SchemaRegistryConfluentConfigAuthenticationTypeSchemaRegistryAuthenticationBasic:
+		if u.SchemaRegistryAuthenticationBasic != nil {
+			raw, err := json.Marshal(u.SchemaRegistryAuthenticationBasic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling SchemaRegistryConfluentConfigAuthentication basic: %w", err)
+			}
+			m["basic"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *SchemaRegistryConfluentConfigAuthentication) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling SchemaRegistryConfluentConfigAuthentication: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = SchemaRegistryConfluentConfigAuthenticationType(probe.Type)
+	switch probe.Type {
+	case "basic":
+		payload, ok := raw["basic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryAuthenticationBasic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling SchemaRegistryConfluentConfigAuthentication basic: %w", err)
+		}
+		u.SchemaRegistryAuthenticationBasic = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *SchemaRegistryConfluentConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling SchemaRegistryConfluentConfig: nil receiver")
+	}
+	type alias SchemaRegistryConfluentConfig
+	aux := alias{}
+	aux.Authentication = &SchemaRegistryConfluentConfigAuthentication{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling SchemaRegistryConfluentConfig: %w", err)
+	}
+	if aux.Authentication != nil && aux.Authentication.Type == "" && aux.Authentication.SchemaRegistryAuthenticationBasic == nil {
+		aux.Authentication = nil
+	}
+	*s = SchemaRegistryConfluentConfig(aux)
+	return nil
+}
+
 // SchemaRegistryReference A reference to a schema Registry.
 type SchemaRegistryReference map[string]string
 
