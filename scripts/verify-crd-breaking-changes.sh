@@ -13,6 +13,9 @@ readonly RELATIVE_CRD_DIR
 CURRENT_CRD_DIR="${SCRIPT_ROOT}/${RELATIVE_CRD_DIR}"
 readonly CURRENT_CRD_DIR
 
+CONFIG_FILE="${SCRIPT_ROOT}/.crdify.yaml"
+readonly CONFIG_FILE
+
 is_crd_basename() {
 	local basename="${1}"
 
@@ -144,7 +147,7 @@ while IFS= read -r basename; do
 	git show "${base_revision}:${base_file}" > "${old_file}"
 
 	echo "Checking ${basename}"
-	if ! "${CRDIFY_BIN}" "file://${old_file}" "file://${current_file}"; then
+	if ! "${CRDIFY_BIN}" --config "${CONFIG_FILE}" "file://${old_file}" "file://${current_file}"; then
 		status=1
 	fi
 done < "${union_basenames}"
