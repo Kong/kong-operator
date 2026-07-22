@@ -17,6 +17,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
@@ -226,6 +227,87 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 			assert.Equal(t, deployment.Namespace, fetchedDeployment.Namespace)
 		})
 	}
+}
+
+// TestDeploymentBuilder_BuildAndDeploy_ScalingOnlyChangeIsNoop is a regression test
+// for the DataPlane's HPA not being updated when only spec.deployment.scaling
+// changes: reconcileDataPlaneDeployment used to hash the whole DataPlane spec
+// (including Scaling, which has no effect on the Deployment) to decide whether the
+// Deployment needed a patch, so a scaling-only change would falsely report
+// op.Updated and pre-empt the DataPlane controller's HPA reconciliation for a pass.
+func TestDeploymentBuilder_BuildAndDeploy_ScalingOnlyChangeIsNoop(t *testing.T) {
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-dataplane",
+			Namespace: "default",
+			UID:       "test-uid",
+		},
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: "kong/kong-gateway:3.11",
+									},
+								},
+							},
+						},
+						Scaling: &operatorv1beta1.Scaling{
+							HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+								MinReplicas: new(int32(2)),
+								MaxReplicas: 3,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	logger := logr.Discard()
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, appsv1.AddToScheme(scheme))
+	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
+
+	fakeClient := fakectrlruntimeclient.
+		NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(dataplane).
+		Build()
+
+	builder := NewDeploymentBuilder(logger, fakeClient).
+		WithDefaultImage("kong:3.0").
+		WithClusterCertificate("test-cert").
+		WithOpts(
+			labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
+		)
+
+	_, res, err := builder.BuildAndDeploy(t.Context(), dataplane, true, false)
+	require.NoError(t, err)
+	require.Equal(t, op.Created, res)
+
+	// A second call with no spec changes lets the Deployment's PodTemplateSpec
+	// settle to its fully-defaulted form (the fake client, unlike a real API
+	// server, doesn't apply defaulting on Create), so the next call's diff is
+	// solely attributable to the scaling change below.
+	_, _, err = builder.BuildAndDeploy(t.Context(), dataplane, true, false)
+	require.NoError(t, err)
+
+	// Only the DataPlane's scaling changes; nothing that affects the Deployment
+	// template, strategy, or replica count (existing replicas already satisfy the
+	// new minReplicas).
+	dataplane.Spec.Deployment.Scaling.HorizontalScaling.MinReplicas = new(int32(1))
+	dataplane.Spec.Deployment.Scaling.HorizontalScaling.MaxReplicas = 2
+
+	_, res, err = builder.BuildAndDeploy(t.Context(), dataplane, true, false)
+	require.NoError(t, err)
+	assert.Equal(t, op.Noop, res, "a scaling-only change must not report the Deployment as updated, "+
+		"or it pre-empts the DataPlane controller's HPA reconciliation for a reconcile pass")
 }
 
 func TestGenerateDataPlaneDeployment(t *testing.T) {
