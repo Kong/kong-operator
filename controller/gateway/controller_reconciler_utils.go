@@ -1316,6 +1316,27 @@ func setDataPlaneDeploymentListenPorts(
 	assignedPortNumber := consts.DataPlaneAssignedPortStart
 	assignedPortMax := consts.DataPlaneAssignedPortStart + 1024
 
+	// assignPort is the function to assign a port for the listener if the specified port is already occupied on Kong DataPlane.
+	// TODO: support multiple listeners using the same port:
+	// https://github.com/Kong/kong-operator/issues/3511
+	assignPort := func(portNumber int) (int, error) {
+		// Assign another port if the listener's port is already allocated on Kong DP.
+		// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
+		_, inputPortOccupied := kongPortOccupied[portNumber]
+		if isKnownPort(portNumber) || inputPortOccupied {
+			for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
+				if _, occupied := kongPortOccupied[assignedPortNumber]; !occupied {
+					kongPortOccupied[assignedPortNumber] = struct{}{}
+					return assignedPortNumber, nil
+				}
+			}
+			return 0, fmt.Errorf("listener's port %d already occupied and no available ports can be assigned", portNumber)
+		}
+		// otherwise, the listener's port is available to use on Kong DP.
+		kongPortOccupied[portNumber] = struct{}{}
+		return portNumber, nil
+	}
+
 	for i, l := range listeners {
 		switch l.Protocol {
 		case gatewayv1.HTTPProtocolType:
@@ -1323,33 +1344,26 @@ func setDataPlaneDeploymentListenPorts(
 		case gatewayv1.HTTPSProtocolType:
 			listenerPortToKongListenPort[int(l.Port)] = consts.DataPlaneProxySSLPort
 		case gatewayv1.TLSProtocolType:
-			portNumber := int(l.Port)
-			// TODO: support multiple listeners using the same port:
-			// https://github.com/Kong/kong-operator/issues/3511
-			// Assign another port if the listener's port is already allocated on Kong DP.
-			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
-			_, occupied := kongPortOccupied[portNumber]
-			if isKnownPort(portNumber) || occupied {
-				for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
-					if _, occupied := kongPortOccupied[assignedPortNumber]; !occupied {
-						listenerPortToKongListenPort[portNumber] = assignedPortNumber
-						kongPortOccupied[assignedPortNumber] = struct{}{}
-						break
-					}
-				}
-				// Although it should not happen where no ports can be assigned for the listener,
-				// we attach an error if the case really happens.
-				if assignedPortNumber >= assignedPortMax {
-					errs = errors.Join(errs, fmt.Errorf("listener %d's port %d already occupied and no available ports can be assigned", i, portNumber))
-				}
-
-			} else {
-				listenerPortToKongListenPort[portNumber] = portNumber
-				kongPortOccupied[portNumber] = struct{}{}
+			kongPortNumber, err := assignPort(int(l.Port))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("listener %d: %w", i, err))
+				continue
 			}
+			listenerPortToKongListenPort[int(l.Port)] = kongPortNumber
 			streamPorts = append(streamPorts, streamListenPort{
-				kongPort: listenerPortToKongListenPort[portNumber],
+				kongPort: kongPortNumber,
 				protocol: gatewayv1.TLSProtocolType,
+			})
+		case gatewayv1.TCPProtocolType:
+			kongPortNumber, err := assignPort(int(l.Port))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("listener %d: %w", i, err))
+				continue
+			}
+			listenerPortToKongListenPort[int(l.Port)] = kongPortNumber
+			streamPorts = append(streamPorts, streamListenPort{
+				kongPort: kongPortNumber,
+				protocol: gatewayv1.TCPProtocolType,
 			})
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
