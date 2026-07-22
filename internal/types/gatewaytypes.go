@@ -53,6 +53,10 @@ type (
 	TLSRouteSpec           = gatewayv1.TLSRouteSpec
 	TLSRouteStatus         = gatewayv1.TLSRouteStatus
 	TLSRouteRule           = gatewayv1.TLSRouteRule
+	TCPRoute               = gatewayv1.TCPRoute
+	TCPRouteList           = gatewayv1.TCPRouteList
+	TCPRouteSpec           = gatewayv1.TCPRouteSpec
+	TCPRouteRule           = gatewayv1.TCPRouteRule
 	GRPCRoute              = gatewayv1.GRPCRoute
 	GRPCRouteList          = gatewayv1.GRPCRouteList
 	GRPCRouteSpec          = gatewayv1.GRPCRouteSpec

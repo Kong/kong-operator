@@ -28,6 +28,13 @@ func Owns(obj client.Object) []client.Object {
 			&configurationv1alpha1.KongUpstream{},
 			&configurationv1alpha1.KongTarget{},
 		}
+	case *gwtypes.TCPRoute:
+		return []client.Object{
+			&configurationv1alpha1.KongRoute{},
+			&configurationv1alpha1.KongService{},
+			&configurationv1alpha1.KongUpstream{},
+			&configurationv1alpha1.KongTarget{},
+		}
 	case *gwtypes.Gateway:
 		return []client.Object{
 			&configurationv1alpha1.KongCertificate{},

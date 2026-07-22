@@ -56,7 +56,7 @@ type DesiredStateReadinessChecker interface {
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {
-	gwtypes.HTTPRoute | gwtypes.TLSRoute | gwtypes.Gateway
+	gwtypes.HTTPRoute | gwtypes.TLSRoute | gwtypes.TCPRoute | gwtypes.Gateway
 }
 
 // RootObjectPtr is a generic interface that represents a pointer to a type T,
@@ -77,6 +77,9 @@ func NewConverter[t RootObject](obj t, cl client.Client, fqdnMode bool, clusterD
 		return newHTTPRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	case gwtypes.TLSRoute:
 		return newTLSRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
+	case gwtypes.TCPRoute:
+		// TODO: Add TCPRoute conversion support: https://github.com/Kong/kong-operator/issues/4335
+		return nil, fmt.Errorf("TCPRoute conversion is not supported yet")
 	case gwtypes.Gateway:
 		return newGatewayConverter(&o, cl).(APIConverter[t]), nil
 	default:
