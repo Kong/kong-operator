@@ -60,6 +60,11 @@ type (
 	GRPCRoute              = gatewayv1.GRPCRoute
 	GRPCRouteList          = gatewayv1.GRPCRouteList
 	GRPCRouteSpec          = gatewayv1.GRPCRouteSpec
+	UDPRoute               = gatewayv1.UDPRoute
+	UDPRouteList           = gatewayv1.UDPRouteList
+	UDPRouteSpec           = gatewayv1.UDPRouteSpec
+	UDPRouteStatus         = gatewayv1.UDPRouteStatus
+	UDPRouteRule           = gatewayv1.UDPRouteRule
 )
 
 var GroupVersion = gatewayv1.GroupVersion
@@ -69,6 +74,7 @@ const (
 	HTTPProtocolType                      = gatewayv1.HTTPProtocolType
 	HTTPSProtocolType                     = gatewayv1.HTTPSProtocolType
 	TLSProtocolType                       = gatewayv1.TLSProtocolType
+	UDPProtocolType                       = gatewayv1.UDPProtocolType
 	HTTPRouteFilterExtensionRef           = gatewayv1.HTTPRouteFilterExtensionRef
 	HTTPRouteFilterRequestHeaderModifier  = gatewayv1.HTTPRouteFilterRequestHeaderModifier
 	ListenerConditionProgrammed           = gatewayv1.ListenerConditionProgrammed
