@@ -1390,7 +1390,7 @@ func setDataPlaneDeploymentListenPorts(
 			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
 			assignStreamPort(i, portNumber)
 			streamPorts = append(streamPorts, streamListenPort{
-				kongPort: listenerPortToKongListenPort[portNumber],
+				kongPort: portNumber,
 				protocol: gatewayv1.TLSProtocolType,
 			})
 		case gatewayv1.UDPProtocolType:
@@ -1399,6 +1399,13 @@ func setDataPlaneDeploymentListenPorts(
 			streamPorts = append(streamPorts, streamListenPort{
 				kongPort: listenerPortToKongListenPort[portNumber],
 				protocol: gatewayv1.UDPProtocolType,
+			})
+		case gatewayv1.TCPProtocolType:
+			portNumber := int(l.Port)
+			assignStreamPort(int(l.Port), portNumber)
+			streamPorts = append(streamPorts, streamListenPort{
+				kongPort: portNumber,
+				protocol: gatewayv1.TCPProtocolType,
 			})
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
