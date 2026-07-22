@@ -8,20 +8,6 @@ import (
 )
 
 var skippedTestsShared = []string{
-	// NOTE:
-	// Issue tracking all gRPC related conformance tests:
-	// https://github.com/Kong/kong-operator/issues/2345
-	// Tests GRPCRouteHeaderMatching, GRPCExactMethodMatching, GRPCRouteWeight are skipped
-	// because to proxy different gRPC services and route requests based on Header or Method,
-	// it is necessary to create separate catch-all routes for them.
-	// However, Kong does not define priority behavior in this situation unless priorities are manually added.
-	tests.GRPCRouteHeaderMatching.ShortName,
-	tests.GRPCExactMethodMatching.ShortName,
-	tests.GRPCRouteWeight.ShortName,
-	// When processing this scenario, the Kong's router requires `priority` to be specified for routes.
-	// We cannot provide that for routes that are part of the conformance suite.
-	tests.GRPCRouteListenerHostnameMatching.ShortName,
-
 	// newly added in gateway api v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4662
 	tests.GatewayListenerUnsupportedProtocol.ShortName,
 	tests.GatewayInvalidParametersRef.ShortName,
@@ -29,6 +15,11 @@ var skippedTestsShared = []string{
 
 	// failed after bumping gateway api to v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4661
 	tests.HTTPRouteWeight.ShortName,
+
+	// skip it until FTI-7663 released
+	tests.GRPCExactMethodMatching.ShortName,
+	tests.GRPCRouteHeaderMatching.ShortName,
+	tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 
 var skippedTestsForExpressionsRouter = []string{}
@@ -46,6 +37,8 @@ var skippedTestsForHybrid = []string{
 	// Extended profile.
 	tests.HTTPRouteRewriteHost.ShortName,
 	tests.HTTPRouteRewritePath.ShortName,
+
+	tests.GRPCRouteWeight.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.

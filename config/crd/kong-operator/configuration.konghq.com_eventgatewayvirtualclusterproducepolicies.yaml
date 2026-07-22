@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.2.0
+    kubernetes-configuration.konghq.com/version: v2.3.0-rc.2
   name: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -287,6 +287,7 @@ spec:
                               - encryptionKey
                               - paths
                               type: object
+                            maxItems: 256
                             type: array
                           failureMode:
                             description: |-
@@ -849,6 +850,12 @@ spec:
         required:
         - metadata
         type: object
+        x-kubernetes-validations:
+        - message: spec.eventGatewayVirtualClusterRef is immutable when an entity
+            is already Programmed
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
     served: true
     storage: true
     subresources:

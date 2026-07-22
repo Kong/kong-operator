@@ -4,7 +4,6 @@ package v1alpha1
 
 import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // SecretKeyRef is a reference to a key in a Secret
@@ -97,7 +96,7 @@ type SensitiveDataSource struct {
 	// Required when type is 'secretRef'.
 	//
 	// +optional
-	SecretRef *commonv1alpha1.NamespacedRef `json:"secretRef,omitempty"`
+	SecretRef *SensitiveDataSecretRef `json:"secretRef,omitempty"`
 }
 
 // flattenSDKUnions recursively flattens nested discriminated-union shapes.
@@ -171,10 +170,11 @@ func nestedSDKUnionMemberForKey(object map[string]any, key string) (string, any,
 	return discriminatorValue, inner, true
 }
 
-// flattenSensitiveData recursively replaces any SensitiveDataSource JSON
-// object shape {"type": "inline|secretRef", "value": "X", ...} with the
-// bare string "X", translating the CRD wire format to the Konnect SDK
-// wire format which expects plain strings for sensitive fields.
+// flattenSensitiveData recursively replaces any SensitiveDataSource (or
+// dedicated per-field DataSource) JSON object shape
+// {"type": "inline|secretRef", "value": X, ...} with the bare value X,
+// translating the CRD wire format to the Konnect SDK wire format which
+// expects plain values (of whatever type X is) for sensitive fields.
 func flattenSensitiveData(v any) any {
 	switch x := v.(type) {
 	case map[string]any:
@@ -185,10 +185,8 @@ func flattenSensitiveData(v any) any {
 		if typ != "inline" && typ != "secretRef" {
 			return x
 		}
-		rawVal, hasVal := x["value"]
-		val, isString := rawVal.(string)
-		if hasVal && isString {
-			return val
+		if rawVal, hasVal := x["value"]; hasVal {
+			return rawVal
 		}
 		return x
 	case []any:
@@ -199,7 +197,6 @@ func flattenSensitiveData(v any) any {
 	}
 	return v
 }
-
 
 // camelToSnakeCase converts a camelCase string to snake_case.
 // e.g. "bootstrapServers" → "bootstrap_servers", "defaultAPIVisibility" → "default_api_visibility"
@@ -224,7 +221,7 @@ func camelToSnakeCase(s string) string {
 // camelCase (CRD K8s wire format) to snake_case (Konnect SDK wire format).
 func isSDKDiscriminatorKey(key string) bool {
 	switch key {
-	case "type", "op", "kind", "mode":
+	case "type", "op", "kind", "mode", "aclAttributeType":
 		return true
 	default:
 		return false
@@ -253,4 +250,50 @@ func renameKeysToSDK(v any) any {
 		return x
 	}
 	return v
+}
+
+// sdkOpsConstField describes a const discriminator to inject at a payload path.
+type sdkOpsConstField struct {
+	Path  []string
+	Key   string
+	Value string
+}
+
+// injectSDKOpsConstFields sets each const discriminator into the payload, only
+// when the key is absent, so user- or union-provided values are never overridden.
+func injectSDKOpsConstFields(payload map[string]any, fields []sdkOpsConstField) {
+	for _, f := range fields {
+		setSDKOpsConstAtPath(payload, f.Path, f.Key, f.Value)
+	}
+}
+
+func setSDKOpsConstAtPath(v any, path []string, key, value string) {
+	if len(path) == 0 {
+		if m, ok := v.(map[string]any); ok {
+			if _, exists := m[key]; !exists {
+				m[key] = value
+			}
+		}
+		return
+	}
+	switch segment := path[0]; segment {
+	case "[]":
+		if items, ok := v.([]any); ok {
+			for _, item := range items {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	case "{}":
+		if object, ok := v.(map[string]any); ok {
+			for _, item := range object {
+				setSDKOpsConstAtPath(item, path[1:], key, value)
+			}
+		}
+	default:
+		if object, ok := v.(map[string]any); ok {
+			if child, ok := object[segment]; ok {
+				setSDKOpsConstAtPath(child, path[1:], key, value)
+			}
+		}
+	}
 }

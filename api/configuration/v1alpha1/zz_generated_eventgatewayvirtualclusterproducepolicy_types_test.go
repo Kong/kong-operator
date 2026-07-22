@@ -70,12 +70,12 @@ func TestEventGatewayVirtualClusterProducePolicyAPISpecUnmarshalJSON_DecodesUnio
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayVirtualClusterProducePolicyAPISpec)
+		assert  func(*testing.T, EventGatewayVirtualClusterProducePolicyAPISpec)
 	}{
 		{
-			name: "EventGatewayVirtualClusterProducePolicyConfig/encrypt",
+			name:    "EventGatewayVirtualClusterProducePolicyConfig/encrypt",
 			payload: []byte("{\"type\":\"encrypt\",\"encrypt\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterProducePolicyAPISpec) {
 				t.Helper()
@@ -91,7 +91,7 @@ func TestEventGatewayVirtualClusterProducePolicyAPISpecUnmarshalJSON_DecodesUnio
 			},
 		},
 		{
-			name: "EventGatewayVirtualClusterProducePolicyConfig/encrypt_fields",
+			name:    "EventGatewayVirtualClusterProducePolicyConfig/encrypt_fields",
 			payload: []byte("{\"type\":\"encryptFields\",\"encryptFields\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterProducePolicyAPISpec) {
 				t.Helper()
@@ -107,7 +107,7 @@ func TestEventGatewayVirtualClusterProducePolicyAPISpecUnmarshalJSON_DecodesUnio
 			},
 		},
 		{
-			name: "EventGatewayVirtualClusterProducePolicyConfig/modify_headers",
+			name:    "EventGatewayVirtualClusterProducePolicyConfig/modify_headers",
 			payload: []byte("{\"type\":\"modifyHeaders\",\"modifyHeaders\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterProducePolicyAPISpec) {
 				t.Helper()
@@ -123,7 +123,7 @@ func TestEventGatewayVirtualClusterProducePolicyAPISpecUnmarshalJSON_DecodesUnio
 			},
 		},
 		{
-			name: "EventGatewayVirtualClusterProducePolicyConfig/schema_validation",
+			name:    "EventGatewayVirtualClusterProducePolicyConfig/schema_validation",
 			payload: []byte("{\"type\":\"schemaValidation\",\"schemaValidation\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterProducePolicyAPISpec) {
 				t.Helper()

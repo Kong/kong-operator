@@ -41,11 +41,12 @@ func inlineSDS(value string) configurationv1alpha1.SensitiveDataSource {
 	}
 }
 
-func secretRefSDS(name string) configurationv1alpha1.SensitiveDataSource {
+func secretRefSDS(name, key string) configurationv1alpha1.SensitiveDataSource {
 	return configurationv1alpha1.SensitiveDataSource{
 		Type: configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-		SecretRef: &commonv1alpha1.NamespacedRef{
+		SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{
 			Name: name,
+			Key:  key,
 		},
 	}
 }
@@ -89,8 +90,8 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 					obj.Spec.APISpec.TLS = configurationv1alpha1.BackendClusterTLS{
 						Enabled: "Enabled",
 						ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
-							Certificate: secretRefSDS("my-cert-secret"),
-							Key:         secretRefSDS("my-key-secret"),
+							Certificate: secretRefSDS("my-cert-secret", "tls.crt"),
+							Key:         secretRefSDS("my-key-secret", "tls.key"),
 						},
 					}
 					return obj
@@ -104,7 +105,7 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 						Enabled: "Enabled",
 						ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
 							Certificate: inlineSDS("cert-data"),
-							Key:         secretRefSDS("my-tls-secret"),
+							Key:         secretRefSDS("my-tls-secret", "tls.key"),
 						},
 					}
 					return obj

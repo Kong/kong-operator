@@ -546,7 +546,6 @@ func TestCleanOrphanedResources(t *testing.T) {
 		gvks                 []schema.GroupVersionKind
 		desired              []unstructured.Unstructured // what the converter reports as desired
 		existing             []unstructured.Unstructured // what's in the cluster
-		noWait               bool                        // true → orphanCleanupOptions{waitForDeletes: false}
 		runUntilDone         bool                        // loop until requeue=false
 		outputStoreErr       error
 		interceptorFn        *interceptor.Funcs
@@ -638,11 +637,11 @@ func TestCleanOrphanedResources(t *testing.T) {
 				serviceGVK: {"svc1"},
 			},
 		},
-		// --- gating: noWait=false (orphanCleanupOptions{waitForDeletes: true}) ---
+		// --- gating: orphanCleanupOptions{waitForDeletes: true} ---
 		{
 			// After deleting the orphan in GVK1, the function returns immediately without
 			// processing GVK2. A second call is needed to clean GVK2 orphans.
-			name:        "noWait=false: orphan deleted in GVK1 stops processing GVK2 in same pass",
+			name:        "orphan deleted in GVK1 stops processing GVK2 in same pass",
 			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
 			existing:    []unstructured.Unstructured{makeOrphan("r-orphan", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
 			wantRequeue: true,
@@ -653,38 +652,13 @@ func TestCleanOrphanedResources(t *testing.T) {
 		},
 		{
 			// An in-deletion object in GVK1 also triggers an early return, blocking GVK2.
-			name:        "noWait=false: in-deletion orphan in GVK1 stops processing GVK2",
+			name:        "in-deletion orphan in GVK1 stops processing GVK2",
 			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
 			existing:    []unstructured.Unstructured{makeDeletingOrphan("r-deleting", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
 			wantRequeue: true,
 			wantRemaining: map[schema.GroupVersionKind][]string{
 				routeGVK:   {"r-deleting"},
 				serviceGVK: {"svc-orphan"},
-			},
-		},
-		// --- gating: noWait=true (orphanCleanupOptions{waitForDeletes: false}) ---
-		{
-			// With noWait=true, GVK2 is processed even when GVK1 had orphans to delete.
-			name:        "noWait=true: orphan deleted in GVK1 continues to GVK2 in same pass",
-			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
-			existing:    []unstructured.Unstructured{makeOrphan("r-orphan", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
-			noWait:      true,
-			wantRequeue: false,
-			wantRemaining: map[schema.GroupVersionKind][]string{
-				routeGVK:   {},
-				serviceGVK: {},
-			},
-		},
-		{
-			// With noWait=true, an in-deletion GVK1 orphan does not block GVK2.
-			name:        "noWait=true: in-deletion orphan in GVK1 does not block GVK2",
-			gvks:        []schema.GroupVersionKind{routeGVK, serviceGVK},
-			existing:    []unstructured.Unstructured{makeDeletingOrphan("r-deleting", routeGVK), makeOrphan("svc-orphan", serviceGVK)},
-			noWait:      true,
-			wantRequeue: false,
-			wantRemaining: map[schema.GroupVersionKind][]string{
-				routeGVK:   {"r-deleting"},
-				serviceGVK: {},
 			},
 		},
 		// --- error paths ---
@@ -748,7 +722,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 							outputStoreErr: tt.outputStoreErr,
 						},
 					}
-					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: !tt.noWait})
+					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 				} else {
 					conv := &fakeHTTPRouteConverter{
 						gvks:           tt.gvks,
@@ -756,7 +730,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 						desired:        tt.desired,
 						outputStoreErr: tt.outputStoreErr,
 					}
-					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: !tt.noWait})
+					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 				}
 				if !tt.runUntilDone || !requeue || err != nil {
 					break
@@ -836,25 +810,20 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 		require.Len(t, serviceList.Items, 1)
 	})
 
-	t.Run("route deletion cleanup does not wait for deleting child before later GVKs", func(t *testing.T) {
-		cl := newClient()
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false})
-		require.NoError(t, err)
-		require.False(t, requeue)
-
-		serviceList := &unstructured.UnstructuredList{}
-		serviceList.SetGroupVersionKind(gvks[1])
-		require.NoError(t, cl.List(ctx, serviceList))
-		require.Empty(t, serviceList.Items)
-	})
-
-	t.Run("route deletion cleanup retries when orphan delete conflicts", func(t *testing.T) {
+	t.Run("cleanup requeues when orphan delete conflicts", func(t *testing.T) {
+		conflictGVK := []schema.GroupVersionKind{
+			{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},
+		}
+		conflictService := newUnstructured("ns", "service", conflictGVK[0], ownerLabels)
+		conflictService.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
+		})
 		cl := fake.NewClientBuilder().
 			WithScheme(runtime.NewScheme()).
-			WithObjects(deletingRoute.DeepCopy(), service.DeepCopy()).
+			WithObjects(conflictService.DeepCopy()).
 			WithInterceptorFuncs(interceptor.Funcs{
 				Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-					if obj.GetName() == service.GetName() {
+					if obj.GetName() == conflictService.GetName() {
 						return apierrors.NewConflict(
 							schema.GroupResource{Group: "configuration.konghq.com", Resource: "kongservices"},
 							obj.GetName(),
@@ -866,12 +835,17 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 			}).
 			Build()
 
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false})
+		conflictConv := &fakeHTTPRouteConverter{
+			gvks: conflictGVK,
+			root: *root,
+		}
+
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, conflictConv, orphanCleanupOptions{waitForDeletes: true})
 		require.NoError(t, err)
 		require.True(t, requeue)
 
 		serviceList := &unstructured.UnstructuredList{}
-		serviceList.SetGroupVersionKind(gvks[1])
+		serviceList.SetGroupVersionKind(conflictGVK[0])
 		require.NoError(t, cl.List(ctx, serviceList))
 		require.Len(t, serviceList.Items, 1)
 	})
@@ -2361,91 +2335,103 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 	}
 }
 
-func TestStripHybridRouteAnnotations(t *testing.T) {
+func TestHybridRouteAnnotationInfo(t *testing.T) {
 	tests := []struct {
-		name string
-		in   map[string]string
-		want map[string]string
+		name    string
+		wantKey string
+		wantRef string
+		runFn   func() (string, string)
 	}{
 		{
-			name: "removes hybrid-routes keys, keeps others",
-			in: map[string]string{
-				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/r1,ns/r2",
-				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns/t1",
-				consts.GatewayOperatorHybridGatewaysAnnotation:        "ns/gw",
-				"unrelated": "keep",
-			},
-			want: map[string]string{
-				consts.GatewayOperatorHybridGatewaysAnnotation: "ns/gw",
-				"unrelated": "keep",
+			name:    "HTTPRoute returns HTTPRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation,
+			wantRef: "ns/route-a",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "route-a", Namespace: "ns"},
+				})
 			},
 		},
 		{
-			name: "no annotations is a no-op",
-			in:   nil,
-			want: nil,
+			name:    "TLSRoute returns TLSRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesTLSRouteAnnotation,
+			wantRef: "ns/tls-route",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.TLSRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "tls-route", Namespace: "ns"},
+				})
+			},
+		},
+		{
+			name:    "Gateway returns empty strings",
+			wantKey: "",
+			wantRef: "",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "ns"},
+				})
+			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &unstructured.Unstructured{}
-			obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"})
-			if tt.in != nil {
-				obj.SetAnnotations(tt.in)
-			}
-			stripHybridRouteAnnotations(obj)
-			assert.Equal(t, tt.want, obj.GetAnnotations())
+			key, ref := tt.runFn()
+			assert.Equal(t, tt.wantKey, key)
+			assert.Equal(t, tt.wantRef, ref)
 		})
 	}
 }
 
-func TestReconcileSharedRouteAnnotations(t *testing.T) {
-	ctx := context.Background()
-	logger := logr.Discard()
+func TestMergeHybridRouteAnnotation(t *testing.T) {
 	upstreamGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"}
+	annotationKey := consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	routeRef := "ns/route-a"
 
-	root := gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "route-a",
-			Namespace: "ns",
+	tests := []struct {
+		name           string
+		existingAnns   map[string]string
+		desiredAnns    map[string]string
+		wantAnnotation string
+	}{
+		{
+			name:           "empty existing sets annotation to routeRef",
+			existingAnns:   nil,
+			desiredAnns:    nil,
+			wantAnnotation: "ns/route-a",
+		},
+		{
+			name:           "existing has other routes, appends routeRef",
+			existingAnns:   map[string]string{annotationKey: "ns/other-route"},
+			desiredAnns:    nil,
+			wantAnnotation: "ns/other-route,ns/route-a",
+		},
+		{
+			name:           "routeRef already present, annotation is unchanged",
+			existingAnns:   map[string]string{annotationKey: "ns/other-route,ns/route-a"},
+			desiredAnns:    nil,
+			wantAnnotation: "ns/other-route,ns/route-a",
+		},
+		{
+			name:           "desired already has unrelated annotations, only hybrid-routes key is set",
+			existingAnns:   nil,
+			desiredAnns:    map[string]string{"unrelated": "keep"},
+			wantAnnotation: "ns/route-a",
 		},
 	}
-	routeKey := client.ObjectKeyFromObject(&root).String()
-
-	// Desired KongUpstream (without the hybrid-routes annotation, as applied by enforceState).
-	desired := newUnstructured("ns", "up-1", upstreamGVK, nil)
-
-	// One shared upstream already exists with another Route recorded; the absent upstream is not
-	// created here but is reported back via the missing return value so the reconciler can requeue.
-	existing := newUnstructured("ns", "up-1", upstreamGVK, nil)
-	existing.SetAnnotations(map[string]string{
-		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/other-route",
-	})
-
-	missingDesired := newUnstructured("ns", "up-missing", upstreamGVK, nil)
-
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(&existing).Build()
-	fakeConv := &fakeHTTPRouteConverter{
-		root:    root,
-		desired: []unstructured.Unstructured{desired, missingDesired},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			desired := newUnstructured("ns", "up-1", upstreamGVK, nil)
+			if tt.desiredAnns != nil {
+				desired.SetAnnotations(tt.desiredAnns)
+			}
+			existing := newUnstructured("ns", "up-1", upstreamGVK, nil)
+			if tt.existingAnns != nil {
+				existing.SetAnnotations(tt.existingAnns)
+			}
+			mergeHybridRouteAnnotation(&desired, &existing, annotationKey, routeRef)
+			assert.Equal(t, tt.wantAnnotation, desired.GetAnnotations()[annotationKey])
+		})
 	}
-
-	annotationsMissing, err := reconcileSharedRouteAnnotations[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
-	require.NoError(t, err)
-	assert.True(t, annotationsMissing, "absent desired upstream must be reported missing so the reconciler requeues")
-
-	got := &unstructured.Unstructured{}
-	got.SetGroupVersionKind(upstreamGVK)
-	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "up-1"}, got))
-	assert.Equal(t, "ns/other-route,"+routeKey, got.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
-
-	// The missing upstream must not have been created.
-	missing := &unstructured.Unstructured{}
-	missing.SetGroupVersionKind(upstreamGVK)
-	err = cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "up-missing"}, missing)
-	assert.True(t, apierrors.IsNotFound(err))
 }
 
 func TestRequeueOnConflict(t *testing.T) {

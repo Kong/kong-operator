@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
@@ -128,6 +129,7 @@ func RoutesForHTTPRouteRule(
 		return nil, fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
 			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
 	}
+	tags := pkgmetadata.ExtractTags(httpRoute)
 
 	for i, match := range rule.Matches {
 		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, namingParentRef, match, i)
@@ -144,6 +146,7 @@ func RoutesForHTTPRouteRule(
 			WithHosts(hostnames).
 			WithStripPath(stripPath).
 			WithPreserveHost(preserveHost).
+			WithSpecTags(tags).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
 		if priority := priorityForHeaderOnlyHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
@@ -369,16 +372,18 @@ func routesForTLSRouteRule(
 	routeName := namegen.NewKongRouteNameForTLSRouteRule(tlsRoute, cp, namingParentRef, rule)
 	logger = logger.WithValues("kongroute", routeName)
 
-	var protocol sdkkonnectcomp.RouteJSONProtocols
+	var protocol sdkkonnectcomp.Protocols
 	tlsPassthrough, err := isTLSRoutePassthrough(ctx, cl, tlsRoute, pRef)
 	if err != nil {
 		return nil, err
 	}
 	if tlsPassthrough {
-		protocol = sdkkonnectcomp.RouteJSONProtocolsTLSPassthrough
+		protocol = sdkkonnectcomp.ProtocolsTLSPassthrough
 	} else {
-		protocol = sdkkonnectcomp.RouteJSONProtocolsTLS
+		protocol = sdkkonnectcomp.ProtocolsTLS
 	}
+
+	tags := pkgmetadata.ExtractTags(tlsRoute)
 
 	routeBuilder := builder.NewKongRoute().WithName(routeName).
 		WithNamespace(metadata.NamespaceFromParentRef(tlsRoute, pRef)).
@@ -387,7 +392,8 @@ func routesForTLSRouteRule(
 		WithSpecName(routeName).
 		WithKongService(serviceName).
 		WithProtocols(protocol).
-		WithSNIs(hostnames)
+		WithSNIs(hostnames).
+		WithSpecTags(tags)
 
 	kongRoute, err := routeBuilder.Build()
 	if err != nil {
@@ -410,7 +416,7 @@ func routesForTLSRouteRule(
 // Returns nil when no matching listeners are found (relies on Kong Gateway defaults).
 func protocolsFromGatewayListener(
 	ctx context.Context, cl client.Client, httpRoute *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference,
-) ([]sdkkonnectcomp.RouteJSONProtocols, error) {
+) ([]sdkkonnectcomp.Protocols, error) {
 	ns := httpRoute.Namespace
 	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
 		ns = string(*parentRef.Namespace)
@@ -427,9 +433,9 @@ func protocolsFromGatewayListener(
 		return nil, nil
 	}
 
-	protocols := make([]sdkkonnectcomp.RouteJSONProtocols, 0, len(protos))
+	protocols := make([]sdkkonnectcomp.Protocols, 0, len(protos))
 	for _, p := range protos {
-		protocols = append(protocols, sdkkonnectcomp.RouteJSONProtocols(p))
+		protocols = append(protocols, sdkkonnectcomp.Protocols(p))
 	}
 	return protocols, nil
 }

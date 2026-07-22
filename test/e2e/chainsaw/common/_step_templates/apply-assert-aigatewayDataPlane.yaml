@@ -1,0 +1,56 @@
+# Template for creating and asserting an AIGatewayDataPlane.
+#
+# The operator auto-provisions the mTLS client Secret and the
+# AIGatewayDataPlaneCertificate; they are NOT created here.
+#
+# Required bindings:
+#   - aigw_dp_name: Name of the AIGatewayDataPlane to create.
+#   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
+#   - namespace: Namespace where the AIGatewayDataPlane will be created.
+#   - aigw_dp_image: AI Gateway data plane container image. Overrides the operator
+#     default (kong/kong-ai-gateway:2.0.0), which is too old to load the config the
+#     .tech Konnect org emits. Must be pre-loaded into the cluster.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-dataplane
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: aigateway.konghq.com/v1alpha1
+          kind: AIGatewayDataPlane
+          metadata:
+            name: ($aigw_dp_name)
+            namespace: ($namespace)
+          spec:
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($aigw_cp_name)
+            deployment:
+              replicas: 1
+              podTemplateSpec:
+                spec:
+                  containers:
+                    - name: aigw
+                      image: ($aigw_dp_image)
+            network:
+              services:
+                ingress:
+                  type: LoadBalancer
+                  ports:
+                    - name: ingress
+                      port: 443
+                      targetPort: 8443
+    - assert:
+        resource:
+          apiVersion: aigateway.konghq.com/v1alpha1
+          kind: AIGatewayDataPlane
+          metadata:
+            name: ($aigw_dp_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Ready']):
+              - status: 'True'
+            (readyReplicas > `0`): true

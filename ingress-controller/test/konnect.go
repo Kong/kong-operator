@@ -1,26 +1,10 @@
 package test
 
-import "os"
+import "github.com/kong/kong-operator/v2/test"
 
-const (
-	// KonnectControlPlaneLabelCreatedInTests is the label that is set on all
-	// Konnect control planes created by tests.
-	KonnectControlPlaneLabelCreatedInTests = "created_in_tests"
-)
-
-// KonnectServerURL returns the Konnect server URL to be used for Konnect API
-// requests in tests and CI.
-// It is driven by the TEST_KONG_KONNECT_SERVER_URL environment variable.
-func KonnectServerURL() string {
-	serverURL := os.Getenv("TEST_KONG_KONNECT_SERVER_URL")
-	if serverURL != "" {
-		return serverURL
-	}
-	return konnectDefaultDevServerURL
-}
-
+// KonnectServerRegion returns the region of the Konnect server based on the server URL.
 func KonnectServerRegion() string {
-	serverURL := KonnectServerURL()
+	serverURL := test.KonnectServerURL()
 	switch serverURL {
 	case "https://eu.api.konghq.tech", "https://eu.kic.api.konghq.tech":
 		return "eu"

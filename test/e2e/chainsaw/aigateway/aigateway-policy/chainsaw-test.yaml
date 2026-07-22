@@ -1,0 +1,213 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-policy
+spec:
+  description: |
+    Konnect AIGateway - Policy. Stands up the Konnect AIGateway control plane
+    and creates policies to test the AIGatewayPolicy CRD. Then check for the policies
+    on Konnect to validate that they were created successfully.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+    - name: Create-aigateway-policy-with-inline-config
+      description: Create an AIGatewayPolicy resource with inline config that adds a custom header to the response of an API.
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-inline-config']))
+      try:
+        - apply:
+            file: 01-aigateway-policy-inline-config.yaml
+        - assert:
+            file: 00-assert-aigateway-policy-programmed.yaml
+    - name: Create-aigateway-model-referencing-the-policy
+      description: Create an AIGatewayModel that references the AIGatewayPolicy created in the previous step.
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-inline-config']))
+      try:
+        - apply:
+            file: 03-aigateway-model-referencing-the-policy.yaml
+    - name: Verify-aigateway-policy-inline-config-is-applied
+      description: Verify that the AIGatewayPolicy with inline config is applied by checking for the custom header in the response of an API.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /aigw11/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: EXPECT_HEADER
+                value: "Modified-By-Policy-Inline"
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+    - name: Create-aigateway-policy-secretRef-config
+      description: Create an AIGatewayPolicy resource with secretRef config that adds a custom header to the response of an API.
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-secretref-config']))
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-secretref-config-secret']))
+      try:
+        - apply:
+            file: 02-aigateway-policy-secretRef-config.yaml
+        - assert:
+            file: 00-assert-aigateway-policy-programmed.yaml
+    - name: Update-aigateway-model-to-reference-the-new-policy
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-secretref-config']))
+      try:
+        - apply:
+            file: 03-aigateway-model-referencing-the-policy.yaml
+    - name: Verify-aigateway-policy-secretRef-config-is-applied
+      description: Verify that the AIGatewayPolicy with secretRef config is applied by checking for the custom header in the response of an API.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /aigw11/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: EXPECT_HEADER
+                value: "Modified-By-Policy-Secretref"
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+    - name: Update-secret-to-change-the-policy-config
+      description: Update the secret referenced by the AIGatewayPolicy with secretRef config to change the custom header value in the response of an API.
+      bindings:
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-secretref-config-secret']))
+      try:
+        - apply:
+            file: 04-update-secret-for-aigateway-policy-secretRef-config.yaml
+    - name: Verify-aigateway-policy-secretRef-config-is-applied-after-secret-update
+      description: Verify that the AIGatewayPolicy with secretRef config is applied after the secret update by checking for the updated custom header in the response of an API.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /aigw11/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: EXPECT_HEADER
+                value: "Modified-By-Policy-Secretref-Updated"
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+    - name: Delete-aigateway-model-and-policies-and-wait-for-konnect-cleanup
+      description: |
+        Explicitly delete the AIGatewayModel first (it references both policies
+        and the provider by name), then the provider and both AIGatewayPolicy
+        resources, waiting for each to be fully removed (Konnect-side finalizer
+        cleared) before the implicit end-of-test cleanup runs. Doing this inside
+        try: - in referrer-before-referee order - instead of relying on
+        chainsaw's default reverse-creation-order cleanup avoids deleting a
+        policy/provider while the model still references it, and ensures the
+        top-level catch: fires and captures a debug snapshot if any Konnect-side
+        deletion hangs.
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              name: aigw11-model
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayModelProvider
+              name: openai-provider
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              name: (join('-', [($test_name), 'policy-inline-config']))
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              name: (join('-', [($test_name), 'policy-secretref-config']))
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayModelProvider
+              metadata:
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                namespace: ($namespace)
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-ai-policy
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

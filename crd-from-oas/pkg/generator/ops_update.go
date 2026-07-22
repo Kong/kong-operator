@@ -16,6 +16,9 @@ type OpsUpdateFileInfo struct {
 	APIPackagePath string
 	SDKGetter      string
 	NeedsClient    bool
+	// SkipUpdate indicates the entity does not support update. The dispatcher
+	// emits a nil return for this entity instead of calling an update function.
+	SkipUpdate bool
 }
 
 type updateOpCallShape struct {
@@ -71,7 +74,13 @@ type opsUpdateFuncData struct {
 	UpdateBodyField      string
 	UpdateReqBodyPointer bool // true when SDK body param is a pointer
 	NeedsClient          bool // true when the generated update function needs client.Client
-	HasReferences        bool // true when cross-CR references or parent ref replacement need ID injection
+	HasReferences        bool // true when parent ref replacement needs an entity-level request builder
+	// Associations lists the top-level spec association fields whose membership
+	// is enforced by a hand-written helper called after the entity is updated.
+	Associations []opsAssociationData
+	// SupportsMirror is true when the entity opted into Origin+Mirror. The
+	// generated update function then early-returns a no-op for Mirror entities.
+	SupportsMirror bool
 }
 
 func qualifiedSDKTypeName(importPath, typeName string) string {
@@ -170,7 +179,9 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		return nil, nil
 	}
 	hasTags, hasLabels, labelsPointer := metadataFields(schema)
-	needsClient := opsConfig.RequireClient
+	associations := g.opsAssociations(entityName)
+	// Association enforcement helpers need the controller-runtime client.
+	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName) || len(associations) > 0
 
 	return &opsUpdateFuncData{
 		Entity:               entityName,
@@ -190,8 +201,10 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		UpdateBodyField:      callShape.BodyField,
 		UpdateReqBodyPointer: callShape.ReqBodyPointer,
 		NeedsClient:          needsClient,
-		HasReferences:        g.entityHasReferences(entityName) || g.entityHasParentRefReplacement(entityName),
+		HasReferences:        g.entityHasParentRefReplacement(entityName),
 		UpdateOmitsEntityID:  callShape.OmitsEntityID,
+		Associations:         associations,
+		SupportsMirror:       g.entitySupportsMirror(entityName),
 	}, nil
 }
 
@@ -206,6 +219,7 @@ func GenerateOpsUpdateDispatcher(infos []*OpsUpdateFileInfo) (*GeneratedFile, er
 			APIPackagePath: info.APIPackagePath,
 			SDKGetter:      info.SDKGetter,
 			NeedsClient:    info.NeedsClient,
+			SkipUpdate:     info.SkipUpdate,
 		})
 	}
 	return buildDispatcherFile("zz_generated_ops_update.go", opsUpdateDispatcherTemplate, "controller/konnect/ops", flat)

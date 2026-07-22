@@ -75,8 +75,14 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	}
 
 	// Handle array types.
-	if prop.Type == "array" && schemaValue.Items != nil {
-		prop.Items = ParseProperty("items", schemaValue.Items, depth+1, visited)
+	if prop.Type == "array" {
+		if schemaValue.MaxItems != nil {
+			maxItems := int64(*schemaValue.MaxItems)
+			prop.MaxItems = &maxItems
+		}
+		if schemaValue.Items != nil {
+			prop.Items = ParseProperty("items", schemaValue.Items, depth+1, visited)
+		}
 	}
 
 	// Handle nested object types.
@@ -100,6 +106,32 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	// Handle additionalProperties (map types)
 	if schemaValue.AdditionalProperties.Schema != nil {
 		prop.AdditionalProperties = ParseProperty("value", schemaValue.AdditionalProperties.Schema, depth+1, visited)
+	}
+
+	// Handle allOf with a single $ref — the OAS "typed alias" pattern, where
+	// a property wraps a named schema in allOf to attach extra constraints.
+	// Treat it as a direct $ref so the generator emits the named type rather than
+	// falling back to `any`.
+	if len(schemaValue.AllOf) == 1 && prop.RefName == "" {
+		if entry := schemaValue.AllOf[0]; entry.Ref != "" {
+			prop.RefName = extractRefName(entry.Ref)
+			if v := entry.Value; v != nil {
+				if prop.Type == "" {
+					prop.Type = getSchemaType(v)
+				}
+				if prop.MinLength == nil && v.MinLength > 0 {
+					minLen := int64(v.MinLength)
+					prop.MinLength = &minLen
+				}
+				if prop.MaxLength == nil && v.MaxLength != nil {
+					maxLen := int64(*v.MaxLength)
+					prop.MaxLength = &maxLen
+				}
+				if prop.Pattern == "" && v.Pattern != "" {
+					prop.Pattern = v.Pattern
+				}
+			}
+		}
 	}
 
 	// Handle oneOf (union types).

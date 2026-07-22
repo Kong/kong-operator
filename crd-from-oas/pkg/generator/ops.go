@@ -73,6 +73,7 @@ func (g *Generator) generateEntityOpsFile(
 		//     The fallback else-branch emits no SDK call and therefore no import.
 		getForUIDNeedsOpsImport := getForUIDData != nil &&
 			!getForUIDData.SingletonByParent &&
+			!getForUIDData.ListCallStylePositional &&
 			(getForUIDData.UseUIDTagFilter || len(getForUIDData.MatchFields) > 0 || getForUIDData.RootUnion != nil ||
 				getForUIDData.HasLabels || getForUIDData.HasName)
 		deleteNeedsOpsImport := deleteData != nil &&
@@ -82,11 +83,19 @@ func (g *Generator) generateEntityOpsFile(
 			deleteNeedsOpsImport ||
 			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
+		needsStringsImport := createData != nil && len(createData.ResponseStatusFields) > 0
+		needsJSONImport := createData != nil && createData.RespRootUnion != nil
 
 		extraImportSet := make(map[string]string)
 		if deleteData != nil && deleteData.DeleteAsUpdate && deleteData.DeletePutReqImportPath != "" &&
 			!strings.HasSuffix(deleteData.DeletePutReqImportPath, "/operations") {
 			extraImportSet[deleteData.DeletePutReqImportPath] = sdkImportAlias(deleteData.DeletePutReqImportPath)
+		}
+		if (createData != nil && createData.SupportsMirror) ||
+			(updateData != nil && updateData.SupportsMirror) ||
+			(deleteData != nil && deleteData.SupportsMirror) {
+			const commonPath = "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+			extraImportSet[commonPath] = "commonv1alpha1"
 		}
 		extraImports := make([]opsFileImport, 0, len(extraImportSet))
 		for path, alias := range extraImportSet {
@@ -96,17 +105,21 @@ func (g *Generator) generateEntityOpsFile(
 
 		// Render file header.
 		headerData := struct {
-			APIAlias          string
-			APIPackagePath    string
-			NeedsOpsImport    bool
-			NeedsClientImport bool
-			ExtraImports      []opsFileImport
+			APIAlias           string
+			APIPackagePath     string
+			NeedsOpsImport     bool
+			NeedsClientImport  bool
+			NeedsStringsImport bool
+			NeedsJSONImport    bool
+			ExtraImports       []opsFileImport
 		}{
-			APIAlias:          g.config.APIGroupPackageAlias,
-			APIPackagePath:    g.config.APIGroupPackagePath,
-			NeedsOpsImport:    needsOpsImport,
-			NeedsClientImport: needsClientImport,
-			ExtraImports:      extraImports,
+			APIAlias:           g.config.APIGroupPackageAlias,
+			APIPackagePath:     g.config.APIGroupPackagePath,
+			NeedsOpsImport:     needsOpsImport,
+			NeedsClientImport:  needsClientImport,
+			NeedsStringsImport: needsStringsImport,
+			NeedsJSONImport:    needsJSONImport,
+			ExtraImports:       extraImports,
 		}
 		var content strings.Builder
 		headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
@@ -179,6 +192,15 @@ func (g *Generator) generateEntityOpsFile(
 			APIPackagePath: g.config.APIGroupPackagePath,
 			SDKGetter:      sdkGetter,
 			NeedsClient:    updateData.NeedsClient,
+		}
+	} else {
+		// No update stanza in config: emit a no-op case in the dispatcher so
+		// the entity is handled gracefully without returning an error.
+		updateInfo = &OpsUpdateFileInfo{
+			Entity:         entityName,
+			APIAlias:       g.config.APIGroupPackageAlias,
+			APIPackagePath: g.config.APIGroupPackagePath,
+			SkipUpdate:     true,
 		}
 	}
 
@@ -283,6 +305,7 @@ func buildDispatcherFile(
 		APIAlias    string
 		SDKGetter   string
 		NeedsClient bool
+		SkipUpdate  bool
 	}
 
 	importSet := map[string]string{}
@@ -294,6 +317,7 @@ func buildDispatcherFile(
 			APIAlias:    info.APIAlias,
 			SDKGetter:   info.SDKGetter,
 			NeedsClient: info.NeedsClient,
+			SkipUpdate:  info.SkipUpdate,
 		})
 	}
 
@@ -407,11 +431,7 @@ func pathParamToFieldName(param string) string {
 	if param == "" {
 		return ""
 	}
-	name := strings.ToUpper(param[:1]) + param[1:]
-	if strings.HasSuffix(name, "Id") {
-		name = name[:len(name)-2] + "ID"
-	}
-	return name
+	return fixInitialisms(strings.ToUpper(param[:1]) + param[1:])
 }
 
 // pascalFromKebab converts a kebab-case or space-separated identifier to

@@ -1,0 +1,55 @@
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: ($http_agent_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($http_agent_name)
+    displayName: ($http_agent_name)
+    type: http
+    enabled: Enabled
+    config:
+      url: (join('', ['http://', ($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+      route:
+        paths:
+          - ($http_agent_route_path)
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
+        stripPath: Enabled
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: ($a2a_agent_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($a2a_agent_name)
+    displayName: ($a2a_agent_name)
+    type: a2a
+    enabled: Enabled
+    config:
+      url: (join('', ['http://', ($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027/a2a']))
+      route:
+        paths:
+          - ($a2a_agent_route_path)
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
+        stripPath: Enabled

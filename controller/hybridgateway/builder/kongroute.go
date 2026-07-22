@@ -53,7 +53,7 @@ func (b *KongRouteBuilder) WithHosts(hosts []string) *KongRouteBuilder {
 }
 
 // WithProtocols sets the allowed protocols for the KongRoute being built.
-func (b *KongRouteBuilder) WithProtocols(protocols ...sdkkonnectcomp.RouteJSONProtocols) *KongRouteBuilder {
+func (b *KongRouteBuilder) WithProtocols(protocols ...sdkkonnectcomp.Protocols) *KongRouteBuilder {
 	b.route.Spec.Protocols = append(b.route.Spec.Protocols, protocols...)
 	return b
 }
@@ -192,6 +192,16 @@ func (b *KongRouteBuilder) WithAnnotations(route client.Object, parentRef *gwtyp
 		b.route.Annotations = make(map[string]string)
 	}
 	maps.Copy(b.route.Annotations, annotations)
+	return b
+}
+
+// WithSpecTags sets the tags in the KongRoute spec.
+// A nil or empty slice leaves Spec.Tags unset.
+func (b *KongRouteBuilder) WithSpecTags(tags []string) *KongRouteBuilder {
+	if len(tags) == 0 {
+		return b
+	}
+	b.route.Spec.Tags = commonv1alpha1.Tags(tags)
 	return b
 }
 

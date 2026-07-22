@@ -42,6 +42,9 @@ type opsGetForUIDFuncData struct {
 	// used only when GetForUIDFullyWrapped is false (single-parent case).
 	// e.g. "PortalID" for an entity nested under Portal.
 	ParentIDField string
+	// ListCallStylePositional indicates the SDK list method takes positional
+	// (pageSize *int64, pageNumber *int64) args instead of a request struct.
+	ListCallStylePositional bool
 	// HasLabels indicates the entity's request schema declares a "labels"
 	// field, so list response items are expected to expose GetLabels() and
 	// the generator can match by the Kubernetes UID label.
@@ -165,6 +168,14 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		matchFields = make([]opsGetForUIDMatchFieldData, 0, len(opsConfig.GetForUID.MatchFields))
 		for _, field := range opsConfig.GetForUID.MatchFields {
 			sensitive := g.isSensitiveMatchField(entityName, field.ObjectField)
+			if sensitive {
+				if valueGoType, ok := g.sensitiveMatchFieldValueType(entityName, field.ObjectField); ok && valueGoType != "string" {
+					return nil, fmt.Errorf(
+						"entity %q: getForUID.matchFields.objectField %q resolves to a non-string secret reference leaf (%s); matchSensitiveDataSourceField only supports string-valued SensitiveDataSource fields",
+						entityName, field.ObjectField, valueGoType,
+					)
+				}
+			}
 			matchFields = append(matchFields, opsGetForUIDMatchFieldData{
 				ObjectField:    field.ObjectField,
 				ResponseField:  field.ResponseField,
@@ -201,24 +212,25 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 	}
 
 	return &opsGetForUIDFuncData{
-		Entity:                entityName,
-		APIAlias:              g.config.APIGroupPackageAlias,
-		ListSDKInterface:      listInterface,
-		ListSDKMethod:         listMethod,
-		ListResponseField:     listResponseField,
-		ListResponseItemsExpr: listResponseItemsExpr,
-		ListResponseNilCheck:  listResponseNilCheck,
-		Parents:               parents,
-		GetForUIDFullyWrapped: getForUIDFullyWrapped,
-		GetForUIDWrappedType:  getForUIDWrappedType,
-		ParentIDField:         parentIDField,
-		HasLabels:             hasLabels,
-		UseUIDTagFilter:       opsConfig != nil && opsConfig.UseUIDTagFilter,
-		MatchFields:           matchFields,
-		RootUnion:             rootUnion,
-		HasName:               hasName,
-		SingletonByParent:     isParentScopedSingleton(schema),
-		SingletonNoID:         isSingletonNoID(schema),
+		Entity:                  entityName,
+		APIAlias:                g.config.APIGroupPackageAlias,
+		ListSDKInterface:        listInterface,
+		ListSDKMethod:           listMethod,
+		ListResponseField:       listResponseField,
+		ListResponseItemsExpr:   listResponseItemsExpr,
+		ListResponseNilCheck:    listResponseNilCheck,
+		Parents:                 parents,
+		GetForUIDFullyWrapped:   getForUIDFullyWrapped,
+		GetForUIDWrappedType:    getForUIDWrappedType,
+		ParentIDField:           parentIDField,
+		ListCallStylePositional: opsConfig != nil && opsConfig.ListCallStylePositional,
+		HasLabels:               hasLabels,
+		UseUIDTagFilter:         opsConfig != nil && opsConfig.UseUIDTagFilter,
+		MatchFields:             matchFields,
+		RootUnion:               rootUnion,
+		HasName:                 hasName,
+		SingletonByParent:       isParentScopedSingleton(schema),
+		SingletonNoID:           isSingletonNoID(schema),
 	}, nil
 }
 

@@ -7,11 +7,8 @@ import (
 	"time"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/go-logr/logr"
-
-	"github.com/kong/kong-operator/v2/test"
 )
 
 const (
@@ -20,30 +17,18 @@ const (
 )
 
 // cleanupKonnectSystemAccounts deletes orphaned system accounts created by the tests.
-func cleanupKonnectSystemAccounts(ctx context.Context, log logr.Logger) error {
-	serverURL, err := canonicalizedServerURL()
-	if err != nil {
-		return fmt.Errorf("invalid server URL %s: %w", test.KonnectServerURL(), err)
-	}
+func cleanupKonnectSystemAccounts(sdk *sdkkonnectgo.SDK) func(ctx context.Context, log logr.Logger) error {
+	return func(ctx context.Context, log logr.Logger) error {
+		orphanedSAs, err := findOrphanedSystemAccounts(ctx, log, sdk.SystemAccounts)
+		if err != nil {
+			return fmt.Errorf("failed to find orphaned system accounts: %w", err)
+		}
+		if err := deleteSystemAccounts(ctx, log, sdk.SystemAccounts, orphanedSAs); err != nil {
+			return fmt.Errorf("failed to delete system accounts: %w", err)
+		}
 
-	sdk := sdkkonnectgo.New(
-		sdkkonnectgo.WithSecurity(
-			sdkkonnectcomp.Security{
-				PersonalAccessToken: new(test.KonnectAccessToken()),
-			},
-		),
-		sdkkonnectgo.WithServerURL(serverURL),
-	)
-
-	orphanedSAs, err := findOrphanedSystemAccounts(ctx, log, sdk.SystemAccounts)
-	if err != nil {
-		return fmt.Errorf("failed to find orphaned system accounts: %w", err)
+		return nil
 	}
-	if err := deleteSystemAccounts(ctx, log, sdk.SystemAccounts, orphanedSAs); err != nil {
-		return fmt.Errorf("failed to delete system accounts: %w", err)
-	}
-
-	return nil
 }
 
 // findOrphanedSystemAccounts finds system accounts that were created more than timeUntilSystemAccountOrphaned ago.

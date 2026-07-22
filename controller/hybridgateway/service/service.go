@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // ServiceForRule creates or updates a KongService for the given route rule.
@@ -149,6 +150,8 @@ func ServiceForRuleWithName[
 
 	pRefNamespace := metadata.NamespaceFromParentRef(parentRoute, pRef)
 
+	tags := utils.TagsFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+
 	// Resolve client certificate from the backend Service annotations (first-wins).
 	certSecretName, certOwnerSvc := resolveClientCertFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	kongCertificate = buildClientCertificate(
@@ -181,7 +184,9 @@ func ServiceForRuleWithName[
 		WithWriteTimeout(writeTimeout).
 		WithRetries(retries).
 		WithClientCertificateRef(clientCertRefName(kongCertificate)).
-		WithControlPlaneRef(*cp).Build()
+		WithControlPlaneRef(*cp).
+		WithSpecTags(tags).
+		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
 		return nil, nil, nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
@@ -273,6 +278,10 @@ func buildClientCertificate[
 		return nil
 	}
 
+	// KongCertificate tags come solely from the client-cert Secret's konghq.com/tags
+	// annotation. Tags on the backend Service must not leak here.
+	certTags := pkgmetadata.ExtractTags(secret)
+
 	cert, err := builder.NewKongCertificate().
 		WithName(serviceName).
 		WithNamespace(serviceNamespace).
@@ -280,6 +289,7 @@ func buildClientCertificate[
 		WithControlPlaneRef(*cp).
 		WithLabelsForRoute(parentRoute, pRef).
 		WithAnnotationsForRoute(parentRoute, pRef).
+		WithSpecTags(certTags).
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongCertificate resource", "cert", serviceName)

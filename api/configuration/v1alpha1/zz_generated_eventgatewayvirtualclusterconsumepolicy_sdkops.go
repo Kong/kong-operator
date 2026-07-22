@@ -135,7 +135,6 @@ func normalizeEventGatewayVirtualClusterConsumePolicySDKOpsBoolField(value any, 
 	}
 }
 
-
 func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -223,7 +222,7 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) ToCreateEventGatewayVir
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch variant {
 	case "ConsumeSchemaValidationPolicy":
 		var member sdkkonnectcomp.EventGatewayConsumeSchemaValidationPolicy
@@ -288,7 +287,7 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) ToUpdateEventGatewayVir
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_ = variant
 	var body sdkkonnectcomp.EventGatewayConsumePolicyUpdate
 	if err := json.Unmarshal(data, &body); err != nil {

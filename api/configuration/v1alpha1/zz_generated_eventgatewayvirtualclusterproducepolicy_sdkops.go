@@ -128,7 +128,6 @@ func normalizeEventGatewayVirtualClusterProducePolicySDKOpsBoolField(value any, 
 	}
 }
 
-
 func (s *EventGatewayVirtualClusterProducePolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -213,7 +212,7 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) ToCreateEventGatewayVir
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch variant {
 	case "ModifyHeadersPolicyCreate":
 		var member sdkkonnectcomp.EventGatewayModifyHeadersPolicyCreate
@@ -269,7 +268,7 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) ToUpdateEventGatewayVir
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_ = variant
 	var body sdkkonnectcomp.EventGatewayProducePolicyUpdate
 	if err := json.Unmarshal(data, &body); err != nil {

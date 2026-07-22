@@ -61,7 +61,7 @@ func (r *MCPServerReconciler) ensureDeployment(
 
 	desired := generateDeployment(mcpServer, *remoteMCPServer, apiAuth)
 
-	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		r.eventRecorder.Eventf(mcpServer, nil, corev1.EventTypeWarning, "DeploymentFailed", "ApplyDeployment",
 			"Failed to apply Deployment: %v", err)
@@ -267,7 +267,7 @@ func (r *MCPServerReconciler) ensureService(
 ) error {
 	desired := generateService(mcpServer)
 
-	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		r.eventRecorder.Eventf(mcpServer, nil, corev1.EventTypeWarning, "ServiceFailed", "ApplyService",
 			"Failed to apply Service: %v", err)

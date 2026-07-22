@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // PortalIPAllowList is the Schema for the portalipallowlists API.
@@ -57,6 +57,7 @@ type PortalIPAllowListAPISpec struct {
 	// The list of allowed ips for the portal.
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=25
 	AllowedIps []string `json:"allowedIps,omitempty"`
 }
 

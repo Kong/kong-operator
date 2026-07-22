@@ -247,6 +247,13 @@ make test.charts.golden.update  # Update Helm chart golden files if CRDs changed
 make verify.manifests     # Verify manifests are consistent
 ```
 
+## Code exploration
+
+### cx
+
+Whenever `cx` is available in the system, use that for semantic code exploration.
+It's specifically designed for AI agents to understand codebases and provide context-aware suggestions.
+
 ## CI Workflow
 
 Main test workflow: `.github/workflows/tests.yaml`:

@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // PortalCustomization is the Schema for the portalcustomizations API.
@@ -205,4 +205,3 @@ type Colors struct {
 	// +kubebuilder:validation:Pattern=`^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$`
 	Primary string `json:"primary,omitzero"`
 }
-

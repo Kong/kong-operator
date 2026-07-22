@@ -1,0 +1,71 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.com
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: AIGatewayPolicy
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: aigw-consumer-group-policy-prompt-decorator
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: aigw-consumer-group-policy-prompt-decorator
+    displayName: AI Gateway Policy Prompt Decorator
+    type: ai-prompt-decorator
+    enabled: Enabled
+    global: Disabled
+    config:
+      type: inline
+      value:
+        llm_format: openai
+        max_request_body_size: 8388608
+        prompts:
+          append: null
+          prepend:
+          - content: In short words
+            role: user
+---
+kind: AIGatewayConsumerGroup
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: sample-ai-gw-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: sample-dev-users
+    displayName: Dev Users Group
+    # References to AIGatewayPolicy CRs (by metadata.name) applied to this
+    # consumer group.
+    policies:
+      - name: aigw-consumer-group-policy-prompt-decorator
+    labels:
+      tier: development

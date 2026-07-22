@@ -178,7 +178,7 @@ func TestKongRoute(t *testing.T) {
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-							Protocols: []sdkkonnectcomp.RouteJSONProtocols{"http"},
+							Protocols: []sdkkonnectcomp.Protocols{"http"},
 							Hosts:     []string{"example.com"},
 						},
 					},
@@ -194,7 +194,7 @@ func TestKongRoute(t *testing.T) {
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "svc"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-							Protocols: []sdkkonnectcomp.RouteJSONProtocols{"http"},
+							Protocols: []sdkkonnectcomp.Protocols{"http"},
 						},
 					},
 				},

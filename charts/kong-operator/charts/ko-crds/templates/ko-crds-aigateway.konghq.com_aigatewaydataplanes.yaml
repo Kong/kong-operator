@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.2.0
+    kubernetes-configuration.konghq.com/version: v2.3.0-rc.2
   name: aigatewaydataplanes.aigateway.konghq.com
 spec:
   group: aigateway.konghq.com
@@ -37,7 +37,7 @@ spec:
         description: |-
           AIGatewayDataPlane is the Schema for the AIGateway data planes API.
           It manages an AI Gateway binary Deployment that connects to Konnect via
-          a referenced AIGatewayControlPlane resource.
+          a referenced KonnectAIGateway (controlplane) resource.
         properties:
           apiVersion:
             description: |-
@@ -68,11 +68,11 @@ spec:
                 properties:
                   konnectNamespacedRef:
                     description: |-
-                      KonnectNamespacedRef references a AIGatewayControlPlane resource in the same namespace.
+                      KonnectNamespacedRef references a KonnectAIGateway (controlplane) resource in the same namespace.
                       Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.
                     properties:
                       name:
-                        description: Name is the name of the AIGatewayControlPlane
+                        description: Name is the name of the KonnectAIGateway (controlplane)
                           resource.
                         maxLength: 253
                         minLength: 1

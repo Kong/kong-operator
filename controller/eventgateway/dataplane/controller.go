@@ -19,7 +19,6 @@ package dataplane
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -51,11 +50,10 @@ type Reconciler struct {
 	SecretLabelSelector      string
 	CertTTL                  time.Duration
 
-	// typeConverter is initialised once during SetupWithManager from the API
-	// server's OpenAPI v3 schemas. It supports all types (core K8s + CRDs) and
-	// is used for both diff-before-apply and structured-merge-diff based
-	// PodTemplateSpec merging.
-	typeConverter managedfields.TypeConverter
+	// TypeConverter is injected via the TypeConverterProvider at controller
+	// registration time.  It is used for both diff-before-apply and
+	// structured-merge-diff based PodTemplateSpec merging.
+	TypeConverter managedfields.TypeConverter
 
 	// eventRecorder records Kubernetes events on KegDataPlane objects.
 	eventRecorder events.EventRecorder
@@ -63,13 +61,6 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	// Initialise the TypeConverter from API server OpenAPI v3 schemas.
-	// This is done once at startup.
-	tc, err := initTypeConverter(mgr)
-	if err != nil {
-		return fmt.Errorf("DataPlane controller: failed to initialize TypeConverter: %w", err)
-	}
-	r.typeConverter = tc
 	r.eventRecorder = mgr.GetEventRecorder(ControllerName)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&eventgatewayv1alpha1.KegDataPlane{}).
@@ -90,7 +81,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, egdp *eventgatewayv1alpha1.K
 
 	log.Trace(logger, "reconciling KegDataPlane resource")
 
-	defer func() { err = errors.Join(err, r.applyStatus(ctx, logger, egdp)) }()
+	defer func() {
+		err = errors.Join(err, ensureReadyStatus(ctx, r.Client, egdp))
+		err = errors.Join(err, r.applyStatus(ctx, logger, egdp))
+	}()
 
 	// Resolve referenced KonnectEventGateway and set resolution condition.
 	keg, err := r.resolveKonnectEventGateway(ctx, logger, egdp)
@@ -131,11 +125,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, egdp *eventgatewayv1alpha1.K
 
 	// Ensure the Kafka Service.
 	if err := r.ensureKafkaService(ctx, logger, egdp); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Compute Ready condition; deferred applyStatus flushes status.
-	if err := ensureReadyStatus(ctx, r.Client, egdp); err != nil {
 		return ctrl.Result{}, err
 	}
 

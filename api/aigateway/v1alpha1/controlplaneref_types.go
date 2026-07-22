@@ -28,7 +28,7 @@ type ControlPlaneRef struct {
 	// +required
 	Type ControlPlaneRefType `json:"type,omitempty"`
 
-	// KonnectNamespacedRef references a AIGatewayControlPlane resource in the same namespace.
+	// KonnectNamespacedRef references a KonnectAIGateway (controlplane) resource in the same namespace.
 	// Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.
 	//
 	// +optional
@@ -41,16 +41,16 @@ type ControlPlaneRef struct {
 type ControlPlaneRefType string
 
 const (
-	// ControlPlaneRefTypeKonnectNamespacedRef references a AIGatewayControlPlane
+	// ControlPlaneRefTypeKonnectNamespacedRef references a KonnectAIGateway
 	// resource in the same namespace as the DataPlane.
 	ControlPlaneRefTypeKonnectNamespacedRef ControlPlaneRefType = "konnectNamespacedRef"
 )
 
-// KonnectNamespacedRef is a reference to a AIGatewayControlPlane resource in the same namespace.
+// KonnectNamespacedRef is a reference to a KonnectAIGateway resource in the same namespace.
 //
 // +kubebuilder:object:generate=true
 type KonnectNamespacedRef struct {
-	// Name is the name of the AIGatewayControlPlane resource.
+	// Name is the name of the KonnectAIGateway (controlplane) resource.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1

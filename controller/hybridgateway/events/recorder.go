@@ -26,7 +26,7 @@ func NewTypedEventRecorder(recorder events.EventRecorder) *TypedEventRecorder {
 // Eventf is like Event, but uses [fmt.Sprintf] to construct the message.
 func (r *TypedEventRecorder) Eventf(object runtime.Object, eventtype, baseReason, messageFmt string, args ...any) {
 	reason := r.getTypedReason(object, baseReason)
-	r.recorder.Eventf(object, nil, eventtype, reason, "", messageFmt, args...)
+	r.recorder.Eventf(object, nil, eventtype, reason, baseReason, messageFmt, args...)
 }
 
 // getTypedReason returns a type-specific event reason based on the object's kind.

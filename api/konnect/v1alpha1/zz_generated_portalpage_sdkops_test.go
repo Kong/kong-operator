@@ -11,12 +11,12 @@ import (
 
 func TestPortalPageAPISpec_ToCreatePortalPageRequest(t *testing.T) {
 	spec := &PortalPageAPISpec{
-		Content: PageContent("test-value"),
+		Content:     PageContent("test-value"),
 		Description: Description("test-value"),
-		Slug: PageSlug("test-value"),
-		Status: PublishedStatus("test-value"),
-		Title: PageTitle("test-value"),
-		Visibility: PageVisibilityStatus("test-value"),
+		Slug:        PageSlug("test-value"),
+		Status:      PublishedStatus("published"),
+		Title:       PageTitle("test-value"),
+		Visibility:  PageVisibilityStatus("public"),
 	}
 	result, err := spec.ToCreatePortalPageRequest()
 	require.NoError(t, err)
@@ -31,19 +31,19 @@ func TestPortalPageAPISpec_ToCreatePortalPageRequest(t *testing.T) {
 	require.Equal(t, "test-value", payload["content"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["slug"])
-	require.Equal(t, "test-value", payload["status"])
+	require.Equal(t, "published", payload["status"])
 	require.Equal(t, "test-value", payload["title"])
-	require.Equal(t, "test-value", payload["visibility"])
+	require.Equal(t, "public", payload["visibility"])
 }
 
 func TestPortalPageAPISpec_ToUpdatePortalPageRequest(t *testing.T) {
 	spec := &PortalPageAPISpec{
-		Content: PageContent("test-value"),
+		Content:     PageContent("test-value"),
 		Description: Description("test-value"),
-		Slug: PageSlug("test-value"),
-		Status: PublishedStatus("test-value"),
-		Title: PageTitle("test-value"),
-		Visibility: PageVisibilityStatus("test-value"),
+		Slug:        PageSlug("test-value"),
+		Status:      PublishedStatus("published"),
+		Title:       PageTitle("test-value"),
+		Visibility:  PageVisibilityStatus("public"),
 	}
 	result, err := spec.ToUpdatePortalPageRequest()
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestPortalPageAPISpec_ToUpdatePortalPageRequest(t *testing.T) {
 	require.Equal(t, "test-value", payload["content"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["slug"])
-	require.Equal(t, "test-value", payload["status"])
+	require.Equal(t, "published", payload["status"])
 	require.Equal(t, "test-value", payload["title"])
-	require.Equal(t, "test-value", payload["visibility"])
+	require.Equal(t, "public", payload["visibility"])
 }

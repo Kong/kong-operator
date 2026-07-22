@@ -93,10 +93,19 @@ func buildSDKFactoryTemplateData(infos []*SDKFactoryFileInfo) *sdkFactoryTemplat
 	}
 	importsBlock := strings.TrimRight(importsBuf.String(), "\n")
 
+	// Multiple entities can share a single SDK interface (e.g. AIGatewayConsumer
+	// and AIGatewayConsumerCredential both use AIGatewayConsumersSDK). The factory
+	// emits one getter/interface entry/mock field per SDK interface, so deduplicate
+	// cases by getter name to avoid duplicate method and field declarations.
 	cases := make([]sdkFactoryCase, 0, len(sorted))
+	seenGetters := make(map[string]bool, len(sorted))
 	for _, info := range sorted {
 		alias := importSet[info.SDKInterfaceImportPath]
 		getterName := "Get" + strings.TrimSuffix(info.SDKInterfaceTypeName, "SDK") + "SDK"
+		if seenGetters[getterName] {
+			continue
+		}
+		seenGetters[getterName] = true
 		cases = append(cases, sdkFactoryCase{
 			GetterName:          getterName,
 			Alias:               alias,

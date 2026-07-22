@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 20) }}
     env:
-      CRD_BREAKING_CHANGES_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || '' }}
+      CRD_BREAKING_CHANGES_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
       ACK_CRD_BREAKING_CHANGE_LABEL: ack_crd_breaking_change
     strategy:
       fail-fast: false
@@ -42,16 +42,16 @@ jobs:
             lint-cache: false
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
     - name: Checkout repository
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         fetch-depth: ${{ matrix.fetch_depth }}
 
     - name: Setup go
-      uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: go.mod
         cache: false
@@ -97,49 +97,27 @@ jobs:
           go-lint-${{ runner.os }}-${{ runner.arch }}-go-
 
     - name: Check CRD breaking-change acknowledgement
-      if: ${{ matrix.name == 'crd-breaking-changes' }}
+      if: ${{ matrix.name == 'crd-breaking-changes' && github.event_name == 'pull_request' }}
       env:
         GH_TOKEN: ${{ github.token }}
         PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
-        MERGE_GROUP_HEAD_REF: ${{ github.event.merge_group.head_ref || '' }}
       run: |
         set -euo pipefail
 
+        # A CRD breaking change is acknowledged by adding the label to the PR. This check
+        # only runs for pull_request events, so there is always a single PR to inspect.
         ack="false"
-        # pull_request has one PR number. merge_group can represent one or more queued PRs,
-        # so keep this as a whitespace-separated list and acknowledge if any PR has the label.
-        pr_numbers="${PULL_REQUEST_NUMBER}"
-
-        if [[ "${GITHUB_EVENT_NAME}" == "merge_group" ]]; then
-          # The merge-group SHA is synthetic, so resolve the queued PRs from that commit.
-          # Fall back to the generated head_ref format because the commit-to-PR API can
-          # return nothing for merge queue commits.
-          pr_numbers="$(gh api \
+        if [[ -n "${PULL_REQUEST_NUMBER}" ]]; then
+          ack="$(gh api \
             -H "Accept: application/vnd.github+json" \
-            "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
-            --jq '.[].number' || true)"
-
-          if [[ -z "${pr_numbers}" && "${MERGE_GROUP_HEAD_REF}" =~ (^|/)pr-([0-9]+)- ]]; then
-            pr_numbers="${BASH_REMATCH[2]}"
-          fi
-
-          if [[ -z "${pr_numbers}" ]]; then
-            echo "Could not determine pull requests for merge group; CRD breaking changes will not be acknowledged automatically."
-          fi
-        fi
-
-        for pr_number in ${pr_numbers}; do
-          has_ack_label="$(gh api \
-            -H "Accept: application/vnd.github+json" \
-            "repos/${GITHUB_REPOSITORY}/issues/${pr_number}/labels" \
+            "repos/${GITHUB_REPOSITORY}/issues/${PULL_REQUEST_NUMBER}/labels" \
             --jq 'any(.[].name; . == env.ACK_CRD_BREAKING_CHANGE_LABEL)')"
-
-          if [[ "${has_ack_label}" == "true" ]]; then
-            ack="true"
-            break
-          fi
-        done
+        fi
 
         echo "ACK_CRD_BREAKING_CHANGE=${ack}" >> "${GITHUB_ENV}"
 
-    - run: make ${{ matrix.make-target }}
+    # The CRD breaking-change check compares against a PR base and is acknowledged via a PR
+    # label, so it can only run in a pull_request context. There is no way to acknowledge a
+    # breaking change on a bare commit (push/merge_group), so skip it outside of PRs.
+    - if: ${{ matrix.name != 'crd-breaking-changes' || github.event_name == 'pull_request' }}
+      run: make ${{ matrix.make-target }}

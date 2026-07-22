@@ -224,7 +224,7 @@ AIGatewayStatus defines the observed state of AIGateway.
 
 | Field | Description |
 | --- | --- |
-| `endpoints` _[AIGatewayEndpoint](#gateway-operator-konghq-com-v1alpha1-types-aigatewayendpoint)_ | Endpoints are collections of the URL, credentials and metadata needed in order to access models served by the AIGateway for inference. |
+| `endpoints` _[][AIGatewayEndpoint](#gateway-operator-konghq-com-v1alpha1-types-aigatewayendpoint)_ | Endpoints are collections of the URL, credentials and metadata needed in order to access models served by the AIGateway for inference. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the AIGateway.<br /><br />Known condition types are:<br /><br /><br />  - "Accepted" <br />  - "Provisioning" <br />  - "EndpointsReady" |
 
 _Appears in:_
@@ -245,7 +245,7 @@ Azure, e.t.c.).
 | `identifier` _string_ | Identifier is the unique name which identifies the LLM. This will be used as part of the requests made to an AIGateway endpoint. For instance: if you provided the identifier "devteam-gpt-access", then you would access this model via "https://${endpoint}/devteam-gpt-access" and supply it with your consumer credentials to authenticate requests. |
 | `model` _*string_ | Model is the model name of the LLM (e.g. gpt-3.5-turbo, phi-2, e.t.c.).<br /><br />If not specified, whatever the cloud provider specifies as the default model will be used. |
 | `promptType` _[LLMPromptType](#gateway-operator-konghq-com-v1alpha1-types-llmprompttype)_ | PromptType is the type of prompt to be used for inference requests to the LLM (e.g. "chat", "completions").<br /><br />If "chat" is specified, prompts sent by the user will be interactive, contextual and stateful. The LLM will dynamically answer questions and simulate a dialogue, while also keeping track of the conversation to provide contextually relevant responses.<br /><br />If "completions" is specified, prompts sent by the user will be stateless and "one-shot". The LLM will provide a single response to the prompt, without any context from previous prompts.<br /><br />If not specified, "completions" will be used as the default. |
-| `defaultPrompts` _[LLMPrompt](#gateway-operator-konghq-com-v1alpha1-types-llmprompt)_ | DefaultPrompts is a list of prompts that should be provided to the LLM by default. This is generally used to influence inference behavior, for instance by providing a "system" role prompt that instructs the LLM to take on a certain persona. |
+| `defaultPrompts` _[][LLMPrompt](#gateway-operator-konghq-com-v1alpha1-types-llmprompt)_ | DefaultPrompts is a list of prompts that should be provided to the LLM by default. This is generally used to influence inference behavior, for instance by providing a "system" role prompt that instructs the LLM to take on a certain persona. |
 | `defaultPromptParams` _[LLMPromptParams](#gateway-operator-konghq-com-v1alpha1-types-llmpromptparams)_ | DefaultPromptParams configures the parameters which will be sent with any and every inference request.<br /><br />If this is set, there is currently no way to override these parameters at the individual prompt level. This is an expected feature from later releases of our AI plugins. |
 | `aiCloudProvider` _[AICloudProvider](#gateway-operator-konghq-com-v1alpha1-types-aicloudprovider)_ | AICloudProvider defines the cloud provider that will fulfill the LLM requests for this CloudHostedLargeLanguageModel |
 
@@ -433,7 +433,7 @@ serve and manage traffic for.
 
 | Field | Description |
 | --- | --- |
-| `cloudHosted` _[CloudHostedLargeLanguageModel](#gateway-operator-konghq-com-v1alpha1-types-cloudhostedlargelanguagemodel)_ | CloudHosted configures LLMs hosted and served by cloud providers.<br /><br />This is currently a required field, requiring at least one cloud-hosted LLM be specified, however in future iterations we may add other hosting options such as self-hosted LLMs as separate fields. |
+| `cloudHosted` _[][CloudHostedLargeLanguageModel](#gateway-operator-konghq-com-v1alpha1-types-cloudhostedlargelanguagemodel)_ | CloudHosted configures LLMs hosted and served by cloud providers.<br /><br />This is currently a required field, requiring at least one cloud-hosted LLM be specified, however in future iterations we may add other hosting options such as self-hosted LLMs as separate fields. |
 
 _Appears in:_
 
@@ -466,7 +466,7 @@ ServiceSelector holds the service selector specification.
 
 | Field | Description |
 | --- | --- |
-| `matchNames` _[ServiceSelectorEntry](#gateway-operator-konghq-com-v1alpha1-types-serviceselectorentry)_ | MatchNames holds the list of Services names to match. |
+| `matchNames` _[][ServiceSelectorEntry](#gateway-operator-konghq-com-v1alpha1-types-serviceselectorentry)_ | MatchNames holds the list of Services names to match. |
 
 _Appears in:_
 
@@ -513,7 +513,7 @@ WatchNamespaceGrantSpec defines the desired state of an WatchNamespaceGrant.
 
 | Field | Description |
 | --- | --- |
-| `from` _[WatchNamespaceGrantFrom](#gateway-operator-konghq-com-v1alpha1-types-watchnamespacegrantfrom)_ | From describes the trusted namespaces and kinds that can reference the namespace this grant exists in. |
+| `from` _[][WatchNamespaceGrantFrom](#gateway-operator-konghq-com-v1alpha1-types-watchnamespacegrantfrom)_ | From describes the trusted namespaces and kinds that can reference the namespace this grant exists in. |
 
 _Appears in:_
 
@@ -688,7 +688,7 @@ deploy and connect a ControlPlane to a DataPlane object.
 | --- | --- |
 | `deployment` _[ControlPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-controlplanedeploymentoptions)_ |  |
 | `dataplane` _*string_ | DataPlanes refers to the named DataPlane objects which this ControlPlane is responsible for. Currently they must be in the same namespace as the DataPlane. |
-| `extensions` _[ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the ControlPlane resources to influence or enhance functionality. |
+| `extensions` _[][ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the ControlPlane resources to influence or enhance functionality. |
 | `watchNamespaces` _[WatchNamespaces](#gateway-operator-konghq-com-v1beta1-types-watchnamespaces)_ | WatchNamespaces indicates the namespaces to watch for resources. |
 
 _Appears in:_
@@ -707,7 +707,7 @@ ControlPlaneSpec defines the desired state of ControlPlane.
 | --- | --- |
 | `deployment` _[ControlPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-controlplanedeploymentoptions)_ |  |
 | `dataplane` _*string_ | DataPlanes refers to the named DataPlane objects which this ControlPlane is responsible for. Currently they must be in the same namespace as the DataPlane. |
-| `extensions` _[ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the ControlPlane resources to influence or enhance functionality. |
+| `extensions` _[][ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the ControlPlane resources to influence or enhance functionality. |
 | `watchNamespaces` _[WatchNamespaces](#gateway-operator-konghq-com-v1beta1-types-watchnamespaces)_ | WatchNamespaces indicates the namespaces to watch for resources. |
 | `gatewayClass` _*sigs.k8s.io/gateway-api/apis/v1.ObjectName_ | GatewayClass indicates the Gateway resources which this ControlPlane should be responsible for configuring routes for (e.g. HTTPRoute, TCPRoute, UDPRoute, TLSRoute, e.t.c.).<br /><br />Required for the ControlPlane to have any effect: at least one Gateway must be present for configuration to be pushed to the data-plane and only Gateway resources can be used to identify data-plane entities. |
 | `ingressClass` _*string_ | IngressClass enables support for the older Ingress resource and indicates which Ingress resources this ControlPlane should be responsible for.<br /><br />Routing configured this way will be applied to the Gateway resources indicated by GatewayClass.<br /><br />If omitted, Ingress resources will not be supported by the ControlPlane. |
@@ -782,8 +782,8 @@ deploy the DataPlane.
 | `deployment` _[DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanedeploymentoptions)_ |  |
 | `network` _[DataPlaneNetworkOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanenetworkoptions)_ |  |
 | `resources` _[DataPlaneResources](#gateway-operator-konghq-com-v1beta1-types-dataplaneresources)_ |  |
-| `extensions` _[ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1. |
-| `pluginsToInstall` _[NamespacedName](#gateway-operator-konghq-com-v1beta1-types-namespacedname)_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the DataPlane. |
+| `extensions` _[][ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1. |
+| `pluginsToInstall` _[][NamespacedName](#gateway-operator-konghq-com-v1beta1-types-namespacedname)_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the DataPlane. |
 
 _Appears in:_
 
@@ -872,7 +872,7 @@ DataPlaneServiceOptions contains Services related DataPlane configuration.
 | `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core)_ | ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). If set to "Local", the proxy will configure the service in a way that assumes that external load balancers will take care of balancing the service traffic between nodes, and so each node will deliver traffic only to the node-local endpoints of the service, without masquerading the client source IP. (Traffic mistakenly sent to a node with no endpoints will be dropped.) The default value, "Cluster", uses the standard behavior of routing to all endpoints evenly (possibly modified by topology and other features). Note that traffic sent to an External IP or LoadBalancer IP from within the cluster will always get "Cluster" semantics, but clients sending to a NodePort from within the cluster may need to take traffic policy into account when picking a node.<br /><br />More info: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip |
 | `trafficDistribution` _*string_ | TrafficDistribution offers a way to express preferences for how traffic is distributed to Service endpoints. Implementations can use this field as a hint, but are not required to guarantee strict adherence. If the field is not set, the implementation will apply its default routing strategy.<br /><br />"PreferSameZone" prioritizes endpoints in the same zone as the client. "PreferSameNode" prioritizes endpoints on the same node as the client.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution |
 | `internalTrafficPolicy` _[ServiceInternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceinternaltrafficpolicy-v1-core)_ | InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP. If set to "Local", the proxy will assume that pods only want to talk to endpoints of the service on the same node as the pod, dropping the traffic if there are no local endpoints. The default value, "Cluster", uses the standard behavior of routing to all endpoints evenly.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#internal-traffic-policy |
-| `ports` _[DataPlaneServicePort](#gateway-operator-konghq-com-v1beta1-types-dataplaneserviceport)_ | Ports defines the list of ports that are exposed by the service. The ports field allows defining the name, port and targetPort of the underlying service ports, while the protocol is defaulted to TCP, as it is the only protocol currently supported. |
+| `ports` _[][DataPlaneServicePort](#gateway-operator-konghq-com-v1beta1-types-dataplaneserviceport)_ | Ports defines the list of ports that are exposed by the service. The ports field allows defining the name, port and targetPort of the underlying service ports, while the protocol is defaulted to TCP, as it is the only protocol currently supported. |
 
 _Appears in:_
 
@@ -924,8 +924,8 @@ DataPlaneSpec defines the desired state of DataPlane.
 | `deployment` _[DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanedeploymentoptions)_ |  |
 | `network` _[DataPlaneNetworkOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanenetworkoptions)_ |  |
 | `resources` _[DataPlaneResources](#gateway-operator-konghq-com-v1beta1-types-dataplaneresources)_ |  |
-| `extensions` _[ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1. |
-| `pluginsToInstall` _[NamespacedName](#gateway-operator-konghq-com-v1beta1-types-namespacedname)_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the DataPlane. |
+| `extensions` _[][ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1. |
+| `pluginsToInstall` _[][NamespacedName](#gateway-operator-konghq-com-v1beta1-types-namespacedname)_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the DataPlane. |
 
 _Appears in:_
 
@@ -942,7 +942,7 @@ DataPlaneStatus defines the observed state of DataPlane.
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the DataPlane. |
 | `service` _string_ | Service indicates the Service that exposes the DataPlane's configured routes |
-| `addresses` _[Address](#gateway-operator-konghq-com-v1beta1-types-address)_ | Addresses lists the addresses that have actually been bound to the DataPlane. |
+| `addresses` _[][Address](#gateway-operator-konghq-com-v1beta1-types-address)_ | Addresses lists the addresses that have actually been bound to the DataPlane. |
 | `selector` _string_ | Selector contains a unique DataPlane identifier used as a deterministic label selector that is used throughout its dependent resources. This is used e.g. as a label selector for DataPlane's Services, Deployments and PodDisruptionBudgets. |
 | `readyReplicas` _int32_ | ReadyReplicas indicates how many replicas have reported to be ready. |
 | `replicas` _int32_ | Replicas indicates how many replicas have been set for the DataPlane. |
@@ -1001,8 +1001,8 @@ configure and deploy a DataPlane object.
 | `deployment` _[DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanedeploymentoptions)_ |  |
 | `network` _[GatewayConfigDataPlaneNetworkOptions](#gateway-operator-konghq-com-v1beta1-types-gatewayconfigdataplanenetworkoptions)_ |  |
 | `resources` _[GatewayConfigDataPlaneResources](#gateway-operator-konghq-com-v1beta1-types-gatewayconfigdataplaneresources)_ |  |
-| `extensions` _[ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1. |
-| `pluginsToInstall` _[NamespacedName](#gateway-operator-konghq-com-v1beta1-types-namespacedname)_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the Gateways (DataPlanes) that use this GatewayConfig. |
+| `extensions` _[][ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the DataPlane resources to influence or enhance functionality. NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1. |
+| `pluginsToInstall` _[][NamespacedName](#gateway-operator-konghq-com-v1beta1-types-namespacedname)_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the Gateways (DataPlanes) that use this GatewayConfig. |
 
 _Appears in:_
 
@@ -1093,8 +1093,8 @@ GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 | --- | --- |
 | `dataPlaneOptions` _[GatewayConfigDataPlaneOptions](#gateway-operator-konghq-com-v1beta1-types-gatewayconfigdataplaneoptions)_ | DataPlaneOptions is the specification for configuration overrides for DataPlane resources that will be created for the Gateway. |
 | `controlPlaneOptions` _[ControlPlaneOptions](#gateway-operator-konghq-com-v1beta1-types-controlplaneoptions)_ | ControlPlaneOptions is the specification for configuration overrides for ControlPlane resources that will be created for the Gateway. |
-| `listenersOptions` _[GatewayConfigurationListenerOptions](#gateway-operator-konghq-com-v1beta1-types-gatewayconfigurationlisteneroptions)_ | ListenerOptions is the specification for configuration bound to specific listeners in the Gateway. It will override the default configuration of control plane or data plane for the specified listener. |
-| `extensions` _[ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the Gateway resource to influence or enhance functionality. NOTE: currently, there's only 1 extension that can be attached at the Gateway level (KonnectExtension), so the amount of extensions is limited to 1. |
+| `listenersOptions` _[][GatewayConfigurationListenerOptions](#gateway-operator-konghq-com-v1beta1-types-gatewayconfigurationlisteneroptions)_ | ListenerOptions is the specification for configuration bound to specific listeners in the Gateway. It will override the default configuration of control plane or data plane for the specified listener. |
+| `extensions` _[][ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the Gateway resource to influence or enhance functionality. NOTE: currently, there's only 1 extension that can be attached at the Gateway level (KonnectExtension), so the amount of extensions is limited to 1. |
 
 _Appears in:_
 
@@ -1358,7 +1358,7 @@ services that are exposed as part of the rollout.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name indicates the name of the service. |
-| `addresses` _[Address](#gateway-operator-konghq-com-v1beta1-types-address)_ | Addresses contains the addresses of a Service. |
+| `addresses` _[][Address](#gateway-operator-konghq-com-v1beta1-types-address)_ | Addresses contains the addresses of a Service. |
 
 _Appears in:_
 
@@ -1937,8 +1937,8 @@ deploy and connect a ControlPlane to a DataPlane object.
 | --- | --- |
 | `ingressClass` _*string_ | IngressClass enables support for the Ingress resources and indicates which Ingress resources this ControlPlane should be responsible for.<br /><br />If omitted, Ingress resources will not be supported by the ControlPlane. |
 | `watchNamespaces` _[WatchNamespaces](#gateway-operator-konghq-com-v2beta1-types-watchnamespaces)_ | WatchNamespaces indicates the namespaces to watch for resources. |
-| `featureGates` _[ControlPlaneFeatureGate](#gateway-operator-konghq-com-v2beta1-types-controlplanefeaturegate)_ | FeatureGates is a list of feature gates that are enabled for this ControlPlane. |
-| `controllers` _[ControlPlaneController](#gateway-operator-konghq-com-v2beta1-types-controlplanecontroller)_ | Controllers defines the controllers that are enabled for this ControlPlane. |
+| `featureGates` _[][ControlPlaneFeatureGate](#gateway-operator-konghq-com-v2beta1-types-controlplanefeaturegate)_ | FeatureGates is a list of feature gates that are enabled for this ControlPlane. |
+| `controllers` _[][ControlPlaneController](#gateway-operator-konghq-com-v2beta1-types-controlplanecontroller)_ | Controllers defines the controllers that are enabled for this ControlPlane. |
 | `gatewayDiscovery` _[ControlPlaneGatewayDiscovery](#gateway-operator-konghq-com-v2beta1-types-controlplanegatewaydiscovery)_ | GatewayDiscovery defines the configuration for the Gateway Discovery feature. |
 | `cache` _[ControlPlaneK8sCache](#gateway-operator-konghq-com-v2beta1-types-controlplanek8scache)_ | Cache defines the configuration related to the kubernetes object caches. |
 | `dataplaneSync` _[ControlPlaneDataPlaneSync](#gateway-operator-konghq-com-v2beta1-types-controlplanedataplanesync)_ | DataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane. |
@@ -1983,8 +1983,8 @@ ControlPlaneSpec defines the desired state of ControlPlane
 | --- | --- |
 | `ingressClass` _*string_ | IngressClass enables support for the Ingress resources and indicates which Ingress resources this ControlPlane should be responsible for.<br /><br />If omitted, Ingress resources will not be supported by the ControlPlane. |
 | `watchNamespaces` _[WatchNamespaces](#gateway-operator-konghq-com-v2beta1-types-watchnamespaces)_ | WatchNamespaces indicates the namespaces to watch for resources. |
-| `featureGates` _[ControlPlaneFeatureGate](#gateway-operator-konghq-com-v2beta1-types-controlplanefeaturegate)_ | FeatureGates is a list of feature gates that are enabled for this ControlPlane. |
-| `controllers` _[ControlPlaneController](#gateway-operator-konghq-com-v2beta1-types-controlplanecontroller)_ | Controllers defines the controllers that are enabled for this ControlPlane. |
+| `featureGates` _[][ControlPlaneFeatureGate](#gateway-operator-konghq-com-v2beta1-types-controlplanefeaturegate)_ | FeatureGates is a list of feature gates that are enabled for this ControlPlane. |
+| `controllers` _[][ControlPlaneController](#gateway-operator-konghq-com-v2beta1-types-controlplanecontroller)_ | Controllers defines the controllers that are enabled for this ControlPlane. |
 | `gatewayDiscovery` _[ControlPlaneGatewayDiscovery](#gateway-operator-konghq-com-v2beta1-types-controlplanegatewaydiscovery)_ | GatewayDiscovery defines the configuration for the Gateway Discovery feature. |
 | `cache` _[ControlPlaneK8sCache](#gateway-operator-konghq-com-v2beta1-types-controlplanek8scache)_ | Cache defines the configuration related to the kubernetes object caches. |
 | `dataplaneSync` _[ControlPlaneDataPlaneSync](#gateway-operator-konghq-com-v2beta1-types-controlplanedataplanesync)_ | DataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane. |
@@ -1993,7 +1993,7 @@ ControlPlaneSpec defines the desired state of ControlPlane
 | `objectFilters` _[ControlPlaneObjectFilters](#gateway-operator-konghq-com-v2beta1-types-controlplaneobjectfilters)_ | ObjectFilters defines the filters to limit watched objects by the controllers. |
 | `konnect` _[ControlPlaneKonnectOptions](#gateway-operator-konghq-com-v2beta1-types-controlplanekonnectoptions)_ | Konnect defines the Konnect-related configuration options for the ControlPlane. |
 | `dataplane` _[ControlPlaneDataPlaneTarget](#gateway-operator-konghq-com-v2beta1-types-controlplanedataplanetarget)_ | DataPlane designates the target data plane to configure.<br /><br />It can be: - a name of a DataPlane resource that is managed by the operator, - a DataPlane that is managed by the owner of the ControlPlane (e.g. a Gateway resource) |
-| `extensions` _[ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the ControlPlane resources to influence or enhance functionality. |
+| `extensions` _[][ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the ControlPlane resources to influence or enhance functionality. |
 
 _Appears in:_
 
@@ -2010,8 +2010,8 @@ ControlPlaneStatus defines the observed state of ControlPlane.
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the Gateway. |
 | `dataPlane` _[ControlPlaneDataPlaneStatus](#gateway-operator-konghq-com-v2beta1-types-controlplanedataplanestatus)_ | DataPlane describes the status of the DataPlane that the ControlPlane is responsible for configuring. |
-| `featureGates` _[ControlPlaneFeatureGate](#gateway-operator-konghq-com-v2beta1-types-controlplanefeaturegate)_ | FeatureGates is a list of effective feature gates for this ControlPlane. |
-| `controllers` _[ControlPlaneController](#gateway-operator-konghq-com-v2beta1-types-controlplanecontroller)_ | Controllers is a list of enabled and disabled controllers for this ControlPlane. |
+| `featureGates` _[][ControlPlaneFeatureGate](#gateway-operator-konghq-com-v2beta1-types-controlplanefeaturegate)_ | FeatureGates is a list of effective feature gates for this ControlPlane. |
+| `controllers` _[][ControlPlaneController](#gateway-operator-konghq-com-v2beta1-types-controlplanecontroller)_ | Controllers is a list of enabled and disabled controllers for this ControlPlane. |
 
 _Appears in:_
 
@@ -2129,8 +2129,8 @@ ControlPlane resources that will be managed as part of the Gateway.
 | --- | --- |
 | `ingressClass` _*string_ | IngressClass enables support for the Ingress resources and indicates which Ingress resources this ControlPlane should be responsible for.<br /><br />If omitted, Ingress resources will not be supported by the ControlPlane. |
 | `watchNamespaces` _[WatchNamespaces](#gateway-operator-konghq-com-v2beta1-types-watchnamespaces)_ | WatchNamespaces indicates the namespaces to watch for resources. |
-| `featureGates` _[ControlPlaneFeatureGate](#gateway-operator-konghq-com-v2beta1-types-controlplanefeaturegate)_ | FeatureGates is a list of feature gates that are enabled for this ControlPlane. |
-| `controllers` _[ControlPlaneController](#gateway-operator-konghq-com-v2beta1-types-controlplanecontroller)_ | Controllers defines the controllers that are enabled for this ControlPlane. |
+| `featureGates` _[][ControlPlaneFeatureGate](#gateway-operator-konghq-com-v2beta1-types-controlplanefeaturegate)_ | FeatureGates is a list of feature gates that are enabled for this ControlPlane. |
+| `controllers` _[][ControlPlaneController](#gateway-operator-konghq-com-v2beta1-types-controlplanecontroller)_ | Controllers defines the controllers that are enabled for this ControlPlane. |
 | `gatewayDiscovery` _[ControlPlaneGatewayDiscovery](#gateway-operator-konghq-com-v2beta1-types-controlplanegatewaydiscovery)_ | GatewayDiscovery defines the configuration for the Gateway Discovery feature. |
 | `cache` _[ControlPlaneK8sCache](#gateway-operator-konghq-com-v2beta1-types-controlplanek8scache)_ | Cache defines the configuration related to the kubernetes object caches. |
 | `dataplaneSync` _[ControlPlaneDataPlaneSync](#gateway-operator-konghq-com-v2beta1-types-controlplanedataplanesync)_ | DataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane. |
@@ -2171,7 +2171,7 @@ configure and deploy a DataPlane object.
 | `deployment` _[DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v2beta1-types-dataplanedeploymentoptions)_ |  |
 | `network` _[GatewayConfigDataPlaneNetworkOptions](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigdataplanenetworkoptions)_ |  |
 | `resources` _[GatewayConfigDataPlaneResources](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigdataplaneresources)_ |  |
-| `pluginsToInstall` _[NamespacedName](#gateway-operator-konghq-com-v2beta1-types-namespacedname)_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the Gateways (DataPlanes) that use this GatewayConfig. |
+| `pluginsToInstall` _[][NamespacedName](#gateway-operator-konghq-com-v2beta1-types-namespacedname)_ | PluginsToInstall is a list of KongPluginInstallation resources that will be installed and available in the Gateways (DataPlanes) that use this GatewayConfig. |
 
 _Appears in:_
 
@@ -2263,8 +2263,8 @@ Only one of 'konnect' or 'extensions' can be specified.
 | --- | --- |
 | `dataPlaneOptions` _[GatewayConfigDataPlaneOptions](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigdataplaneoptions)_ | DataPlaneOptions is the specification for configuration overrides for DataPlane resources that will be created for the Gateway. |
 | `controlPlaneOptions` _[GatewayConfigControlPlaneOptions](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigcontrolplaneoptions)_ | ControlPlaneOptions is the specification for configuration overrides for ControlPlane resources that will be managed as part of the Gateway. |
-| `listenersOptions` _[GatewayConfigurationListenerOptions](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigurationlisteneroptions)_ | ListenerOptions is the specification for configuration bound to specific listeners in the Gateway. It will override the default configuration of control plane or data plane for the specified listener. |
-| `extensions` _[ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the Gateway resource to influence or enhance functionality. NOTE: currently, there are only 2 extensions that can be attached at the Gateway level (KonnectExtension, DataPlaneMetricsExtension), so the amount of extensions is limited to 2. |
+| `listenersOptions` _[][GatewayConfigurationListenerOptions](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigurationlisteneroptions)_ | ListenerOptions is the specification for configuration bound to specific listeners in the Gateway. It will override the default configuration of control plane or data plane for the specified listener. |
+| `extensions` _[][ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)_ | Extensions provide additional or replacement features for the Gateway resource to influence or enhance functionality. NOTE: currently, there are only 2 extensions that can be attached at the Gateway level (KonnectExtension, DataPlaneMetricsExtension), so the amount of extensions is limited to 2. |
 | `konnect` _[KonnectOptions](#gateway-operator-konghq-com-v2beta1-types-konnectoptions)_ | Konnect holds the configuration for a Konnect-managed control plane. If this field is set, the operator will provision a Gateway that is connected to a Konnect Control Plane. |
 
 _Appears in:_

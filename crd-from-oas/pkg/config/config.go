@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -72,28 +73,115 @@ type EntityGVKConfig struct {
 	Group string `yaml:"group,omitempty"`
 }
 
-// ReferenceConfig configures a single inter-CR reference field.
+// ReferenceConfig declares a spec field that holds references to other CRs
+// in this API group, where the Konnect API accepts the referenced entity's
+// Konnect ID (or, in the future, Konnect name). This is deliberately NOT a
+// general type-override facility: the generator derives the ref struct, CRD
+// validation, SDK request resolution, and watch/index wiring from it.
 type ReferenceConfig struct {
-	// Kind is the Go type name of the referenced CRD (e.g. "EventGatewayBackendCluster").
-	// Used to name the resolved-ID status field: status.<lowerCamelCase(Kind)>.id.
-	Kind string `yaml:"kind"`
 	// Path is the dot-separated field path on the referring CR that holds the
-	// reference (e.g. "spec.apiSpec.destination"). Must start with "spec.apiSpec.".
+	// references (e.g. "spec.apiSpec.policies" or the nested
+	// "spec.apiSpec.access.acls.allow.allow"). Must start with "spec.apiSpec." and
+	// resolve to an array field, possibly through nested objects and oneOf/anyOf
+	// union variants.
 	Path string `yaml:"path"`
+	// Kinds lists the CRD kinds (in this API group) the field may reference.
+	// With a single kind, the generated ref struct's kind field is optional and
+	// defaulted; with multiple kinds it is required with an enum of Kinds.
+	Kinds []string `yaml:"kinds"`
+	// ResolvesTo selects what is pushed to Konnect for each reference:
+	// "id" (the referenced CR's Konnect ID) or "name" (its Konnect name).
+	ResolvesTo string `yaml:"resolvesTo"`
+	// RefTypeName names the generated ref struct. Required when Kinds has more
+	// than one entry (the name cannot be derived); must be empty otherwise
+	// (single-kind names derive as "<Kind>Ref").
+	RefTypeName string `yaml:"refTypeName,omitempty"`
+}
+
+// TypeName returns the Go type name of the generated ref struct.
+func (rc ReferenceConfig) TypeName() string {
+	if rc.RefTypeName != "" {
+		return rc.RefTypeName
+	}
+	if len(rc.Kinds) == 1 {
+		return rc.Kinds[0] + "Ref"
+	}
+	return ""
+}
+
+// AssociationConfig declares a spec-level field holding references to other CRs
+// in this API group that the entity is associated with. Unlike ReferenceConfig
+// (which replaces an OpenAPI-derived field inside spec.apiSpec and injects the
+// resolved value into the SDK create/update body), an association is a new
+// top-level spec field (sibling of apiSpec) whose membership is enforced in
+// Konnect by a dedicated, hand-written ops helper.
+//
+// The generator emits the spec field, the referenced ref struct(s), and a call
+// site to the helper named by convention (enforce<Entity><GoFieldName>). The
+// enforcement SDK call itself lives in the hand-written helper.
+type AssociationConfig struct {
+	// Name is the lowerCamelCase JSON name of the top-level spec field, e.g.
+	// "consumerGroups". The Go field name is derived from it.
+	Name string `yaml:"name"`
+	// Kinds lists the CRD kinds (in this API group) the field may reference.
+	// A single kind emits a name-only ref struct (no kind field on the CRD);
+	// multiple kinds are not yet supported.
+	Kinds []string `yaml:"kinds"`
+	// SDKMethod is the SDK method the hand-written enforcement helper calls to
+	// push the membership set to Konnect (e.g.
+	// "UpdateAiGatewayConsumerGroupsForConsumer"). The generator does not emit
+	// the call itself — the helper (enforce<Entity><GoFieldName>) does — but it
+	// needs the name to wire the generated ops-controller test's mock expectation.
+	SDKMethod string `yaml:"sdkMethod"`
+}
+
+// RefTypeName returns the Go type name of the generated ref struct for a
+// single-kind association (e.g. "AIGatewayConsumerGroupRef").
+func (a AssociationConfig) RefTypeName() string {
+	return a.Kinds[0] + "Ref"
+}
+
+// SourceConfig declares whether a generated root CRD supports being a Mirror of
+// an existing Konnect entity in addition to the default Origin behavior. When
+// SupportsMirror is true the generator emits Source/Mirror spec fields, spec-level
+// CEL, an optional-pointer APISpec, GetSource/GetMirror accessors, and a Mirror
+// short-circuit in the generated create/update/delete ops.
+type SourceConfig struct {
+	// SupportsMirror enables Origin+Mirror. When false (or when the source block
+	// is omitted entirely) the entity stays Origin-only.
+	SupportsMirror bool `yaml:"supportsMirror,omitempty"`
 }
 
 // SecretReferenceConfig configures a single sensitive field that can be provided
 // inline or sourced from a Kubernetes Secret.
+//
+// The Go type backing the inline value is inferred from the OAS field at Path,
+// not configured here:
+//   - When the field resolves to a string (OAS booleans included, since this
+//     generator represents them as Go string), it becomes the shared
+//     SensitiveDataSource type (Value *string) — unchanged regardless of this change.
+//   - Otherwise (e.g. an arbitrary JSON object, an integer, a typed map), the
+//     generator emits a dedicated per-field type instead (named from the
+//     entity and the field's Go selector, e.g. "AIGatewayPolicyConfigDataSource")
+//     whose Value field matches the OAS field's type. Resolving such a field's
+//     secretRef at runtime requires a hand-written valueFromSecretRef method on
+//     the generated dedicated type, added to secretref_manual.go in the target
+//     API package — the generator only emits the call site, not the method.
+//   - A leaf that is itself a oneOf union or an object with nested properties
+//     (inline or via $ref) is rejected at generation time: there's no single
+//     unambiguous value to wrap in inline-vs-secretRef.
 type SecretReferenceConfig struct {
 	// Path is the dot-separated field path within the spec
 	// (e.g. "spec.apiSpec.tls.clientIdentity.certificate").
 	// Must start with "spec.apiSpec.".
+	// When the resolved OAS leaf is itself an array of strings (e.g.
+	// "clientSecret: []string"), the generator detects this from the schema and
+	// emits a list of secret sources ([]SensitiveDataSource, one per element)
+	// instead of a single one — no separate array notation is needed in Path.
 	Path string `yaml:"path"`
 	// Type is the Kubernetes resource type that holds the sensitive data.
 	// Currently only "Secret" is supported.
 	Type string `yaml:"type"`
-	// Key is the data key inside the referenced resource (e.g. "tls.crt").
-	Key string `yaml:"key"`
 }
 
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
@@ -114,6 +202,10 @@ type TypeConfig struct {
 	// Each entry replaces the OpenAPI-derived field with a *commonv1alpha1.ObjectRef
 	// and emits a corresponding resolved-ID field on the status.
 	References []ReferenceConfig `yaml:"-"`
+	// Associations lists top-level spec fields (siblings of apiSpec) holding
+	// references to other CRs whose membership is enforced in Konnect by a
+	// hand-written ops helper. See AssociationConfig.
+	Associations []AssociationConfig `yaml:"associations,omitempty"`
 	// Ops maps operation names (e.g. "create", "update") to SDK type configurations.
 	// When set, conversion methods are generated on the entity's APISpec type.
 	Ops map[string]*OpConfig `yaml:"-"`
@@ -130,15 +222,26 @@ type TypeConfig struct {
 	OpsGetForUID *GetForUIDConfig `yaml:"-"`
 	// OpsSDK holds SDK interface and field name for SDK factory generation.
 	OpsSDK *OpSDKConfig `yaml:"-"`
+	// OpsListCallStylePositional indicates that the SDK list method for this
+	// entity uses positional (pageSize *int64, pageNumber *int64) arguments
+	// instead of a request struct. The generator emits nil, nil for both.
+	OpsListCallStylePositional bool `yaml:"-"`
+	// OpsResponseStatusFields configures fields to copy from the SDK create
+	// response into the CRD status struct.
+	OpsResponseStatusFields []ResponseStatusFieldConfig `yaml:"-"`
 	// SecretReferences lists sensitive field paths whose values can be provided
 	// either inline or sourced from a Kubernetes Secret. Each entry causes the
-	// OAS-derived string field at Path to become a SensitiveDataSource struct
-	// supporting inline and secretRef variants at runtime.
+	// OAS-derived field at Path to become a union struct supporting inline and
+	// secretRef variants at runtime — the shared SensitiveDataSource type for
+	// string fields, or a dedicated generated type for non-string fields (see
+	// SecretReferenceConfig's doc comment).
 	SecretReferences []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
 	// Reconciler holds configuration for reconciler code generation.
 	// When set, reconciler wiring files (interface methods, watch options,
 	// index files) are generated for this entity.
 	Reconciler *ReconcilerConfig `yaml:"reconciler,omitempty"`
+	// Source declares Origin/Mirror support for this (root) entity. Nil => Origin-only.
+	Source *SourceConfig `yaml:"-"`
 }
 
 // ParentRefConfig overrides the spec field for the parent reference when the
@@ -327,6 +430,30 @@ type GetForUIDRootUnionCase struct {
 	MatchFields []GetForUIDMatchField `yaml:"matchFields,omitempty"`
 }
 
+// ResponseStatusFieldConfig configures one field to copy from the SDK create
+// response into the CRD status struct. It also causes a new Go struct type
+// to be emitted for the field's type.
+type ResponseStatusFieldConfig struct {
+	// StatusField is the Go field name on the status struct, e.g. "Endpoints".
+	// It also becomes the suffix of the generated struct type name: {EntityName}{StatusField}.
+	StatusField string `yaml:"statusField"`
+	// StatusJSON is the json tag for the status field, e.g. "endpoints".
+	StatusJSON string `yaml:"statusJSON"`
+	// Fields lists the scalar sub-fields of the new status struct.
+	Fields []ResponseStatusSubField `yaml:"fields"`
+}
+
+// ResponseStatusSubField is one scalar field in a response-derived status struct.
+type ResponseStatusSubField struct {
+	// Name is the Go field name, e.g. "Configuration".
+	Name string `yaml:"name"`
+	// JSON is the json tag, e.g. "configuration".
+	JSON string `yaml:"json"`
+	// RespPath is the Go path on the response entity (e.g. "Endpoints.Configuration")
+	// relative to resp.{RespField} (where RespField comes from schema.SuccessResponseRef).
+	RespPath string `yaml:"respPath"`
+}
+
 type typeOpsYAML struct {
 	// RequireClient indicates that generated ops for this entity need a
 	// controller-runtime client to fetch cluster data such as Secrets.
@@ -338,11 +465,17 @@ type typeOpsYAML struct {
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool `yaml:"useUIDTagFilter,omitempty"`
+	// ListCallStylePositional indicates that the SDK list method uses positional
+	// (pageSize *int64, pageNumber *int64) args instead of a request struct.
+	ListCallStylePositional bool `yaml:"listCallStylePositional,omitempty"`
 	// GetForUID holds custom field-matching configuration for generated
 	// getForUID logic.
 	GetForUID *GetForUIDConfig `yaml:"getForUID,omitempty"`
 	// SDK holds the SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig `yaml:"sdk,omitempty"`
+	// ResponseStatusFields configures fields to copy from the SDK create response
+	// into the CRD status struct.
+	ResponseStatusFields []ResponseStatusFieldConfig `yaml:"responseStatusFields,omitempty"`
 	// Operations maps operation names (e.g. "create", "update") to SDK type configs.
 	Operations map[string]*OpConfig `yaml:",inline"`
 }
@@ -353,9 +486,11 @@ type typeConfigYAML struct {
 	SchemaFieldOmissions map[string][]string     `yaml:"schemaFieldOmissions,omitempty"`
 	CEL                  map[string]*FieldConfig `yaml:"cel,omitempty"`
 	References           []ReferenceConfig       `yaml:"references,omitempty"`
+	Associations         []AssociationConfig     `yaml:"associations,omitempty"`
 	SecretReferences     []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
 	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
 	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
+	Source               *SourceConfig           `yaml:"source,omitempty"`
 }
 
 // UnmarshalYAML preserves the in-memory Ops map shape while allowing
@@ -372,8 +507,10 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		SchemaFieldOmissions: raw.SchemaFieldOmissions,
 		CEL:                  raw.CEL,
 		References:           raw.References,
+		Associations:         raw.Associations,
 		SecretReferences:     raw.SecretReferences,
 		Reconciler:           raw.Reconciler,
+		Source:               raw.Source,
 	}
 
 	if raw.Ops != nil {
@@ -381,8 +518,10 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.OpsRequireClient = raw.Ops.RequireClient
 		tc.OpsSkipGetForUID = raw.Ops.SkipGetForUID
 		tc.OpsUseUIDTagFilter = raw.Ops.UseUIDTagFilter
+		tc.OpsListCallStylePositional = raw.Ops.ListCallStylePositional
 		tc.OpsGetForUID = raw.Ops.GetForUID
 		tc.OpsSDK = raw.Ops.SDK
+		tc.OpsResponseStatusFields = raw.Ops.ResponseStatusFields
 	}
 
 	return nil
@@ -400,11 +539,17 @@ type EntityOpsConfig struct {
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool
+	// ListCallStylePositional indicates that the SDK list method uses positional
+	// (pageSize *int64, pageNumber *int64) args instead of a request struct.
+	ListCallStylePositional bool
 	// GetForUID holds custom field-matching configuration for generated
 	// getForUID logic.
 	GetForUID *GetForUIDConfig
 	// SDK holds SDK interface and field name for SDK factory generation.
 	SDK *OpSDKConfig
+	// ResponseStatusFields configures fields to copy from the SDK create response
+	// into the CRD status struct.
+	ResponseStatusFields []ResponseStatusFieldConfig
 }
 
 // NameOverrides returns a mapping from OpenAPI path to the custom CRD type name
@@ -497,6 +642,23 @@ func (c *APIGroupVersionConfig) ReconcilerConfigs(pathToEntityName map[string]st
 	return result
 }
 
+// SourceConfigs builds a mapping from entity name to source config using the
+// provided pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) SourceConfigs(pathToEntityName map[string]string) map[string]*SourceConfig {
+	result := make(map[string]*SourceConfig)
+	for _, tc := range c.Types {
+		if tc.Source == nil {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = tc.Source
+	}
+	return result
+}
+
 // OpsConfig builds a mapping from entity name to operations config using the provided
 // pathToEntityName mapping (built after parsing the OpenAPI spec).
 func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) map[string]*EntityOpsConfig {
@@ -511,12 +673,14 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		}
 		requireClient := tc.OpsRequireClient || len(tc.SecretReferences) > 0
 		result[entityName] = &EntityOpsConfig{
-			Ops:             tc.Ops,
-			RequireClient:   requireClient,
-			SkipGetForUID:   tc.OpsSkipGetForUID,
-			UseUIDTagFilter: tc.OpsUseUIDTagFilter,
-			GetForUID:       tc.OpsGetForUID,
-			SDK:             tc.OpsSDK,
+			Ops:                     tc.Ops,
+			RequireClient:           requireClient,
+			SkipGetForUID:           tc.OpsSkipGetForUID,
+			UseUIDTagFilter:         tc.OpsUseUIDTagFilter,
+			ListCallStylePositional: tc.OpsListCallStylePositional,
+			GetForUID:               tc.OpsGetForUID,
+			SDK:                     tc.OpsSDK,
+			ResponseStatusFields:    tc.OpsResponseStatusFields,
 		}
 	}
 	return result
@@ -535,6 +699,23 @@ func (c *APIGroupVersionConfig) ReferencesConfig(pathToEntityName map[string]str
 			continue
 		}
 		result[entityName] = tc.References
+	}
+	return result
+}
+
+// AssociationsConfig builds a mapping from entity name to association configs using the
+// provided pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) AssociationsConfig(pathToEntityName map[string]string) map[string][]AssociationConfig {
+	result := make(map[string][]AssociationConfig)
+	for _, tc := range c.Types {
+		if len(tc.Associations) == 0 {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = tc.Associations
 	}
 	return result
 }
@@ -573,61 +754,123 @@ func (c *APIGroupVersionConfig) SchemaFieldOmissionsConfig() map[string]map[stri
 }
 
 func (c *APIGroupVersionConfig) validate() error {
-	if c.CommonTypes == nil || c.CommonTypes.ObjectRef == nil {
-		for _, tc := range c.Types {
-			if err := tc.validate(); err != nil {
-				return fmt.Errorf("type %q: %w", tc.Path, err)
-			}
+	if c.CommonTypes != nil && c.CommonTypes.ObjectRef != nil {
+		ref := c.CommonTypes.ObjectRef
+
+		// Default Generate to true when ObjectRef is present but Generate is not explicitly set.
+		if ref.Generate == nil && ref.Import == nil {
+			ref.Generate = new(true)
 		}
-		return nil
-	}
-	ref := c.CommonTypes.ObjectRef
 
-	// Default Generate to true when ObjectRef is present but Generate is not explicitly set.
-	if ref.Generate == nil && ref.Import == nil {
-		ref.Generate = new(true)
+		// Only flag mutual exclusion when generate is explicitly set to true.
+		if ref.Generate != nil && *ref.Generate && ref.Import != nil {
+			return fmt.Errorf("commonTypes.objectRef: generate and import are mutually exclusive")
+		}
+		// Require import when generate is explicitly set to false.
+		if ref.Generate != nil && !*ref.Generate && ref.Import == nil {
+			return fmt.Errorf("commonTypes.objectRef: import is required when generate is false")
+		}
+		if ref.Import != nil && ref.Import.Path == "" {
+			return fmt.Errorf("commonTypes.objectRef.import: path is required")
+		}
 	}
 
-	// Only flag mutual exclusion when generate is explicitly set to true.
-	if ref.Generate != nil && *ref.Generate && ref.Import != nil {
-		return fmt.Errorf("commonTypes.objectRef: generate and import are mutually exclusive")
-	}
-	// Require import when generate is explicitly set to false.
-	if ref.Generate != nil && !*ref.Generate && ref.Import == nil {
-		return fmt.Errorf("commonTypes.objectRef: import is required when generate is false")
-	}
-	if ref.Import != nil && ref.Import.Path == "" {
-		return fmt.Errorf("commonTypes.objectRef.import: path is required")
-	}
 	for _, tc := range c.Types {
 		if err := tc.validate(); err != nil {
 			return fmt.Errorf("type %q: %w", tc.Path, err)
 		}
 	}
+
+	if err := c.validateReferenceTypeConsistency(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
+// validateReferenceTypeConsistency ensures that every generated ref struct type
+// name (see ReferenceConfig.TypeName) is declared consistently across all types
+// in the API group-version: two references that share a type name must agree on
+// their Kinds (order-insensitive) and ResolvesTo.
+func (c *APIGroupVersionConfig) validateReferenceTypeConsistency() error {
+	seen := make(map[string]ReferenceConfig)
+	for _, tc := range c.Types {
+		for _, ref := range tc.References {
+			name := ref.TypeName()
+			if name == "" {
+				continue
+			}
+			prev, ok := seen[name]
+			if !ok {
+				seen[name] = ref
+				continue
+			}
+			if !equalKinds(prev.Kinds, ref.Kinds) || prev.ResolvesTo != ref.ResolvesTo {
+				return fmt.Errorf("reference type %q declared with conflicting kinds or resolvesTo", name)
+			}
+		}
+	}
+	return nil
+}
+
+// equalKinds reports whether two kind lists contain the same elements,
+// ignoring order.
+func equalKinds(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	as := append([]string(nil), a...)
+	bs := append([]string(nil), b...)
+	sort.Strings(as)
+	sort.Strings(bs)
+	for i := range as {
+		if as[i] != bs[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (tc *TypeConfig) validate() error {
-	seenRefKinds := make(map[string]bool)
-	for i, ref := range tc.References {
-		if ref.Kind == "" {
-			return fmt.Errorf("references[%d].kind is required", i)
-		}
+	for _, ref := range tc.References {
 		if !strings.HasPrefix(ref.Path, "spec.apiSpec.") {
-			return fmt.Errorf("references[%d].path must start with \"spec.apiSpec.\", got %q", i, ref.Path)
+			return fmt.Errorf("reference %q: path must start with \"spec.apiSpec.\"", ref.Path)
 		}
-		if seenRefKinds[ref.Kind] {
-			return fmt.Errorf("references[%d]: duplicate kind %q (each kind must appear at most once per type)", i, ref.Kind)
+		if len(ref.Kinds) == 0 {
+			return fmt.Errorf("reference %q: kinds must not be empty", ref.Path)
 		}
-		seenRefKinds[ref.Kind] = true
+		switch ref.ResolvesTo {
+		case "id", "name":
+		default:
+			return fmt.Errorf("reference %q: resolvesTo must be \"id\" or \"name\", got %q", ref.Path, ref.ResolvesTo)
+		}
+		if len(ref.Kinds) > 1 && ref.RefTypeName == "" {
+			return fmt.Errorf("reference %q: refTypeName is required when multiple kinds are configured", ref.Path)
+		}
+	}
+	seenAssocNames := make(map[string]bool)
+	for i, a := range tc.Associations {
+		if a.Name == "" {
+			return fmt.Errorf("associations[%d].name must not be empty", i)
+		}
+		if len(a.Kinds) == 0 {
+			return fmt.Errorf("associations[%d]: kinds must not be empty", i)
+		}
+		if len(a.Kinds) > 1 {
+			return fmt.Errorf("associations[%d]: multi-kind associations are not yet supported", i)
+		}
+		if a.SDKMethod == "" {
+			return fmt.Errorf("associations[%d].sdkMethod must not be empty", i)
+		}
+		if seenAssocNames[a.Name] {
+			return fmt.Errorf("associations[%d]: duplicate name %q", i, a.Name)
+		}
+		seenAssocNames[a.Name] = true
 	}
 	seenSecretPaths := make(map[string]bool)
 	for i, sr := range tc.SecretReferences {
 		if !strings.HasPrefix(sr.Path, "spec.apiSpec.") {
 			return fmt.Errorf("secretReferences[%d].path must start with \"spec.apiSpec.\", got %q", i, sr.Path)
-		}
-		if sr.Key == "" {
-			return fmt.Errorf("secretReferences[%d].key is required", i)
 		}
 		if sr.Type != "Secret" {
 			return fmt.Errorf("secretReferences[%d].type %q is not supported; only \"Secret\" is currently allowed", i, sr.Type)
@@ -682,6 +925,9 @@ func (tc *TypeConfig) validate() error {
 		} else if err := validateGetForUIDMatchFields("ops.getForUID.matchFields", tc.OpsGetForUID.MatchFields); err != nil {
 			return err
 		}
+	}
+	if tc.Source != nil && tc.Source.SupportsMirror && strings.Contains(tc.Path, "{") {
+		return fmt.Errorf("source.supportsMirror is only supported on root entities (path %q has path parameters)", tc.Path)
 	}
 	return nil
 }

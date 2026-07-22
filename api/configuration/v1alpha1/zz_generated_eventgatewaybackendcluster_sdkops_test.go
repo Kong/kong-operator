@@ -11,11 +11,11 @@ import (
 
 func TestEventGatewayBackendClusterAPISpec_ToCreateBackendClusterRequest(t *testing.T) {
 	spec := &EventGatewayBackendClusterAPISpec{
-		BootstrapServers: []string{"test-value"},
-		Description: "test-value",
+		BootstrapServers:                         []string{"test-value"},
+		Description:                              "test-value",
 		InsecureAllowAnonymousVirtualClusterAuth: "Enabled",
-		Labels: Labels{"test-key": "test-value"},
-		Name: BackendClusterName("test-value"),
+		Labels:                                   Labels{"test-key": "test-value"},
+		Name:                                     BackendClusterName("test-value"),
 	}
 	result, err := spec.ToCreateBackendClusterRequest()
 	require.NoError(t, err)
@@ -36,11 +36,11 @@ func TestEventGatewayBackendClusterAPISpec_ToCreateBackendClusterRequest(t *test
 
 func TestEventGatewayBackendClusterAPISpec_ToUpdateBackendClusterRequest(t *testing.T) {
 	spec := &EventGatewayBackendClusterAPISpec{
-		BootstrapServers: []string{"test-value"},
-		Description: "test-value",
+		BootstrapServers:                         []string{"test-value"},
+		Description:                              "test-value",
 		InsecureAllowAnonymousVirtualClusterAuth: "Enabled",
-		Labels: Labels{"test-key": "test-value"},
-		Name: BackendClusterName("test-value"),
+		Labels:                                   Labels{"test-key": "test-value"},
+		Name:                                     BackendClusterName("test-value"),
 	}
 	result, err := spec.ToUpdateBackendClusterRequest()
 	require.NoError(t, err)

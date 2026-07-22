@@ -2,6 +2,36 @@
 
 package konnect
 
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayagents,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayagents/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayagents/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumers,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumers/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumers/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumercredentials,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumercredentials/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumercredentials/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumergroups,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumergroups/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayconsumergroups/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayidentityproviders,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayidentityproviders/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewayidentityproviders/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymcpservers,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymcpservers/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymcpservers/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodels/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodelproviders,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodelproviders/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaymodelproviders/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaypolicies,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaypolicies/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=aigatewaypolicies/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/finalizers,verbs=update;patch

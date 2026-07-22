@@ -19,4 +19,4 @@ metadata:
 spec:
   type: token
   token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  serverURL: us.api.konghq.tech
+  serverURL: us.api.konghq.com

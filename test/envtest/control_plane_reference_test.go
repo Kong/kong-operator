@@ -18,6 +18,7 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/conditions"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
@@ -185,7 +186,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 						conditions.WithType(string(configurationv1.ConditionProgrammed)),
 						conditions.WithStatus(metav1.ConditionTrue),
 					))
-				}, waitTime, tickDuration, "expected object to be programmed")
+				}, consts.WaitTime, consts.TickTime, "expected object to be programmed")
 			} else {
 				asserts.Never(t, func(ctx context.Context) bool {
 					require.NoError(t, ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object))
@@ -195,7 +196,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 						conditions.WithType(string(configurationv1.ConditionProgrammed)),
 						conditions.WithStatus(metav1.ConditionTrue),
 					)
-				}, waitTime, tickDuration, "expected object not to be programmed")
+				}, consts.WaitTime, consts.TickTime, "expected object not to be programmed")
 			}
 		})
 	}

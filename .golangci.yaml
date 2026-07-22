@@ -1,6 +1,6 @@
 version: "2"
 run:
-  timeout: 8m
+  timeout: 10m
 linters:
   enable:
     - asasalint

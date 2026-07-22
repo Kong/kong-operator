@@ -76,7 +76,6 @@ type BackendClusterAuthenticationSaslScram struct {
 
 // BackendClusterAuthenticationScheme represents a union type for BackendClusterAuthenticationScheme.
 // Only one of the fields should be set based on the Type.
-//
 type BackendClusterAuthenticationScheme struct {
 	// Type designates the type of configuration.
 	//
@@ -196,6 +195,7 @@ func (u *BackendClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // BackendClusterName The unique name of the backend cluster.
 type BackendClusterName string
 
@@ -223,6 +223,7 @@ type BackendClusterReferenceModify struct {
 	// +optional
 	Name *BackendClusterName `json:"name,omitempty"`
 }
+
 // BackendClusterTLS is a type alias.
 type BackendClusterTLS struct {
 	// A literal value or a reference to an existing secret as a template string
@@ -358,7 +359,7 @@ type EncryptionKeyType string
 
 // EncryptionKeyType values.
 const (
-	EncryptionKeyTypeAWS EncryptionKeyType = "aws"
+	EncryptionKeyTypeAWS    EncryptionKeyType = "aws"
 	EncryptionKeyTypeStatic EncryptionKeyType = "static"
 )
 
@@ -431,6 +432,7 @@ func (u *EncryptionKey) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // EncryptionKeyAWS The AWS KMS key to use for encryption.
 type EncryptionKeyAWS struct {
 	// The AWS KMS key ARN.
@@ -461,6 +463,7 @@ type EncryptionKeyStaticReference struct {
 	// +optional
 	Name *string `json:"name,omitempty"`
 }
+
 // EncryptionKeyStaticReferenceByID A static encryption key reference by ID.
 type EncryptionKeyStaticReferenceByID struct {
 }
@@ -543,7 +546,6 @@ type EventGatewayACLRule struct {
 
 // EventGatewayACLRuleResourceNames represents a union type for resource_names.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayACLRuleResourceNames struct {
 	// Type designates the type of configuration.
 	//
@@ -567,7 +569,7 @@ type EventGatewayACLRuleResourceNamesType string
 
 // EventGatewayACLRuleResourceNamesType values.
 const (
-	EventGatewayACLRuleResourceNamesTypeStat EventGatewayACLRuleResourceNamesType = "stat"
+	EventGatewayACLRuleResourceNamesTypeStat  EventGatewayACLRuleResourceNamesType = "stat"
 	EventGatewayACLRuleResourceNamesTypeDynam EventGatewayACLRuleResourceNamesType = "dynam"
 )
 
@@ -640,6 +642,7 @@ func (u *EventGatewayACLRuleResourceNames) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayACLRule) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -779,7 +782,6 @@ func (s *EventGatewayConsumeSchemaValidationPolicy) UnmarshalJSON(data []byte) e
 
 // EventGatewayConsumeSchemaValidationPolicyConfig represents a union type for EventGatewayConsumeSchemaValidationPolicyConfig.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayConsumeSchemaValidationPolicyConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -804,7 +806,7 @@ type EventGatewayConsumeSchemaValidationPolicyConfigType string
 // EventGatewayConsumeSchemaValidationPolicyConfigType values.
 const (
 	EventGatewayConsumeSchemaValidationPolicyConfigTypeSchemaRegistry EventGatewayConsumeSchemaValidationPolicyConfigType = "confluentSchemaRegistry"
-	EventGatewayConsumeSchemaValidationPolicyConfigTypeJSON EventGatewayConsumeSchemaValidationPolicyConfigType = "json"
+	EventGatewayConsumeSchemaValidationPolicyConfigTypeJSON           EventGatewayConsumeSchemaValidationPolicyConfigType = "json"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -876,6 +878,7 @@ func (u *EventGatewayConsumeSchemaValidationPolicyConfig) UnmarshalJSON(data []b
 	}
 	return nil
 }
+
 // EventGatewayConsumeSchemaValidationPolicyJSONConfig The configuration of the
 // consume schema validation policy when using JSON parsing without schema.
 type EventGatewayConsumeSchemaValidationPolicyJSONConfig struct {
@@ -942,7 +945,6 @@ type EventGatewayConsumeSchemaValidationPolicyJSONConfig struct {
 
 // EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry struct {
 	// Type designates the type of configuration.
 	//
@@ -966,7 +968,7 @@ type EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType strin
 
 // EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType values.
 const (
-	EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeID EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType = "id"
+	EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeID   EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType = "id"
 	EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeName EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType = "name"
 )
 
@@ -1039,6 +1041,7 @@ func (u *EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry) Unma
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayConsumeSchemaValidationPolicyJSONConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -1124,7 +1127,6 @@ type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig struct {
 
 // EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry struct {
 	// Type designates the type of configuration.
 	//
@@ -1148,7 +1150,7 @@ type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry
 
 // EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType values.
 const (
-	EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "id"
+	EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID   EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "id"
 	EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "name"
 )
 
@@ -1221,6 +1223,7 @@ func (u *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegi
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -1356,7 +1359,7 @@ type EventGatewayEncryptConfigEncryptionKeyType string
 
 // EventGatewayEncryptConfigEncryptionKeyType values.
 const (
-	EventGatewayEncryptConfigEncryptionKeyTypeAWS EventGatewayEncryptConfigEncryptionKeyType = "aws"
+	EventGatewayEncryptConfigEncryptionKeyTypeAWS    EventGatewayEncryptConfigEncryptionKeyType = "aws"
 	EventGatewayEncryptConfigEncryptionKeyTypeStatic EventGatewayEncryptConfigEncryptionKeyType = "static"
 )
 
@@ -1429,6 +1432,7 @@ func (u *EventGatewayEncryptConfigEncryptionKey) UnmarshalJSON(data []byte) erro
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayEncryptConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -1489,7 +1493,6 @@ type EventGatewayEncryptPolicy struct {
 
 // EventGatewayKeySource represents a union type for EventGatewayKeySource.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayKeySource struct {
 	// Type designates the type of configuration.
 	//
@@ -1513,7 +1516,7 @@ type EventGatewayKeySourceType string
 
 // EventGatewayKeySourceType values.
 const (
-	EventGatewayKeySourceTypeAWS EventGatewayKeySourceType = "aws"
+	EventGatewayKeySourceTypeAWS    EventGatewayKeySourceType = "aws"
 	EventGatewayKeySourceTypeStatic EventGatewayKeySourceType = "static"
 )
 
@@ -1586,6 +1589,7 @@ func (u *EventGatewayKeySource) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // EventGatewayListenerPort is a type alias.
 //
 // +kubebuilder:validation:XIntOrString
@@ -1600,7 +1604,6 @@ type EventGatewayListenerPortString string
 
 // EventGatewayModifyHeaderAction represents a union type for EventGatewayModifyHeaderAction.
 // Only one of the fields should be set based on the Op.
-//
 type EventGatewayModifyHeaderAction struct {
 	// Op designates the type of configuration.
 	//
@@ -1625,7 +1628,7 @@ type EventGatewayModifyHeaderActionType string
 // EventGatewayModifyHeaderActionType values.
 const (
 	EventGatewayModifyHeaderActionTypeRemove EventGatewayModifyHeaderActionType = "remove"
-	EventGatewayModifyHeaderActionTypeSet EventGatewayModifyHeaderActionType = "set"
+	EventGatewayModifyHeaderActionTypeSet    EventGatewayModifyHeaderActionType = "set"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -1697,6 +1700,7 @@ func (u *EventGatewayModifyHeaderAction) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // EventGatewayModifyHeaderRemoveAction An action that removes a header by key.
 type EventGatewayModifyHeaderRemoveAction struct {
 	// The key of the header to remove.
@@ -1871,7 +1875,6 @@ type EventGatewayParsedRecordDecryptionSelector struct {
 
 // EventGatewayParsedRecordDecryptionSelectorPaths represents a union type for paths.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayParsedRecordDecryptionSelectorPaths struct {
 	// Type designates the type of configuration.
 	//
@@ -1895,7 +1898,7 @@ type EventGatewayParsedRecordDecryptionSelectorPathsType string
 
 // EventGatewayParsedRecordDecryptionSelectorPathsType values.
 const (
-	EventGatewayParsedRecordDecryptionSelectorPathsTypeArray EventGatewayParsedRecordDecryptionSelectorPathsType = "array"
+	EventGatewayParsedRecordDecryptionSelectorPathsTypeArray      EventGatewayParsedRecordDecryptionSelectorPathsType = "array"
 	EventGatewayParsedRecordDecryptionSelectorPathsTypeExpression EventGatewayParsedRecordDecryptionSelectorPathsType = "expression"
 )
 
@@ -1968,6 +1971,7 @@ func (u *EventGatewayParsedRecordDecryptionSelectorPaths) UnmarshalJSON(data []b
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayParsedRecordDecryptionSelector) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -1992,6 +1996,7 @@ type EventGatewayParsedRecordEncryptFieldsConfig struct {
 	// Selects which fields to encrypt and with what keys.
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=256
 	EncryptFields []EventGatewayParsedRecordEncryptionSelector `json:"encryptFields,omitempty"`
 	// Describes how to handle a failure in a policy applied to produced records.
 	// * `reject` - rejects the record batch.
@@ -2078,7 +2083,6 @@ type EventGatewayParsedRecordEncryptionSelector struct {
 
 // EventGatewayParsedRecordEncryptionSelectorEncryptionKey represents a union type for encryption_key.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayParsedRecordEncryptionSelectorEncryptionKey struct {
 	// Type designates the type of configuration.
 	//
@@ -2102,7 +2106,7 @@ type EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType string
 
 // EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType values.
 const (
-	EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeAWS EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType = "aws"
+	EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeAWS    EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType = "aws"
 	EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeStatic EventGatewayParsedRecordEncryptionSelectorEncryptionKeyType = "static"
 )
 
@@ -2175,9 +2179,9 @@ func (u *EventGatewayParsedRecordEncryptionSelectorEncryptionKey) UnmarshalJSON(
 	}
 	return nil
 }
+
 // EventGatewayParsedRecordEncryptionSelectorPaths represents a union type for paths.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayParsedRecordEncryptionSelectorPaths struct {
 	// Type designates the type of configuration.
 	//
@@ -2201,7 +2205,7 @@ type EventGatewayParsedRecordEncryptionSelectorPathsType string
 
 // EventGatewayParsedRecordEncryptionSelectorPathsType values.
 const (
-	EventGatewayParsedRecordEncryptionSelectorPathsTypeArray EventGatewayParsedRecordEncryptionSelectorPathsType = "array"
+	EventGatewayParsedRecordEncryptionSelectorPathsTypeArray      EventGatewayParsedRecordEncryptionSelectorPathsType = "array"
 	EventGatewayParsedRecordEncryptionSelectorPathsTypeExpression EventGatewayParsedRecordEncryptionSelectorPathsType = "expression"
 )
 
@@ -2274,6 +2278,7 @@ func (u *EventGatewayParsedRecordEncryptionSelectorPaths) UnmarshalJSON(data []b
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayParsedRecordEncryptionSelector) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -2377,7 +2382,6 @@ func (s *EventGatewayProduceSchemaValidationPolicy) UnmarshalJSON(data []byte) e
 
 // EventGatewayProduceSchemaValidationPolicyConfig represents a union type for EventGatewayProduceSchemaValidationPolicyConfig.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayProduceSchemaValidationPolicyConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -2402,7 +2406,7 @@ type EventGatewayProduceSchemaValidationPolicyConfigType string
 // EventGatewayProduceSchemaValidationPolicyConfigType values.
 const (
 	EventGatewayProduceSchemaValidationPolicyConfigTypeSchemaRegistry EventGatewayProduceSchemaValidationPolicyConfigType = "confluentSchemaRegistry"
-	EventGatewayProduceSchemaValidationPolicyConfigTypeJSON EventGatewayProduceSchemaValidationPolicyConfigType = "json"
+	EventGatewayProduceSchemaValidationPolicyConfigTypeJSON           EventGatewayProduceSchemaValidationPolicyConfigType = "json"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -2474,6 +2478,7 @@ func (u *EventGatewayProduceSchemaValidationPolicyConfig) UnmarshalJSON(data []b
 	}
 	return nil
 }
+
 // EventGatewayProduceSchemaValidationPolicyJSONConfig The configuration of the
 // produce schema validation policy when using JSON parsing without schema.
 type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
@@ -2537,7 +2542,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 
 // EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry struct {
 	// Type designates the type of configuration.
 	//
@@ -2561,7 +2565,7 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType strin
 
 // EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType values.
 const (
-	EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeID EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType = "id"
+	EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeID   EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType = "id"
 	EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeName EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType = "name"
 )
 
@@ -2634,6 +2638,7 @@ func (u *EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry) Unma
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayProduceSchemaValidationPolicyJSONConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -2716,7 +2721,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 
 // EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
 // Only one of the fields should be set based on the Type.
-//
 type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry struct {
 	// Type designates the type of configuration.
 	//
@@ -2740,7 +2744,7 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry
 
 // EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType values.
 const (
-	EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "id"
+	EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID   EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "id"
 	EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "name"
 )
 
@@ -2813,6 +2817,7 @@ func (u *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegi
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -2926,6 +2931,7 @@ type EventGatewayTLSListenerPolicyConfig struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=1
 	Certificates []TLSCertificate `json:"certificates,omitempty"`
 	// Configures mutual TLS (mTLS) client certificate verification.
 	// When set, the gateway
@@ -2981,6 +2987,90 @@ type EventGatewayTLSListenerPolicyConfigClientAuthentication struct {
 	//
 	// +required
 	TLSTrustBundles []TLSTrustBundleReference `json:"tlsTrustBundles,omitempty"`
+}
+
+// FetchKongIdentityPrincipal Fetches principal metadata from Kong Identity
+// after successful authentication.
+// The principal is looked up by a custom key matched against the authenticated
+// identity.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type FetchKongIdentityPrincipal struct {
+	// Kong Identity directory to use for principal lookup.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Directory string `json:"directory,omitzero"`
+	// Behavior when the Kong Identity principal lookup fails.
+	// * `error` - fail the authentication if the principal lookup fails.
+	// * `ignore` - proceed without principal metadata if the lookup fails.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;ignore
+	FailureMode FetchKongIdentityPrincipalFailureMode `json:"failureMode,omitzero"`
+	// Defines how to look up the principal in Kong Identity.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	FetchBy FetchKongIdentityPrincipalFetchBy `json:"fetchBy,omitzero"`
+}
+
+// FetchKongIdentityPrincipalFailureMode Behavior when the Kong Identity
+// principal lookup fails.
+// * `error` - fail the authentication if the principal lookup fails.
+// * `ignore` - proceed without principal metadata if the lookup fails.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type FetchKongIdentityPrincipalFailureMode string
+
+// FetchKongIdentityPrincipalFetchBy Defines how to look up the principal in
+// Kong Identity.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type FetchKongIdentityPrincipalFetchBy struct {
+	// The metadata key in Kong Identity to match the authenticated identity
+	// against.
+	// Value for the lookup is a `username` in case of `sasl_plain` or
+	// `sasl_scram`.
+	// In case of `client_certificate` it's a principal mapped by the listener
+	// TLSServer policy.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Key string `json:"key,omitzero"`
+}
+
+// FetchKongIdentityPrincipalOauthBearer Fetches principal metadata from Kong
+// Identity after successful OAUTHBEARER authentication.
+// The principal is looked up by the iss and sub claims from the JWT token.
+//
+// **Requires a minimum runtime version of `1.2`**.
+type FetchKongIdentityPrincipalOauthBearer struct {
+	// Kong Identity directory to use for principal lookup.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Directory string `json:"directory,omitzero"`
+	// Behavior when the Kong Identity principal lookup fails.
+	// * `error` - fail the authentication if the principal lookup fails.
+	// * `ignore` - proceed without principal metadata if the lookup fails.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;ignore
+	FailureMode FetchKongIdentityPrincipalFailureMode `json:"failureMode,omitzero"`
 }
 
 // ForwardToClusterByPortMappingConfig The configuration to forward request to
@@ -3169,7 +3259,6 @@ type ForwardToVirtualClusterPolicy struct {
 
 // ForwardToVirtualClusterPolicyConfig represents a union type for config.
 // Only one of the fields should be set based on the Type.
-//
 type ForwardToVirtualClusterPolicyConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -3194,7 +3283,7 @@ type ForwardToVirtualClusterPolicyConfigType string
 // ForwardToVirtualClusterPolicyConfigType values.
 const (
 	ForwardToVirtualClusterPolicyConfigTypePortMapping ForwardToVirtualClusterPolicyConfigType = "portMapping"
-	ForwardToVirtualClusterPolicyConfigTypeSNI ForwardToVirtualClusterPolicyConfigType = "sni"
+	ForwardToVirtualClusterPolicyConfigTypeSNI         ForwardToVirtualClusterPolicyConfigType = "sni"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -3266,6 +3355,7 @@ func (u *ForwardToVirtualClusterPolicyConfig) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *ForwardToVirtualClusterPolicy) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -3338,7 +3428,6 @@ type ProduceFailureMode string
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
 //
-//
 // to help to identify the clients violating schema.
 type ProduceKeyValidationAction string
 
@@ -3346,7 +3435,6 @@ type ProduceKeyValidationAction string
 // valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
-//
 //
 // to help to identify the clients violating schema.
 type ProduceValueValidationAction string
@@ -3403,6 +3491,7 @@ type TLSTrustBundleReference struct {
 	// +optional
 	Name *TLSTrustBundleName `json:"name,omitempty"`
 }
+
 // TLSTrustBundleReferenceByID is a type alias.
 type TLSTrustBundleReferenceByID struct {
 }
@@ -3437,7 +3526,6 @@ type TLSVersionRange struct {
 // the gateway.
 // - `enforce_on_gateway` means the gateway enforces its own ACL policies for
 // this virtual cluster
-//
 //
 // and does not forward ACL-related commands to the backend cluster.
 // Note that if there are no ACL policies configured, all access is denied.
@@ -3480,6 +3568,15 @@ type VirtualClusterAuthenticationClaimsMapping struct {
 //
 // **Requires a minimum runtime version of `1.1`**.
 type VirtualClusterAuthenticationClientCertificate struct {
+	// Fetches principal metadata from Kong Identity after successful
+	// authentication.
+	// The principal is looked up by a custom key matched against the authenticated
+	// identity.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	FetchKongIdentityPrincipal FetchKongIdentityPrincipal `json:"fetchKongIdentityPrincipal,omitzero"`
 }
 
 // VirtualClusterAuthenticationJWKS JSON Web Key Set configuration for verifying
@@ -3512,6 +3609,14 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	//
 	// +optional
 	ClaimsMapping VirtualClusterAuthenticationClaimsMapping `json:"claimsMapping,omitzero"`
+	// Fetches principal metadata from Kong Identity after successful OAUTHBEARER
+	// authentication.
+	// The principal is looked up by the iss and sub claims from the JWT token.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	FetchKongIdentityPrincipal FetchKongIdentityPrincipalOauthBearer `json:"fetchKongIdentityPrincipal,omitzero"`
 	// JSON Web Key Set configuration for verifying token signatures.
 	//
 	// +optional
@@ -3577,6 +3682,15 @@ type VirtualClusterAuthenticationPrincipal struct {
 // VirtualClusterAuthenticationSaslPlain SASL/PLAIN authentication scheme for
 // the virtual cluster containing principals with username and password.
 type VirtualClusterAuthenticationSaslPlain struct {
+	// Fetches principal metadata from Kong Identity after successful
+	// authentication.
+	// The principal is looked up by a custom key matched against the authenticated
+	// identity.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	FetchKongIdentityPrincipal FetchKongIdentityPrincipal `json:"fetchKongIdentityPrincipal,omitzero"`
 	// The mediation type for SASL/PLAIN authentication.
 	//
 	// +required
@@ -3601,11 +3715,19 @@ type VirtualClusterAuthenticationSaslScram struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=sha256;sha512
 	Algorithm string `json:"algorithm,omitzero"`
+	// Fetches principal metadata from Kong Identity after successful
+	// authentication.
+	// The principal is looked up by a custom key matched against the authenticated
+	// identity.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	FetchKongIdentityPrincipal FetchKongIdentityPrincipal `json:"fetchKongIdentityPrincipal,omitzero"`
 }
 
 // VirtualClusterAuthenticationScheme represents a union type for VirtualClusterAuthenticationScheme.
 // Only one of the fields should be set based on the Type.
-//
 type VirtualClusterAuthenticationScheme struct {
 	// Type designates the type of configuration.
 	//
@@ -3641,11 +3763,11 @@ type VirtualClusterAuthenticationSchemeType string
 
 // VirtualClusterAuthenticationSchemeType values.
 const (
-	VirtualClusterAuthenticationSchemeTypeAnonymous VirtualClusterAuthenticationSchemeType = "anonymous"
+	VirtualClusterAuthenticationSchemeTypeAnonymous         VirtualClusterAuthenticationSchemeType = "anonymous"
 	VirtualClusterAuthenticationSchemeTypeClientCertificate VirtualClusterAuthenticationSchemeType = "clientCertificate"
-	VirtualClusterAuthenticationSchemeTypeOauthBearer VirtualClusterAuthenticationSchemeType = "oauthBearer"
-	VirtualClusterAuthenticationSchemeTypeSaslPlain VirtualClusterAuthenticationSchemeType = "saslPlain"
-	VirtualClusterAuthenticationSchemeTypeSaslScram VirtualClusterAuthenticationSchemeType = "saslScram"
+	VirtualClusterAuthenticationSchemeTypeOauthBearer       VirtualClusterAuthenticationSchemeType = "oauthBearer"
+	VirtualClusterAuthenticationSchemeTypeSaslPlain         VirtualClusterAuthenticationSchemeType = "saslPlain"
+	VirtualClusterAuthenticationSchemeTypeSaslScram         VirtualClusterAuthenticationSchemeType = "saslScram"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -3771,6 +3893,7 @@ func (u *VirtualClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // VirtualClusterAuthenticationValidate Validation rules.
 type VirtualClusterAuthenticationValidate struct {
 	// List of expected audience values.
@@ -3855,7 +3978,6 @@ type VirtualClusterNamespaceAdditionalProperties struct {
 
 // VirtualClusterNamespaceIDSelector represents a union type for VirtualClusterNamespaceIDSelector.
 // Only one of the fields should be set based on the Type.
-//
 type VirtualClusterNamespaceIDSelector struct {
 	// Type designates the type of configuration.
 	//
@@ -3880,7 +4002,7 @@ type VirtualClusterNamespaceIDSelectorType string
 // VirtualClusterNamespaceIDSelectorType values.
 const (
 	VirtualClusterNamespaceIDSelectorTypeExactList VirtualClusterNamespaceIDSelectorType = "exactList"
-	VirtualClusterNamespaceIDSelectorTypeGlob VirtualClusterNamespaceIDSelectorType = "glob"
+	VirtualClusterNamespaceIDSelectorTypeGlob      VirtualClusterNamespaceIDSelectorType = "glob"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -3952,6 +4074,7 @@ func (u *VirtualClusterNamespaceIDSelector) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 // VirtualClusterNamespaceIDSelectorExactList is a type alias.
 type VirtualClusterNamespaceIDSelectorExactList struct {
 	//
@@ -3983,7 +4106,6 @@ type VirtualClusterNamespaceIDSelectorGlob struct {
 
 // VirtualClusterNamespaceTopicSelector represents a union type for VirtualClusterNamespaceTopicSelector.
 // Only one of the fields should be set based on the Type.
-//
 type VirtualClusterNamespaceTopicSelector struct {
 	// Type designates the type of configuration.
 	//
@@ -4008,7 +4130,7 @@ type VirtualClusterNamespaceTopicSelectorType string
 // VirtualClusterNamespaceTopicSelectorType values.
 const (
 	VirtualClusterNamespaceTopicSelectorTypeExactList VirtualClusterNamespaceTopicSelectorType = "exactList"
-	VirtualClusterNamespaceTopicSelectorTypeGlob VirtualClusterNamespaceTopicSelectorType = "glob"
+	VirtualClusterNamespaceTopicSelectorTypeGlob      VirtualClusterNamespaceTopicSelectorType = "glob"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -4080,6 +4202,7 @@ func (u *VirtualClusterNamespaceTopicSelector) UnmarshalJSON(data []byte) error 
 	}
 	return nil
 }
+
 // VirtualClusterNamespaceTopicSelectorExactList is a type alias.
 type VirtualClusterNamespaceTopicSelectorExactList struct {
 	// How to inform the user about conflicts where multiple backend topics would
@@ -4134,6 +4257,7 @@ type VirtualClusterReference struct {
 	// +optional
 	Name *VirtualClusterName `json:"name,omitempty"`
 }
+
 // VirtualClusterReferenceByID Reference a virtual cluster by its unique
 // identifier.
 type VirtualClusterReferenceByID struct {
@@ -4149,10 +4273,8 @@ type VirtualClusterReferenceByName struct {
 	Name VirtualClusterName `json:"name,omitzero"`
 }
 
-// VirtualClusterTopicAlias **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// A topic alias maps an alias name to a namespace-visible topic name.
+// VirtualClusterTopicAlias A topic alias maps an alias name to a
+// namespace-visible topic name.
 // Clients can produce to, consume from, and discover the topic under the alias
 // name.
 // The original topic name remains accessible.

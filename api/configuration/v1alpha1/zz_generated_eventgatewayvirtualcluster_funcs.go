@@ -3,11 +3,12 @@
 package v1alpha1
 
 import (
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *EventGatewayVirtualCluster) GetKonnectLabels() map[string]string {
 	if obj.Spec.APISpec.Labels == nil {
@@ -50,6 +51,12 @@ func (obj *EventGatewayVirtualCluster) SetKonnectID(id string) {
 // GetKonnectID returns the Konnect ID in the EventGatewayVirtualCluster status.
 func (obj *EventGatewayVirtualCluster) GetKonnectID() string {
 	return obj.Status.ID
+}
+
+// GetKonnectName returns the EventGatewayVirtualCluster's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayVirtualCluster) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
 }
 
 // GetTypeName returns the EventGatewayVirtualCluster Kind name.
@@ -101,6 +108,11 @@ func (obj *EventGatewayVirtualCluster) GetEventGatewayBackendClusterRef() common
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayVirtualCluster) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayBackendClusterRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayVirtualCluster) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.EventGatewayBackendClusterRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

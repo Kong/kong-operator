@@ -493,6 +493,16 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 
 	apiAuthRef, err := GetAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
+		// Entities such as KongTargets resolve API authentication through their
+		// parent resource. The parent ControlPlane can disappear between the
+		// reference checks above and this lookup. In that case the ControlPlane's
+		// deletion has already removed its Konnect entities, so keeping the child
+		// cleanup finalizer would only leave the Kubernetes resource terminating
+		// forever.
+		if handled, res, finalizerErr := removeCleanupFinalizerIfControlPlaneIsGone(ctx, r.Client, ent, err); handled {
+			return res, finalizerErr
+		}
+
 		if crossnamespace.IsReferenceNotGranted(err) {
 			log.Info(logger, "cross-namespace reference to KonnectAPIAuthConfiguration is not granted", "error", err.Error())
 			if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, konnectv1alpha1.KonnectAPIAuthConfiguration{}, apiAuthRef, err, programmedFalseCondition); requeue {
@@ -798,6 +808,35 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	return ctrl.Result{
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+func removeCleanupFinalizerIfControlPlaneIsGone[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	cl client.Client,
+	ent TEnt,
+	err error,
+) (bool, ctrl.Result, error) {
+	if _, ok := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err); !ok {
+		return false, ctrl.Result{}, nil
+	}
+
+	if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+		if err := cl.Update(ctx, ent); err != nil {
+			switch {
+			case apierrors.IsConflict(err):
+				return true, ctrl.Result{Requeue: true}, nil
+			case apierrors.IsNotFound(err):
+				return true, ctrl.Result{}, nil
+			default:
+				return true, ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+			}
+		}
+	}
+
+	return true, ctrl.Result{}, nil
 }
 
 // reconcilePendingKonnectID reconciles the cached view of the object with the

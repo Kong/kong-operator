@@ -74,6 +74,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 
 	log.Trace(logger, "reconciling DataPlane resource")
 
+	warnOperatorManagedEnvVars(ctx, logger, dataplane, r.Client)
+
 	if k8sutils.InitReady(dataplane) {
 		if patched, err := patchDataPlaneStatus(ctx, r.Client, logger, dataplane); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed initializing DataPlane Ready condition: %w", err)

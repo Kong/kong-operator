@@ -96,6 +96,8 @@ func TestBuildKongCertificate(t *testing.T) {
 		certRef         gatewayv1.SecretObjectReference
 		secretNamespace string
 		controlPlaneRef *commonv1alpha1.ControlPlaneRef
+		tags            []string
+		wantTags        commonv1alpha1.Tags
 		expectError     bool
 	}{
 		{
@@ -170,6 +172,32 @@ func TestBuildKongCertificate(t *testing.T) {
 			},
 			expectError: false,
 		},
+		{
+			name: "builds certificate with tags from Secret",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tagged-gateway",
+					Namespace: "default",
+				},
+			},
+			listener: &gwtypes.Listener{
+				Name: "https",
+				Port: 443,
+			},
+			certRef: gatewayv1.SecretObjectReference{
+				Name: "tls-secret",
+			},
+			secretNamespace: "default",
+			controlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: "test-cp",
+				},
+			},
+			tags:        []string{"cert-tag"},
+			wantTags:    commonv1alpha1.Tags{"cert-tag"},
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -178,7 +206,7 @@ func TestBuildKongCertificate(t *testing.T) {
 			converter := newGatewayConverter(tt.gateway, fakeClient).(*gatewayConverter)
 			converter.controlPlaneRef = tt.controlPlaneRef
 
-			cert, err := converter.buildKongCertificate(tt.listener, tt.certRef, tt.secretNamespace)
+			cert, err := converter.buildKongCertificate(tt.listener, tt.certRef, tt.secretNamespace, tt.tags)
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -192,6 +220,7 @@ func TestBuildKongCertificate(t *testing.T) {
 			require.Equal(t, string(tt.certRef.Name), cert.Spec.SecretRef.Name)
 			require.Equal(t, tt.secretNamespace, *cert.Spec.SecretRef.Namespace)
 			require.Equal(t, tt.controlPlaneRef.KonnectNamespacedRef.Name, cert.Spec.ControlPlaneRef.KonnectNamespacedRef.Name)
+			require.Equal(t, tt.wantTags, cert.Spec.Tags)
 
 			// Verify owner reference.
 			require.Len(t, cert.OwnerReferences, 1)
@@ -224,9 +253,9 @@ func TestBuildKongCertificate_SamePortDifferentListenersDifferentNames(t *testin
 	listenerOne := &gwtypes.Listener{Name: "https-1", Port: 443}
 	listenerTwo := &gwtypes.Listener{Name: "https-2", Port: 443}
 
-	certOne, err := converter.buildKongCertificate(listenerOne, certRef, "default")
+	certOne, err := converter.buildKongCertificate(listenerOne, certRef, "default", nil)
 	require.NoError(t, err)
-	certTwo, err := converter.buildKongCertificate(listenerTwo, certRef, "default")
+	certTwo, err := converter.buildKongCertificate(listenerTwo, certRef, "default", nil)
 	require.NoError(t, err)
 
 	assert.NotEqual(t, certOne.Name, certTwo.Name)
@@ -238,6 +267,8 @@ func TestBuildKongSNI(t *testing.T) {
 		gateway     *gwtypes.Gateway
 		listener    *gwtypes.Listener
 		kongCert    *configurationv1alpha1.KongCertificate
+		tags        []string
+		wantTags    commonv1alpha1.Tags
 		expectError bool
 		expectedSNI string
 	}{
@@ -328,6 +359,30 @@ func TestBuildKongSNI(t *testing.T) {
 			expectError: false,
 			expectedSNI: "*.example.com",
 		},
+		{
+			name: "builds SNI with tags from Secret",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tagged-gateway",
+					Namespace: "default",
+				},
+			},
+			listener: &gwtypes.Listener{
+				Name:     "https",
+				Port:     443,
+				Hostname: new(gatewayv1.Hostname("example.com")),
+			},
+			kongCert: &configurationv1alpha1.KongCertificate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cert-tagged-gateway-443",
+					Namespace: "default",
+				},
+			},
+			tags:        []string{"cert-tag"},
+			wantTags:    commonv1alpha1.Tags{"cert-tag"},
+			expectError: false,
+			expectedSNI: "example.com",
+		},
 	}
 
 	for _, tt := range tests {
@@ -335,7 +390,7 @@ func TestBuildKongSNI(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().Build()
 			converter := newGatewayConverter(tt.gateway, fakeClient).(*gatewayConverter)
 
-			sni, err := converter.buildKongSNI(tt.listener, tt.kongCert)
+			sni, err := converter.buildKongSNI(tt.listener, tt.kongCert, tt.tags)
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -347,6 +402,7 @@ func TestBuildKongSNI(t *testing.T) {
 			require.Equal(t, tt.gateway.Namespace, sni.Namespace)
 			require.Equal(t, tt.expectedSNI, sni.Spec.Name)
 			require.Equal(t, tt.kongCert.Name, sni.Spec.CertificateRef.Name)
+			require.Equal(t, tt.wantTags, sni.Spec.Tags)
 
 			// Verify owner reference.
 			require.Len(t, sni.OwnerReferences, 1)
@@ -718,6 +774,113 @@ func TestProcessListenerCertificate(t *testing.T) {
 			expectError: true,
 			validateOutput: func(t *testing.T, objects []client.Object) {
 				require.Empty(t, objects, "should not create resources when ReferenceGrant check fails")
+			},
+		},
+		{
+			name: "tags KongCertificate and KongSNI from the Secret's konghq.com/tags annotation",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+			},
+			listener: &gwtypes.Listener{
+				Name:     "https",
+				Port:     443,
+				Hostname: new(gatewayv1.Hostname("example.com")),
+			},
+			certRef: gatewayv1.SecretObjectReference{
+				Name: "tls-secret",
+			},
+			setupMocks: func(t *testing.T, cl client.Client) {
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tls-secret",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"konghq.com/tags": "cert-tag",
+						},
+					},
+					Type: corev1.SecretTypeTLS,
+					Data: map[string][]byte{
+						"tls.crt": cert,
+						"tls.key": key,
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), secret))
+			},
+			controlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: "test-cp",
+				},
+			},
+			expectError: false,
+			validateOutput: func(t *testing.T, objects []client.Object) {
+				require.Len(t, objects, 2)
+				for _, obj := range objects {
+					switch o := obj.(type) {
+					case *configurationv1alpha1.KongCertificate:
+						require.Equal(t, commonv1alpha1.Tags{"cert-tag"}, o.Spec.Tags, "KongCertificate should carry tags from the Secret")
+					case *configurationv1alpha1.KongSNI:
+						require.Equal(t, commonv1alpha1.Tags{"cert-tag"}, o.Spec.Tags, "KongSNI should carry tags from the Secret")
+					}
+				}
+			},
+		},
+		{
+			// Secret-only invariant: tags placed on the Gateway (not the Secret) must NOT
+			// leak into the KongCertificate/KongSNI produced from the listener's TLS Secret.
+			name: "does not tag KongCertificate/KongSNI from Gateway annotations (Secret-only)",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"konghq.com/tags": "gateway-tag",
+					},
+				},
+			},
+			listener: &gwtypes.Listener{
+				Name:     "https",
+				Port:     443,
+				Hostname: new(gatewayv1.Hostname("example.com")),
+			},
+			certRef: gatewayv1.SecretObjectReference{
+				Name: "tls-secret",
+			},
+			setupMocks: func(t *testing.T, cl client.Client) {
+				// Secret has no konghq.com/tags annotation.
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tls-secret",
+						Namespace: "default",
+					},
+					Type: corev1.SecretTypeTLS,
+					Data: map[string][]byte{
+						"tls.crt": cert,
+						"tls.key": key,
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), secret))
+			},
+			controlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: "test-cp",
+				},
+			},
+			expectError: false,
+			validateOutput: func(t *testing.T, objects []client.Object) {
+				require.Len(t, objects, 2)
+				for _, obj := range objects {
+					switch o := obj.(type) {
+					case *configurationv1alpha1.KongCertificate:
+						require.Nil(t, o.Spec.Tags, "KongCertificate must not inherit tags from the Gateway")
+					case *configurationv1alpha1.KongSNI:
+						require.Nil(t, o.Spec.Tags, "KongSNI must not inherit tags from the Gateway")
+					}
+				}
 			},
 		},
 	}

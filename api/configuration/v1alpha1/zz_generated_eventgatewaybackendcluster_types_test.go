@@ -53,12 +53,12 @@ func TestEventGatewayBackendClusterAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 	t.Parallel()
 
 	tests := []struct {
-		name   string
+		name    string
 		payload []byte
-		assert func(*testing.T, EventGatewayBackendClusterAPISpec)
+		assert  func(*testing.T, EventGatewayBackendClusterAPISpec)
 	}{
 		{
-			name: "Authentication/anonymous",
+			name:    "Authentication/anonymous",
 			payload: []byte("{\"authentication\":{\"type\":\"anonymous\",\"anonymous\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayBackendClusterAPISpec) {
 				t.Helper()
@@ -74,7 +74,7 @@ func TestEventGatewayBackendClusterAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 			},
 		},
 		{
-			name: "Authentication/sasl_plain",
+			name:    "Authentication/sasl_plain",
 			payload: []byte("{\"authentication\":{\"type\":\"saslPlain\",\"saslPlain\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayBackendClusterAPISpec) {
 				t.Helper()
@@ -90,7 +90,7 @@ func TestEventGatewayBackendClusterAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 			},
 		},
 		{
-			name: "Authentication/sasl_scram",
+			name:    "Authentication/sasl_scram",
 			payload: []byte("{\"authentication\":{\"type\":\"saslScram\",\"saslScram\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayBackendClusterAPISpec) {
 				t.Helper()

@@ -4,13 +4,13 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -29,15 +29,15 @@ func testGeneratedPortalForSDKOps() *konnectv1alpha1.Portal {
 		},
 		Spec: konnectv1alpha1.PortalSpec{
 			APISpec: konnectv1alpha1.PortalAPISpec{
-				AuthenticationEnabled: "Enabled",
+				AuthenticationEnabled:   "Enabled",
 				AutoApproveApplications: "Enabled",
-				AutoApproveDevelopers: "Enabled",
-				DefaultAPIVisibility: "test-value",
-				DefaultPageVisibility: "test-value",
-				Description: new("test-value"),
-				DisplayName: "test-value",
-				Labels: konnectv1alpha1.LabelsUpdate{"test-key": "test-value"},
-				Name: "test-value",
+				AutoApproveDevelopers:   "Enabled",
+				DefaultAPIVisibility:    "public",
+				DefaultPageVisibility:   "public",
+				Description:             new("test-value"),
+				DisplayName:             "test-value",
+				Labels:                  konnectv1alpha1.LabelsUpdate{"test-key": "test-value"},
+				Name:                    "test-value",
 				NotificationsDeveloperPiiVisibilityEnabled: "Enabled",
 				RBACEnabled: "Enabled",
 				SiprEnabled: "Enabled",

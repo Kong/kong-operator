@@ -11,10 +11,10 @@ import (
 
 func TestEventGatewayListenerAPISpec_ToCreateEventGatewayListenerRequest(t *testing.T) {
 	spec := &EventGatewayListenerAPISpec{
-		Addresses: []string{"test-value"},
+		Addresses:   []string{"test-value"},
 		Description: "test-value",
-		Labels: Labels{"test-key": "test-value"},
-		Name: "test-value",
+		Labels:      Labels{"test-key": "test-value"},
+		Name:        "test-value",
 	}
 	result, err := spec.ToCreateEventGatewayListenerRequest()
 	require.NoError(t, err)
@@ -34,10 +34,10 @@ func TestEventGatewayListenerAPISpec_ToCreateEventGatewayListenerRequest(t *test
 
 func TestEventGatewayListenerAPISpec_ToUpdateEventGatewayListenerRequest(t *testing.T) {
 	spec := &EventGatewayListenerAPISpec{
-		Addresses: []string{"test-value"},
+		Addresses:   []string{"test-value"},
 		Description: "test-value",
-		Labels: Labels{"test-key": "test-value"},
-		Name: "test-value",
+		Labels:      Labels{"test-key": "test-value"},
+		Name:        "test-value",
 	}
 	result, err := spec.ToUpdateEventGatewayListenerRequest()
 	require.NoError(t, err)

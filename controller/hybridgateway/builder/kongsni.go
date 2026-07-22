@@ -103,6 +103,16 @@ func (b *KongSNIBuilder) WithOwner(owner *gwtypes.Gateway) *KongSNIBuilder {
 	return b
 }
 
+// WithSpecTags sets the tags in the KongSNI spec.
+// A nil or empty slice leaves Spec.Tags unset.
+func (b *KongSNIBuilder) WithSpecTags(tags []string) *KongSNIBuilder {
+	if len(tags) == 0 {
+		return b
+	}
+	b.sni.Spec.Tags = commonv1alpha1.Tags(tags)
+	return b
+}
+
 // Build returns the constructed KongSNI resource and any accumulated errors.
 func (b *KongSNIBuilder) Build() (configurationv1alpha1.KongSNI, error) {
 	if len(b.errors) > 0 {

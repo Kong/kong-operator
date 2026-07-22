@@ -91,9 +91,9 @@ func deleteEventGatewayVirtualClusterPolicy(
 	id := obj.GetKonnectStatus().GetKonnectID()
 
 	_, err := sdk.DeleteEventGatewayVirtualClusterClusterLevelPolicy(ctx, sdkkonnectops.DeleteEventGatewayVirtualClusterClusterLevelPolicyRequest{
-		GatewayID: gatewayID,
+		GatewayID:        gatewayID,
 		VirtualClusterID: virtualClusterID,
-		PolicyID: id,
+		PolicyID:         id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
 		return handleDeleteError(ctx, errWrap, obj)

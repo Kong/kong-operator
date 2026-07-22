@@ -20,6 +20,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
@@ -28,9 +29,11 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	aigwdataplane "github.com/kong/kong-operator/v2/controller/aigateway/dataplane"
 	"github.com/kong/kong-operator/v2/controller/controlplane"
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
+	"github.com/kong/kong-operator/v2/controller/crdschema"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
 	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
 	"github.com/kong/kong-operator/v2/controller/gateway"
@@ -42,6 +45,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/mcpserver"
+	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
@@ -151,7 +155,6 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectGatewayControlPlane(),
 			index.OptionsForKonnectAPIAuthConfiguration(),
 			index.OptionsForKonnectCloudGatewayNetwork(),
-			index.OptionsForKegDataPlane(),
 			index.OptionsForKonnectExtension(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
 		)
@@ -159,10 +162,31 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		indexOptions = append(indexOptions, generatedIndexOptionsForKonnectEntities(cl)...)
 	}
 
+	if cfg.KEGDataPlaneControllerEnabled {
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForKegDataPlane(),
+		)
+	}
+
+	if cfg.AIGatewayDataPlaneControllerEnabled {
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForAIGatewayDataPlane(),
+		)
+	}
+
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
 		cl := mgr.GetClient()
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForMCPServer(cl),
+		)
+	}
+
+	// The crdschema controller (which rebuilds the shared SSA TypeConverter)
+	// is enabled under the same condition as the shared TypeConverterProvider
+	// itself; see modules/manager/run.go.
+	if IsSSAProviderNeeded(cfg) {
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForCRDSchema(),
 		)
 	}
 
@@ -309,6 +333,26 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 					Resource: "konnecteventgateways",
+				},
+			},
+		},
+		{
+			condition: c.AIGatewayDataPlaneControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				{
+					Group:    aigatewayv1alpha1.SchemeGroupVersion.Group,
+					Version:  aigatewayv1alpha1.SchemeGroupVersion.Version,
+					Resource: "aigatewaydataplanes",
+				},
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "aigatewaydataplanecertificates",
+				},
+				{
+					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konnectaigateways",
 				},
 			},
 		},
@@ -484,7 +528,7 @@ func ensureRequiredCRDs(c *Config, checker crdExistenceChecker) error {
 }
 
 // SetupControllers returns a list of ControllerDefs based on config.
-func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Manager) ([]ControllerDef, error) {
+func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Manager, ssaProvider *controllerpkgssa.TypeConverterProvider) ([]ControllerDef, error) {
 	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
 	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 
@@ -700,13 +744,38 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				SecretLabelSelector:      c.SecretLabelSelector,
 				CertTTL:                  c.CertTTL,
+				TypeConverter:            ssaProvider,
+			},
+		},
+		// AIGateway DataPlane controller
+		{
+			Enabled: c.AIGatewayDataPlaneControllerEnabled,
+			Controller: &aigwdataplane.Reconciler{
+				Client:                   mgr.GetClient(),
+				LoggingMode:              c.LoggingMode,
+				ClusterCASecretName:      c.ClusterCASecretName,
+				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				SecretLabelSelector:      c.SecretLabelSelector,
+				CertTTL:                  c.CertTTL,
+				TypeConverter:            ssaProvider,
+			},
+		},
+		// CRD schema reconciler: rebuilds the shared SSA TypeConverter when
+		// relevant CRDs change. Enabled whenever at least one SSA-using
+		// controller is active.
+		{
+			Enabled: ssaProvider != nil,
+			Controller: &crdschema.Reconciler{
+				Client:      mgr.GetClient(),
+				LoggingMode: c.LoggingMode,
+				Provider:    ssaProvider,
 			},
 		},
 	}
 
 	// MCPServer controllers
 	if c.FeatureGates.Enabled(FeatureGateMCPServer) {
-		controllers = append(controllers, newMCPServerControllers(mgr, c, ctrlOpts)...)
+		controllers = append(controllers, newMCPServerControllers(mgr, c, ctrlOpts, ssaProvider)...)
 	}
 
 	// Konnect controllers
@@ -890,7 +959,7 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 	}
 }
 
-func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options) []ControllerDef {
+func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options, ssaProvider *controllerpkgssa.TypeConverterProvider) []ControllerDef {
 	reconcileEventCh := make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
 	sm := mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
 	sdkFactory := sdkops.NewSDKFactory()
@@ -913,6 +982,7 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 				SdkFactory:        sdkFactory,
 				ClusterDomain:     c.ClusterDomain,
 				ReconcileEventCh:  reconcileEventCh,
+				TypeConverter:     ssaProvider,
 			},
 		},
 		{

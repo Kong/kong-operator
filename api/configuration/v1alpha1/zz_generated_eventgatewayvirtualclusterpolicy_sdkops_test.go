@@ -9,16 +9,14 @@ import (
 )
 
 func TestEventGatewayVirtualClusterPolicyAPISpec_ToCreateEventGatewayVirtualClusterClusterLevelPolicyRequest(t *testing.T) {
-	spec := &EventGatewayVirtualClusterPolicyAPISpec{
-	}
+	spec := &EventGatewayVirtualClusterPolicyAPISpec{}
 	result, err := spec.ToCreateEventGatewayVirtualClusterClusterLevelPolicyRequest()
 	require.Error(t, err)
 	require.Nil(t, result)
 }
 
 func TestEventGatewayVirtualClusterPolicyAPISpec_ToUpdateEventGatewayVirtualClusterClusterLevelPolicyRequest(t *testing.T) {
-	spec := &EventGatewayVirtualClusterPolicyAPISpec{
-	}
+	spec := &EventGatewayVirtualClusterPolicyAPISpec{}
 	result, err := spec.ToUpdateEventGatewayVirtualClusterClusterLevelPolicyRequest()
 	require.Error(t, err)
 	require.Nil(t, result)

@@ -46,10 +46,12 @@ func Test_ensureReadyStatus(t *testing.T) {
 
 	tests := []struct {
 		name              string
+		preConditions     []metav1.Condition
 		objects           []client.Object
 		buildClient       func(base client.WithWatch) client.Client
 		wantErr           bool
 		wantReadyStatus   metav1.ConditionStatus
+		wantReason        string
 		wantReplicas      int32
 		wantReadyReplicas int32
 	}{
@@ -90,6 +92,44 @@ func Test_ensureReadyStatus(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			// When a non-Ready condition is already False, Ready must be set to
+			// False/DependenciesNotReady without fetching the Deployment. The GET
+			// interceptor errors to prove the Deployment was never looked up.
+			name: "non-Ready condition False: Ready=False without fetching deployment",
+			preConditions: []metav1.Condition{
+				{
+					Type:               string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
+					Status:             metav1.ConditionFalse,
+					Reason:             "NotFound",
+					Message:            "referenced KonnectEventGateway not found",
+					LastTransitionTime: metav1.Now(),
+				},
+			},
+			buildClient: func(base client.WithWatch) client.Client {
+				return interceptor.NewClient(base, interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						return assert.AnError
+					},
+				})
+			},
+			wantReadyStatus: metav1.ConditionFalse,
+			wantReason:      string(eventgatewayv1alpha1.DependenciesNotReadyReason),
+		},
+		{
+			// When all non-Ready conditions are True, the function falls through to
+			// the Deployment check. With no Deployment present it sets Ready=False.
+			name: "all non-Ready conditions True: falls through to deployment check",
+			preConditions: []metav1.Condition{
+				{
+					Type:               string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
+					Status:             metav1.ConditionTrue,
+					Reason:             string(eventgatewayv1alpha1.KonnectEventGatewayResolvedReason),
+					LastTransitionTime: metav1.Now(),
+				},
+			},
+			wantReadyStatus: metav1.ConditionFalse,
+		},
 	}
 
 	for _, tc := range tests {
@@ -105,6 +145,7 @@ func Test_ensureReadyStatus(t *testing.T) {
 			}
 
 			dp := egdp()
+			dp.Status.Conditions = append(dp.Status.Conditions, tc.preConditions...)
 			err := ensureReadyStatus(context.Background(), cl, dp)
 
 			if tc.wantErr {
@@ -116,6 +157,9 @@ func Test_ensureReadyStatus(t *testing.T) {
 			cond := apimeta.FindStatusCondition(dp.Status.Conditions, string(eventgatewayv1alpha1.ReadyType))
 			require.NotNil(t, cond, "Ready condition must be set")
 			assert.Equal(t, tc.wantReadyStatus, cond.Status)
+			if tc.wantReason != "" {
+				assert.Equal(t, tc.wantReason, cond.Reason)
+			}
 
 			assert.Equal(t, tc.wantReplicas, dp.Status.Replicas)
 			assert.Equal(t, tc.wantReadyReplicas, dp.Status.ReadyReplicas)
@@ -145,7 +189,7 @@ func Test_applyStatus(t *testing.T) {
 	newReconciler := func(cl client.Client, rec *events.FakeRecorder) *Reconciler {
 		return &Reconciler{
 			Client:        cl,
-			typeConverter: tc,
+			TypeConverter: tc,
 			eventRecorder: rec,
 		}
 	}

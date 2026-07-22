@@ -187,7 +187,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 	if updated {
 		if err := r.Update(ctx, ext); err != nil {
 			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 			}
 			// in case the finalizer removal fails because the resource does not exist, ignore the error.
 			if isFinalizerToBeRemoved && apierrors.IsNotFound(err) {
@@ -232,7 +232,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			if updated {
 				if err := r.Update(ctx, ext); err != nil {
 					if apierrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+						return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
 					if apierrors.IsNotFound(err) {
@@ -465,6 +465,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 		}
 		certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] = newMappedIDsStr
 		if err := r.Update(ctx, certificateSecret); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
+			if apierrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -643,7 +649,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			if updated {
 				if err := r.Update(ctx, certificateSecret); err != nil {
 					if apierrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+						return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
 					if apierrors.IsNotFound(err) {

@@ -40,7 +40,7 @@ spec:
     - name: gateway_namespace
       value: ($namespace)
     - name: gateway_image
-      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+      value: (env('GATEWAY_IMAGE'))
     - name: httproute_name_get
       value: method-matching-get
     - name: httproute_name_post

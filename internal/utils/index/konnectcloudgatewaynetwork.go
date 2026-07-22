@@ -27,6 +27,15 @@ func konnectCloudGatewayNetworkAPIAuthConfigurationRef(object client.Object) []s
 	if !ok {
 		return nil
 	}
+	if cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {
+		return nil
+	}
 
-	return []string{cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+	namespace := cp.GetNamespace()
+	if cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace != nil &&
+		*cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace != "" {
+		namespace = *cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace
+	}
+
+	return []string{namespace + "/" + cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
 }

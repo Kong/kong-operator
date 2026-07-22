@@ -1,0 +1,105 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see: https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.com
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+kind: AIGatewayPolicy
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: aigw-agent-policy-prompt-decorator
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: aigw-agent-policy-prompt-decorator
+    displayName: AI Gateway Policy Prompt Decorator
+    type: ai-prompt-decorator
+    enabled: Enabled
+    global: Disabled
+    config:
+      type: "inline"
+      value:
+        llm_format: openai
+        max_request_body_size: 8388608
+        prompts:
+          append: null
+          prepend:
+            - content: "In short words"
+              role: user
+---
+kind: AIGatewayConsumerGroup
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-agent-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: agent-dev-users
+    displayName: Dev Users Group
+---
+kind: AIGatewayAgent
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: sample-ai-agent
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: sample-ai-agent
+    displayName: My AI Agent
+    type: http
+    enabled: Enabled
+    # References to AIGatewayPolicy CRs (by metadata.name) applied to this agent.
+    policies:
+      - name: aigw-agent-policy-prompt-decorator
+    # Access control: allow-list of AIGatewayConsumerGroup
+    # CRs (referenced by metadata.name). The operator resolves each reference to
+    # the referenced CR's Konnect name at reconcile time.
+    access:
+      acls:
+        type: allow
+        allow:
+          allow:
+            - kind: AIGatewayConsumerGroup
+              name: ai-gw-agent-consumer-group
+    config:
+      url: https://my-upstream-agent.example.com
+      route:
+        paths:
+          - /sample-ai-agent
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https

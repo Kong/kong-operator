@@ -57,23 +57,23 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// DataPlane - AIGatewayControlPlane Resolved Condition Constants
+// DataPlane - KonnectAIGateway (controlplane) Resolved Condition Constants
 // -----------------------------------------------------------------------------
 
 const (
-	// AIGatewayControlPlaneResolvedType indicates whether the referenced
-	// AIGatewayControlPlane has been resolved and is Programmed.
-	AIGatewayControlPlaneResolvedType consts.ConditionType = "AIGatewayControlPlaneResolved"
+	// KonnectAIGatewayResolvedType indicates whether the referenced
+	// KonnectAIGateway has been resolved and is Programmed.
+	KonnectAIGatewayResolvedType consts.ConditionType = "KonnectAIGatewayResolved"
 
-	// AIGatewayControlPlaneResolvedReason indicates the AIGatewayControlPlane has
+	// KonnectAIGatewayResolvedReason indicates the KonnectAIGateway has
 	// been resolved successfully.
-	AIGatewayControlPlaneResolvedReason consts.ConditionReason = "Resolved"
-	// AIGatewayControlPlaneNotFoundReason indicates the referenced
-	// AIGatewayControlPlane was not found.
-	AIGatewayControlPlaneNotFoundReason consts.ConditionReason = "NotFound"
-	// AIGatewayControlPlaneNotProgrammedReason indicates the referenced
-	// AIGatewayControlPlane exists but is not yet Programmed on Konnect.
-	AIGatewayControlPlaneNotProgrammedReason consts.ConditionReason = "NotProgrammed"
+	KonnectAIGatewayResolvedReason consts.ConditionReason = "Resolved"
+	// KonnectAIGatewayNotFoundReason indicates the referenced
+	// KonnectAIGateway was not found.
+	KonnectAIGatewayNotFoundReason consts.ConditionReason = "NotFound"
+	// KonnectAIGatewayNotProgrammedReason indicates the referenced
+	// KonnectAIGateway exists but is not yet Programmed on Konnect.
+	KonnectAIGatewayNotProgrammedReason consts.ConditionReason = "NotProgrammed"
 )
 
 // -----------------------------------------------------------------------------
@@ -90,15 +90,15 @@ const (
 	// ResourceUpdatedMessage indicates a resource was updated.
 	ResourceUpdatedMessage = "Resource has been updated"
 
-	// AIGatewayControlPlaneNotFoundMessage indicates the referenced
-	// AIGatewayControlPlane was not found.
-	AIGatewayControlPlaneNotFoundMessage = "Referenced AIGatewayControlPlane not found"
-	// AIGatewayControlPlaneNotProgrammedMessage indicates the referenced
-	// AIGatewayControlPlane is not yet Programmed.
-	AIGatewayControlPlaneNotProgrammedMessage = "Referenced AIGatewayControlPlane is not yet Programmed on Konnect"
-	// AIGatewayControlPlaneResolvedMessage indicates the AIGatewayControlPlane has
+	// KonnectAIGatewayNotFoundMessage indicates the referenced
+	// KonnectAIGateway was not found.
+	KonnectAIGatewayNotFoundMessage = "Referenced KonnectAIGateway not found"
+	// KonnectAIGatewayNotProgrammedMessage indicates the referenced
+	// KonnectAIGateway is not yet Programmed.
+	KonnectAIGatewayNotProgrammedMessage = "Referenced KonnectAIGateway is not yet Programmed on Konnect"
+	// KonnectAIGatewayResolvedMessage indicates the KonnectAIGateway has
 	// been resolved.
-	AIGatewayControlPlaneResolvedMessage = "Referenced AIGatewayControlPlane is resolved and Programmed"
+	KonnectAIGatewayResolvedMessage = "Referenced KonnectAIGateway is resolved and Programmed"
 )
 
 // -----------------------------------------------------------------------------

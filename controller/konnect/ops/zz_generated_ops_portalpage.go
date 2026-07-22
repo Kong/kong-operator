@@ -54,8 +54,8 @@ func updatePortalPage(
 	}
 
 	_, err = sdk.UpdatePortalPage(ctx, sdkkonnectops.UpdatePortalPageRequest{
-		PortalID: parentID,
-		PageID: id,
+		PortalID:                parentID,
+		PageID:                  id,
 		UpdatePortalPageRequest: *req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {

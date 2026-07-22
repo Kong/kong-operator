@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong-mock
+  namespace: kong-aigateway-mock
+  labels: { app: kong-mock }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: kong-mock }
+  template:
+    metadata:
+      labels: { app: kong-mock }
+    spec:
+      containers:
+        - name: kong
+          image: kong:3.9
+          env:
+            - { name: KONG_DATABASE, value: "off" }
+            - { name: KONG_DECLARATIVE_CONFIG, value: "/kong/declarative/kong.yml" }
+            - { name: KONG_PROXY_LISTEN, value: "0.0.0.0:8000" }
+            - { name: KONG_ADMIN_LISTEN, value: "off" }
+            - { name: KONG_STATUS_LISTEN, value: "0.0.0.0:8100" }
+          ports:
+            - containerPort: 8000
+            - containerPort: 8100
+          readinessProbe:
+            httpGet: { path: /status, port: 8100 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
+          volumeMounts:
+            - name: declarative
+              mountPath: /kong/declarative
+      volumes:
+        - name: declarative
+          configMap:
+            name: kong-mock-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-mock
+  namespace: kong-aigateway-mock
+spec:
+  selector: { app: kong-mock }
+  ports:
+    - name: proxy
+      port: 8000
+      targetPort: 8000

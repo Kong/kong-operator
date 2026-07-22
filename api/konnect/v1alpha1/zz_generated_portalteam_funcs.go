@@ -3,9 +3,9 @@
 package v1alpha1
 
 import (
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -22,6 +22,12 @@ func (obj *PortalTeam) SetKonnectID(id string) {
 // GetKonnectID returns the Konnect ID in the PortalTeam status.
 func (obj *PortalTeam) GetKonnectID() string {
 	return obj.Status.ID
+}
+
+// GetKonnectName returns the PortalTeam's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *PortalTeam) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
 }
 
 // GetTypeName returns the PortalTeam Kind name.
@@ -73,6 +79,11 @@ func (obj *PortalTeam) GetPortalRef() commonv1alpha1.ObjectRef {
 // GetParentRef returns the reference to the parent entity.
 func (obj *PortalTeam) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetPortalRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *PortalTeam) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.PortalRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

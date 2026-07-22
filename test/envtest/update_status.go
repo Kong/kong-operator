@@ -18,7 +18,7 @@ import (
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
-func updateKongConsumerStatusWithKonnectID(
+func UpdateKongConsumerStatusWithKonnectID(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -34,7 +34,7 @@ func updateKongConsumerStatusWithKonnectID(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongConsumerGroupStatusWithKonnectID(
+func UpdateKongConsumerGroupStatusWithKonnectID(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -50,7 +50,7 @@ func updateKongConsumerGroupStatusWithKonnectID(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongServiceStatusWithProgrammed(
+func UpdateKongServiceStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -63,13 +63,13 @@ func updateKongServiceStatusWithProgrammed(
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
 	obj.Status.Conditions = []metav1.Condition{
-		programmedCondition(obj.GetGeneration()),
+		ProgrammedCondition(obj.GetGeneration()),
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongRouteStatusWithProgrammed(
+func UpdateKongRouteStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -84,13 +84,13 @@ func updateKongRouteStatusWithProgrammed(
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
 	obj.Status.Conditions = []metav1.Condition{
-		programmedCondition(obj.GetGeneration()),
+		ProgrammedCondition(obj.GetGeneration()),
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongKeySetStatusWithProgrammed(
+func UpdateKongKeySetStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -102,13 +102,13 @@ func updateKongKeySetStatusWithProgrammed(
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
 	obj.Status.Conditions = []metav1.Condition{
-		programmedCondition(obj.GetGeneration()),
+		ProgrammedCondition(obj.GetGeneration()),
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKongUpstreamStatusWithProgrammed(
+func UpdateKongUpstreamStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -121,13 +121,13 @@ func updateKongUpstreamStatusWithProgrammed(
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
 	obj.Status.Conditions = []metav1.Condition{
-		programmedCondition(obj.GetGeneration()),
+		ProgrammedCondition(obj.GetGeneration()),
 	}
 
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func updateKonnectEventGatewayStatusWithProgrammed(
+func UpdateKonnectEventGatewayStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
@@ -144,7 +144,7 @@ func updateKonnectEventGatewayStatusWithProgrammed(
 			OrgID:     "org-id",
 		}
 		obj.Status.Conditions = []metav1.Condition{
-			programmedCondition(obj.GetGeneration()),
+			ProgrammedCondition(obj.GetGeneration()),
 		}
 		assert.NoError(ct, cl.Status().Update(ctx, obj))
 	}, waitTime, tickTime)
@@ -161,7 +161,7 @@ func updateEventGatewayDataPlaneCertificateStatusWithProgrammed(
 			return
 		}
 		obj.Status.Conditions = []metav1.Condition{
-			programmedCondition(obj.GetGeneration()),
+			ProgrammedCondition(obj.GetGeneration()),
 		}
 		assert.NoError(ct, cl.Status().Update(ctx, obj))
 	}, waitTime, tickTime)
@@ -175,7 +175,7 @@ func konnectEntityStatus(id string) konnectv1alpha2.KonnectEntityStatus {
 	}
 }
 
-func programmedCondition(generation int64) metav1.Condition {
+func ProgrammedCondition(generation int64) metav1.Condition {
 	return k8sutils.NewConditionWithGeneration(
 		konnectv1alpha1.KonnectEntityProgrammedConditionType,
 		metav1.ConditionTrue,

@@ -94,9 +94,9 @@ func deleteEventGatewayListenerPolicy(
 	id := obj.GetKonnectStatus().GetKonnectID()
 
 	_, err := sdk.DeleteEventGatewayListenerPolicy(ctx, sdkkonnectops.DeleteEventGatewayListenerPolicyRequest{
-		GatewayID: gatewayID,
+		GatewayID:  gatewayID,
 		ListenerID: eventGatewayListenerID,
-		PolicyID: id,
+		PolicyID:   id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
 		return handleDeleteError(ctx, errWrap, obj)
@@ -118,7 +118,7 @@ func getEventGatewayListenerPolicyForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayListener", Op: GetOp}
 	}
 	resp, err := sdk.ListEventGatewayListenerPolicies(ctx, sdkkonnectops.ListEventGatewayListenerPoliciesRequest{
-		GatewayID: gatewayID,
+		GatewayID:  gatewayID,
 		ListenerID: eventGatewayListenerID,
 	})
 	if err != nil {

@@ -15,7 +15,7 @@ Package v1alpha1 contains API Schema definitions for the aigateway.konghq.com v1
 
 AIGatewayDataPlane is the Schema for the AIGateway data planes API.
 It manages an AI Gateway binary Deployment that connects to Konnect via
-a referenced AIGatewayControlPlane resource.
+a referenced KonnectAIGateway (controlplane) resource.
 
 <!-- ai_gateway_data_plane description placeholder -->
 
@@ -75,7 +75,7 @@ The Type field determines which sub-field is active.
 | Field | Description |
 | --- | --- |
 | `type` _[ControlPlaneRefType](#aigateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced. Currently only konnectNamespacedRef is supported. |
-| `konnectNamespacedRef` _[KonnectNamespacedRef](#aigateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a AIGatewayControlPlane resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#aigateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectAIGateway (controlplane) resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
 
 _Appears in:_
 
@@ -98,7 +98,7 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a AIGatewayControlPlane<br />resource in the same namespace as the DataPlane.<br /> |
+| `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a KonnectAIGateway<br />resource in the same namespace as the DataPlane.<br /> |
 
 #### DeploymentOptions
 
@@ -140,13 +140,13 @@ _Appears in:_
 #### KonnectNamespacedRef
 
 
-KonnectNamespacedRef is a reference to a AIGatewayControlPlane resource in the same namespace.
+KonnectNamespacedRef is a reference to a KonnectAIGateway resource in the same namespace.
 
 
 
 | Field | Description |
 | --- | --- |
-| `name` _string_ | Name is the name of the AIGatewayControlPlane resource. |
+| `name` _string_ | Name is the name of the KonnectAIGateway (controlplane) resource. |
 
 _Appears in:_
 
@@ -223,7 +223,7 @@ ServiceOptions contains Service configuration for the AIGatewayDataPlane.
 | `externalTrafficPolicy` _[ServiceExternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core)_ | ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's externally-facing addresses. |
 | `trafficDistribution` _*string_ | TrafficDistribution offers a way to express preferences for how traffic is distributed to Service endpoints. Implementations can use this field as a hint, but are not required to guarantee strict adherence. If the field is not set, the implementation will apply its default routing strategy.<br /><br />"PreferSameZone" prioritizes endpoints in the same zone as the client. "PreferSameNode" prioritizes endpoints on the same node as the client.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution |
 | `internalTrafficPolicy` _[ServiceInternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceinternaltrafficpolicy-v1-core)_ | InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP. If set to "Local", the proxy will assume that pods only want to talk to endpoints of the service on the same node as the pod, dropping the traffic if there are no local endpoints. The default value, "Cluster", uses the standard behavior of routing to all endpoints evenly.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#internal-traffic-policy |
-| `ports` _[ServicePort](#aigateway-konghq-com-v1alpha1-types-serviceport)_ | Ports defines the list of ports that are exposed by the service. |
+| `ports` _[][ServicePort](#aigateway-konghq-com-v1alpha1-types-serviceport)_ | Ports defines the list of ports that are exposed by the service. |
 
 _Appears in:_
 

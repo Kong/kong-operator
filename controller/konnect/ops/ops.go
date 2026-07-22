@@ -280,6 +280,10 @@ func getKonnectIDForUID[
 		return getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
+	case *konnectv1alpha1.AIGatewayModel:
+		return getAIGatewayModelForUID(ctx, sdk.GetAIGatewayModelsSDK(), ent)
+	case *konnectv1alpha1.AIGatewayMCPServer:
+		return getAIGatewayMCPServerForUID(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
 
 	// ---------------------------------------------------------------------
 	// TODO: add other manually maintained Konnect types here
@@ -549,6 +553,8 @@ func Update[
 		err = updateSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = nil // DataPlaneCertificates are immutable.
+	case *konnectv1alpha1.AIGatewayConsumerCredential:
+		err = nil // AIGatewayConsumerCredentials are immutable.
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
@@ -935,6 +941,33 @@ func ClearInstanceFromError(err error) error {
 	return err
 }
 
+// MirrorableEntity is implemented by generated Konnect CRD types that opted into
+// Origin/Mirror source support via the crd-from-oas source.supportsMirror config.
+// It lets isMirrorableEntity/isMirrorEntity recognize those types generically,
+// without a per-type switch case. Hand-written mirror types
+// (KonnectGatewayControlPlane, MCPServer) keep their explicit switch cases and do
+// NOT implement this interface.
+type MirrorableEntity interface {
+	GetSource() *commonv1alpha1.EntitySource
+	GetMirror() *konnectv1alpha2.MirrorSpec
+}
+
+// isMirrorableViaInterface reports whether v implements MirrorableEntity.
+func isMirrorableViaInterface(v any) bool {
+	_, ok := v.(MirrorableEntity)
+	return ok
+}
+
+// isMirrorEntityViaInterface reports whether v implements MirrorableEntity and its
+// source is Mirror.
+func isMirrorEntityViaInterface(v any) bool {
+	m, ok := v.(MirrorableEntity)
+	if !ok {
+		return false
+	}
+	return m.GetSource() != nil && *m.GetSource() == commonv1alpha1.EntitySourceMirror
+}
+
 // isMirrorableEntity checks if the entity is mirrorable.
 // This is used to determine if the entity can be mirrored to Konnect.
 func isMirrorableEntity[
@@ -947,7 +980,7 @@ func isMirrorableEntity[
 	case *konnectv1alpha1.MCPServer:
 		return true
 	default:
-		return false
+		return isMirrorableViaInterface(any(ent))
 	}
 }
 
@@ -964,7 +997,7 @@ func isMirrorEntity[
 		// MCPServer is mirror-only
 		return cp.Spec.Source == nil || *cp.Spec.Source == commonv1alpha1.EntitySourceMirror
 	default:
-		return false
+		return isMirrorEntityViaInterface(any(ent))
 	}
 }
 

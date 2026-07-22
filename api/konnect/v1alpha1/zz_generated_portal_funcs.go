@@ -6,6 +6,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *Portal) GetKonnectLabels() map[string]string {
 	if obj.Spec.APISpec.Labels == nil {
@@ -50,6 +51,12 @@ func (obj *Portal) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the Portal's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *Portal) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the Portal Kind name.
 func (obj Portal) GetTypeName() string {
 	return "Portal"
@@ -78,6 +85,7 @@ func (obj *Portal) SetConditions(conditions []metav1.Condition) {
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
 func (obj *Portal) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {
 	return konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
-		Name: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Name:      obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Namespace: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace,
 	}
 }

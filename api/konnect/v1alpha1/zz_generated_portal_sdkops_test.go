@@ -11,15 +11,15 @@ import (
 
 func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 	spec := &PortalAPISpec{
-		AuthenticationEnabled: "Enabled",
+		AuthenticationEnabled:   "Enabled",
 		AutoApproveApplications: "Enabled",
-		AutoApproveDevelopers: "Enabled",
-		DefaultAPIVisibility: "test-value",
-		DefaultPageVisibility: "test-value",
-		Description: new("test-value"),
-		DisplayName: "test-value",
-		Labels: LabelsUpdate{"test-key": "test-value"},
-		Name: "test-value",
+		AutoApproveDevelopers:   "Enabled",
+		DefaultAPIVisibility:    "public",
+		DefaultPageVisibility:   "public",
+		Description:             new("test-value"),
+		DisplayName:             "test-value",
+		Labels:                  LabelsUpdate{"test-key": "test-value"},
+		Name:                    "test-value",
 		NotificationsDeveloperPiiVisibilityEnabled: "Enabled",
 		RBACEnabled: "Enabled",
 		SiprEnabled: "Enabled",
@@ -37,8 +37,8 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 	require.Equal(t, true, payload["authentication_enabled"])
 	require.Equal(t, true, payload["auto_approve_applications"])
 	require.Equal(t, true, payload["auto_approve_developers"])
-	require.Equal(t, "test-value", payload["default_api_visibility"])
-	require.Equal(t, "test-value", payload["default_page_visibility"])
+	require.Equal(t, "public", payload["default_api_visibility"])
+	require.Equal(t, "public", payload["default_page_visibility"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
@@ -50,15 +50,15 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 
 func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 	spec := &PortalAPISpec{
-		AuthenticationEnabled: "Enabled",
+		AuthenticationEnabled:   "Enabled",
 		AutoApproveApplications: "Enabled",
-		AutoApproveDevelopers: "Enabled",
-		DefaultAPIVisibility: "test-value",
-		DefaultPageVisibility: "test-value",
-		Description: new("test-value"),
-		DisplayName: "test-value",
-		Labels: LabelsUpdate{"test-key": "test-value"},
-		Name: "test-value",
+		AutoApproveDevelopers:   "Enabled",
+		DefaultAPIVisibility:    "public",
+		DefaultPageVisibility:   "public",
+		Description:             new("test-value"),
+		DisplayName:             "test-value",
+		Labels:                  LabelsUpdate{"test-key": "test-value"},
+		Name:                    "test-value",
 		NotificationsDeveloperPiiVisibilityEnabled: "Enabled",
 		RBACEnabled: "Enabled",
 		SiprEnabled: "Enabled",
@@ -76,8 +76,8 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 	require.Equal(t, true, payload["authentication_enabled"])
 	require.Equal(t, true, payload["auto_approve_applications"])
 	require.Equal(t, true, payload["auto_approve_developers"])
-	require.Equal(t, "test-value", payload["default_api_visibility"])
-	require.Equal(t, "test-value", payload["default_page_visibility"])
+	require.Equal(t, "public", payload["default_api_visibility"])
+	require.Equal(t, "public", payload["default_page_visibility"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])

@@ -33,9 +33,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/openapi"
+	"k8s.io/client-go/rest"
 	kubespec3 "k8s.io/kube-openapi/pkg/spec3"
 	validationspec "k8s.io/kube-openapi/pkg/validation/spec"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
 
@@ -48,15 +48,13 @@ import (
 // Server-Side Apply operations.
 const FieldManager = "gateway-operator"
 
-// NewTypeConverter builds a TypeConverter from the API server's live OpenAPI v3
-// schemas. Only schemas for the specified GroupVersions are fetched, reducing
-// startup latency compared to downloading the full schema set.
-//
-// groupVersions should list every GV whose objects will be passed to MergeObjects
-// or ApplyIfChanged. For core types use schema.GroupVersion{Group: "", Version: "v1"}.
-// Call this once during SetupWithManager.
-func NewTypeConverter(mgr ctrl.Manager, groupVersions []schema.GroupVersion) (managedfields.TypeConverter, error) {
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+// fetchBuiltinSchemas fetches OpenAPI v3 schemas for the given built-in
+// GroupVersions (e.g. core/v1, apps/v1) from the API server's /openapi/v3
+// endpoint. Built-in schemas are published at apiserver startup and are not
+// subject to the CRD OpenAPI publication debounce, so this is safe to call
+// once at manager startup.
+func fetchBuiltinSchemas(cfg *rest.Config, groupVersions []schema.GroupVersion) (map[string]*validationspec.Schema, error) {
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discovery client for OpenAPI: %w", err)
 	}
@@ -89,11 +87,7 @@ func NewTypeConverter(mgr ctrl.Manager, groupVersions []schema.GroupVersion) (ma
 		maps.Copy(schemas, oa.Components.Schemas)
 	}
 
-	tc, err := managedfields.NewTypeConverter(schemas, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create TypeConverter: %w", err)
-	}
-	return tc, nil
+	return schemas, nil
 }
 
 // gvToPathKey converts a GroupVersion to the path key used by the OpenAPI v3

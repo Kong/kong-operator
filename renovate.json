@@ -94,6 +94,8 @@
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}docker{{/if}}",
       "fileMatch": [
         "^pkg/consts/dataplane\\.go$",
+        "^pkg/consts/aigateway\\.go$",
+        "^pkg/consts/eventgateway\\.go$",
         "^internal/versions/controlplane\\.go$",
         "^test/e2e/helm_install_upgrade_test\\.go$"
       ],
@@ -190,7 +192,6 @@
     {
       "description": "Disable Go dependencies updates (still handled by dependabot)",
       "matchManagers": ["gomod"],
-      "matchDepNames": ["go"],
       "matchBaseBranches": [
         "$default",
         "release/2.1.x",

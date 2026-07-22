@@ -249,25 +249,6 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 		return ctrl.Result{}, err
 	}
 
-	// Phase 4b: Atomically record this Route in the hybrid-routes annotation of every shared Kong
-	// resource. This runs regardless of whether enforceState applied or is waiting, so resources
-	// created in this (or an earlier) reconcile are tracked promptly and concurrent Routes sharing
-	// a resource do not clobber each other's entry.
-	annotationsMissing, err := reconcileSharedRouteAnnotations[t, tPtr](ctx, r.Client, logger, conv)
-	if err != nil {
-		if result, ok := requeueOnConflict(err, logger, "Hybrid-routes annotation sync conflicted, requeueing"); ok {
-			return result, nil
-		}
-		r.eventRecorder.Eventf(
-			obj,
-			corev1.EventTypeWarning,
-			eventconst.EventReasonStateEnforcementFailed,
-			"Hybrid-routes annotation sync failed: %v",
-			err,
-		)
-		return ctrl.Result{}, err
-	}
-
 	// Only emit success event if state was actually changed.
 	if applied {
 		r.eventRecorder.Eventf(
@@ -284,16 +265,6 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	// schedule a short requeue as a safety net in case watch events are delayed.
 	if waiting {
 		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
-	}
-
-	// In steady state (enforceState applied nothing and is not waiting) every desired Kong resource
-	// existed when enforceState ran. If the annotation sync above then found one missing, another
-	// Route deleted the shared resource in the window before this Route recorded itself. No watch
-	// event will re-trigger this Route (the delete event maps via the annotation, which no longer
-	// lists it), so requeue to let the next reconcile recreate the resource and re-record this Route.
-	if annotationsMissing {
-		log.Debug(logger, "Shared Kong resource missing during annotation sync, requeueing to recreate")
-		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
 	// Phase 4.5: Readiness gate before orphan cleanup.
@@ -438,9 +409,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	logger logr.Logger,
 	conv converter.APIConverter[t],
 ) (bool, error) {
-	// Use the existing cleanup logic but do not wait for generated resources to
-	// fully disappear before releasing the root finalizer. Generated resources
-	// have their own cleanup/finalizer flows; keeping the Gateway API object in
-	// deletion until every child finishes can block immediate same-name re-creates.
-	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: false})
+	// On the deletion path we create a fresh converter but do not run Translate(),
+	// so cleanOrphanedResources() sees no desired output objects. That makes all
+	// owned generated resources orphan candidates, and we wait for their deletion
+	// before releasing the root finalizer.
+	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 }

@@ -54,8 +54,8 @@ func updatePortalTeam(
 	}
 
 	_, err = sdk.UpdatePortalTeam(ctx, sdkkonnectops.UpdatePortalTeamRequest{
-		PortalID: parentID,
-		TeamID: id,
+		PortalID:                parentID,
+		TeamID:                  id,
 		PortalUpdateTeamRequest: req,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
