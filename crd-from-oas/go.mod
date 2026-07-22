@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/caarlos0/env/v11 v11.4.1
-	github.com/getkin/kin-openapi v0.142.0
+	github.com/getkin/kin-openapi v0.143.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/mod v0.38.0
 	golang.org/x/tools v0.48.0
