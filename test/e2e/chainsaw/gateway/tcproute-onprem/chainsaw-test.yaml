@@ -1,7 +1,7 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  name: tcproute-onprem
+  name: gateway-tcproute-onprem
 spec:
   description: |
     Validates that an operator-managed on-prem Gateway supports TCPRoute by:
@@ -71,3 +71,16 @@ spec:
       description: Verify that TCP traffic to the Gateway is routed to the tcpecho backend.
       use:
         template: ../../common/_step_templates/verify-tcp-traffic-from-host.yaml
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-tcproute-onprem
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

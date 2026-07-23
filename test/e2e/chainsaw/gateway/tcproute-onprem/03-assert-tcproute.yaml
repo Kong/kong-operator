@@ -9,15 +9,17 @@ spec:
       kind: Gateway
       name: ($gateway_name)
       sectionName: tcp
-  rules:
-    - backendRefs:
-        - name: ($echo_deployment_name)
-          port: ($tcp_echo_port)
 status:
-  (conditions[?type == 'Accepted']):
-    - status: 'True'
-  (conditions[?type == 'ResolvedRefs']):
-    - status: 'True'
-  (conditions[?type == 'Programmed']):
-    - status: 'True'
-  
+  parents:
+    - parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: ($gateway_name)
+        sectionName: tcp
+       # Filter conditions array to check for all required conditions
+      (conditions[?type == 'Accepted']):
+        - status: 'True'
+      (conditions[?type == 'ResolvedRefs']):
+        - status: 'True'
+      (conditions[?type == 'Programmed']):
+        - status: 'True'
