@@ -235,6 +235,28 @@ func normalizeAIGatewayModelSDKOpsBoolField(value any, path []string) (any, erro
 	}
 }
 
+// AIGatewayModelSDKOpsUnionUnwrapFields lists property-level oneOf fields
+// with no OAS discriminator, whose payload must be unwrapped from the CRD's
+// discriminated shape to the Konnect SDK's non-discriminated shape.
+var AIGatewayModelSDKOpsUnionUnwrapFields = []sdkOpsUnionUnwrapField{
+	{
+		Path: []string{
+			"api",
+			"config",
+			"route",
+			"model",
+		},
+	},
+	{
+		Path: []string{
+			"model",
+			"config",
+			"route",
+			"model",
+		},
+	},
+}
+
 func (s *AIGatewayModelAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -255,6 +277,7 @@ func (s *AIGatewayModelAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	if err := normalizeAIGatewayModelSDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize AIGatewayModelAPISpec SDK payload: %w", err)
 	}
+	unwrapSDKOpsUnionFields(payload, AIGatewayModelSDKOpsUnionUnwrapFields)
 	return payload, nil
 }
 
@@ -315,12 +338,18 @@ func (s *AIGatewayModelAPISpec) toCreateAIGatewayModelRequestFromPayload(payload
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelAPI: %w", err)
 		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayModelSDKOpsUnionUnwrapFields, "api"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayModelRequestAPI(member)
 		return &target, nil
 	case "Model":
 		var member sdkkonnectcomp.AIGatewayModelModel
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelModel: %w", err)
+		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayModelSDKOpsUnionUnwrapFields, "model"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayModelRequestModel(member)
 		return &target, nil
@@ -352,12 +381,18 @@ func (s *AIGatewayModelAPISpec) toUpdateAIGatewayModelRequestFromPayload(payload
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelAPI: %w", err)
 		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayModelSDKOpsUnionUnwrapFields, "api"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayModelRequestAPI(member)
 		return &target, nil
 	case "Model":
 		var member sdkkonnectcomp.AIGatewayModelModel
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelModel: %w", err)
+		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayModelSDKOpsUnionUnwrapFields, "model"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayModelRequestModel(member)
 		return &target, nil

@@ -245,6 +245,18 @@ type TypeConfig struct {
 	Reconciler *ReconcilerConfig `yaml:"reconciler,omitempty"`
 	// Source declares Origin/Mirror support for this (root) entity. Nil => Origin-only.
 	Source *SourceConfig `yaml:"-"`
+	// OneOfVariantNamesFromTitle lists generated union wrapper type names (e.g.
+	// "AIGatewayModelRouteConfigModel") for which anonymous oneOf variants (no
+	// $ref) are named after their OAS `title` instead of the generic
+	// Variant1/Variant2/... fallback. A titled variant whose schema has
+	// exactly one nested property is additionally flattened onto the wrapper
+	// field directly, avoiding a doubled JSON key like
+	// route.model.pathAliases.pathAliases. Declared under whichever entity's
+	// config block is convenient — the names are matched against the
+	// generated union type regardless of which entity or shared schema it
+	// belongs to. Opt-in only: unlisted unions keep the existing generic
+	// naming and shape.
+	OneOfVariantNamesFromTitle []string `yaml:"oneOfVariantNamesFromTitle,omitempty"`
 }
 
 // ParentRefConfig overrides the spec field for the parent reference when the
@@ -499,6 +511,9 @@ type typeConfigYAML struct {
 	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
 	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
 	Source               *SourceConfig           `yaml:"source,omitempty"`
+	// OneOfVariantNamesFromTitle lists generated union wrapper type names opted
+	// into title-based anonymous variant naming. See TypeConfig's doc comment.
+	OneOfVariantNamesFromTitle []string `yaml:"oneOfVariantNamesFromTitle,omitempty"`
 }
 
 // UnmarshalYAML preserves the in-memory Ops map shape while allowing
@@ -510,15 +525,16 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	*tc = TypeConfig{
-		Path:                 raw.Path,
-		Name:                 raw.Name,
-		SchemaFieldOmissions: raw.SchemaFieldOmissions,
-		CEL:                  raw.CEL,
-		References:           raw.References,
-		Associations:         raw.Associations,
-		SecretReferences:     raw.SecretReferences,
-		Reconciler:           raw.Reconciler,
-		Source:               raw.Source,
+		Path:                       raw.Path,
+		Name:                       raw.Name,
+		SchemaFieldOmissions:       raw.SchemaFieldOmissions,
+		CEL:                        raw.CEL,
+		References:                 raw.References,
+		Associations:               raw.Associations,
+		SecretReferences:           raw.SecretReferences,
+		Reconciler:                 raw.Reconciler,
+		Source:                     raw.Source,
+		OneOfVariantNamesFromTitle: raw.OneOfVariantNamesFromTitle,
 	}
 
 	if raw.Ops != nil {
@@ -671,6 +687,22 @@ func (c *APIGroupVersionConfig) SourceConfigs(pathToEntityName map[string]string
 	return result
 }
 
+// OneOfVariantNamesFromTitleUnions builds the set of generated union wrapper
+// type names opted into naming anonymous oneOf variants after their OAS title,
+// aggregated across every entity's configuration.
+func (c *APIGroupVersionConfig) OneOfVariantNamesFromTitleUnions() map[string]bool {
+	result := make(map[string]bool)
+	for _, tc := range c.Types {
+		for _, unionTypeName := range tc.OneOfVariantNamesFromTitle {
+			if unionTypeName == "" {
+				continue
+			}
+			result[unionTypeName] = true
+		}
+	}
+	return result
+}
+
 // OpsConfig builds a mapping from entity name to operations config using the provided
 // pathToEntityName mapping (built after parsing the OpenAPI spec).
 func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) map[string]*EntityOpsConfig {
@@ -685,15 +717,15 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		}
 		requireClient := tc.OpsRequireClient || len(tc.SecretReferences) > 0
 		result[entityName] = &EntityOpsConfig{
-			Ops:                     tc.Ops,
-			RequireClient:           requireClient,
+			Ops:                         tc.Ops,
+			RequireClient:               requireClient,
 			SkipGetForUID:               tc.OpsSkipGetForUID,
 			SkipRootUnionMetadataFields: tc.OpsSkipRootUnionMetadataFields,
-			UseUIDTagFilter:         tc.OpsUseUIDTagFilter,
-			ListCallStylePositional: tc.OpsListCallStylePositional,
-			GetForUID:               tc.OpsGetForUID,
-			SDK:                     tc.OpsSDK,
-			ResponseStatusFields:    tc.OpsResponseStatusFields,
+			UseUIDTagFilter:             tc.OpsUseUIDTagFilter,
+			ListCallStylePositional:     tc.OpsListCallStylePositional,
+			GetForUID:                   tc.OpsGetForUID,
+			SDK:                         tc.OpsSDK,
+			ResponseStatusFields:        tc.OpsResponseStatusFields,
 		}
 	}
 	return result

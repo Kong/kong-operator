@@ -39,6 +39,7 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	// Basic type info
 	prop.Type = getSchemaType(schemaValue)
 	prop.Format = schemaValue.Format
+	prop.Title = schemaValue.Title
 	prop.Description = schemaValue.Description
 	prop.Nullable = schemaValue.Nullable
 	prop.ReadOnly = schemaValue.ReadOnly

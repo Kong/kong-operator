@@ -1,14 +1,3 @@
-kind: KonnectAPIAuthConfiguration
-apiVersion: konnect.konghq.com/v1alpha1
-metadata:
-  name: konnect-api-auth-1
-  namespace: default
-spec:
-  type: token
-  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
-  serverURL: us.api.konghq.com
----
 kind: KonnectAIGateway
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
@@ -143,11 +132,15 @@ spec:
               - kind: AIGatewayConsumerGroup
                 name: ai-gw-model-consumer-group
       config:
-        model:
-          alias: gpt-4o-mini
         route:
           paths:
             - /v1/chat/completions
+          # Routes a request to this model when its path matches one of the
+          # aliases below (in addition to the paths/methods/hosts match above).
+          model:
+            type: pathAliases
+            pathAliases:
+              - gpt-4o-mini
       # References to AIGatewayPolicy CRs (by metadata.name). The operator
       # resolves each reference to the referenced CR's Konnect name at
       # reconcile time.

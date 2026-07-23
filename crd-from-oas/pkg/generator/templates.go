@@ -1332,6 +1332,23 @@ var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
 {{- end}}
 }
 {{- end}}
+{{- if .UnionUnwrapFields}}
+
+// {{$.EntityName}}SDKOpsUnionUnwrapFields lists property-level oneOf fields
+// with no OAS discriminator, whose payload must be unwrapped from the CRD's
+// discriminated shape to the Konnect SDK's non-discriminated shape.
+var {{$.EntityName}}SDKOpsUnionUnwrapFields = []sdkOpsUnionUnwrapField{
+{{- range .UnionUnwrapFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+{{- end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
@@ -1357,6 +1374,9 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
 	}
+	{{- end }}
+	{{- if $.UnionUnwrapFields}}
+	unwrapSDKOpsUnionFields(payload, {{$.EntityName}}SDKOpsUnionUnwrapFields)
 	{{- end }}
 	{{- if $.ConstFields}}
 	injectSDKOpsConstFields(payload, {{$.EntityName}}SDKOpsConstFields)
@@ -1435,6 +1455,11 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.CreateVariantTypeName}}: %w", err)
 		}
+		{{- if $.UnionUnwrapFields}}
+		if err := assignSDKOpsUnionMembers(&member, data, {{$.EntityName}}SDKOpsUnionUnwrapFields, "{{.JSONName}}"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
+		{{- end}}
 		body := {{$compAlias}}.{{.WrappedCreateConstructorName}}(member)
 		return &{{$opsAlias}}.{{$typeName}}{
 			{{$bodyField}}: {{if $bodyFieldPointer}}&body{{else}}body{{end}},
@@ -1452,6 +1477,11 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.CreateVariantTypeName}}: %w", err)
 		}
+		{{- if $.UnionUnwrapFields}}
+		if err := assignSDKOpsUnionMembers(&member, data, {{$.EntityName}}SDKOpsUnionUnwrapFields, "{{.JSONName}}"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
+		{{- end}}
 		target := {{$importAlias}}.{{.CreateConstructorName}}(member)
 		return &target, nil
 {{- end}}
@@ -1492,6 +1522,11 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.UpdateVariantTypeName}}: %w", err)
 		}
+		{{- if $.UnionUnwrapFields}}
+		if err := assignSDKOpsUnionMembers(&member, data, {{$.EntityName}}SDKOpsUnionUnwrapFields, "{{.JSONName}}"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
+		{{- end}}
 		target := {{$importAlias}}.{{.UpdateConstructorName}}(member)
 		return &target, nil
 		{{- else}}
@@ -2232,6 +2267,10 @@ const commonTypesTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
 {{- if .KonnectStatusImport}}
 {{- if .KonnectStatusImport.Alias}}
 	{{.KonnectStatusImport.Alias}} "{{.KonnectStatusImport.Path}}"
@@ -2271,6 +2310,10 @@ import (
 ` + renameKeysToSDKHelper + `
 
 ` + injectSDKOpsConstFieldsHelper + `
+
+` + unwrapSDKOpsUnionFieldsHelper + `
+
+` + assignSDKOpsUnionMembersHelper + `
 `
 
 // opsPerEntityFileHeaderTemplate renders the shared file header (preamble,

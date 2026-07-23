@@ -54,6 +54,14 @@ var AIGatewayIdentityProviderSDKOpsBoolFields = []AIGatewayIdentityProviderSDKOp
 		},
 	},
 	{
+		Label: "openid-connect.config.consumer_groups_optional",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"consumer_groups_optional",
+		},
+	},
+	{
 		Label: "openid-connect.config.consumer_optional",
 		Path: []string{
 			"openid-connect",
