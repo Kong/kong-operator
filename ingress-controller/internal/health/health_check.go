@@ -73,6 +73,9 @@ func (s *CheckServer) Start(ctx context.Context, addr string, logger logr.Logger
 		Addr:              addr,
 		Handler:           s,
 		ReadHeaderTimeout: 3 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 	go func() {
 		err := server.ListenAndServe()
