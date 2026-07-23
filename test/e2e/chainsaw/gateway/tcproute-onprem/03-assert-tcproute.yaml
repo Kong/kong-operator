@@ -18,8 +18,11 @@ status:
         sectionName: tcp
        # Filter conditions array to check for all required conditions
       (conditions[?type == 'Accepted']):
-        - status: 'True'
+        - status: "True"
+          reason: Accepted
       (conditions[?type == 'ResolvedRefs']):
-        - status: 'True'
+        - status: "True"
+          reason: ResolvedRefs
       (conditions[?type == 'Programmed']):
-        - status: 'True'
+        - status: "True"
+          reason: Programmed

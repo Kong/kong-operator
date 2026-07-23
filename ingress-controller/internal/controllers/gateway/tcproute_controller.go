@@ -626,16 +626,6 @@ func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute
 				return gatewayapi.RouteReasonInvalidKind, fmt.Sprintf("target %s has unsupported type %s", targetNN, backendRefGK), nil
 			}
 
-			// Check if the referenced object actually exists.
-			// Only Services are currently supported as BackendRef objects.
-			service := &corev1.Service{}
-			if err := r.Get(ctx, targetNN, service); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return "", "", err
-				}
-				return gatewayapi.RouteReasonBackendNotFound, fmt.Sprintf("target %s of type %s does not exist", targetNN, backendRefGK), nil
-			}
-
 			// If the object referenced is in another namespace,
 			// verify that a ReferenceGrant permits the reference.
 			if tcpRoute.Namespace != backendNamespace {
@@ -664,6 +654,16 @@ func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute
 				if !isGranted {
 					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
 				}
+			}
+
+			// Check if the referenced object actually exists.
+			// Only Services are currently supported as BackendRef objects.
+			service := &corev1.Service{}
+			if err := r.Get(ctx, targetNN, service); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return "", "", err
+				}
+				return gatewayapi.RouteReasonBackendNotFound, fmt.Sprintf("target %s of type %s does not exist", targetNN, backendRefGK), nil
 			}
 		}
 	}
