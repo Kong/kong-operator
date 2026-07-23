@@ -543,7 +543,7 @@ func (s *UpdateStrategyDBMode) refillPluginIDs(currentState *state.KongState, ta
 	}
 	// For each existing plugin in the DB, we look for the same plugin in the target state and re-fill the ID.
 	for _, existingPlugin := range plugins {
-		var serviceID, routeID, consumerID, consumerGroupID string
+		var serviceID, routeID, consumerID, consumerGroupID, modelID string
 		if existingPlugin.Service != nil && existingPlugin.Service.ID != nil {
 			serviceID = *existingPlugin.Service.ID
 		}
@@ -556,9 +556,12 @@ func (s *UpdateStrategyDBMode) refillPluginIDs(currentState *state.KongState, ta
 		if existingPlugin.ConsumerGroup != nil && existingPlugin.ConsumerGroup.ID != nil {
 			consumerGroupID = *existingPlugin.ConsumerGroup.ID
 		}
+		if existingPlugin.Model != nil && existingPlugin.Model.ID != nil {
+			modelID = *existingPlugin.Model.ID
+		}
 		// If the same plugin is in the target state and we have filled a different ID with the existing plugin,
 		// we re-fill the ID of the plugin in the target state to keep the ID the same as the existing plugin.
-		targetPlugin, err := targetState.Plugins.GetByProp(*existingPlugin.Name, serviceID, routeID, consumerID, consumerGroupID)
+		targetPlugin, err := targetState.Plugins.GetByProp(*existingPlugin.Name, serviceID, routeID, consumerID, consumerGroupID, modelID)
 		if err != nil {
 			if !errors.Is(err, state.ErrNotFound) {
 				s.logger.Error(err, "failed to get plugin with given fields in the target state")
