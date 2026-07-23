@@ -1822,6 +1822,12 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 			opts: GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv2beta1.DeploymentOptions{
+						Annotations: map[string]string{
+							"deployment-annotation": "value",
+						},
+						Labels: map[string]string{
+							"deployment-label": "value",
+						},
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
