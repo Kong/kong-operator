@@ -291,24 +291,36 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			// We failed to match a listener with this route
 
 			// This will also catch a case of not matching listener/section name.
+			//
+			// Cases are ordered to match the sequence in which the loop above checks a
+			// listener, not by RouteReason alphabetically or arbitrarily: each flag can
+			// only become true for a listener that has already passed every check before
+			// it, so "flag N is false across all listeners" means no listener got past
+			// check N. Checking flags out of loop-order would let a listener that failed
+			// an earlier check (e.g. AllowedRoutes/kind) masquerade as having failed a
+			// later one (e.g. SectionName) purely because its later flag was never
+			// reached, reporting the wrong reason. matchingHostname is the exception: it's
+			// only set on a listener that already passed every other check (it's the last
+			// check in the loop), so when non-nil it unambiguously means that listener
+			// failed on hostname alone and can safely stay checked first.
 			reason := gatewayapi.RouteReasonNoMatchingParent
 			switch {
 			case matchingHostname != nil && *matchingHostname == metav1.ConditionFalse:
 				// If there is no matchingHostname, the gateway Status Condition Accepted
 				// must be set to False with reason NoMatchingListenerHostname
 				reason = gatewayapi.RouteReasonNoMatchingListenerHostname
+			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
+				reason = gatewayapi.RouteReasonNotAllowedByListeners
+			case !listenerReady:
+				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			case parentRef.SectionName != nil && !allowedByListenerName:
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			case !listenerReady:
-				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			case parentRef.Port != nil && !portMatched:
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
-				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			}
 
 			var listenerName string
