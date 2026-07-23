@@ -4,7 +4,7 @@ github_attestations = false
 ################################################################################
 # Tools
 
-[tools.markdownlint-cli2 ]
+[tools.markdownlint-cli2]
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
 version = "0.23.1"
 
