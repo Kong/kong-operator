@@ -471,9 +471,7 @@ func (r *Reconciler) listGatewaysAttachedByGRPCRoute(ctx context.Context, obj cl
 }
 
 // listGatewaysAttachedByTCPRoute is a watch predicate which finds all Gateways mentioned
-// in TCPRoutes' ParentRefs. TCPRoute lives in gateway-api v1alpha2, which is not part of
-// the generic gwtypes.SupportedRoute union, so this function is specialized rather than
-// delegating to listGatewaysAttachedByRoute.
+// in TCPRoutes' ParentRefs.
 func (r *Reconciler) listGatewaysAttachedByTCPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
