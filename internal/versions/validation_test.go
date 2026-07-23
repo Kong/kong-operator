@@ -111,9 +111,6 @@ func Test_versionFromImage(t *testing.T) {
 				return v
 			},
 		},
-		// Regression: image references whose registry host carries a port
-		// number contain more than one ':', but the tag is always after the
-		// last one. See https://github.com/Kong/kong-operator/issues/... .
 		{
 			Tag: "registry.example.com:5000/kong/kong-gateway:3.3.0",
 			Expected: func(t *testing.T) semver.Version {

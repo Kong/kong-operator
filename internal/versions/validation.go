@@ -43,17 +43,15 @@ func FromImage(image string) (semver.Version, error) {
 	}
 
 	// Use the last ':' as the tag separator. Splitting on every ':' breaks
-	// references whose registry host carries a port, e.g.
-	//   registry.example.com:5000/foo/bar:3.10
+	// when registry host carries a port, e.g. registry.example.com:5000/foo/bar:3.10
 	// where the first ':' is part of the host ("<host>:<port>") rather than
-	// a tag separator. The tag, if present, always follows the LAST ':'
-	// (any digest was already stripped above).
+	// a tag separator. The tag, if present, always follows the LAST ':'.
 	idx := strings.LastIndex(image, ":")
 	if idx == -1 {
 		return semver.Version{}, fmt.Errorf(`%w, got: %s`, ErrExpectedSemverVersion, image)
 	}
 	tag := image[idx+1:]
-	// If what looks like a tag actually contains '/', we split on a port
+	// If what looks like a tag actually contains '/', split it on a port
 	// separator in the registry host and the reference has no tag at all
 	// (e.g. "registry:5000/foo/bar" — LastIndex found ':' inside the host).
 	if tag == "" || strings.Contains(tag, "/") {
