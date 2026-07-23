@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -68,6 +69,68 @@ func TestTCPRouteConverter_Translate(t *testing.T) {
 	assert.Empty(t, kongRoute.Spec.Hosts)
 	assert.Empty(t, kongRoute.Spec.Paths)
 	assert.Equal(t, "default/test-route", kongRoute.Annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation])
+}
+
+func TestTCPRouteConverter_TranslateBackendClientCertificate(t *testing.T) {
+	route := newTCPRouteForTranslation()
+	gateway := newTCPGateway()
+	gateway.UID = types.UID("gateway-uid")
+
+	backendService := newService("default")
+	backendService.Annotations = map[string]string{
+		"konghq.com/client-cert": "backend-client-cert",
+		"konghq.com/protocol":    "tls",
+	}
+	clientCertSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backend-client-cert",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       []byte("cert-data"),
+			corev1.TLSPrivateKeyKey: []byte("key-data"),
+		},
+	}
+	objects := append(
+		newKonnectGatewayStandardObjects(gateway),
+		backendService,
+		clientCertSecret,
+		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+	converter := newTCPRouteConverter(route, fakeClient, false, "")
+
+	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
+	require.NoError(t, err)
+	require.Equal(t, 6, resourceCount)
+
+	output, err := converter.GetOutputStore(t.Context(), logr.Discard())
+	require.NoError(t, err)
+
+	var kongService *configurationv1alpha1.KongService
+	var kongCertificate *configurationv1alpha1.KongCertificate
+	for _, obj := range output {
+		switch obj.GetKind() {
+		case "KongService":
+			converted := &configurationv1alpha1.KongService{}
+			require.NoError(t, fakeClient.Scheme().Convert(&obj, converted, nil))
+			kongService = converted
+		case "KongCertificate":
+			converted := &configurationv1alpha1.KongCertificate{}
+			require.NoError(t, fakeClient.Scheme().Convert(&obj, converted, nil))
+			kongCertificate = converted
+		}
+	}
+
+	require.NotNil(t, kongService)
+	require.NotNil(t, kongCertificate)
+	require.NotNil(t, kongService.Spec.ClientCertificateRef)
+	assert.Equal(t, kongCertificate.Name, kongService.Spec.ClientCertificateRef.Name)
+	require.NotNil(t, kongCertificate.Spec.SecretRef)
+	assert.Equal(t, "backend-client-cert", kongCertificate.Spec.SecretRef.Name)
+	require.NotNil(t, kongCertificate.Spec.SecretRef.Namespace)
+	assert.Equal(t, "default", *kongCertificate.Spec.SecretRef.Namespace)
+	assert.Equal(t, "default/test-route", kongCertificate.Annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation])
 }
 
 func TestTCPRouteConverter_GetHybridGatewayParentsIsHostless(t *testing.T) {
