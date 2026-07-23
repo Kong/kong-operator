@@ -202,6 +202,7 @@ func TestKonnectExtension(t *testing.T) {
 			require.NoError(t, err)
 			conditions.KonnectEntityIsProgrammed(t, cp)
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+		t.Logf("KonnectGatewayControlPlane received Konnect ID (%s) for resource %s/%s", cp.GetKonnectID(), cp.Namespace, cp.Name)
 
 		t.Run("Origin ControlPlane", func(t *testing.T) {
 			// Create entities to check proper working on Konnect.
@@ -224,8 +225,6 @@ func TestKonnectExtension(t *testing.T) {
 		})
 
 		t.Run("Mirror ControlPlane", func(t *testing.T) {
-			t.Skipf("Skip until flakiness is resolved, TODO: https://github.com/Kong/kong-operator/issues/4807")
-
 			// Create a Mirror Konnect control plane for the KonnectExtension to attach to.
 			mirrorCP := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, authCfg,
 				deploy.WithTestIDLabel(testID),
@@ -239,6 +238,7 @@ func TestKonnectExtension(t *testing.T) {
 				require.NoError(t, err)
 				conditions.KonnectEntityIsProgrammed(t, mirrorCP)
 			}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+			t.Logf("KonnectGatewayControlPlane received Konnect ID (%s) for resource %s/%s", mirrorCP.GetKonnectID(), mirrorCP.Namespace, mirrorCP.Name)
 
 			require.Eventually(t,
 				testutils.ObjectPredicates(t, cl,
@@ -326,8 +326,15 @@ type KonnectExtensionTestCaseParams struct {
 }
 
 func konnectExtensionTestCases(t *testing.T, cl client.Client, params KonnectExtensionTestCaseParams) {
+	t.Helper()
+
 	ctx := t.Context()
 	cert, key := certificate.MustGenerateCertPEMFormat()
+
+	t.Logf("Running KonnectExtension test cases with KonnectGatewayControlPlane %s (Konnect ID: %s)",
+		client.ObjectKeyFromObject(params.konnectControlPlane),
+		params.konnectControlPlane.GetKonnectID(),
+	)
 
 	t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
 		t.Run("manual secret provisioning", func(t *testing.T) {
@@ -448,7 +455,9 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 	t.Helper()
 	ctx := t.Context()
 
-	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", p.konnectExtension.Namespace, p.konnectExtension.Name)
+	nnKonnectExt := client.ObjectKeyFromObject(p.konnectExtension)
+
+	t.Logf("Waiting for KonnectExtension %s to have expected conditions set to True", nnKonnectExt)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		ok, msg := conditions.CheckKonnectExtensionConditions(ctx, t, cl,
 			p.konnectExtension,
@@ -459,12 +468,16 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, p.konnectExtension.Status.Conditions)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
+	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s", nnKonnectExt)
 	require.EventuallyWithT(t,
 		conditions.CheckKonnectExtensionStatus(ctx, cl, p.konnectExtension, p.konnectControlPlane.GetKonnectID(), ""),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	t.Logf("Creating a DataPlane using the KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
+	var kExt konnectv1alpha2.KonnectExtension
+	require.NoError(t, cl.Get(ctx, nnKonnectExt, &kExt))
+	t.Logf("KonnectExtension got the ControlPlane ID: %s", kExt.Status.Konnect.ControlPlaneID)
+
+	t.Logf("Creating a DataPlane using the KonnectExtension %s", nnKonnectExt)
 	dataPlane := builder.NewDataPlaneBuilder().
 		WithObjectMeta(metav1.ObjectMeta{
 			Namespace: p.namespace,
