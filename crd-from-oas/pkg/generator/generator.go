@@ -5634,9 +5634,10 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	boolFields := g.collectSDKOpsBoolFields(schema)
 	constFields := g.collectSDKOpsConstFields(schema)
 	unionUnwrapFields := g.collectSDKOpsUnionUnwrapFields(schema)
+	freeformKeyFields := g.collectSDKOpsFreeformKeyFields(schema)
 
 	if hasRootOneOf(schema) {
-		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields, constFields, unionUnwrapFields)
+		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields, constFields, unionUnwrapFields, freeformKeyFields)
 	}
 
 	componentsPath := "github.com/Kong/sdk-konnect-go/models/components"
@@ -5700,6 +5701,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		Imports                 []*sdkOpsImport
 		BoolFields              []sdkOpsBoolField
 		ConstFields             []sdkOpsConstField
+		FreeformKeyFields       []sdkOpsFreeformKeyField
 		Methods                 []sdkOpsMethod
 		NeedsClient             bool
 		SecretReferences        []SecretReferenceForTemplate
@@ -5716,6 +5718,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		Imports:                 imports,
 		BoolFields:              boolFields,
 		ConstFields:             constFields,
+		FreeformKeyFields:       freeformKeyFields,
 		Methods:                 standardMethods,
 		NeedsClient:             opsConfig.RequireClient || g.entityHasReferences(entityName),
 		SecretReferences:        secretReferences,
@@ -5789,6 +5792,7 @@ func (g *Generator) generateRootUnionSDKOps(
 	boolFields []sdkOpsBoolField,
 	constFields []sdkOpsConstField,
 	unionUnwrapFields []sdkOpsUnionUnwrapField,
+	freeformKeyFields []sdkOpsFreeformKeyField,
 ) (string, error) {
 	rootUnionTypeName := goFieldName(entityName + "Config")
 
@@ -6002,6 +6006,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		BoolFields             []sdkOpsBoolField
 		ConstFields            []sdkOpsConstField
 		UnionUnwrapFields      []sdkOpsUnionUnwrapField
+		FreeformKeyFields      []sdkOpsFreeformKeyField
 		Methods                []sdkOpsRootUnionMethod
 		Variants               []sdkOpsRootUnionVariant
 		NeedsClient            bool
@@ -6017,6 +6022,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		BoolFields:             boolFields,
 		ConstFields:            constFields,
 		UnionUnwrapFields:      unionUnwrapFields,
+		FreeformKeyFields:      freeformKeyFields,
 		Methods:                rootUnionMethods,
 		Variants:               variants,
 		NeedsClient:            opsConfig.RequireClient || g.entityHasReferences(entityName),
@@ -6431,6 +6437,143 @@ func allVariantsAnonymousSingleProperty(variants []*parser.Property) bool {
 		}
 	}
 	return true
+}
+
+// sdkOpsFreeformKeyField records the path to a free-form/data-keyed subtree
+// (an apiextensionsv1.JSON field, or an additionalProperties map whose values
+// aren't themselves renameable structs) whose keys are user data — e.g. an
+// HTTP header name — and must survive renameKeysToSDK's camelCase→snake_case
+// pass verbatim. See renameKeysToSDKExcept.
+type sdkOpsFreeformKeyField struct {
+	Path []string
+}
+
+// collectSDKOpsFreeformKeyFields finds free-form/map-data fields, mirroring
+// collectSDKOpsUnionUnwrapFields' walk (including the root-oneOf variant
+// traversal) so it reaches free-form fields nested inside a root union's own
+// variants (e.g. AIGatewayModel's api.config.route.headers).
+func (g *Generator) collectSDKOpsFreeformKeyFields(schema *parser.Schema) []sdkOpsFreeformKeyField {
+	if schema == nil {
+		return nil
+	}
+
+	var fields []sdkOpsFreeformKeyField
+	for _, prop := range schema.Properties {
+		g.collectSDKOpsFreeformKeyFieldsFromProperty(prop, []string{prop.Name}, &fields)
+	}
+	if len(schema.OneOf) > 0 {
+		rawVariantNames := make([]string, 0, len(schema.OneOf))
+		for _, variant := range schema.OneOf {
+			variantName := variant.Name
+			if variant.RefName != "" {
+				variantName = variant.RefName
+			}
+			rawVariantNames = append(rawVariantNames, variantName)
+		}
+		variantNames := extractVariantNames(rawVariantNames)
+		discValueForRef := make(map[string]string, len(schema.DiscriminatorMapping))
+		for discValue, refName := range schema.DiscriminatorMapping {
+			discValueForRef[refName] = discValue
+		}
+		for i, variant := range schema.OneOf {
+			variantRefName := variant.Name
+			if variant.RefName != "" {
+				variantRefName = variant.RefName
+			}
+			variantJSONName := discValueForRef[variantRefName]
+			if variantJSONName == "" {
+				variantJSONName = strings.ToLower(variantNames[i])
+			}
+			for _, nestedProp := range variant.Properties {
+				g.collectSDKOpsFreeformKeyFieldsFromProperty(nestedProp, []string{variantJSONName, nestedProp.Name}, &fields)
+			}
+		}
+	}
+
+	sort.Slice(fields, func(i, j int) bool {
+		return strings.Join(fields[i].Path, ".") < strings.Join(fields[j].Path, ".")
+	})
+
+	return fields
+}
+
+func (g *Generator) collectSDKOpsFreeformKeyFieldsFromProperty(prop *parser.Property, path []string, fields *[]sdkOpsFreeformKeyField) {
+	if prop == nil || skipProperty(prop) {
+		return
+	}
+
+	if g.isFreeformKeyProperty(prop) {
+		*fields = append(*fields, sdkOpsFreeformKeyField{Path: append([]string(nil), path...)})
+		// The whole subtree's keys are data; don't recurse into it.
+		return
+	}
+
+	if prop.Items != nil {
+		g.collectSDKOpsFreeformKeyFieldsFromProperty(prop.Items, append(path, "[]"), fields)
+	}
+	for _, nestedProp := range prop.Properties {
+		g.collectSDKOpsFreeformKeyFieldsFromProperty(nestedProp, append(path, nestedProp.Name), fields)
+	}
+	if prop.AdditionalProperties != nil {
+		g.collectSDKOpsFreeformKeyFieldsFromProperty(prop.AdditionalProperties, append(path, "{}"), fields)
+	}
+	// A property-level oneOf's variants are flattened directly onto the
+	// wrapper field on the wire (see allVariantsAnonymousSingleProperty), so a
+	// free-form variant member (e.g. AIGatewayModelRouteConfigModel's Body/
+	// Headers) is reached at the same path depth as prop itself, keyed by the
+	// variant's own property name.
+	//
+	// ponytail: this path only matches in the root-union SDK-ops pipeline,
+	// where renameKeysToSDKExcept runs before flattenSDKUnions so the CRD's
+	// nested {"type":..., "<member>": {...}} shape is still intact. The
+	// standard (non-root-union) pipeline flattens before renaming, hoisting
+	// the free-form keys up to prop's own level — a path collected here
+	// wouldn't match there. No non-root-union entity has a free-form member
+	// under a property-level oneOf today; fix the standard pipeline's
+	// ordering too if one is ever added.
+	for _, variant := range prop.OneOf {
+		for _, nestedProp := range variant.Properties {
+			g.collectSDKOpsFreeformKeyFieldsFromProperty(nestedProp, append(path, nestedProp.Name), fields)
+		}
+	}
+}
+
+// isFreeformKeyProperty reports whether prop's JSON object keys are user data
+// rather than CRD field names: either an apiextensionsv1.JSON field (an
+// object with no declared properties) or an additionalProperties map whose
+// value type has no renameable field names of its own (scalar, or itself
+// free-form). A map of structs (map[string]<struct>) is deliberately
+// excluded — its values still need their own field names renamed.
+func (g *Generator) isFreeformKeyProperty(prop *parser.Property) bool {
+	if prop == nil || prop.IsReference || len(prop.OneOf) > 0 || len(prop.AnyOf) > 0 {
+		return false
+	}
+	if prop.RefName != "" {
+		if g == nil || g.parsed == nil {
+			return false
+		}
+		refSchema := g.parsed.Schemas[prop.RefName]
+		if refSchema == nil {
+			return false
+		}
+		if refSchema.AdditionalProperties != nil {
+			return isFreeformOrScalarValue(refSchema.AdditionalProperties)
+		}
+		return refSchema.Type == "object" && len(refSchema.Properties) == 0
+	}
+	if prop.Type != "object" {
+		return false
+	}
+	if prop.AdditionalProperties != nil {
+		return isFreeformOrScalarValue(prop.AdditionalProperties)
+	}
+	return len(prop.Properties) == 0
+}
+
+// isFreeformOrScalarValue reports whether a map's value type carries no
+// renameable field names of its own: a scalar, or itself a free-form object.
+func isFreeformOrScalarValue(value *parser.Property) bool {
+	return value != nil && value.RefName == "" && len(value.Properties) == 0 && len(value.OneOf) == 0
 }
 
 // collectSDKOpsConstFields finds discriminator fields that were stripped from

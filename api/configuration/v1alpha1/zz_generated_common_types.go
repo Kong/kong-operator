@@ -232,7 +232,32 @@ func isSDKDiscriminatorKey(key string) bool {
 	}
 }
 
+// sdkOpsFreeformKeyField marks a free-form/data-keyed subtree (an
+// apiextensionsv1.JSON field, or an additionalProperties map whose values
+// aren't themselves renameable structs) whose keys are user data and must
+// not be camelCase→snake_case renamed by renameKeysToSDK.
+type sdkOpsFreeformKeyField struct {
+	Path []string
+}
+
 func renameKeysToSDK(v any) any {
+	return renameKeysToSDKExcept(v, nil)
+}
+
+// renameKeysToSDKExcept is renameKeysToSDK, but preserves verbatim every key
+// at or under a free-form path in fields. Segments are matched against each
+// key's already-renamed (snake_case) form; "[]" descends into every array
+// element and "{}" matches any map key, mirroring unwrapSDKOpsUnionFields'
+// path convention.
+func renameKeysToSDKExcept(v any, fields []sdkOpsFreeformKeyField) any {
+	paths := make([][]string, 0, len(fields))
+	for _, f := range fields {
+		paths = append(paths, f.Path)
+	}
+	return renameKeysToSDKWalk(v, paths)
+}
+
+func renameKeysToSDKWalk(v any, paths [][]string) any {
 	switch x := v.(type) {
 	case map[string]any:
 		result := make(map[string]any, len(x))
@@ -244,16 +269,46 @@ func renameKeysToSDK(v any) any {
 					val = camelToSnakeCase(s)
 				}
 			}
-			result[newKey] = renameKeysToSDK(val)
+			sub, atLeaf := advanceFreeformKeyPaths(paths, newKey)
+			if atLeaf {
+				// newKey is itself a free-form field: its keys are data, not
+				// CRD field names, so the value is kept as-is.
+				result[newKey] = val
+			} else {
+				result[newKey] = renameKeysToSDKWalk(val, sub)
+			}
 		}
 		return result
 	case []any:
+		sub, _ := advanceFreeformKeyPaths(paths, "[]")
 		for i, val := range x {
-			x[i] = renameKeysToSDK(val)
+			x[i] = renameKeysToSDKWalk(val, sub)
 		}
 		return x
 	}
 	return v
+}
+
+// advanceFreeformKeyPaths returns the tails of the paths whose head matches
+// seg (a literal snake_case key, or "[]" for array descent; a "{}" head
+// matches any map key). ok is true when a matched path is exhausted by seg,
+// i.e. seg is the free-form field itself.
+func advanceFreeformKeyPaths(paths [][]string, seg string) (tails [][]string, ok bool) {
+	for _, p := range paths {
+		if len(p) == 0 {
+			continue
+		}
+		head := p[0]
+		if head != seg && !(head == "{}" && seg != "[]") {
+			continue
+		}
+		if len(p) == 1 {
+			ok = true
+			continue
+		}
+		tails = append(tails, p[1:])
+	}
+	return tails, ok
 }
 
 // sdkOpsConstField describes a const discriminator to inject at a payload path.

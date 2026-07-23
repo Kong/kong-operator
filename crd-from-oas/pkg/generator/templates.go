@@ -665,6 +665,23 @@ var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
 {{- end}}
 }
 {{- end}}
+{{- if .FreeformKeyFields}}
+
+// {{$.EntityName}}SDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+{{- range .FreeformKeyFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+{{- end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
@@ -681,7 +698,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
+	{{- if $.FreeformKeyFields}}
+	payload = renameKeysToSDKExcept(payload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	payload = renameKeysToSDK(payload)
+	{{- end}}
 	{{- if $.BoolFields}}
 	if pm, ok := payload.(map[string]any); ok {
 		if err := normalize{{$.EntityName}}SDKOpsBoolFields(pm); err != nil {
@@ -1349,6 +1370,23 @@ var {{$.EntityName}}SDKOpsUnionUnwrapFields = []sdkOpsUnionUnwrapField{
 {{- end}}
 }
 {{- end}}
+{{- if .FreeformKeyFields}}
+
+// {{$.EntityName}}SDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+{{- range .FreeformKeyFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+{{- end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
@@ -1365,7 +1403,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
+	{{- if $.FreeformKeyFields}}
+	renamed := renameKeysToSDKExcept(rawPayload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	renamed := renameKeysToSDK(rawPayload)
+	{{- end}}
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert {{$.EntityName}}APISpec SDK payload to map")

@@ -104,7 +104,7 @@ spec:
 kind: AIGatewayModel
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: sample-ai-gw-model
+  name: sample-ai-gw-model-api
   namespace: default
 spec:
   aiGatewayRef:
@@ -151,6 +151,54 @@ spec:
         env: test
       targets:
         - name: gpt-4o-mini
+          provider:
+            name: ai-gw-provider-openai
+          config:
+            type: openai
+            openai:
+              upstreamURL: https://api.openai.com/v1/chat/completions
+---
+kind: AIGatewayModel
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: sample-ai-gw-model
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: model
+    model:
+      name: gpt-4o-mini-model
+      displayName: GPT-4o Mini
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - agentic
+        - generate
+      config:
+        responseStreaming: always
+        route:
+          model:
+            type: headers
+            # route.model.headers is an object keyed by header name (Kong
+            # route header-matching format: { "<header>": [<values>] }), not
+            # a list. Routes a request to this model when headers match:
+            headers:
+              X-Kong-LLM-Model:
+                - gpt-4o-mini-model
+          tags:
+            - customtag
+          paths:
+            - /v1/chat/completions
+      labels:
+        app: test1
+        env: test
+      targets:
+        - name: gpt-4o-mini-model
           provider:
             name: ai-gw-provider-openai
           config:

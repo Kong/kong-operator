@@ -257,6 +257,88 @@ var AIGatewayModelSDKOpsUnionUnwrapFields = []sdkOpsUnionUnwrapField{
 	},
 }
 
+// AIGatewayModelSDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var AIGatewayModelSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"api",
+			"config",
+			"route",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"api",
+			"config",
+			"route",
+			"model",
+			"body",
+		},
+	},
+	{
+		Path: []string{
+			"api",
+			"config",
+			"route",
+			"model",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"api",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"api",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"model",
+			"config",
+			"route",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"model",
+			"config",
+			"route",
+			"model",
+			"body",
+		},
+	},
+	{
+		Path: []string{
+			"model",
+			"config",
+			"route",
+			"model",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"model",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"model",
+			"managed_by",
+		},
+	},
+}
+
 func (s *AIGatewayModelAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -269,7 +351,7 @@ func (s *AIGatewayModelAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	renamed := renameKeysToSDK(rawPayload)
+	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayModelSDKOpsFreeformKeyFields)
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert AIGatewayModelAPISpec SDK payload to map")
