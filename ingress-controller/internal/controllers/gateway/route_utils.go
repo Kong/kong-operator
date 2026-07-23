@@ -780,6 +780,33 @@ func isTLSReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef g
 	return false
 }
 
+// isUDPReferenceGranted checks that the backendRef referenced by the UDPRoute is granted by a ReferenceGrant.
+func isUDPReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef gatewayapi.BackendRef, fromNamespace string) bool {
+	var backendRefGroup gatewayapi.Group
+	var backendRefKind gatewayapi.Kind
+
+	if backendRef.Group != nil {
+		backendRefGroup = *backendRef.Group
+	}
+	if backendRef.Kind != nil {
+		backendRefKind = *backendRef.Kind
+	}
+	for _, from := range grantSpec.From {
+		if from.Group != gatewayv1.GroupName || from.Kind != "UDPRoute" || fromNamespace != string(from.Namespace) {
+			continue
+		}
+
+		for _, to := range grantSpec.To {
+			if backendRefGroup == to.Group &&
+				backendRefKind == to.Kind &&
+				(to.Name == nil || *to.Name == backendRef.Name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // setRouteParentInStatusForParent checks if the provided route Status, contains
 // status for the provided parent and if it does it sets it to the provided
 // RouteStatusParent. If it does not then it appends the provided RouteStatusParent
