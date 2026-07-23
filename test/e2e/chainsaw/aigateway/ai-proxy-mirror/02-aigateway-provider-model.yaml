@@ -58,6 +58,11 @@ spec:
         model:
           nameHeader: Enabled
         route:
+          model:
+            type: headers
+            headers:
+              X-Kong-LLM-Model:
+                - qwen2.5:0.5b
           paths:
             - /aigw11/chat
       targets:
