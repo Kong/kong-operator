@@ -165,8 +165,6 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 	obj objectWithParentRef,
 ) (ctrl.Result, error) {
 	parentType := constraints.EntityTypeName[p]()
-	kind := obj.GetParentGVK().Kind
-	_ = kind
 
 	parentRef := obj.GetParentRef()
 	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, obj, parentRef, obj.GetParentGVK()); err != nil || !res.IsZero() {
