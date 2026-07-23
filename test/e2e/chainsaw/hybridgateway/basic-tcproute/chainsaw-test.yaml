@@ -1,0 +1,172 @@
+# Basic TCPRoute test scenario.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: basic-tcproute
+spec:
+  description: |
+    This test validates that the hybrid gateway controller translates a basic
+    TCPRoute with a single Service backend into Kong resources and routes TCP
+    traffic through the generated Gateway data plane.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: listener_tcp_port
+      value: 8898
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: tcp_route_name
+      value: (join('-', [($test_name), 'echo-tcp-route']))
+    - name: tcp_route_namespace
+      value: ($namespace)
+    - name: echo_deployment_name
+      value: (join('-', [($test_name), 'echo']))
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+
+  steps:
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-gateway
+      description: Create Gateway with a TCP listener.
+      try:
+        - apply:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+                namespace: ($namespace)
+              spec:
+                gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+                listeners:
+                  - name: tcp
+                    protocol: TCP
+                    port: (to_number($listener_tcp_port))
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Accepted']):
+                  - status: 'True'
+                    reason: Accepted
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'DataPlaneReady']):
+                  - status: 'True'
+                    reason: Ready
+                (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KonnectExtensionReady']):
+                  - status: 'True'
+                    reason: Ready
+                (conditions[?type == 'GatewayService']):
+                  - status: 'True'
+                    reason: Ready
+
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlPlane resource is created and synchronized.
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    - name: Create-echo-service
+      description: Create and assert an echo service to route TCP traffic to.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+
+    - name: Create-tcproute-echo
+      description: Create TCPRoute to route traffic to the echo service.
+      try:
+        - apply:
+            file: 01-tcpRoute-echo.yaml
+        - assert:
+            file: 02-tcpRoute-echo-assert.yaml
+
+    - name: Assert-kong-resources
+      description: Assert that TCPRoute-generated Kong resources are programmed.
+      try:
+        - assert:
+            file: 03-assert-kong-resources.yaml
+
+    - name: Verify-TCP-traffic-from-host
+      description: Verify that TCP traffic can be routed through the gateway to the echo service from the host.
+      try:
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              bash ../../common/scripts/proxy_ip_address.sh
+            outputs:
+              - name: proxy_ip
+                value: (json_parse($stdout).proxy_ip_address)
+        - script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: PROXY_PORT
+                value: (to_string($listener_tcp_port))
+              - name: EXPECTED_RESPONSE
+                value: Running on Pod
+            content: |
+              bash ../../common/scripts/host_connectivity_test_tcp.sh
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-basic-tcproute
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -200,6 +200,10 @@ func (c *tcpRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 			c.outputStore = append(c.outputStore, upstreamPtr)
 			log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
 
+			// TCPRoute has no route-level TLS configuration. certPtr is only the
+			// optional upstream client certificate produced from the backend
+			// Service's konghq.com/client-cert annotation when the effective Kong
+			// service protocol is TLS-capable.
 			servicePtr, certPtr, grantPtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongService resource, skipping rule",
