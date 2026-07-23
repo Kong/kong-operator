@@ -1,0 +1,25 @@
+# On-prem GatewayConfiguration with no KONG_STREAM_LISTEN set.
+# The operator generates the default value for the TLS listener.
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: (join('-', [($test_name), 'gateway-configuration']))
+  namespace: ($namespace)
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+            - name: proxy
+              image: ($gateway_image)
+              readinessProbe:
+                failureThreshold: 3
+                initialDelaySeconds: 1
+                periodSeconds: 1
+                successThreshold: 1
+                timeoutSeconds: 1
+                httpGet:
+                  path: /status/ready
+                  port: 8100
+                  scheme: HTTP
