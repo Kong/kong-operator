@@ -56,7 +56,6 @@ spec:
         - generate
       config:
         model:
-          alias: qwen2.5:0.5b
           nameHeader: Enabled
         route:
           paths:
