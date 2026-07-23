@@ -978,7 +978,11 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeN
 	}
 {{- end}}
 {{- end}}
+{{- if .SingleValueObjectRef}}
+	return []{{.TypeName}}{*{{$path}}}
+{{- else}}
 	return {{$path}}
+{{- end}}
 {{- end}}
 }
 {{end}}
@@ -1105,6 +1109,11 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 	// each element of the "{{.ArrayKey}}" array in the SDK payload, preserving
 	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
 	// of the config wasn't set, so the payload is left untouched.
+{{- else if .ObjectWrap}}
+	// {{.Path}} carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "{{.ObjectWrapKey}}",
+	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
+	// that part of the config wasn't set, so the payload is left untouched.
 {{- else}}
 	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
@@ -1153,6 +1162,16 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 					ri++
 				}
 			}
+		}
+{{- end}}
+{{- else if .ObjectWrap}}
+{{- range .Variants}}
+		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
+		}
+		if len(resolved{{.ResolverName}}) > 0 {
+			{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
 		}
 {{- end}}
 {{- else}}
