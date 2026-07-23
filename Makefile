@@ -182,7 +182,7 @@ download.telepresence: mise yq ## Download telepresence locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:telepresenceio/telepresence
 
 MARKDOWNLINT_VERSION = $(shell $(YQ) -r '.markdownlint-cli2' < $(TOOLS_VERSIONS_FILE))
-MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_VERSION)/bin/markdownlint-cli2
+MARKDOWNLINT = MISE_DATA_DIR=$(PROJECT_DIR)/bin/ $(MISE) x npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION) -- markdownlint-cli2
 .PHONY: download.markdownlint-cli2
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
 	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
