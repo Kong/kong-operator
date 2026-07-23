@@ -67,11 +67,11 @@
 
 ### Added
 
-- GatewayConfiguration: support `spec.deployment.labels` and
-  `spec.deployment.annotations` for Deployment metadata, with safe managed-key
+- `GatewayConfiguration` supports `spec.deployment.labels` and
+  `spec.deployment.annotations` for `Deployment` metadata, with safe managed-key
   removal so operator-managed keys are removed without clobbering external
   labels or annotations.
-  [#3682](https://github.com/Kong/kong-operator/pull/3682)
+  [#5037](https://github.com/Kong/kong-operator/pull/5037)
 - EventGateway CRDs: added `EventGatewaySchemaRegistry` CRD and reconciliation logic.
   [#5017](https://github.com/Kong/kong-operator/pull/5017)
 
