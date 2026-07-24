@@ -1191,7 +1191,7 @@ func countAttachedUDPRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener,
 func countAttachedTCPRoutes(listener gwtypes.Listener, tcpRoutes []gatewayv1.TCPRoute) int32 {
 	count := lo.CountBy(tcpRoutes, func(r gatewayv1.TCPRoute) bool {
 		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
-			return parentRef.SectionName == nil || *parentRef.SectionName == listener.Name &&
+			return (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
 				(parentRef.Port == nil || *parentRef.Port == listener.Port)
 		})
 	})
