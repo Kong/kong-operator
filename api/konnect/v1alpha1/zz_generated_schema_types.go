@@ -3526,6 +3526,45 @@ func (s *AIGatewayModelAccess) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// AIGatewayModelAliasConfig Configuration for routing to this model using an
+// alias.
+type AIGatewayModelAliasConfig map[string]string
+
+// AIGatewayModelAliasConfigBody Configuration for routing requests to a
+// specific model using a request body property.
+type AIGatewayModelAliasConfigBody struct {
+	// Value indexed by property name that will cause this route to match if
+	// present in the request body.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxProperties=1
+	Body apiextensionsv1.JSON `json:"body,omitzero"`
+}
+
+// AIGatewayModelAliasConfigHeaders Configuration for routing requests to a
+// specific model using a header.
+type AIGatewayModelAliasConfigHeaders struct {
+	// Value indexed by property name that will cause this route to match if
+	// present in the request headers.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxProperties=1
+	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
+}
+
+// AIGatewayModelAliasConfigPath Configuration for routing requests to a
+// specific model using a path alias.
+type AIGatewayModelAliasConfigPath struct {
+	// Value that will cause this route to match if present in the request path.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxItems=1
+	PathAliases []string `json:"pathAliases,omitempty"`
+}
+
 // AIGatewayModelBalancerConfig represents a union type for AIGatewayModelBalancerConfig.
 // Only one of the fields should be set based on the Algorithm.
 type AIGatewayModelBalancerConfig struct {
@@ -6835,8 +6874,7 @@ type AIGatewayModelRouteConfig struct {
 	//
 	// +optional
 	Methods []string `json:"methods,omitempty"`
-	// Configuration for routing requests to a specific model.
-	//
+	// Configuration for routing to this model using an alias.
 	//
 	// +optional
 	Model *AIGatewayModelRouteConfigModel `json:"model,omitempty"`
@@ -6903,29 +6941,21 @@ type AIGatewayModelRouteConfigModel struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=body;headers;pathAliases
+	// +kubebuilder:validation:Enum=body;headers;path
 	Type AIGatewayModelRouteConfigModelType `json:"type,omitempty"`
 
-	// Value indexed by property name that will cause this route to match if
-	// present in the request body.
-	//
+	// Body configuration.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=1
-	Body *apiextensionsv1.JSON `json:"body,omitempty"`
-	// Value indexed by property name that will cause this route to match if
-	// present in the request headers.
-	//
+	Body *AIGatewayModelAliasConfigBody `json:"body,omitempty"`
+	// Headers configuration.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=1
-	Headers *apiextensionsv1.JSON `json:"headers,omitempty"`
-	// Value that will cause this route to match if present in the request path.
-	//
+	Headers *AIGatewayModelAliasConfigHeaders `json:"headers,omitempty"`
+	// Path configuration.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	PathAliases []string `json:"pathAliases,omitempty"`
+	Path *AIGatewayModelAliasConfigPath `json:"path,omitempty"`
 }
 
 // AIGatewayModelRouteConfigModelType represents the type of model.
@@ -6933,9 +6963,9 @@ type AIGatewayModelRouteConfigModelType string
 
 // AIGatewayModelRouteConfigModelType values.
 const (
-	AIGatewayModelRouteConfigModelTypeBody        AIGatewayModelRouteConfigModelType = "body"
-	AIGatewayModelRouteConfigModelTypeHeaders     AIGatewayModelRouteConfigModelType = "headers"
-	AIGatewayModelRouteConfigModelTypePathAliases AIGatewayModelRouteConfigModelType = "pathAliases"
+	AIGatewayModelRouteConfigModelTypeBody    AIGatewayModelRouteConfigModelType = "body"
+	AIGatewayModelRouteConfigModelTypeHeaders AIGatewayModelRouteConfigModelType = "headers"
+	AIGatewayModelRouteConfigModelTypePath    AIGatewayModelRouteConfigModelType = "path"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -6963,13 +6993,13 @@ func (u AIGatewayModelRouteConfigModel) MarshalJSON() ([]byte, error) {
 			}
 			m["headers"] = raw
 		}
-	case AIGatewayModelRouteConfigModelTypePathAliases:
-		if u.PathAliases != nil {
-			raw, err := json.Marshal(u.PathAliases)
+	case AIGatewayModelRouteConfigModelTypePath:
+		if u.Path != nil {
+			raw, err := json.Marshal(u.Path)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel PathAliases: %w", err)
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Path: %w", err)
 			}
-			m["pathAliases"] = raw
+			m["path"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -6997,7 +7027,7 @@ func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val apiextensionsv1.JSON
+		var val AIGatewayModelAliasConfigBody
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Body: %w", err)
 		}
@@ -7007,21 +7037,21 @@ func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val apiextensionsv1.JSON
+		var val AIGatewayModelAliasConfigHeaders
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Headers: %w", err)
 		}
 		u.Headers = &val
-	case "pathAliases":
-		payload, ok := raw["pathAliases"]
+	case "path":
+		payload, ok := raw["path"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val []string
+		var val AIGatewayModelAliasConfigPath
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel PathAliases: %w", err)
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Path: %w", err)
 		}
-		u.PathAliases = val
+		u.Path = &val
 	}
 	return nil
 }
@@ -7037,7 +7067,7 @@ func (s *AIGatewayModelRouteConfig) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfig: %w", err)
 	}
-	if aux.Model != nil && aux.Model.Type == "" && aux.Model.Body == nil && aux.Model.Headers == nil && aux.Model.PathAliases == nil {
+	if aux.Model != nil && aux.Model.Type == "" && aux.Model.Body == nil && aux.Model.Headers == nil && aux.Model.Path == nil {
 		aux.Model = nil
 	}
 	*s = AIGatewayModelRouteConfig(aux)
