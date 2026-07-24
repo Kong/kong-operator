@@ -3,7 +3,11 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"reflect"
+	"strings"
 )
 
 // SecretKeyRef is a reference to a key in a Secret
@@ -228,7 +232,32 @@ func isSDKDiscriminatorKey(key string) bool {
 	}
 }
 
+// sdkOpsFreeformKeyField marks a free-form/data-keyed subtree (an
+// apiextensionsv1.JSON field, or an additionalProperties map whose values
+// aren't themselves renameable structs) whose keys are user data and must
+// not be camelCase→snake_case renamed by renameKeysToSDK.
+type sdkOpsFreeformKeyField struct {
+	Path []string
+}
+
 func renameKeysToSDK(v any) any {
+	return renameKeysToSDKExcept(v, nil)
+}
+
+// renameKeysToSDKExcept is renameKeysToSDK, but preserves verbatim every key
+// at or under a free-form path in fields. Segments are matched against each
+// key's already-renamed (snake_case) form; "[]" descends into every array
+// element and "{}" matches any map key, mirroring unwrapSDKOpsUnionFields'
+// path convention.
+func renameKeysToSDKExcept(v any, fields []sdkOpsFreeformKeyField) any {
+	paths := make([][]string, 0, len(fields))
+	for _, f := range fields {
+		paths = append(paths, f.Path)
+	}
+	return renameKeysToSDKWalk(v, paths)
+}
+
+func renameKeysToSDKWalk(v any, paths [][]string) any {
 	switch x := v.(type) {
 	case map[string]any:
 		result := make(map[string]any, len(x))
@@ -240,16 +269,46 @@ func renameKeysToSDK(v any) any {
 					val = camelToSnakeCase(s)
 				}
 			}
-			result[newKey] = renameKeysToSDK(val)
+			sub, atLeaf := advanceFreeformKeyPaths(paths, newKey)
+			if atLeaf {
+				// newKey is itself a free-form field: its keys are data, not
+				// CRD field names, so the value is kept as-is.
+				result[newKey] = val
+			} else {
+				result[newKey] = renameKeysToSDKWalk(val, sub)
+			}
 		}
 		return result
 	case []any:
+		sub, _ := advanceFreeformKeyPaths(paths, "[]")
 		for i, val := range x {
-			x[i] = renameKeysToSDK(val)
+			x[i] = renameKeysToSDKWalk(val, sub)
 		}
 		return x
 	}
 	return v
+}
+
+// advanceFreeformKeyPaths returns the tails of the paths whose head matches
+// seg (a literal snake_case key, or "[]" for array descent; a "{}" head
+// matches any map key). ok is true when a matched path is exhausted by seg,
+// i.e. seg is the free-form field itself.
+func advanceFreeformKeyPaths(paths [][]string, seg string) (tails [][]string, ok bool) {
+	for _, p := range paths {
+		if len(p) == 0 {
+			continue
+		}
+		head := p[0]
+		if head != seg && !(head == "{}" && seg != "[]") {
+			continue
+		}
+		if len(p) == 1 {
+			ok = true
+			continue
+		}
+		tails = append(tails, p[1:])
+	}
+	return tails, ok
 }
 
 // sdkOpsConstField describes a const discriminator to inject at a payload path.
@@ -296,4 +355,259 @@ func setSDKOpsConstAtPath(v any, path []string, key, value string) {
 			}
 		}
 	}
+}
+
+// sdkOpsUnionUnwrapField locates a property-level oneOf that has no OAS
+// discriminator, so its Konnect SDK type expects the non-discriminated wire
+// shape {"<member>": <value>} instead of the CRD's synthesized
+// {"type": "<member>", "<member>": <value>}.
+type sdkOpsUnionUnwrapField struct {
+	Path []string
+}
+
+// unwrapSDKOpsUnionFields rewrites each payload path from the CRD's
+// discriminated shape to the bare selected-member shape, for oneOf
+// properties with no OAS discriminator. Runs after renameKeysToSDK (paths use
+// snake_case segments) and before flattenSDKUnions; "[]" descends into every
+// array element and "{}" into every map value.
+func unwrapSDKOpsUnionFields(payload map[string]any, fields []sdkOpsUnionUnwrapField) {
+	for _, f := range fields {
+		unwrapSDKOpsUnionAtPath(payload, f.Path)
+	}
+}
+
+func unwrapSDKOpsUnionAtPath(v any, path []string) {
+	if len(path) == 0 {
+		m, ok := v.(map[string]any)
+		if !ok {
+			return
+		}
+		typ, ok := m["type"].(string)
+		if !ok {
+			return
+		}
+		member, ok := m[typ]
+		if !ok {
+			return
+		}
+		for k := range m {
+			delete(m, k)
+		}
+		m[typ] = member
+		return
+	}
+	switch segment := path[0]; segment {
+	case "[]":
+		if items, ok := v.([]any); ok {
+			for _, item := range items {
+				unwrapSDKOpsUnionAtPath(item, path[1:])
+			}
+		}
+	case "{}":
+		if object, ok := v.(map[string]any); ok {
+			for _, item := range object {
+				unwrapSDKOpsUnionAtPath(item, path[1:])
+			}
+		}
+	default:
+		if object, ok := v.(map[string]any); ok {
+			if child, ok := object[segment]; ok {
+				unwrapSDKOpsUnionAtPath(child, path[1:])
+			}
+		}
+	}
+}
+
+// assignSDKOpsUnionMembers reassigns each non-discriminated union field
+// listed in fields directly on the already-unmarshaled SDK struct target,
+// using its bare sub-JSON from data. This works around Konnect SDK unions
+// whose UnmarshalJSON can't distinguish between optional, single-property
+// members and always resolves to the first one. variantJSONName is the
+// snake_case selected-variant key (fields[i].Path[0]) that data corresponds
+// to; fields not rooted at variantJSONName are skipped.
+func assignSDKOpsUnionMembers(target any, data []byte, fields []sdkOpsUnionUnwrapField, variantJSONName string) error {
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	v := reflect.ValueOf(target)
+	if v.Kind() != reflect.Ptr || v.IsNil() {
+		return fmt.Errorf("assignSDKOpsUnionMembers: target must be a non-nil pointer")
+	}
+	for _, field := range fields {
+		if len(field.Path) < 2 || field.Path[0] != variantJSONName {
+			continue
+		}
+		if err := assignSDKOpsUnionMemberAtPath(any(raw), v.Elem(), field.Path[1:]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// assignSDKOpsUnionMemberAtPath walks rawValue and target in lockstep,
+// following path (snake_case JSON field names; "[]" descends into every
+// slice element). It stops descending into maps ("{}"): map values obtained
+// via reflection are not addressable, so a union field nested under a map
+// can't be reassigned this way; no field generated so far needs it.
+func assignSDKOpsUnionMemberAtPath(rawValue any, target reflect.Value, path []string) error {
+	if len(path) == 0 {
+		subMap, ok := rawValue.(map[string]any)
+		if !ok || len(subMap) == 0 {
+			return nil
+		}
+		return assignSDKOpsUnionMember(target, subMap)
+	}
+
+	if path[0] == "[]" {
+		rawItems, ok := rawValue.([]any)
+		if !ok {
+			return nil
+		}
+		sliceTarget := reflectIndirect(target)
+		if sliceTarget.Kind() != reflect.Slice {
+			return nil
+		}
+		for i := 0; i < sliceTarget.Len() && i < len(rawItems); i++ {
+			if err := assignSDKOpsUnionMemberAtPath(rawItems[i], sliceTarget.Index(i), path[1:]); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	rawMap, ok := rawValue.(map[string]any)
+	if !ok {
+		return nil
+	}
+	rawChild, ok := rawMap[path[0]]
+	if !ok || rawChild == nil {
+		return nil
+	}
+	structTarget := reflectIndirect(target)
+	if structTarget.Kind() != reflect.Struct {
+		return nil
+	}
+	fieldVal := sdkStructFieldByJSONName(structTarget, path[0])
+	if !fieldVal.IsValid() {
+		return nil
+	}
+	return assignSDKOpsUnionMemberAtPath(rawChild, fieldVal, path[1:])
+}
+
+// assignSDKOpsUnionMember rebuilds the single-property member that matches
+// subMap's one key onto the union struct held at target (a pointer field,
+// allocated if nil), and sets the union's sibling Type field to the matching
+// member's Go field name, mirroring the SDK's own Create<Union>... constructors.
+func assignSDKOpsUnionMember(target reflect.Value, subMap map[string]any) error {
+	if len(subMap) != 1 {
+		return nil
+	}
+	var memberKey string
+	for k := range subMap {
+		memberKey = k
+	}
+
+	unionVal := reflectIndirect(target)
+	if unionVal.Kind() != reflect.Struct {
+		return nil
+	}
+	unionType := unionVal.Type()
+
+	matchIndex := -1
+	for i := 0; i < unionType.NumField(); i++ {
+		field := unionType.Field(i)
+		if field.Tag.Get("union") != "member" {
+			continue
+		}
+		memberType := field.Type
+		if memberType.Kind() == reflect.Ptr {
+			memberType = memberType.Elem()
+		}
+		if memberType.Kind() == reflect.Struct && sdkStructHasJSONField(memberType, memberKey) {
+			matchIndex = i
+			break
+		}
+	}
+	if matchIndex < 0 {
+		return fmt.Errorf("assignSDKOpsUnionMembers: no union member matches key %q", memberKey)
+	}
+
+	// The SDK's own UnmarshalJSON runs first and, for these ambiguous unions,
+	// may have already populated a *different* member (see package doc).
+	// Clear every member field before setting the matched one, or the SDK's
+	// declaration-order MarshalJSON would still prefer the stale one.
+	for i := 0; i < unionType.NumField(); i++ {
+		field := unionType.Field(i)
+		if field.Tag.Get("union") == "member" {
+			unionVal.Field(i).SetZero()
+		}
+	}
+
+	matchField := unionType.Field(matchIndex)
+	memberType := matchField.Type.Elem()
+	subData, err := json.Marshal(subMap)
+	if err != nil {
+		return err
+	}
+	memberPtr := reflect.New(memberType)
+	if err := json.Unmarshal(subData, memberPtr.Interface()); err != nil {
+		return err
+	}
+	unionVal.Field(matchIndex).Set(memberPtr)
+	if typeField := unionVal.FieldByName("Type"); typeField.IsValid() && typeField.Kind() == reflect.String {
+		typeField.SetString(matchField.Name)
+	}
+	return nil
+}
+
+// reflectIndirect dereferences a pointer, allocating a zero value first if it
+// is nil, and returns v unchanged otherwise.
+func reflectIndirect(v reflect.Value) reflect.Value {
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			if !v.CanSet() {
+				return reflect.Value{}
+			}
+			v.Set(reflect.New(v.Type().Elem()))
+		}
+		return v.Elem()
+	}
+	return v
+}
+
+// sdkStructFieldByJSONName returns the field of structVal whose json tag's
+// name matches jsonName, or the zero Value if none matches.
+func sdkStructFieldByJSONName(structVal reflect.Value, jsonName string) reflect.Value {
+	structType := structVal.Type()
+	for i := 0; i < structType.NumField(); i++ {
+		if sdkJSONFieldName(structType.Field(i)) == jsonName {
+			return structVal.Field(i)
+		}
+	}
+	return reflect.Value{}
+}
+
+// sdkStructHasJSONField reports whether structType has a field whose json
+// tag's name matches jsonName.
+func sdkStructHasJSONField(structType reflect.Type, jsonName string) bool {
+	for i := 0; i < structType.NumField(); i++ {
+		if sdkJSONFieldName(structType.Field(i)) == jsonName {
+			return true
+		}
+	}
+	return false
+}
+
+// sdkJSONFieldName extracts the name portion of a struct field's json tag,
+// falling back to the Go field name when the tag is absent or "-".
+func sdkJSONFieldName(field reflect.StructField) string {
+	name := field.Tag.Get("json")
+	if idx := strings.IndexByte(name, ','); idx >= 0 {
+		name = name[:idx]
+	}
+	if name == "" || name == "-" {
+		return field.Name
+	}
+	return name
 }

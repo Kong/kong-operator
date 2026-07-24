@@ -153,6 +153,240 @@ var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
 	},
 }
 
+// AIGatewayModelProviderSDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var AIGatewayModelProviderSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"anthropic",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"anthropic",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"azure",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"azure",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"bedrock",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"bedrock",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"cerebras",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"cerebras",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"cohere",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"cohere",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"dashscope",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"dashscope",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"databricks",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"databricks",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"deepseek",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"deepseek",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"gemini",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"gemini",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"huggingface",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"huggingface",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"kimi",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"kimi",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"llama2",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"llama2",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"mistral",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"mistral",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"ollama",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"ollama",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"openai",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"openai",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"vercel",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"vercel",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"vertex",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"vertex",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"vllm",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"vllm",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"xai",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"xai",
+			"managed_by",
+		},
+	},
+}
+
 func (s *AIGatewayModelProviderAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -166,7 +400,7 @@ func (s *AIGatewayModelProviderAPISpec) marshalSDKOpsPayload() (map[string]any, 
 	rawPayload = flattenSensitiveData(rawPayload)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	renamed := renameKeysToSDK(rawPayload)
+	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayModelProviderSDKOpsFreeformKeyFields)
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert AIGatewayModelProviderAPISpec SDK payload to map")

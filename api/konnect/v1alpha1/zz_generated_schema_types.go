@@ -715,6 +715,12 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	//
 	// +optional
 	ConsumerGroupsClaim []string `json:"consumerGroupsClaim,omitempty"`
+	// Do not terminate the request if consumer groups mapping fails.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConsumerGroupsOptional string `json:"consumerGroupsOptional,omitzero"`
 	// Do not terminate the request if consumer mapping fails.
 	//
 	//
@@ -741,6 +747,18 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 // AIGatewayIdentityProviderReference Reference to a identity provider instance
 // by name.
 type AIGatewayIdentityProviderReference string
+
+// AIGatewayLoggingConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for AI Gateway logging.
+type AIGatewayLoggingConfig struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
+}
 
 // AIGatewayMCPACLs **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
@@ -3113,16 +3131,11 @@ type AIGatewayModelAPIConfig struct {
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
-	Logging AIGatewayModelAPIConfigLogging `json:"logging,omitzero"`
+	Logging AIGatewayLoggingConfig `json:"logging,omitzero"`
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// +optional
-	Model AIGatewayModelAPIConfigModel `json:"model,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
 	//
@@ -3140,34 +3153,7 @@ type AIGatewayModelAPIConfig struct {
 	// Configuration for an AI Gateway route.
 	//
 	// +required
-	Route AIGatewayRouteConfig `json:"route,omitzero"`
-}
-
-// AIGatewayModelAPIConfigLogging **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// Configuration for AI Gateway logging.
-type AIGatewayModelAPIConfigLogging struct {
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Payloads string `json:"payloads,omitzero"`
-}
-
-// AIGatewayModelAPIConfigModel **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-type AIGatewayModelAPIConfigModel struct {
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// An alias for the model, used to select the target virtual model when passed
-	// in the "model" parameter of the request body.
-	// When not set, this defaults to the AI Gateway model's name.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Alias string `json:"alias,omitzero"`
+	Route AIGatewayModelRouteConfig `json:"route,omitzero"`
 }
 
 // AIGatewayModelAPIConfigBalancer represents a union type for balancer.
@@ -4635,7 +4621,7 @@ type AIGatewayModelFormat struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai
+	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai;vertex
 	Type string `json:"type,omitzero"`
 }
 
@@ -4734,7 +4720,7 @@ type AIGatewayModelModelConfig struct {
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
-	Logging AIGatewayModelModelConfigLogging `json:"logging,omitzero"`
+	Logging AIGatewayLoggingConfig `json:"logging,omitzero"`
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
@@ -4761,34 +4747,12 @@ type AIGatewayModelModelConfig struct {
 	// Configuration for an AI Gateway route.
 	//
 	// +required
-	Route AIGatewayRouteConfig `json:"route,omitzero"`
-}
-
-// AIGatewayModelModelConfigLogging **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// Configuration for AI Gateway logging.
-type AIGatewayModelModelConfigLogging struct {
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Payloads string `json:"payloads,omitzero"`
+	Route AIGatewayModelRouteConfig `json:"route,omitzero"`
 }
 
 // AIGatewayModelModelConfigModel **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 type AIGatewayModelModelConfigModel struct {
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// An alias for the model, used to select the target virtual model when passed
-	// in the "model" parameter of the request body.
-	// When not set, this defaults to the AI Gateway model's name.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Alias string `json:"alias,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -6836,6 +6800,248 @@ type AIGatewayModelProviderXaiConfig struct {
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelRouteConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for an AI Gateway route.
+type AIGatewayModelRouteConfig struct {
+	// One or more lists of values indexed by header name that will cause this
+	// route to match if present in the request.
+	// The `Host` header cannot be used with this attribute: hosts should be
+	// specified using the `hosts` attribute.
+	// When `headers` contains only one value and that value starts with the
+	// special prefix `~*`, the value is interpreted as a regular expression.
+	//
+	// +optional
+	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
+	// A list of domain names that match this route.
+	// Note that the hosts value is case sensitive.
+	//
+	// +optional
+	Hosts []string `json:"hosts,omitempty"`
+	// The status code Kong responds with when all properties of a route match
+	// except the protocol i.e.
+	// if the protocol of the request is `HTTP` instead of `HTTPS`.
+	// `Location` header is injected by Kong if the field is set to 301, 302, 307
+	// or 308.
+	// Note: This config applies only if the route is configured to only accept the
+	// `https` protocol.
+	//
+	// +optional
+	HTTPSRedirectStatusCode int `json:"httpsRedirectStatusCode,omitzero"`
+	// A list of HTTP methods that match this route.
+	//
+	// +optional
+	Methods []string `json:"methods,omitempty"`
+	// Configuration for routing requests to a specific model.
+	//
+	//
+	// +optional
+	Model *AIGatewayModelRouteConfigModel `json:"model,omitempty"`
+	// A list of paths that match this route.
+	//
+	// +optional
+	Paths []string `json:"paths,omitempty"`
+	// When matching a route via one of the `hosts` domain names, use the request
+	// `Host` header in the upstream request headers.
+	// If set to `false`, the upstream `Host` header will be that of the service's
+	// `host`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	PreserveHost string `json:"preserveHost,omitzero"`
+	// An array of the protocols this route should allow.
+	// See the [route Object](#route-object) section for a list of accepted
+	// protocols.
+	// When set to only `https`, HTTP requests are answered with an upgrade error.
+	// When set to only `http`, HTTPS requests are answered with an error.
+	//
+	// +optional
+	Protocols []string `json:"protocols,omitempty"`
+	// A number used to choose which route resolves a given request when several
+	// routes match it using regexes simultaneously.
+	// When two routes match the path and have the same `regex_priority`, the older
+	// one (lowest `created_at`) is used.
+	// Note that the priority for non-regex routes is different (longer non-regex
+	// routes are matched before shorter ones).
+	//
+	// +optional
+	RegexPriority int `json:"regexPriority,omitzero"`
+	// Whether to enable request body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that receive
+	// data with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RequestBuffering string `json:"requestBuffering,omitzero"`
+	// Whether to enable response body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that send data
+	// with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ResponseBuffering string `json:"responseBuffering,omitzero"`
+	// When matching a route via one of the `paths`, strip the matching prefix from
+	// the upstream request URL.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	StripPath string `json:"stripPath,omitzero"`
+	// An optional set of strings associated with the route for grouping and
+	// filtering.
+	//
+	// +optional
+	Tags []string `json:"tags,omitempty"`
+}
+
+// AIGatewayModelRouteConfigModel represents a union type for model.
+// Only one of the fields should be set based on the Type.
+type AIGatewayModelRouteConfigModel struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=body;headers;pathAliases
+	Type AIGatewayModelRouteConfigModelType `json:"type,omitempty"`
+
+	// Value indexed by property name that will cause this route to match if
+	// present in the request body.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=1
+	Body *apiextensionsv1.JSON `json:"body,omitempty"`
+	// Value indexed by property name that will cause this route to match if
+	// present in the request headers.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=1
+	Headers *apiextensionsv1.JSON `json:"headers,omitempty"`
+	// Value that will cause this route to match if present in the request path.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	PathAliases []string `json:"pathAliases,omitempty"`
+}
+
+// AIGatewayModelRouteConfigModelType represents the type of model.
+type AIGatewayModelRouteConfigModelType string
+
+// AIGatewayModelRouteConfigModelType values.
+const (
+	AIGatewayModelRouteConfigModelTypeBody        AIGatewayModelRouteConfigModelType = "body"
+	AIGatewayModelRouteConfigModelTypeHeaders     AIGatewayModelRouteConfigModelType = "headers"
+	AIGatewayModelRouteConfigModelTypePathAliases AIGatewayModelRouteConfigModelType = "pathAliases"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelRouteConfigModel) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelRouteConfigModelTypeBody:
+		if u.Body != nil {
+			raw, err := json.Marshal(u.Body)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Body: %w", err)
+			}
+			m["body"] = raw
+		}
+	case AIGatewayModelRouteConfigModelTypeHeaders:
+		if u.Headers != nil {
+			raw, err := json.Marshal(u.Headers)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Headers: %w", err)
+			}
+			m["headers"] = raw
+		}
+	case AIGatewayModelRouteConfigModelTypePathAliases:
+		if u.PathAliases != nil {
+			raw, err := json.Marshal(u.PathAliases)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel PathAliases: %w", err)
+			}
+			m["pathAliases"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelRouteConfigModelType(probe.Type)
+	switch probe.Type {
+	case "body":
+		payload, ok := raw["body"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val apiextensionsv1.JSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Body: %w", err)
+		}
+		u.Body = &val
+	case "headers":
+		payload, ok := raw["headers"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val apiextensionsv1.JSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Headers: %w", err)
+		}
+		u.Headers = &val
+	case "pathAliases":
+		payload, ok := raw["pathAliases"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []string
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel PathAliases: %w", err)
+		}
+		u.PathAliases = val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelRouteConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfig: nil receiver")
+	}
+	type alias AIGatewayModelRouteConfig
+	aux := alias{}
+	aux.Model = &AIGatewayModelRouteConfigModel{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfig: %w", err)
+	}
+	if aux.Model != nil && aux.Model.Type == "" && aux.Model.Body == nil && aux.Model.Headers == nil && aux.Model.PathAliases == nil {
+		aux.Model = nil
+	}
+	*s = AIGatewayModelRouteConfig(aux)
+	return nil
 }
 
 // AIGatewayModelVectorDBConfig represents a union type for AIGatewayModelVectorDBConfig.
