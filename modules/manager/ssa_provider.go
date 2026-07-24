@@ -12,9 +12,13 @@ import (
 
 // IsSSAProviderNeeded reports whether cfg requires the shared SSA
 // TypeConverterProvider, i.e. whether any SSA-using controller
-// (EventGatewayDataPlane, AIGatewayDataPlane, or MCPServer) is enabled.
+// (EventGatewayDataPlane, AIGatewayDataPlane, MCPServer, or the hybridgateway
+// Gateway API controllers) is enabled.
 func IsSSAProviderNeeded(cfg Config) bool {
-	return cfg.KEGDataPlaneControllerEnabled || cfg.AIGatewayDataPlaneControllerEnabled || cfg.FeatureGates.Enabled(FeatureGateMCPServer)
+	return cfg.KEGDataPlaneControllerEnabled ||
+		cfg.AIGatewayDataPlaneControllerEnabled ||
+		cfg.FeatureGates.Enabled(FeatureGateMCPServer) ||
+		cfg.KonnectControllersEnabled
 }
 
 // ssaCRDGroups are the CRD groups whose types are passed to ApplyIfChanged /
@@ -25,6 +29,11 @@ func IsSSAProviderNeeded(cfg Config) bool {
 // (only the core/apps built-ins), so no other groups belong here.
 // AIGatewayDataPlane adds aigateway.konghq.com for its own status patches and
 // configuration.konghq.com for AIGatewayDataPlaneCertificate objects.
+// The hybridgateway Gateway API controllers (gated by KonnectControllersEnabled)
+// also rely on configuration.konghq.com (KongRoute, KongService, KongUpstream,
+// KongTarget, KongPlugin, KongPluginBinding, KongCertificate, KongSNI) and
+// konnect.konghq.com for their server-side apply schema, both already present
+// below.
 var ssaCRDGroups = map[string]struct{}{
 	"eventgateway.konghq.com":  {},
 	"aigateway.konghq.com":     {},
