@@ -253,6 +253,34 @@ func ListTLSRoutesForGateway(
 	}), nil
 }
 
+// ListUDPRoutesForGateway is a helper function which returns a list of UDPRoutes
+// that have the provided Gateway set as parent in their spec.
+func ListUDPRoutesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+	opts ...client.ListOption,
+) ([]gwtypes.UDPRoute, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list UDPRoutes for gateway: Gateway %s was missing namespace", gateway.Name)
+	}
+
+	var udpRouteList gwtypes.UDPRouteList
+	err := c.List(
+		ctx,
+		&udpRouteList,
+		opts...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("can't list UDPRoutes for gateway: %w", err)
+	}
+	return lo.Filter(udpRouteList.Items, func(r gwtypes.UDPRoute, _ int) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
+			return parentRefMatchGateway(r.Namespace, parentRef, gateway)
+		})
+	}), nil
+}
+
 // ListGRPCRoutesForGateway is a helper function which returns a list of GRPCRoutes
 // that have the provided Gateway set as parent in their spec.parentRefs.
 func ListGRPCRoutesForGateway(
