@@ -2464,6 +2464,56 @@ Allowed values:
 
 
 
+#### AIGatewayModelAliasConfigBody
+
+
+AIGatewayModelAliasConfigBody Configuration for routing requests to a
+specific model using a request body property.
+
+
+
+| Field | Description |
+| --- | --- |
+| `body` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request body. |
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
+
+#### AIGatewayModelAliasConfigHeaders
+
+
+AIGatewayModelAliasConfigHeaders Configuration for routing requests to a
+specific model using a header.
+
+
+
+| Field | Description |
+| --- | --- |
+| `headers` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request headers. |
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
+
+#### AIGatewayModelAliasConfigPath
+
+
+AIGatewayModelAliasConfigPath Configuration for routing requests to a
+specific model using a path alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `pathAliases` _[]string_ | Value that will cause this route to match if present in the request path. |
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
+
+
+
 #### AIGatewayModelBalancerConfigType
 
 _Underlying type:_ `string`
@@ -4051,7 +4101,7 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | `hosts` _[]string_ | A list of domain names that match this route. Note that the hosts value is case sensitive. |
 | `httpsRedirectStatusCode` _int_ | The status code Kong responds with when all properties of a route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the route is configured to only accept the `https` protocol. |
 | `methods` _[]string_ | A list of HTTP methods that match this route. |
-| `model` _[AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)_ | Configuration for routing requests to a specific model. |
+| `model` _[AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)_ | Configuration for routing to this model using an alias. |
 | `paths` _[]string_ | A list of paths that match this route. |
 | `preserveHost` _string_ | When matching a route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the service's `host`. |
 | `protocols` _[]string_ | An array of the protocols this route should allow. See the [route Object](#route-object) section for a list of accepted protocols. When set to only `https`, HTTP requests are answered with an upgrade error. When set to only `http`, HTTPS requests are answered with an error. |
@@ -4077,9 +4127,9 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[AIGatewayModelRouteConfigModelType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodeltype)_ | Type designates the type of configuration. |
-| `body` _*k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request body. |
-| `headers` _*k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request headers. |
-| `pathAliases` _[]string_ | Value that will cause this route to match if present in the request path. |
+| `body` _[AIGatewayModelAliasConfigBody](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigbody)_ | Body configuration. |
+| `headers` _[AIGatewayModelAliasConfigHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigheaders)_ | Headers configuration. |
+| `path` _[AIGatewayModelAliasConfigPath](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigpath)_ | Path configuration. |
 
 _Appears in:_
 
@@ -4104,7 +4154,7 @@ Allowed values:
 | --- | --- |
 | `body` |  |
 | `headers` |  |
-| `pathAliases` |  |
+| `path` |  |
 
 
 
