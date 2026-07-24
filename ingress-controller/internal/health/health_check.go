@@ -29,10 +29,14 @@ func NewHealthCheckerFromFunc(check func() error) healthz.Checker {
 }
 
 // NewHealthCheckServer creates a new HealthCheckServer.
-func NewHealthCheckServer(healthzCheck, readyzChecker healthz.Checker) *CheckServer {
+func NewHealthCheckServer(
+	healthzCheck, readyzChecker healthz.Checker,
+	logger logr.Logger,
+) *CheckServer {
 	return &CheckServer{
 		healthzCheck: healthzCheck,
 		readyzCheck:  readyzChecker,
+		logger:       logger,
 	}
 }
 
@@ -41,6 +45,7 @@ func NewHealthCheckServer(healthzCheck, readyzChecker healthz.Checker) *CheckSer
 type CheckServer struct {
 	healthzCheck healthz.Checker
 	readyzCheck  healthz.Checker
+	logger       logr.Logger
 }
 
 // ServeHTTP serves for liveness probe (/healthz) and readiness probe (/readyz).
@@ -59,8 +64,9 @@ func (s *CheckServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := check(req); err != nil {
-		// check failed, return 500.
-		http.Error(rw, fmt.Sprintf("internal server error: %v", err), http.StatusInternalServerError)
+		// Check failed, return 500.
+		s.logger.Error(err, "health/readiness check failed")
+		http.Error(rw, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	// check passed, return 200 OK
@@ -68,7 +74,7 @@ func (s *CheckServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 // Start starts the HTTP server serving healthz and readyz endpoints in a separate goroutine.
-func (s *CheckServer) Start(ctx context.Context, addr string, logger logr.Logger) {
+func (s *CheckServer) Start(ctx context.Context, addr string) {
 	server := &http.Server{
 		Addr:              addr,
 		Handler:           s,
@@ -81,9 +87,9 @@ func (s *CheckServer) Start(ctx context.Context, addr string, logger logr.Logger
 		err := server.ListenAndServe()
 		if err != nil {
 			if errors.Is(err, http.ErrServerClosed) {
-				logger.Info("Healthz server closed")
+				s.logger.Info("Healthz server closed")
 			} else {
-				logger.Error(err, "Healthz server failed")
+				s.logger.Error(err, "Healthz server failed")
 			}
 		}
 	}()
@@ -97,7 +103,7 @@ func (s *CheckServer) Start(ctx context.Context, addr string, logger logr.Logger
 		//nolint:contextcheck
 		err := server.Shutdown(shutdownCtx)
 		if err != nil {
-			logger.Error(err, "Healthz server shutdown failed")
+			s.logger.Error(err, "Healthz server shutdown failed")
 		}
 	}()
 }
