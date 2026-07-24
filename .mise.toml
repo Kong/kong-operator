@@ -1,6 +1,9 @@
 [settings.github]
 github_attestations = false
 
+[tools]
+node = "latest"
+
 ################################################################################
 # Tools
 

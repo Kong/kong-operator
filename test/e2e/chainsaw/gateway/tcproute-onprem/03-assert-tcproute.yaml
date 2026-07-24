@@ -25,4 +25,4 @@ status:
           reason: ResolvedRefs
       (conditions[?type == 'Programmed']):
         - status: "True"
-          reason: Programmed
+          reason: ConfiguredInGateway

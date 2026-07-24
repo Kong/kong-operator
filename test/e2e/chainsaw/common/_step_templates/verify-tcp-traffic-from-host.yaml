@@ -34,6 +34,6 @@ spec:
           - name: PROXY_PORT
             value: (to_string($listener_tcp_port))
         content: |
-          bash ../../common/scripts/host_connectivity_tcp.sh
+          bash ../../common/scripts/host_connectivity_test_tcp.sh
         check:
           (to_string(json_parse($stdout).success) == 'true'): true
