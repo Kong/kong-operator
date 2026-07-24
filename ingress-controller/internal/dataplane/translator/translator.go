@@ -54,6 +54,12 @@ type FeatureFlags struct {
 	// KongCustomEntity indicates whether we should support translating custom entities from KongCustomEntity CRs.
 	KongCustomEntity bool
 
+	// KongServiceV1Alpha1 enables KIC standalone mode for v1alpha1 Kong Gateway entity CRDs
+	// (KongService, KongRoute, KongUpstream, KongTarget, KongCertificate, KongCACertificate,
+	// KongSNI, KongPluginBinding). When enabled, these CRDs are translated directly to KongState
+	// (kong.* types) and pushed to Kong via POST /config in db-less mode without Konnect.
+	KongServiceV1Alpha1 bool
+
 	// CombinedServicesFromDifferentHTTPRoutes indicates whether we should combine rules from different HTTPRoutes
 	// that are sharing the same combination of backends to one Kong service.
 	CombinedServicesFromDifferentHTTPRoutes bool
@@ -81,6 +87,7 @@ func NewFeatureFlags(
 		RewriteURIs:                             featureGates.Enabled(managercfg.RewriteURIsFeature),
 		KongServiceFacade:                       featureGates.Enabled(managercfg.KongServiceFacadeFeature),
 		KongCustomEntity:                        featureGates.Enabled(managercfg.KongCustomEntityFeature),
+		KongServiceV1Alpha1:                     featureGates.Enabled(managercfg.KongServiceV1Alpha1Feature),
 		CombinedServicesFromDifferentHTTPRoutes: combinedServicesFromDifferentHTTPRoutes,
 		SupportRedirectPlugin:                   supportRedirectPlugin,
 	}
@@ -227,6 +234,13 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	result.FillVaults(t.logger, t.storer, t.failuresCollector)
 	for i := range result.Vaults {
 		t.registerSuccessfullyTranslatedObject(result.Vaults[i].K8sKongVault)
+	}
+
+	// process v1alpha1 Kong Gateway entity CRDs in KIC standalone mode (no Konnect required)
+	if t.featureFlags.KongServiceV1Alpha1 {
+		result.FillFromKongServicesV1Alpha1(t.logger, t.storer, t.failuresCollector)
+		result.FillFromKongCertificatesV1Alpha1(t.logger, t.storer, t.failuresCollector)
+		result.FillFromKongPluginBindingsV1Alpha1(t.logger, t.storer, t.failuresCollector)
 	}
 
 	// process consumer groups
