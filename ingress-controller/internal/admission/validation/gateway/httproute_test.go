@@ -666,7 +666,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			valid: true,
 		},
 		{
-			msg: "we don't support setting the timeout to different value",
+			msg: "supports setting the timeout to different values",
 			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: corev1.NamespaceDefault,
@@ -742,8 +742,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 					},
 				},
 			},
-			valid:         false,
-			validationMsg: "HTTPRoute spec did not pass validation: timeout is set for one of the rules, but a different value is set in another rule",
+			valid: true,
 		},
 		{
 			msg: "we do not support filters in backendRefs",

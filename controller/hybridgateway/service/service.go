@@ -84,6 +84,12 @@ func ServiceForRuleWithName[
 	var namespace string
 	var backendRefs []gwtypes.BackendRef
 	var defaultProtocol string
+	// backendRequestTimeout is the Kong service timeout (ms) derived from an HTTPRoute rule's
+	// spec.timeouts.backendRequest. It is used as a fallback for the connect/read/write timeouts
+	// when the backend Service does not carry the corresponding konghq.com/* annotation, so the
+	// annotation takes precedence over the route-level timeout. nil for route types or rules that
+	// set no backendRequest timeout.
+	var backendRequestTimeout *int64
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -95,6 +101,7 @@ func ServiceForRuleWithName[
 		namespace = r.Namespace
 		backendRefs = utils.HTTPBackendRefsToBackendRefs(httpRule.BackendRefs)
 		defaultProtocol = "http"
+		backendRequestTimeout = namegen.BackendRequestTimeoutMilliseconds(httpRule)
 
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
@@ -128,15 +135,15 @@ func ServiceForRuleWithName[
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	connectTimeout, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	connectTimeout, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, backendRequestTimeout, logger)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	readTimeout, err := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	readTimeout, err := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, backendRequestTimeout, logger)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	writeTimeout, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	writeTimeout, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, backendRequestTimeout, logger)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -215,13 +222,13 @@ func ValidateBackendRefAnnotations(
 	if _, err := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
 		return err
 	}
-	if _, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+	if _, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, nil, logger); err != nil {
 		return err
 	}
-	if _, err := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+	if _, err := resolveReadTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, nil, logger); err != nil {
 		return err
 	}
-	if _, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
+	if _, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, namespace, backendRefs, nil, logger); err != nil {
 		return err
 	}
 	if _, err := resolveRetriesFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
@@ -542,11 +549,14 @@ func extractTLSVerifyDepthFromBackendRef(
 
 // resolveConnectTimeoutFromBackendRefs returns the connect-timeout value taken from
 // the first backend Service that carries the konghq.com/connect-timeout annotation.
+// When no backend Service carries the annotation, it returns the fallback value (e.g. the
+// HTTPRoute rule's backendRequest timeout), so the annotation takes precedence over it.
 func resolveConnectTimeoutFromBackendRefs(
 	ctx context.Context,
 	cl client.Client,
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
+	fallback *int64,
 	logger logr.Logger,
 ) (*int64, error) {
 	for _, backendRef := range backendRefs {
@@ -558,7 +568,7 @@ func resolveConnectTimeoutFromBackendRefs(
 			return v, nil
 		}
 	}
-	return nil, nil
+	return fallback, nil
 }
 
 // extractConnectTimeoutFromBackendRef returns the connect-timeout value from the
@@ -602,11 +612,14 @@ func extractConnectTimeoutFromBackendRef(
 
 // resolveReadTimeoutFromBackendRefs returns the read-timeout value taken from
 // the first backend Service that carries the konghq.com/read-timeout annotation.
+// When no backend Service carries the annotation, it returns the fallback value (e.g. the
+// HTTPRoute rule's backendRequest timeout), so the annotation takes precedence over it.
 func resolveReadTimeoutFromBackendRefs(
 	ctx context.Context,
 	cl client.Client,
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
+	fallback *int64,
 	logger logr.Logger,
 ) (*int64, error) {
 	for _, backendRef := range backendRefs {
@@ -618,7 +631,7 @@ func resolveReadTimeoutFromBackendRefs(
 			return v, nil
 		}
 	}
-	return nil, nil
+	return fallback, nil
 }
 
 // extractReadTimeoutFromBackendRef returns the read-timeout value from the
@@ -662,11 +675,14 @@ func extractReadTimeoutFromBackendRef(
 
 // resolveWriteTimeoutFromBackendRefs returns the write-timeout value taken from
 // the first backend Service that carries the konghq.com/write-timeout annotation.
+// When no backend Service carries the annotation, it returns the fallback value (e.g. the
+// HTTPRoute rule's backendRequest timeout), so the annotation takes precedence over it.
 func resolveWriteTimeoutFromBackendRefs(
 	ctx context.Context,
 	cl client.Client,
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
+	fallback *int64,
 	logger logr.Logger,
 ) (*int64, error) {
 	for _, backendRef := range backendRefs {
@@ -678,7 +694,7 @@ func resolveWriteTimeoutFromBackendRefs(
 			return v, nil
 		}
 	}
-	return nil, nil
+	return fallback, nil
 }
 
 // extractWriteTimeoutFromBackendRef returns the write-timeout value from the

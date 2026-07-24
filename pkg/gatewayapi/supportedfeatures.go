@@ -36,9 +36,7 @@ var commonSupportedFeatures = []features.FeatureName{
 	features.SupportHTTPRouteResponseHeaderModification,
 	features.SupportHTTPRoutePathRewrite,
 	features.SupportHTTPRouteHostRewrite,
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
-	// Temporarily disabled and tracking through the following issue.
-	// features.SupportHTTPRouteBackendTimeout,
+	features.SupportHTTPRouteBackendTimeout,
 
 	// TLSRoute extended.
 	features.SupportTLSRouteModeTerminate,
@@ -48,6 +46,7 @@ var commonSupportedFeatures = []features.FeatureName{
 }
 
 // GetSupportedFeatures returns the supported features for the given router type.
+// The returned slice is safe for callers to mutate.
 func GetSupportedFeatures(routerType consts.RouterFlavor) ([]features.FeatureName, error) {
 	// Return a clone so callers cannot mutate the package-level slices
 	// (e.g. via slices.Sort), which are shared across all callers and would

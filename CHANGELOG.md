@@ -213,6 +213,8 @@
   [#4713](https://github.com/Kong/kong-operator/pull/4713)
 - Hybridgateway: treat malformed annotations as errors
   [#4530](https://github.com/Kong/kong-operator/pull/4530)
+- Conformance: enable HTTPRouteBackendTimeout
+  [#4714](https://github.com/Kong/kong-operator/pull/4714)
 - Conformance: enable GRPCRoute conformance tests for on-prem.
   [#4673](https://github.com/Kong/kong-operator/pull/4673)
 - Kong Event Gateway v1.2.0 is the default KEG DataPlane image.
