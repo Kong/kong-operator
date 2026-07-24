@@ -42,12 +42,23 @@ func FromImage(image string) (semver.Version, error) {
 		image = image[:idx]
 	}
 
-	splitImage := strings.Split(image, ":")
-	if len(splitImage) != 2 {
+	// Use the last ':' as the tag separator. Splitting on every ':' breaks
+	// when registry host carries a port, e.g. registry.example.com:5000/foo/bar:3.10
+	// where the first ':' is part of the host ("<host>:<port>") rather than
+	// a tag separator. The tag, if present, always follows the LAST ':'.
+	idx := strings.LastIndex(image, ":")
+	if idx == -1 {
+		return semver.Version{}, fmt.Errorf(`%w, got: %s`, ErrExpectedSemverVersion, image)
+	}
+	tag := image[idx+1:]
+	// If what looks like a tag actually contains '/', split it on a port
+	// separator in the registry host and the reference has no tag at all
+	// (e.g. "registry:5000/foo/bar" — LastIndex found ':' inside the host).
+	if tag == "" || strings.Contains(tag, "/") {
 		return semver.Version{}, fmt.Errorf(`%w, got: %s`, ErrExpectedSemverVersion, image)
 	}
 
-	rawVersion := strings.TrimPrefix(splitImage[1], "v")
+	rawVersion := strings.TrimPrefix(tag, "v")
 
 	// If we matched a semver without patch version with suffix e.g. 3.3-ubuntu
 	// then append ".0" before the flavour suffix for successful semver parsing.

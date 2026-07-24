@@ -1563,32 +1563,50 @@ spec:
                                   type: string
                                 type: array
                               model:
-                                description: Configuration for routing requests to
-                                  a specific model.
+                                description: Configuration for routing to this model
+                                  using an alias.
                                 properties:
                                   body:
-                                    description: |-
-                                      Value indexed by property name that will cause this route to match if
-                                      present in the request body.
-                                    x-kubernetes-preserve-unknown-fields: true
+                                    description: Body configuration.
+                                    properties:
+                                      body:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request body.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - body
+                                    type: object
                                   headers:
-                                    description: |-
-                                      Value indexed by property name that will cause this route to match if
-                                      present in the request headers.
-                                    x-kubernetes-preserve-unknown-fields: true
-                                  pathAliases:
-                                    description: Value that will cause this route
-                                      to match if present in the request path.
-                                    items:
-                                      type: string
-                                    maxItems: 1
-                                    type: array
+                                    description: Headers configuration.
+                                    properties:
+                                      headers:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request headers.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - headers
+                                    type: object
+                                  path:
+                                    description: Path configuration.
+                                    properties:
+                                      pathAliases:
+                                        description: Value that will cause this route
+                                          to match if present in the request path.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - pathAliases
+                                    type: object
                                   type:
                                     description: Type designates the type of configuration.
                                     enum:
                                     - body
                                     - headers
-                                    - pathAliases
+                                    - path
                                     minLength: 1
                                     type: string
                                 required:
@@ -4297,32 +4315,50 @@ spec:
                                   type: string
                                 type: array
                               model:
-                                description: Configuration for routing requests to
-                                  a specific model.
+                                description: Configuration for routing to this model
+                                  using an alias.
                                 properties:
                                   body:
-                                    description: |-
-                                      Value indexed by property name that will cause this route to match if
-                                      present in the request body.
-                                    x-kubernetes-preserve-unknown-fields: true
+                                    description: Body configuration.
+                                    properties:
+                                      body:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request body.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - body
+                                    type: object
                                   headers:
-                                    description: |-
-                                      Value indexed by property name that will cause this route to match if
-                                      present in the request headers.
-                                    x-kubernetes-preserve-unknown-fields: true
-                                  pathAliases:
-                                    description: Value that will cause this route
-                                      to match if present in the request path.
-                                    items:
-                                      type: string
-                                    maxItems: 1
-                                    type: array
+                                    description: Headers configuration.
+                                    properties:
+                                      headers:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request headers.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - headers
+                                    type: object
+                                  path:
+                                    description: Path configuration.
+                                    properties:
+                                      pathAliases:
+                                        description: Value that will cause this route
+                                          to match if present in the request path.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - pathAliases
+                                    type: object
                                   type:
                                     description: Type designates the type of configuration.
                                     enum:
                                     - body
                                     - headers
-                                    - pathAliases
+                                    - path
                                     minLength: 1
                                     type: string
                                 required:

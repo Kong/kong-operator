@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -38,8 +37,12 @@ func TestAIGatewayModel_RouteModel_WireShape(t *testing.T) {
 							Route: AIGatewayModelRouteConfig{
 								Paths: []string{"/v1/chat/completions"},
 								Model: &AIGatewayModelRouteConfigModel{
-									Type:        AIGatewayModelRouteConfigModelTypePathAliases,
-									PathAliases: []string{"gpt-4o-mini"},
+									Type: AIGatewayModelRouteConfigModelTypePath,
+									Path: &AIGatewayModelAliasConfigPath{
+										PathAliases: []string{
+											"gpt-4o-mini",
+										},
+									},
 								},
 							},
 						},
@@ -109,8 +112,10 @@ func TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved(t *testing.T) {
 							Route: AIGatewayModelRouteConfig{
 								Paths: []string{"/v1/chat/completions"},
 								Model: &AIGatewayModelRouteConfigModel{
-									Type:    AIGatewayModelRouteConfigModelTypeHeaders,
-									Headers: &apiextensionsv1.JSON{Raw: []byte(`{"X-Kong-LLM-Model":["gpt-4o-mini-model"]}`)},
+									Type: AIGatewayModelRouteConfigModelTypePath,
+									Path: &AIGatewayModelAliasConfigPath{
+										PathAliases: []string{"gpt-4o-mini"},
+									},
 								},
 							},
 						},
@@ -151,5 +156,5 @@ func TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved(t *testing.T) {
 		} `json:"config"`
 	}
 	require.NoError(t, json.Unmarshal(data, &decoded))
-	require.JSONEq(t, `{"headers":{"X-Kong-LLM-Model":["gpt-4o-mini-model"]}}`, string(decoded.Config.Route.Model))
+	require.JSONEq(t, `{"path_aliases":["gpt-4o-mini"]}`, string(decoded.Config.Route.Model))
 }

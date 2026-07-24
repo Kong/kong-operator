@@ -470,6 +470,23 @@ func (r *Reconciler) listGatewaysAttachedByGRPCRoute(ctx context.Context, obj cl
 	return listGatewaysAttachedByRoute(grpcRoute)
 }
 
+// listGatewaysAttachedByUDPRoute is a watch predicate which finds all Gateways mentioned
+// in UDPRoutes' Parents field.
+func (r *Reconciler) listGatewaysAttachedByUDPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	udpRoute, ok := obj.(*gwtypes.UDPRoute)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"UDPRoute watch predicate received unexpected object type",
+			"expected", "*gatewayapi.UDPRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	return listGatewaysAttachedByRoute(udpRoute)
+}
+
 // -----------------------------------------------------------------------------
 // GatewayReconciler - Config Defaults
 // -----------------------------------------------------------------------------

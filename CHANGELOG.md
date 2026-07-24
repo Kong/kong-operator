@@ -63,6 +63,13 @@
   `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
   is changed in dataplane options.
   [#5003](https://github.com/Kong/kong-operator/pull/5003)
+- Accept `DataPlane` image references whose registry host contains
+  a port (e.g. `registry.example.com:5000/kong/kong-gateway:3.10`). The tag is
+  now split at the last `:` instead of every `:`, so a host-port colon is no
+  longer misread as the tag separator. Without this fix, DataPlane Deployment
+  provisioning silently failed with
+  `expected "<image>:<tag>" format, got: <full-ref>`.
+  [#5036](https://github.com/Kong/kong-operator/pull/5036)
 
 ### Added
 

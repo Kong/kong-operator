@@ -1,0 +1,106 @@
+name: Muthur
+
+# Federated code review driven by the shared kreview skills in Kong/ksai. Triggered by a
+# `/muthur <ask>` comment on a pull request.
+#
+# Only protected-branch contexts can authenticate (the federation rule requires
+# ref_protected). An issue_comment workflow always executes from the default branch, so
+# this file has to be on master before `/muthur` does anything.
+#
+# The ksai action pin also pins the kreview plugin (the action defaults its plugin checkout
+# to its own ref); bump to a release tag once Kong/ksai publishes one.
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  # Authorization runs in its own job, before the review job's concurrency group, so an
+  # unauthorized commenter cannot trigger a run that cancels an in-progress review and is
+  # only rejected later. The @Kong/k8s-maintainers check needs org Members:read, which the repo
+  # GITHUB_TOKEN lacks, so it uses the KONG_READONLY app.
+  gate:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/muthur')
+    runs-on: ubuntu-latest
+    outputs:
+      authorized: ${{ steps.authz.outputs.authorized }}
+    steps:
+      - name: Mint org-read token
+        id: token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          owner: Kong
+          repositories: |
+            ksai
+            ${{ github.event.repository.name }}
+          app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
+
+      # This authorization action must come from trusted Kong/ksai code, not from any
+      # PR-controlled content.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        name: checkout trusted authz action
+        with:
+          token: ${{ steps.token.outputs.token }}
+          path: _ksai-authz
+          repository: Kong/ksai
+          ref: 79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
+          sparse-checkout: |
+            .github/actions/codeowners-authz
+          persist-credentials: false
+
+      - name: Authorize commenter against CODEOWNERS
+        id: authz
+        uses: ./_ksai-authz/.github/actions/codeowners-authz
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          username: ${{ github.event.comment.user.login }}
+
+  review:
+    needs: gate
+    if: ${{ needs.gate.outputs.authorized == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: write # the action posts the review comment
+      issues: write # the action reacts 👀 to the triggering comment
+      id-token: write # mint the GitHub OIDC token for federation
+    # Only authorized runs reach this job, so only they contend for the group.
+    concurrency:
+      group: muthur-${{ github.event.issue.number }}
+      cancel-in-progress: true
+    steps:
+      # One KONG_READONLY token covers both cross-repo reads the action needs: the kreview
+      # plugin checkout from the internal ksai repo, and the CODEOWNERS/team authorization
+      # (this repo's contents + Kong org Members:read). Posting stays on GITHUB_TOKEN.
+      - name: Mint Kong read token
+        id: kong-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          owner: Kong
+          repositories: |
+            ksai
+            ${{ github.event.repository.name }}
+          app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
+
+      # Pinning the action to a commit also pins the kreview plugin: the action defaults
+      # its plugin checkout to this same ref, so no separate ksai_ref is needed.
+      - uses: Kong/ksai/.github/actions/ai-reviewer-federated@79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
+        with:
+          trigger_phrase: "/muthur"
+          # GITHUB_TOKEN checks out the PR head, reacts, and posts the review comment.
+          source_org_github_token: ${{ github.token }}
+          # KONG_READONLY (has org Members:read) for the CODEOWNERS/team check and the ksai
+          # plugin checkout.
+          authorization_github_token: ${{ steps.kong-token.outputs.token }}
+          kong_org_github_token: ${{ steps.kong-token.outputs.token }}
+          # Non-secret identifiers, shared with claude.yaml; they route this run to the
+          # k8s team's Anthropic workspace, which is the billing boundary.
+          federation_rule_id: ${{ secrets.CLAUDE_FEDERATION_RULE_ID }}
+          organization_id: ${{ secrets.CLAUDE_ORGANIZATION_ID }}
+          service_account_id: ${{ secrets.CLAUDE_SERVICE_ACCOUNT_ID }}
+          workspace_id: ${{ secrets.CLAUDE_WORKSPACE_ID }}
