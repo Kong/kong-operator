@@ -881,6 +881,338 @@ func normalizeAIGatewayMCPServerSDKOpsBoolField(value any, path []string) (any, 
 	}
 }
 
+// AIGatewayMCPServerSDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"conversion-listener",
+			"config",
+			"route",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-listener",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-listener",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-listener",
+			"tools",
+			"[]",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-listener",
+			"tools",
+			"[]",
+			"parameters",
+			"[]",
+			"schema",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-listener",
+			"tools",
+			"[]",
+			"query",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-listener",
+			"tools",
+			"[]",
+			"request_body",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-listener",
+			"tools",
+			"[]",
+			"responses",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-only",
+			"config",
+			"route",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-only",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-only",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-only",
+			"tools",
+			"[]",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-only",
+			"tools",
+			"[]",
+			"parameters",
+			"[]",
+			"schema",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-only",
+			"tools",
+			"[]",
+			"query",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-only",
+			"tools",
+			"[]",
+			"request_body",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-only",
+			"tools",
+			"[]",
+			"responses",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"config",
+			"route",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"tools",
+			"[]",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"tools",
+			"[]",
+			"parameters",
+			"[]",
+			"schema",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"tools",
+			"[]",
+			"query",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"tools",
+			"[]",
+			"request_body",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"tools",
+			"[]",
+			"responses",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"config",
+			"route",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"tools",
+			"[]",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"tools",
+			"[]",
+			"parameters",
+			"[]",
+			"schema",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"tools",
+			"[]",
+			"query",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"tools",
+			"[]",
+			"request_body",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"tools",
+			"[]",
+			"responses",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"config",
+			"route",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"tools",
+			"[]",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"tools",
+			"[]",
+			"input_schema",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"tools",
+			"[]",
+			"output_schema",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"tools",
+			"[]",
+			"parameters",
+			"[]",
+			"schema",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"tools",
+			"[]",
+			"query",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"tools",
+			"[]",
+			"request_body",
+		},
+	},
+	{
+		Path: []string{
+			"upstream-server",
+			"tools",
+			"[]",
+			"responses",
+		},
+	},
+}
+
 func (s *AIGatewayMCPServerAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -893,7 +1225,7 @@ func (s *AIGatewayMCPServerAPISpec) marshalSDKOpsPayload() (map[string]any, erro
 	}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	renamed := renameKeysToSDK(rawPayload)
+	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayMCPServerSDKOpsFreeformKeyFields)
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert AIGatewayMCPServerAPISpec SDK payload to map")

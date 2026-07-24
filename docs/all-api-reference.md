@@ -10117,6 +10117,7 @@ list of properties
 | `clientSecret` _[][SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | An array of strings representing the client secret for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. |
 | `consumerClaims` _[]string_ | An array containing an array of string paths representing the location of the claim in a nested object. For example, to map to user.info.id, set [ "user", "info", "id" ]. |
 | `consumerGroupsClaim` _[]string_ | The claim used for consumer groups mapping. If multiple values are set, it means the claim is inside a nested object of the token payload. |
+| `consumerGroupsOptional` _string_ | Do not terminate the request if consumer groups mapping fails. |
 | `consumerOptional` _string_ | Do not terminate the request if consumer mapping fails. |
 | `issuer` _string_ | URL that identifies the OpenID Provider |
 | `scopes` _[]string_ | This field is referenceable. |
@@ -10174,6 +10175,23 @@ AIGatewayIdentityProviderStatus defines the observed state of AIGatewayIdentityP
 _Appears in:_
 
 - [AIGatewayIdentityProvider](#konnect-konghq-com-v1alpha1-aigatewayidentityprovider)
+
+#### AIGatewayLoggingConfig
+
+
+AIGatewayLoggingConfig **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
+
+
+
+| Field | Description |
+| --- | --- |
+| `payloads` _string_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
+- [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
 
 #### AIGatewayMCPACLs
 
@@ -11352,12 +11370,11 @@ for the model.
 | Field | Description |
 | --- | --- |
 | `balancer` _[AIGatewayModelAPIConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model's load balancer when multiple target models are configured. |
-| `logging` _[AIGatewayModelAPIConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `logging` _[AIGatewayLoggingConfig](#konnect-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `model` _[AIGatewayModelAPIConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfigmodel)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
 | `proxy` _[AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `responseStreaming` _string_ |  |
-| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `route` _[AIGatewayModelRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
 
 _Appears in:_
 
@@ -11410,38 +11427,6 @@ Allowed values:
 | `priority` |  |
 | `round-robin` |  |
 | `semantic` |  |
-
-#### AIGatewayModelAPIConfigLogging
-
-
-AIGatewayModelAPIConfigLogging **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
-
-
-
-| Field | Description |
-| --- | --- |
-| `payloads` _string_ |  |
-
-_Appears in:_
-
-- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
-
-#### AIGatewayModelAPIConfigModel
-
-
-AIGatewayModelAPIConfigModel **Pre-release Feature**
-This feature is currently in beta and is subject to change.
-
-
-
-| Field | Description |
-| --- | --- |
-| `alias` _string_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />An alias for the model, used to select the target virtual model when passed in the "model" parameter of the request body. When not set, this defaults to the AI Gateway model's name. |
-
-_Appears in:_
-
-- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
 
 #### AIGatewayModelAPISpec
 
@@ -11916,12 +11901,12 @@ for the model.
 | Field | Description |
 | --- | --- |
 | `balancer` _[AIGatewayModelModelConfigBalancer](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model's load balancer when multiple target models are configured. |
-| `logging` _[AIGatewayModelModelConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `logging` _[AIGatewayLoggingConfig](#konnect-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `model` _[AIGatewayModelModelConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigmodel)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
 | `proxy` _[AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `responseStreaming` _string_ |  |
-| `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `route` _[AIGatewayModelRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
 
 _Appears in:_
 
@@ -11975,22 +11960,6 @@ Allowed values:
 | `round-robin` |  |
 | `semantic` |  |
 
-#### AIGatewayModelModelConfigLogging
-
-
-AIGatewayModelModelConfigLogging **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
-
-
-
-| Field | Description |
-| --- | --- |
-| `payloads` _string_ |  |
-
-_Appears in:_
-
-- [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
-
 #### AIGatewayModelModelConfigModel
 
 
@@ -12001,7 +11970,6 @@ This feature is currently in beta and is subject to change.
 
 | Field | Description |
 | --- | --- |
-| `alias` _string_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />An alias for the model, used to select the target virtual model when passed in the "model" parameter of the request body. When not set, this defaults to the AI Gateway model's name. |
 | `nameHeader` _string_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Display the model name selected in the X-Kong-LLM-Model response header |
 
 _Appears in:_
@@ -13103,6 +13071,75 @@ _Appears in:_
 
 - [AIGatewayModelProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 
+#### AIGatewayModelRouteConfig
+
+
+AIGatewayModelRouteConfig **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route.
+
+
+
+| Field | Description |
+| --- | --- |
+| `headers` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | One or more lists of values indexed by header name that will cause this route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
+| `hosts` _[]string_ | A list of domain names that match this route. Note that the hosts value is case sensitive. |
+| `httpsRedirectStatusCode` _int_ | The status code Kong responds with when all properties of a route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the route is configured to only accept the `https` protocol. |
+| `methods` _[]string_ | A list of HTTP methods that match this route. |
+| `model` _[AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)_ | Configuration for routing requests to a specific model. |
+| `paths` _[]string_ | A list of paths that match this route. |
+| `preserveHost` _string_ | When matching a route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the service's `host`. |
+| `protocols` _[]string_ | An array of the protocols this route should allow. See the [route Object](#route-object) section for a list of accepted protocols. When set to only `https`, HTTP requests are answered with an upgrade error. When set to only `http`, HTTPS requests are answered with an error. |
+| `regexPriority` _int_ | A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones). |
+| `requestBuffering` _string_ | Whether to enable request body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that receive data with chunked transfer encoding. |
+| `responseBuffering` _string_ | Whether to enable response body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that send data with chunked transfer encoding. |
+| `stripPath` _string_ | When matching a route via one of the `paths`, strip the matching prefix from the upstream request URL. |
+| `tags` _[]string_ | An optional set of strings associated with the route for grouping and filtering. |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
+- [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
+
+#### AIGatewayModelRouteConfigModel
+
+
+AIGatewayModelRouteConfigModel represents a union type for model.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayModelRouteConfigModelType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodeltype)_ | Type designates the type of configuration. |
+| `body` _*k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request body. |
+| `headers` _*k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request headers. |
+| `pathAliases` _[]string_ | Value that will cause this route to match if present in the request path. |
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfig)
+
+#### AIGatewayModelRouteConfigModelType
+
+_Underlying type:_ `string`
+
+AIGatewayModelRouteConfigModelType represents the type of model.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `body` |  |
+| `headers` |  |
+| `pathAliases` |  |
+
 
 
 #### AIGatewayModelSpec
@@ -13980,8 +14017,6 @@ _Appears in:_
 - [AIGatewayMCPServerWithUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
 - [AIGatewayMCPServerWithUpstreamNoProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
 - [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
-- [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
-- [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
 
 #### AIGatewayTarget
 

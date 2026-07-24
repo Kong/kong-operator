@@ -3,6 +3,9 @@ kind: Test
 metadata:
   name: aigateway-ai-proxy-mirror
 spec:
+  # Skipping this test until related AI model routing issue is resolved.
+  # TODO: https://github.com/Kong/kong-operator/issues/5046
+  skip: true
   description: |
     AI GW 1.1 — AI Proxy Advanced against a MIRROR KonnectAIGateway. Creates an Origin
     KonnectAIGateway (which provisions the Konnect AI Gateway control plane), grabs its

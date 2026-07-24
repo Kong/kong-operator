@@ -123,6 +123,17 @@ func normalizeEventGatewayBackendClusterSDKOpsBoolField(value any, path []string
 	}
 }
 
+// EventGatewayBackendClusterSDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var EventGatewayBackendClusterSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"labels",
+		},
+	},
+}
+
 func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -136,7 +147,7 @@ func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, erro
 	payload = flattenSensitiveData(payload)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	payload = renameKeysToSDK(payload)
+	payload = renameKeysToSDKExcept(payload, EventGatewayBackendClusterSDKOpsFreeformKeyFields)
 	if pm, ok := payload.(map[string]any); ok {
 		if err := normalizeEventGatewayBackendClusterSDKOpsBoolFields(pm); err != nil {
 			return nil, fmt.Errorf("failed to normalize EventGatewayBackendClusterAPISpec SDK payload: %w", err)

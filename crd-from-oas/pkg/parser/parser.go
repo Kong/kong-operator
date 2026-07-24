@@ -31,6 +31,7 @@ type Property struct {
 	Name        string
 	Type        string
 	Format      string
+	Title       string // OAS schema title, used to name anonymous oneOf variants
 	Description string
 	Required    bool
 	Nullable    bool
@@ -689,6 +690,13 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 // getSchemaType extracts the type from a schema, handling OpenAPI 3.1 type arrays.
 func getSchemaType(schema *openapi3.Schema) string {
 	if schema.Type == nil {
+		// JSON Schema: a schema with `properties` and no explicit `type` is an
+		// object. Infer it so inline oneOf variants that omit `type: object`
+		// (legal OAS) still generate a concrete Go struct instead of falling
+		// back to `any`, which controller-gen cannot deepcopy.
+		if len(schema.Properties) > 0 {
+			return "object"
+		}
 		return ""
 	}
 	types := schema.Type.Slice()

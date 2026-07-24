@@ -357,6 +357,18 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
+        # AIGatewayModelRouteConfig's "model" field is an inline oneOf whose
+        # variants have no OAS discriminator/$ref, so they'd otherwise generate
+        # as generic Variant1/Variant2/Variant3. Name them from their OAS
+        # titles (matching the SDK's AIGatewayModelRouteConfigBody/Headers/
+        # PathAliases) instead. Each variant also has exactly one nested
+        # property, so it's flattened onto the wrapper field directly (e.g.
+        # Body apiextensionsv1.JSON, PathAliases []string) instead of a
+        # single-field wrapper struct, avoiding a doubled JSON key like
+        # route.model.pathAliases.pathAliases. Opt-in only: unlisted unions
+        # elsewhere are unaffected.
+        oneOfVariantNamesFromTitle:
+          - AIGatewayModelRouteConfigModel
         references:
           - path: spec.apiSpec.api.policies
             kinds: [AIGatewayPolicy]
