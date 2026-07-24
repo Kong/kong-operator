@@ -1,5 +1,5 @@
 # On-prem GatewayConfiguration with no KONG_STREAM_LISTEN set.
-# The operator generates the default value for the TLS listener.
+# The operator generates the default value for the TCP listener.
 apiVersion: gateway-operator.konghq.com/v2beta1
 kind: GatewayConfiguration
 metadata:
