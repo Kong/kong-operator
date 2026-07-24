@@ -7,8 +7,11 @@ name: Muthur
 # ref_protected). An issue_comment workflow always executes from the default branch, so
 # this file has to be on master before `/muthur` does anything.
 #
-# The ksai action pin also pins the kreview plugin (the action defaults its plugin checkout
-# to its own ref); bump to a release tag once Kong/ksai publishes one.
+# kong-operator is public and Kong/ksai is internal, so ksai actions are checked out locally
+# via sparse-checkout and referenced by path rather than by a remote `uses:`, which GitHub
+# won't resolve from a public repo into a private one. `ksai_ref` pins the kreview plugin to
+# the same commit as the action checkout; bump both to a release tag once Kong/ksai publishes
+# one.
 
 on:
   issue_comment:
@@ -87,10 +90,25 @@ jobs:
           app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
           private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
 
-      # Pinning the action to a commit also pins the kreview plugin: the action defaults
-      # its plugin checkout to this same ref, so no separate ksai_ref is needed.
-      - uses: Kong/ksai/.github/actions/ai-reviewer-federated@79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
+      # kong-operator is public and Kong/ksai is internal, so the action can't be resolved
+      # via a remote `uses:` (unlike the gate job's authz check, which hits the same wall and
+      # is worked around the same way): check it out locally via sparse-checkout instead.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        name: checkout trusted reviewer action
         with:
+          token: ${{ steps.kong-token.outputs.token }}
+          path: _ksai-review
+          repository: Kong/ksai
+          ref: 79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
+          sparse-checkout: |
+            .github/actions/ai-reviewer-federated
+          persist-credentials: false
+
+      # A local-path action has no github.action_ref, so it can no longer default the
+      # kreview plugin checkout to its own ref: ksai_ref pins the plugin explicitly instead.
+      - uses: ./_ksai-review/.github/actions/ai-reviewer-federated
+        with:
+          ksai_ref: 79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
           trigger_phrase: "/muthur"
           # GITHUB_TOKEN checks out the PR head, reacts, and posts the review comment.
           source_org_github_token: ${{ github.token }}
