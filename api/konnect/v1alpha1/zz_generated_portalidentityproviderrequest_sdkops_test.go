@@ -12,7 +12,7 @@ import (
 func TestPortalIdentityProviderRequestAPISpec_ToPortalCreateIdentityProvider(t *testing.T) {
 	spec := &PortalIdentityProviderRequestAPISpec{
 		Enabled: "Enabled",
-		Type: IdentityProviderType("test-value"),
+		Type:    IdentityProviderType("oidc"),
 	}
 	result, err := spec.ToPortalCreateIdentityProvider()
 	require.NoError(t, err)
@@ -25,13 +25,13 @@ func TestPortalIdentityProviderRequestAPISpec_ToPortalCreateIdentityProvider(t *
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
 	require.Equal(t, true, payload["enabled"])
-	require.Equal(t, "test-value", payload["type"])
+	require.Equal(t, "oidc", payload["type"])
 }
 
 func TestPortalIdentityProviderRequestAPISpec_ToPortalUpdateIdentityProvider(t *testing.T) {
 	spec := &PortalIdentityProviderRequestAPISpec{
 		Enabled: "Enabled",
-		Type: IdentityProviderType("test-value"),
+		Type:    IdentityProviderType("oidc"),
 	}
 	result, err := spec.ToPortalUpdateIdentityProvider()
 	require.NoError(t, err)
@@ -44,5 +44,5 @@ func TestPortalIdentityProviderRequestAPISpec_ToPortalUpdateIdentityProvider(t *
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
 	require.Equal(t, true, payload["enabled"])
-	require.Equal(t, "test-value", payload["type"])
+	require.Equal(t, "oidc", payload["type"])
 }

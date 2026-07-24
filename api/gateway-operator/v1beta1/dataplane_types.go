@@ -162,6 +162,18 @@ type DataPlaneDeploymentOptions struct {
 	//
 	// +optional
 	Rollout *Rollout `json:"rollout,omitempty"`
+
+	// Hardened indicates whether the operator should apply a hardened
+	// security context (non-root user, read-only root filesystem, dropped
+	// capabilities) and the related volumes and environment variables to
+	// the DataPlane's proxy container.
+	//
+	// Enabling this on an existing DataPlane causes a rolling restart of
+	// its Pods.
+	//
+	// +optional
+	// +kubebuilder:default=disabled
+	Hardened commonv1alpha1.HardeningState `json:"hardened,omitempty"`
 }
 
 // DataPlaneNetworkOptions defines network related options for a DataPlane.
@@ -216,6 +228,12 @@ type DataPlaneServicePort struct {
 	// Optional if only one ServicePort is defined on this service.
 	// +optional
 	Name string `json:"name,omitempty"`
+
+	// The IP protocol for this port. Supports "TCP" and "UDP". Defaults to "TCP".
+	// +optional
+	// +kubebuilder:validation:Enum=TCP;UDP
+	// +kubebuilder:default=TCP
+	Protocol corev1.Protocol `json:"protocol,omitempty" hash:"ignore"`
 
 	// The port that will be exposed by this service.
 	Port int32 `json:"port"`
@@ -329,6 +347,32 @@ type ServiceOptions struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Cluster;Local
 	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
+
+	// TrafficDistribution offers a way to express preferences for how traffic is
+	// distributed to Service endpoints. Implementations can use this field as a
+	// hint, but are not required to guarantee strict adherence. If the field is
+	// not set, the implementation will apply its default routing strategy.
+	//
+	// "PreferSameZone" prioritizes endpoints in the same zone as the client.
+	// "PreferSameNode" prioritizes endpoints on the same node as the client.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=PreferSameZone;PreferSameNode
+	TrafficDistribution *string `json:"trafficDistribution,omitempty" hash:"ignore"` // hash:"ignore": Service-only; kept out of Deployment spec-hash (PR #4627).
+
+	// InternalTrafficPolicy describes how nodes distribute service traffic they
+	// receive on the ClusterIP. If set to "Local", the proxy will assume that pods
+	// only want to talk to endpoints of the service on the same node as the pod,
+	// dropping the traffic if there are no local endpoints. The default value,
+	// "Cluster", uses the standard behavior of routing to all endpoints evenly.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#internal-traffic-policy
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Cluster;Local
+	InternalTrafficPolicy *corev1.ServiceInternalTrafficPolicy `json:"internalTrafficPolicy,omitempty" hash:"ignore"` // hash:"ignore": Service-only; kept out of Deployment spec-hash (PR #4627).
 }
 
 // DataPlaneStatus defines the observed state of DataPlane.

@@ -2,11 +2,15 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
+  - aigateway.konghq.com_aigatewaydataplanes.yaml
+  - configuration.konghq.com_aigatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaybackendclusters.yaml
   - configuration.konghq.com_eventgatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaylistenerpolicies.yaml
   - configuration.konghq.com_eventgatewaylisteners.yaml
+  - configuration.konghq.com_eventgatewayschemaregistries.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterconsumepolicies.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusterpolicies.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterproducepolicies.yaml
   - configuration.konghq.com_eventgatewayvirtualclusters.yaml
   - configuration.konghq.com_ingressclassparameterses.yaml
@@ -43,7 +47,16 @@ resources:
   - gateway-operator.konghq.com_gatewayconfigurations.yaml
   - gateway-operator.konghq.com_kongplugininstallations.yaml
   - gateway-operator.konghq.com_watchnamespacegrants.yaml
-  - konnect.konghq.com_identityproviderrequests.yaml
+  - konnect.konghq.com_aigatewayagents.yaml
+  - konnect.konghq.com_aigatewayconsumercredentials.yaml
+  - konnect.konghq.com_aigatewayconsumergroups.yaml
+  - konnect.konghq.com_aigatewayconsumers.yaml
+  - konnect.konghq.com_aigatewayidentityproviders.yaml
+  - konnect.konghq.com_aigatewaymcpservers.yaml
+  - konnect.konghq.com_aigatewaymodelproviders.yaml
+  - konnect.konghq.com_aigatewaymodels.yaml
+  - konnect.konghq.com_aigatewaypolicies.yaml
+  - konnect.konghq.com_konnectaigateways.yaml
   - konnect.konghq.com_konnectapiauthconfigurations.yaml
   - konnect.konghq.com_konnectcloudgatewaydataplanegroupconfigurations.yaml
   - konnect.konghq.com_konnectcloudgatewaynetworks.yaml

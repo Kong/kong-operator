@@ -4,13 +4,13 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -30,8 +30,8 @@ func testGeneratedPortalTeamForSDKOps() *konnectv1alpha1.PortalTeam {
 		Spec: konnectv1alpha1.PortalTeamSpec{
 			APISpec: konnectv1alpha1.PortalTeamAPISpec{
 				CanOwnApplications: "Enabled",
-				Description: "test-value",
-				Name: "test-value",
+				Description:        "test-value",
+				Name:               "test-value",
 			},
 		},
 	}
@@ -107,8 +107,8 @@ func TestUpdatePortalTeam_UsesSDKOpsConversion(t *testing.T) {
 		UpdatePortalTeam(
 			mock.Anything,
 			sdkkonnectops.UpdatePortalTeamRequest{
-				PortalID: parentID,
-				TeamID: obj.GetKonnectStatus().GetKonnectID(),
+				PortalID:                parentID,
+				TeamID:                  obj.GetKonnectStatus().GetKonnectID(),
 				PortalUpdateTeamRequest: expectedRequest,
 			},
 		).
@@ -135,8 +135,8 @@ func TestUpdatePortalTeam_PropagatesSDKError(t *testing.T) {
 		UpdatePortalTeam(
 			mock.Anything,
 			sdkkonnectops.UpdatePortalTeamRequest{
-				PortalID: parentID,
-				TeamID: obj.GetKonnectStatus().GetKonnectID(),
+				PortalID:                parentID,
+				TeamID:                  obj.GetKonnectStatus().GetKonnectID(),
 				PortalUpdateTeamRequest: expectedRequest,
 			},
 		).

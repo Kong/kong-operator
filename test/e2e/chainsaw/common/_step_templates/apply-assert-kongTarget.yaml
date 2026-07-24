@@ -8,6 +8,12 @@
 #   - pod_namespace: Namespace where the pod is located.
 #   - target_port: The target address (host:port) for the KongTarget.
 #   - target_weight: The weight for the KongTarget (e.g., 100).
+#
+# Optional bindings:
+#   - target_address: Pre-computed "host:port" string. When non-empty, used directly
+#     as the KongTarget target instead of the resolved pod IP. Use this when the
+#     upstream requires SSL hostname verification (e.g. mTLS cert-ref tests) and the
+#     target must match the server certificate's CN/SAN.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
@@ -37,7 +43,7 @@ spec:
           spec:
             upstreamRef:
               name: ($kong_upstream_name)
-            target: (join(':', [($upstream_pod_ip), (to_string($target_port))]))
+            target: ($target_address || join(':', [($upstream_pod_ip), (to_string($target_port))]))
             weight: ($target_weight)
     - assert:
         resource:

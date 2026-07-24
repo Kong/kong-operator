@@ -2,10 +2,11 @@ package route
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,13 +14,156 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
+	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
+
+type buildResolvedRefsConditionFunc[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]] func(
+	context.Context,
+	logr.Logger,
+	client.Client,
+	TPtr,
+) (*metav1.Condition, error)
+
+// UpdateRouteStatus reconciles the status of a route object against its parentRefs.
+// It builds the ResolvedRefs, Accepted and Programmed conditions for each supported
+// parentRef, cleans up orphaned ParentStatus entries and persists the status to the
+// cluster when changes are detected.
+//
+// Returns:
+//   - updated: true if the route status was changed and persisted
+//   - stop: true if state enforcement must halt (e.g. route not accepted or conflict)
+//   - err: any error encountered while building conditions or updating the status
+func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	routeObject TPtr,
+	expectedGVKs []schema.GroupVersionKind,
+	buildResolvedRefsCondition buildResolvedRefsConditionFunc[T, TPtr],
+) (updated bool, stop bool, err error) {
+	routeKind := routeKindForStatusPhase(*routeObject)
+	logger = logger.WithValues("phase", strings.ToLower(routeKind)+"-status")
+	log.Debug(logger, "Starting UpdateRootObjectStatus")
+
+	log.Debug(logger, "Building ResolvedRefs condition", "routeKind", routeKind)
+	resolvedRefsCond, err := buildResolvedRefsCondition(ctx, logger, cl, routeObject)
+	if err != nil {
+		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for %s %s: %w", routeKind, routeObject.GetName(), err)
+	}
+
+	// Validate the implementation-specific konghq.com/* annotations once (route-level and
+	// backend-Service-level). A malformed value is surfaced via the KongConfigurationValid
+	// condition and halts state enforcement until the user fixes the annotation.
+	// The condition is set only while invalid; a valid Route carries no such condition.
+	var invalidConfigCond *metav1.Condition
+	if annotationErr := validateAnnotations(ctx, logger, cl, routeObject); annotationErr != nil {
+		log.Debug(logger, "HTTPRoute has malformed Kong annotations", "error", annotationErr)
+		invalidConfigCond = BuildKongConfigurationInvalidCondition(routeObject, annotationErr)
+		stop = true
+	}
+
+	for _, pRef := range gwtypes.GetSpecParentRefs(*routeObject) {
+		log.Debug(logger, "Processing ParentReference", "parentRef", pRef)
+		gateway, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, routeObject.GetNamespace())
+		if err != nil {
+			switch {
+			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound),
+				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController),
+				errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound),
+				errors.Is(err, hybridgatewayerrors.ErrUnsupportedKind),
+				errors.Is(err, hybridgatewayerrors.ErrUnsupportedGroup):
+				log.Debug(logger, "Skipping status update Gateway", "parentRef", pRef, "reason", err)
+				if RemoveStatusForParentRef(logger, routeObject, pRef, vars.ControllerName()) {
+					log.Debug(logger, "Removed ParentStatus for unsupported ParentReference", "parentRef", pRef)
+					updated = true
+					stop = false
+				}
+				continue
+			default:
+				log.Error(logger, err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
+				return false, stop, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
+			}
+		}
+		if !found {
+			continue
+		}
+
+		log.Debug(logger, "Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
+		acceptedCondition, err := BuildAcceptedCondition(ctx, logger, cl, gateway, routeObject, pRef)
+		if err != nil {
+			return false, stop, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
+		}
+		// Unresolved backend references should still translate and be applied so the
+		// data plane returns a Gateway API-compliant 500 instead of falling through to 404.
+		// Only an unaccepted route must halt state enforcement.
+		if acceptedCondition.Status == metav1.ConditionFalse {
+			stop = true
+		}
+
+		log.Debug(logger, "Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
+		programmedConditions, err := BuildProgrammedCondition(ctx, logger, cl, routeObject, pRef, expectedGVKs)
+		if err != nil {
+			return false, stop, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
+		}
+
+		// Combine all conditions. The KongConfigurationValid condition is appended only when the
+		// Kong configuration is invalid; when valid it is omitted so SetStatusConditions removes
+		// any stale instance.
+		programmedConditions = append(programmedConditions, *acceptedCondition, *resolvedRefsCond)
+		if invalidConfigCond != nil {
+			programmedConditions = append(programmedConditions, *invalidConfigCond)
+		}
+
+		log.Debug(logger, "Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
+		if SetStatusConditions(routeObject, pRef, vars.ControllerName(), programmedConditions...) {
+			log.Debug(logger, "Status conditions updated for ParentReference", "parentRef", pRef)
+			updated = true
+		}
+	}
+
+	log.Debug(logger, "Cleaning up orphaned ParentStatus entries")
+	if CleanupOrphanedParentStatus(logger, routeObject, vars.ControllerName()) {
+		log.Debug(logger, "Orphaned ParentStatus entries cleaned up")
+		updated = true
+	}
+
+	if updated {
+		log.Debug(logger, "Updating route status in cluster", "routeKind", routeKind)
+		if err := cl.Status().Update(ctx, routeObject); err != nil {
+			if apierrors.IsConflict(err) {
+				return false, true, err
+			}
+			log.Error(logger, err, "Failed to update route status in cluster", "routeKind", routeKind)
+			return false, stop, fmt.Errorf("failed to update %s status: %w", routeKind, err)
+		}
+	} else {
+		log.Debug(logger, "No status update required", "routeKind", routeKind)
+	}
+
+	log.Debug(logger, "Finished UpdateRootObjectStatus", "updated", updated)
+	return updated, stop, nil
+}
+
+func routeKindForStatusPhase[T gwtypes.SupportedRoute](routeObject T) string {
+	switch any(routeObject).(type) {
+	case gwtypes.HTTPRoute:
+		return "HTTPRoute"
+	case gwtypes.TLSRoute:
+		return "TLSRoute"
+	}
+	return "Route"
+}
 
 // SetStatusConditions updates the status conditions for a specific ParentReference managed by the given controller.
 // It finds the ParentStatus entry that matches both the ParentReference and controllerName, then updates or adds
@@ -488,74 +632,21 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
 func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute) (*metav1.Condition, error) {
-	conditionSet := false
-	cond := &metav1.Condition{
-		Type:    string(gwtypes.RouteConditionResolvedRefs),
-		Status:  metav1.ConditionTrue,
-		Reason:  string(gwtypes.RouteReasonResolvedRefs),
-		Message: "All references resolved",
-	}
+	backendRefs := make([]gwtypes.BackendRef, 0)
+	extensionRefs := make([]*gwtypes.LocalObjectReference, 0)
 	for _, rule := range route.Spec.Rules {
 		for _, bRef := range rule.BackendRefs {
-			// BackendRef namespace.
-			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef.BackendRef)
-			if err != nil {
-				return nil, err
-			}
-			if bRefValidCond.Status != metav1.ConditionTrue {
-				cond.Status = bRefValidCond.Status
-				cond.Reason = bRefValidCond.Reason
-				cond.Message = bRefValidCond.Message
-				conditionSet = true
-				break
-			}
-		}
-		if conditionSet {
-			break
+			backendRefs = append(backendRefs, bRef.BackendRef)
 		}
 
 		for _, filter := range rule.Filters {
-			// Only process filters of type ExtensionRef
-			if filter.Type != gwtypes.HTTPRouteFilterExtensionRef {
-				continue
-			}
-
-			if filter.ExtensionRef == nil {
-				log.Debug(logger, "ExtensionRef is nil in filter but type is ExtensionRef, skipping")
-				continue
-			}
-
-			// ExtensionRef is always in the same namespace as the route.
-			extRefNamespace := route.Namespace
-
-			// Check if the group kind is supported for the reference.
-			if !IsExtensionRefSupported(filter.ExtensionRef.Group, filter.ExtensionRef.Kind) {
-				log.Debug(logger, "Unsupported ExtensionRef group/kind", "group", filter.ExtensionRef.Group, "kind", filter.ExtensionRef.Kind)
-				cond.Reason = string(gwtypes.RouteReasonInvalidKind)
-				cond.Status = metav1.ConditionFalse
-				cond.Message = fmt.Sprintf("Unsupported ExtensionRef %s/%s group/kind: %s/%s", extRefNamespace, filter.ExtensionRef.Name, filter.ExtensionRef.Group, filter.ExtensionRef.Kind)
-				conditionSet = true
-				break
-			}
-
-			// Check if the referenced object exists.
-			kongPlugin := configurationv1.KongPlugin{}
-			err := cl.Get(ctx, client.ObjectKey{Namespace: extRefNamespace, Name: string(filter.ExtensionRef.Name)}, &kongPlugin)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					log.Debug(logger, "ExtensionRef not found", "namespace", extRefNamespace, "name", filter.ExtensionRef.Name)
-					cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
-					cond.Status = metav1.ConditionFalse
-					cond.Message = fmt.Sprintf("ExtensionRef %s/%s not found", extRefNamespace, filter.ExtensionRef.Name)
-					conditionSet = true
-					break
-				}
-				return nil, fmt.Errorf("failed to get ExtensionRef %s/%s: %w", extRefNamespace, filter.ExtensionRef.Name, err)
+			if filter.Type == gwtypes.HTTPRouteFilterExtensionRef {
+				extensionRefs = append(extensionRefs, filter.ExtensionRef)
 			}
 		}
 	}
 
-	return SetConditionMeta(*cond, route), nil
+	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, extensionRefs)
 }
 
 // BuildResolvedRefsConditionForTLSRoute evaluates all BackendRefs in an TLSRoute to determine if their
@@ -577,28 +668,103 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
 func BuildResolvedRefsConditionForTLSRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.TLSRoute) (*metav1.Condition, error) {
+	backendRefs := make([]gwtypes.BackendRef, 0)
+	for _, rule := range route.Spec.Rules {
+		backendRefs = append(backendRefs, rule.BackendRefs...)
+	}
+	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, nil)
+}
+
+func buildResolvedRefsCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context, logger logr.Logger, cl client.Client, route TPtr,
+	backendRefs []gwtypes.BackendRef, extensionRefs []*gwtypes.LocalObjectReference,
+) (*metav1.Condition, error) {
 	cond := &metav1.Condition{
 		Type:    string(gwtypes.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionTrue,
 		Reason:  string(gwtypes.RouteReasonResolvedRefs),
 		Message: "All references resolved",
 	}
-	for _, rule := range route.Spec.Rules {
-		for _, bRef := range rule.BackendRefs {
-			// BackendRef namespace.
-			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef)
-			if err != nil {
-				return nil, err
-			}
-			if bRefValidCond.Status != metav1.ConditionTrue {
-				cond.Status = bRefValidCond.Status
-				cond.Reason = bRefValidCond.Reason
-				cond.Message = bRefValidCond.Message
-				return SetConditionMeta(*cond, route), nil
-			}
+
+	for _, bRef := range backendRefs {
+		bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef)
+		if err != nil {
+			return nil, err
+		}
+		if bRefValidCond.Status != metav1.ConditionTrue {
+			cond.Status = bRefValidCond.Status
+			cond.Reason = bRefValidCond.Reason
+			cond.Message = bRefValidCond.Message
+			return SetConditionMeta(*cond, route), nil
 		}
 	}
+
+	for _, extensionRef := range extensionRefs {
+		if extensionRef == nil {
+			log.Debug(logger, "ExtensionRef is nil in filter but type is ExtensionRef, skipping")
+			continue
+		}
+
+		if !IsExtensionRefSupported(extensionRef.Group, extensionRef.Kind) {
+			log.Debug(logger, "Unsupported ExtensionRef group/kind", "group", extensionRef.Group, "kind", extensionRef.Kind)
+			cond.Reason = string(gwtypes.RouteReasonInvalidKind)
+			cond.Status = metav1.ConditionFalse
+			cond.Message = fmt.Sprintf("Unsupported ExtensionRef %s/%s group/kind: %s/%s", route.GetNamespace(), extensionRef.Name, extensionRef.Group, extensionRef.Kind)
+			return SetConditionMeta(*cond, route), nil
+		}
+
+		kongPlugin := configurationv1.KongPlugin{}
+		err := cl.Get(ctx, client.ObjectKey{Namespace: route.GetNamespace(), Name: string(extensionRef.Name)}, &kongPlugin)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Debug(logger, "ExtensionRef not found", "namespace", route.GetNamespace(), "name", extensionRef.Name)
+				cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
+				cond.Status = metav1.ConditionFalse
+				cond.Message = fmt.Sprintf("ExtensionRef %s/%s not found", route.GetNamespace(), extensionRef.Name)
+				return SetConditionMeta(*cond, route), nil
+			}
+			return nil, fmt.Errorf("failed to get ExtensionRef %s/%s: %w", route.GetNamespace(), extensionRef.Name, err)
+		}
+	}
+
 	return SetConditionMeta(*cond, route), nil
+}
+
+// validateAnnotations validates the implementation-specific konghq.com/* annotations.
+// It returns an error wrapping [hybridgatewayerrors.ErrMalformedAnnotation] on the first malformed value,
+// or nil if all are valid.
+func validateAnnotations[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	route TPtr) error {
+	switch r := any(route).(type) {
+	case *gwtypes.HTTPRoute:
+		if _, err := metadata.ExtractStripPath(route.GetAnnotations()); err != nil {
+			return fmt.Errorf("%w: konghq.com/strip-path on %s/%s: %w",
+				hybridgatewayerrors.ErrMalformedAnnotation, route.GetNamespace(), route.GetName(), err)
+		}
+		if _, err := metadata.ExtractPreserveHost(route.GetAnnotations()); err != nil {
+			return fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
+				hybridgatewayerrors.ErrMalformedAnnotation, route.GetNamespace(), route.GetName(), err)
+		}
+		for _, rule := range r.Spec.Rules {
+			backendRefs := utils.HTTPBackendRefsToBackendRefs(rule.BackendRefs)
+			if err := service.ValidateBackendRefAnnotations(ctx, cl, route.GetNamespace(), backendRefs, logger); err != nil {
+				return err
+			}
+		}
+	case *gwtypes.TLSRoute:
+		for _, rule := range r.Spec.Rules {
+			if err := service.ValidateBackendRefAnnotations(ctx, cl, route.GetNamespace(), rule.BackendRefs, logger); err != nil {
+				return err
+			}
+		}
+	// Should be unreachable.
+	default:
+		return fmt.Errorf("unsupported route type %T", r)
+	}
+	return nil
 }
 
 // backendRefResolvedCondition returns the ResolvedRefs condition of the route according to the status of the given backendRef in the route.
@@ -633,14 +799,14 @@ func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 	}
 
 	// BackendRef group/kind (default to core/Service when unset).
-	bRefGroup, bRefKind := backendRefGroupKind(bRef.Group, bRef.Kind)
+	bRefGroup, bRefKind := utils.BackendRefGroupKind(bRef.Group, bRef.Kind)
 	bRefGK := string(bRefKind)
 	if bRefGroup != "" {
 		bRefGK = fmt.Sprintf("%s/%s", string(bRefGroup), string(bRefKind))
 	}
 
 	// Check if the group kind is supported for the reference.
-	if !IsBackendRefSupported(bRef.Group, bRef.Kind) {
+	if !utils.IsBackendRefSupported(bRef.Group, bRef.Kind) {
 		log.Debug(logger, "Unsupported BackendRef group/kind", "group", bRef.Group, "kind", bRef.Kind)
 		cond.Reason = string(gwtypes.RouteReasonInvalidKind)
 		cond.Status = metav1.ConditionFalse
@@ -736,31 +902,29 @@ func isProgrammed(obj *unstructured.Unstructured) bool {
 }
 
 // FilterMatchingListeners filters the provided listeners to find those that match the given ParentReference
-// based on section name, port, and protocol requirements. Only listeners that are both matching and ready
-// are returned.
+// based on section name, port, and listener acceptance status. Only listeners that are both matching and
+// accepted are returned.
 //
 // The function performs the following checks for each listener:
 // 1. Matches the section name specified in the ParentReference (if any)
 // 2. Matches the port specified in the ParentReference (if any)
-// 3. Supports the protocol with appropriate TLS mode
-// 4. Is in a "Programmed" (ready) state according to the Gateway status
+// 3. Is accepted according to the Gateway status
 //
 // Parameters:
 //   - gw: The Gateway object containing the listeners and their status
-//   - routeKind: The kind of the route
+//   - routeKind: The kind of the route. Currently unused, but kept to preserve the caller shape.
 //   - logger: Logger for debugging information
 //   - pRef: The ParentReference specifying matching criteria
 //   - listeners: The list of listeners from the Gateway spec to filter
 //
 // Returns:
-//   - []gwtypes.Listener: List of listeners that match criteria and are ready
+//   - []gwtypes.Listener: List of listeners that match criteria and are accepted
 //   - *metav1.Condition: Condition indicating why no listeners matched (nil if matches found)
 //
 // The returned condition will have status "False" with reason "NoMatchingParent" if no listeners
-// match the criteria. If listeners match but are not ready, the message will indicate this distinction.
+// match the criteria.
 func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind string, pRef gwtypes.ParentReference, listeners []gwtypes.Listener) ([]gwtypes.Listener, *metav1.Condition) {
 	var matchingListeners []gwtypes.Listener
-	var matchedNotReady bool
 	for _, listener := range listeners {
 		// Check if the listener name matches the section name of the parent reference.
 		if pRef.SectionName != nil && *pRef.SectionName != listener.Name {
@@ -774,18 +938,14 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind 
 
 		// At this point, the listener matches the parent reference.
 		log.Debug(logger, "Listener matches ParentReference criteria", "listener", listener.Name, "parentRef", pRef)
-		// Now check if the listener is ready.
+		// Now check if the listener is accepted.
 		for _, ls := range gw.Status.Listeners {
 			if ls.Name == listener.Name {
 				for _, cond := range ls.Conditions {
-					if cond.Type == string(gwtypes.ListenerConditionProgrammed) {
+					if cond.Type == string(gatewayv1.ListenerConditionAccepted) {
 						if cond.Status == metav1.ConditionTrue {
-							log.Debug(logger, "Listener is ready (programmed)", "listener", listener.Name)
+							log.Debug(logger, "Listener is accepted", "listener", listener.Name)
 							matchingListeners = append(matchingListeners, listener)
-						} else {
-							log.Debug(logger, "Listener matched but is not ready", "listener", listener.Name)
-							// Listener is not ready, and we track that at least one listener matched but is not ready.
-							matchedNotReady = true
 						}
 					}
 				}
@@ -795,21 +955,16 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind 
 
 	// If we found no matching listeners, determine the appropriate condition to return.
 	if len(matchingListeners) == 0 {
-		// If we had at least one listener that matched but was not ready, return a condition indicating that.
-		msg := string(gwtypes.RouteReasonNoMatchingParent)
-		if matchedNotReady {
-			msg = "A Gateway Listener matches this route but is not ready"
-		}
-		log.Debug(logger, "No matching listeners found for ParentReference", "parentRef", pRef, "matchedNotReady", matchedNotReady)
+		log.Debug(logger, "No matching listeners found for ParentReference", "parentRef", pRef)
 		return nil, &metav1.Condition{
 			Type:    string(gwtypes.RouteConditionAccepted),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(gwtypes.RouteReasonNoMatchingParent),
-			Message: msg,
+			Message: string(gwtypes.RouteReasonNoMatchingParent),
 		}
 	}
-	// Return the list of matching and ready listeners that can be used for further processing.
-	log.Debug(logger, "Matching and ready listeners found", "parentRef", pRef, "count", len(matchingListeners))
+	// Return the list of matching and accepted listeners that can be used for further processing.
+	log.Debug(logger, "Matching and accepted listeners found", "parentRef", pRef, "count", len(matchingListeners))
 	return matchingListeners, nil
 }
 
@@ -1074,6 +1229,24 @@ func SetConditionMeta[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T
 	return &cond
 }
 
+// BuildKongConfigurationInvalidCondition builds the implementation-specific
+// KongConfigurationValid condition reporting malformed Kong configuration.
+// The returned condition has Status=False and the given error's text as its message.
+//
+// This condition is only set when configuration is invalid; callers omit it entirely when
+// everything parses, so SetStatusConditions removes any previously-set instance.
+func BuildKongConfigurationInvalidCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	route TPtr, configErr error,
+) *metav1.Condition {
+	cond := metav1.Condition{
+		Type:    routeconst.ConditionTypeKongConfigurationValid,
+		Status:  metav1.ConditionFalse,
+		Reason:  routeconst.ConditionReasonInvalidKongConfiguration,
+		Message: configErr.Error(),
+	}
+	return SetConditionMeta(cond, route)
+}
+
 // FilterOutGVKByKind returns a new slice of GVKs with the specified kind removed.
 // It matches Kind == kindToFilter and filters those out.
 func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter string) []schema.GroupVersionKind {
@@ -1084,25 +1257,6 @@ func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter str
 		}
 	}
 	return filtered
-}
-
-// backendRefGroupKind returns the effective group and kind for a BackendRef,
-// applying Gateway API defaults: kind defaults to "Service" and group defaults
-// to "" (core) when nil or empty.
-func backendRefGroupKind(group *gwtypes.Group, kind *gwtypes.Kind) (gwtypes.Group, gwtypes.Kind) {
-	g := lo.FromPtr(group)
-	k := lo.FromPtr(kind)
-	if k == "" {
-		k = "Service"
-	}
-	return g, k
-}
-
-// IsBackendRefSupported returns true if the BackendRef group and kind are supported by Gateway API.
-// Only core "Service" is supported.
-func IsBackendRefSupported(group *gwtypes.Group, kind *gwtypes.Kind) bool {
-	g, k := backendRefGroupKind(group, kind)
-	return (g == "" || g == "core") && k == "Service"
 }
 
 // IsExtensionRefSupported returns true if the ExtensionRef group and kind are supported by the Kong Gateway API implementation.
@@ -1125,7 +1279,7 @@ func IsExtensionRefSupported(group gwtypes.Group, kind gwtypes.Kind) bool {
 // Returns:
 //   - bool: true if the reference is permitted by the grant, false otherwise
 func IsRouteReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwtypes.BackendRef, routeKind string, fromNamespace string) bool {
-	bRefGroup, bRefKind := backendRefGroupKind(backendRef.Group, backendRef.Kind)
+	bRefGroup, bRefKind := utils.BackendRefGroupKind(backendRef.Group, backendRef.Kind)
 
 	for _, from := range grantSpec.From {
 		if from.Group != gwtypes.GroupName || string(from.Kind) != routeKind || fromNamespace != string(from.Namespace) {

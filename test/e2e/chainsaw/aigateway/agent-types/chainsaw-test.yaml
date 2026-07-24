@@ -1,0 +1,184 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-agent-types
+spec:
+  description: |
+    Stands up a Konnect AIGateway control plane, starts the shared go-echo backend
+    in the test namespace, creates HTTP and A2A AIGatewayAgent routes to that
+    backend's matching protocol surfaces, and verifies an in-cluster
+    AIGatewayDataPlane only returns the expected response shape for matching
+    request types.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: http_agent_name
+      value: (join('-', [($test_name), 'http-agent']))
+    - name: http_agent_route_path
+      value: /http-agent
+    - name: a2a_agent_name
+      value: (join('-', [($test_name), 'a2a-agent']))
+    - name: a2a_agent_route_path
+      value: /a2a-agent
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: Start-echo-agent-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: Create-aigateway-agents
+      try:
+        - apply:
+            file: 01-aigatewayagents.yaml
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($http_agent_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($a2a_agent_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+    - name: Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+    - name: Drive-matching-http-agent-traffic
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: METHOD
+                value: GET
+              - name: ROUTE_PATH
+                value: (join('', [($http_agent_route_path), '?details=true']))
+              - name: EXPECTED_BODY
+                value: Running on Pod
+            content: |
+              bash ../../common/scripts/aigw_agent_request.sh
+    - name: Drive-matching-a2a-agent-traffic
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: METHOD
+                value: POST
+              - name: ROUTE_PATH
+                value: ($a2a_agent_route_path)
+              - name: REQUEST_BODY
+                value: '{"jsonrpc":"2.0","id":"e2e-a2a","method":"message/send","params":{"message":{"role":"user","parts":[{"kind":"text","text":"hello"}]}}}'
+              - name: EXPECTED_JSONRPC
+                value: "2.0"
+              - name: EXPECTED_JSON_ID
+                value: e2e-a2a
+              - name: EXPECTED_JSON_RESULT_TEXT
+                value: mock A2A agent response from go-echo
+            content: |
+              bash ../../common/scripts/aigw_agent_request.sh
+    - name: Reject-a2a-request-on-http-agent
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: METHOD
+                value: POST
+              - name: ROUTE_PATH
+                value: ($http_agent_route_path)
+              - name: REQUEST_BODY
+                value: '{"jsonrpc":"2.0","id":"e2e-cross","method":"message/send","params":{"message":{"role":"user"}}}'
+              - name: EXPECTED_BODY
+                value: jsonrpc
+              - name: UNEXPECTED_BODY
+                value: mock A2A agent response from go-echo
+            content: |
+              bash ../../common/scripts/aigw_agent_request.sh
+    - name: Reject-http-request-on-a2a-agent
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: METHOD
+                value: GET
+              - name: ROUTE_PATH
+                value: ($a2a_agent_route_path)
+              - name: EXPECTED_STATUS
+                value: "405"
+              - name: UNEXPECTED_BODY
+                value: Running on Pod
+            content: |
+              bash ../../common/scripts/aigw_agent_request.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-agent-types
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -61,7 +62,7 @@ type Kong struct {
 // It sets up a cleanup function that will terminate the container when the test finishes.
 func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	req := testcontainers.ContainerRequest{
-		Image: kongImageUnderTest(),
+		Image: kongImageUnderTest(t),
 		Env: map[string]string{
 			"KONG_DATABASE":      "off",
 			"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongAdminPort),
@@ -80,13 +81,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	BindLocalPort(t, &req, kongAdminPort)
 	BindLocalPort(t, &req, kongProxyPort)
 
-	kongC, err := retry.DoWithData(
-		func() (testcontainers.Container, error) {
-			return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-				ContainerRequest: req,
-				Started:          true,
-			})
-		},
+	kongC, err := retry.NewWithData[testcontainers.Container](
 		retry.Context(ctx),
 		retry.Attempts(100),
 		retry.Delay(10*time.Millisecond),
@@ -95,6 +90,13 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 		retry.OnRetry(func(_ uint, err error) {
 			t.Logf("failed creating Kong container: %v", err)
 		}),
+	).Do(
+		func() (testcontainers.Container, error) {
+			return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+				ContainerRequest: req,
+				Started:          true,
+			})
+		},
 	)
 	require.NoError(t, err)
 
@@ -119,18 +121,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	defer cancel()
 
 	require.NoError(t,
-		retry.Do(
-			func() error {
-				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
-				defer cancel()
-				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
-				if err != nil {
-					return err
-				}
-
-				t.Logf("using Kong instance (version: %q) reachable at %s", kongVersion, adminURL)
-				return nil
-			},
+		retry.New(
 			retry.Context(versionCtx),
 			retry.Attempts(0),
 			retry.Delay(tickTime),
@@ -143,6 +134,18 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 				_, ok := errors.AsType[helpers.TooOldKongGatewayError](err)
 				return !ok
 			}),
+		).Do(
+			func() error {
+				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+				defer cancel()
+				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
+				if err != nil {
+					return err
+				}
+
+				t.Logf("using Kong instance (version: %q) reachable at %s", kongVersion, adminURL)
+				return nil
+			},
 		),
 	)
 
@@ -151,16 +154,22 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 
 // AdminURL returns the admin API URL of the Kong container reachable from the host machine.
 func (c Kong) AdminURL(ctx context.Context, t *testing.T) string {
+	host, err := c.container.Host(ctx)
+	require.NoError(t, err)
+
 	port, err := c.container.MappedPort(ctx, kongAdminPort)
 	require.NoError(t, err)
-	return fmt.Sprintf("http://localhost:%s", port.Port())
+	return fmt.Sprintf("http://%s", net.JoinHostPort(host, port.Port()))
 }
 
 // ProxyURL returns the proxy URL of the Kong container reachable from the host machine.
 func (c Kong) ProxyURL(ctx context.Context, t *testing.T) string {
+	host, err := c.container.Host(ctx)
+	require.NoError(t, err)
+
 	port, err := c.container.MappedPort(ctx, kongProxyPort)
 	require.NoError(t, err)
-	return fmt.Sprintf("http://localhost:%s", port.Port())
+	return fmt.Sprintf("http://%s", net.JoinHostPort(host, port.Port()))
 }
 
 // Terminate stops and removes the Kong container.
@@ -171,13 +180,19 @@ func (c Kong) Terminate(ctx context.Context) error {
 // kongImageUnderTest returns the Kong image to be used for integration tests. If both TEST_KONG_IMAGE and
 // TEST_KONG_TAG are set, it will return the image and tag specified by them. Otherwise, it will return
 // the default image (kong:latest or kong/kong-gateway if EE tests enabled).
-func kongImageUnderTest() string {
+func kongImageUnderTest(t *testing.T) string {
+	t.Helper()
+
 	if testenv.KongImage() != "" && testenv.KongTag() != "" {
 		return fmt.Sprintf("%s:%s", testenv.KongImage(), testenv.KongTag())
 	}
 
 	if testenv.KongEnterpriseEnabled() {
-		return "kong/kong-gateway:latest"
+		gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-ee")
+		require.NoError(t, err)
+		return "kong/kong-gateway:" + gatewayTag
 	}
-	return "kong:latest"
+	gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-oss")
+	require.NoError(t, err)
+	return "kong:" + gatewayTag
 }

@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -186,6 +186,9 @@ func New(
 		return nil, fmt.Errorf("unable to connect to Kubernetes API: %w", err)
 	}
 
+	//+kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
+	//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+
 	setupLog.Info("Initializing Dataplane Client")
 	var eventRecorder record.EventRecorder
 	if c.EmitKubernetesEvents {
@@ -308,6 +311,7 @@ func New(
 		allNamespacesClient,
 		c.IngressClassName,
 		admission.NewDefaultAdminAPIServicesProvider(m.clientsManager),
+		kongSemVersion,
 		translatorFeatureFlags,
 		storer,
 		referenceIndexers,
@@ -416,19 +420,7 @@ func waitForKubernetesAPIReadiness(ctx context.Context, logger logr.Logger, mgr 
 		return fmt.Errorf("failed to build readiness check URL: %w", err)
 	}
 
-	return retry.Do(func() error {
-		// Call the readiness check of the Kubernetes API server: https://kubernetes.io/docs/reference/using-api/health-checks/.
-		resp, err := mgr.GetHTTPClient().Get(readinessEndpointURL)
-		if err != nil {
-			return fmt.Errorf("failed to connect to %q: %w", readinessEndpointURL, err)
-		}
-		defer resp.Body.Close()
-		// We're waiting for the readiness check to return status 200.
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("readiness check %q returned status %d", readinessEndpointURL, resp.StatusCode)
-		}
-		return nil
-	},
+	return retry.New(
 		retry.Context(ctx),
 		retry.Delay(delay),
 		retry.DelayType(retry.FixedDelay),
@@ -437,6 +429,20 @@ func waitForKubernetesAPIReadiness(ctx context.Context, logger logr.Logger, mgr 
 		retry.OnRetry(func(_ uint, err error) {
 			logger.Info("Retrying Kubernetes API readiness check after error", "error", err.Error())
 		}),
+	).Do(
+		func() error {
+			// Call the readiness check of the Kubernetes API server: https://kubernetes.io/docs/reference/using-api/health-checks/.
+			resp, err := mgr.GetHTTPClient().Get(readinessEndpointURL)
+			if err != nil {
+				return fmt.Errorf("failed to connect to %q: %w", readinessEndpointURL, err)
+			}
+			defer resp.Body.Close()
+			// We're waiting for the readiness check to return status 200.
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("readiness check %q returned status %d", readinessEndpointURL, resp.StatusCode)
+			}
+			return nil
+		},
 	)
 }
 

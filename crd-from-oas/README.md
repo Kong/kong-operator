@@ -34,11 +34,20 @@ apiGroupVersions:
     types:
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: EventGatewayDataPlaneCertificate
-        optionalSecretReference: true
+        secretReferences:
+          - path: spec.apiSpec.certificate
+            type: Secret
+            key: tls.crt
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
+        name: EventGatewayVirtualClusterConsumePolicy
+        # Omit fields from generated nested schema types for this API only.
+        schemaFieldOmissions:
+          EventGatewayModifyHeadersPolicyCreate:
+            - parentPolicyID
 ```
 
 Generated ops infer that a controller-runtime client is needed when
-`optionalSecretReference: true` is enabled. For other entities that need to
+`secretReferences` are configured. For other entities that need to
 read cluster state while building SDK requests, set `ops.requireClient: true`
 under the type configuration.
 
@@ -130,6 +139,36 @@ types:
 If none of the generated strategies fit, leave `skipGetForUID: true` in the
 config and provide a hand-written helper in
 `controller/konnect/ops/ops_<entity>_manual.go`.
+
+### `source.supportsMirror`
+
+Root entities can opt into Origin/Mirror support by setting `source.supportsMirror: true`.
+Absent (or `false`) the entity stays Origin-only — the default behavior where the CRD
+creates and owns the Konnect entity.
+
+```yaml
+types:
+  - path: /v1/ai-gateways
+    name: KonnectAIGateway
+    source:
+      supportsMirror: true
+    ops:
+      # ...
+```
+
+When enabled, the generator emits:
+
+- `spec.source` (enum `Origin`;`Mirror`, defaulting to `Origin`) and `spec.mirror`
+  (`konnectv1alpha2.MirrorSpec`, carrying `konnect.id`).
+- Spec-level CEL: `source` is immutable; `mirror` is required for `Mirror` and forbidden
+  for `Origin`; `apiSpec` is required for `Origin` and forbidden for `Mirror`.
+- An optional-pointer `apiSpec` (required-for-Origin via the CEL above).
+- `GetSource`/`GetMirror` accessors so the entity satisfies the ops-layer
+  `MirrorableEntity` interface.
+- A Mirror short-circuit in the generated ops: create fetches the existing Konnect entity
+  by ID (`Get<Entity>`) and copies status instead of creating; update and delete are no-ops.
+
+Only supported on root entities (OpenAPI paths with no path parameters).
 
 ### TODOs
 

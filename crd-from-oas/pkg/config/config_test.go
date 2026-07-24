@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLoadProjectConfig(t *testing.T) {
@@ -55,6 +56,32 @@ func TestLoadProjectConfig(t *testing.T) {
 		assert.Equal(t, "/v3/gateways", gateway.Types[0].Path)
 	})
 
+	t.Run("valid config with per-type schema field omissions", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  configuration.konghq.com/v1alpha1:
+    types:
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
+        schemaFieldOmissions:
+          EventGatewayModifyHeadersPolicyCreate:
+            - parentPolicyID
+          EventGatewaySkipRecordPolicyCreate:
+            - parentPolicyID
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		configuration := cfg.APIGroupVersions["configuration.konghq.com/v1alpha1"]
+		require.NotNil(t, configuration)
+		require.Len(t, configuration.Types, 1)
+		require.NotNil(t, configuration.Types[0].SchemaFieldOmissions)
+		assert.Equal(t, []string{"parentPolicyID"}, configuration.Types[0].SchemaFieldOmissions["EventGatewayModifyHeadersPolicyCreate"])
+		assert.Equal(t, []string{"parentPolicyID"}, configuration.Types[0].SchemaFieldOmissions["EventGatewaySkipRecordPolicyCreate"])
+	})
+
 	t.Run("valid config with ops requireClient", func(t *testing.T) {
 		content := `
 apiGroupVersions:
@@ -64,7 +91,6 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.certificate
             type: Secret
-            key: tls.crt
         ops:
           requireClient: true
           create:
@@ -82,7 +108,6 @@ apiGroupVersions:
 		require.Len(t, konnect.Types[0].SecretReferences, 1)
 		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].SecretReferences[0].Path)
 		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
-		assert.Equal(t, "tls.crt", konnect.Types[0].SecretReferences[0].Key)
 		assert.True(t, konnect.Types[0].OpsRequireClient)
 		require.NotNil(t, konnect.Types[0].Ops)
 		assert.Equal(t,
@@ -597,6 +622,55 @@ func TestAPIGroupVersionConfig_NameOverrides(t *testing.T) {
 	})
 }
 
+func TestTypeConfig_ValidateAssociations(t *testing.T) {
+	t.Run("valid single-kind association", func(t *testing.T) {
+		tc := &TypeConfig{
+			Path:         "/v1/ai-gateways/{gatewayId}/consumers",
+			Associations: []AssociationConfig{{Name: "consumerGroups", Kinds: []string{"AIGatewayConsumerGroup"}, SDKMethod: "UpdateAiGatewayConsumerGroupsForConsumer"}},
+		}
+		require.NoError(t, tc.validate())
+	})
+	t.Run("empty name errors", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{{Kinds: []string{"X"}, SDKMethod: "M"}}}
+		require.ErrorContains(t, tc.validate(), "name must not be empty")
+	})
+	t.Run("empty kinds errors", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{{Name: "consumerGroups", SDKMethod: "M"}}}
+		require.ErrorContains(t, tc.validate(), "kinds must not be empty")
+	})
+	t.Run("multi-kind not yet supported", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{{Name: "x", Kinds: []string{"A", "B"}, SDKMethod: "M"}}}
+		require.ErrorContains(t, tc.validate(), "multi-kind associations are not yet supported")
+	})
+	t.Run("empty sdkMethod errors", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{{Name: "consumerGroups", Kinds: []string{"A"}}}}
+		require.ErrorContains(t, tc.validate(), "sdkMethod must not be empty")
+	})
+	t.Run("duplicate name errors", func(t *testing.T) {
+		tc := &TypeConfig{Associations: []AssociationConfig{
+			{Name: "consumerGroups", Kinds: []string{"A"}, SDKMethod: "M"},
+			{Name: "consumerGroups", Kinds: []string{"A"}, SDKMethod: "M"},
+		}}
+		require.ErrorContains(t, tc.validate(), "duplicate name")
+	})
+}
+
+func TestAPIGroupVersionConfig_AssociationsConfig(t *testing.T) {
+	agv := &APIGroupVersionConfig{
+		Types: []*TypeConfig{
+			{Path: "/v1/ai-gateways/{gatewayId}/consumers", Associations: []AssociationConfig{{Name: "consumerGroups", Kinds: []string{"AIGatewayConsumerGroup"}}}},
+			{Path: "/v3/portals"},
+		},
+	}
+	got := agv.AssociationsConfig(map[string]string{
+		"/v1/ai-gateways/{gatewayId}/consumers": "AIGatewayConsumer",
+		"/v3/portals":                           "Portal",
+	})
+	require.Len(t, got, 1)
+	require.Equal(t, "consumerGroups", got["AIGatewayConsumer"][0].Name)
+	require.Equal(t, "AIGatewayConsumerGroupRef", got["AIGatewayConsumer"][0].RefTypeName())
+}
+
 func TestAPIGroupVersionConfig_GetPaths(t *testing.T) {
 	agv := &APIGroupVersionConfig{
 		Types: []*TypeConfig{
@@ -699,6 +773,32 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 	})
 }
 
+func TestAPIGroupVersionConfig_SchemaFieldOmissionsConfig(t *testing.T) {
+	agv := &APIGroupVersionConfig{
+		Types: []*TypeConfig{
+			{
+				Path: "/v1/consume-policies",
+				SchemaFieldOmissions: map[string][]string{
+					"EventGatewayModifyHeadersPolicyCreate": {"parentPolicyID"},
+				},
+			},
+			{
+				Path: "/v1/produce-policies",
+				SchemaFieldOmissions: map[string][]string{
+					"EventGatewayModifyHeadersPolicyCreate":             {"name"},
+					"EventGatewayParsedRecordEncryptFieldsPolicyCreate": {"parentPolicyID"},
+				},
+			},
+		},
+	}
+
+	omissions := agv.SchemaFieldOmissionsConfig()
+	require.Len(t, omissions, 2)
+	assert.True(t, omissions["EventGatewayModifyHeadersPolicyCreate"]["parentPolicyID"])
+	assert.True(t, omissions["EventGatewayModifyHeadersPolicyCreate"]["name"])
+	assert.True(t, omissions["EventGatewayParsedRecordEncryptFieldsPolicyCreate"]["parentPolicyID"])
+}
+
 func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 	t.Run("with ops configured", func(t *testing.T) {
 		agv := &APIGroupVersionConfig{
@@ -740,7 +840,7 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
 					},
 					SecretReferences: []SecretReferenceConfig{
-						{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"},
+						{Path: "spec.apiSpec.certificate", Type: "Secret"},
 					},
 				},
 				{
@@ -1020,4 +1120,133 @@ apiGroupVersions:
 	require.Len(t, rc.AncestorEntityGVKs, 1)
 	assert.Equal(t, []string{"KonnectEventGateway"}, rc.AncestorEntityKinds())
 	assert.Equal(t, "konnect.konghq.com", rc.AncestorEntityGVKs[0].Group)
+}
+
+func TestReferenceConfigValidation(t *testing.T) {
+	base := func(mut func(*ReferenceConfig)) *APIGroupVersionConfig {
+		rc := ReferenceConfig{
+			Path:       "spec.apiSpec.policies",
+			Kinds:      []string{"AIGatewayPolicy"},
+			ResolvesTo: "id",
+		}
+		if mut != nil {
+			mut(&rc)
+		}
+		return &APIGroupVersionConfig{
+			Types: []*TypeConfig{{
+				Path:       "/v1/ai-gateways/{gatewayId}/agents",
+				Name:       "AIGatewayAgent",
+				References: []ReferenceConfig{rc},
+			}},
+		}
+	}
+
+	tests := []struct {
+		name    string
+		cfg     *APIGroupVersionConfig
+		wantErr string
+	}{
+		{name: "valid single-kind id ref", cfg: base(nil)},
+		{
+			name:    "empty kinds rejected",
+			cfg:     base(func(rc *ReferenceConfig) { rc.Kinds = nil }),
+			wantErr: "kinds must not be empty",
+		},
+		{
+			name:    "bad resolvesTo rejected",
+			cfg:     base(func(rc *ReferenceConfig) { rc.ResolvesTo = "uuid" }),
+			wantErr: `resolvesTo must be "id" or "name"`,
+		},
+		{
+			name: "resolvesTo name accepted",
+			cfg:  base(func(rc *ReferenceConfig) { rc.ResolvesTo = "name" }),
+		},
+		{
+			name: "nested path accepted",
+			cfg:  base(func(rc *ReferenceConfig) { rc.Path = "spec.apiSpec.access.acls.allow.allow" }),
+		},
+		{
+			name:    "path outside spec.apiSpec rejected",
+			cfg:     base(func(rc *ReferenceConfig) { rc.Path = "spec.policies" }),
+			wantErr: `must start with "spec.apiSpec."`,
+		},
+		{
+			name: "multi-kind requires refTypeName",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Kinds = []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"}
+			}),
+			wantErr: "refTypeName is required when multiple kinds",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.validate()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestReferenceConfigTypeName(t *testing.T) {
+	require.Equal(t, "AIGatewayPolicyRef", ReferenceConfig{Kinds: []string{"AIGatewayPolicy"}}.TypeName())
+	require.Equal(t, "AIGatewayACLRef", ReferenceConfig{
+		Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+		RefTypeName: "AIGatewayACLRef",
+	}.TypeName())
+}
+
+func TestSourceConfig_Unmarshal(t *testing.T) {
+	const y = `
+path: /v1/event-gateways
+name: KonnectEventGateway
+source:
+  supportsMirror: true
+`
+	var tc TypeConfig
+	require.NoError(t, yaml.Unmarshal([]byte(y), &tc))
+	require.NotNil(t, tc.Source)
+	require.True(t, tc.Source.SupportsMirror)
+}
+
+func TestSourceConfig_AbsentIsNil(t *testing.T) {
+	const y = `
+path: /v1/event-gateways
+name: KonnectEventGateway
+`
+	var tc TypeConfig
+	require.NoError(t, yaml.Unmarshal([]byte(y), &tc))
+	require.Nil(t, tc.Source)
+}
+
+func TestSourceConfig_ValidateRootOnly(t *testing.T) {
+	child := &TypeConfig{
+		Path:   "/v1/event-gateways/{gatewayId}/listeners",
+		Source: &SourceConfig{SupportsMirror: true},
+	}
+	require.ErrorContains(t, child.validate(), "supportsMirror")
+
+	root := &TypeConfig{
+		Path:   "/v1/event-gateways",
+		Source: &SourceConfig{SupportsMirror: true},
+	}
+	require.NoError(t, root.validate())
+}
+
+func TestSourceConfigs_Accessor(t *testing.T) {
+	c := &APIGroupVersionConfig{
+		Types: []*TypeConfig{
+			{Path: "/v1/event-gateways", Source: &SourceConfig{SupportsMirror: true}},
+			{Path: "/v1/portals"},
+		},
+	}
+	got := c.SourceConfigs(map[string]string{
+		"/v1/event-gateways": "KonnectEventGateway",
+		"/v1/portals":        "Portal",
+	})
+	require.Contains(t, got, "KonnectEventGateway")
+	require.True(t, got["KonnectEventGateway"].SupportsMirror)
+	require.NotContains(t, got, "Portal")
 }

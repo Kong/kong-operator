@@ -4,13 +4,13 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -29,12 +29,12 @@ func testGeneratedPortalPageForSDKOps() *konnectv1alpha1.PortalPage {
 		},
 		Spec: konnectv1alpha1.PortalPageSpec{
 			APISpec: konnectv1alpha1.PortalPageAPISpec{
-				Content: "test-value",
+				Content:     "test-value",
 				Description: "test-value",
-				Slug: "test-value",
-				Status: "test-value",
-				Title: "test-value",
-				Visibility: "test-value",
+				Slug:        "test-value",
+				Status:      "published",
+				Title:       "test-value",
+				Visibility:  "public",
 			},
 		},
 	}
@@ -110,8 +110,8 @@ func TestUpdatePortalPage_UsesSDKOpsConversion(t *testing.T) {
 		UpdatePortalPage(
 			mock.Anything,
 			sdkkonnectops.UpdatePortalPageRequest{
-				PortalID: parentID,
-				PageID: obj.GetKonnectStatus().GetKonnectID(),
+				PortalID:                parentID,
+				PageID:                  obj.GetKonnectStatus().GetKonnectID(),
 				UpdatePortalPageRequest: *expectedRequest,
 			},
 		).
@@ -138,8 +138,8 @@ func TestUpdatePortalPage_PropagatesSDKError(t *testing.T) {
 		UpdatePortalPage(
 			mock.Anything,
 			sdkkonnectops.UpdatePortalPageRequest{
-				PortalID: parentID,
-				PageID: obj.GetKonnectStatus().GetKonnectID(),
+				PortalID:                parentID,
+				PageID:                  obj.GetKonnectStatus().GetKonnectID(),
 				UpdatePortalPageRequest: *expectedRequest,
 			},
 		).

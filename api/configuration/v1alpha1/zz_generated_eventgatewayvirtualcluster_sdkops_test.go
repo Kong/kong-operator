@@ -11,11 +11,11 @@ import (
 
 func TestEventGatewayVirtualClusterAPISpec_ToCreateVirtualClusterRequest(t *testing.T) {
 	spec := &EventGatewayVirtualClusterAPISpec{
-		AclMode: VirtualClusterACLMode("test-value"),
+		AclMode:     VirtualClusterACLMode("enforce_on_gateway"),
 		Description: "test-value",
-		DNSLabel: VirtualClusterDNSLabel("test-value"),
-		Labels: Labels{"test-key": "test-value"},
-		Name: VirtualClusterName("test-value"),
+		DNSLabel:    VirtualClusterDNSLabel("test-value"),
+		Labels:      Labels{"test-key": "test-value"},
+		Name:        VirtualClusterName("test-value"),
 	}
 	result, err := spec.ToCreateVirtualClusterRequest()
 	require.NoError(t, err)
@@ -27,7 +27,7 @@ func TestEventGatewayVirtualClusterAPISpec_ToCreateVirtualClusterRequest(t *test
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
-	require.Equal(t, "test-value", payload["acl_mode"])
+	require.Equal(t, "enforce_on_gateway", payload["acl_mode"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["dns_label"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
@@ -36,11 +36,11 @@ func TestEventGatewayVirtualClusterAPISpec_ToCreateVirtualClusterRequest(t *test
 
 func TestEventGatewayVirtualClusterAPISpec_ToUpdateVirtualClusterRequest(t *testing.T) {
 	spec := &EventGatewayVirtualClusterAPISpec{
-		AclMode: VirtualClusterACLMode("test-value"),
+		AclMode:     VirtualClusterACLMode("enforce_on_gateway"),
 		Description: "test-value",
-		DNSLabel: VirtualClusterDNSLabel("test-value"),
-		Labels: Labels{"test-key": "test-value"},
-		Name: VirtualClusterName("test-value"),
+		DNSLabel:    VirtualClusterDNSLabel("test-value"),
+		Labels:      Labels{"test-key": "test-value"},
+		Name:        VirtualClusterName("test-value"),
 	}
 	result, err := spec.ToUpdateVirtualClusterRequest()
 	require.NoError(t, err)
@@ -52,7 +52,7 @@ func TestEventGatewayVirtualClusterAPISpec_ToUpdateVirtualClusterRequest(t *test
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
-	require.Equal(t, "test-value", payload["acl_mode"])
+	require.Equal(t, "enforce_on_gateway", payload["acl_mode"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["dns_label"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])

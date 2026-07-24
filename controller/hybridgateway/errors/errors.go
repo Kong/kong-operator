@@ -25,4 +25,8 @@ var (
 
 	// ErrGatewayNotReferencingControlPlane is returned when a Gateway does not reference a ControlPlane.
 	ErrGatewayNotReferencingControlPlane = fmt.Errorf("gateway does not reference a ControlPlane")
+
+	// ErrMalformedAnnotation is returned when a konghq.com/* annotation value
+	// fails to parse (invalid bool, invalid integer, negative integer, etc.).
+	ErrMalformedAnnotation = fmt.Errorf("malformed annotation")
 )

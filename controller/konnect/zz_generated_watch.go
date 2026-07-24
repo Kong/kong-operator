@@ -21,6 +21,26 @@ func reconciliationWatchOptionsForEntity[
 	ent TEnt,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	switch any(ent).(type) {
+	case *konnectv1alpha1.AIGatewayAgent:
+		return AIGatewayAgentReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayConsumer:
+		return AIGatewayConsumerReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayConsumerCredential:
+		return AIGatewayConsumerCredentialReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayConsumerGroup:
+		return AIGatewayConsumerGroupReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
+		return AIGatewayDataPlaneCertificateReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayIdentityProvider:
+		return AIGatewayIdentityProviderReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayMCPServer:
+		return AIGatewayMCPServerReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayModel:
+		return AIGatewayModelReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayModelProvider:
+		return AIGatewayModelProviderReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayPolicy:
+		return AIGatewayPolicyReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return EventGatewayBackendClusterReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
@@ -29,12 +49,18 @@ func reconciliationWatchOptionsForEntity[
 		return EventGatewayListenerReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayListenerPolicy:
 		return EventGatewayListenerPolicyReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.EventGatewaySchemaRegistry:
+		return EventGatewaySchemaRegistryReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:
 		return EventGatewayVirtualClusterReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
 		return EventGatewayVirtualClusterConsumePolicyReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicy:
+		return EventGatewayVirtualClusterPolicyReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.KonnectAIGateway:
+		return KonnectAIGatewayReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return KonnectEventGatewayReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.Portal:

@@ -32,6 +32,8 @@ import (
 // +kubebuilder:resource:categories=kong
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Upstream",type=string,JSONPath=`.spec.upstreamRef.name`,description="The KongUpstream this Target is attached to"
+// +kubebuilder:printcolumn:name="Target",type=string,JSONPath=`.spec.target`,description="The target address of the upstream"
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.upstreamRef == self.spec.upstreamRef", message="spec.upstreamRef is immutable"

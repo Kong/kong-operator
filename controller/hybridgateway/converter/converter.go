@@ -41,10 +41,22 @@ type OrphanedResourceHandler interface {
 	HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error)
 }
 
+// DesiredStateReadinessChecker is an optional interface that converters can implement to
+// defer orphan cleanup until the resources they desire are ready (Programmed in Konnect).
+// When a converter implements it and DesiredResourcesReady returns false, the reconciler
+// requeues without deleting orphaned resources. This ensures stale resources are pruned
+// only after their replacements are live, avoiding a data-plane gap during a cutover
+// (e.g. when a spec change rotates the desired KongUpstream/KongService/KongRoute names).
+type DesiredStateReadinessChecker interface {
+	// DesiredResourcesReady reports whether all desired resources produced by the converter
+	// are Programmed. Resource kinds without a Programmed condition are ignored.
+	DesiredResourcesReady(ctx context.Context, logger logr.Logger) (ready bool, err error)
+}
+
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {
-	gwtypes.HTTPRoute | gwtypes.TLSRoute | gwtypes.Gateway
+	gwtypes.HTTPRoute | gwtypes.TLSRoute | gwtypes.TCPRoute | gwtypes.Gateway
 }
 
 // RootObjectPtr is a generic interface that represents a pointer to a type T,
@@ -65,6 +77,9 @@ func NewConverter[t RootObject](obj t, cl client.Client, fqdnMode bool, clusterD
 		return newHTTPRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	case gwtypes.TLSRoute:
 		return newTLSRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
+	case gwtypes.TCPRoute:
+		// TODO: Add TCPRoute conversion support: https://github.com/Kong/kong-operator/issues/4335
+		return nil, fmt.Errorf("TCPRoute conversion is not supported yet")
 	case gwtypes.Gateway:
 		return newGatewayConverter(&o, cl).(APIConverter[t]), nil
 	default:

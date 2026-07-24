@@ -41,6 +41,17 @@ func TestOwns(t *testing.T) {
 			},
 		},
 		{
+			name:    "TCPRoute",
+			obj:     &gwtypes.TCPRoute{},
+			wantLen: 4,
+			want: []any{
+				&configurationv1alpha1.KongRoute{},
+				&configurationv1alpha1.KongService{},
+				&configurationv1alpha1.KongUpstream{},
+				&configurationv1alpha1.KongTarget{},
+			},
+		},
+		{
 			name:    "OtherType",
 			obj:     &gwtypes.GatewayClass{},
 			wantLen: 0,

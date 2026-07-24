@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
       - uses: mukunku/tag-exists-action@5c39604fe8aef7e65acb6fbcf96ec580f7680313 # v1.7.0
@@ -109,7 +109,7 @@ jobs:
         run: exit 1
 
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -144,11 +144,11 @@ jobs:
     name: "test-integration-current-kubernetes"
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -156,11 +156,11 @@ jobs:
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
       - name: Setup golang
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
 
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea # v4.2.1
         with:
           install: false
 
@@ -178,7 +178,7 @@ jobs:
       - name: Get Kong Enterprise License
         if: steps.check-op-service-account-token.outputs.provided == 'true'
         id: get-license
-        uses: Kong/kong-license@62d5e200998d4b19ed6b78591332a092536c63f5 # master @ 20260330
+        uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
         with:
           # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password.
           op-token: ${{ secrets.op-service-account-token }}
@@ -199,65 +199,17 @@ jobs:
           if-no-files-found: ignore
 
   test-e2e-current-kubernetes:
-    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     needs:
       - semver
       - build-push-images
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
-        with:
-          egress-policy: audit
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-
-      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
-
-      - name: Setup golang
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
-        with:
-          go-version-file: go.mod
-
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          install: false
-
-      # This step is required to check if the OP Service Account Token is available and export a boolean output
-      # to be used in the next step. It's because we cannot use a secret in a step's condition.
-      # See: https://github.com/actions/runner/issues/520
-      - name: Check OP Service Account Token available
-        id: check-op-service-account-token
-        run: |
-          # If secrets.op-service-account-token is set, return true.
-          if [ -n "${{ secrets.op-service-account-token }}" ]; then
-              echo "provided=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Get Kong Enterprise License
-        if: steps.check-op-service-account-token.outputs.provided == 'true'
-        id: get-license
-        uses: Kong/kong-license@62d5e200998d4b19ed6b78591332a092536c63f5 # master @ 20260330
-        with:
-          # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password.
-          op-token: ${{ secrets.op-service-account-token }}
-
-      - name: E2E Tests
-        run: make test.e2e
-        env:
-          KONG_LICENSE_DATA: ${{ steps.get-license.outputs.license || '' }} # The license is optional for OSS tests.
-          KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
-          KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
-
-      - name: upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: diagnostics-e2e
-          path: /tmp/ktf-diag*
-          if-no-files-found: ignore
+    uses: ./.github/workflows/falco-analyzed-e2e.yaml
+    with:
+      test-image: ${{ needs.build-push-images.outputs.full_tag }}
+    secrets:
+      konnect-pat: ${{ secrets.konnect-pat }}
 
   create-release-pr:
     runs-on: ubuntu-latest
@@ -270,7 +222,7 @@ jobs:
       - test-e2e-current-kubernetes
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
       - name: Check if we're not trying to trigger a major/minor release from non main
@@ -290,7 +242,7 @@ jobs:
       # Use the branch set via inputs as a base for the release.
       # If anything needs to be fixed before the release, it should be done on the base branch
       # before the release workflow is triggered.
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           ref: ${{ inputs.base }}
@@ -298,7 +250,7 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
 
@@ -309,9 +261,20 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo ${VERSION} > VERSION
 
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea # v4.2.1
         with:
           install: false
+
+      - name: Run make generate
+        if: ${{ inputs.regenerate-manifests }}
+        run: |
+          make \
+            generate.api \
+            generate.api-from-oas \
+            generate.crds \
+            generate.crd-kustomize \
+            generate.docs \
+            generate.cli-arguments-docs
 
       # Generated manifests are part of the release PR.
       - name: Generate manifests
@@ -377,16 +340,16 @@ jobs:
       - create-release-pr
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           ref: ${{ inputs.base }}
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ github.repository_owner }}/${{ env.DOCS_REPO }}
           path: ${{ env.DOCS_REPO }}

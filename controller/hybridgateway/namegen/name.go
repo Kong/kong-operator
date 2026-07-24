@@ -21,6 +21,13 @@ const (
 	// defaultCPPrefix is the prefix used when including a control-plane identifier.
 	defaultCPPrefix = "cp"
 
+	// parentRefPrefix is the prefix used when including a ParentRef identifier.
+	parentRefPrefix = "pr"
+
+	// backendNotFoundPrefix is the prefix used for service names that intentionally
+	// route to request-termination because no backend target could be produced.
+	backendNotFoundPrefix = "bnf"
+
 	// namegenPrefix is used as the prefix for hashed names when concatenated
 	// components exceed the maximum Kubernetes resource name length.
 	namegenPrefix = "ngn"
@@ -106,6 +113,32 @@ func NewKongServiceNameForHTTPRouteRule(route *gwtypes.HTTPRoute, cp *commonv1al
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
+// NewKongServiceNameForHTTPRouteRuleBackendNotFound generates a route-scoped KongService name
+// for rules that have BackendRefs but no valid backend targets. These services get a
+// request-termination plugin, so they must not share the normal backend service name.
+func NewKongServiceNameForHTTPRouteRuleBackendNotFound(
+	route *gwtypes.HTTPRoute,
+	cp *commonv1alpha1.ControlPlaneRef,
+	rule gatewayv1.HTTPRouteRule,
+) string {
+	readableElements := append(
+		[]string{httpProcolPrefix},
+		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
+	)
+	hashElements := []string{
+		defaultCPPrefix + utils.Hash32(cp),
+		backendNotFoundPrefix + utils.Hash32(struct {
+			Namespace string
+			Name      string
+		}{
+			Namespace: route.Namespace,
+			Name:      route.Name,
+		}),
+		hashForHTTPRouteRuleServiceLikeName(route, rule),
+	}
+	return newNameWithHashSuffix(readableElements, hashElements)
+}
+
 // NewKongServiceNameForTLSRouteRule generates a KongService name based on the ControlPlaneRef and TLSRouteRule passed as arguments.
 func NewKongServiceNameForTLSRouteRule(route *gwtypes.TLSRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.TLSRouteRule) string {
 	readableElements := append(
@@ -121,6 +154,14 @@ func hashElementsForServiceLikeName(
 	cp *commonv1alpha1.ControlPlaneRef,
 	rule gatewayv1.HTTPRouteRule,
 ) []string {
+	hash := hashForHTTPRouteRuleServiceLikeName(route, rule)
+	return []string{
+		defaultCPPrefix + utils.Hash32(cp),
+		hash,
+	}
+}
+
+func hashForHTTPRouteRuleServiceLikeName(route *gwtypes.HTTPRoute, rule gatewayv1.HTTPRouteRule) string {
 	var hash string
 	if len(rule.BackendRefs) > 0 {
 		hash = utils.Hash32(rule.BackendRefs)
@@ -139,10 +180,7 @@ func hashElementsForServiceLikeName(
 		hash = utils.Hash32(zeroBackendRuleIdentity)
 	}
 
-	return []string{
-		defaultCPPrefix + utils.Hash32(cp),
-		hash,
-	}
+	return hash
 }
 
 func hashElementsForServiceLikeNameTLSRouteRule(
@@ -158,52 +196,67 @@ func hashElementsForServiceLikeNameTLSRouteRule(
 	}
 }
 
-// NewKongRouteName generates a KongRoute name based on the HTTPRoute, ControlPlaneRef, and HTTPRouteRule passed as arguments.
-func NewKongRouteName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
-	readableElements := []string{
-		httpProcolPrefix,
-		route.Namespace + "-" + route.Name,
-	}
-	hashElements := []string{
-		defaultCPPrefix + utils.Hash32(cp),
-		utils.Hash32(rule.Matches),
-	}
-	return newNameWithHashSuffix(readableElements, hashElements)
-}
-
 // NewKongRouteNameForMatch generates a KongRoute name based on HTTPRoute, ControlPlaneRef,
-// and a single HTTPRouteMatch. The optional index is included to avoid collisions when
-// multiple matches are identical.
-func NewKongRouteNameForMatch(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, match gatewayv1.HTTPRouteMatch, index int) string {
+// ParentRef, and a single HTTPRouteMatch. The optional index is included to avoid collisions
+// when multiple matches are identical.
+func NewKongRouteNameForMatch(
+	route *gwtypes.HTTPRoute,
+	cp *commonv1alpha1.ControlPlaneRef,
+	parentRef *gwtypes.ParentReference,
+	match gatewayv1.HTTPRouteMatch,
+	index int,
+) string {
 	readableElements := []string{
 		httpProcolPrefix,
 		route.Namespace + "-" + route.Name,
 	}
-	hashElements := []string{
-		defaultCPPrefix + utils.Hash32(cp),
-		utils.Hash32(match),
-		fmt.Sprintf("m%02d", index),
+	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
+	if parentRef != nil {
+		hashElements = append(hashElements, parentRefHashElement(parentRef))
 	}
+	hashElements = append(hashElements, utils.Hash32(match), fmt.Sprintf("m%02d", index))
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
-// NewKongRouteNameForTLSRouteRule generates a KongRoute name based on the TLSRoute rule, ControlPlaneRef and its parent TLSRoute.
-func NewKongRouteNameForTLSRouteRule(route *gwtypes.TLSRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.TLSRouteRule) string {
+// NewKongRouteNameForTLSRouteRule generates a KongRoute name based on the TLSRoute rule,
+// ControlPlaneRef, ParentRef, and its parent TLSRoute.
+func NewKongRouteNameForTLSRouteRule(
+	route *gwtypes.TLSRoute,
+	cp *commonv1alpha1.ControlPlaneRef,
+	parentRef *gwtypes.ParentReference,
+	rule gatewayv1.TLSRouteRule,
+) string {
 	readableElements := []string{
 		tlsProtocolPrefix,
 		route.Namespace + "-" + route.Name,
 	}
-	hashElements := []string{
-		// Since there can be only one rule in TLSRoute, we do not need to consider identical rules within the same TLSRoute.
-		defaultCPPrefix + utils.Hash32(cp),
-		utils.Hash32(rule),
+	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
+	if parentRef != nil {
+		hashElements = append(hashElements, parentRefHashElement(parentRef))
 	}
+	hashElements = append(hashElements, utils.Hash32(rule))
 	return newNameWithHashSuffix(readableElements, hashElements)
+}
+
+func parentRefHashElement(parentRef *gwtypes.ParentReference) string {
+	return parentRefPrefix + utils.Hash32(*parentRef)
 }
 
 // NewKongPluginName generates a KongPlugin name based on the HTTPRouteFilter passed as argument.
 func NewKongPluginName(filter gatewayv1.HTTPRouteFilter, namespace string, pluginName string) string {
 	return newName(namespace, pluginName, utils.Hash32(filter))
+}
+
+// NewKongPluginNameForFilters generates a KongPlugin name for a plugin produced by one or more
+// HTTPRoute filters. When several filters map to the same Kong plugin type (e.g. URLRewrite and
+// RequestHeaderModifier both map to request-transformer) they are merged into a single KongPlugin,
+// so the name must be derived from the whole set of contributing filters. The single-filter case
+// is kept identical to NewKongPluginName to avoid renaming existing resources.
+func NewKongPluginNameForFilters(filters []gatewayv1.HTTPRouteFilter, namespace string, pluginName string) string {
+	if len(filters) == 1 {
+		return NewKongPluginName(filters[0], namespace, pluginName)
+	}
+	return newName(namespace, pluginName, utils.Hash32(filters))
 }
 
 // NewKongPluginNameForService generates a KongPlugin name tied to a KongService.

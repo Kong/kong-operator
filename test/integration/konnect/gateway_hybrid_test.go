@@ -137,7 +137,7 @@ func TestGatewayHybridFull(t *testing.T) {
 	t.Log("verifying GatewayClass has supportedFeatures set")
 	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible)
 	require.NoError(t, err)
-	require.Eventually(t, testutils.GatewayClassHasSupportedFeatures(t, ctx, string(gateway.Spec.GatewayClassName), integration.GetClients(), requiredFeatures.UnsortedList()...), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, testutils.GatewayClassHasSupportedFeatures(t, ctx, string(gateway.Spec.GatewayClassName), integration.GetClients(), requiredFeatures...), testutils.SubresourceReadinessWait, time.Second)
 
 	dataplaneClient := operatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
@@ -182,7 +182,7 @@ func TestGatewayHybridFull(t *testing.T) {
 		request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test", "")
 		require.Eventually(
 			t,
-			testutils.GetResponseBodyContains(t, integration.GetClients(), httpClient, request, "<title>httpbin.org</title>"),
+			testutils.GetResponseBodyContains(t, httpClient, request, "<title>httpbin.org</title>"),
 			httpRouteAccessTimeout,
 			time.Second,
 		)
@@ -191,7 +191,7 @@ func TestGatewayHybridFull(t *testing.T) {
 		request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test/1234", "")
 		require.Eventually(
 			t,
-			testutils.GetResponseBodyContains(t, integration.GetClients(), httpClient, request, "<h1>Not Found</h1>"),
+			testutils.GetResponseBodyContains(t, httpClient, request, "<h1>Not Found</h1>"),
 			httpRouteAccessTimeout,
 			time.Second,
 		)

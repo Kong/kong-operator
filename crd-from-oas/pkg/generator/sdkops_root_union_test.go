@@ -70,3 +70,12 @@ func TestGenerateSDKOps_RootUnionUsesDiscriminatorJSONNames(t *testing.T) {
 	assert.NotContains(t, content, `payload["eventgatewaytlslisten"]`)
 	assert.NotContains(t, content, `payload["forwardtovirtualclust"]`)
 }
+
+func TestFlattenSDKUnionsHelper_FlattensNonObjectMembers(t *testing.T) {
+	t.Parallel()
+
+	assert.Contains(t, flattenSDKUnionsHelper, `if len(x) == 2 {`)
+	assert.Contains(t, flattenSDKUnionsHelper, `return inner`)
+	assert.Contains(t, flattenSDKUnionsHelper, `func nestedSDKUnionMember(object map[string]any) (string, string, any, bool) {`)
+	assert.Contains(t, flattenSDKUnionsHelper, `func nestedSDKUnionMemberForKey(object map[string]any, key string) (string, any, bool) {`)
+}

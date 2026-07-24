@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -63,21 +62,13 @@ func (r *DynamicCRDController) SetupWithManager(mgr ctrl.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.isOneOfRequiredCRDs)),
 		).
-		Complete(r)
+		Complete(reconcile.AsReconciler[*apiextensionsv1.CustomResourceDefinition](mgr.GetClient(), r))
 }
 
-func (r *DynamicCRDController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("CustomResourceDefinition", req.NamespacedName)
+func (r *DynamicCRDController) Reconcile(ctx context.Context, crd *apiextensionsv1.CustomResourceDefinition) (ctrl.Result, error) {
+	log := r.Log.WithValues("CustomResourceDefinition", client.ObjectKeyFromObject(crd))
 
-	crd := new(apiextensionsv1.CustomResourceDefinition)
-	if err := r.Manager.GetClient().Get(ctx, req.NamespacedName, crd); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.V(logging.DebugLevel).Info("Object enqueued no longer exists, skipping", "name", req.Name)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	log.V(logging.DebugLevel).Info("Processing CustomResourceDefinition", "name", req.Name)
+	log.V(logging.DebugLevel).Info("Processing CustomResourceDefinition", "name", crd.Name)
 
 	if !r.allRequiredCRDsInstalled() {
 		log.V(logging.DebugLevel).Info("Still not all required CustomResourceDefinitions are installed, waiting")

@@ -1,0 +1,19 @@
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ($aigw_dp_name)
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'KonnectAIGatewayResolved']):
+    - status: 'True'
+      reason: Resolved
+  (conditions[?type == 'CertificateProvisioned']):
+    - status: 'True'
+      reason: CertificateProvisioned
+  (conditions[?type == 'KonnectCertificateRegistered']):
+    - status: 'True'
+      reason: KonnectCertificateRegistered
+  (conditions[?type == 'Ready']):
+    - status: 'True'
+      reason: Ready
+  (readyReplicas > `0`): true

@@ -60,7 +60,7 @@ func TestHelmUpgrade(t *testing.T) {
 	// This is the latest Chart available publicly (used by actual users) that we can upgrade from.
 	const (
 		lastReleasedChart        = "oci://docker.io/kong/kong-operator-chart"
-		lastReleasedChartVersion = "1.2.4" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
+		lastReleasedChartVersion = "1.3.1" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
 	)
 	// This is the Chart and image from current state of the repository that we want to upgrade to.
 	// Image has to be loaded into the cluster beforehand and specified via KONG_TEST_KONG_OPERATOR_IMAGE_LOAD
@@ -92,12 +92,7 @@ func TestHelmUpgrade(t *testing.T) {
 			// For instance change in CRDs requires manual installation of new CRDs before the upgrade,
 			// see charts/kong-operator/UPGRADE.md this section mostly should be empty.
 			// IDEALLY IT SHOULD BE EMPTY - seamless upgrade should not require manual steps.
-			stepsToDoBeforeUpgrade := []func(context.Context, *testing.T, clusters.Cluster){
-				func(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
-					t.Log("Applying Gateway API CRDs for v1.5.1 due to PR #3491")
-					require.NoError(t, clusters.KustomizeDeployForCluster(ctx, cluster, "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.5.1"))
-				},
-			}
+			stepsToDoBeforeUpgrade := []func(context.Context, *testing.T, clusters.Cluster){}
 
 			onPremObjects, onPremGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeOnPrem)
 			suitesToRun := []suite{
@@ -156,9 +151,8 @@ func TestHelmUpgrade(t *testing.T) {
 								dataPlaneOwnedByGatewayReady(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
-						// Normally DataPlane Deployment should not be patched during the upgrade.
 						{
-							Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
+							Name: "DataPlane deployment is patched after operator upgrade (adjusting securityContext)",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 								gatewayDataPlaneDeploymentIsPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
@@ -198,9 +192,9 @@ func TestHelmUpgrade(t *testing.T) {
 							},
 						},
 						{
-							Name: "DataPlane deployment is not patched after install",
+							Name: "DataPlane deployment is patched after operator upgrade (adjusting securityContext)",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -230,9 +224,9 @@ func TestHelmUpgrade(t *testing.T) {
 							},
 						},
 						{
-							Name: "DataPlane deployment is patched after operator upgrade, due to PR #3531",
+							Name: "DataPlane deployment is not patched after operator upgrade",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -288,12 +282,12 @@ func TestHelmUpgrade(t *testing.T) {
 				"Installing Helm release %q with chart %q version %q",
 				releaseName, lastReleasedChart, lastReleasedChartVersion,
 			)
-			require.NoError(t, helm.InstallE(t, helmOpts, lastReleasedChart, releaseName))
-			out, err := helm.RunHelmCommandAndGetOutputE(t, helmOpts, "list")
+			require.NoError(t, helm.InstallContextE(t, ctx, helmOpts, lastReleasedChart, releaseName))
+			out, err := helm.RunHelmCommandAndGetOutputContextE(t, ctx, helmOpts, "list")
 			require.NoError(t, err)
 			t.Logf("Helm list output after install:\n  %s", out)
 			t.Cleanup(func() {
-				out, err := helm.RunHelmCommandAndGetOutputE(t, helmOpts, "uninstall", releaseName)
+				out, err := helm.RunHelmCommandAndGetOutputContextE(t, context.Background(), helmOpts, "uninstall", releaseName)
 				if !assert.NoError(t, err) {
 					t.Logf("output: %s", out)
 				}
@@ -343,9 +337,9 @@ func TestHelmUpgrade(t *testing.T) {
 			helmOpts.SetValues["image.repository"] = currentImageRepository
 			helmOpts.SetValues["image.tag"] = currentImageTag
 			helmOpts.Version = "" // For local charts, version must be empty.
-			require.NoError(t, helm.UpgradeE(t, helmOpts, currentChart, releaseName))
+			require.NoError(t, helm.UpgradeContextE(t, ctx, helmOpts, currentChart, releaseName))
 
-			out, err = helm.RunHelmCommandAndGetOutputE(t, helmOpts, "list")
+			out, err = helm.RunHelmCommandAndGetOutputContextE(t, ctx, helmOpts, "list")
 			require.NoError(t, err)
 			t.Logf("Helm list output after upgrade:\n  %s", out)
 			ensureBasicReadiness(t, ctx, e, releaseName)
@@ -601,7 +595,7 @@ func gatewayDataPlaneDeploymentIsPatched(
 ) func(context.Context, *assert.CollectT, client.Client) {
 	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
 		if d.Generation == 1 {
-			return fmt.Errorf("Gateway's DataPlane Deployment %q did not get patched but it should:\n%# v",
+			return fmt.Errorf("Gateway's DataPlane Deployment %q is not patched but it should be:\n%# v",
 				client.ObjectKeyFromObject(d), pretty.Formatter(d),
 			)
 		}

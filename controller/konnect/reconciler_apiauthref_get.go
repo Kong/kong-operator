@@ -42,6 +42,21 @@ type portalRefAccessor interface {
 	GetPortalRef() commonv1alpha1.ObjectRef
 }
 
+type konnectAIGatewayRefAccessor interface {
+	objectWithParentRef
+	GetKonnectAIGatewayRef() commonv1alpha1.ObjectRef
+}
+
+type aiGatewayConsumerRefAccessor interface {
+	objectWithParentRef
+	GetAIGatewayConsumerRef() commonv1alpha1.ObjectRef
+}
+
+type aiGatewayDataPlaneRefAccessor interface {
+	objectWithParentRef
+	GetAiGatewayRef() commonv1alpha1.ObjectRef
+}
+
 func getAPIAuthRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -52,9 +67,18 @@ func getAPIAuthRef[
 ) (types.NamespacedName, error) {
 	// TODO: make this generic for all root dependent entities.
 
-	if obj, ok := any(ent).(portalRefAccessor); ok {
-		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.Portal](ctx, cl, obj, obj.GetParentRef())
+	// AIGateway
+	if obj, ok := any(ent).(konnectAIGatewayRefAccessor); ok {
+		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.KonnectAIGateway](ctx, cl, obj, obj.GetParentRef())
 	}
+	if obj, ok := any(ent).(aiGatewayDataPlaneRefAccessor); ok {
+		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.KonnectAIGateway](ctx, cl, obj, obj.GetParentRef())
+	}
+	if obj, ok := any(ent).(aiGatewayConsumerRefAccessor); ok {
+		return getAPIAuthRefViaAIGatewayConsumer(ctx, cl, obj)
+	}
+
+	// EventGateway
 	if obj, ok := any(ent).(eventGatewayRefAccessor); ok {
 		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.KonnectEventGateway](ctx, cl, obj, obj.GetParentRef())
 	}
@@ -66,6 +90,11 @@ func getAPIAuthRef[
 	}
 	if obj, ok := any(ent).(eventGatewayVirtualClusterRefAccessor); ok {
 		return getAPIAuthRefViaVirtualCluster(ctx, cl, obj)
+	}
+
+	// Other Konnect entities.
+	if obj, ok := any(ent).(portalRefAccessor); ok {
+		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.Portal](ctx, cl, obj, obj.GetParentRef())
 	}
 
 	return types.NamespacedName{},
@@ -120,6 +149,17 @@ func getAPIAuthRefViaVirtualCluster(
 		return types.NamespacedName{}, fmt.Errorf("failed to get EventGatewayVirtualCluster %s: %w", nn, err)
 	}
 	return getAPIAuthRefViaBackendCluster(ctx, cl, virtualCluster)
+}
+
+func getAPIAuthRefViaAIGatewayConsumer(
+	ctx context.Context,
+	cl client.Client,
+	obj aiGatewayConsumerRefAccessor,
+) (types.NamespacedName, error) {
+	return getAPIAuthRefViaParent[
+		konnectv1alpha1.AIGatewayConsumer,
+		konnectv1alpha1.KonnectAIGateway,
+	](ctx, cl, obj)
 }
 
 // getAPIAuthRefViaParent resolves the APIAuth for an entity whose immediate parent

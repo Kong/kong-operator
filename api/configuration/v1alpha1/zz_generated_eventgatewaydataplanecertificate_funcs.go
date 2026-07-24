@@ -3,9 +3,9 @@
 package v1alpha1
 
 import (
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -24,9 +24,20 @@ func (obj *EventGatewayDataPlaneCertificate) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayDataPlaneCertificate's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayDataPlaneCertificate) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the EventGatewayDataPlaneCertificate Kind name.
 func (obj EventGatewayDataPlaneCertificate) GetTypeName() string {
 	return "EventGatewayDataPlaneCertificate"
+}
+
+// GetItems returns the list of EventGatewayDataPlaneCertificate items.
+func (obj EventGatewayDataPlaneCertificateList) GetItems() []EventGatewayDataPlaneCertificate {
+	return obj.Items
 }
 
 // HasParent returns true if the EventGatewayDataPlaneCertificate has a parent entity.
@@ -73,6 +84,11 @@ func (obj *EventGatewayDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayDataPlaneCertificate) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayDataPlaneCertificate) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.GatewayRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

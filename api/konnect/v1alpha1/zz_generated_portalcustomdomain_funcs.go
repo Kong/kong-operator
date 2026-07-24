@@ -3,9 +3,9 @@
 package v1alpha1
 
 import (
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -27,6 +27,11 @@ func (obj *PortalCustomDomain) GetKonnectID() string {
 // GetTypeName returns the PortalCustomDomain Kind name.
 func (obj PortalCustomDomain) GetTypeName() string {
 	return "PortalCustomDomain"
+}
+
+// GetItems returns the list of PortalCustomDomain items.
+func (obj PortalCustomDomainList) GetItems() []PortalCustomDomain {
+	return obj.Items
 }
 
 // HasParent returns true if the PortalCustomDomain has a parent entity.
@@ -68,6 +73,11 @@ func (obj *PortalCustomDomain) GetPortalRef() commonv1alpha1.ObjectRef {
 // GetParentRef returns the reference to the parent entity.
 func (obj *PortalCustomDomain) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetPortalRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *PortalCustomDomain) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.PortalRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

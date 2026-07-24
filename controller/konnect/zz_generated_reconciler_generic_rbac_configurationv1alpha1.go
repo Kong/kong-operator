@@ -2,6 +2,9 @@
 
 package konnect
 
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=aigatewaydataplanecertificates,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=aigatewaydataplanecertificates/status,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=aigatewaydataplanecertificates/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters/finalizers,verbs=update;patch
@@ -14,12 +17,18 @@ package konnect
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaylistenerpolicies,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaylistenerpolicies/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaylistenerpolicies/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayschemaregistries,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayschemaregistries/status,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayschemaregistries/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusters,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusters/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusters/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterconsumepolicies,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterconsumepolicies/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterconsumepolicies/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterpolicies,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterpolicies/status,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterpolicies/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterproducepolicies,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterproducepolicies/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterproducepolicies/finalizers,verbs=update;patch

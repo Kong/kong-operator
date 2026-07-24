@@ -96,11 +96,11 @@ for ns in ${ALL_NAMESPACES}; do
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Gateway API Resources" \
     "gateway-api"
 
-  # Kong Configuration resources
+  # Kong Configuration resources (base Kong gateway config only)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Kong Configuration Resources" \
     "kongcertificates.configuration.konghq.com,kongsnis.configuration.konghq.com,kongroutes.configuration.konghq.com,kongservices.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com,kongreferencegrants.configuration.konghq.com,kongplugins.configuration.konghq.com,kongclusterplugins.configuration.konghq.com,kongconsumers.configuration.konghq.com,kongconsumergroups.configuration.konghq.com,kongupstreampolicies.configuration.konghq.com"
 
-  # Konnect resources (excluding KonnectAPIAuthConfiguration - captured separately with redaction)
+  # Konnect resources (base only - excluding KonnectAPIAuthConfiguration captured separately with redaction)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Konnect Resources" \
     "konnectgatewaycontrolplanes.konnect.konghq.com,konnectextensions.konnect.konghq.com"
 
@@ -125,6 +125,14 @@ for ns in ${ALL_NAMESPACES}; do
   # Gateway Operator resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Gateway Operator Resources" \
     "gatewayconfigurations.gateway-operator.konghq.com,controlplanes.gateway-operator.konghq.com,dataplanes.gateway-operator.konghq.com,aigateways.gateway-operator.konghq.com,dataplanemetricsextensions.gateway-operator.konghq.com"
+
+  # Event Gateway resources (all related resources regardless of API group)
+  capture_resource_group "${RESOURCES_FILE}" "${ns}" "Event Gateway Resources" \
+    "kegdataplanes.eventgateway.konghq.com,konnecteventgateways.konnect.konghq.com,eventgatewaydataplanecertificates.configuration.konghq.com,eventgatewaybackendclusters.configuration.konghq.com,eventgatewayvirtualclusters.configuration.konghq.com,eventgatewaylisteners.configuration.konghq.com,eventgatewaylistenerpolicies.configuration.konghq.com,eventgatewayvirtualclusterconsumepolicies.configuration.konghq.com"
+
+  # AI Gateway resources (all related resources regardless of API group)
+  capture_resource_group "${RESOURCES_FILE}" "${ns}" "AI Gateway Resources" \
+    "aigatewaydataplanes.aigateway.konghq.com,konnectaigateways.konnect.konghq.com,aigatewaydataplanecertificates.configuration.konghq.com,aigatewaymodelproviders.konnect.konghq.com,aigatewaymodels.konnect.konghq.com,aigatewaypolicies.konnect.konghq.com,aigatewayconsumers.konnect.konghq.com,aigatewayconsumercredentials.konnect.konghq.com,aigatewayconsumergroups.konnect.konghq.com,aigatewayagents.konnect.konghq.com,aigatewaymcpservers.konnect.konghq.com,aigatewayidentityproviders.konnect.konghq.com"
 
   # Core Kubernetes resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Core Kubernetes Resources" \
@@ -201,6 +209,22 @@ for ns in ${ALL_NAMESPACES}; do
   } >> "${DESCRIBED_FILE}"
 
   safe_kubectl "${DESCRIBED_FILE}" describe gatewayconfigurations -n "${ns}"
+
+  {
+    echo ""
+    echo "=== Event Gateway Resources in ${ns} ==="
+    echo ""
+  } >> "${DESCRIBED_FILE}"
+
+  safe_kubectl "${DESCRIBED_FILE}" describe kegdataplanes.eventgateway.konghq.com,konnecteventgateways,eventgatewaydataplanecertificates,eventgatewaybackendclusters,eventgatewayvirtualclusters,eventgatewaylisteners,eventgatewaylistenerpolicies,eventgatewayvirtualclusterconsumepolicies -n "${ns}"
+
+  {
+    echo ""
+    echo "=== AI Gateway Resources in ${ns} ==="
+    echo ""
+  } >> "${DESCRIBED_FILE}"
+
+  safe_kubectl "${DESCRIBED_FILE}" describe aigatewaydataplanes.aigateway.konghq.com,konnectaigateways,aigatewaydataplanecertificates,aigatewaymodelproviders,aigatewaymodels,aigatewaypolicies,aigatewayconsumers,aigatewayconsumercredentials,aigatewayconsumergroups,aigatewayagents,aigatewaymcpservers,aigatewayidentityproviders -n "${ns}"
 done
 
 # 3. Capture events in test namespaces
@@ -275,7 +299,55 @@ else
   echo "No operator pods found in namespace ${OPERATOR_NAMESPACE}" >> "${OPERATOR_LOGS_FILE}"
 fi
 
-# 6. Capture operator pod status
+# 6. Capture workload pod logs in test namespaces (DataPlane, Kafka, etc.)
+echo "Capturing workload pod logs in test namespace(s)..."
+WORKLOAD_LOGS_FILE="${SNAPSHOT_DIR}/workload-logs.txt"
+{
+  echo "=== Workload Pod Logs ==="
+  echo "Namespaces: ${ALL_NAMESPACES}"
+  echo "Captured at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  echo ""
+} > "${WORKLOAD_LOGS_FILE}"
+
+for ns in ${ALL_NAMESPACES}; do
+  echo "Capturing pod logs from namespace: ${ns}..."
+  {
+    echo ""
+    echo "######################################################"
+    echo "# Pod logs in namespace: ${ns}"
+    echo "######################################################"
+    echo ""
+  } >> "${WORKLOAD_LOGS_FILE}"
+
+  PODS=$(kubectl get pods -n "${ns}" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
+  if [ -z "${PODS}" ]; then
+    echo "No pods found in namespace ${ns}" >> "${WORKLOAD_LOGS_FILE}"
+    continue
+  fi
+
+  for pod in ${PODS}; do
+    echo "=== Logs from pod: ${pod} ===" >> "${WORKLOAD_LOGS_FILE}"
+    echo "" >> "${WORKLOAD_LOGS_FILE}"
+
+    if kubectl logs "${pod}" -n "${ns}" --all-containers --timestamps >> "${WORKLOAD_LOGS_FILE}" 2>&1; then
+      echo "" >> "${WORKLOAD_LOGS_FILE}"
+    else
+      echo "Failed to get logs from pod ${pod}" >> "${WORKLOAD_LOGS_FILE}"
+      echo "" >> "${WORKLOAD_LOGS_FILE}"
+    fi
+
+    # Also get previous logs if container restarted
+    echo "=== Previous logs from pod: ${pod} (if any) ===" >> "${WORKLOAD_LOGS_FILE}"
+    if kubectl logs "${pod}" -n "${ns}" --all-containers --timestamps --previous >> "${WORKLOAD_LOGS_FILE}" 2>&1; then
+      echo "" >> "${WORKLOAD_LOGS_FILE}"
+    else
+      echo "No previous logs or failed to get previous logs" >> "${WORKLOAD_LOGS_FILE}"
+      echo "" >> "${WORKLOAD_LOGS_FILE}"
+    fi
+  done
+done
+
+# 7. Capture operator pod status
 echo "Capturing operator pod status..."
 OPERATOR_STATUS_FILE="${SNAPSHOT_DIR}/operator-pods-status.txt"
 {
@@ -288,7 +360,7 @@ OPERATOR_STATUS_FILE="${SNAPSHOT_DIR}/operator-pods-status.txt"
 safe_kubectl "${OPERATOR_STATUS_FILE}" get pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/name=kong-operator -o wide
 safe_kubectl "${OPERATOR_STATUS_FILE}" describe pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/name=kong-operator
 
-# 7. Create summary file
+# 8. Create summary file
 echo "Creating summary..."
 SUMMARY_FILE="${SNAPSHOT_DIR}/summary.txt"
 {
@@ -304,6 +376,7 @@ SUMMARY_FILE="${SNAPSHOT_DIR}/summary.txt"
   echo "  - events.txt: Events in test namespaces"
   echo "  - operator-events.txt: Events in operator namespace"
   echo "  - operator-logs.txt: Kong operator logs (current and previous)"
+  echo "  - workload-logs.txt: Test-namespace pod logs (current and previous)"
   echo "  - operator-pods-status.txt: Operator pod status and descriptions"
   echo ""
 } > "${SUMMARY_FILE}"

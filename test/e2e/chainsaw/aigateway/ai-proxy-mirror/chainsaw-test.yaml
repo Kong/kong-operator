@@ -1,0 +1,145 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-ai-proxy-mirror
+spec:
+  description: |
+    AI GW 1.1 — AI Proxy Advanced against a MIRROR KonnectAIGateway. Creates an Origin
+    KonnectAIGateway (which provisions the Konnect AI Gateway control plane), grabs its
+    Konnect ID, then creates a second KonnectAIGateway with spec.source=Mirror referencing
+    that ID. It asserts the mirror becomes Programmed + Mirrored and reports the same ID and
+    endpoints as the origin, then attaches an OpenAI-compatible provider + model exposing
+    /aigw11/chat and an in-cluster AIGatewayDataPlane to the MIRROR, and drives a real
+    chat-completions request — asserting a 200 carrying the X-Kong-LLM-Model header. This
+    proves a mirror control plane is fully usable as a reference to an existing Konnect entity.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    # Origin control plane: owns the Konnect AI Gateway and yields the ID to mirror.
+    - name: aigw_origin_cp_name
+      value: (join('-', [($test_name), 'cp-origin']))
+    # Mirror control plane: references the origin's Konnect ID. Provider/model/dataplane
+    # attach to this one (aigw_cp_name is the binding they consume).
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp-mirror']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-origin-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+        # Override the CP name so the shared template creates the ORIGIN.
+        - name: aigw_cp_name
+          value: ($aigw_origin_cp_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: Create-mirror-konnect-aigateway
+      try:
+        # Grab the origin's Konnect ID (populated in status once Programmed).
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ORIGIN_CP
+                value: ($aigw_origin_cp_name)
+            content: |
+              kubectl get konnectaigateway "$ORIGIN_CP" -n "$NAMESPACE" -o jsonpath='{.status.id}'
+            outputs:
+              - name: origin_cp_id
+                value: ($stdout)
+        # Create the mirror referencing that ID. No apiSpec is allowed for a Mirror.
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($aigw_cp_namespace)
+                labels:
+                  test: ($test_name)
+              spec:
+                source: Mirror
+                mirror:
+                  konnect:
+                    id: ($origin_cp_id)
+                konnect:
+                  authRef:
+                    name: ($konnect_auth_name)
+        # The mirror must be Programmed + Mirrored and report the SAME id + endpoints.
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($aigw_cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (conditions[?type == 'Mirrored']):
+                  - status: 'True'
+                (id == ($origin_cp_id)): true
+                (endpoints.configuration != null): true
+    - name: Create-provider-and-model
+      try:
+        - apply:
+            file: 02-aigateway-provider-model.yaml
+        - assert:
+            file: 02-aigateway-provider-model-assert.yaml
+    - name: Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+    - name: Drive-chat-completion-traffic
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /aigw11/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: EXPECT_HEADER
+                value: X-Kong-LLM-Model
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-ai-proxy-mirror
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

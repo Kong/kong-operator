@@ -139,20 +139,6 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, fmt.Errorf("failed to mount konnect cert: %w", err)
 	}
 
-	// Genreate an error log if the user is trying to set environment variables that are managed by the operator, as this may cause unexpected behavior.
-	for _, envVar := range operatorManangedEnvVars {
-		found, err := envVarExistsInPodTemplateSpec(ctx, envVar, dataplane, d.client)
-		if err != nil {
-			return nil, op.Noop, fmt.Errorf("failed to check if env var %s exists in PodTemplateSpec: %w", envVar, err)
-		}
-		if found {
-			d.logger.Error(fmt.Errorf("operator maanged environment variable %s exists in DataPlane spec", envVar),
-				"DataPlane contains operator managed environment variable. This may cause unexpected behavior as the operator also manages this variable.",
-				"envVar", envVar, "dataPlane", client.ObjectKeyFromObject(dataplane).String(),
-			)
-		}
-	}
-
 	// TODO https://github.com/kong/kong-operator/issues/128
 	// This is a workaround to avoid patches clobbering the wrong EnvVar. We want to find an improved patch mechanism
 	// that doesn't clobber EnvVars (and other array fields) it shouldn't.
@@ -166,7 +152,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	// apply default envvars and restore the hacked-out ones
 	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, config.KongDefaults)
 
-	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), dataplane.Spec); err != nil {
+	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), deploymentRelevantDataPlaneSpec(dataplane)); err != nil {
 		return nil, op.Noop, err
 	}
 
@@ -299,6 +285,26 @@ func podTemplateSpecHasRestartAnnotation(template *corev1.PodTemplateSpec) (stri
 	return v, ok && v != ""
 }
 
+// warnOperatorManagedEnvVars logs an error for each operator-managed env var found in the
+// DataPlane spec. Call this before any extension processors mutate the in-memory spec so
+// the check reflects only user-authored values.
+func warnOperatorManagedEnvVars(ctx context.Context, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, cl client.Client) {
+	for _, envVar := range operatorManangedEnvVars {
+		found, err := envVarExistsInPodTemplateSpec(ctx, envVar, dataplane, cl)
+		if err != nil {
+			logger.Error(err, "failed to check if operator managed env var exists in DataPlane spec", "envVar", envVar)
+			continue
+		}
+		if !found {
+			continue
+		}
+		logger.Error(fmt.Errorf("operator maanged environment variable %s exists in DataPlane spec", envVar),
+			"DataPlane contains operator managed environment variable. This may cause unexpected behavior as the operator also manages this variable.",
+			"envVar", envVar, "dataPlane", client.ObjectKeyFromObject(dataplane).String(),
+		)
+	}
+}
+
 // envVarExistsInPodTemplateSpec checks if an environment variable with the given name
 // exists in the proxy container of the PodTemplateSpec in the DataPlane.
 func envVarExistsInPodTemplateSpec(
@@ -356,6 +362,17 @@ func isRecentDeploymentRestart(template *corev1.PodTemplateSpec, logger logr.Log
 	return restartTimeStr, false
 }
 
+// deploymentRelevantDataPlaneSpec returns a copy of the DataPlane's spec with fields
+// that have no bearing on the generated Deployment zeroed out. It's used as the input
+// for the Deployment's spec-hash annotation, so that changes to fields the Deployment
+// doesn't care about (e.g. Scaling, which only affects the HPA) don't cause a spurious
+// Deployment update that would pre-empt reconciliation of those other resources.
+func deploymentRelevantDataPlaneSpec(dataplane *operatorv1beta1.DataPlane) operatorv1beta1.DataPlaneSpec {
+	spec := *dataplane.Spec.DeepCopy()
+	spec.Deployment.Scaling = nil
+	return spec
+}
+
 // reconcileDataPlaneDeployment takes any existing DataPlane Deployment and a desired DataPlane Deployment and
 // reconciles the existing state to the desired state by either updating an existing Deployment, creating a new one,
 // or doing nothing.
@@ -374,7 +391,7 @@ func reconcileDataPlaneDeployment(
 		// existing Deployment with the spec hash of the desired Deployment. If
 		// the hashes match, we skip the update.
 		if !enforceConfig {
-			match, err := k8sresources.SpecHashMatchesAnnotation(dataplane.Spec, existing)
+			match, err := k8sresources.SpecHashMatchesAnnotation(deploymentRelevantDataPlaneSpec(dataplane), existing)
 			if err != nil {
 				return op.Noop, nil, err
 			}

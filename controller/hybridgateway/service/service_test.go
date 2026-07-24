@@ -17,6 +17,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -256,7 +257,7 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 					},
 				},
 			},
-			expectedProtocol: sdkkonnectcomp.ProtocolGrpcs,
+			expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsGrpcs),
 		},
 		{
 			name: "backend service without protocol annotation defaults to http",
@@ -801,6 +802,7 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 		backendRefs     []gatewayv1.HTTPBackendRef
 		backendServices []corev1.Service
 		expected        *bool
+		wantErr         bool
 	}{
 		{
 			name:        "service with tls-verify=true annotation",
@@ -827,12 +829,13 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:        "invalid value leaves field unset",
+			name:        "invalid value returns wrapped sentinel error",
 			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port443}}}},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "maybe"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name: "first backend ref with annotation wins",
@@ -868,6 +871,12 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, service)
+				return
+			}
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -895,6 +904,7 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
 		expected        *bool
+		wantErr         bool
 	}{
 		{
 			name:      "service with tls-verify=true annotation returns true",
@@ -999,6 +1009,21 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			},
 			expected: new(true),
 		},
+		{
+			name:      "malformed annotation on first backend ref bubbles wrapped error",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{
+					Name: "bad-svc", Namespace: "test-namespace",
+					Annotations: map[string]string{"konghq.com/tls-verify": "not-a-bool"},
+				}},
+			},
+			expected: nil,
+			wantErr:  true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1009,7 +1034,14 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := resolveTLSVerifyFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			result, err := resolveTLSVerifyFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, result)
+				return
+			}
+			require.NoError(t, err)
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -1035,6 +1067,7 @@ func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
 		backendRef gwtypes.BackendRef
 		services   []corev1.Service
 		expected   *bool
+		wantErr    bool
 	}{
 		{
 			name:      "supported backend ref with tls-verify=true annotation",
@@ -1070,7 +1103,7 @@ func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:      "invalid annotation value returns nil",
+			name:      "invalid annotation value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-verify", Port: &port80},
@@ -1079,6 +1112,7 @@ func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-verify", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "maybe"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name:      "unsupported backend ref group",
@@ -1137,7 +1171,14 @@ func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := extractTLSVerifyFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			result, err := extractTLSVerifyFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation,
+					"error should wrap ErrMalformedAnnotation; got %v", err)
+			} else {
+				require.NoError(t, err)
+			}
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -1171,6 +1212,7 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 		backendRefs     []gatewayv1.HTTPBackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name: "backend service with tls-verify-depth annotation",
@@ -1223,7 +1265,7 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "invalid annotation value leaves field unset",
+			name: "invalid annotation value returns wrapped sentinel error",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
 					BackendRef: gatewayv1.BackendRef{
@@ -1246,6 +1288,7 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 				},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name: "first backend ref with annotation wins",
@@ -1323,6 +1366,12 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 
 			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, service)
+				return
+			}
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -1350,6 +1399,7 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name:      "service with tls-verify-depth annotation returns value",
@@ -1443,6 +1493,21 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			},
 			expected: new(int64(3)),
 		},
+		{
+			name:      "malformed annotation on first backend ref bubbles wrapped error",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{
+					Name: "bad-svc", Namespace: "test-namespace",
+					Annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"},
+				}},
+			},
+			expected: nil,
+			wantErr:  true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1453,7 +1518,14 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			result, err := resolveTLSVerifyDepthFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, result)
+				return
+			}
+			require.NoError(t, err)
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -1479,6 +1551,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 		backendRef gwtypes.BackendRef
 		services   []corev1.Service
 		expected   *int64
+		wantErr    bool
 	}{
 		{
 			name:      "supported backend ref with tls-verify-depth annotation",
@@ -1514,7 +1587,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 			expected: new(int64(0)),
 		},
 		{
-			name:      "negative value returns nil",
+			name:      "negative value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-depth", Port: &port80},
@@ -1523,9 +1596,10 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
-			name:      "non-numeric value returns nil",
+			name:      "non-numeric value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-depth", Port: &port80},
@@ -1534,6 +1608,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "abc"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name:      "unsupported backend ref group",
@@ -1592,7 +1667,14 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := extractTLSVerifyDepthFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			result, err := extractTLSVerifyDepthFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation,
+					"error should wrap ErrMalformedAnnotation; got %v", err)
+			} else {
+				require.NoError(t, err)
+			}
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -1624,6 +1706,7 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 		backendRefs     []gatewayv1.HTTPBackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name:        "service with connect-timeout annotation",
@@ -1642,12 +1725,13 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:        "invalid value leaves field unset",
+			name:        "invalid value returns wrapped sentinel error",
 			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}}}},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "abc"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name: "first backend ref with annotation wins",
@@ -1683,6 +1767,12 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, service)
+				return
+			}
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -1710,6 +1800,7 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name:      "service with connect-timeout annotation returns value",
@@ -1803,6 +1894,21 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			},
 			expected: new(int64(5000)),
 		},
+		{
+			name:      "malformed annotation on first backend ref bubbles wrapped error",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{
+					Name: "bad-svc", Namespace: "test-namespace",
+					Annotations: map[string]string{"konghq.com/connect-timeout": "-1"},
+				}},
+			},
+			expected: nil,
+			wantErr:  true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1813,7 +1919,14 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := resolveConnectTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			result, err := resolveConnectTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, result)
+				return
+			}
+			require.NoError(t, err)
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -1839,6 +1952,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 		backendRef gwtypes.BackendRef
 		services   []corev1.Service
 		expected   *int64
+		wantErr    bool
 	}{
 		{
 			name:      "supported backend ref with connect-timeout annotation",
@@ -1874,7 +1988,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 			expected: new(int64(0)),
 		},
 		{
-			name:      "negative value returns nil",
+			name:      "negative value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-timeout", Port: &port80},
@@ -1883,9 +1997,10 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "-1"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
-			name:      "non-numeric value returns nil",
+			name:      "non-numeric value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-timeout", Port: &port80},
@@ -1894,6 +2009,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "abc"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name:      "unsupported backend ref group",
@@ -1952,7 +2068,14 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := extractConnectTimeoutFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			result, err := extractConnectTimeoutFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation,
+					"error should wrap ErrMalformedAnnotation; got %v", err)
+			} else {
+				require.NoError(t, err)
+			}
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -1984,6 +2107,7 @@ func TestServiceForRule_ReadTimeoutAnnotation(t *testing.T) {
 		backendRefs     []gatewayv1.HTTPBackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name:        "service with read-timeout annotation",
@@ -2002,12 +2126,13 @@ func TestServiceForRule_ReadTimeoutAnnotation(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:        "invalid value leaves field unset",
+			name:        "invalid value returns wrapped sentinel error",
 			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}}}},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "abc"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name: "first backend ref with annotation wins",
@@ -2043,6 +2168,12 @@ func TestServiceForRule_ReadTimeoutAnnotation(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, service)
+				return
+			}
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -2070,6 +2201,7 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name:      "service with read-timeout annotation returns value",
@@ -2163,6 +2295,21 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			},
 			expected: new(int64(30000)),
 		},
+		{
+			name:      "malformed annotation on first backend ref bubbles wrapped error",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{
+					Name: "bad-svc", Namespace: "test-namespace",
+					Annotations: map[string]string{"konghq.com/read-timeout": "-1"},
+				}},
+			},
+			expected: nil,
+			wantErr:  true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -2173,7 +2320,14 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := resolveReadTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			result, err := resolveReadTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, result)
+				return
+			}
+			require.NoError(t, err)
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -2199,6 +2353,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 		backendRef gwtypes.BackendRef
 		services   []corev1.Service
 		expected   *int64
+		wantErr    bool
 	}{
 		{
 			name:      "supported backend ref with read-timeout annotation",
@@ -2234,18 +2389,19 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 			expected: new(int64(0)),
 		},
 		{
-			name:      "negative value returns nil",
+			name:      "negative value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "-1"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "-5"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
-			name:      "non-numeric value returns nil",
+			name:      "non-numeric value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-timeout", Port: &port80},
@@ -2254,6 +2410,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "abc"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name:      "unsupported backend ref group",
@@ -2312,7 +2469,14 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := extractReadTimeoutFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			result, err := extractReadTimeoutFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation,
+					"error should wrap ErrMalformedAnnotation; got %v", err)
+			} else {
+				require.NoError(t, err)
+			}
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -2344,6 +2508,7 @@ func TestServiceForRule_WriteTimeoutAnnotation(t *testing.T) {
 		backendRefs     []gatewayv1.HTTPBackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name:        "service with write-timeout annotation",
@@ -2362,12 +2527,13 @@ func TestServiceForRule_WriteTimeoutAnnotation(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:        "invalid value leaves field unset",
+			name:        "invalid value returns wrapped sentinel error",
 			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}}}},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "abc"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name: "first backend ref with annotation wins",
@@ -2403,6 +2569,12 @@ func TestServiceForRule_WriteTimeoutAnnotation(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, service)
+				return
+			}
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -2430,6 +2602,7 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name:      "service with write-timeout annotation returns value",
@@ -2522,6 +2695,21 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			},
 			expected: new(int64(5000)),
 		},
+		{
+			name:      "malformed annotation on first backend ref bubbles wrapped error",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{
+					Name: "bad-svc", Namespace: "test-namespace",
+					Annotations: map[string]string{"konghq.com/write-timeout": "-1"},
+				}},
+			},
+			expected: nil,
+			wantErr:  true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -2532,7 +2720,14 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := resolveWriteTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			result, err := resolveWriteTimeoutFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, result)
+				return
+			}
+			require.NoError(t, err)
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -2558,6 +2753,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 		backendRef gwtypes.BackendRef
 		services   []corev1.Service
 		expected   *int64
+		wantErr    bool
 	}{
 		{
 			name:      "supported backend ref with write-timeout annotation",
@@ -2593,7 +2789,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 			expected: new(int64(0)),
 		},
 		{
-			name:      "negative value returns nil",
+			name:      "negative value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-timeout", Port: &port80},
@@ -2602,9 +2798,10 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "-1"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
-			name:      "non-numeric value returns nil",
+			name:      "non-numeric value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-timeout", Port: &port80},
@@ -2613,6 +2810,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "abc"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name:      "unsupported backend ref group",
@@ -2671,7 +2869,14 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := extractWriteTimeoutFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			result, err := extractWriteTimeoutFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation,
+					"error should wrap ErrMalformedAnnotation; got %v", err)
+			} else {
+				require.NoError(t, err)
+			}
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -2703,6 +2908,7 @@ func TestServiceForRule_RetriesAnnotation(t *testing.T) {
 		backendRefs     []gatewayv1.HTTPBackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name:        "service with retries annotation",
@@ -2721,12 +2927,13 @@ func TestServiceForRule_RetriesAnnotation(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:        "invalid value leaves field unset",
+			name:        "invalid value returns wrapped sentinel error",
 			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}}}},
 			backendServices: []corev1.Service{
 				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "abc"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name: "first backend ref with annotation wins",
@@ -2762,6 +2969,12 @@ func TestServiceForRule_RetriesAnnotation(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, service)
+				return
+			}
 			require.NoError(t, err)
 			require.NotNil(t, service)
 			if tt.expected == nil {
@@ -2789,6 +3002,7 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 		backendRefs     []gwtypes.BackendRef
 		backendServices []corev1.Service
 		expected        *int64
+		wantErr         bool
 	}{
 		{
 			name:      "service with retries annotation returns value",
@@ -2881,6 +3095,21 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			},
 			expected: new(int64(2)),
 		},
+		{
+			name:      "malformed annotation on first backend ref bubbles wrapped error",
+			namespace: "test-namespace",
+			backendRefs: []gwtypes.BackendRef{
+				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{
+					Name: "bad-svc", Namespace: "test-namespace",
+					Annotations: map[string]string{"konghq.com/retries": "-1"},
+				}},
+			},
+			expected: nil,
+			wantErr:  true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -2891,7 +3120,14 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := resolveRetriesFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			result, err := resolveRetriesFromBackendRefs(ctx, cl, tt.namespace, tt.backendRefs, logger)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Nil(t, result)
+				return
+			}
+			require.NoError(t, err)
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
@@ -2917,6 +3153,7 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 		backendRef gwtypes.BackendRef
 		services   []corev1.Service
 		expected   *int64
+		wantErr    bool
 	}{
 		{
 			name:      "supported backend ref with retries annotation",
@@ -2952,18 +3189,19 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 			expected: new(int64(0)),
 		},
 		{
-			name:      "negative value returns nil",
+			name:      "negative value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-retries", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "-1"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "-2"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
-			name:      "non-numeric value returns nil",
+			name:      "non-numeric value returns wrapped sentinel error",
 			namespace: "test-namespace",
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-retries", Port: &port80},
@@ -2972,6 +3210,7 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "abc"}}},
 			},
 			expected: nil,
+			wantErr:  true,
 		},
 		{
 			name:      "unsupported backend ref group",
@@ -3030,12 +3269,107 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 			}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result := extractRetriesFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			result, err := extractRetriesFromBackendRef(ctx, cl, logger, tt.namespace, tt.backendRef)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation,
+					"error should wrap ErrMalformedAnnotation; got %v", err)
+			} else {
+				require.NoError(t, err)
+			}
 			if tt.expected == nil {
 				assert.Nil(t, result)
 			} else {
 				require.NotNil(t, result)
 				assert.Equal(t, *tt.expected, *result)
+			}
+		})
+	}
+}
+
+func TestServiceForRule_TagsAnnotation(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	upstreamName := "test-upstream"
+	port80 := gatewayv1.PortNumber(80)
+
+	tests := []struct {
+		name            string
+		backendRefs     []gatewayv1.HTTPBackendRef
+		backendServices []corev1.Service
+		expected        commonv1alpha1.Tags
+	}{
+		{
+			name: "service with tags annotation",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-a,prod"}}},
+			},
+			expected: commonv1alpha1.Tags{"team-a", "prod"},
+		},
+		{
+			name: "service without tags annotation leaves field unset",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+			},
+			expected: nil,
+		},
+		{
+			name: "first backend ref with annotation wins",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
+				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+			},
+			backendServices: []corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-a"}}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-b"}}},
+			},
+			expected: commonv1alpha1.Tags{"team-a"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
+				},
+			}
+			rule := gwtypes.HTTPRouteRule{
+				BackendRefs: tt.backendRefs,
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/test")}},
+				},
+			}
+			var objects []client.Object
+			for i := range tt.backendServices {
+				objects = append(objects, &tt.backendServices[i])
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			require.NoError(t, err)
+			require.NotNil(t, service)
+			if tt.expected == nil {
+				assert.Nil(t, service.Spec.Tags)
+			} else {
+				assert.Equal(t, tt.expected, service.Spec.Tags)
 			}
 		})
 	}

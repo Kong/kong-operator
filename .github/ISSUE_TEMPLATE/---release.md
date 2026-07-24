@@ -22,17 +22,23 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] From [GitHub release action][release-action], start a new workflow run:
   - Set the `Use workflow from` to the release branch: e.g. `release/1.2.x`
     - If you want to release a major or minor version, set the `Use workflow from` to the `main` branch otherwise set it to the release branch (e.g. `release/1.2.x`).
-  - Set the `release` input set to the target version (e.g. `v1.2.0`).
+  - Set the `tag` input set to the target version (e.g. `v1.2.0`).
+  - Set the `latest` input to indicate whether this release should be tagged as `latest`.
+  - Set the `release_type` input to `release` or `prerelease`.
   - Set `release_issue_number` to this issue's number so that the workflow can comment back with the docs PR link.
 - [ ] Wait for the workflow to complete.
 - [ ] The CI should create a PR in the [Kong Operator][ko-prs] repo that bumps KO version in `VERSION` file and manifests. Merge it.
 - [ ] After the PR is merged, [release-bot][release-bot-workflow] workflow will be triggered. It will create a new GH release, as well as a release branch (if not patch or prerelease):
   - [ ] Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
-  - [ ] Check the `release/N.M.x` release branch exists.
+  - [ ] If the release is not a patch or prerelease, check the `release/N.M.x` release branch exists.
 - [ ] Update the official documentation at [https://github.com/Kong/developer.konghq.com/][docs_repo]
   - [ ] **Changelog, CLI configuration options, and CRD reference**: Automatically synced by the release workflow (when `latest=true`). A docs PR will be created in the [docs repo][docs_repo] and a comment will be posted in this issue. Review and merge the PR when ready.
   - [ ] Update supported releases table at <https://github.com/Kong/developer.konghq.com/blob/main/app/_data/products/operator.yml>
-- [ ] Major/Minor only: update `renovate.json` config which targets the latest release branch (e.g. `release/2.1.x`) to update the `matchBaseBranches` field to the new release branch (e.g. `release/2.2.x`).
+- [ ] Major/Minor only:
+  - [ ] Update `renovate.json` config which targets the latest release branch (e.g. `release/2.1.x`) to update the `matchBaseBranches` field to the new release branch (e.g. `release/2.2.x`).
+  - [ ] Update `.github/workflows/charts-sync.yaml` workflow by replacing the old release branch (e.g. `release/2.1.x`) with the new one (e.g. `release/2.2.x`) in the `branches` section.
+  - [ ] Remove `.github/workflows/charts-sync.yaml` from the old release branch (e.g. `release/2.1.x`) if it exists.
+  - [ ] Update `.github/workflows/govulncheck-cron.yaml` workflow by adding the new release branch (e.g. `release/2.2.x`) to the `branches` section.
 
 ## Conformance tests report
 

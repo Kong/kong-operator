@@ -33,6 +33,7 @@ import (
 	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
@@ -153,6 +154,48 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	return kgcp, nil
+}
+
+// enforceKonnectGatewayControlPlaneSpec ensures that the spec of the provided
+// KonnectGatewayControlPlane matches the desired state derived from the Gateway
+// and GatewayConfiguration. Any manual changes to enforced fields are overridden.
+// Returns true if the resource was patched.
+//
+// Note: spec.konnect.authRef is only enforced when the control plane is not yet
+// Programmed, as the field becomes immutable once Programmed is True. Other fields
+// are skipped, because there are immutable in both GatewayConfiguration and KonnectGatewayControlPlane.
+func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
+	ctx context.Context,
+	kgcp *konnectv1alpha2.KonnectGatewayControlPlane,
+	gatewayConfig *GatewayConfiguration,
+) (bool, error) {
+	if gatewayConfig.Spec.Konnect == nil {
+		return false, nil
+	}
+
+	old := kgcp.DeepCopy()
+	updated := false
+
+	if gatewayConfig.Spec.Konnect.APIAuthConfigurationRef != nil &&
+		!k8sutils.HasConditionTrue(
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, kgcp,
+		) &&
+		!k8sutils.IsProgrammed(kgcp) {
+		desired := *gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
+		if kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef != desired {
+			kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef = desired
+			updated = true
+		}
+	}
+
+	if !updated {
+		return false, nil
+	}
+
+	if err := r.Patch(ctx, kgcp, client.MergeFrom(old)); err != nil {
+		return false, fmt.Errorf("failed patching KonnectGatewayControlPlane %s spec: %w", kgcp.Name, err)
+	}
+	return true, nil
 }
 
 func (r *Reconciler) createKonnectExtension(
@@ -733,83 +776,6 @@ func generateDataPlaneNetworkPolicy(
 	}, nil
 }
 
-// ensureOwnedControlPlanesDeleted deletes all controlplanes owned by gateway.
-// returns true if at least one controlplane resource is deleted.
-func (r *Reconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
-	controlplanes, err := gatewayutils.ListControlPlanesForGateway(ctx, r.Client, gateway)
-	if err != nil {
-		return false, err
-	}
-
-	var (
-		deleted bool
-		errs    []error
-	)
-	for i := range controlplanes {
-		// skip already deleted controlplanes, because controlplanes may have finalizers
-		// to wait for owned cluster wide resources deleted.
-		if !controlplanes[i].DeletionTimestamp.IsZero() {
-			continue
-		}
-		err = r.Delete(ctx, &controlplanes[i])
-		if client.IgnoreNotFound(err) != nil {
-			errs = append(errs, err)
-			continue
-		}
-		deleted = true
-	}
-
-	return deleted, errors.Join(errs...)
-}
-
-// ensureOwnedDataPlanesDeleted deleted all dataplanes owned by gateway.
-// returns true if at least one dataplane resource is deleted.
-func (r *Reconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
-	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, r.Client, gateway)
-	if err != nil {
-		return false, err
-	}
-
-	var (
-		deleted bool
-		errs    []error
-	)
-	for i := range dataplanes {
-		err = r.Delete(ctx, &dataplanes[i])
-		if client.IgnoreNotFound(err) != nil {
-			errs = append(errs, err)
-			continue
-		}
-		deleted = true
-	}
-
-	return deleted, errors.Join(errs...)
-}
-
-// ensureOwnedNetworkPoliciesDeleted deleted all network policies owned by gateway.
-// returns true if at least one networkPolicy resource is deleted.
-func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gateway *gwtypes.Gateway) (bool, error) {
-	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
-	if err != nil {
-		return false, err
-	}
-
-	var (
-		deleted bool
-		errs    []error
-	)
-	for i := range networkPolicies {
-		err = r.Delete(ctx, &networkPolicies[i])
-		if client.IgnoreNotFound(err) != nil {
-			errs = append(errs, err)
-			continue
-		}
-		deleted = true
-	}
-
-	return deleted, errors.Join(errs...)
-}
-
 // -----------------------------------------------------------------------------
 // GatewayReconciler - Private type status-related utilities/wrappers
 // -----------------------------------------------------------------------------
@@ -871,8 +837,8 @@ func (l listenerConditionAwareT) SetConditions(conditions []metav1.Condition) {
 // as each protocolType can be compatible with many different route types.
 func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]struct{} {
 	return map[gatewayv1.ProtocolType]map[gatewayv1.Kind]struct{}{
-		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}},
-		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}},
+		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}, "GRPCRoute": {}},
+		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
 		// TCPRoutes ad UDPRoutes are not supported yet
 		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
@@ -1104,6 +1070,15 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 				)
 			}
 			count += countAttachedTLSRoutes(g, listener, tlsRoutes)
+		case "GRPCRoute":
+			grpcRoutes, err := gatewayutils.ListGRPCRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list GRPCRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
+			}
+			count += countAttachedGRPCRoutes(g, listener, grpcRoutes)
 		// Unsupported route kinds. Should be unreachable.
 		default:
 			return 0, fmt.Errorf("unsupported route kind: %s", k)
@@ -1133,6 +1108,19 @@ func countAttachedHTTPRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener
 
 func countAttachedTLSRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener, tlsRoutes []gatewayv1.TLSRoute) int32 {
 	count := lo.CountBy(tlsRoutes, func(r gatewayv1.TLSRoute) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return string(parentRef.Name) == gateway.Name &&
+				(parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+				listenerHostnameIntersectsRouteHostnames(listener.Hostname, r.Spec.Hostnames)
+		})
+	})
+	return int32(count)
+}
+
+// countAttachedGRPCRoutes counts the number of attached GRPCRoutes for a given listener,
+// taking into account the ParentRef's sectionName and hostname intersections between the listener and the route.
+func countAttachedGRPCRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener, grpcRoutes []gatewayv1.GRPCRoute) int32 {
+	count := lo.CountBy(grpcRoutes, func(r gatewayv1.GRPCRoute) bool {
 		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
 			return string(parentRef.Name) == gateway.Name &&
 				(parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
@@ -1289,8 +1277,8 @@ func setDataPlaneDeploymentListenPorts(
 		consts.DataPlaneAdminAPIPort: {},
 	}
 
-	// Extract listeners with TLS ports.
-	tlsPorts := []int{}
+	// Extract stream (TLS/TCP/UDP) listeners with the Kong port they map to.
+	var streamPorts []streamListenPort
 	var errs error
 	// assignedPortNumber and assignedPortMax defines the interval of ports to assign to listen on Kong stream proxy
 	// if the specified port in the listener is already occupied on Kong DataPlane.
@@ -1307,7 +1295,6 @@ func setDataPlaneDeploymentListenPorts(
 			portNumber := int(l.Port)
 			// TODO: support multiple listeners using the same port:
 			// https://github.com/Kong/kong-operator/issues/3511
-			tlsPorts = append(tlsPorts, portNumber)
 			// Assign another port if the listener's port is already allocated on Kong DP.
 			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
 			_, occupied := kongPortOccupied[portNumber]
@@ -1329,6 +1316,10 @@ func setDataPlaneDeploymentListenPorts(
 				listenerPortToKongListenPort[portNumber] = portNumber
 				kongPortOccupied[portNumber] = struct{}{}
 			}
+			streamPorts = append(streamPorts, streamListenPort{
+				kongPort: listenerPortToKongListenPort[portNumber],
+				protocol: gatewayv1.TLSProtocolType,
+			})
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 		}
@@ -1338,13 +1329,40 @@ func setDataPlaneDeploymentListenPorts(
 		return nil, errs
 	}
 
-	// Configure env `KONG_STREAM_LISTEN` if there are TLS listeners.
-	// To make the value of the env stable when listener not changed, we sort the ports here.
-	if len(tlsPorts) > 0 {
-		sort.Ints(tlsPorts)
-		streamListenEnvs := make([]string, 0, len(tlsPorts))
-		for _, portNumber := range tlsPorts {
-			streamListenEnvs = append(streamListenEnvs, fmt.Sprintf("0.0.0.0:%d ssl reuseport", listenerPortToKongListenPort[portNumber]))
+	// Configure env `KONG_STREAM_LISTEN` if there are stream listeners.
+	if len(streamPorts) > 0 {
+		// The controller enforces only the Kong port (its remapping logic) and the
+		// protocol token (e.g. `ssl` for TLS). The bind address and any other listen
+		// options (`reuseport`, `backlog=...`, ...) are taken from the user-configured
+		// KONG_STREAM_LISTEN when present, otherwise sensible defaults are used. This
+		// lets users pick an IPv6 address (`[::]`) or drop `reuseport`, and matches how
+		// KONG_PROXY_LISTEN/KONG_ADMIN_LISTEN are user-overridable.
+		//
+		// One template is derived per user-configured SSL endpoint, so a dual-stack
+		// value like "0.0.0.0:X ssl reuseport, [::]:Y ssl reuseport" produces both
+		// bind addresses (with their own options) for every generated Kong port.
+		templates := []streamListenTemplate{{address: "0.0.0.0", options: []string{"reuseport"}}}
+		if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
+			if cfg, err := parseKongListenEnv(streamListen); err == nil && len(cfg.SSLEndpoints) > 0 {
+				templates = templates[:0]
+				for _, ep := range cfg.SSLEndpoints {
+					address := ep.Address
+					if address == "" {
+						address = "0.0.0.0"
+					}
+					templates = append(templates, streamListenTemplate{address: address, options: ep.Options})
+				}
+			}
+		}
+		// Sort by the Kong port to keep the env value stable when listeners do not change.
+		sort.Slice(streamPorts, func(i, j int) bool { return streamPorts[i].kongPort < streamPorts[j].kongPort })
+		streamListenEnvs := make([]string, 0, len(streamPorts)*len(templates))
+		for _, sp := range streamPorts {
+			tokens := streamListenProtocolTokens(sp.protocol)
+			for _, tmpl := range templates {
+				streamListenEnvs = append(streamListenEnvs,
+					renderStreamListenEntry(tmpl, sp.kongPort, tokens))
+			}
 		}
 		k8sutils.SetContainerEnv(container, corev1.EnvVar{
 			Name:  "KONG_STREAM_LISTEN",
@@ -1555,6 +1573,10 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 		resolvedRefsCondition.Message = message
 	}
 
+	// sort supportedKinds to avoid unnecessary updates, since it'll be written into status.
+	sort.Slice(supportedKinds, func(i, j int) bool {
+		return supportedKinds[i].Kind < supportedKinds[j].Kind
+	})
 	return supportedKinds, resolvedRefsCondition, nil
 }
 
@@ -1574,11 +1596,56 @@ func conditionMessage(oldStr, newStr string) string {
 type proxyListenEndpoint struct {
 	Address string
 	Port    int
+	// Options holds the listen flags following the address (e.g. "reuseport",
+	// "backlog=16384"), in their original order, excluding the "ssl" token which is
+	// represented by the endpoint landing in SSLEndpoints.
+	Options []string
 }
 
 type kongListenConfig struct {
 	Endpoints    []*proxyListenEndpoint
 	SSLEndpoints []*proxyListenEndpoint
+}
+
+// streamListenPort is a stream (TLS/TCP/UDP) listener's resolved Kong port together
+// with the Gateway protocol it serves, used to render KONG_STREAM_LISTEN.
+type streamListenPort struct {
+	kongPort int
+	protocol gatewayv1.ProtocolType
+}
+
+// streamListenTemplate holds the user-controlled parts of a KONG_STREAM_LISTEN entry:
+// the bind address and the listen options. The controller supplies the port and the
+// protocol token itself.
+type streamListenTemplate struct {
+	address string
+	options []string
+}
+
+// streamListenProtocolTokens returns the KONG_STREAM_LISTEN tokens the controller
+// enforces for a stream listener of the given protocol: TLS -> "ssl"; UDP -> "udp";
+// TCP -> none. Rendering is otherwise identical across protocols, so future TCPRoute
+// and UDPRoute support only needs to collect their ports (see streamListenPort) —
+// no separate render path is required.
+func streamListenProtocolTokens(p gatewayv1.ProtocolType) []string {
+	switch p {
+	case gatewayv1.TLSProtocolType:
+		return []string{"ssl"}
+	case gatewayv1.UDPProtocolType:
+		return []string{"udp"}
+	default: // TCP and anything else: no extra token.
+		return nil
+	}
+}
+
+// renderStreamListenEntry builds a single KONG_STREAM_LISTEN entry from the
+// controller-owned port and protocol tokens followed by the user-preserved options.
+func renderStreamListenEntry(tmpl streamListenTemplate, port int, tokens []string) string {
+	parts := make([]string, 0, 1+len(tokens)+len(tmpl.options))
+	parts = append(parts, net.JoinHostPort(tmpl.address, strconv.Itoa(port)))
+	parts = append(parts, tokens...)
+	parts = append(parts, tmpl.options...)
+	return strings.Join(parts, " ")
 }
 
 // parseKongListenEnv parses the provided kong listen string and returns
@@ -1605,25 +1672,34 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 		if err != nil {
 			return kongListenConfig, fmt.Errorf("failed parsing host %s: %w", hostPort, err)
 		}
-		flags := s[i+1:]
-		if strings.Contains(flags, "ssl") {
-			p, err := strconv.Atoi(port)
-			if err != nil {
-				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
+		p, err := strconv.Atoi(port)
+		if err != nil {
+			return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
+		}
+		// Split the trailing flags: "ssl" selects the SSL endpoint bucket, everything
+		// else is preserved as options in original order.
+		var (
+			ssl     bool
+			options []string
+		)
+		if i >= 0 {
+			for f := range strings.FieldsSeq(s[i+1:]) {
+				if f == "ssl" {
+					ssl = true
+					continue
+				}
+				options = append(options, f)
 			}
-			kongListenConfig.SSLEndpoints = append(kongListenConfig.SSLEndpoints, &proxyListenEndpoint{
-				Address: host,
-				Port:    p,
-			})
+		}
+		endpoint := &proxyListenEndpoint{
+			Address: host,
+			Port:    p,
+			Options: options,
+		}
+		if ssl {
+			kongListenConfig.SSLEndpoints = append(kongListenConfig.SSLEndpoints, endpoint)
 		} else {
-			p, err := strconv.Atoi(port)
-			if err != nil {
-				return kongListenConfig, fmt.Errorf("failed parsing port %s: %w", port, err)
-			}
-			kongListenConfig.Endpoints = append(kongListenConfig.Endpoints, &proxyListenEndpoint{
-				Address: host,
-				Port:    p,
-			})
+			kongListenConfig.Endpoints = append(kongListenConfig.Endpoints, endpoint)
 		}
 	}
 

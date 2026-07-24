@@ -13,7 +13,6 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -85,6 +84,7 @@ func UpstreamForRule[
 
 	policy := upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), rule)
 	hostHeader := resolveHostHeaderFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	tags := utils.TagsFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	logger = logger.WithValues("kongupstream", upstreamName)
 	log.Debug(logger, fmt.Sprintf("Creating KongUpstream for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 
@@ -96,6 +96,7 @@ func UpstreamForRule[
 		WithSpecName(upstreamName).
 		WithHostHeader(hostHeader).
 		WithControlPlaneRef(*cp).
+		WithSpecTags(tags).
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongUpstream resource")
@@ -138,7 +139,7 @@ func extractHostHeaderFromBackendRef(
 	namespace string,
 	backendRef gwtypes.BackendRef,
 ) *string {
-	if !route.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+	if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
 		return nil
 	}
 

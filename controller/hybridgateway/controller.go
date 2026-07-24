@@ -13,7 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	eventconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/events"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
@@ -35,6 +37,8 @@ const (
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tlsroutes,verbs=get;list;watch;patch
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tlsroutes/status,verbs=get;update
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes,verbs=get;list;watch;patch
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes/status,verbs=get;update
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes/status,verbs=get;update;patch
@@ -75,7 +79,7 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
 		Client:        mgr.GetClient(),
-		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorderFor(ControllerName)), //nolint:staticcheck // It should be replaced with GetEventRecorder in the future.
+		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorder(ControllerName)),
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
 	}
@@ -105,19 +109,13 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 		builder = builder.Watches(w.Object, handler.EnqueueRequestsFromMapFunc(w.MapFunc))
 	}
 
-	return builder.Complete(r)
+	return builder.Complete(reconcile.AsReconciler[tPtr](r.Client, r))
 }
 
 // Reconcile reconciles the state of a custom resource by fetching the object,
 // converting it to the expected type, translating it, and enforcing its desired state.
-func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var obj tPtr = new(t)
-
+func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tPtr) (ctrl.Result, error) {
 	logger := ctrllog.FromContext(ctx).WithName(ControllerName)
-
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 
 	rootObj, ok := any(*obj).(t)
 	if !ok {
@@ -159,7 +157,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	statusChanged, stop, err := enforceStatus(ctx, logger, conv)
 	if err != nil && !apierrors.IsConflict(err) {
 		// Record status update failure event.
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonStatusUpdateFailed,
@@ -176,7 +174,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 
 	// Only emit success event if status was actually changed.
 	if statusChanged {
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeNormal,
 			eventconst.EventReasonStatusUpdateSucceeded,
@@ -190,7 +188,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	resourceCount, err := translate(conv, ctx, logger)
 	if err != nil {
 		// Record translation failure event.
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonTranslationFailed,
@@ -200,7 +198,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Record translation success event.
-	r.eventRecorder.Event(
+	r.eventRecorder.Eventf(
 		obj,
 		corev1.EventTypeNormal,
 		eventconst.EventReasonTranslationSucceeded,
@@ -218,7 +216,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		updated, stop, err := su.UpdateRootObjectStatus(ctx, logger)
 		if err != nil {
 			// Record status update failure event and exit.
-			r.eventRecorder.Event(
+			r.eventRecorder.Eventf(
 				obj,
 				corev1.EventTypeWarning,
 				eventconst.EventReasonStatusUpdateFailed,
@@ -244,7 +242,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	applied, waiting, err := enforceState(ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record state enforcement failure event.
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonStateEnforcementFailed,
@@ -255,7 +253,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 
 	// Only emit success event if state was actually changed.
 	if applied {
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeNormal,
 			eventconst.EventReasonStateEnforcementSucceeded,
@@ -271,11 +269,30 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
 	}
 
+	// Phase 4.5: Readiness gate before orphan cleanup.
+	// For converters that opt in (currently HTTPRoute), defer deleting orphaned resources
+	// until all desired resources are Programmed. This prevents removing stale resources
+	// before their replacements are live in the data plane, which would otherwise open a
+	// traffic gap when a spec change rotates the desired resource names.
+	if checker, ok := any(conv).(converter.DesiredStateReadinessChecker); ok {
+		ready, err := checker.DesiredResourcesReady(ctx, logger)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if !ready {
+			log.Debug(logger, "Desired resources not ready yet, deferring orphan cleanup")
+			return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
+		}
+	}
+
 	// Phase 5: Orphan Cleanup.
-	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
+	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 	if err != nil {
+		if result, ok := requeueOnConflict(err, logger, "Orphan cleanup conflicted, requeueing"); ok {
+			return result, nil
+		}
 		// Record orphan cleanup failure event.
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonOrphanCleanupFailed,
@@ -290,7 +307,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	// KongPluginBinding to prevent routes from being active without security plugins).
 	if orphansDeleted {
 		log.Debug(logger, "Orphan cleanup in progress, requeueing to continue multi-step deletion")
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeNormal,
 			eventconst.EventReasonOrphanCleanupSucceeded,
@@ -332,8 +349,11 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	// but with no desired resources (simulating what cleanOrphanedResources does when desiredObjects is empty)
 	orphansDeleted, err := r.cleanupGeneratedResources(ctx, logger, conv)
 	if err != nil {
+		if result, ok := requeueOnConflict(err, logger, "Deletion cleanup conflicted, requeueing"); ok {
+			return result, nil
+		}
 		// Record cleanup failure event
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeWarning,
 			eventconst.EventReasonOrphanCleanupFailed,
@@ -346,7 +366,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	// We must wait for all resources to be fully deleted before removing the finalizer.
 	if orphansDeleted {
 		log.Debug(logger, "Resource deletion cleanup in progress, requeueing to continue")
-		r.eventRecorder.Event(
+		r.eventRecorder.Eventf(
 			obj,
 			corev1.EventTypeNormal,
 			eventconst.EventReasonOrphanCleanupSucceeded,
@@ -372,6 +392,14 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	return ctrl.Result{}, nil
 }
 
+func requeueOnConflict(err error, logger logr.Logger, message string) (ctrl.Result, bool) {
+	if !apierrors.IsConflict(err) {
+		return ctrl.Result{}, false
+	}
+	log.Debug(logger, message)
+	return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, true
+}
+
 // cleanupGeneratedResources deletes all resources generated by the converter.
 // This is similar to cleanOrphanedResources but treats all owned resources as orphans
 // since we want to delete everything when the Route is being deleted.
@@ -383,7 +411,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	logger logr.Logger,
 	conv converter.APIConverter[t],
 ) (bool, error) {
-	// Use the existing cleanup logic but with an empty desired set,
-	// which will cause all owned resources to be considered orphans and deleted
-	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
+	// On the deletion path we create a fresh converter but do not run Translate(),
+	// so cleanOrphanedResources() sees no desired output objects. That makes all
+	// owned generated resources orphan candidates, and we wait for their deletion
+	// before releasing the root finalizer.
+	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 }

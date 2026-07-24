@@ -10,6 +10,7 @@ TAG ?= $(shell git describe --tags)
 VERSION ?= $(shell cat VERSION)
 GO_MODULE_MAJOR_VERSION := $(shell go list -m -f '{{.Path}}' | awk -F'/v' '{print (NF>1) ? $$NF : "1"}')
 GO_METADATA_PACKAGE = $(REPO)/v$(GO_MODULE_MAJOR_VERSION)/modules/manager/metadata
+TEST_DEPENDENCIES_FILE = $(PROJECT_DIR)/test/test_dependencies.yaml
 
 ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
@@ -52,7 +53,7 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
+tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs crdify grpcurl
 
 MISE := $(shell which mise)
 MISE_FILE := .mise.toml
@@ -127,6 +128,12 @@ CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/github-elastic-crd-ref-docs/$(CRD_REF
 crd-ref-docs: yq ## Download crd-ref-docs locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
 
+CRDIFY_VERSION = $(shell $(YQ) -r '.crdify' < $(TOOLS_VERSIONS_FILE))
+CRDIFY = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-crdify/$(CRDIFY_VERSION)/bin/crdify
+.PHONY: crdify
+crdify: mise yq ## Download crdify locally if necessary.
+	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/crdify@v$(CRDIFY_VERSION)
+
 SKAFFOLD_VERSION = $(shell $(YQ) -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/github-google-container-tools-skaffold/$(SKAFFOLD_VERSION)/skaffold
 .PHONY: skaffold
@@ -174,11 +181,10 @@ TELEPRESENCE= $(PROJECT_DIR)/bin/installs/github-telepresenceio-telepresence/$(T
 download.telepresence: mise yq ## Download telepresence locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:telepresenceio/telepresence
 
-MARKDOWNLINT_VERSION = $(shell $(YQ) -r '.markdownlint-cli2' < $(TOOLS_VERSIONS_FILE))
-MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_VERSION)/bin/markdownlint-cli2
+MARKDOWNLINT_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["markdownlint-cli2"].version' < $(MISE_FILE))
 .PHONY: download.markdownlint-cli2
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
-	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
+	$(MAKE) mise-install DEP_VER=markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
 HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:helm/helm"].version' < $(MISE_FILE))
 HELM = helm
@@ -192,11 +198,17 @@ KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd
 download.kube-api-linter: mise yq ## Download kube-api-linter locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter@$(KUBE_API_LINTER_VERSION)
 
-CHAINSAW_VERSION = $(shell $(YQ) -r '.chainsaw' < $(TOOLS_VERSIONS_FILE))
-CHAINSAW = $(PROJECT_DIR)/bin/installs/github-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
+CHAINSAW_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:kyverno/chainsaw"].version' < $(MISE_FILE))
+CHAINSAW = $(PROJECT_DIR)/bin/installs/aqua-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
 .PHONY: chainsaw
 chainsaw: mise yq ## Download chainsaw locally if necessary.
-	$(MAKE) mise-install DEP_VER=github:kyverno/chainsaw@$(CHAINSAW_VERSION)
+	$(MAKE) mise-install DEP_VER=aqua:kyverno/chainsaw@$(CHAINSAW_VERSION)
+
+GRPCURL_VERSION = $(shell $(YQ) -r '.grpcurl' < $(TOOLS_VERSIONS_FILE))
+GRPCURL = $(PROJECT_DIR)/bin/installs/github-fullstorydev-grpcurl/$(GRPCURL_VERSION:v%=%)/grpcurl
+.PHONY: grpcurl
+grpcurl: mise yq ## Download grpcurl locally if necessary.
+	$(MAKE) mise-install DEP_VER=github:fullstorydev/grpcurl@$(GRPCURL_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -276,7 +288,7 @@ lint.actions: download.actionlint download.shellcheck
 
 .PHONY: lint.markdownlint
 lint.markdownlint: download.markdownlint-cli2
-	$(MARKDOWNLINT) \
+	mise x markdownlint-cli2@$(MARKDOWNLINT_VERSION) -- markdownlint-cli2 \
 		CHANGELOG.md \
 		README.md \
 		FEATURES.md \
@@ -290,7 +302,7 @@ lint.markdownlint: download.markdownlint-cli2
 lint.all: lint lint.charts lint.actions lint.markdownlint
 
 .PHONY: verify
-verify: verify.go-fix verify.manifests verify.generators
+verify: verify.go-fix verify.manifests verify.generators verify.crd-breaking-changes
 
 .PHONY: verify.diff
 verify.diff:
@@ -308,6 +320,10 @@ verify.generators: verify.repo generate verify.diff
 
 .PHONY: verify.go-fix
 verify.go-fix: go-fix verify.diff
+
+.PHONY: verify.crd-breaking-changes
+verify.crd-breaking-changes: crdify
+	CRDIFY_BIN="$${CRDIFY_BIN:-$(CRDIFY)}" ./scripts/verify-crd-breaking-changes.sh
 
 # ------------------------------------------------------------------------------
 # Build - Generators
@@ -558,8 +574,13 @@ CONFORMANCE_TEST_TIMEOUT ?= "20m"
 E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
-TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < ./test/test_dependencies.yaml)
+TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < $(TEST_DEPENDENCIES_FILE))
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
+
+.PHONY: tune.inotify
+tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in kind-based tests (Linux host / Docker VM).
+	sudo sysctl -w fs.inotify.max_user_instances=8192
+	sudo sysctl -w fs.inotify.max_user_watches=524288
 
 .PHONY: test
 test: test.unit
@@ -575,6 +596,10 @@ _test.unit: gotestsum
 		-coverprofile=coverage.unit.out \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(UNIT_TEST_PATHS)
+	$(MAKE) _test.unit.crd-from-oas
+
+.PHONY: _test.unit.crd-from-oas
+_test.unit.crd-from-oas:
 	cd crd-from-oas && \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
@@ -589,10 +614,11 @@ test.unit:
 test.unit.pretty:
 	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
 
-ENVTEST_TEST_PATHS := ./test/envtest/...
-ENVTEST_TIMEOUT ?= 15m
-PKG_LIST=./controller/...,./internal/...,./pkg/...,./modules/...
+ENVTEST_TEST_PATHS ?= ./test/envtest/...
+ENVTEST_TIMEOUT ?= 30m
+PKG_LIST = ./controller/...,./internal/...,./pkg/...,./modules/...
 TEST_DIR ?= $(PROJECT_DIR)
+ENVTEST_GOTESTSUM_FORMAT ?= standard-verbose
 
 .PHONY: _test.envtest
 _test.envtest: gotestsum setup-envtest
@@ -600,7 +626,7 @@ _test.envtest: gotestsum setup-envtest
 	cd $(TEST_DIR) && \
 	KUBECONFIG=$(KUBECONFIG) \
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
-	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	GOTESTSUM_FORMAT=$(ENVTEST_GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- \
 		$(GOTESTFLAGS) \
 		-race \
@@ -612,25 +638,30 @@ _test.envtest: gotestsum setup-envtest
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS)" \
 		$(ENVTEST_TEST_PATHS)
 
+# To run the envtest suite with pretty format use:
+# GOTESTSUM_FORMAT=testname make test.envtest
+
+.PHONY: test.envtest.base
+test.envtest.base:
+	ENVTEST_TEST_PATHS=./test/envtest/ \
+		$(MAKE) _test.envtest
+
 .PHONY: test.envtest
 test.envtest:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose
-
-.PHONY: test.envtest.pretty
-test.envtest.pretty:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname
+	$(MAKE) _test.envtest
 
 .PHONY: test.crds-validation
+CRDS_VALIDATION_TEST_PATHS ?= ./test/crdsvalidation/...
 test.crds-validation:
 	$(MAKE) _test.envtest \
 		GOTESTSUM_FORMAT=standard-verbose \
-		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+		ENVTEST_TEST_PATHS="$(CRDS_VALIDATION_TEST_PATHS)"
 
 .PHONY: test.crds-validation.pretty
 test.crds-validation.pretty:
 	$(MAKE) _test.envtest \
 		GOTESTSUM_FORMAT=testname \
-		ENVTEST_TEST_PATHS=./test/crdsvalidation/...
+		ENVTEST_TEST_PATHS="$(CRDS_VALIDATION_TEST_PATHS)"
 
 # Define a constant list of channels
 CHANNELS := ingress-controller-incubator gateway-operator kong-operator
@@ -806,9 +837,21 @@ test.e2e:
 
 CHAINSAW_TEST_DIR ?= ./test/e2e/chainsaw
 CHAINSAW_CONFIG ?= ./test/e2e/chainsaw/.chainsaw.yaml
+CHAINSAW_FIXTURES_DIR ?= ./test/e2e/chainsaw/fixtures
+
+# DIRNAME is passed to the dispatcher via the environment (never substituted into the
+# recipe), so its value can never be parsed as a shell command.
+.PHONY: test.e2e.chainsaw.prereq
+test.e2e.chainsaw.prereq: export DIRNAME := $(DIRNAME)
+test.e2e.chainsaw.prereq: ## Apply prerequisite fixtures for a chainsaw suite (usage: DIRNAME=<suite>).
+	bash $(CHAINSAW_FIXTURES_DIR)/run-prereq.sh
+
 .PHONY: test.e2e.chainsaw
-test.e2e.chainsaw: chainsaw ## Run chainsaw e2e tests.
-	$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
+test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
+	GATEWAY_IMAGE=kong/kong-gateway:$(shell $(YQ) -ojson -r '.chainsaw.kong-ee' < $(TEST_DEPENDENCIES_FILE)) \
+	AIGW_DP_IMAGE=kong/kong-ai-gateway-dev:$(shell $(YQ) -ojson -r '.chainsaw.aigw-dp' < $(TEST_DEPENDENCIES_FILE)) \
+	GRPCURL_BIN=$(GRPCURL) \
+		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
 GO_TEST_PARALLEL := $(if $(GO_TEST_PARALLEL),$(GO_TEST_PARALLEL),$(NCPU))
@@ -865,8 +908,12 @@ test.samples: kustomize
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
-	@find config/samples/ -maxdepth 1 -name "*.yaml" -print0 | while IFS= read -r -d '' file; do \
-		echo && echo $$file && kubectl apply -f $$file && kubectl delete -f $$file; \
+	@set -e; \
+	for file in config/samples/*.yaml; do \
+		[ "$$(basename "$$file")" = "kustomization.yaml" ] && continue; \
+		echo; echo; echo "$$file"; \
+		kubectl apply -f "$$file"; \
+		kubectl delete -f "$$file"; \
 	done
 
 .PHONY: test.charts.golden
@@ -1001,6 +1048,7 @@ _run:
 		-cluster-ca-secret-namespace kong-system \
 		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
+		-enable-controller-aigatewaydataplane \
 		-enable-controller-konnect \
 		-enable-controller-controlplaneextensions \
 		-enable-conversion-webhook=false \
@@ -1048,6 +1096,7 @@ debug: generate install.all _ensure-kong-system-namespace
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		--enable-controller-aigateway \
+		--enable-controller-aigatewaydataplane \
 		--enable-controller-konnect \
 		-zap-time-encoding iso8601
 
@@ -1155,4 +1204,5 @@ lint.api: download.kube-api-linter
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
 		./api/common/v1alpha1/... \
-		./api/eventgateway/v1alpha1/...
+		./api/eventgateway/v1alpha1/... \
+		./api/aigateway/v1alpha1/...

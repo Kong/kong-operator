@@ -3,6 +3,7 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,8 +22,14 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
+
+// hybridGatewayStateFieldManager is intentionally distinct from the historical
+// gateway-operator manager so that annotation fields owned by older reconciles
+// are not lost during an upgrade.
+const hybridGatewayStateFieldManager = controllerpkgssa.FieldManager + "-hybridgateway"
 
 // translate performs the full translation process using the provided APIConverter.
 // Returns an integer representing the number of translated resources, and an error if the translation fails.
@@ -72,6 +79,23 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 
 	log.Debug(logger, "Retrieved desired objects for enforcement", "objectCount", len(desiredObjects))
 
+	// Compute the hybrid-routes annotation info for the root object once, outside the per-resource loop.
+	routeAnnotationKey, routeRef := hybridRouteAnnotationInfo(conv.GetRootObject())
+
+	// Build lookup maps once so that per-object gating checks are O(1) instead of O(n).
+	desiredUpstreamNames := make(map[string]struct{}, len(desiredObjects))
+	desiredTargetsByUpstream := make(map[string][]unstructured.Unstructured, len(desiredObjects))
+	for _, obj := range desiredObjects {
+		switch obj.GetKind() {
+		case "KongUpstream":
+			desiredUpstreamNames[obj.GetName()] = struct{}{}
+		case "KongTarget":
+			if upName, _, _ := unstructured.NestedString(obj.Object, "spec", "upstreamRef", "name"); upName != "" {
+				desiredTargetsByUpstream[upName] = append(desiredTargetsByUpstream[upName], obj)
+			}
+		}
+	}
+
 	var (
 		objectsCreated = 0
 		objectsUpdated = 0
@@ -100,6 +124,40 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// "can't create target without a Konnect Upstream ID".
 		switch desired.GetKind() {
 		case "KongService":
+			// KongService.Spec.Host is the KongUpstream name. Do not create/program the service before its
+			// upstream exists and is Programmed in Konnect. Otherwise Konnect can hold a service whose host
+			// has no matching upstream, and once a request hits it the dataplane falls back to DNS-resolving
+			// the (hashed) upstream name -> NXDOMAIN. Only gate when the host actually refers to a desired
+			// KongUpstream (in hybrid gateway it always does; the guard avoids waiting forever on a service
+			// that legitimately points at an external hostname).
+			if host, _, _ := unstructured.NestedString(desired.Object, "spec", "host"); host != "" && desiredHasUpstreamNamed(desiredUpstreamNames, host) {
+				var up configurationv1alpha1.KongUpstream
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: host}, &up); err != nil {
+					log.Debug(logger, "Upstream not found yet for service, waiting", "upstream", host)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &up) {
+					log.Debug(logger, "Upstream not Programmed yet for service, waiting", "upstream", host)
+					objectsSkipped++
+					stopAtKind = "KongUpstream"
+					continue
+				}
+				// Also wait until the upstream's targets are Programmed before creating the service, so the
+				// service is only ever live once it can actually serve traffic. Anything that depends on the
+				// service (the KongRoute) then transitively waits for a servable backend.
+				targetsReady, err := upstreamTargetsProgrammed(ctx, cl, desiredTargetsByUpstream[host])
+				if err != nil {
+					return false, false, fmt.Errorf("failed to check upstream targets readiness for service %s: %w", desired.GetName(), err)
+				}
+				if !targetsReady {
+					log.Debug(logger, "Upstream targets not Programmed yet for service, waiting", "service", desired.GetName(), "upstream", host)
+					objectsSkipped++
+					stopAtKind = "KongTarget"
+					continue
+				}
+			}
 			// KongService with a clientCertificateRef depends on the referenced KongCertificate being Programmed.
 			certName, _, _ := unstructured.NestedString(desired.Object, "spec", "clientCertificateRef", "name")
 			if certName != "" {
@@ -190,6 +248,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			}
 		}
 		log.Debug(logger, "Processing desired object", "index", i, "kind", desired.GetKind(), "name", desired.GetName())
+
 		// Get the existing object by name from the API server.
 		existing := &unstructured.Unstructured{}
 		existing.SetGroupVersionKind(desired.GetObjectKind().GroupVersionKind())
@@ -199,6 +258,14 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			Name:      desired.GetName(),
 		}, existing)
 
+		// Merge the hybrid-routes annotation from the live object into the desired state so that SSA
+		// owns and persists it atomically with the rest of the resource. When the object does not
+		// exist yet, existing carries no annotations and the annotation is initialised to just this
+		// route ref. Gateway converters (empty routeAnnotationKey) skip this step.
+		if routeAnnotationKey != "" {
+			mergeHybridRouteAnnotation(&desired, existing, routeAnnotationKey, routeRef)
+		}
+
 		namespacedNameDesired := client.ObjectKeyFromObject(&desired)
 		namespacedNameExisting := client.ObjectKeyFromObject(existing)
 
@@ -207,7 +274,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 				// Object doesn't exist, create it using server-side apply.
 				log.Debug(logger, "Creating new object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
 				// Set field manager for server-side apply
-				if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(controllerpkgssa.FieldManager), client.ForceOwnership); err != nil {
+				if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(hybridGatewayStateFieldManager), client.ForceOwnership); err != nil {
 					if apierrors.IsConflict(err) {
 						return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 					}
@@ -232,14 +299,14 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		}
 
 		// Object exists, check if we need to update it.
-		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, controllerpkgssa.FieldManager, "")
+		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, hybridGatewayStateFieldManager, "")
 		if err != nil {
 			return false, false, fmt.Errorf("failed to extract managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
 		}
 		if managedFieldsObj == nil {
 			// No managed fields for our field manager, we should update.
 			log.Debug(logger, "No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
-			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(controllerpkgssa.FieldManager), client.ForceOwnership); err != nil {
+			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(hybridGatewayStateFieldManager), client.ForceOwnership); err != nil {
 				if apierrors.IsConflict(err) {
 					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
@@ -267,7 +334,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		} else {
 			log.Info(logger, "Changes detected for obj, applying desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting, "changes", compare.String())
 			// Changes detected, apply the desired state using server-side apply.
-			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(controllerpkgssa.FieldManager), client.ForceOwnership); err != nil {
+			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(hybridGatewayStateFieldManager), client.ForceOwnership); err != nil {
 				if apierrors.IsConflict(err) {
 					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
@@ -288,6 +355,71 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	applied = (objectsCreated + objectsUpdated) > 0
 	waiting = objectsSkipped > 0
 	return applied, waiting, nil
+}
+
+// desiredHasUpstreamNamed reports whether the pre-built upstream name set contains the given name.
+// Used to decide whether a KongService's host refers to a managed upstream (and should therefore be gated
+// on it) versus an external hostname (which must not gate).
+func desiredHasUpstreamNamed(desiredUpstreamNames map[string]struct{}, name string) bool {
+	_, ok := desiredUpstreamNames[name]
+	return ok
+}
+
+// upstreamTargetsProgrammed reports whether every KongTarget in the pre-filtered targets slice is present
+// in the cluster and Programmed. The caller is responsible for passing only the targets that belong to the
+// upstream being checked (use the desiredTargetsByUpstream map built in enforceState). An empty/nil slice
+// means no targets exist for that upstream and is considered ready.
+func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, targets []unstructured.Unstructured) (bool, error) {
+	for i := range targets {
+		d := &targets[i]
+		var tgt configurationv1alpha1.KongTarget
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: d.GetNamespace(), Name: d.GetName()}, &tgt); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Not created yet (targets are appended after the route): not ready.
+				return false, nil
+			}
+			return false, fmt.Errorf("failed to get KongTarget %s/%s: %w", d.GetNamespace(), d.GetName(), err)
+		}
+		if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &tgt) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// hybridRouteAnnotationInfo returns the annotation key and route reference string for the given
+// root object. Returns empty strings for Gateway objects, which do not use hybrid-routes annotations.
+func hybridRouteAnnotationInfo[t converter.RootObject](obj t) (annotationKey, routeRef string) {
+	switch o := any(obj).(type) {
+	case gwtypes.HTTPRoute:
+		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation, o.Namespace + "/" + o.Name
+	case gwtypes.TLSRoute:
+		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation, o.Namespace + "/" + o.Name
+	}
+	return "", ""
+}
+
+// mergeHybridRouteAnnotation merges routeRef into the hybrid-routes annotation on desired,
+// seeding from existing's annotation to preserve other routes' entries.
+func mergeHybridRouteAnnotation(desired, existing *unstructured.Unstructured, annotationKey, routeRef string) {
+	current := ""
+	if anns := existing.GetAnnotations(); len(anns) > 0 {
+		current = anns[annotationKey]
+	}
+	merged := current
+	if !strings.Contains(","+current+",", ","+routeRef+",") {
+		if current != "" {
+			merged = current + "," + routeRef
+		} else {
+			merged = routeRef
+		}
+	}
+	anns := desired.GetAnnotations()
+	if anns == nil {
+		anns = make(map[string]string)
+	}
+	anns[annotationKey] = merged
+	desired.SetAnnotations(anns)
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.
@@ -311,6 +443,17 @@ func enforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logg
 	return conv.UpdateRootObjectStatus(ctx, logger)
 }
 
+// orphanCleanupOptions controls how cleanOrphanedResources handles
+// in-flight deletions while pruning orphaned resources.
+type orphanCleanupOptions struct {
+	// waitForDeletes, when true, makes cleanup process one GVK at a time and
+	// requeue until every orphan of that type is fully gone before moving on,
+	// enforcing deletion ordering across resource types (e.g. delete KongRoute
+	// before KongPluginBinding). When false, all GVKs are processed in a single
+	// pass and resources already being deleted are not waited on.
+	waitForDeletes bool
+}
+
 // cleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
 //
 // The function performs the following operations:
@@ -323,16 +466,21 @@ func enforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logg
 // This cleanup process ensures that resources that were previously created by the converter
 // but are no longer needed (due to configuration changes) are properly removed from the cluster.
 //
-// Deletion is performed in a multi-step process ensuring resources are deleted in the order defined by conv.GetExpectedGVKs().
+// When opts.waitForDeletes is true, deletion is performed in a multi-step process ensuring resources are
+// deleted in the order defined by conv.GetExpectedGVKs(): the function returns (true, nil) to requeue as
+// soon as a GVK has any orphan deleted or still in deletion, so each type is fully removed before the next
+// one is processed. When false, all GVKs are processed in a single pass and in-flight deletions are not
+// waited on.
 //
 // Parameters:
 //   - ctx: The context for API calls and cancellation
 //   - cl: The Kubernetes client for listing and deleting resources
 //   - logger: Logger for debugging and status information
 //   - conv: The APIConverter that manages the root object and its desired state
+//   - opts: Options controlling whether to wait for in-flight deletions
 //
 // Returns:
-//   - bool: true if any orphaned resources were deleted in this iteration and a requeue is needed
+//   - bool: true if a requeue is needed to continue/complete the cleanup
 //   - error: Any error that occurred during the cleanup process
 //
 // The function uses ownership labels to identify resources managed by the root object
@@ -342,9 +490,10 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	cl client.Client,
 	logger logr.Logger,
 	conv converter.APIConverter[t],
+	opts orphanCleanupOptions,
 ) (bool, error) {
 	logger = logger.WithValues("phase", "orphan-cleanup")
-	log.Debug(logger, "Starting orphaned resource cleanup")
+	log.Debug(logger, "Starting orphaned resource cleanup", "waitForDeletes", opts.waitForDeletes)
 
 	desiredObjects, err := conv.GetOutputStore(ctx, logger)
 	if err != nil {
@@ -377,9 +526,10 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	}
 	log.Debug(logger, "Finished building desired resource key set", "totalKeys", len(desiredSet))
 
-	// For each expected GVK, list resources and delete orphans.
-	// Process one GVK at a time to ensure proper deletion ordering and wait for resources
-	// to be fully deleted before moving to the next type.
+	// For each expected GVK, list resources and delete orphans. When waiting for deletes, reconciliation
+	// processes one GVK at a time and waits for resources to be fully deleted before moving to the next type
+	// or releasing the root finalizer.
+	orphansDeleted := 0
 	for _, gvk := range expectedGVKs {
 		log.Debug(logger, "Processing GVK for orphan cleanup", "gvk", gvk.String())
 
@@ -393,8 +543,8 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 
 		log.Debug(logger, "Found existing resources for GVK", "gvk", gvk.String(), "resourceCount", len(list.Items))
 
-		orphansForGVK := 0
-		orphansForGVKInDeletion := 0
+		orphansDeletedForGVK := 0
+		orphansInDeletionForGVK := 0
 
 		for _, item := range list.Items {
 			key := fmt.Sprintf("%s/%s/%s", item.GetNamespace(), item.GetName(), gvk.String())
@@ -416,32 +566,63 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			}
 
 			// Check if the resource is already being deleted (has deletionTimestamp set).
-			// If so, we need to wait for it to be fully deleted before proceeding to the next GVK.
 			if !item.GetDeletionTimestamp().IsZero() {
-				log.Debug(logger, "Resource is already being deleted, will requeue to wait for deletion", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
-				orphansForGVKInDeletion++
+				if opts.waitForDeletes {
+					log.Debug(logger, "Resource is already being deleted, will requeue to wait for deletion", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+					orphansInDeletionForGVK++
+				} else {
+					log.Debug(logger, "Resource is already being deleted, not waiting for deletion", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+				}
 				continue
 			}
 
 			log.Info(logger, "Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
-			if err := cl.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
-				return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+			// Delete with an optimistic-lock precondition on the resourceVersion that the orphan
+			// decision was made against. This closes the race where another Route attaches to a
+			// shared resource (adding itself to the hybrid-routes annotation) between our read and
+			// the delete: such a change bumps the resourceVersion and the delete fails with a
+			// conflict, so we requeue and re-evaluate instead of deleting a resource still in use.
+			deleteOpts := []client.DeleteOption{}
+			if rv := item.GetResourceVersion(); rv != "" {
+				deleteOpts = append(deleteOpts, client.Preconditions{ResourceVersion: &rv})
 			}
-			orphansForGVK++
+			if err := cl.Delete(ctx, &item, deleteOpts...); err != nil {
+				switch {
+				case apierrors.IsNotFound(err):
+					// Already gone; treat as deleted.
+				case apierrors.IsConflict(err):
+					if opts.waitForDeletes {
+						log.Debug(logger, "Orphaned resource changed before deletion, requeuing to re-evaluate",
+							"kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+						orphansInDeletionForGVK++
+						continue
+					}
+					log.Debug(logger, "Orphaned resource changed before deletion, requeueing cleanup",
+						"kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+					return true, nil
+				default:
+					return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+				}
+			}
+			orphansDeletedForGVK++
 		}
+		orphansDeleted += orphansDeletedForGVK
 
-		// If we deleted any orphan resource or found any that is currently being deleted, return true to trigger a requeue.
-		// This ensures we wait for the current GVK's resources to be fully deleted before moving to the next GVK, enforcing
-		// deletion order among resource types.
-		if orphansForGVK > 0 || orphansForGVKInDeletion > 0 {
-			log.Debug(logger, "Requeuing to wait for orphaned resources deletion for GVK", "gvk", gvk.String(), "orphansDeleted", orphansForGVK)
+		// When waiting for deletes, if we deleted any orphan resource or found any that is currently being
+		// deleted, return true to trigger a requeue. This ensures we wait for the current GVK's resources to
+		// be fully deleted before moving to the next GVK, enforcing deletion order among resource types.
+		if opts.waitForDeletes && (orphansDeletedForGVK > 0 || orphansInDeletionForGVK > 0) {
+			log.Debug(logger, "Requeuing to wait for orphaned resources deletion for GVK", "gvk", gvk.String(), "orphansDeleted", orphansDeletedForGVK)
 			return true, nil
-		} else {
-			log.Debug(logger, "No orphaned resources found for GVK", "gvk", gvk.String())
 		}
+		log.Debug(logger, "Finished processing GVK for orphan cleanup", "gvk", gvk.String())
 	}
 
-	// No orphans found
+	if opts.waitForDeletes && orphansDeleted > 0 {
+		log.Debug(logger, "Requeuing after deleting orphaned resources", "orphansDeleted", orphansDeleted)
+		return true, nil
+	}
+
 	log.Debug(logger, "Finished orphaned resource cleanup")
 	return false, nil
 }

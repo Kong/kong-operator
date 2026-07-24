@@ -7,7 +7,13 @@ spec:
   description: |
     This test validates that the hybrid gateway controller correctly
     processes the currently supported filters in HTTPRoute, including:
-    `RequestHeaderModifier`, `ResponseHeaderModifier`.
+    `RequestHeaderModifier`, `ResponseHeaderModifier`, and `URLRewrite`.
+    It also validates that multiple filters in a single rule that map to the
+    same Kong plugin type (e.g. `URLRewrite` + `RequestHeaderModifier`, both
+    of which translate to `request-transformer`) are merged into a single
+    KongPlugin/KongPluginBinding, instead of producing two plugins of the same
+    type on the same route (which Konnect rejects with a
+    `unique-plugin-per-entity` constraint error).
 
   bindings:
     # Common bindings.
@@ -42,7 +48,7 @@ spec:
     - name: konnect_api_auth_namespace
       value: ($namespace)
     - name: gateway_image
-      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+      value: (env('GATEWAY_IMAGE'))
     - name: gateway_name
       value: (join('-', [($test_name), 'gateway']))
     - name: gateway_namespace
@@ -60,6 +66,12 @@ spec:
     - name: http_route_combined_filters_name
       value: (join('-', [($test_name), 'httpbin-combined-filters']))
     - name: http_route_combined_filters_namespace
+      value: ($namespace)
+    - name: merged_filters_fqdn
+      value: (join('.', ['httpbin-merged', ($test_name), 'example.com']))
+    - name: http_route_merged_filters_name
+      value: (join('-', [($test_name), 'httpbin-merged-filters']))
+    - name: http_route_merged_filters_namespace
       value: ($namespace)
     - name: httpbin_deployment_name
       value: (join('-', [($test_name), 'httpbin']))
@@ -935,6 +947,146 @@ spec:
           value: "https"
         - name: insecure
           value: "true"
+
+    # Step 50: Create an HTTPRoute whose single rule combines a URLRewrite and a
+    # RequestHeaderModifier filter. Both map to a request-transformer plugin and must be merged.
+    - name: Create-httproute-with-url-rewrite-and-header-modifier
+      description: Create HTTPRoute combining URLRewrite and RequestHeaderModifier filters (both map to request-transformer).
+      try:
+        - apply:
+            file: 07-httproute-filter-url-rewrite-and-header-modifier.yaml
+        - assert:
+            file: 08-httproute-filter-url-rewrite-and-header-modifier-assert.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_merged_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_merged_filters_namespace)
+        - name: route_hosts
+          value:
+            - ($merged_filters_fqdn)
+
+    # Step 51: Assert the backend is translated into a KongService resource (merged filters).
+    - name: Assert-kong-service-merged-filters
+      description: Assert that the KongService resource is created for the HTTPRoute with merged filters.
+      use:
+        template: ../../common/_step_templates/assert-kongService.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_merged_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_merged_filters_namespace)
+
+    # Step 52: Assert the backend is translated into a KongUpstream resource (merged filters).
+    - name: Assert-kong-upstream-merged-filters
+      description: Assert that the KongUpstream resource is created for the HTTPRoute with merged filters.
+      use:
+        template: ../../common/_step_templates/assert-kongUpstream.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_merged_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_merged_filters_namespace)
+
+    # Step 53: Assert the KongUpstream has a KongTarget resource (merged filters).
+    - name: Assert-kong-target-merged-filters
+      description: Assert that the KongTarget resource is created for the KongUpstream (merged filters).
+      use:
+        template: ../../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_merged_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_merged_filters_namespace)
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+
+    # Step 54: Assert that a SINGLE request-transformer plugin is created carrying the merged
+    # configuration of BOTH filters: the URLRewrite contributes replace.uri and the
+    # RequestHeaderModifier contributes the header operations. If the filters were not merged,
+    # there would be two request-transformer plugins each with a partial config and neither would
+    # match this exact configuration.
+    - name: Assert-Request-Transformer-Plugin-for-Merged-Filters
+      description: Assert that a single request-transformer plugin carries the merged configuration of both filters.
+      use:
+        template: ../../common/_step_templates/assert-kongPlugin.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_merged_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_merged_filters_namespace)
+        - name: namespace
+          value: ($namespace)
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: plugin_type
+          value: request-transformer
+        - name: plugin_config
+          value: '{"add":{"headers":["X-Merge-Set:foo"]},"append":{"headers":["X-Merge-Add:bar"]},"remove":{"headers":["X-Merge-Remove"]},"replace":{"headers":["X-Merge-Set:foo"],"uri":"/anything$(uri_captures[1])"}}'
+
+    # Step 55: Assert the single KongPluginBinding for the merged plugin is Programmed in Konnect.
+    # The assert template resolves the (single) request-transformer plugin name and requires the
+    # binding's Programmed condition to be True - this is what fails under the unique-plugin bug.
+    - name: Assert-KongPluginBinding-for-Merged-Filters
+      description: Assert that a single KongPluginBinding is created for the merged request-transformer plugin and is Programmed.
+      use:
+        template: ../../common/_step_templates/assert-kongPluginBinding.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_merged_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_merged_filters_namespace)
+
+    # Step 56: Verify GET /get works from the host (merged filters). The URLRewrite rewrites the
+    # prefix to /anything, which go-httpbin echoes back.
+    - name: Verify-GET-traffic-from-host-merged-filters
+      description: Verify that GET requests to /get work from the host (merged filters).
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_merged_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_merged_filters_namespace)
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($merged_filters_fqdn)
+
+    # Step 57: Verify the RequestHeaderModifier half of the merged plugin still applies over HTTP.
+    - name: Verify-request-header-modifier-merged-filters-over-http
+      description: Validate that the RequestHeaderModifier contribution of the merged plugin modifies headers correctly over HTTP.
+      use:
+        template: ../../common/_step_templates/verify-request-header-modifier.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace
+          value: ($gateway_namespace)
+        - name: route_path
+          value: "/get"
+        - name: namespace
+          value: ($http_route_merged_filters_namespace)
+        - name: host_header
+          value: ($merged_filters_fqdn)
+        - name: proxy_port
+          value: "80"
+        - name: headers_to_send
+          value: "X-Merge-Remove:to-be-removed,X-Merge-Set:existing-value"
+        - name: expected_headers_present
+          value: "X-Merge-Set:foo,X-Merge-Add:bar"
+        - name: expected_headers_absent
+          value: "X-Merge-Remove,X-Merge-Set:existing-value"
+        - name: protocol
+          value: "http"
+        - name: insecure
+          value: "false"
 
   catch:
     # Capture debug snapshot on test failure for CI debugging.

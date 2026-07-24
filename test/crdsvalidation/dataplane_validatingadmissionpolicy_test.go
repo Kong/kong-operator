@@ -49,7 +49,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 		ValidationPolicyKonnect,
 	}
 
-	helm.ApplyTemplate(t, cfg, kcfg.ChartPath(), templates)
+	helm.ApplyTemplate(ctx, t, cfg, kcfg.ChartPath(), templates)
 
 	t.Run("static autoscale", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration]{
@@ -58,6 +58,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						Version: "3.14",
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider: "aws",
@@ -98,7 +99,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 		ValidationPolicyDataplane,
 	}
 
-	helm.ApplyTemplate(t, cfg, kcfg.ChartPath(), templates)
+	helm.ApplyTemplate(ctx, t, cfg, kcfg.ChartPath(), templates)
 
 	t.Run("ports", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{

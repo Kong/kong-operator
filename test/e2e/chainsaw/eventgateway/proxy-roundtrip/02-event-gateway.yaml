@@ -1,0 +1,101 @@
+# Event Gateway resources for the proxy-roundtrip test.
+#
+# advertisedHost on the EventGatewayListenerPolicy starts as a placeholder
+# and is patched to the LoadBalancer external IP in a later step, after the
+# Service has been assigned an address.
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectEventGateway
+metadata:
+  name: ($keg_cp_name)
+spec:
+  apiSpec:
+    name: ($keg_cp_name)
+    description: proxy-roundtrip chainsaw test control plane
+    labels:
+      test: proxy-roundtrip
+  konnect:
+    authRef:
+      name: ($konnect_auth_name)
+---
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($keg_cp_name)
+  network:
+    services:
+      kafka:
+        type: LoadBalancer
+        ports:
+          - name: kafka
+            port: 19092
+            targetPort: 19092
+          - name: kafka-broker-0
+            port: 19093
+            targetPort: 19093
+          - name: kafka-broker-1
+            port: 19094
+            targetPort: 19094
+          - name: kafka-broker-2
+            port: 19095
+            targetPort: 19095
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: ($backend_cluster_name)
+spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($keg_cp_name)
+  apiSpec:
+    name: ($backend_cluster_name)
+    description: proxy-roundtrip backend (in-namespace Kafka)
+    bootstrapServers:
+      - (join('', ['kafka-bootstrap.', ($namespace), '.svc:9092']))
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: ($virtual_cluster_name)
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($backend_cluster_name)
+  apiSpec:
+    name: ($virtual_cluster_name)
+    description: proxy-roundtrip virtual cluster
+    dnsLabel: vcluster-1
+    aclMode: enforce_on_gateway
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: ($listener_name)
+spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($keg_cp_name)
+  apiSpec:
+    name: ($listener_name)
+    description: proxy-roundtrip listener
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - "19092-19095"

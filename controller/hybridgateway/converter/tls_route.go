@@ -7,16 +7,13 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/kongroute"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/target"
@@ -24,7 +21,6 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
-	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 var _ APIConverter[gwtypes.TLSRoute] = &tlsRouteConverter{}
@@ -78,97 +74,7 @@ func (c *tlsRouteConverter) GetRootObject() gwtypes.TLSRoute {
 // - stop is true if the TLSRoute is not ready for the next round of reconciliation;
 // - err is the error happened (if there is) in processing.
 func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	logger = logger.WithValues("phase", "tlsroute-status")
-	log.Debug(logger, "Starting UpdateRootObjectStatus")
-
-	// First, build the resolvedRefs conditons for the TLSRoute since it is the same for all ParentRefs.
-	log.Debug(logger, "Building ResolvedRefs condition for TLSRoute")
-	resolvedRefsCond, err := route.BuildResolvedRefsConditionForTLSRoute(ctx, logger, c.Client, c.route)
-	if err != nil {
-		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for TLSRoute %s: %w", c.route.Name, err)
-	}
-
-	// For each parentRef in the TLSRoute, build the conditions and set them in the status.
-	for _, pRef := range c.route.Spec.ParentRefs {
-		log.Debug(logger, "Processing ParentReference", "parentRef", pRef)
-		// Check if the parentRef belongs to a Gateway managed by us.
-		gateway, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
-		if err != nil {
-			switch {
-			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound),
-				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController),
-				errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound),
-				errors.Is(err, hybridgatewayerrors.ErrUnsupportedKind),
-				errors.Is(err, hybridgatewayerrors.ErrUnsupportedGroup):
-				// If the gateway is not managed by us or not found we skip setting conditions.
-				log.Debug(logger, "Skipping status update Gateway", "parentRef", pRef, "reason", err)
-				if route.RemoveStatusForParentRef(logger, c.route, pRef, vars.ControllerName()) {
-					// If we removed the status, we need to mark the update as true.
-					log.Debug(logger, "Removed ParentStatus for unsupported ParentReference", "parentRef", pRef)
-					updated = true
-					stop = false
-				}
-				continue
-			default:
-				log.Error(logger, err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
-				return false, stop, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
-			}
-		}
-		if !found {
-			continue
-		}
-
-		log.Debug(logger, "Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
-		acceptedCondition, err := route.BuildAcceptedCondition(ctx, logger, c.Client, gateway, c.route, pRef)
-		if err != nil {
-			return false, stop, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
-		}
-		// Unresolved backend references should still translate so the desired state is
-		// recomputed (no KongTargets for unpermitted refs) and orphan cleanup can remove
-		// resources from a previous reconciliation. Only an unaccepted route halts state
-		// enforcement.
-		if acceptedCondition.Status == metav1.ConditionFalse {
-			stop = true
-		}
-
-		log.Debug(logger, "Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
-		programmedConditions, err := route.BuildProgrammedCondition(ctx, logger, c.Client, c.route, pRef, c.expectedGVKs)
-		if err != nil {
-			return false, stop, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
-		}
-
-		// Combine all conditions.
-		programmedConditions = append(programmedConditions, *acceptedCondition, *resolvedRefsCond)
-
-		log.Debug(logger, "Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
-		if route.SetStatusConditions(c.route, pRef, vars.ControllerName(), programmedConditions...) {
-			log.Debug(logger, "Status conditions updated for ParentReference", "parentRef", pRef)
-			updated = true
-		}
-	}
-
-	log.Debug(logger, "Cleaning up orphaned ParentStatus entries")
-	if route.CleanupOrphanedParentStatus(logger, c.route, vars.ControllerName()) {
-		log.Debug(logger, "Orphaned ParentStatus entries cleaned up")
-		updated = true
-	}
-
-	// Update the status in the cluster if there are changes.
-	if updated {
-		log.Debug(logger, "Updating TLSRoute status in cluster", "status", c.route.Status)
-		if err := c.Status().Update(ctx, c.route); err != nil {
-			if apierrors.IsConflict(err) {
-				return false, true, err
-			}
-			log.Error(logger, err, "Failed to update TLSRoute status in cluster")
-			return false, stop, fmt.Errorf("failed to update TLSRoute status: %w", err)
-		}
-	} else {
-		log.Debug(logger, "No status update required for TLSRoute")
-	}
-
-	log.Debug(logger, "Finished UpdateRootObjectStatus", "updated", updated)
-	return updated, stop, nil
+	return route.UpdateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForTLSRoute)
 }
 
 // GetOutputStore implements APIConverter.
@@ -182,6 +88,7 @@ func (c *tlsRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logg
 
 	var conversionErrors []error
 
+	// c.outputStore is already deduplicated in translate(); no need to deduplicate again here.
 	objects := make([]unstructured.Unstructured, 0, len(c.outputStore))
 	for _, obj := range c.outputStore {
 		unstr, err := utils.ToUnstructured(obj, c.Scheme())
@@ -222,26 +129,53 @@ func (c *tlsRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logg
 //   - err: any error that occurred during processing
 func (c *tlsRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
 	am := metadata.NewAnnotationManager(logger)
+	key := client.ObjectKeyFromObject(resource)
+	gvk := resource.GroupVersionKind()
+
+	// Remove this Route from the shared hybrid-routes annotation atomically. Multiple Routes (or
+	// rules) can share the same Kong resource, so a concurrent Route adding itself must not be lost
+	// and the resource must not be deleted while still referenced. We re-read the live object, drop
+	// our entry, and either patch with an optimistic lock (when other Routes remain) or surface the
+	// validated resourceVersion so the caller can delete with an optimistic-lock precondition.
+	fresh := &unstructured.Unstructured{}
+	fresh.SetGroupVersionKind(gvk)
+	if err := c.Get(ctx, key, fresh); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Already gone; nothing to delete.
+			return true, nil
+		}
+		return true, fmt.Errorf("failed to get resource: %w", err)
+	}
 
 	// If the route is not present in the hybrid-routes annotation of the Kong resource, don't touch it.
-	if !am.ContainsRoute(resource, c.route) {
-		log.Trace(logger, "Route annotation not found, skipping resource", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
+	if !am.ContainsRoute(fresh, c.route) {
+		log.Trace(logger, "Route annotation not found, skipping resource", "kind", fresh.GetKind(), "obj", key)
 		return true, nil
 	}
 
-	oldResource := resource.DeepCopy()
-	am.RemoveRouteFromAnnotation(resource, c.route)
+	base := fresh.DeepCopy()
+	am.RemoveRouteFromAnnotation(fresh, c.route)
 
 	// If other Routes are still present in the annotation, we just need to update the resource.
-	if len(am.GetRoutesWithKind(resource, "TLSRoute")) > 0 {
-		log.Debug(logger, "Updating hybrid-routes annotation", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
-		if err := c.Patch(ctx, resource, client.MergeFrom(oldResource)); err != nil && !apierrors.IsNotFound(err) {
+	if len(am.GetRoutesWithKind(fresh, "TLSRoute")) > 0 {
+		log.Debug(logger, "Updating hybrid-routes annotation", "kind", fresh.GetKind(), "obj", key)
+		if err := c.Patch(ctx, fresh, client.MergeFromWithOptions(base, client.MergeFromWithOptimisticLock{})); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
 			return true, fmt.Errorf("failed to update resource: %w", err)
 		}
+		// Reflect the persisted state back onto the caller's resource.
+		resource.SetAnnotations(fresh.GetAnnotations())
+		resource.SetResourceVersion(fresh.GetResourceVersion())
 		return true, nil
 	}
 
-	// No other routes in the annotation, don't skip deletion.
+	// No other routes remain. Surface the validated resourceVersion (and the annotation
+	// removal) on the caller's resource so the orphan deletion uses it as an optimistic-lock
+	// precondition, and don't skip deletion.
+	resource.SetAnnotations(fresh.GetAnnotations())
+	resource.SetResourceVersion(fresh.GetResourceVersion())
 	return false, nil
 }
 
@@ -282,6 +216,10 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 		pRef := pRefData.parentRef
 		cp := pRefData.cpRef
 		hostnames := pRefData.hostnames
+		var namingParentRef *gwtypes.ParentReference
+		if len(supportedParentRefs) > 1 {
+			namingParentRef = &pRef
+		}
 
 		log.Debug(logger, "Processing parent reference",
 			"parentRef", pRef,
@@ -329,7 +267,7 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 			log.Debug(logger, "Successfully translated KongService resource", "service", serviceName)
 
 			// Build the KongRoute resource.
-			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
+			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, ruleIndex, &pRef, cp, namingParentRef, serviceName, hostnames)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongRoute resource, skipping rule",
 					"service", serviceName,
@@ -374,6 +312,8 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 
 		}
 	}
+
+	c.outputStore = deduplicateOutputStore(c.outputStore)
 
 	// Check if any translation errors occurred
 	if len(translationErrors) > 0 {

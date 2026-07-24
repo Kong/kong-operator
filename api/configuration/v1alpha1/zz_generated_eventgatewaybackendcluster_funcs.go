@@ -3,11 +3,12 @@
 package v1alpha1
 
 import (
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *EventGatewayBackendCluster) GetKonnectLabels() map[string]string {
 	if obj.Spec.APISpec.Labels == nil {
@@ -52,9 +53,20 @@ func (obj *EventGatewayBackendCluster) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayBackendCluster's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayBackendCluster) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the EventGatewayBackendCluster Kind name.
 func (obj EventGatewayBackendCluster) GetTypeName() string {
 	return "EventGatewayBackendCluster"
+}
+
+// GetItems returns the list of EventGatewayBackendCluster items.
+func (obj EventGatewayBackendClusterList) GetItems() []EventGatewayBackendCluster {
+	return obj.Items
 }
 
 // HasParent returns true if the EventGatewayBackendCluster has a parent entity.
@@ -101,6 +113,11 @@ func (obj *EventGatewayBackendCluster) GetEventGatewayRef() commonv1alpha1.Objec
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayBackendCluster) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayBackendCluster) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.GatewayRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

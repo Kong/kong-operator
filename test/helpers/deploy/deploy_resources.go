@@ -30,6 +30,9 @@ const (
 	// KonnectTestIDLabel is the label key added in the Konnect entity used to identify them created by the test suite.
 	// Since the label cannot start with `kong`, we use another key.
 	KonnectTestIDLabel = "operator-test-id"
+	// KonnectCreatedInTestsLabel is the label that is set on Konnect resources
+	// created by tests.
+	KonnectCreatedInTestsLabel = "created_in_tests"
 )
 
 func randomSuffix() string {
@@ -444,6 +447,83 @@ func Portal(
 	return &obj
 }
 
+// KonnectAIGateway deploys a KonnectAIGateway (controlplane) resource and returns it.
+func KonnectAIGateway(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectAIGateway {
+	t.Helper()
+	name := "ai-gw-cp-" + randomSuffix()
+	obj := konnectv1alpha1.KonnectAIGateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.KonnectAIGatewaySpec{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: apiAuth.Name,
+				},
+			},
+			APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
+				Name:        konnectv1alpha1.AIGatewayEntityIdentifier(name),
+				DisplayName: "AI Gateway " + name,
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
+// AIGatewayAgent deploys an AIGatewayAgent resource and returns it.
+func AIGatewayAgent(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	gateway *konnectv1alpha1.KonnectAIGateway,
+	opts ...ObjOption,
+) *konnectv1alpha1.AIGatewayAgent {
+	t.Helper()
+	name := "ai-agent-" + randomSuffix()
+	obj := konnectv1alpha1.AIGatewayAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.AIGatewayAgentSpec{
+			AIGatewayRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: gateway.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
+				Name:        konnectv1alpha1.AIGatewayEntityIdentifier(name),
+				DisplayName: "AI Agent " + name,
+				Type:        "http",
+				Config: konnectv1alpha1.AIGatewayAgentConfig{
+					URL: "https://upstream.example.com",
+				},
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
 // KonnectEventGateway deploys a KonnectEventGateway resource and returns it.
 func KonnectEventGateway(
 	t *testing.T,
@@ -726,9 +806,9 @@ func KongRoute(
 		Spec: configurationv1alpha1.KongRouteSpec{
 			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 				Name: new(name),
-				Protocols: []sdkkonnectcomp.RouteJSONProtocols{
-					sdkkonnectcomp.RouteJSONProtocolsHTTP,
-					sdkkonnectcomp.RouteJSONProtocolsHTTPS,
+				Protocols: []sdkkonnectcomp.Protocols{
+					sdkkonnectcomp.ProtocolsHTTP,
+					sdkkonnectcomp.ProtocolsHTTPS,
 				},
 				Methods: []string{"GET"},
 			},
@@ -1614,6 +1694,7 @@ func Namespace(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
+	opts ...ObjOption,
 ) *corev1.Namespace {
 	t.Helper()
 

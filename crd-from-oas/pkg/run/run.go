@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"go/format"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -141,6 +142,7 @@ func (r *Runner) Run(
 			FieldConfig:              agvConfig.FieldConfig(pathToEntityName),
 			OpsConfig:                agvConfig.OpsConfig(pathToEntityName),
 			CommonTypes:              agvConfig.CommonTypes,
+			SchemaFieldOmissions:     agvConfig.SchemaFieldOmissionsConfig(),
 			SecretReferences:         agvConfig.SecretReferencesConfig(pathToEntityName),
 			ReconcilerConfig:         agvConfig.ReconcilerConfigs(pathToEntityName),
 			APIGroupPackagePath:      apiGroupPackagePath,
@@ -149,6 +151,8 @@ func (r *Runner) Run(
 			ManualGetForUIDEntities:  manualGetForUIDEntities,
 			Categories:               agvConfig.Categories,
 			References:               agvConfig.ReferencesConfig(pathToEntityName),
+			Associations:             agvConfig.AssociationsConfig(pathToEntityName),
+			SourceConfig:             agvConfig.SourceConfigs(pathToEntityName),
 		})
 
 		files, err := gen.Generate(parsed)
@@ -162,7 +166,8 @@ func (r *Runner) Run(
 			return fmt.Errorf("failed to create output directory %q: %w", dir, err)
 		}
 
-		if err := cleanupLegacyGeneratedFiles(r.projectRoot, dir, parsed); err != nil {
+		references := agvConfig.ReferencesConfig(pathToEntityName)
+		if err := cleanupLegacyGeneratedFiles(r.projectRoot, dir, parsed, references); err != nil {
 			return fmt.Errorf("failed to remove obsolete generated files in %q: %w", dir, err)
 		}
 		if err := cleanupRenamedGeneratedFiles(r.projectRoot, dir, renamedGeneratedEntities); err != nil {
@@ -258,7 +263,7 @@ func (r *Runner) Run(
 			} else {
 				filePath = filepath.Join(dir, file.Name)
 			}
-			if err := os.WriteFile(filePath, []byte(file.Content), 0o600); err != nil {
+			if err := writeGeneratedFile(filePath, file.Content); err != nil {
 				return fmt.Errorf("failed to write file %q: %w", filePath, err)
 			}
 			logger.Info("generated file", "path", filePath)
@@ -444,11 +449,26 @@ func emitDispatcherFile(
 		return fmt.Errorf("failed to create output directory %q: %w", targetDir, err)
 	}
 	filePath := filepath.Join(targetDir, file.Name)
-	if err := os.WriteFile(filePath, []byte(file.Content), 0o600); err != nil {
+	if err := writeGeneratedFile(filePath, file.Content); err != nil {
 		return fmt.Errorf("failed to write file %q: %w", filePath, err)
 	}
 	logger.Info("generated file", "path", filePath)
 	return nil
+}
+
+// writeGeneratedFile writes generated content to disk, running gofmt on Go
+// source so every generated .go file is consistently formatted regardless of
+// which generator produced it.
+func writeGeneratedFile(filePath, content string) error {
+	data := []byte(content)
+	if strings.HasSuffix(filePath, ".go") {
+		formatted, err := format.Source(data)
+		if err != nil {
+			return fmt.Errorf("failed to format generated file %q: %w", filePath, err)
+		}
+		data = formatted
+	}
+	return os.WriteFile(filePath, data, 0o600)
 }
 
 // handWrittenOpsFileNames returns candidate hand-written ops file names for an
@@ -495,7 +515,12 @@ func generatedOpsTestFileName(entity string) string {
 	return "zz_generated_ops_" + generator.EntityFilePrefix(entity) + "_test.go"
 }
 
-func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedSpec) error {
+func cleanupLegacyGeneratedFiles(
+	projectRoot string,
+	dir string,
+	parsed *parser.ParsedSpec,
+	references map[string][]config.ReferenceConfig,
+) error {
 	for entityName := range parsed.RequestBodies {
 		entity := parser.GetEntityNameFromType(entityName)
 
@@ -535,6 +560,13 @@ func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedS
 				}
 			}
 		}
+
+		if len(references[entity]) > 0 {
+			prefix := generator.EntityFilePrefix(entity)
+			if err := removeFileIfExists(filepath.Join(dir, "zz_generated_"+prefix+"_sdkops_test.go")); err != nil {
+				return err
+			}
+		}
 	}
 
 	sharedReconcilerFuncsPath := filepath.Join(dir, "zz_generated_reconciler_funcs.go")
@@ -543,6 +575,10 @@ func cleanupLegacyGeneratedFiles(projectRoot, dir string, parsed *parser.ParsedS
 	}
 	reconcilerConditionsPath := filepath.Join(dir, "zz_generated_reconciler_conditions.go")
 	if err := removeFileIfExists(reconcilerConditionsPath); err != nil {
+		return err
+	}
+	referencesPath := filepath.Join(dir, "zz_generated_references.go")
+	if err := removeFileIfExists(referencesPath); err != nil {
 		return err
 	}
 

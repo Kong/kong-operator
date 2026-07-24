@@ -2,6 +2,11 @@
 
 package v1alpha1
 
+// PersistsKonnectID reports whether AIGatewayDataPlaneCertificate persists a Konnect ID in status.
+func (*AIGatewayDataPlaneCertificate) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether EventGatewayBackendCluster persists a Konnect ID in status.
 func (*EventGatewayBackendCluster) PersistsKonnectID() bool {
 	return true
@@ -22,6 +27,11 @@ func (*EventGatewayListenerPolicy) PersistsKonnectID() bool {
 	return true
 }
 
+// PersistsKonnectID reports whether EventGatewaySchemaRegistry persists a Konnect ID in status.
+func (*EventGatewaySchemaRegistry) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether EventGatewayVirtualCluster persists a Konnect ID in status.
 func (*EventGatewayVirtualCluster) PersistsKonnectID() bool {
 	return true
@@ -29,6 +39,11 @@ func (*EventGatewayVirtualCluster) PersistsKonnectID() bool {
 
 // PersistsKonnectID reports whether EventGatewayVirtualClusterConsumePolicy persists a Konnect ID in status.
 func (*EventGatewayVirtualClusterConsumePolicy) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether EventGatewayVirtualClusterPolicy persists a Konnect ID in status.
+func (*EventGatewayVirtualClusterPolicy) PersistsKonnectID() bool {
 	return true
 }
 

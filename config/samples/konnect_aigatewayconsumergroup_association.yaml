@@ -1,0 +1,60 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.com
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: AIGatewayConsumerGroup
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: sample-ai-gw-consumer-group-1
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: sample-dev-users-1
+    displayName: Dev Users Group
+    labels:
+      tier: development
+---
+kind: AIGatewayConsumer
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: sample-ai-gw-consumer-1
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: sample-dev-consumer-1
+    displayName: Dev Team Consumer
+    type: api-key
+    labels:
+      team: platform-dev
+  # Reference consumer groups by metadata.name (resolved to apiSpec.name at runtime).
+  consumerGroups:
+  - name: sample-ai-gw-consumer-group-1

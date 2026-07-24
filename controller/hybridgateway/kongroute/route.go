@@ -3,6 +3,8 @@ package kongroute
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
@@ -12,11 +14,13 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
+	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
@@ -46,8 +50,10 @@ func RoutesForRule[
 	cl client.Client,
 	route TPtr,
 	rule R,
+	ruleIndex int,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
 	serviceName string,
 	hostnames []string,
 ) (kongRoutes []*configurationv1alpha1.KongRoute, err error) {
@@ -57,13 +63,13 @@ func RoutesForRule[
 		if !ok {
 			return nil, fmt.Errorf("failed to build KongRoute: unmatched route type and rule type: %T and %T", route, rule)
 		}
-		return RoutesForHTTPRouteRule(ctx, logger, cl, r, httpRule, pRef, cp, serviceName, hostnames)
+		return RoutesForHTTPRouteRule(ctx, logger, cl, r, httpRule, ruleIndex, pRef, cp, namingParentRef, serviceName, hostnames)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
 			return nil, fmt.Errorf("failed to build KongRoute: unmatched route type and rule type: %T and %T", route, rule)
 		}
-		return routesForTLSRouteRule(ctx, logger, cl, r, tlsRule, pRef, cp, serviceName, hostnames)
+		return routesForTLSRouteRule(ctx, logger, cl, r, tlsRule, pRef, cp, namingParentRef, serviceName, hostnames)
 	}
 	return nil, fmt.Errorf("failed to build KongRoute: unsupported route type: %T", route)
 }
@@ -85,8 +91,10 @@ func RoutesForHTTPRouteRule(
 	cl client.Client,
 	httpRoute *gwtypes.HTTPRoute,
 	rule gwtypes.HTTPRouteRule,
+	ruleIndex int,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
 	serviceName string,
 	hostnames []string,
 ) ([]*configurationv1alpha1.KongRoute, error) {
@@ -109,22 +117,22 @@ func RoutesForHTTPRouteRule(
 
 	// Check filters to determine if we need capture groups in paths.
 	setCaptureGroup := needsCaptureGroup(rule)
+	priorities := httpRouteMatchPriorities(httpRoute)
 
 	stripPath, err := metadata.ExtractStripPath(httpRoute.Annotations)
 	if err != nil {
-		log.Error(logger, err, fmt.Sprintf("Failed to extract strip path annotation, defaulting to %t", stripPath),
-			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
+		return nil, fmt.Errorf("%w: konghq.com/strip-path on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
 	}
 	preserveHost, err := metadata.ExtractPreserveHost(httpRoute.Annotations)
 	if err != nil {
-		log.Error(logger, err, fmt.Sprintf("Failed to extract preserve host annotation, defaulting to %t", preserveHost),
-			"httpRoute", fmt.Sprintf("%s/%s", httpRoute.GetNamespace(), httpRoute.GetName()),
-			"WARNING", "The malformed annotations will be treated as errors in future versions, please fix the annotation value to be a valid boolean")
+		return nil, fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
 	}
+	tags := pkgmetadata.ExtractTags(httpRoute)
 
 	for i, match := range rule.Matches {
-		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, match, i)
+		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, namingParentRef, match, i)
 		mLog := logger.WithValues("kongroute", routeName, "matchIndex", i)
 		log.Debug(mLog, "Creating KongRoute for HTTPRoute match")
 
@@ -138,8 +146,12 @@ func RoutesForHTTPRouteRule(
 			WithHosts(hostnames).
 			WithStripPath(stripPath).
 			WithPreserveHost(preserveHost).
+			WithSpecTags(tags).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
+		if priority := priorityForHeaderOnlyHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
+			routeBuilder.WithRegexPriority(priority).WithHeaderOnlyRegexPath()
+		}
 
 		newRoute, buildErr := routeBuilder.Build()
 		if buildErr != nil {
@@ -158,6 +170,165 @@ func RoutesForHTTPRouteRule(
 	}
 
 	return kongRoutes, nil
+}
+
+type httpRouteMatchPriorityKey struct {
+	ruleIndex  int
+	matchIndex int
+}
+
+type httpRoutePriorityClass struct {
+	pathType       gatewayv1.PathMatchType
+	pathLength     int
+	hasMethodMatch bool
+	headerCount    int
+}
+
+func httpRouteMatchPriorities(httpRoute *gwtypes.HTTPRoute) map[httpRouteMatchPriorityKey]int64 {
+	classes := make([]httpRoutePriorityClass, 0)
+	classSet := make(map[httpRoutePriorityClass]struct{})
+	matchCountByClass := make(map[httpRoutePriorityClass]int)
+	for _, rule := range httpRoute.Spec.Rules {
+		for _, match := range rule.Matches {
+			class := calculateHTTPRoutePriorityClass(match)
+			if _, ok := classSet[class]; !ok {
+				classSet[class] = struct{}{}
+				classes = append(classes, class)
+			}
+			matchCountByClass[class]++
+		}
+	}
+
+	slices.SortFunc(classes, compareHTTPRoutePriorityClass)
+	rankByClass := make(map[httpRoutePriorityClass]int64, len(classes))
+	for rank, class := range classes {
+		rankByClass[class] = int64(rank)
+	}
+
+	// priorityClassSize bounds the number of matches that can share a single
+	// specificity class without their offsets overflowing into the adjacent
+	// class' range. Gateway API caps the matches per HTTPRoute well below this,
+	// so the assumption holds in practice.
+	const priorityClassSize = int64(1 << 10)
+	seenByClass := make(map[httpRoutePriorityClass]int)
+	priorities := make(map[httpRouteMatchPriorityKey]int64)
+	for ruleIndex, rule := range httpRoute.Spec.Rules {
+		for matchIndex, match := range rule.Matches {
+			class := calculateHTTPRoutePriorityClass(match)
+			offset := matchCountByClass[class] - 1 - seenByClass[class]
+			seenByClass[class]++
+			priorities[httpRouteMatchPriorityKey{
+				ruleIndex:  ruleIndex,
+				matchIndex: matchIndex,
+			}] = rankByClass[class]*priorityClassSize + int64(offset)
+		}
+	}
+	return priorities
+}
+
+func priorityForHeaderOnlyHTTPRouteMatch(
+	match gatewayv1.HTTPRouteMatch,
+	priorities map[httpRouteMatchPriorityKey]int64,
+	ruleIndex, matchIndex int,
+) *int64 {
+	if !isHeaderOnlyDefaultPathHTTPRouteMatch(match) {
+		return nil
+	}
+	priority := priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex)
+	return &priority
+}
+
+func isHeaderOnlyDefaultPathHTTPRouteMatch(match gatewayv1.HTTPRouteMatch) bool {
+	if len(match.Headers) == 0 {
+		return false
+	}
+	if match.Path == nil {
+		return true
+	}
+
+	pathType := gatewayv1.PathMatchPathPrefix
+	if match.Path.Type != nil {
+		pathType = *match.Path.Type
+	}
+	return pathType == gatewayv1.PathMatchPathPrefix && match.Path.Value != nil && *match.Path.Value == "/"
+}
+
+func priorityForHTTPRouteMatch(priorities map[httpRouteMatchPriorityKey]int64, ruleIndex, matchIndex int) int64 {
+	return priorities[httpRouteMatchPriorityKey{
+		ruleIndex:  ruleIndex,
+		matchIndex: matchIndex,
+	}]
+}
+
+func calculateHTTPRoutePriorityClass(match gatewayv1.HTTPRouteMatch) httpRoutePriorityClass {
+	class := httpRoutePriorityClass{}
+	if match.Path != nil {
+		class.pathType = gatewayv1.PathMatchPathPrefix
+		if match.Path.Type != nil {
+			class.pathType = *match.Path.Type
+		}
+		if match.Path.Value != nil {
+			class.pathLength = len(*match.Path.Value)
+		}
+	}
+	class.hasMethodMatch = match.Method != nil
+	class.headerCount = countEffectiveHTTPHeaderMatches(match.Headers)
+	return class
+}
+
+func compareHTTPRoutePriorityClass(a, b httpRoutePriorityClass) int {
+	if c := comparePathTypePriority(a.pathType, b.pathType); c != 0 {
+		return c
+	}
+	if c := a.pathLength - b.pathLength; c != 0 {
+		return c
+	}
+	if c := compareBool(a.hasMethodMatch, b.hasMethodMatch); c != 0 {
+		return c
+	}
+	if c := a.headerCount - b.headerCount; c != 0 {
+		return c
+	}
+	return 0
+}
+
+func comparePathTypePriority(a, b gatewayv1.PathMatchType) int {
+	return pathTypePriority(a) - pathTypePriority(b)
+}
+
+func pathTypePriority(t gatewayv1.PathMatchType) int {
+	switch t {
+	case gatewayv1.PathMatchRegularExpression:
+		return 3
+	case gatewayv1.PathMatchExact:
+		return 2
+	case gatewayv1.PathMatchPathPrefix:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func compareBool(a, b bool) int {
+	if a == b {
+		return 0
+	}
+	if a {
+		return 1
+	}
+	return -1
+}
+
+func countEffectiveHTTPHeaderMatches(headers []gatewayv1.HTTPHeaderMatch) int {
+	seenHeaders := make(map[string]struct{}, len(headers))
+	for _, header := range headers {
+		name := strings.ToLower(string(header.Name))
+		if _, ok := seenHeaders[name]; ok {
+			continue
+		}
+		seenHeaders[name] = struct{}{}
+	}
+	return len(seenHeaders)
 }
 
 // needsCaptureGroup checks if the given HTTPRoute rule requires a capture group
@@ -194,22 +365,25 @@ func routesForTLSRouteRule(
 	rule gwtypes.TLSRouteRule,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
 	serviceName string,
 	hostnames []string,
 ) ([]*configurationv1alpha1.KongRoute, error) {
-	routeName := namegen.NewKongRouteNameForTLSRouteRule(tlsRoute, cp, rule)
+	routeName := namegen.NewKongRouteNameForTLSRouteRule(tlsRoute, cp, namingParentRef, rule)
 	logger = logger.WithValues("kongroute", routeName)
 
-	var protocol sdkkonnectcomp.RouteJSONProtocols
+	var protocol sdkkonnectcomp.Protocols
 	tlsPassthrough, err := isTLSRoutePassthrough(ctx, cl, tlsRoute, pRef)
 	if err != nil {
 		return nil, err
 	}
 	if tlsPassthrough {
-		protocol = sdkkonnectcomp.RouteJSONProtocolsTLSPassthrough
+		protocol = sdkkonnectcomp.ProtocolsTLSPassthrough
 	} else {
-		protocol = sdkkonnectcomp.RouteJSONProtocolsTLS
+		protocol = sdkkonnectcomp.ProtocolsTLS
 	}
+
+	tags := pkgmetadata.ExtractTags(tlsRoute)
 
 	routeBuilder := builder.NewKongRoute().WithName(routeName).
 		WithNamespace(metadata.NamespaceFromParentRef(tlsRoute, pRef)).
@@ -218,7 +392,8 @@ func routesForTLSRouteRule(
 		WithSpecName(routeName).
 		WithKongService(serviceName).
 		WithProtocols(protocol).
-		WithSNIs(hostnames)
+		WithSNIs(hostnames).
+		WithSpecTags(tags)
 
 	kongRoute, err := routeBuilder.Build()
 	if err != nil {
@@ -241,7 +416,7 @@ func routesForTLSRouteRule(
 // Returns nil when no matching listeners are found (relies on Kong Gateway defaults).
 func protocolsFromGatewayListener(
 	ctx context.Context, cl client.Client, httpRoute *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference,
-) ([]sdkkonnectcomp.RouteJSONProtocols, error) {
+) ([]sdkkonnectcomp.Protocols, error) {
 	ns := httpRoute.Namespace
 	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
 		ns = string(*parentRef.Namespace)
@@ -258,9 +433,9 @@ func protocolsFromGatewayListener(
 		return nil, nil
 	}
 
-	protocols := make([]sdkkonnectcomp.RouteJSONProtocols, 0, len(protos))
+	protocols := make([]sdkkonnectcomp.Protocols, 0, len(protos))
 	for _, p := range protos {
-		protocols = append(protocols, sdkkonnectcomp.RouteJSONProtocols(p))
+		protocols = append(protocols, sdkkonnectcomp.Protocols(p))
 	}
 	return protocols, nil
 }

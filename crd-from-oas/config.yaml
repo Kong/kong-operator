@@ -11,13 +11,42 @@ apiGroupVersions:
           path: github.com/kong/kong-operator/v2/api/common/v1alpha1
           alias: commonv1alpha1
     types:
+      # AI Gateway APIs
+      - path: /v1/ai-gateways/{gatewayId}/data-plane-certificates
+        name: AIGatewayDataPlaneCertificate
+        secretReferences:
+          - path: spec.apiSpec.cert
+            type: Secret
+        ops:
+          sdk:
+          # AIGatewayDataPlaneClientCertificate is named struct in SDK
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayDataPlaneCertificatesSDK
+            fieldName: AIGatewayDataPlaneCertificates
+          requireClient: true
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Cert
+                responseField: Cert
+              - objectField: Spec.APISpec.Title
+                responseField: Title
+              - objectField: Spec.APISpec.Description
+                responseField: Description
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayDataPlaneCertificateRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
       # Event Gateway APIs
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: EventGatewayDataPlaneCertificate
         secretReferences:
           - path: spec.apiSpec.certificate
             type: Secret
-            key: tls.crt
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK
@@ -35,6 +64,24 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateEventGatewayDataPlaneCertificateRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
+      - path: /v1/event-gateways/{gatewayId}/schema-registries
+        name: EventGatewaySchemaRegistry
+        secretReferences:
+          - path: spec.apiSpec.confluent.config.authentication.basic.password
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewaySchemaRegistriesSDK
+            fieldName: EventGatewaySchemaRegistries
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.SchemaRegistryCreate
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewaySchemaRegistryRequest
           delete: {}
         reconciler:
           parentEntityGVK:
@@ -60,14 +107,16 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.tlsServer.config.certificates[].certificate
             type: Secret
-            key: tls.crt
           - path: spec.apiSpec.tlsServer.config.certificates[].key
             type: Secret
-            key: tls.key
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
             fieldName: EventGatewayListenerPolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle) once create/update
+          # label injection has been reviewed for this entity.
+          skipRootUnionMetadataFields: true
           getForUID:
             listItemsSource: slice
             rootUnion:
@@ -126,10 +175,8 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.tls.clientIdentity.certificate
             type: Secret
-            key: tls.crt
           - path: spec.apiSpec.tls.clientIdentity.key
             type: Secret
-            key: tls.key
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
         ops:
@@ -152,10 +199,20 @@ apiGroupVersions:
             replacesAPISpecField: destination
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policies
         name: EventGatewayVirtualClusterProducePolicy
+        schemaFieldOmissions:
+          EventGatewayModifyHeadersPolicyCreate:
+            - parentPolicyID
+          EventGatewayParsedRecordEncryptFieldsPolicyCreate:
+            - parentPolicyID
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
             fieldName: EventGatewayVirtualClusterProducePolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterProducePolicyRequest
           update:
@@ -171,10 +228,29 @@ apiGroupVersions:
               group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
         name: EventGatewayVirtualClusterConsumePolicy
+        references:
+          - path: spec.apiSpec.schemaValidation.config.json.schemaRegistry
+            kinds: [EventGatewaySchemaRegistry]
+            resolvesTo: name
+          - path: spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry
+            kinds: [EventGatewaySchemaRegistry]
+            resolvesTo: name
+        schemaFieldOmissions:
+          EventGatewayModifyHeadersPolicyCreate:
+            - parentPolicyID
+          EventGatewayParsedRecordDecryptFieldsPolicyCreate:
+            - parentPolicyID
+          EventGatewaySkipRecordPolicyCreate:
+            - parentPolicyID
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK
             fieldName: EventGatewayVirtualClusterConsumePolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterConsumePolicyRequest
           update:
@@ -183,6 +259,30 @@ apiGroupVersions:
         reconciler:
           parentEntityGVK:
             kind:  EventGatewayVirtualCluster
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policies
+        name: EventGatewayVirtualClusterPolicy
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterPoliciesSDK
+            fieldName: EventGatewayVirtualClusterPolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterClusterLevelPolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterClusterLevelPolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: EventGatewayVirtualCluster
           ancestorEntityGVKs:
             - kind: KonnectEventGateway
               group: konnect.konghq.com
@@ -202,6 +302,323 @@ apiGroupVersions:
           path: github.com/kong/kong-operator/v2/api/common/v1alpha1
           alias: commonv1alpha1
     types:
+      # AI Gateway APIs
+      - path: /v1/ai-gateways
+        name: KonnectAIGateway
+        source:
+          supportsMirror: true
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewaysSDK
+            fieldName: AIGateways
+          listCallStylePositional: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayRequest
+          delete: {}
+          responseStatusFields:
+            - statusField: Endpoints
+              statusJSON: endpoints
+              fields:
+                - name: Configuration
+                  json: configuration
+                  respPath: Endpoints.Configuration
+                - name: Telemetry
+                  json: telemetry
+                  respPath: Endpoints.Telemetry
+        reconciler: {}
+
+      - path: /v1/ai-gateways/{gatewayId}/identity
+        name: AIGatewayIdentityProvider
+        secretReferences:
+          - path: spec.apiSpec.openid-connect.config.clientSecret
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayIdentityProvidersSDK
+            fieldName: AIGatewayIdentityProviders
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayIdentityProviderRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayIdentityProviderRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
+      - path: /v1/ai-gateways/{gatewayId}/models
+        name: AIGatewayModel
+        references:
+          - path: spec.apiSpec.api.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.model.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.api.access.acls.allow.allow
+            kinds: [AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
+          - path: spec.apiSpec.api.access.acls.deny.deny
+            kinds: [AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
+          - path: spec.apiSpec.api.targets.provider
+            kinds: [AIGatewayModelProvider]
+            refTypeName: AIGatewayModelProviderRef
+            resolvesTo: name
+          - path: spec.apiSpec.model.targets.provider
+            kinds: [AIGatewayModelProvider]
+            refTypeName: AIGatewayModelProviderRef
+            resolvesTo: name
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayModelsSDK
+            fieldName: AIGatewayModels
+          # List responses are root unions whose wrapper does not expose top-level
+          # GetID/GetLabels accessors, so conflict lookup stays hand-written for now.
+          skipGetForUID: true
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle) once create/update
+          # label injection has been reviewed for this entity.
+          skipRootUnionMetadataFields: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayModelRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
+      - path: /v1/ai-gateways/{gatewayId}/model-providers
+        name: AIGatewayModelProvider
+        secretReferences:
+          # Basic-auth token: matches the 15 providers whose auth is a direct
+          # (non-union) basic config; skipped for the 4 cloud providers below,
+          # whose auth is itself a discriminated union.
+          - path: spec.apiSpec.*.config.auth.headers[].value
+            type: Secret
+          - path: spec.apiSpec.*.config.auth.params[].value
+            type: Secret
+          # Cloud providers' basic-auth arm: matches when their union-typed
+          # auth field is configured with the "basic" variant.
+          - path: spec.apiSpec.*.config.auth.basic.headers[].value
+            type: Secret
+          - path: spec.apiSpec.*.config.auth.basic.params[].value
+            type: Secret
+          # Cloud-native credentials, one path per provider since each names
+          # its secret field differently.
+          - path: spec.apiSpec.bedrock.config.auth.aws.secretAccessKey
+            type: Secret
+          - path: spec.apiSpec.azure.config.auth.azure.clientSecret
+            type: Secret
+          - path: spec.apiSpec.gemini.config.auth.gcp.serviceAccountJSON
+            type: Secret
+          - path: spec.apiSpec.vertex.config.auth.gcp.serviceAccountJSON
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayModelProvidersSDK
+            fieldName: AIGatewayModelProviders
+          # TODO: this entity has 19 union variants; root-union metadata
+          # detection cannot resolve a single injection field today (the
+          # generator requires exactly one union member). Needs generator
+          # support for multi-variant label injection before this can be
+          # enabled, and a getForUID match strategy.
+          skipRootUnionMetadataFields: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelProviderRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayModelProviderRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
+      - path: /v1/ai-gateways/{gatewayId}/agents
+        name: AIGatewayAgent
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.access.acls.allow.allow
+            kinds: [AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
+          - path: spec.apiSpec.access.acls.deny.deny
+            kinds: [AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayAgentsSDK
+            fieldName: AIGatewayAgents
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
+      - path: /v1/ai-gateways/{gatewayId}/consumers
+        name: AIGatewayConsumer
+        # consumerGroups is a top-level spec field (sibling of apiSpec) listing the
+        # AIGatewayConsumerGroups this consumer belongs to. Membership is enforced
+        # in Konnect by the hand-written enforceAIGatewayConsumerConsumerGroups
+        # helper via UpdateAiGatewayConsumerGroupsForConsumer.
+        associations:
+          - name: consumerGroups
+            kinds: [AIGatewayConsumerGroup]
+            sdkMethod: UpdateAiGatewayConsumerGroupsForConsumer
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumersSDK
+            fieldName: AIGatewayConsumers
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: GetName()
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayConsumerRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayConsumerRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
+      - path: /v1/ai-gateways/{gatewayId}/consumer-groups
+        name: AIGatewayConsumerGroup
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumerGroupsSDK
+            fieldName: AIGatewayConsumerGroups
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: GetName()
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayConsumerGroupRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayConsumerGroupRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
+      - path: /v1/ai-gateways/{gatewayId}/mcp-servers
+        name: AIGatewayMCPServer
+        references:
+          - path: spec.apiSpec.conversion-listener.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.conversion-only.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.listener.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.passthrough-listener.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.upstream-server.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayMCPServersSDK
+            fieldName: AIGatewayMCPServers
+          # List responses are root unions whose wrapper does not expose top-level
+          # GetID/GetLabels accessors, so conflict lookup stays hand-written for now.
+          skipGetForUID: true
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle) once create/update
+          # label injection has been reviewed for this entity.
+          skipRootUnionMetadataFields: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayMCPServerRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayMCPServerRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
+      # AIGatewayConsumerCredential is a child of AIGatewayConsumer. Credentials
+      # only obtain a Konnect ID once associated with a consumer, so they are
+      # modelled as a separate resource that references the consumer (analogous to
+      # KongPluginBinding), matching the OpenAPI resource hierarchy.
+      # Credentials support create/delete only (no update). The api_key value is
+      # write-only and sourced from a Secret; it is never echoed back in status.
+      - path: /v1/ai-gateways/{gatewayId}/consumers/{consumerId}/credentials
+        name: AIGatewayConsumerCredential
+        secretReferences:
+          - path: spec.apiSpec.apiKey
+            type: Secret
+        ops:
+          sdk:
+          # AIGatewayConsumerCredential shares the AIGatewayConsumersSDK interface
+          # with AIGatewayConsumer; the SDK exposes credential ops on it directly.
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumersSDK
+            fieldName: AIGatewayConsumers
+          requireClient: true
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: GetName()
+          create:
+          # Two-level-deep nested resource: the SDK create method takes the
+          # operations request wrapper (path params + body), not the components body.
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateAiGatewayConsumerCredentialRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: AIGatewayConsumer
+            group: konnect.konghq.com
+          ancestorEntityGVKs:
+            - kind: KonnectAIGateway
+              group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayConsumerRef
+
       # Event Gateway APIs
       - path: /v1/event-gateways
         name: KonnectEventGateway
@@ -320,7 +737,7 @@ apiGroupVersions:
             # Designates the field on the object to compare when using a fallback
             # because this type in Konnect doesn't support tags or labels.
             matchFields:
-              - objectField: Spec.APISpec.AllowedIps 
+              - objectField: Spec.APISpec.AllowedIps
                 responseField: AllowedIps
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalsIPAllowListSDK
@@ -371,3 +788,23 @@ apiGroupVersions:
           delete:
             asPUT: true
         reconciler: {}
+      - path: /v1/ai-gateways/{gatewayId}/policies
+        name: AIGatewayPolicy
+        secretReferences:
+          - path: spec.apiSpec.config
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayPoliciesSDK
+            fieldName: AIGatewayPolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayPolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayPolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef

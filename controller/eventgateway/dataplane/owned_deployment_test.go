@@ -354,6 +354,55 @@ func Test_buildKEGEnvVars(t *testing.T) {
 }
 
 // -----------------------------------------------------------------
+// generateBaseDeployment
+// -----------------------------------------------------------------
+
+func Test_generateBaseDeployment_hardening(t *testing.T) {
+	egdp := &eventgatewayv1alpha1.KegDataPlane{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-keg", Namespace: "test-ns"},
+	}
+	keg := &konnectv1alpha1.KonnectEventGateway{}
+	keg.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
+		ServerURL: "https://us.api.konghq.com",
+		ID:        "gw-id",
+	}
+
+	d, err := generateBaseDeployment(egdp, keg, "kong/keg:test", "cert-secret")
+	require.NoError(t, err)
+	require.Len(t, d.Spec.Template.Spec.Containers, 1)
+	container := d.Spec.Template.Spec.Containers[0]
+
+	require.Equal(t, &corev1.SecurityContext{
+		AllowPrivilegeEscalation: new(false),
+		ReadOnlyRootFilesystem:   new(true),
+		RunAsNonRoot:             new(true),
+		RunAsUser:                new(int64(65532)),
+		RunAsGroup:               new(int64(65532)),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+			Add:  []corev1.Capability{"NET_BIND_SERVICE"},
+		},
+	}, container.SecurityContext)
+
+	// KEG containers must not get the var-kong volume/mount or KONG_PREFIX env var,
+	// and must not have a duplicated "tmp" mount (the container previously hard-coded
+	// its own "tmp" VolumeMount in addition to the one added by the hardening helper).
+	assert.Equal(t, []corev1.VolumeMount{
+		{Name: KonnectCertVolumeName, MountPath: KonnectCertMountPath, ReadOnly: true},
+		{Name: "tmp", MountPath: "/tmp"},
+	}, container.VolumeMounts)
+
+	_, hasKongPrefix := findEnv(container.Env, "KONG_PREFIX")
+	assert.False(t, hasKongPrefix, "KEG container must not get KONG_PREFIX env var")
+
+	volumeNames := make([]string, 0, len(d.Spec.Template.Spec.Volumes))
+	for _, v := range d.Spec.Template.Spec.Volumes {
+		volumeNames = append(volumeNames, v.Name)
+	}
+	assert.ElementsMatch(t, []string{"tmp", KonnectCertVolumeName}, volumeNames)
+}
+
+// -----------------------------------------------------------------
 // buildDeployment
 // -----------------------------------------------------------------
 
@@ -546,10 +595,13 @@ func Test_ensureDeployment(t *testing.T) {
 	for _, tc2 := range tests {
 		t.Run(tc2.name, func(t *testing.T) {
 			recorder := events.NewFakeRecorder(10)
-			base := fake.NewClientBuilder().WithScheme(scheme).Build()
+			base := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithTypeConverters(tc).
+				Build()
 			r := &Reconciler{
 				Client:        tc2.buildClient(base),
-				typeConverter: tc,
+				TypeConverter: tc,
 				eventRecorder: recorder,
 			}
 

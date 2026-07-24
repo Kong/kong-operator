@@ -12,8 +12,8 @@ import (
 func TestPortalTeamAPISpec_ToPortalCreateTeamRequest(t *testing.T) {
 	spec := &PortalTeamAPISpec{
 		CanOwnApplications: "Enabled",
-		Description: "test-value",
-		Name: "test-value",
+		Description:        "test-value",
+		Name:               "test-value",
 	}
 	result, err := spec.ToPortalCreateTeamRequest()
 	require.NoError(t, err)
@@ -33,8 +33,8 @@ func TestPortalTeamAPISpec_ToPortalCreateTeamRequest(t *testing.T) {
 func TestPortalTeamAPISpec_ToPortalUpdateTeamRequest(t *testing.T) {
 	spec := &PortalTeamAPISpec{
 		CanOwnApplications: "Enabled",
-		Description: "test-value",
-		Name: "test-value",
+		Description:        "test-value",
+		Name:               "test-value",
 	}
 	result, err := spec.ToPortalUpdateTeamRequest()
 	require.NoError(t, err)

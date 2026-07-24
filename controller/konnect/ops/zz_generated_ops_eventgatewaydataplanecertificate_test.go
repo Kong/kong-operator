@@ -4,17 +4,17 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"testing"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func testGeneratedEventGatewayDataPlaneCertificateForSDKOps() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
@@ -33,7 +33,7 @@ func testGeneratedEventGatewayDataPlaneCertificateForSDKOps() *configurationv1al
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 				Certificate: configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")},
 				Description: "test-value",
-				Name: "test-value",
+				Name:        "test-value",
 			},
 		},
 	}
@@ -44,7 +44,7 @@ func TestCreateEventGatewayDataPlaneCertificate_UsesSDKOpsConversion(t *testing.
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayDataPlaneCertificateForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -74,7 +74,7 @@ func TestCreateEventGatewayDataPlaneCertificate_PropagatesSDKError(t *testing.T)
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayDataPlaneCertificateForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -100,7 +100,7 @@ func TestUpdateEventGatewayDataPlaneCertificate_UsesSDKOpsConversion(t *testing.
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayDataPlaneCertificateForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -112,7 +112,7 @@ func TestUpdateEventGatewayDataPlaneCertificate_UsesSDKOpsConversion(t *testing.
 		UpdateEventGatewayDataPlaneCertificate(
 			mock.Anything,
 			sdkkonnectops.UpdateEventGatewayDataPlaneCertificateRequest{
-				GatewayID: parentID,
+				GatewayID:     parentID,
 				CertificateID: obj.GetKonnectStatus().GetKonnectID(),
 				UpdateEventGatewayDataPlaneCertificateRequest: expectedRequest,
 			},
@@ -128,7 +128,7 @@ func TestUpdateEventGatewayDataPlaneCertificate_PropagatesSDKError(t *testing.T)
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayDataPlaneCertificateForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -141,7 +141,7 @@ func TestUpdateEventGatewayDataPlaneCertificate_PropagatesSDKError(t *testing.T)
 		UpdateEventGatewayDataPlaneCertificate(
 			mock.Anything,
 			sdkkonnectops.UpdateEventGatewayDataPlaneCertificateRequest{
-				GatewayID: parentID,
+				GatewayID:     parentID,
 				CertificateID: obj.GetKonnectStatus().GetKonnectID(),
 				UpdateEventGatewayDataPlaneCertificateRequest: expectedRequest,
 			},

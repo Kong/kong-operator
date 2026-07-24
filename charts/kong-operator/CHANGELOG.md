@@ -1,13 +1,36 @@
 # Changelog
 
-## Unreleased
+## 1.4.0-rc.1
 
 ### Changed
 
+- Bump default image to `2.3.0-rc.2`.
+- Bump Gateway API CRDs subcharts (`gwapi-standard-crds`, `gwapi-experimental-crds`)
+  to `1.6.1`.
+
+## 1.3.1
+
+### Changed
+
+- Bump default image to 2.2.1
+
+## 1.3.0
+
+### Changed
+
+- Bump default image to 2.2.0
 - Bootstrapping CA certificate (that is used for signing certificates for
   ControlPlane - DataPlane communication) can be done by cert-manager,
   see the options `global.certificateAuthority.options.certManager.enabled`.
   [#3655](https://github.com/Kong/kong-operator/pull/3655)
+
+### Fixes
+
+- Allow `fullnameOverride` to control the webhook cert-manager `Certificate`
+  and `Issuer` resource names.
+  When `fullnameOverride` is aleady being used, the webhook certificate resources
+  will be renamed which can cause intermittent webhook failures during upgrade.
+  [#4091](https://github.com/Kong/kong-operator/pull/4091)
 
 ## 1.2.0
 

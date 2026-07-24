@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -11,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
@@ -19,42 +21,74 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
 
-func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
-	tlsRouteTypeMeta := metav1.TypeMeta{Kind: "TLSRoute", APIVersion: corev1.SchemeGroupVersion.String()}
+func TestIngressRulesFromTLSRoutes(t *testing.T) {
+	tlsRouteTypeMeta := gatewayapi.TLSRouteTypeMeta
+	kongVersionNotSupportingWildcardSNI := semver.MustParse("3.4.3")
+	kongVersionSupportingWildcardSNI := semver.MustParse("3.7.0")
 
-	testCases := []struct {
-		name                 string
-		tcpRoutes            []*gatewayapi.TLSRoute
-		services             []*corev1.Service
-		expectedKongServices []kongstate.Service
-		expectedKongRoutes   map[string][]kongstate.Route
-		expectedFailures     []failures.ResourceFailure
-	}{
-		{
-			name: "tlsroute with single rule",
-			tcpRoutes: []*gatewayapi.TLSRoute{
+	mustCreateResourceFailure := func(message string, causingObjects ...client.Object) failures.ResourceFailure {
+		failure, err := failures.NewResourceFailure(message, causingObjects...)
+		require.NoError(t, err)
+		return failure
+	}
+
+	tlsRouteExactHostname := &gatewayapi.TLSRoute{
+		TypeMeta: tlsRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "tlsroute-1",
+		},
+		Spec: gatewayapi.TLSRouteSpec{
+			Hostnames: []gatewayapi.Hostname{
+				"foo.com",
+				"bar.com",
+			},
+			Rules: []gatewayapi.TLSRouteRule{
 				{
-					TypeMeta: tlsRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "tlsroute-1",
-					},
-					Spec: gatewayapi.TLSRouteSpec{
-						Hostnames: []gatewayapi.Hostname{
-							"foo.com",
-							"bar.com",
-						},
-						Rules: []gatewayapi.TLSRouteRule{
-							{
-								BackendRefs: []gatewayapi.BackendRef{
-									builder.NewBackendRef("service1").WithPort(80).Build(),
-									builder.NewBackendRef("service2").WithPort(443).Build(),
-								},
-							},
-						},
+					BackendRefs: []gatewayapi.BackendRef{
+						builder.NewBackendRef("service1").WithPort(80).Build(),
+						builder.NewBackendRef("service2").WithPort(443).Build(),
 					},
 				},
 			},
+		},
+	}
+
+	tlsRouteWildcardHostname := &gatewayapi.TLSRoute{
+		TypeMeta: tlsRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "tlsroute-1",
+		},
+		Spec: gatewayapi.TLSRouteSpec{
+			Hostnames: []gatewayapi.Hostname{
+				"*.foo.com",
+			},
+			Rules: []gatewayapi.TLSRouteRule{
+				{
+					BackendRefs: []gatewayapi.BackendRef{
+						builder.NewBackendRef("service1").WithPort(80).Build(),
+					},
+				},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name                    string
+		kongVersion             semver.Version
+		expressionRoutesEnabled bool
+		tlsRoutes               []*gatewayapi.TLSRoute
+		services                []*corev1.Service
+		expectedKongServices    []kongstate.Service
+		expectedKongRoutes      map[string][]kongstate.Route
+		expectedFailures        []failures.ResourceFailure
+	}{
+		{
+			name:                    "tlsroute with single rule and exact hostnames",
+			kongVersion:             kongVersionNotSupportingWildcardSNI,
+			expressionRoutesEnabled: true,
+			tlsRoutes:               []*gatewayapi.TLSRoute{tlsRouteExactHostname},
 			// After https://github.com/Kong/kubernetes-ingress-controller/pull/5392
 			// is merged the backendRef will be checked for existence in the store
 			// so we need to add them here.
@@ -100,39 +134,9 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 		},
 		{
-			name: "tlsroute with multiple rules",
-			tcpRoutes: []*gatewayapi.TLSRoute{
-				{
-					TypeMeta: tlsRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "tlsroute-1",
-					},
-					Spec: gatewayapi.TLSRouteSpec{
-						Hostnames: []gatewayapi.Hostname{
-							"foo.com",
-							"bar.com",
-						},
-						Rules: []gatewayapi.TLSRouteRule{
-							{
-								BackendRefs: []gatewayapi.BackendRef{
-									builder.NewBackendRef("service1").WithPort(80).Build(),
-									builder.NewBackendRef("service2").WithPort(443).Build(),
-								},
-							},
-							{
-								BackendRefs: []gatewayapi.BackendRef{
-									builder.NewBackendRef("service3").WithPort(8080).Build(),
-									builder.NewBackendRef("service4").WithPort(8443).Build(),
-								},
-							},
-						},
-					},
-				},
-			},
-			// After https://github.com/Kong/kubernetes-ingress-controller/pull/5392
-			// is merged the backendRef will be checked for existence in the store
-			// so we need to add them here.
+			name:        "tlsroute with wildcard hostname on Kong version not supporting it",
+			kongVersion: kongVersionNotSupportingWildcardSNI,
+			tlsRoutes:   []*gatewayapi.TLSRoute{tlsRouteWildcardHostname},
 			services: []*corev1.Service{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -140,22 +144,21 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 						Name:      "service1",
 					},
 				},
+			},
+			expectedFailures: []failures.ResourceFailure{
+				mustCreateResourceFailure("wildcard TLS SNIs are not supported in TLSRoute with Kong versions below 3.7.0", tlsRouteWildcardHostname),
+			},
+		},
+		{
+			name:                    "tlsroute with wildcard hostname on Kong version supporting it",
+			kongVersion:             kongVersionSupportingWildcardSNI,
+			expressionRoutesEnabled: true,
+			tlsRoutes:               []*gatewayapi.TLSRoute{tlsRouteWildcardHostname},
+			services: []*corev1.Service{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
-						Name:      "service2",
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service3",
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service4",
+						Name:      "service1",
 					},
 				},
 			},
@@ -168,16 +171,7 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
 							WithPortNumber(80).
-							MustBuild(), builder.NewKongstateServiceBackend("service2").WithPortNumber(443).MustBuild(),
-					},
-				},
-				{
-					Service: kong.Service{
-						Name: new("tlsroute.default.tlsroute-1.1"),
-					},
-					Backends: []kongstate.ServiceBackend{
-						builder.NewKongstateServiceBackend("service3").WithPortNumber(8080).MustBuild(),
-						builder.NewKongstateServiceBackend("service4").WithPortNumber(8443).MustBuild(),
+							MustBuild(),
 					},
 				},
 			},
@@ -186,18 +180,7 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						Route: kong.Route{
 							Name:         new("tlsroute.default.tlsroute-1.0.0"),
-							Expression:   new(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
-							PreserveHost: new(true),
-							Protocols:    kong.StringSlice("tls"),
-						},
-						ExpressionRoutes: true,
-					},
-				},
-				"tlsroute.default.tlsroute-1.1": {
-					{
-						Route: kong.Route{
-							Name:         new("tlsroute.default.tlsroute-1.1.0"),
-							Expression:   new(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
+							Expression:   new(`tls.sni =^ ".foo.com"`),
 							PreserveHost: new(true),
 							Protocols:    kong.StringSlice("tls"),
 						},
@@ -211,12 +194,13 @@ func TestIngressRulesFromTLSRoutesUsingExpressionRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
-				TLSRoutes: tc.tcpRoutes,
+				TLSRoutes: tc.tlsRoutes,
 				Services:  tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakestore)
-			translator.featureFlags.ExpressionRoutes = true
+			translator.kongVersion = tc.kongVersion
+			translator.featureFlags.ExpressionRoutes = tc.expressionRoutesEnabled
 
 			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
 			translator.failuresCollector = failureCollector

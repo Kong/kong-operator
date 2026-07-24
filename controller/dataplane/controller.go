@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	kcfgkonnect "github.com/kong/kong-operator/v2/api/konnect"
@@ -60,7 +61,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 
 	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
 		WithOptions(r.ControllerOptions).
-		Complete(r)
+		Complete(reconcile.AsReconciler[*operatorv1beta1.DataPlane](r.Client, r))
 }
 
 // -----------------------------------------------------------------------------
@@ -68,15 +69,12 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 // -----------------------------------------------------------------------------
 
 // Reconcile moves the current state of an object to the intended state.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.DataPlane) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "dataplane", r.LoggingMode)
 
 	log.Trace(logger, "reconciling DataPlane resource")
-	dpNn := req.NamespacedName
-	dataplane := new(operatorv1beta1.DataPlane)
-	if err := r.Get(ctx, dpNn, dataplane); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+
+	warnOperatorManagedEnvVars(ctx, logger, dataplane, r.Client)
 
 	if k8sutils.InitReady(dataplane) {
 		if patched, err := patchDataPlaneStatus(ctx, r.Client, logger, dataplane); err != nil {
@@ -226,7 +224,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w", dpNn, err)
+		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w", client.ObjectKeyFromObject(dataplane), err)
 	}
 	if res != op.Noop {
 		return ctrl.Result{}, nil
@@ -242,7 +240,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	res, _, err = ensurePodDisruptionBudgetForDataPlane(ctx, r.Client, logger, dataplane)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("could not ensure PodDisruptionBudget for DataPlane %s: %w", dpNn, err)
+		return ctrl.Result{}, fmt.Errorf("could not ensure PodDisruptionBudget for DataPlane %s: %w", client.ObjectKeyFromObject(dataplane), err)
 	}
 	if res != op.Noop {
 		log.Debug(logger, "PodDisruptionBudget created/updated")

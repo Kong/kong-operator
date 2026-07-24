@@ -13,6 +13,7 @@ import (
 	pkgapisappsv1 "k8s.io/kubernetes/pkg/apis/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -57,6 +58,12 @@ func GenerateNewDeploymentForDataPlane(
 	dataplaneImage string,
 	opts ...DeploymentOpt,
 ) (*Deployment, error) {
+	container := GenerateDataPlaneContainer(dataplaneImage, dataplane.Spec.Deployment.PodTemplateSpec)
+	var volumes []corev1.Volume
+	if dataplane.Spec.Deployment.Hardened == commonv1alpha1.HardeningStateEnabled {
+		container, volumes = HardenContainerWithSecurityContext(container, DataPlaneTypeGateway)
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    dataplane.Namespace,
@@ -104,9 +111,12 @@ func GenerateNewDeploymentForDataPlane(
 					// This would most likely not be necessary if we implemented patching
 					// with SSA and structured marge patch instead of strategic merge patch,
 					// see: https://github.com/Kong/kong-operator/issues/1743.
-					Volumes: VolumesFromPodTemplateSpecOrNil(dataplane.Spec.Deployment.PodTemplateSpec),
+					Volumes: append(
+						VolumesFromPodTemplateSpecOrNil(dataplane.Spec.Deployment.PodTemplateSpec),
+						volumes...,
+					),
 					Containers: []corev1.Container{
-						GenerateDataPlaneContainer(dataplaneImage, dataplane.Spec.Deployment.PodTemplateSpec),
+						container,
 					},
 				},
 			},
@@ -156,6 +166,91 @@ func GenerateNewDeploymentForDataPlane(
 
 	wrapped := Deployment(*deployment)
 	return &wrapped, nil
+}
+
+// DataPlaneType represents the type of data plane.
+type DataPlaneType byte
+
+const (
+	// DataPlaneTypeGateway represents a standard Kong Gateway data plane.
+	DataPlaneTypeGateway DataPlaneType = iota
+	// DataPlaneTypeAIGateway represents a Kong AI Gateway data plane.
+	DataPlaneTypeAIGateway
+	// DataPlaneTypeKeg represents a Kong Event Gateway data plane.
+	DataPlaneTypeKeg
+)
+
+// HardenContainerWithSecurityContext hardens a container with a security context and returns
+// necessary volumes that has to be added to the Pod spec. It modifies the container in place
+// and returns it with adjusted SecurityContext, Environment variables and VolumeMounts.
+func HardenContainerWithSecurityContext(container corev1.Container, dpType DataPlaneType) (
+	corev1.Container, []corev1.Volume,
+) {
+	container.SecurityContext = &corev1.SecurityContext{
+		AllowPrivilegeEscalation: new(false),
+		ReadOnlyRootFilesystem:   new(true),
+		RunAsNonRoot:             new(true),
+		RunAsUser:                new(int64(65532)),
+		RunAsGroup:               new(int64(65532)),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+			Add:  []corev1.Capability{"NET_BIND_SERVICE"},
+		},
+	}
+	var volumes []corev1.Volume
+
+	const volumeTMP = "tmp"
+	container.VolumeMounts = append(
+		container.VolumeMounts,
+		corev1.VolumeMount{
+			Name:      volumeTMP,
+			MountPath: "/tmp",
+		},
+	)
+	volumes = append(
+		volumes,
+		corev1.Volume{
+			Name: volumeTMP,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					SizeLimit: new(resource.MustParse("1Gi")),
+				},
+			},
+		},
+	)
+
+	// For standard Kong Gateway runtime it is required to have
+	// additional writable path.
+	if dpType != DataPlaneTypeKeg {
+		const (
+			volumeVarKong          = "var-kong"
+			volumeVarKongMountPath = "/var/kong"
+		)
+
+		container.VolumeMounts = append(
+			container.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      volumeVarKong,
+				MountPath: volumeVarKongMountPath,
+			},
+		)
+		volumes = append(
+			volumes,
+			corev1.Volume{
+				Name: volumeVarKong,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		)
+		env := corev1.EnvVar{
+			Name:  "KONG_PREFIX",
+			Value: volumeVarKongMountPath,
+		}
+		container.Env = append(container.Env, env)
+	}
+
+	return container, volumes
 }
 
 // VolumesFromPodTemplateSpecOrNil returns volumes from a PodTemplateSpec,

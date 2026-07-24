@@ -1,10 +1,9 @@
 package helpers
 
 import (
+	"net"
 	"sync"
 	"testing"
-
-	"github.com/phayes/freeport"
 )
 
 var freePortLock = sync.Mutex{}
@@ -22,7 +21,7 @@ func GetFreePort(t *testing.T) int {
 	for {
 		// Get a random free port, but do not use it yet...
 		var err error
-		freePort, err = freeport.GetFreePort()
+		freePort, err = getFreeTCPPort()
 		if err != nil {
 			continue
 		}
@@ -51,3 +50,18 @@ func GetFreePort(t *testing.T) int {
 
 // userPorts keeps track of ports that were used in the current test run.
 var usedPorts sync.Map
+
+// getFreeTCPPort asks the kernel for a free open port that is ready to use.
+func getFreeTCPPort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
+}

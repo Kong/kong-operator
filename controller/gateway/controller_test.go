@@ -68,7 +68,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 			},
 			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
 				ctx := t.Context()
-				_, err := r.Reconcile(ctx, gatewayReq)
+				gateway := new(gwtypes.Gateway)
+				require.NoError(t, r.Get(ctx, gatewayReq.NamespacedName, gateway))
+				_, err := r.Reconcile(ctx, gateway)
 				require.Error(t, err)
 			},
 		},
@@ -116,7 +118,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 			},
 			testBody: func(t *testing.T, r Reconciler, gatewayReq reconcile.Request) {
 				ctx := t.Context()
-				res, err := r.Reconcile(ctx, gatewayReq)
+				gateway := new(gwtypes.Gateway)
+				require.NoError(t, r.Get(ctx, gatewayReq.NamespacedName, gateway))
+				res, err := r.Reconcile(ctx, gateway)
 				require.NoError(t, err, "reconciliation should not return an error")
 				require.Equal(t, reconcile.Result{}, res, "reconciliation should not return a requeue")
 
@@ -235,6 +239,12 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 			},
 			testBody: func(t *testing.T, reconciler Reconciler, gatewayReq reconcile.Request) {
 				ctx := t.Context()
+				reconcileGateway := func(req reconcile.Request) error {
+					gateway := new(gwtypes.Gateway)
+					require.NoError(t, reconciler.Get(ctx, req.NamespacedName, gateway))
+					_, err := reconciler.Reconcile(ctx, gateway)
+					return err
+				}
 
 				// These addresses are just placeholders, their value doesn't matter. No check is performed in the Gateway-controller,
 				// apart from the existence of an address.
@@ -245,7 +255,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 
 				t.Log("first reconciliation, the dataplane has no IP assigned")
 				// the dataplane service starts with no IP assigned, the gateway must be not ready
-				_, err := reconciler.Reconcile(ctx, gatewayReq)
+				err := reconcileGateway(gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 
 				t.Log("verifying the gateway gets finalizers assigned")
@@ -258,13 +268,13 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				})
 
 				// need to trigger the Reconcile again because the first one only updated the finalizers
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				err = reconcileGateway(gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				// need to trigger the Reconcile again because the previous updated the Gateway Status
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				err = reconcileGateway(gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				// need to trigger the Reconcile again because the previous updated the NetworkPolicy
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				err = reconcileGateway(gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 
 				var currentGateway gwtypes.Gateway
@@ -284,7 +294,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					Type:      corev1.ServiceTypeClusterIP,
 				}
 				require.NoError(t, reconciler.Update(ctx, dataplaneService))
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				err = reconcileGateway(gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				// the dataplane service now has a clusterIP assigned, the gateway must be ready
 				require.NoError(t, reconciler.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
@@ -319,7 +329,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				}
 				require.NoError(t, reconciler.Client.Status().Update(ctx, dataplaneService))
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				err = reconcileGateway(gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
@@ -352,7 +362,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				}
 				require.NoError(t, reconciler.Client.Status().Update(ctx, dataplaneService))
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				err = reconcileGateway(gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
@@ -372,7 +382,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					ClusterIP: "",
 				}
 				require.NoError(t, reconciler.Update(ctx, dataplaneService))
-				_, err = reconciler.Reconcile(ctx, gatewayReq)
+				err = reconcileGateway(gatewayReq)
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				// the dataplane service has no clusterIP assigned, the gateway must be not ready
@@ -427,6 +437,113 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 			tc.testBody(t, reconciler, tc.gatewayReq)
 		})
 	}
+}
+
+func TestProvisionControlPlane_UpdatesExtensionsWhenOnlyExtensionsDiffer(t *testing.T) {
+	ctx := t.Context()
+
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+			UID:       types.UID(uuid.NewString()),
+		},
+	}
+
+	controlPlane := &gwtypes.ControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-controlplane",
+			Namespace: "test-namespace",
+		},
+		Spec: gwtypes.ControlPlaneSpec{
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{},
+			Extensions: []commonv1alpha1.ExtensionRef{
+				{
+					Group: "sample.group",
+					Kind:  "SampleExtension",
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "old-extension",
+					},
+				},
+			},
+		},
+	}
+	k8sutils.SetOwnerForObject(controlPlane, gateway)
+	gatewayutils.LabelObjectAsGatewayManaged(controlPlane, gateway.Name)
+
+	fakeClient := fakectrlruntimeclient.
+		NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(controlPlane).
+		Build()
+
+	reconciler := Reconciler{
+		Client: fakeClient,
+	}
+
+	gatewayConfig := &GatewayConfiguration{
+		Spec: GatewayConfigurationSpec{
+			Extensions: []commonv1alpha1.ExtensionRef{
+				{
+					Group: "sample.group",
+					Kind:  "SampleExtension",
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: "new-extension",
+					},
+				},
+			},
+		},
+	}
+
+	reconciler.provisionControlPlane(ctx, logr.Discard(), gateway, gatewayConfig)
+
+	var updatedControlPlane gwtypes.ControlPlane
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+		Name:      controlPlane.Name,
+		Namespace: controlPlane.Namespace,
+	}, &updatedControlPlane))
+	require.Equal(t, gatewayConfig.Spec.Extensions, updatedControlPlane.Spec.Extensions)
+}
+
+// Test_deploymentOptionsDeepEqual_Scaling is a regression test for the DataPlane's
+// spec.deployment.scaling never being updated by provisionDataPlane: the comparator
+// used to gate whether the owned DataPlane needs a patch only compared Replicas and
+// PodTemplateSpec, silently ignoring Scaling, so a scaling-only change from the
+// GatewayConfiguration was never detected and the patch was skipped forever.
+func Test_deploymentOptionsDeepEqual_Scaling(t *testing.T) {
+	original := &operatorv1beta1.DataPlaneDeploymentOptions{
+		DeploymentOptions: operatorv1beta1.DeploymentOptions{
+			Scaling: &operatorv1beta1.Scaling{
+				HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+					MinReplicas: new(int32(2)),
+					MaxReplicas: 3,
+				},
+			},
+		},
+	}
+	changed := original.DeepCopy()
+	changed.Scaling.HorizontalScaling.MinReplicas = new(int32(1))
+	changed.Scaling.HorizontalScaling.MaxReplicas = 2
+
+	assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+		"identical DeploymentOptions must be reported as equal")
+	assert.False(t, deploymentOptionsDeepEqual(original, changed),
+		"a scaling-only change must not be reported as equal, or the DataPlane's "+
+			"scaling never gets patched by provisionDataPlane")
+}
+
+func Test_deploymentOptionsDeepEqual_Hardened(t *testing.T) {
+	original := &operatorv1beta1.DataPlaneDeploymentOptions{
+		Hardened: commonv1alpha1.HardeningStateDisabled,
+	}
+	changed := original.DeepCopy()
+	changed.Hardened = commonv1alpha1.HardeningStateEnabled
+
+	assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+		"identical DeploymentOptions must be reported as equal")
+	assert.False(t, deploymentOptionsDeepEqual(original, changed),
+		"a hardened-only change must not be reported as equal, or the DataPlane's "+
+			"hardened setting never gets patched by provisionDataPlane")
 }
 
 func Test_setDataPlaneOptionsDefaults(t *testing.T) {
@@ -793,7 +910,7 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		_, err := reconciler.Reconcile(b.Context(), gatewayReq)
+		_, err := reconcile.AsReconciler(reconciler.Client, &reconciler).Reconcile(b.Context(), gatewayReq)
 		if err != nil {
 			b.Error(err)
 		}

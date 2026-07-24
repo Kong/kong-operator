@@ -151,7 +151,9 @@ func TestGenerateIndex_UsesNamespacedAPIAuthKey(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, content, `if ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name == "" {`)
-	assert.Contains(t, content, `return []string{ent.GetNamespace() + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}`)
+	assert.Contains(t, content, `namespace := ent.GetNamespace()`)
+	assert.Contains(t, content, `namespace = *ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace`)
+	assert.Contains(t, content, `return []string{namespace + "/" + ent.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}`)
 }
 
 func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
@@ -228,6 +230,110 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 		assert.Contains(t, content, `if ent.Spec.GatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.GatewayRef.NamespacedRef.Namespace != "" {`)
 		assert.Contains(t, content, `return []string{refNamespace + "/" + ent.Spec.GatewayRef.NamespacedRef.Name}`)
 	})
+
+	t.Run("watches and indexes cross-referenced kinds", func(t *testing.T) {
+		gWithRefs := NewGenerator(Config{
+			APIVersion:           "v1alpha1",
+			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			APIGroupPackageAlias: "konnectv1alpha1",
+			References: map[string][]config.ReferenceConfig{
+				"AIGatewayAgent": {
+					{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"}, ResolvesTo: "id"},
+				},
+			},
+		})
+
+		agentMetadata := reconcilerEntityMetadata{
+			EntityName:                 "AIGatewayAgent",
+			EntityNameLowerCamel:       "aiGatewayAgent",
+			ParentEntityName:           "AIGatewayControlPlane",
+			ParentRefFieldName:         "AIGatewayRef",
+			APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			APIGroupPackageAlias:       "konnectv1alpha1",
+			ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+			ParentAPIGroupPackageAlias: "konnectv1alpha1",
+		}
+
+		watchOut, err := gWithRefs.generateWatch(agentMetadata, &config.ReconcilerConfig{
+			IsRoot:           new(false),
+			ParentEntityType: "AIGatewayControlPlane",
+		})
+		require.NoError(t, err)
+		require.Contains(t, watchOut, "enqueueAIGatewayAgentForAIGatewayPolicy")
+		require.Contains(t, watchOut, "&konnectv1alpha1.AIGatewayPolicy{}")
+
+		indexOut, err := gWithRefs.generateIndex(agentMetadata, &config.ReconcilerConfig{
+			IsRoot:           new(false),
+			ParentEntityType: "AIGatewayControlPlane",
+		})
+		require.NoError(t, err)
+		require.Contains(t, indexOut, "IndexFieldAIGatewayAgentOnAIGatewayPolicyRef")
+		require.Contains(t, indexOut, "for _, ref := range ent.Spec.APISpec.Policies {")
+	})
+}
+
+// TestGenerateWatchAndIndex_DedupSharedKind verifies that two reference fields
+// pointing at the same ACL kind (allow and deny, each referencing
+// AIGatewayConsumerGroup) collapse to exactly one watch, index field and
+// extractor, unioning both accessors.
+func TestGenerateWatchAndIndex_DedupSharedKind(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion:           "v1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {
+				{
+					Path:        "spec.apiSpec.access.acls.allow.allow",
+					Kinds:       []string{"AIGatewayConsumerGroup"},
+					RefTypeName: "AIGatewayACLRef",
+					ResolvesTo:  "name",
+				},
+				{
+					Path:        "spec.apiSpec.access.acls.deny.deny",
+					Kinds:       []string{"AIGatewayConsumerGroup"},
+					RefTypeName: "AIGatewayACLRef",
+					ResolvesTo:  "name",
+				},
+			},
+		},
+	})
+
+	metadata := reconcilerEntityMetadata{
+		EntityName:                 "AIGatewayAgent",
+		EntityNameLowerCamel:       "aiGatewayAgent",
+		ParentEntityName:           "AIGatewayControlPlane",
+		ParentRefFieldName:         "AIGatewayRef",
+		APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias:       "konnectv1alpha1",
+		ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		ParentAPIGroupPackageAlias: "konnectv1alpha1",
+	}
+	rc := &config.ReconcilerConfig{IsRoot: new(false), ParentEntityType: "AIGatewayControlPlane"}
+
+	watchOut, err := g.generateWatch(metadata, rc)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(watchOut))
+	require.NoError(t, err, "generated watch must be valid Go source")
+
+	// Exactly one enqueue func and one Watches registration for the shared kind.
+	assert.Equal(t, 1, strings.Count(watchOut, "func enqueueAIGatewayAgentForAIGatewayConsumerGroup("))
+	assert.Equal(t, 1, strings.Count(watchOut, "&konnectv1alpha1.AIGatewayConsumerGroup{}"))
+
+	indexOut, err := g.generateIndex(metadata, rc)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(indexOut))
+	require.NoError(t, err, "generated index must be valid Go source")
+
+	// Exactly one index field const and one extractor func for the shared kind.
+	assert.Equal(t, 1, strings.Count(indexOut, "IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef ="))
+	assert.Equal(t, 1, strings.Count(indexOut, "func aiGatewayAgentOnAIGatewayConsumerGroupRef("))
+
+	// Each extractor unions the allow and deny accessors from the API package.
+	assert.Contains(t, indexOut, "konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent)")
+	assert.Contains(t, indexOut, "konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsDenyDeny(ent)")
+	// Single-kind references accept the defaulted/empty kind.
+	assert.Contains(t, indexOut, `if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {`)
 }
 
 func TestGenerateReconcilerConditions(t *testing.T) {
@@ -393,7 +499,7 @@ func TestGenerateCommonTypes(t *testing.T) {
 		g := NewGenerator(Config{
 			APIVersion: "v1alpha1",
 			SecretReferences: map[string][]config.SecretReferenceConfig{
-				"Entity": {{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"}},
+				"Entity": {{Path: "spec.apiSpec.certificate", Type: "Secret"}},
 			},
 		})
 		content, err := g.generateCommonTypes(nil)
@@ -475,6 +581,135 @@ func TestGenerateCRDType_ObjectRefImport(t *testing.T) {
 		content, err := g.generateCRDType("CreateTeam", schemaWithRef)
 		require.NoError(t, err)
 		assert.Contains(t, content, "*commonv1alpha1.ObjectRef")
+	})
+}
+
+func TestGenerateCRDType_ReferenceFieldTypeSwap(t *testing.T) {
+	maxLen := int64(100)
+	maxItems := int64(50)
+	schema := &parser.Schema{
+		Name: "CreateAIGatewayAgent",
+		Properties: []*parser.Property{
+			{
+				Name:     "policies",
+				Type:     "array",
+				MaxItems: &maxItems,
+				Items: &parser.Property{
+					Name:      "policy",
+					Type:      "string",
+					MaxLength: &maxLen,
+				},
+			},
+		},
+	}
+
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {{
+				Path:       "spec.apiSpec.policies",
+				Kinds:      []string{"AIGatewayPolicy"},
+				ResolvesTo: "id",
+			}},
+		},
+	})
+	content, err := g.generateCRDType("CreateAIGatewayAgent", schema)
+	require.NoError(t, err)
+	// The field name and JSON tag are preserved; only the item type changes to
+	// the generated ref struct type.
+	require.Contains(t, content, "Policies []AIGatewayPolicyRef `json:\"policies,omitempty\"`")
+	require.NotContains(t, content, "Policies []string")
+	// Item-level string markers must NOT be emitted for ref fields — the
+	// generated ref struct carries its own item validation.
+	require.NotContains(t, content, "MaxLength")
+	// Array-level bounds MUST be preserved so the Kubernetes CEL cost estimator
+	// stays bounded over the ref struct's own item validations.
+	require.Contains(t, content, "+kubebuilder:validation:MaxItems=50")
+}
+
+func TestGenerateCRDType_Association(t *testing.T) {
+	schema := &parser.Schema{
+		Name:       "CreateAIGatewayConsumer",
+		Properties: []*parser.Property{},
+	}
+
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		Associations: map[string][]config.AssociationConfig{
+			"AIGatewayConsumer": {{
+				Name:  "consumerGroups",
+				Kinds: []string{"AIGatewayConsumerGroup"},
+			}},
+		},
+	})
+	content, err := g.generateCRDType("CreateAIGatewayConsumer", schema)
+	require.NoError(t, err)
+
+	// The top-level spec field is emitted (sibling of apiSpec) as a ref-struct list.
+	require.Contains(t, content, "ConsumerGroups []AIGatewayConsumerGroupRef `json:\"consumerGroups,omitempty\"`")
+	// The single-kind ref struct is emitted with only a Name field (no Kind).
+	require.Contains(t, content, "type AIGatewayConsumerGroupRef struct {")
+	require.Contains(t, content, "Name string `json:\"name\"`")
+	require.NotContains(t, content, "Kind string")
+}
+
+func TestGenerateCRDType_NoAssociationsByDefault(t *testing.T) {
+	schema := &parser.Schema{Name: "CreatePortal", Properties: []*parser.Property{}}
+	g := NewGenerator(Config{APIGroup: "konnect.konghq.com", APIVersion: "v1alpha1"})
+	content, err := g.generateCRDType("CreatePortal", schema)
+	require.NoError(t, err)
+	// Entities without an association opt-in must not gain any association field.
+	require.NotContains(t, content, "consumerGroups")
+}
+
+func TestGenerate_ReferencePathMustBeArray(t *testing.T) {
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateAIGatewayAgent": {
+				Name: "CreateAIGatewayAgent",
+				Properties: []*parser.Property{
+					{Name: "policies", Type: "string"},
+				},
+			},
+		},
+		Schemas: map[string]*parser.Schema{},
+	}
+
+	t.Run("non-array property errors", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			References: map[string][]config.ReferenceConfig{
+				"AIGatewayAgent": {{
+					Path:       "spec.apiSpec.policies",
+					Kinds:      []string{"AIGatewayPolicy"},
+					ResolvesTo: "id",
+				}},
+			},
+		})
+		_, err := g.Generate(parsed)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "must be an array property")
+	})
+
+	t.Run("missing property errors", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			References: map[string][]config.ReferenceConfig{
+				"AIGatewayAgent": {{
+					Path:       "spec.apiSpec.doesnotexist",
+					Kinds:      []string{"AIGatewayPolicy"},
+					ResolvesTo: "id",
+				}},
+			},
+		})
+		_, err := g.Generate(parsed)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "spec.apiSpec.doesnotexist")
+		require.Contains(t, err.Error(), "does not match any field")
 	})
 }
 
@@ -711,6 +946,7 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, "obj.Status.ID = id")
 		assert.Contains(t, content, `func (obj *Portal) GetKonnectID() string {`)
 		assert.Contains(t, content, `func (obj Portal) GetTypeName() string {`)
+		assert.Contains(t, content, `func (obj PortalList) GetItems() []Portal {`)
 		assert.Contains(t, content, `func (obj *Portal) GetConditions() []metav1.Condition {`)
 		assert.Contains(t, content, `func (obj *Portal) SetConditions(conditions []metav1.Condition) {`)
 		assert.NotContains(t, content, `SetParentID(id string)`)
@@ -732,9 +968,11 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		assert.Contains(t, content, `metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"`)
 		assert.Contains(t, content, `func (obj *Portal) GetKonnectID() string {`)
 		assert.Contains(t, content, `func (obj Portal) GetTypeName() string {`)
+		assert.Contains(t, content, `func (obj PortalList) GetItems() []Portal {`)
 		assert.Contains(t, content, `func (obj *Portal) GetConditions() []metav1.Condition {`)
 		assert.Contains(t, content, `func (obj *Portal) SetConditions(conditions []metav1.Condition) {`)
 		assert.Contains(t, content, `func (obj *Portal) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef {`)
+		assert.Contains(t, content, `Namespace: obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Namespace,`)
 	})
 
 	t.Run("non-root reconciler entities omit auth accessors", func(t *testing.T) {
@@ -750,6 +988,7 @@ func TestGenerateCRDFuncs_GeneratesKonnectFuncs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, content, `func (obj *PortalTeam) GetKonnectID() string {`)
 		assert.Contains(t, content, `func (obj PortalTeam) GetTypeName() string {`)
+		assert.Contains(t, content, `func (obj PortalTeamList) GetItems() []PortalTeam {`)
 		assert.Contains(t, content, `func (obj *PortalTeam) GetConditions() []metav1.Condition {`)
 		assert.Contains(t, content, `func (obj *PortalTeam) SetConditions(conditions []metav1.Condition) {`)
 		assert.NotContains(t, content, `GetKonnectAPIAuthConfigurationRef`)
@@ -1141,6 +1380,44 @@ func TestGenerateCRDType_WithRootUnionGeneratesSafeUnmarshal(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGenerateCRDType_DoesNotImportAPIExtensionsForReferencedJSONOnly(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"ReferencedJSONSchema": {
+				Name: "ReferencedJSONSchema",
+				Properties: []*parser.Property{
+					{
+						Name: "payload",
+						Type: "object",
+						AdditionalProperties: &parser.Property{
+							Type:                 "object",
+							AdditionalProperties: &parser.Property{Type: "string"},
+						},
+					},
+				},
+			},
+		},
+	}
+	g.parsed = parsed
+
+	schema := &parser.Schema{
+		Name: "CreateExample",
+		Properties: []*parser.Property{
+			{Name: "config", RefName: "ReferencedJSONSchema"},
+		},
+	}
+
+	content, err := g.generateCRDType("CreateExample", schema)
+	require.NoError(t, err)
+
+	assert.NotContains(t, content, `apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"`)
+}
+
 func TestGenerateEntityFiles_GeneratesUnionTypeTests(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroup:   "konnect.konghq.com",
@@ -1216,9 +1493,9 @@ func TestGenerateSharedFiles_GeneratesSchemaUnionTests(t *testing.T) {
 	var schemaTestFile GeneratedFile
 	for _, file := range files {
 		switch file.Name {
-		case "schema_types.go":
+		case "zz_generated_schema_types.go":
 			schemaFile = file
-		case "schema_types_test.go":
+		case "zz_generated_schema_types_test.go":
 			schemaTestFile = file
 		}
 	}
@@ -1591,7 +1868,7 @@ func TestGenerate_OmitsUnusedArrayRefAliases(t *testing.T) {
 
 	var schemaContent string
 	for _, f := range files {
-		if f.Name == "schema_types.go" {
+		if f.Name == "zz_generated_schema_types.go" {
 			schemaContent = f.Content
 			break
 		}
@@ -1682,6 +1959,51 @@ func TestGenerateSchemaTypes_QualifiesAmbiguousInlineTypesAndEmitsNestedUnionTyp
 	assert.Contains(t, content, "type EventGatewayModifyHeadersPolicyCreateConfig struct {")
 	assert.Contains(t, content, "SchemaRegistry *EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry `json:\"schemaRegistry,omitempty\"`")
 	assert.Contains(t, content, "type EventGatewayConsumeSchemaValidationPolicyConfigSchemaRegistry struct {")
+}
+
+func TestGenerateSchemaTypes_OmitsConfiguredSchemaFields(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		CommonTypes: &config.CommonTypesConfig{
+			ObjectRef: &config.ObjectRefConfig{
+				Import: &config.ImportConfig{
+					Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+					Alias: "commonv1alpha1",
+				},
+			},
+		},
+		SchemaFieldOmissions: map[string]map[string]bool{
+			"EventGatewayModifyHeadersPolicyCreate": {
+				"parentPolicyID": true,
+			},
+		},
+	})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayModifyHeadersPolicyCreate": {
+				Name: "EventGatewayModifyHeadersPolicyCreate",
+				Properties: []*parser.Property{
+					{
+						Name:        "parentPolicyID",
+						Description: "The unique identifier of the parent schema validation policy, if any.",
+						IsReference: true,
+					},
+					{
+						Name:        "name",
+						Description: "A unique user-defined name of the policy.",
+						Type:        "string",
+					},
+				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayModifyHeadersPolicyCreate": true}, parsed, nil)
+
+	assert.Contains(t, content, "type EventGatewayModifyHeadersPolicyCreate struct {")
+	assert.Contains(t, content, "Name string `json:\"name,omitzero\"`")
+	assert.NotContains(t, content, "ParentPolicyID")
+	assert.NotContains(t, content, "commonv1alpha1")
 }
 
 func TestGenerateSchemaTypes_EmitsAnonymousInlineUnionVariantTypes(t *testing.T) {
@@ -2228,7 +2550,7 @@ func TestBuildSchemaCursors_SecretReferenceDoesNotRecordOriginalLeafTypeCursor(t
 		APIVersion:  "v1alpha1",
 		FieldConfig: fieldCfg,
 		SecretReferences: map[string][]config.SecretReferenceConfig{
-			"BackendCluster": {{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"}},
+			"BackendCluster": {{Path: "spec.apiSpec.certificate", Type: "Secret"}},
 		},
 	})
 	require.NoError(t, gen.buildSensitiveLeaves(parsed))
@@ -2991,6 +3313,112 @@ func TestGenerateSDKOps_RootUnionUsesSelectedVariantPayload(t *testing.T) {
 	assert.NotContains(t, content, "target.DcrConfig = &unionValue")
 }
 
+func TestGenerateSDKOps_RootUnionUsesDirectUpdateConstructorForUnionRequests(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				Name:    "AIGatewayModelAPI",
+				RefName: "AIGatewayModelAPI",
+				Properties: []*parser.Property{
+					{Name: "formats", RefName: "AIGatewayModelFormat", Required: true},
+					{Name: "config", RefName: "AIGatewayModelAPIConfig", Required: true},
+					{Name: "capabilities", RefName: "Capabilities", Required: true},
+				},
+			},
+			{
+				Name:    "AIGatewayModelModel",
+				RefName: "AIGatewayModelModel",
+				Properties: []*parser.Property{
+					{Name: "formats", RefName: "AIGatewayModelFormat", Required: true},
+					{Name: "config", RefName: "AIGatewayModelModelConfig", Required: true},
+					{Name: "capabilities", RefName: "AIGatewayModelModelCapabilities", Required: true},
+				},
+			},
+		},
+		Properties: []*parser.Property{
+			{Name: "api", Type: "object"},
+			{Name: "model", Type: "object"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"api":   "AIGatewayModelAPI",
+			"model": "AIGatewayModelModel",
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayModelRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayModel", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "CreateCreateAIGatewayModelRequestAPI")
+	assert.Contains(t, content, "CreateCreateAIGatewayModelRequestModel")
+	assert.Contains(t, content, "CreateUpdateAIGatewayModelRequestAPI")
+	assert.Contains(t, content, "CreateUpdateAIGatewayModelRequestModel")
+	assert.NotContains(t, content, `configPayload, ok := selected["config"]`)
+	assert.NotContains(t, content, "target.Config = &unionValue")
+}
+
+// TestGenerateSDKOps_RootUnionConstructorSuffixUsesDiscriminatorNotTypeName
+// guards against regressing https://github.com/Kong/kong-operator: the SDK's
+// constructor suffix is derived from the discriminator value ("openid-connect"
+// -> "OpenidConnect"), not from the variant's schema type name
+// (AIGatewayIdentityProviderOpenIDConnect). The two diverge whenever the type
+// name carries an initialism ("OpenID") the discriminator spelling doesn't
+// ("openid"); using the type name produces a constructor call
+// (...OpenIDConnect) that doesn't exist in the SDK.
+func TestGenerateSDKOps_RootUnionConstructorSuffixUsesDiscriminatorNotTypeName(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				Name:    "AIGatewayIdentityProviderKeyAuth",
+				RefName: "AIGatewayIdentityProviderKeyAuth",
+			},
+			{
+				Name:    "AIGatewayIdentityProviderOpenIDConnect",
+				RefName: "AIGatewayIdentityProviderOpenIDConnect",
+			},
+		},
+		Properties: []*parser.Property{
+			{Name: "key-auth", Type: "object"},
+			{Name: "openid-connect", Type: "object"},
+		},
+		DiscriminatorMapping: map[string]string{
+			"key-auth":       "AIGatewayIdentityProviderKeyAuth",
+			"openid-connect": "AIGatewayIdentityProviderOpenIDConnect",
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayIdentityProviderRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayIdentityProviderRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayIdentityProvider", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, "CreateCreateAIGatewayIdentityProviderRequestKeyAuth")
+	assert.Contains(t, content, "CreateCreateAIGatewayIdentityProviderRequestOpenidConnect")
+	assert.Contains(t, content, "CreateUpdateAIGatewayIdentityProviderRequestKeyAuth")
+	assert.Contains(t, content, "CreateUpdateAIGatewayIdentityProviderRequestOpenidConnect")
+	assert.NotContains(t, content, "CreateCreateAIGatewayIdentityProviderRequestOpenIDConnect")
+	assert.NotContains(t, content, "CreateUpdateAIGatewayIdentityProviderRequestOpenIDConnect")
+	// The member struct type name is unaffected — it's a real SDK type spelled with "OpenID".
+	assert.Contains(t, content, "AIGatewayIdentityProviderOpenIDConnect")
+}
+
 func TestGenerateSDKOps_RootUnionUsesWrappedOperationsBodyMetadata(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{
@@ -3254,7 +3682,6 @@ func TestGenerateSDKOpsTest_UsesRawConfiguredSensitiveFields(t *testing.T) {
 				{
 					Path: "spec.apiSpec.key",
 					Type: "Secret",
-					Key:  "tls.key",
 				},
 			},
 		},
@@ -3367,10 +3794,12 @@ func TestGenerateSDKOpsTest_SkipsTypeAssertionsForUpdateMethods(t *testing.T) {
 	content, err := g.generateSDKOpsTest("IdentityProviderRequest", schema, opsConfig)
 	require.NoError(t, err)
 	assert.Contains(t, content, `func TestIdentityProviderRequestAPISpec_ToCreateIdentityProvider`)
-	assert.Contains(t, content, `Type: "test-value"`)
-	assert.Contains(t, content, `require.Equal(t, "test-value", payload["type"])`)
+	// Enum-typed fields use a valid enum value (the first) rather than a placeholder.
+	assert.Contains(t, content, `Type: "oidc"`)
+	assert.Contains(t, content, `require.Equal(t, "oidc", payload["type"])`)
 	assert.Contains(t, content, `func TestIdentityProviderRequestAPISpec_ToUpdateIdentityProvider`)
-	assert.Equal(t, 1, strings.Count(content, `Type: "test-value"`))
+	// type assertions are skipped for update methods, so it appears exactly once.
+	assert.Equal(t, 1, strings.Count(content, `Type: "oidc"`))
 }
 
 func TestParseSDKTypePath(t *testing.T) {
@@ -3717,6 +4146,49 @@ func TestGenerateMockSDKFactoryDispatcher(t *testing.T) {
 	assert.Less(t, idxEventCert, idxPortal)
 }
 
+func TestGenerateSDKFactoryDispatcher_SharedInterface(t *testing.T) {
+	// AIGatewayConsumer and AIGatewayConsumerCredential both use the
+	// AIGatewayConsumersSDK interface. The factory must emit the getter and
+	// interface entry exactly once to avoid duplicate declarations.
+	infos := []*SDKFactoryFileInfo{
+		{
+			Entity:                 "AIGatewayConsumer",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "AIGatewayConsumersSDK",
+			SDKFieldName:           "AIGatewayConsumers",
+		},
+		{
+			Entity:                 "AIGatewayConsumerCredential",
+			SDKInterfaceImportPath: "github.com/Kong/sdk-konnect-go",
+			SDKInterfaceTypeName:   "AIGatewayConsumersSDK",
+			SDKFieldName:           "AIGatewayConsumers",
+		},
+	}
+
+	file, err := GenerateSDKFactoryDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	// One entry in the GeneratedSDK interface and one getter func => 2 total.
+	assert.Equal(t, 2, strings.Count(file.Content, "GetAIGatewayConsumersSDK()"),
+		"shared SDK interface must not produce duplicate getter declarations")
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+
+	// The mock factory must likewise deduplicate fields, constructors and methods.
+	mockFile, err := GenerateMockSDKFactoryDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, mockFile)
+	assert.Equal(t, 1, strings.Count(mockFile.Content, "*mocks.MockAIGatewayConsumersSDK"),
+		"shared SDK interface must not produce duplicate mock fields")
+	assert.Equal(t, 1, strings.Count(mockFile.Content, "mocks.NewMockAIGatewayConsumersSDK(t)"),
+		"shared SDK interface must not produce duplicate mock constructors")
+	mockFormatted, err := format.Source([]byte(mockFile.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(mockFormatted), mockFile.Content)
+}
+
 func TestGenerateSchemaTypes_MapWithValueTypes(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
@@ -3979,6 +4451,44 @@ func TestGenerateOpsCreate_NonRootEntity(t *testing.T) {
 	assert.Contains(t, file.Content, "obj.SetKonnectID(*resp.IdentityProvider.ID)")
 }
 
+func TestGenerateOpsCreate_RootUnionResponseExtractsVariantID(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-ai-gateway-model",
+		Tags:               []string{"AI Gateway Models"},
+		SuccessResponseRef: "AIGatewayModel",
+		OneOf: []*parser.Property{
+			{RefName: "AIGatewayModelAPI"},
+			{RefName: "AIGatewayModelModel"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest"},
+		},
+	}
+
+	file, info, err := g.generateOpsCreate("AIGatewayModel", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Contains(t, file.Content, "if resp == nil || resp.AIGatewayModel == nil {")
+	// The response is a discriminated union (possibly nested); its MarshalJSON
+	// already flattens every level down to the real API JSON shape, so the Konnect
+	// ID is extracted via a JSON round-trip instead of a per-variant Go field
+	// access chain. This is robust to unions nested more than one level deep.
+	assert.Contains(t, file.Content, "json.Marshal(resp.AIGatewayModel)")
+	assert.Contains(t, file.Content, `ID string `+"`json:\"id\"`")
+	assert.Contains(t, file.Content, "obj.SetKonnectID(respRootUnionID.ID)")
+	assert.NotContains(t, file.Content, "resp.AIGatewayModel.ID")
+	assert.NotContains(t, file.Content, "resp.AIGatewayModel.AIGatewayModelAIGatewayModelAPI")
+}
+
 func TestGenerateOpsCreate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
@@ -4141,6 +4651,22 @@ func TestGenerateEntityOpsFile_UsesConfiguredSDKInterface(t *testing.T) {
 	assert.Equal(t, "zz_generated_ops_portalpage_test.go", res.TestFile.Name)
 	assert.Contains(t, res.TestFile.Content, "mocks.NewMockPortalPagesSDK(t)")
 	assert.Contains(t, res.TestFile.Content, "obj.SetPortalID(parentID)")
+}
+
+func TestBuildOpsControllerRootUnionFixture_AIGatewayModelUsesValidFixture(t *testing.T) {
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{RefName: "AIGatewayModelAPI"},
+			{RefName: "AIGatewayModelModel"},
+		},
+	}
+
+	fixture := buildOpsControllerRootUnionFixture("AIGatewayModel", schema, "konnectv1alpha1")
+	require.NotNil(t, fixture)
+	assert.Equal(t, "AIGatewayModelConfigTypeAPI", fixture.TypeConstName)
+	assert.Equal(t, "API", fixture.VariantField)
+	assert.Contains(t, fixture.VariantValue, "AIGatewayModelAPI{DisplayName:")
+	assert.Contains(t, fixture.VariantValue, "Capabilities: []string{\"llm/v1/chat\"}")
 }
 
 func TestGenerateEntityOpsFile_ControllerOpsTestsUseSafeNamedRefLiterals(t *testing.T) {
@@ -4888,8 +5414,8 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 		APIVersion: "v1alpha1",
 		SecretReferences: map[string][]config.SecretReferenceConfig{
 			"KonnectEventDataPlaneCertificate": {
-				{Path: "spec.apiSpec.certificate", Type: "Secret", Key: "tls.crt"},
-				{Path: "spec.apiSpec.key", Type: "Secret", Key: "tls.key"},
+				{Path: "spec.apiSpec.certificate", Type: "Secret"},
+				{Path: "spec.apiSpec.key", Type: "Secret"},
 			},
 		},
 	})
@@ -4920,8 +5446,7 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	assert.Contains(t, content, "src := apiSpec.Certificate")
 	assert.Contains(t, content, "src := apiSpec.Key")
 	assert.Contains(t, content, "if src.Type == SensitiveDataSourceTypeSecretRef {")
-	assert.Contains(t, content, `secretBytes, ok := secret.Data["tls.crt"]`)
-	assert.Contains(t, content, `secretBytes, ok := secret.Data["tls.key"]`)
+	assert.Contains(t, content, `secretBytes, ok := secret.Data[src.SecretRef.Key]`)
 	assert.Contains(t, content, "apiSpec.Certificate.Value = &resolved")
 	assert.Contains(t, content, "apiSpec.Key.Value = &resolved")
 	assert.Contains(t, content, "payload = flattenSensitiveData(payload)")
@@ -4931,6 +5456,98 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	assert.Contains(t, content, "return spec.ToCreateEventGatewayDataPlaneCertificateRequest()")
 	assert.Contains(t, content, "func (obj *KonnectEventDataPlaneCertificate) ToUpdateEventGatewayDataPlaneCertificateRequest(ctx context.Context, cl client.Client)")
 	assert.Contains(t, content, "return spec.ToUpdateEventGatewayDataPlaneCertificateRequest()")
+}
+
+func TestGenerateSDKOps_ClientRequestMethodsResolveReferences(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {
+				{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"}, ResolvesTo: "id"},
+			},
+		},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "policies", Type: "array"},
+			{Name: "name", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayAgent", schema, opsConfig)
+	require.NoError(t, err)
+
+	// References imply the entity needs a client even without secret refs.
+	require.Contains(t, content, `"context"`)
+	require.Contains(t, content, `apierrors "k8s.io/apimachinery/pkg/api/errors"`)
+	require.Contains(t, content, `"sigs.k8s.io/controller-runtime/pkg/client"`)
+	// No secret-ref plumbing when only references are configured.
+	require.NotContains(t, content, "corev1")
+	require.NotContains(t, content, "func (obj *AIGatewayAgent) sdkOpsAPISpec")
+
+	// Resolver function.
+	require.Contains(t, content, "func resolveAIGatewayAgentPolicies(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error)")
+	require.Contains(t, content, "resolved := make([]string, 0, len(obj.Spec.APISpec.Policies))")
+	require.Contains(t, content, "var errs []error")
+	require.Contains(t, content, "for _, ref := range obj.Spec.APISpec.Policies {")
+	require.Contains(t, content, `if ns != obj.GetNamespace() {`)
+	require.Contains(t, content, `errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})`)
+	require.Contains(t, content, `continue`)
+	// Top-level references resolve via direct field access, not a generated
+	// accessor; nested reference accessors are only needed for deeper paths.
+	require.NotContains(t, content, "func RefsAt")
+	require.Contains(t, content, "var referenced AIGatewayPolicy")
+	require.Contains(t, content, `if apierrors.IsNotFound(err) {`)
+	require.Contains(t, content, `errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})`)
+	require.Contains(t, content, `errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))`)
+	require.Contains(t, content, `errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})`)
+	require.Contains(t, content, `errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})`)
+	require.Contains(t, content, "if err := errors.Join(errs...); err != nil {")
+
+	// Client-needing builders with payload injection.
+	require.Contains(t, content, "func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl client.Client)")
+	require.Contains(t, content, "func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl client.Client)")
+	require.NotContains(t, content, "func (s *AIGatewayAgentAPISpec) ToCreateAIGatewayAgentRequest()")
+	require.NotContains(t, content, "func (s *AIGatewayAgentAPISpec) ToUpdateAIGatewayAgentRequest()")
+	require.Contains(t, content, "resolvedPolicies, err := resolveAIGatewayAgentPolicies(ctx, cl, obj)")
+	require.Contains(t, content, `payload["policies"] = resolvedPolicies`)
+}
+
+func TestGenerateSDKOps_EmitsResolveKonnectReferences(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {
+				{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"}, ResolvesTo: "id"},
+			},
+		},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "policies", Type: "array"},
+			{Name: "name", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayAgent", schema, opsConfig)
+	require.NoError(t, err)
+
+	require.Contains(t, content, `"errors"`)
+	require.Contains(t, content, "func (obj *AIGatewayAgent) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {")
+	require.Contains(t, content, "if _, err := resolveAIGatewayAgentPolicies(ctx, cl, obj); err != nil {")
+	require.Contains(t, content, "return errors.Join(errs...)")
 }
 
 func TestGenerateOpsUpdate_PointerBody(t *testing.T) {
@@ -4991,10 +5608,11 @@ func TestGenerateOpsUpdate_NoUpdateOp_Skipped(t *testing.T) {
 
 	file, info, err := g.generateOpsUpdate("Portal", schema, opsConfig)
 	require.NoError(t, err)
-	require.NotNil(t, file) // file emitted for create
-	require.Nil(t, info)    // no update info → not in dispatcher
+	require.NotNil(t, file)
+	require.NotNil(t, info)          // Update info present -> emits nil case in dispatcher
+	require.True(t, info.SkipUpdate) // No update stanza -> no-op dispatcher case.
 
-	// File contains create but no update.
+	// File contains create but no update function.
 	assert.Contains(t, file.Content, "func createPortal(")
 	assert.NotContains(t, file.Content, "func updatePortal(")
 }
@@ -5331,10 +5949,26 @@ func TestPathParamToFieldName(t *testing.T) {
 		{"id", "ID"},
 		{"gatewayId", "GatewayID"},
 		{"certificateId", "CertificateID"},
+		{"modelIdOrName", "ModelIDOrName"},
 		{"fooId", "FooID"},
 	}
 	for _, tc := range tests {
 		assert.Equal(t, tc.want, pathParamToFieldName(tc.param), "param=%q", tc.param)
+	}
+}
+
+func TestGoFieldName_FixesCamelCaseInitialisms(t *testing.T) {
+	tests := []struct {
+		name string
+		want string
+	}{
+		{"aiGatewayRef", "AIGatewayRef"},
+		{"modelIdOrName", "ModelIDOrName"},
+		{"apiSpec", "APISpec"},
+	}
+
+	for _, tc := range tests {
+		assert.Equal(t, tc.want, goFieldName(tc.name), "name=%q", tc.name)
 	}
 }
 
@@ -5349,6 +5983,40 @@ func TestGenerateSchemaTypes_ScalarOneOfEmitsIntOrString(t *testing.T) {
 					{Name: "variant0", Type: "string"},
 					{Name: "variant1", Type: "integer"},
 				},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"EventGatewayListenerPort": true}, parsed, nil)
+
+	assert.Contains(t, content, `type EventGatewayListenerPort = intstr.IntOrString`)
+	assert.Contains(t, content, `+kubebuilder:validation:XIntOrString`)
+	assert.Contains(t, content, `intstr "k8s.io/apimachinery/pkg/util/intstr"`)
+	assert.NotContains(t, content, `map[string]string`)
+}
+
+func TestGenerateSchemaTypes_ScalarOneOfViaRefsEmitsIntOrString(t *testing.T) {
+	// Regression test for sdk-konnect-go 0.39: the EventGatewayListenerPort oneOf
+	// changed from inline scalars to $ref variants pointing to scalar schemas.
+	// isScalarStringIntOneOf must resolve the refs and still emit intstr.IntOrString.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"EventGatewayListenerPort": {
+				Name:        "EventGatewayListenerPort",
+				Description: "A port or a range of ports.",
+				OneOf: []*parser.Property{
+					{Name: "variant0", RefName: "EventGatewayListenerPortString"},
+					{Name: "variant1", RefName: "EventGatewayListenerPortInteger"},
+				},
+			},
+			"EventGatewayListenerPortString": {
+				Name: "EventGatewayListenerPortString",
+				Type: "string",
+			},
+			"EventGatewayListenerPortInteger": {
+				Name: "EventGatewayListenerPortInteger",
+				Type: "integer",
 			},
 		},
 	}
@@ -5381,9 +6049,8 @@ func TestGenerateSchemaTypes_ArrayItemsRefEmitsTypedSlice(t *testing.T) {
 }
 
 func TestGenerateSchemaTypes_NonScalarOneOfFallsBack(t *testing.T) {
-	// A oneOf where variants have RefName must NOT be consumed by the scalar arm;
-	// it falls through to default (map[string]string) until a dedicated follow-up
-	// handles ref-bearing root oneOf.
+	// A oneOf where ref variants point to non-scalar (object) schemas must NOT be
+	// consumed by the scalar intstr arm; it falls through to default handling.
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	parsed := &parser.ParsedSpec{
 		Schemas: map[string]*parser.Schema{
@@ -5485,4 +6152,366 @@ func TestGenerateCRDType_Categories(t *testing.T) {
 		assert.Contains(t, content, "+kubebuilder:resource:scope=Namespaced\n")
 		assert.NotContains(t, content, "categories=")
 	})
+}
+
+func TestGenerateReferencesFile(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {{
+				Path:       "spec.apiSpec.policies",
+				Kinds:      []string{"AIGatewayPolicy"},
+				ResolvesTo: "id",
+			}},
+			"AIGatewayConsumer": {{
+				Path:       "spec.apiSpec.policies",
+				Kinds:      []string{"AIGatewayPolicy"},
+				ResolvesTo: "id",
+			}},
+		},
+	})
+	out, err := g.GenerateReferencesFile()
+	require.NoError(t, err)
+	// Deduplicated: two entities share AIGatewayPolicyRef, emitted once.
+	require.Equal(t, 1, strings.Count(out, "type AIGatewayPolicyRef struct"))
+	require.Contains(t, out, "+kubebuilder:validation:Enum=AIGatewayPolicy")
+	require.Contains(t, out, "+kubebuilder:default=AIGatewayPolicy")
+	require.Contains(t, out, `Kind string `+"`"+`json:"kind,omitempty"`+"`")
+	require.Contains(t, out, `Name string `+"`"+`json:"name"`+"`")
+	require.Contains(t, out, `Namespace string `+"`"+`json:"namespace,omitempty"`+"`")
+	require.Contains(t, out, "KonnectReferencesResolvedConditionType")
+	require.Contains(t, out, "KonnectReferencesResolvedReasonInvalid")
+	require.Contains(t, out, "KonnectReferencesResolvedReasonResolutionFailed")
+	require.Contains(t, out, "type ReferenceNotFoundError struct")
+	require.Contains(t, out, "type ReferenceNotProgrammedError struct")
+	require.Contains(t, out, "type ReferenceCrossNamespaceError struct")
+	require.Contains(t, out, "type ReferenceDifferentGatewayError struct")
+}
+
+func TestGenerateReferencesFile_MultiKind(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {{
+				Path:        "spec.apiSpec.allow",
+				Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+				ResolvesTo:  "id",
+				RefTypeName: "AIGatewayACLRef",
+			}},
+		},
+	})
+	out, err := g.GenerateReferencesFile()
+	require.NoError(t, err)
+	require.Contains(t, out, "type AIGatewayACLRef struct")
+	require.Contains(t, out, "+kubebuilder:validation:Enum=AIGatewayConsumer;AIGatewayConsumerGroup")
+	// Multi-kind: kind is required, no default.
+	require.Contains(t, out, `Kind string `+"`"+`json:"kind"`+"`")
+	require.NotContains(t, out, "+kubebuilder:default=AIGatewayConsumer")
+}
+
+func TestGenerateReferencesFile_Empty(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	out, err := g.GenerateReferencesFile()
+	require.NoError(t, err)
+	require.Empty(t, out)
+}
+
+func TestEntitySupportsMirror(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+			"Portal":              {SupportsMirror: false},
+		},
+	})
+	require.True(t, g.entitySupportsMirror("KonnectEventGateway"))
+	require.False(t, g.entitySupportsMirror("Portal"))
+	require.False(t, g.entitySupportsMirror("Unknown"))
+}
+
+func TestGenerateCRDType_MirrorSpecFields(t *testing.T) {
+	schema := &parser.Schema{
+		Name: "CreateKonnectEventGateway",
+		Properties: []*parser.Property{
+			{Name: "name", Type: "string"},
+		},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventGateway": {IsRoot: new(true)},
+		},
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	content, err := g.generateCRDType("CreateKonnectEventGateway", schema)
+	require.NoError(t, err)
+
+	// Source + Mirror fields present, reusing shared types.
+	require.Contains(t, content, "Source *commonv1alpha1.EntitySource `json:\"source,omitempty\"`")
+	require.Contains(t, content, "Mirror *konnectv1alpha2.MirrorSpec `json:\"mirror,omitempty\"`")
+	// APISpec becomes an optional pointer.
+	require.Contains(t, content, "APISpec *KonnectEventGatewayAPISpec `json:\"apiSpec,omitempty\"`")
+	// Spec-level CEL.
+	require.Contains(t, content, "spec.source is immutable")
+	require.Contains(t, content, "mirror field must be set for type Mirror")
+	require.Contains(t, content, "mirror field cannot be set for type Origin")
+	require.Contains(t, content, "apiSpec must be set for type Origin")
+	require.Contains(t, content, "apiSpec cannot be set for type Mirror")
+	// commonv1alpha1 import present.
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+}
+
+func TestGenerateCRDType_NoMirrorByDefault(t *testing.T) {
+	schema := &parser.Schema{
+		Name:       "CreatePortal",
+		Properties: []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal": {IsRoot: new(true)},
+		},
+	})
+	content, err := g.generateCRDType("CreatePortal", schema)
+	require.NoError(t, err)
+	require.NotContains(t, content, "Mirror *konnectv1alpha2.MirrorSpec")
+	require.NotContains(t, content, "spec.source is immutable")
+	// APISpec stays a value struct.
+	require.Contains(t, content, "APISpec PortalAPISpec `json:\"apiSpec,omitzero\"`")
+}
+
+func TestGenerateCRDType_MirrorImportsKonnectV1Alpha2WithoutRootReconciler(t *testing.T) {
+	schema := &parser.Schema{
+		Name:       "CreateKonnectEventGateway",
+		Properties: []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	content, err := g.generateCRDType("CreateKonnectEventGateway", schema)
+	require.NoError(t, err)
+	require.Contains(t, content, "konnectv1alpha2 \"github.com/kong/kong-operator/v2/api/konnect/v1alpha2\"")
+	require.Contains(t, content, "Mirror *konnectv1alpha2.MirrorSpec")
+}
+
+func TestGenerateCRDFuncs_MirrorAccessors(t *testing.T) {
+	schema := &parser.Schema{
+		Name: "CreateKonnectEventGateway",
+		Properties: []*parser.Property{
+			{
+				Name: "labels",
+				Type: "object",
+				AdditionalProperties: &parser.Property{
+					Name: "value",
+					Type: "string",
+				},
+			},
+		},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventGateway": {IsRoot: new(true)},
+		},
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	content, err := g.generateCRDFuncs("CreateKonnectEventGateway", schema)
+	require.NoError(t, err)
+
+	require.Contains(t, content, "func (obj *KonnectEventGateway) GetSource() *commonv1alpha1.EntitySource {")
+	require.Contains(t, content, "return obj.Spec.Source")
+	require.Contains(t, content, "func (obj *KonnectEventGateway) GetMirror() *konnectv1alpha2.MirrorSpec {")
+	require.Contains(t, content, "return obj.Spec.Mirror")
+	// Label accessor nil-guards the pointer APISpec.
+	require.Contains(t, content, "if obj.Spec.APISpec == nil {")
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+}
+
+func TestOpsCreateFuncBody_MirrorData(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+		},
+	}
+	data, err := g.generateOpsCreateFuncBody("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.True(t, data.SupportsMirror)
+	require.Equal(t, "GetEventGateway", data.GetSDKMethod)
+	require.Equal(t, "CreateEventGateway", data.SDKMethod)
+}
+
+func TestGenerateEntityOpsFile_MirrorBranch(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	content := res.File.Content
+	require.Contains(t, content, "*obj.Spec.Source == commonv1alpha1.EntitySourceMirror")
+	require.Contains(t, content, "sdk.GetEventGateway(ctx, id)")
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+}
+
+func TestGenerateEntityOpsFile_MirrorUpdateDeleteGuard(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		UpdateOperationID:  "update-event-gateway",
+		UpdateTags:         []string{"event-gateways"},
+		DeleteOperationID:  "delete-event-gateway",
+		DeleteTags:         []string{"event-gateways"},
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest"},
+			"delete": {},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	content := res.File.Content
+	// Both update and delete must early-return for a mirror entity.
+	require.Equal(t, 2, strings.Count(content,
+		"if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {\n\t\treturn nil\n\t}"))
+}
+
+func TestGenerateEntityOpsFile_MirrorImportWithoutCreateOp(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		UpdateOperationID:  "update-event-gateway",
+		UpdateTags:         []string{"event-gateways"},
+		DeleteOperationID:  "delete-event-gateway",
+		DeleteTags:         []string{"event-gateways"},
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest"},
+			"delete": {},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	content := res.File.Content
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+	require.Contains(t, content, "*obj.Spec.Source == commonv1alpha1.EntitySourceMirror")
+}
+
+func TestGenerateEntityOpsTestFile_MirrorAPISpecIsPointer(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	require.NotNil(t, res.TestFile)
+	content := res.TestFile.Content
+	// A mirror entity's APISpec field is *KonnectEventGatewayAPISpec, so the
+	// fixture must take its address rather than embedding a value literal.
+	require.Contains(t, content, "APISpec: &konnectv1alpha1.KonnectEventGatewayAPISpec{")
+	require.NotContains(t, content, "APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{")
 }

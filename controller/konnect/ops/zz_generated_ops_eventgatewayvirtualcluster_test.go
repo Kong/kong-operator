@@ -4,13 +4,13 @@ package ops
 
 import (
 	"errors"
-	"testing"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
@@ -29,11 +29,11 @@ func testGeneratedEventGatewayVirtualClusterForSDKOps() *configurationv1alpha1.E
 		},
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			APISpec: configurationv1alpha1.EventGatewayVirtualClusterAPISpec{
-				AclMode: "test-value",
+				AclMode:     "enforce_on_gateway",
 				Description: "test-value",
-				DNSLabel: "test-value",
-				Labels: configurationv1alpha1.Labels{"test-key": "test-value"},
-				Name: "test-value",
+				DNSLabel:    "test-value",
+				Labels:      configurationv1alpha1.Labels{"test-key": "test-value"},
+				Name:        "test-value",
 			},
 		},
 	}
@@ -112,8 +112,8 @@ func TestUpdateEventGatewayVirtualCluster_UsesSDKOpsConversion(t *testing.T) {
 		UpdateEventGatewayVirtualCluster(
 			mock.Anything,
 			sdkkonnectops.UpdateEventGatewayVirtualClusterRequest{
-				GatewayID: parentID,
-				VirtualClusterID: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                   parentID,
+				VirtualClusterID:            obj.GetKonnectStatus().GetKonnectID(),
 				UpdateVirtualClusterRequest: expectedRequest,
 			},
 		).
@@ -141,8 +141,8 @@ func TestUpdateEventGatewayVirtualCluster_PropagatesSDKError(t *testing.T) {
 		UpdateEventGatewayVirtualCluster(
 			mock.Anything,
 			sdkkonnectops.UpdateEventGatewayVirtualClusterRequest{
-				GatewayID: parentID,
-				VirtualClusterID: obj.GetKonnectStatus().GetKonnectID(),
+				GatewayID:                   parentID,
+				VirtualClusterID:            obj.GetKonnectStatus().GetKonnectID(),
 				UpdateVirtualClusterRequest: expectedRequest,
 			},
 		).

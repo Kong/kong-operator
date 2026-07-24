@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -132,7 +132,7 @@ func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reco
 	})
 	return &Reconciler{
 		Client:                   wrapped,
-		typeConverter:            managedfields.NewDeducedTypeConverter(),
+		TypeConverter:            managedfields.NewDeducedTypeConverter(),
 		eventRecorder:            recorder,
 		ClusterCASecretName:      testCASecretName,
 		ClusterCASecretNamespace: testCASecretNamespace,
@@ -184,7 +184,7 @@ func newProgrammedKonnectCert() *configurationv1alpha1.EventGatewayDataPlaneCert
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 				Certificate: configurationv1alpha1.SensitiveDataSource{
 					Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-					SecretRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestDPName},
+					SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: reconcileTestDPName, Key: corev1.TLSCertKey},
 				},
 			},
 		},
@@ -378,14 +378,17 @@ func TestReconciler_Reconcile(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			egdp := newReconcileEGDP()
+			typeConverter := managedfields.NewDeducedTypeConverter()
 			base := fake.NewClientBuilder().
 				WithScheme(scheme).
+				WithTypeConverters(typeConverter).
 				WithObjects(tc.objects...).
 				WithStatusSubresource(egdp, &configurationv1alpha1.EventGatewayDataPlaneCertificate{}).
 				Build()
 
 			recorder := events.NewFakeRecorder(30)
 			r := newTestReconciler(base, recorder)
+			r.TypeConverter = typeConverter
 
 			count := tc.reconcileCount
 			if count == 0 {
@@ -395,9 +398,16 @@ func TestReconciler_Reconcile(t *testing.T) {
 			var result ctrl.Result
 			var err error
 			for i := range count {
-				result, err = r.Reconcile(t.Context(), reconcile.Request{
-					NamespacedName: types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName},
-				})
+				current := new(eventgatewayv1alpha1.KegDataPlane)
+				getErr := r.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, current)
+				switch {
+				case apierrors.IsNotFound(getErr):
+					result, err = ctrl.Result{}, nil
+				case getErr != nil:
+					result, err = ctrl.Result{}, getErr
+				default:
+					result, err = r.Reconcile(t.Context(), current)
+				}
 				// All intermediate reconciles must not error; drain their events
 				// so assertFn only sees events from the final reconcile.
 				if i < count-1 {

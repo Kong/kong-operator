@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -104,26 +105,21 @@ func (r *KonnectAPIAuthConfigurationReconciler) SetupWithManager(ctx context.Con
 
 	setKonnectAPIAuthConfigurationRefWatches(b)
 
-	return b.Complete(r)
+	return b.Complete(reconcile.AsReconciler(r.client, r))
 }
 
 // Reconcile reconciles a KonnectAPIAuthConfiguration object.
 func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
-	ctx context.Context, req ctrl.Request,
+	ctx context.Context, apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 ) (ctrl.Result, error) {
-	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
-	if err := r.client.Get(ctx, req.NamespacedName, &apiAuth); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
 	var (
 		entityTypeName = "KonnectAPIAuthConfiguration"
 		logger         = log.GetLogger(ctx, entityTypeName, r.loggingMode)
 	)
 
-	updated, err := EnsureFinalizerOnKonnectAPIAuthConfiguration(ctx, r.client, &apiAuth)
+	updated, err := EnsureFinalizerOnKonnectAPIAuthConfiguration(ctx, r.client, apiAuth)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer on KonnectAPIAuthConfiguration %s: %w", req.String(), err)
+		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer on KonnectAPIAuthConfiguration %s: %w", client.ObjectKeyFromObject(apiAuth), err)
 	}
 	if updated {
 		// update will requeue
@@ -148,10 +144,34 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	token, err := GetTokenFromKonnectAPIAuthConfiguration(ctx, r.client, &apiAuth)
+	token, err := GetTokenFromKonnectAPIAuthConfiguration(ctx, r.client, apiAuth)
 	if err != nil {
+		if crossnamespace.IsReferenceNotGranted(err) {
+			// The cross-namespace reference to the Secret is not permitted by a
+			// KongReferenceGrant. Surface it via ResolvedRefs and mark the auth
+			// configuration invalid. The KongReferenceGrant watch requeues the
+			// object once a permitting grant is created, so no error is returned.
+			if res, _, errStatus := patch.StatusWithConditions(
+				ctx, r.client, apiAuth,
+				metav1.Condition{
+					Type:    configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+					Status:  metav1.ConditionFalse,
+					Reason:  configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+					Message: err.Error(),
+				},
+				metav1.Condition{
+					Type:    konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
+					Message: err.Error(),
+				},
+			); errStatus != nil || !res.IsZero() {
+				return res, errStatus
+			}
+			return ctrl.Result{}, nil
+		}
 		if res, errStatus := patch.StatusWithCondition(
-			ctx, r.client, &apiAuth,
+			ctx, r.client, apiAuth,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
@@ -160,6 +180,13 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 			return res, errStatus
 		}
 		return ctrl.Result{}, err
+	}
+
+	// Manage the ResolvedRefs condition for the resolved Secret reference. It is
+	// present only for cross-namespace secretRefs, mirroring the other Konnect
+	// cross-namespace reference reconcilers.
+	if res, errStatus := r.reconcileSecretRefResolvedRefs(ctx, apiAuth); errStatus != nil || !res.IsZero() {
+		return res, errStatus
 	}
 
 	server, err := server.NewServer[konnectv1alpha1.KonnectAPIAuthConfiguration](apiAuth.Spec.ServerURL)
@@ -191,7 +218,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		}
 
 		logger.Error(err, "failed to get organization info from Konnect")
-		if cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
+		if cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, apiAuth); !ok ||
 			cond.Status != metav1.ConditionFalse ||
 			cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid ||
 			cond.ObservedGeneration != apiAuth.GetGeneration() ||
@@ -202,14 +229,14 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 			apiAuth.Status.OrganizationID = ""
 			apiAuth.Status.ServerURL = server.URL()
 
-			_ = patch.SetStatusWithConditionIfDifferent(&apiAuth,
+			_ = patch.SetStatusWithConditionIfDifferent(apiAuth,
 				konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 				metav1.ConditionFalse,
 				konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
 				errMsg,
 			)
 
-			_, errUpdate := patch.ApplyStatusPatchIfNotEmpty(ctx, r.client, ctrllog.FromContext(ctx), &apiAuth, old)
+			_, errUpdate := patch.ApplyStatusPatchIfNotEmpty(ctx, r.client, ctrllog.FromContext(ctx), apiAuth, old)
 			if errUpdate != nil {
 				if apierrors.IsConflict(errUpdate) {
 					return ctrl.Result{Requeue: true}, nil
@@ -239,7 +266,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		}
 		condMessage = fmt.Sprintf("Token from Secret %s is valid", nn)
 	}
-	if cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !ok ||
+	if cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, apiAuth); !ok ||
 		cond.Status != metav1.ConditionTrue ||
 		cond.Message != condMessage ||
 		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid ||
@@ -252,14 +279,14 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		apiAuth.Status.OrganizationID = *respOrg.MeOrganization.ID
 		apiAuth.Status.ServerURL = server.URL()
 
-		_ = patch.SetStatusWithConditionIfDifferent(&apiAuth,
+		_ = patch.SetStatusWithConditionIfDifferent(apiAuth,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
 			metav1.ConditionTrue,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
 			condMessage,
 		)
 
-		_, errUpdate := patch.ApplyStatusPatchIfNotEmpty(ctx, r.client, ctrllog.FromContext(ctx), &apiAuth, old)
+		_, errUpdate := patch.ApplyStatusPatchIfNotEmpty(ctx, r.client, ctrllog.FromContext(ctx), apiAuth, old)
 		if errUpdate != nil {
 			if apierrors.IsConflict(errUpdate) {
 				return ctrl.Result{Requeue: true}, nil
@@ -292,18 +319,11 @@ func GetTokenFromKonnectAPIAuthConfiguration(
 		if nn.Namespace != apiAuth.Namespace {
 			gvkAPIAuth := metav1.GroupVersionKind(apiAuth.GetObjectKind().GroupVersionKind())
 			gvkSecret := metav1.GroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
-			// TODO: Require a KongReferenceGrant for cross-namespace references in KO 2.3 and later:
+			// Cross-namespace references from a KonnectAPIAuthConfiguration to a Secret
+			// require a KongReferenceGrant in the Secret's namespace.
 			// https://github.com/Kong/kong-operator/issues/2908
-			err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, apiAuth.Namespace, nn.Namespace, nn.Name, gvkAPIAuth, gvkSecret)
-			if err != nil {
-				ctrllog.FromContext(ctx).
-					Error(
-						fmt.Errorf("missing KongReferenceGrant from KonnectAPIAuthConfiguration %s to Secret %s",
-							client.ObjectKeyFromObject(apiAuth), nn,
-						),
-						"WARNING: referencing Secret in a different namespace. "+
-							"This will require a KongReferenceGrant in Secret's namespace in KO 2.3 and later.",
-					)
+			if err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, apiAuth.Namespace, nn.Namespace, nn.Name, gvkAPIAuth, gvkSecret); err != nil {
+				return "", err
 			}
 		}
 
@@ -324,6 +344,34 @@ func GetTokenFromKonnectAPIAuthConfiguration(
 	}
 
 	return "", fmt.Errorf("unknown KonnectAPIAuthType: %s", apiAuth.Spec.Type)
+}
+
+// apiAuthHasCrossNamespaceSecretRef reports whether the KonnectAPIAuthConfiguration
+// references a Secret in a different namespace than its own.
+func apiAuthHasCrossNamespaceSecretRef(apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+	if apiAuth.Spec.Type != konnectv1alpha1.KonnectAPIAuthTypeSecretRef || apiAuth.Spec.SecretRef == nil {
+		return false
+	}
+	ns := apiAuth.Spec.SecretRef.Namespace
+	return ns != "" && ns != apiAuth.Namespace
+}
+
+// reconcileSecretRefResolvedRefs sets the ResolvedRefs condition to True for a
+// cross-namespace secretRef whose KongReferenceGrant has been verified, or
+// removes it for same-namespace (or non-secretRef) configurations.
+func (r *KonnectAPIAuthConfigurationReconciler) reconcileSecretRefResolvedRefs(
+	ctx context.Context, apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+) (ctrl.Result, error) {
+	if apiAuthHasCrossNamespaceSecretRef(apiAuth) {
+		return patch.StatusWithCondition(
+			ctx, r.client, apiAuth,
+			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+			metav1.ConditionTrue,
+			configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+			"KongReferenceGrant allows access to the referenced Secret",
+		)
+	}
+	return patch.StatusWithoutCondition(ctx, r.client, apiAuth, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
 }
 
 // EnsureFinalizerOnKonnectAPIAuthConfiguration ensures that the KonnectAPIAuthConfiguration

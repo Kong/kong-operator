@@ -79,8 +79,6 @@ spec:
       enabled: Disabled
       tlsVersions:
       - tls13
-      # TODO: this needs to be a secret reference or a literal with certificate data.
-      # https://github.com/Kong/kong-operator/issues/4063
       caBundle: |
         -----BEGIN CERTIFICATE-----
         MIICwDCCAimgAwIBAgIUc4PDW5VuLWNsM+3Mcnk66T5E3P0wDQYJKoZIhvcNAQEL
@@ -113,11 +111,13 @@ spec:
           type: secretRef
           secretRef:
             name: my-backend-cluster-tls
+            key: tls.crt
         # Or source key from a Kubernetes Secret (key: tls.key from Secret my-backend-cluster-tls):
         key:
           type: secretRef
           secretRef:
             name: my-backend-cluster-tls
+            key: tls.key
 ---
 kind: EventGatewayVirtualCluster
 apiVersion: configuration.konghq.com/v1alpha1

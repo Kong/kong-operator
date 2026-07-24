@@ -10,7 +10,7 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
@@ -27,44 +27,49 @@ func CreateTestSystemAccount(ctx context.Context, t *testing.T) string {
 
 	var (
 		systemAccountID   string
-		systemAccountName = fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixMilli())
+		systemAccountName = fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixMicro())
 	)
-	err := retry.Do(func() error {
-		createResp, err := s.SystemAccounts.
-			PostSystemAccounts(ctx,
-				&sdkkonnectcomp.CreateSystemAccount{
-					Name:           systemAccountName,
-					Description:    "Test system account for Kong Ingress Controller integration tests",
-					KonnectManaged: new(false),
-				},
-			)
-		if err != nil {
-			return err
-		}
-
-		if createResp == nil {
-			return fmt.Errorf("failed to create system account: response is nil")
-		}
-
-		if createResp.GetStatusCode() != http.StatusCreated {
-			body, err := io.ReadAll(createResp.RawResponse.Body)
+	err := retry.New(
+		retry.Attempts(5),
+		retry.Delay(time.Second),
+	).Do(
+		func() error {
+			createResp, err := s.SystemAccounts.
+				PostSystemAccounts(ctx,
+					&sdkkonnectcomp.CreateSystemAccount{
+						Name:           systemAccountName,
+						Description:    "Test system account for Kong Ingress Controller integration tests",
+						KonnectManaged: new(false),
+					},
+				)
 			if err != nil {
-				body = []byte(err.Error())
+				return err
 			}
-			return fmt.Errorf("failed to create system account: code %d, message %s", createResp.GetStatusCode(), body)
-		}
 
-		if createResp.SystemAccount == nil ||
-			createResp.SystemAccount.ID == nil {
-			return fmt.Errorf(
-				"failed to create system account: response fields are missing (status code %d)",
-				createResp.GetStatusCode(),
-			)
-		}
+			if createResp == nil {
+				return fmt.Errorf("failed to create system account: response is nil")
+			}
 
-		systemAccountID = *createResp.SystemAccount.ID
-		return nil
-	}, retry.Attempts(5), retry.Delay(time.Second))
+			if createResp.GetStatusCode() != http.StatusCreated {
+				body, err := io.ReadAll(createResp.RawResponse.Body)
+				if err != nil {
+					body = []byte(err.Error())
+				}
+				return fmt.Errorf("failed to create system account: code %d, message %s", createResp.GetStatusCode(), body)
+			}
+
+			if createResp.SystemAccount == nil ||
+				createResp.SystemAccount.ID == nil {
+				return fmt.Errorf(
+					"failed to create system account: response fields are missing (status code %d)",
+					createResp.GetStatusCode(),
+				)
+			}
+
+			systemAccountID = *createResp.SystemAccount.ID
+			return nil
+		},
+	)
 	require.NoError(t, err)
 
 	assignRole(ctx, t, s.SystemAccountsRoles, systemAccountID, sdkkonnectcomp.RoleNameCreator)
@@ -72,17 +77,17 @@ func CreateTestSystemAccount(ctx context.Context, t *testing.T) string {
 
 	t.Cleanup(func() {
 		fmt.Printf("deleting test system account: %q\n", systemAccountID)
-		err := retry.Do(
+		if err := retry.New(
+			retry.Attempts(5),
+			retry.Delay(time.Second),
+		).Do(
 			func() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				_, err := s.SystemAccounts.DeleteSystemAccountsID(ctx, systemAccountID)
 				return err
 			},
-			retry.Attempts(5),
-			retry.Delay(time.Second),
-		)
-		if err != nil {
+		); err != nil {
 			// Don't fail the test if cleanup fails, just log the error.
 			// Cleanup job will eventually clean up konnect.
 			fmt.Printf("failed to delete test system account %q: %v\n", systemAccountID, err)

@@ -73,20 +73,29 @@ func (g *Generator) generateEntityOpsFile(
 		//     The fallback else-branch emits no SDK call and therefore no import.
 		getForUIDNeedsOpsImport := getForUIDData != nil &&
 			!getForUIDData.SingletonByParent &&
+			!getForUIDData.ListCallStylePositional &&
 			(getForUIDData.UseUIDTagFilter || len(getForUIDData.MatchFields) > 0 || getForUIDData.RootUnion != nil ||
 				getForUIDData.HasLabels || getForUIDData.HasName)
 		deleteNeedsOpsImport := deleteData != nil &&
 			(deleteData.DeleteFullyWrapped ||
 				(deleteData.DeleteAsUpdate && (deleteData.DeletePutWrapped || deleteData.DeletePutFullyWrapped)))
-		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) ||
+		needsOpsImport := (updateData != nil && updateData.UpdateWrapped && !updateData.UpdateFullyWrapped) ||
 			deleteNeedsOpsImport ||
 			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
+		needsStringsImport := createData != nil && len(createData.ResponseStatusFields) > 0
+		needsJSONImport := createData != nil && createData.RespRootUnion != nil
 
 		extraImportSet := make(map[string]string)
 		if deleteData != nil && deleteData.DeleteAsUpdate && deleteData.DeletePutReqImportPath != "" &&
 			!strings.HasSuffix(deleteData.DeletePutReqImportPath, "/operations") {
 			extraImportSet[deleteData.DeletePutReqImportPath] = sdkImportAlias(deleteData.DeletePutReqImportPath)
+		}
+		if (createData != nil && createData.SupportsMirror) ||
+			(updateData != nil && updateData.SupportsMirror) ||
+			(deleteData != nil && deleteData.SupportsMirror) {
+			const commonPath = "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+			extraImportSet[commonPath] = "commonv1alpha1"
 		}
 		extraImports := make([]opsFileImport, 0, len(extraImportSet))
 		for path, alias := range extraImportSet {
@@ -96,17 +105,21 @@ func (g *Generator) generateEntityOpsFile(
 
 		// Render file header.
 		headerData := struct {
-			APIAlias          string
-			APIPackagePath    string
-			NeedsOpsImport    bool
-			NeedsClientImport bool
-			ExtraImports      []opsFileImport
+			APIAlias           string
+			APIPackagePath     string
+			NeedsOpsImport     bool
+			NeedsClientImport  bool
+			NeedsStringsImport bool
+			NeedsJSONImport    bool
+			ExtraImports       []opsFileImport
 		}{
-			APIAlias:          g.config.APIGroupPackageAlias,
-			APIPackagePath:    g.config.APIGroupPackagePath,
-			NeedsOpsImport:    needsOpsImport,
-			NeedsClientImport: needsClientImport,
-			ExtraImports:      extraImports,
+			APIAlias:           g.config.APIGroupPackageAlias,
+			APIPackagePath:     g.config.APIGroupPackagePath,
+			NeedsOpsImport:     needsOpsImport,
+			NeedsClientImport:  needsClientImport,
+			NeedsStringsImport: needsStringsImport,
+			NeedsJSONImport:    needsJSONImport,
+			ExtraImports:       extraImports,
 		}
 		var content strings.Builder
 		headerTmpl := template.Must(template.New("opsheader").Parse(opsPerEntityFileHeaderTemplate))
@@ -179,6 +192,15 @@ func (g *Generator) generateEntityOpsFile(
 			APIPackagePath: g.config.APIGroupPackagePath,
 			SDKGetter:      sdkGetter,
 			NeedsClient:    updateData.NeedsClient,
+		}
+	} else {
+		// No update stanza in config: emit a no-op case in the dispatcher so
+		// the entity is handled gracefully without returning an error.
+		updateInfo = &OpsUpdateFileInfo{
+			Entity:         entityName,
+			APIAlias:       g.config.APIGroupPackageAlias,
+			APIPackagePath: g.config.APIGroupPackagePath,
+			SkipUpdate:     true,
 		}
 	}
 
@@ -283,6 +305,7 @@ func buildDispatcherFile(
 		APIAlias    string
 		SDKGetter   string
 		NeedsClient bool
+		SkipUpdate  bool
 	}
 
 	importSet := map[string]string{}
@@ -294,6 +317,7 @@ func buildDispatcherFile(
 			APIAlias:    info.APIAlias,
 			SDKGetter:   info.SDKGetter,
 			NeedsClient: info.NeedsClient,
+			SkipUpdate:  info.SkipUpdate,
 		})
 	}
 
@@ -407,11 +431,7 @@ func pathParamToFieldName(param string) string {
 	if param == "" {
 		return ""
 	}
-	name := strings.ToUpper(param[:1]) + param[1:]
-	if strings.HasSuffix(name, "Id") {
-		name = name[:len(name)-2] + "ID"
-	}
-	return name
+	return fixInitialisms(strings.ToUpper(param[:1]) + param[1:])
 }
 
 // pascalFromKebab converts a kebab-case or space-separated identifier to
@@ -472,11 +492,41 @@ func isSingletonNoID(schema *parser.Schema) bool {
 // metadata injection in the generated create function. labelsPointer is true
 // when the labels map uses nullable string values (map[string]*string in the
 // SDK), which requires the pointer-valued helper variant.
-func metadataFields(schema *parser.Schema) (hasTags, hasLabels, labelsPointer bool) {
+//
+// When the schema is a root-level discriminated union (no properties of its
+// own, only oneOf variants), tags/labels declared inside any variant also
+// count — unless the entity opted out via ops.skipRootUnionMetadataFields
+// (see EntityOpsConfig.SkipRootUnionMetadataFields), which preserves prior
+// generated output for entities not yet reviewed for this behavior.
+func metadataFields(schema *parser.Schema, opsConfig *config.EntityOpsConfig) (hasTags, hasLabels, labelsPointer bool) {
 	if schema == nil {
 		return false, false, false
 	}
-	for _, prop := range schema.Properties {
+	hasTags, hasLabels, labelsPointer = scanMetadataProperties(schema.Properties)
+	if len(schema.Properties) > 0 || len(schema.OneOf) == 0 {
+		return hasTags, hasLabels, labelsPointer
+	}
+	if opsConfig != nil && opsConfig.SkipRootUnionMetadataFields {
+		return hasTags, hasLabels, labelsPointer
+	}
+	for _, variant := range schema.OneOf {
+		if variant == nil {
+			continue
+		}
+		vTags, vLabels, vPointer := scanMetadataProperties(variant.Properties)
+		hasTags = hasTags || vTags
+		if vLabels {
+			hasLabels = true
+			labelsPointer = labelsPointer || vPointer
+		}
+	}
+	return hasTags, hasLabels, labelsPointer
+}
+
+// scanMetadataProperties reports whether props declares a "tags" array
+// property or a "labels" object/map property. See metadataFields.
+func scanMetadataProperties(props []*parser.Property) (hasTags, hasLabels, labelsPointer bool) {
+	for _, prop := range props {
 		if prop == nil {
 			continue
 		}

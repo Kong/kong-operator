@@ -5,6 +5,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -14,6 +15,7 @@ import (
 
 func createEventGatewayVirtualClusterConsumePolicy(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK,
 	obj *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy,
 ) error {
@@ -25,7 +27,7 @@ func createEventGatewayVirtualClusterConsumePolicy(
 	if virtualClusterID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayVirtualCluster", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreateEventGatewayVirtualClusterConsumePolicyRequest()
+	req, err := obj.ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -46,6 +48,7 @@ func createEventGatewayVirtualClusterConsumePolicy(
 
 func updateEventGatewayVirtualClusterConsumePolicy(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK,
 	obj *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy,
 ) error {
@@ -58,7 +61,7 @@ func updateEventGatewayVirtualClusterConsumePolicy(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayVirtualCluster", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterConsumePolicyRequest()
+	req, err := obj.ToUpdateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -69,7 +72,7 @@ func updateEventGatewayVirtualClusterConsumePolicy(
 	_, err = sdk.UpdateEventGatewayVirtualClusterConsumePolicy(ctx, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
-			return createEventGatewayVirtualClusterConsumePolicy(ctx, sdk, obj)
+			return createEventGatewayVirtualClusterConsumePolicy(ctx, cl, sdk, obj)
 		})
 	}
 	return nil
@@ -91,9 +94,9 @@ func deleteEventGatewayVirtualClusterConsumePolicy(
 	id := obj.GetKonnectStatus().GetKonnectID()
 
 	_, err := sdk.DeleteEventGatewayVirtualClusterConsumePolicy(ctx, sdkkonnectops.DeleteEventGatewayVirtualClusterConsumePolicyRequest{
-		GatewayID: gatewayID,
+		GatewayID:        gatewayID,
 		VirtualClusterID: virtualClusterID,
-		PolicyID: id,
+		PolicyID:         id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
 		return handleDeleteError(ctx, errWrap, obj)

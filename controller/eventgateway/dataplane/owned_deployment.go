@@ -25,7 +25,6 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +39,7 @@ import (
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 // ensureDeployment reconciles the keg Deployment for the given DataPlane.
@@ -51,13 +51,13 @@ func (r *Reconciler) ensureDeployment(
 	certSecretName string,
 ) error {
 	image := resolveImage(egdp, consts.DefaultKEGImage)
-	desired, err := buildDeployment(r.typeConverter, egdp, keg, image, certSecretName)
+	desired, err := buildDeployment(r.TypeConverter, egdp, keg, image, certSecretName)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for DataPlane %s/%s: %w",
 			egdp.Namespace, egdp.Name, err)
 	}
 
-	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.typeConverter, desired, controllerpkgssa.FieldManager)
+	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		r.eventRecorder.Eventf(egdp, nil, corev1.EventTypeWarning, "DeploymentFailed", "ApplyDeployment",
 			"Failed to apply Deployment: %v", err)
@@ -183,24 +183,11 @@ func generateBaseDeployment(
 		Name:  consts.KEGContainerName,
 		Image: image,
 		Env:   envVars,
-		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: new(false),
-			ReadOnlyRootFilesystem:   new(true),
-			RunAsUser:                new(int64(65532)),
-			RunAsGroup:               new(int64(65532)),
-			Capabilities: &corev1.Capabilities{
-				Drop: []corev1.Capability{"NET_RAW"},
-			},
-		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      KonnectCertVolumeName,
 				MountPath: KonnectCertMountPath,
 				ReadOnly:  true,
-			},
-			{
-				Name:      "tmp",
-				MountPath: "/tmp",
 			},
 		},
 		ReadinessProbe: &corev1.Probe{
@@ -220,10 +207,11 @@ func generateBaseDeployment(
 			},
 		},
 	}
+	container, volumes := resources.HardenContainerWithSecurityContext(container, resources.DataPlaneTypeKeg)
 
-	tmpSizeLimit := resource.MustParse("1Gi")
-	volumes := []corev1.Volume{
-		{
+	volumes = append(
+		volumes,
+		corev1.Volume{
 			Name: KonnectCertVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -231,15 +219,7 @@ func generateBaseDeployment(
 				},
 			},
 		},
-		{
-			Name: "tmp",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					SizeLimit: &tmpSizeLimit,
-				},
-			},
-		},
-	}
+	)
 
 	var replicas *int32
 	if egdp.Spec.Deployment != nil {
@@ -265,9 +245,6 @@ func generateBaseDeployment(
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: new(true),
-					},
 					Containers: []corev1.Container{container},
 					Volumes:    volumes,
 				},

@@ -13,6 +13,7 @@ import (
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
@@ -38,14 +39,27 @@ func handleTypeSpecific[
 		res       ctrl.Result
 		err       error
 	)
-	switch e := any(ent).(type) {
-	case *configurationv1.KongConsumer:
-		updated, isProblem = handleKongConsumerSpecific(ctx, cl, e)
-	case *konnectv1alpha2.KonnectGatewayControlPlane:
-		updated, err = handleKonnectGatewayControlPlaneSpecific(ctx, sdk, e)
+
+	if resolver, ok := any(ent).(konnectReferenceResolver); ok {
+		refUpdated, refProblem, err := handleKonnectReferences(ctx, cl, ent, resolver)
 		if err != nil {
 			return false, ctrl.Result{}, err
 		}
+		updated = updated || refUpdated
+		isProblem = isProblem || refProblem
+	}
+
+	switch e := any(ent).(type) {
+	case *configurationv1.KongConsumer:
+		u, p := handleKongConsumerSpecific(ctx, cl, e)
+		updated = updated || u
+		isProblem = isProblem || p
+	case *konnectv1alpha2.KonnectGatewayControlPlane:
+		u, err := handleKonnectGatewayControlPlaneSpecific(ctx, sdk, e)
+		if err != nil {
+			return false, ctrl.Result{}, err
+		}
+		updated = updated || u
 	default:
 	}
 
@@ -120,4 +134,151 @@ func handleKongConsumerSpecific(
 	)
 
 	return updated, true
+}
+
+// konnectReferenceResolver is implemented by generated Konnect entity types
+// that declare CR references on their spec (see crd-from-oas `references` config).
+type konnectReferenceResolver interface {
+	ResolveKonnectReferences(ctx context.Context, cl client.Client) error
+}
+
+// handleKonnectReferences resolves the CR references declared on ent's spec (if
+// any) and reflects the outcome in the KonnectReferencesResolved condition.
+// Reconciliation must stop (isProblem=true) before any SDK calls when
+// references fail to resolve.
+func handleKonnectReferences[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	cl client.Client,
+	ent TEnt,
+	resolver konnectReferenceResolver,
+) (updated bool, isProblem bool, err error) {
+	err = resolver.ResolveKonnectReferences(ctx, cl)
+	if err == nil {
+		updated = patch.SetStatusWithConditionIfDifferent(
+			ent,
+			kcfgconsts.ConditionType(konnectv1alpha1.KonnectReferencesResolvedConditionType),
+			metav1.ConditionTrue,
+			kcfgconsts.ConditionReason(konnectv1alpha1.KonnectReferencesResolvedReasonResolved),
+			"",
+		)
+		return updated, false, nil
+	}
+
+	if !isExpectedKonnectReferenceResolutionError(err) {
+		return false, false, err
+	}
+
+	reason := konnectReferenceResolutionReason(err)
+	updated = patch.SetStatusWithConditionIfDifferent(
+		ent,
+		kcfgconsts.ConditionType(konnectv1alpha1.KonnectReferencesResolvedConditionType),
+		metav1.ConditionFalse,
+		kcfgconsts.ConditionReason(reason),
+		err.Error(),
+	)
+	return updated, true, nil
+}
+
+func konnectReferenceResolutionReason(err error) string {
+	reasons := konnectReferenceResolutionReasons(err)
+	if len(reasons) > 1 {
+		return konnectv1alpha1.KonnectReferencesResolvedReasonResolutionFailed
+	}
+	if reasons[referenceResolutionReasonInvalid] {
+		return konnectv1alpha1.KonnectReferencesResolvedReasonInvalid
+	}
+	if reasons[referenceResolutionReasonNotFound] {
+		return konnectv1alpha1.KonnectReferencesResolvedReasonNotFound
+	}
+	return konnectv1alpha1.KonnectReferencesResolvedReasonNotProgrammed
+}
+
+type referenceResolutionReasonCategory string
+
+const (
+	referenceResolutionReasonInvalid       referenceResolutionReasonCategory = "invalid"
+	referenceResolutionReasonNotFound      referenceResolutionReasonCategory = "not-found"
+	referenceResolutionReasonNotProgrammed referenceResolutionReasonCategory = "not-programmed"
+)
+
+func konnectReferenceResolutionReasons(err error) map[referenceResolutionReasonCategory]bool {
+	reasons := map[referenceResolutionReasonCategory]bool{}
+	collectKonnectReferenceResolutionReasons(err, reasons)
+	return reasons
+}
+
+func collectKonnectReferenceResolutionReasons(err error, reasons map[referenceResolutionReasonCategory]bool) {
+	if err == nil {
+		return
+	}
+	if joined, ok := errors.AsType[interface {
+		error
+		Unwrap() []error
+	}](err); ok {
+		for _, e := range joined.Unwrap() {
+			collectKonnectReferenceResolutionReasons(e, reasons)
+		}
+		return
+	}
+	switch {
+	case hasInvalidKonnectReferenceResolutionError(err):
+		reasons[referenceResolutionReasonInvalid] = true
+	case hasNotFoundKonnectReferenceResolutionError(err):
+		reasons[referenceResolutionReasonNotFound] = true
+	case hasNotProgrammedKonnectReferenceResolutionError(err):
+		reasons[referenceResolutionReasonNotProgrammed] = true
+	}
+}
+
+func isExpectedKonnectReferenceResolutionError(err error) bool {
+	if err == nil {
+		return true
+	}
+	if joined, ok := errors.AsType[interface {
+		error
+		Unwrap() []error
+	}](err); ok {
+		for _, e := range joined.Unwrap() {
+			if !isExpectedKonnectReferenceResolutionError(e) {
+				return false
+			}
+		}
+		return true
+	}
+	if _, ok := errors.AsType[konnectv1alpha1.ReferenceNotFoundError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[konnectv1alpha1.ReferenceNotProgrammedError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[konnectv1alpha1.ReferenceCrossNamespaceError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[konnectv1alpha1.ReferenceDifferentGatewayError](err); ok {
+		return true
+	}
+	return false
+}
+
+func hasInvalidKonnectReferenceResolutionError(err error) bool {
+	if _, ok := errors.AsType[konnectv1alpha1.ReferenceCrossNamespaceError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[konnectv1alpha1.ReferenceDifferentGatewayError](err); ok {
+		return true
+	}
+	return false
+}
+
+func hasNotFoundKonnectReferenceResolutionError(err error) bool {
+	_, ok := errors.AsType[konnectv1alpha1.ReferenceNotFoundError](err)
+	return ok
+}
+
+func hasNotProgrammedKonnectReferenceResolutionError(err error) bool {
+	_, ok := errors.AsType[konnectv1alpha1.ReferenceNotProgrammedError](err)
+	return ok
 }

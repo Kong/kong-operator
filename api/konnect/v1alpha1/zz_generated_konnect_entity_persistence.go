@@ -2,6 +2,56 @@
 
 package v1alpha1
 
+// PersistsKonnectID reports whether AIGatewayAgent persists a Konnect ID in status.
+func (*AIGatewayAgent) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayConsumer persists a Konnect ID in status.
+func (*AIGatewayConsumer) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayConsumerCredential persists a Konnect ID in status.
+func (*AIGatewayConsumerCredential) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayConsumerGroup persists a Konnect ID in status.
+func (*AIGatewayConsumerGroup) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayIdentityProvider persists a Konnect ID in status.
+func (*AIGatewayIdentityProvider) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayMCPServer persists a Konnect ID in status.
+func (*AIGatewayMCPServer) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayModel persists a Konnect ID in status.
+func (*AIGatewayModel) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayModelProvider persists a Konnect ID in status.
+func (*AIGatewayModelProvider) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayPolicy persists a Konnect ID in status.
+func (*AIGatewayPolicy) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether KonnectAIGateway persists a Konnect ID in status.
+func (*KonnectAIGateway) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether KonnectEventGateway persists a Konnect ID in status.
 func (*KonnectEventGateway) PersistsKonnectID() bool {
 	return true

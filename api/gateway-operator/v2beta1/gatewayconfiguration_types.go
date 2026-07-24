@@ -103,6 +103,9 @@ type GatewayConfigurationSpec struct {
 //
 // +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror",rule="self.source == 'Mirror' ? has(self.mirror) : true"
 // +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin",rule="self.source == 'Origin' ? !has(self.mirror) : true"
+// +kubebuilder:validation:XValidation:message="mirror is immutable once set",rule="!has(self.mirror) && !has(oldSelf.mirror) ? true : (has(self.mirror) && has(oldSelf.mirror) ? self.mirror == oldSelf.mirror : false)"
+// +kubebuilder:validation:XValidation:message="source is immutable once set",rule="!has(self.source) && !has(oldSelf.source) ? true : self.source == oldSelf.source"
+// +kubebuilder:validation:XValidation:message="authRef is immutable once set",rule="!has(oldSelf.authRef) ? true : self.authRef == oldSelf.authRef"
 type KonnectOptions struct {
 	// APIAuthConfigurationRef contains the Konnect API authentication configuration.
 	// If this field is not set, the operator will not be able to connect
@@ -161,6 +164,18 @@ type DataPlaneDeploymentOptions struct {
 	//
 	// +optional
 	Rollout *Rollout `json:"rollout,omitempty"`
+
+	// Hardened indicates whether the operator should apply a hardened
+	// security context (non-root user, read-only root filesystem, dropped
+	// capabilities) and the related volumes and environment variables to
+	// the DataPlane's proxy container.
+	//
+	// Enabling this on an existing DataPlane causes a rolling restart of
+	// its Pods.
+	//
+	// +optional
+	// +kubebuilder:default=disabled
+	Hardened commonv1alpha1.HardeningState `json:"hardened,omitempty"`
 }
 
 // GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.
@@ -271,6 +286,7 @@ type GatewayConfigurationListenerOptions struct {
 	// Name is the name of the Listener.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Name gatewayv1.SectionName `json:"name"`
 
 	// The port on each node on which this service is exposed when type is

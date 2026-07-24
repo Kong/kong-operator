@@ -36,6 +36,12 @@ var PortalSDKOpsBoolFields = []PortalSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "notifications_developer_pii_visibility_enabled",
+		Path: []string{
+			"notifications_developer_pii_visibility_enabled",
+		},
+	},
+	{
 		Label: "rbac_enabled",
 		Path: []string{
 			"rbac_enabled",
@@ -128,7 +134,6 @@ func normalizePortalSDKOpsBoolField(value any, path []string) (any, error) {
 		return object, nil
 	}
 }
-
 
 func (s *PortalAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)

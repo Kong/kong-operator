@@ -16,6 +16,7 @@ make build.operator     # Build optimized binary only (no code generation)
 make generate           # Full code generation (CRDs, deepcopy, mocks, docs, manifests, chart golden files)
 make manifests          # Generate CRDs and RBAC manifests only
 make tools              # Install all required development tools via mise
+make verify.crd-breaking-changes  # Check CRDs for breaking schema changes
 ```
 
 ## Linting
@@ -25,6 +26,7 @@ make lint               # Run Go linters (modules, golangci-lint)
 make lint.all           # Full lint: Go + charts + GitHub Actions + markdown
 make lint.api           # Lint Kubernetes API types
 make lint.golangci-lint # Run golangci-lint linter for Go code
+make lint.actions       # Lint github action files 
 make go-fix             # Run go-fix on the codebase to ensure you're not using old or deprecated Go constructs.
 ```
 
@@ -56,6 +58,21 @@ make test.integration-ko                 # Kong Operator integration tests
 make test.integration-bluegreen          # DataPlane upgrade/blue-green tests
 make test.integration-validatingwebhook  # Webhook tests
 ```
+
+#### kind: "too many open files" / fsnotify watcher errors
+
+Tests that spin up a kind cluster (integration, conformance, e2e) can fail with
+`failed to create fsnotify watcher: too many open files`. kind nodes share the host
+kernel, so the `fs.inotify.max_user_instances` / `max_user_watches` limits must be raised
+on the **host running Docker** (see https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files).
+
+- **Linux host**: `make tune.inotify` (one-off; persist via `/etc/sysctl.d/99-kind-inotify.conf`).
+- **macOS** (Docker Desktop / colima): the limit lives in the Linux VM, not macOS.
+  - colima: `colima ssh -- sudo sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288`
+  - Docker Desktop: `docker run --rm --privileged alpine sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288`
+  - Note: not persistent across VM restarts.
+
+CI raises these limits automatically via the `.github/actions/bump-inotify` composite action.
 
 ### CRD Validation Tests
 
@@ -173,7 +190,7 @@ See `.golangci.yaml` for the full list of blocked packages and their alternative
 Uses **mise** for tool versions. Tool versions defined in `.tools_versions.yaml` and `.mise.toml`. Tools are automatically downloaded as dependencies for each Makefile target that needs them.
 
 ```bash
-make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, gotestsum, skaffold, yq, crd-ref-docs
+make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, gotestsum, skaffold, yq, crd-ref-docs, crdify
 ```
 
 ## Adding New CRDs
@@ -184,6 +201,10 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
 4. Run `make test.charts.golden.update` if chart templates change
 5. Add type specific CRD validation tests in `test/crdsvalidation/`
 6. Add sample YAML in `config/samples/` and test applying it in `test/crdsvalidation/`
+
+If you modify CRDs in `config/crd/kong-operator/`,
+also run `make verify.crd-breaking-changes` to compare them against the base
+branch and catch incompatible schema changes before CI does.
 
 ## Development Workflow
 
@@ -199,7 +220,13 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
    make verify.generators  # Verify generated code is up-to-date (CI runs this)
    ```
 
-5. **Update CHANGELOG.md** - For significant changes, add release notes
+5. **Run CRD compatibility checks when needed** - If you modified CRDs:
+
+   ```bash
+   make verify.crd-breaking-changes
+   ```
+
+6. **Update CHANGELOG.md** - For significant changes, add release notes
 
 ### Verify Before Commit
 
@@ -207,6 +234,7 @@ make tools    # Install: controller-gen, kustomize, client-gen, golangci-lint, g
 make lint                 # Linting passes
 make test.unit            # Unit tests pass
 make verify.generators    # Generated code is up-to-date
+make verify.crd-breaking-changes  # CRDs remain backward compatible
 ```
 
 ### If Modifying API Types
@@ -218,6 +246,13 @@ make generate             # Regenerate CRDs, deepcopy, docs, manifests
 make test.charts.golden.update  # Update Helm chart golden files if CRDs changed
 make verify.manifests     # Verify manifests are consistent
 ```
+
+## Code exploration
+
+### cx
+
+Whenever `cx` is available in the system, use that for semantic code exploration.
+It's specifically designed for AI agents to understand codebases and provide context-aware suggestions.
 
 ## CI Workflow
 

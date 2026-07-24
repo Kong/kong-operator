@@ -32,6 +32,14 @@ func testControlPlaneRef(name string) *commonv1alpha1.ControlPlaneRef {
 	}
 }
 
+func testParentRef(sectionName *gatewayv1.SectionName) *gwtypes.ParentReference {
+	return &gwtypes.ParentReference{
+		Name:        gatewayv1.ObjectName("test-gateway"),
+		Namespace:   new(gatewayv1.Namespace("default")),
+		SectionName: sectionName,
+	}
+}
+
 func testPathMatch(path string) []gatewayv1.HTTPRouteMatch {
 	matchType := gatewayv1.PathMatchPathPrefix
 	return []gatewayv1.HTTPRouteMatch{
@@ -268,6 +276,27 @@ func TestNewKongServiceName(t *testing.T) {
 	}
 }
 
+func TestNewKongServiceNameForHTTPRouteRuleBackendNotFound(t *testing.T) {
+	backendNS := gatewayv1.Namespace("gateway-conformance-web-backend")
+	port := gatewayv1.PortNumber(8080)
+	rule := gatewayv1.HTTPRouteRule{
+		BackendRefs: []gatewayv1.HTTPBackendRef{
+			testBackendRef("web-backend", &backendNS, &port),
+		},
+	}
+	routeA := testRoute("gateway-conformance-infra", "invalid-cross-namespace-backend-ref")
+	routeB := testRoute("gateway-conformance-infra", "reference-grant")
+	cp := testControlPlaneRef("same-namespace")
+
+	normalName := NewKongServiceNameForHTTPRouteRule(routeA, cp, rule)
+	fallbackNameA := NewKongServiceNameForHTTPRouteRuleBackendNotFound(routeA, cp, rule)
+	fallbackNameB := NewKongServiceNameForHTTPRouteRuleBackendNotFound(routeB, cp, rule)
+
+	assert.NotEqual(t, normalName, fallbackNameA)
+	assert.NotEqual(t, fallbackNameA, fallbackNameB)
+	assert.Contains(t, fallbackNameA, backendNotFoundPrefix)
+}
+
 func TestNewKongServiceName_Equality(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -412,86 +441,88 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 	}
 }
 
-func TestNewKongRouteName(t *testing.T) {
-	tests := []struct {
-		name  string
-		route *gwtypes.HTTPRoute
-		cp    *commonv1alpha1.ControlPlaneRef
-		rule  gatewayv1.HTTPRouteRule
-	}{
-		{
-			name: "basic route name generation",
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
-			},
-			cp: &commonv1alpha1.ControlPlaneRef{
-				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-					Name: "test-cp",
-				},
-			},
-			rule: gatewayv1.HTTPRouteRule{
-				Matches: []gatewayv1.HTTPRouteMatch{
-					{
-						Path: &gatewayv1.HTTPPathMatch{
-							Type:  func() *gatewayv1.PathMatchType { t := gatewayv1.PathMatchPathPrefix; return &t }(),
-							Value: func() *string { s := "/api"; return &s }(),
-						},
-					},
-				},
-			},
+func TestNewKongRouteNameForMatch_DiffersByParentRef(t *testing.T) {
+	route := testRoute("default", "test-route")
+	cp := testControlPlaneRef("test-cp")
+	matchType := gatewayv1.PathMatchPathPrefix
+	match := gatewayv1.HTTPRouteMatch{
+		Path: &gatewayv1.HTTPPathMatch{
+			Type:  &matchType,
+			Value: new("/"),
 		},
-		{
-			name: "route with multiple matches",
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "complex-route",
-					Namespace: "test-ns",
-				},
-			},
-			cp: &commonv1alpha1.ControlPlaneRef{
-				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-					Name: "complex-cp",
-				},
-			},
-			rule: gatewayv1.HTTPRouteRule{
-				Matches: []gatewayv1.HTTPRouteMatch{
-					{
-						Path: &gatewayv1.HTTPPathMatch{
-							Type:  func() *gatewayv1.PathMatchType { t := gatewayv1.PathMatchPathPrefix; return &t }(),
-							Value: func() *string { s := "/api/v1"; return &s }(),
-						},
-						Headers: []gatewayv1.HTTPHeaderMatch{
-							{
-								Name:  "X-API-Version",
-								Value: "v1",
-							},
-						},
-					},
-					{
-						Path: &gatewayv1.HTTPPathMatch{
-							Type:  func() *gatewayv1.PathMatchType { t := gatewayv1.PathMatchExact; return &t }(),
-							Value: func() *string { s := "/health"; return &s }(),
-						},
-					},
-				},
-			},
+	}
+	listener1 := gatewayv1.SectionName("listener-1")
+	listener2 := gatewayv1.SectionName("listener-2")
+
+	name1 := NewKongRouteNameForMatch(route, cp, testParentRef(&listener1), match, 0)
+	name2 := NewKongRouteNameForMatch(route, cp, testParentRef(&listener2), match, 0)
+
+	assert.NotEqual(t, name1, name2)
+	assert.Equal(t, name1, NewKongRouteNameForMatch(route, cp, testParentRef(&listener1), match, 0))
+}
+
+func TestNewKongRouteNameForMatch_WithoutParentRefKeepsLegacyFormat(t *testing.T) {
+	route := testRoute("default", "test-route")
+	cp := testControlPlaneRef("test-cp")
+	matchType := gatewayv1.PathMatchPathPrefix
+	match := gatewayv1.HTTPRouteMatch{
+		Path: &gatewayv1.HTTPPathMatch{
+			Type:  &matchType,
+			Value: new("/"),
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongRouteName(tt.route, tt.cp, tt.rule)
-			cpHash := utils.Hash32(tt.cp)
-			matchesHash := utils.Hash32(tt.rule.Matches)
-			expected := "http." + tt.route.Namespace + "-" + tt.route.Name + ".cp" + cpHash + "." + matchesHash
-			assert.Equal(t, expected, result)
-		})
+	result := NewKongRouteNameForMatch(route, cp, nil, match, 0)
+	expected := "http.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(match) + ".m00"
+	assert.Equal(t, expected, result)
+}
+
+func TestNewKongRouteNameForTLSRouteRule_DiffersByParentRef(t *testing.T) {
+	route := &gwtypes.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "default",
+		},
 	}
+	cp := testControlPlaneRef("test-cp")
+	rule := gwtypes.TLSRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "backend",
+				Port: new(gatewayv1.PortNumber(443)),
+			},
+		}},
+	}
+	listener1 := gatewayv1.SectionName("listener-1")
+	listener2 := gatewayv1.SectionName("listener-2")
+
+	name1 := NewKongRouteNameForTLSRouteRule(route, cp, testParentRef(&listener1), rule)
+	name2 := NewKongRouteNameForTLSRouteRule(route, cp, testParentRef(&listener2), rule)
+
+	assert.NotEqual(t, name1, name2)
+	assert.Equal(t, name1, NewKongRouteNameForTLSRouteRule(route, cp, testParentRef(&listener1), rule))
+}
+
+func TestNewKongRouteNameForTLSRouteRule_WithoutParentRefKeepsLegacyFormat(t *testing.T) {
+	route := &gwtypes.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "default",
+		},
+	}
+	cp := testControlPlaneRef("test-cp")
+	rule := gwtypes.TLSRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "backend",
+				Port: new(gatewayv1.PortNumber(443)),
+			},
+		}},
+	}
+
+	result := NewKongRouteNameForTLSRouteRule(route, cp, nil, rule)
+	expected := "tls.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(rule)
+	assert.Equal(t, expected, result)
 }
 
 func TestNewKongPluginName(t *testing.T) {
@@ -542,6 +573,79 @@ func TestNewKongPluginName(t *testing.T) {
 	}
 }
 
+func TestNewKongPluginNameForFilters(t *testing.T) {
+	headerModifier := gatewayv1.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Set: []gatewayv1.HTTPHeader{{Name: "X-Test", Value: "test-value"}},
+		},
+	}
+	urlRewrite := gatewayv1.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterURLRewrite,
+		URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			Path: &gatewayv1.HTTPPathModifier{
+				Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+				ReplacePrefixMatch: new("/echo"),
+			},
+		},
+	}
+
+	const ns, pluginName = "default", "request-transformer"
+
+	tests := []struct {
+		name    string
+		filters []gatewayv1.HTTPRouteFilter
+		// want is the name to compare against; wantEqual decides whether the generated name must
+		// equal it or differ from it.
+		want      string
+		wantEqual bool
+	}{
+		{
+			// Critical: renaming an existing single-filter plugin would momentarily leave two
+			// plugins of the same type on a route, reintroducing the unique-plugin-per-entity error.
+			name:      "single filter is backward compatible with NewKongPluginName",
+			filters:   []gatewayv1.HTTPRouteFilter{headerModifier},
+			want:      NewKongPluginName(headerModifier, ns, pluginName),
+			wantEqual: true,
+		},
+		{
+			name:      "merged name differs from the URLRewrite single-filter name",
+			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite, headerModifier},
+			want:      NewKongPluginName(urlRewrite, ns, pluginName),
+			wantEqual: false,
+		},
+		{
+			name:      "merged name differs from the RequestHeaderModifier single-filter name",
+			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite, headerModifier},
+			want:      NewKongPluginName(headerModifier, ns, pluginName),
+			wantEqual: false,
+		},
+		{
+			name:      "merged name changes when filter order changes",
+			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite, headerModifier},
+			want:      NewKongPluginNameForFilters([]gatewayv1.HTTPRouteFilter{headerModifier, urlRewrite}, ns, pluginName),
+			wantEqual: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewKongPluginNameForFilters(tt.filters, ns, pluginName)
+
+			// The name must be deterministic and carry the readable namespace.pluginType prefix.
+			again := NewKongPluginNameForFilters(tt.filters, ns, pluginName)
+			assert.Equal(t, got, again)
+			assert.True(t, strings.HasPrefix(got, "default.request-transformer."))
+
+			if tt.wantEqual {
+				assert.Equal(t, tt.want, got)
+			} else {
+				assert.NotEqual(t, tt.want, got)
+			}
+		})
+	}
+}
+
 func TestNewKongPluginBindingName(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -581,68 +685,91 @@ func TestNewKongPluginBindingName(t *testing.T) {
 }
 
 func TestNewKongTargetName(t *testing.T) {
-	tests := []struct {
-		name       string
-		upstreamID string
-		endpointID string
-		port       int
-		br         *gwtypes.HTTPBackendRef
-	}{
-		{
-			name:       "basic target name",
-			upstreamID: "cp12345678.ab123456",
-			endpointID: "192.168.1.100",
-			port:       8080,
-			br: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "backend-service",
-						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-					},
+	httpBR := func(name string) *gwtypes.HTTPBackendRef {
+		return &gwtypes.HTTPBackendRef{
+			BackendRef: gatewayv1.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name: gatewayv1.ObjectName(name),
+					Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
 				},
 			},
-		},
-		{
-			name:       "target with different port",
-			upstreamID: "cp87654321.cd987654",
-			endpointID: "10.0.0.50",
-			port:       9090,
-			br: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name:      "api-service",
-						Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("api-ns"); return &ns }(),
-						Port:      func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(9090); return &p }(),
-					},
-					Weight: func() *int32 { w := int32(100); return &w }(),
-				},
+		}
+	}
+	tlsBR := func(name string) *gwtypes.BackendRef {
+		return &gwtypes.BackendRef{
+			BackendObjectReference: gatewayv1.BackendObjectReference{
+				Name: gatewayv1.ObjectName(name),
+				Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
 			},
-		},
-		{
-			name:       "target with IPv6 endpoint",
-			upstreamID: "cp11223344.ef556677",
-			endpointID: "2001:db8::1",
-			port:       443,
-			br: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "secure-service",
-						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(443); return &p }(),
-					},
-				},
-			},
-		},
+		}
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongTargetName(tt.upstreamID, tt.endpointID, tt.port, tt.br)
-			assert.NotEmpty(t, result)
-			parts := strings.Split(result, ".")
-			assert.GreaterOrEqual(t, len(parts), 2)
-			assert.Equal(t, tt.upstreamID, strings.Join(parts[0:2], "."))
-		})
-	}
+	t.Run("idempotent: same inputs produce the same name", func(t *testing.T) {
+		br := httpBR("svc-a")
+		first := NewKongTargetName("upstream", "10.0.0.1", 8080, br)
+		second := NewKongTargetName("upstream", "10.0.0.1", 8080, br)
+		assert.Equal(t, first, second)
+	})
+
+	t.Run("different backendRef same endpoint produces different name", func(t *testing.T) {
+		// Critical for the name-reuse logic: when a rollout swaps the contributing
+		// backendRef but points at the same pod IP, a fresh mint must produce a
+		// different name so existingTargetNamesByAddress can distinguish the two.
+		assert.NotEqual(t,
+			NewKongTargetName("upstream", "10.0.0.1", 8080, httpBR("svc-a")),
+			NewKongTargetName("upstream", "10.0.0.1", 8080, httpBR("svc-b")),
+		)
+	})
+
+	t.Run("different endpoint same backendRef produces different name", func(t *testing.T) {
+		br := httpBR("svc-a")
+		assert.NotEqual(t,
+			NewKongTargetName("upstream", "10.0.0.1", 8080, br),
+			NewKongTargetName("upstream", "10.0.0.2", 8080, br),
+		)
+	})
+
+	t.Run("different port same backendRef and endpoint produces different name", func(t *testing.T) {
+		br := httpBR("svc-a")
+		assert.NotEqual(t,
+			NewKongTargetName("upstream", "10.0.0.1", 8080, br),
+			NewKongTargetName("upstream", "10.0.0.1", 9090, br),
+		)
+	})
+
+	t.Run("different upstream produces different name", func(t *testing.T) {
+		br := httpBR("svc-a")
+		assert.NotEqual(t,
+			NewKongTargetName("upstream-x", "10.0.0.1", 8080, br),
+			NewKongTargetName("upstream-y", "10.0.0.1", 8080, br),
+		)
+	})
+
+	t.Run("name starts with upstream prefix", func(t *testing.T) {
+		result := NewKongTargetName("cp12345678.ab123456", "192.168.1.100", 8080, httpBR("svc"))
+		assert.True(t, strings.HasPrefix(result, "cp12345678.ab123456."), "name must start with upstream")
+	})
+
+	t.Run("name does not exceed kubernetes max length", func(t *testing.T) {
+		longUpstream := strings.Repeat("very-long-upstream-segment-", 10)
+		result := NewKongTargetName(longUpstream, "10.0.0.1", 8080, httpBR("svc"))
+		assert.LessOrEqual(t, len(result), maxLen)
+	})
+
+	t.Run("TLSRoute BackendRef variant is idempotent", func(t *testing.T) {
+		br := tlsBR("tls-backend")
+		first := NewKongTargetName("upstream", "10.0.0.1", 443, br)
+		second := NewKongTargetName("upstream", "10.0.0.1", 443, br)
+		assert.Equal(t, first, second)
+	})
+
+	t.Run("TLSRoute BackendRef different service produces different name than HTTPBackendRef", func(t *testing.T) {
+		// The TLS and HTTP variants hash different struct types, so names must not collide.
+		assert.NotEqual(t,
+			NewKongTargetName("upstream", "10.0.0.1", 8080, httpBR("svc-a")),
+			NewKongTargetName("upstream", "10.0.0.1", 8080, tlsBR("svc-a")),
+		)
+	})
 }
 
 func TestNameGenerationConsistency(t *testing.T) {
@@ -701,22 +828,6 @@ func TestNameGenerationConsistency(t *testing.T) {
 	t.Run("service name consistency", func(t *testing.T) {
 		result1 := NewKongServiceNameForHTTPRouteRule(route, cp, rule)
 		result2 := NewKongServiceNameForHTTPRouteRule(route, cp, rule)
-		assert.Equal(t, result1, result2)
-	})
-
-	t.Run("route name consistency", func(t *testing.T) {
-		ruleWithMatches := gatewayv1.HTTPRouteRule{
-			Matches: []gatewayv1.HTTPRouteMatch{
-				{
-					Path: &gatewayv1.HTTPPathMatch{
-						Type:  func() *gatewayv1.PathMatchType { t := gatewayv1.PathMatchPathPrefix; return &t }(),
-						Value: func() *string { s := "/api"; return &s }(),
-					},
-				},
-			},
-		}
-		result1 := NewKongRouteName(route, cp, ruleWithMatches)
-		result2 := NewKongRouteName(route, cp, ruleWithMatches)
 		assert.Equal(t, result1, result2)
 	})
 

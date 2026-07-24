@@ -89,8 +89,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 				EnforceConfig:            true,
 			}
 			konnectExtensionReconciler := &konnect.KonnectExtensionReconciler{
-				Client:     cl,
-				SdkFactory: factory,
+				Client: cl,
 				// To ensure we don't resync in test. Reconciler will be called automatically on changes.
 				SyncPeriod:               konnectInfiniteSyncTime,
 				ClusterCASecretName:      clusterCASecretNN.Name,
@@ -117,13 +116,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b86"
 					dpCertID              = "111111111111111111111111111111111-2"
 				)
-
-				t.Logf("Setting up expected ListDpClientCertificates SDK call returning no certificates")
-				// TODO: https://github.com/Kong/kong-operator/issues/2630 this call can be removed when 2630 is done.
-				sdk.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
-					Return(&sdkkonnectops.ListDpClientCertificatesResponse{
-						StatusCode: http.StatusOK,
-					}, nil)
 
 				sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
 					Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
@@ -316,12 +308,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b88"
 					dpCertID              = "111111111111111111111111111111111-1"
 				)
-
-				t.Logf("Setting up expected ListDpClientCertificates SDK call returning no certificates")
-				sdk.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
-					Return(&sdkkonnectops.ListDpClientCertificatesResponse{
-						StatusCode: http.StatusOK,
-					}, nil)
 
 				sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
 					Return(&sdkkonnectops.CreateDataplaneCertificateResponse{

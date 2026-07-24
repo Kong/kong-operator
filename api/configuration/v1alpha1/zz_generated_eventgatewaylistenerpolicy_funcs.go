@@ -3,9 +3,9 @@
 package v1alpha1
 
 import (
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -24,9 +24,33 @@ func (obj *EventGatewayListenerPolicy) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayListenerPolicy's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayListenerPolicy) GetKonnectName() string {
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.EventGatewayListenerPolicyConfig.Type {
+	case EventGatewayListenerPolicyConfigTypeForwardToVirtualClust:
+		if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust != nil {
+			return string(obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Name)
+		}
+	case EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen:
+		if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+			return string(obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Name)
+		}
+	}
+	return ""
+}
+
 // GetTypeName returns the EventGatewayListenerPolicy Kind name.
 func (obj EventGatewayListenerPolicy) GetTypeName() string {
 	return "EventGatewayListenerPolicy"
+}
+
+// GetItems returns the list of EventGatewayListenerPolicy items.
+func (obj EventGatewayListenerPolicyList) GetItems() []EventGatewayListenerPolicy {
+	return obj.Items
 }
 
 // HasParent returns true if the EventGatewayListenerPolicy has a parent entity.
@@ -84,6 +108,11 @@ func (obj *EventGatewayListenerPolicy) GetEventGatewayListenerRef() commonv1alph
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayListenerPolicy) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayListenerRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayListenerPolicy) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.EventGatewayListenerRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

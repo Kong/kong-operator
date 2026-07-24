@@ -1,0 +1,81 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.com
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway for testing
+    labels:
+      app: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: AIGatewayIdentityProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-key-auth
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: key-auth
+    key-auth:
+      name: my-key-auth-provider
+      displayName: My Key Auth Identity Provider
+      config:
+        hideCredentials: Enabled
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gw-oidc-client-secret
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+data:
+  clientSecret: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==
+---
+kind: AIGatewayIdentityProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-oidc
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: openid-connect
+    openid-connect:
+      name: my-oidc-provider
+      displayName: My OpenID Connect Identity Provider
+      config:
+        issuer: https://my-idp.example.com/.well-known/openid-configuration
+        cacheTokensSalt: my-cache-salt
+        clientID:
+          - my-client-id
+        clientSecret:
+          - type: secretRef
+            secretRef:
+              name: ai-gw-oidc-client-secret
+              key: clientSecret

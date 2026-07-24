@@ -1,0 +1,349 @@
+# TLSRoute overlapping backends test scenario.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: tlsroute-overlapping-backends
+spec:
+  # Skipping this test until fixed and stable.
+  # TODO: https://github.com/Kong/kong-operator/issues/4786
+  skip: true
+  description: |
+    Validates that the hybrid gateway controller correctly handles a TLSRoute
+    whose backendRef Services overlap on the same underlying pods. This mirrors
+    the httproute-overlapping-backends scenario for TLS passthrough routes.
+
+    The test covers four scenarios end-to-end:
+
+    Initial state — two backendRefs, same pods (steps 8-10):
+      Both services resolve to the same pod IP. The controller must merge the
+      duplicate endpoints into a single KongTarget instead of creating two with
+      identical host:port. Exactly 1 KongTarget must be Programmed=True.
+
+    Scenario A — remove one overlapping backendRef (steps 11-11b):
+      The TLSRoute is updated to a single backendRef. The controller must still
+      produce exactly 1 KongTarget and TLS traffic must continue to flow.
+
+    Scenario B — re-add the overlapping backendRef (steps 12-12a):
+      The second backendRef (selecting the same pods) is added back. The
+      controller must again merge the endpoints into 1 KongTarget.
+
+    Scenario C — second service moves to a different deployment (steps 13-14b):
+      The preview service selector is updated to select a new deployment with
+      distinct pod IPs. The controller must now produce 2 KongTargets (one per
+      endpoint), both Programmed=True.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: namespace
+      value: ($namespace)
+    - name: konnect_api_auth_name
+      value: konnect-api-auth-dev-1
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: gateway_class_name
+      value: (join('-', [($test_name), 'gateway-class']))
+    - name: gateway_configuration_name
+      value: (join('-', [($test_name), 'gateway-configuration']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: listener_tls_port
+      value: "8899"
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: fqdn
+      value: (join('.', ['echo', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: tls_route_name
+      value: (join('-', [($test_name), 'overlapping-backends']))
+    - name: tls_route_namespace
+      value: ($namespace)
+    - name: echo_deployment_name
+      value: (join('-', [($test_name), 'echo']))
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: echo_active_service_name
+      value: (join('-', [($test_name), 'echo-active']))
+    - name: echo_preview_service_name
+      value: (join('-', [($test_name), 'echo-preview']))
+
+  steps:
+    # Step 1: Create TLS secret for the Gateway listener.
+    - name: 1-create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 2a: Create the secret for Konnect authentication.
+    - name: 2a-create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    # Step 2b: Create KonnectAPIAuthConfiguration.
+    - name: 2b-create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 3: Create GatewayConfiguration.
+    - name: 3-create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 4: Create GatewayClass.
+    - name: 4-create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 5: Create Gateway with TLS passthrough listener.
+    - name: 5-create-gateway
+      description: Create Gateway with TLS passthrough listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway-tls-passthrough-listener.yaml
+
+    # Step 6: Assert KonnectGatewayControlPlane is created.
+    - name: 6-assert-konnect-gateway-control-plane
+      description: Assert KonnectGatewayControlPlane is created and synchronized.
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 7a: Create the active service + deployment via the TLS echo template.
+    # The template mounts the cert secret created in step 1 and configures TLS on port 1030.
+    - name: 7a-create-active-service
+      description: Create the echo deployment and active service using the TLS echo template.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService-with-tls.yaml
+      bindings:
+        - name: echo_deployment_name
+          value: ($echo_active_service_name)
+        - name: echo_deployment_namespace
+          value: ($namespace)
+
+    # Step 7b: Create the preview service pointing to the same deployment.
+    - name: 7b-create-preview-service
+      description: Create preview service with the same pod selector as the active service.
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: ($echo_preview_service_name)
+                namespace: ($namespace)
+              spec:
+                selector:
+                  app: ($echo_active_service_name)
+                ports:
+                  - name: tls
+                    port: 1030
+                    protocol: TCP
+                    targetPort: 1030
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: ($echo_preview_service_name)
+                namespace: ($namespace)
+
+    # Step 8: Create TLSRoute with two backendRefs both selecting the same pods.
+    - name: 8-create-tlsroute
+      description: Create TLSRoute referencing both services — both select the same pods.
+      try:
+        - apply:
+            file: 08-tlsroute.yaml
+        - assert:
+            file: 08-assert-tlsroute.yaml
+      bindings:
+        - name: route_hosts
+          value:
+            - ($fqdn)
+
+    # Step 9: Assert exactly 1 KongTarget is created (not 2) and it is Programmed.
+    - name: 9-assert-kong-target-exists
+      description: Verify exactly 1 KongTarget is created and Programmed (duplicate endpoints merged).
+      try:
+        - assert:
+            file: 09-assert-kong-target.yaml
+
+    - name: 9a-verify-kong-target-count
+      description: Verify exactly 1 KongTarget exists for this TLSRoute.
+      bindings:
+        - name: expected_kong_target_count
+          value: "1"
+        - name: target_weight
+          value: ""
+      use:
+        template: ../../common/_step_templates/verify-kongTarget-count-tlsroute.yaml
+
+    # Step 10: Verify TLS traffic flows through the single merged target.
+    - name: 10-verify-tls-traffic
+      description: Verify TLS traffic is routed correctly through the merged KongTarget.
+      use:
+        template: ../../common/_step_templates/verify-tls-traffic-from-host.yaml
+      bindings:
+        - name: request_sni
+          value: ($fqdn)
+
+    # -------------------------------------------------------------------------
+    # Scenario A: remove one overlapping backendRef → single service → 1 KongTarget.
+    # -------------------------------------------------------------------------
+
+    - name: 11-remove-overlapping-backendref
+      description: Remove preview backendRef — single active service only. Expect 1 KongTarget.
+      bindings:
+        - name: route_hosts
+          value:
+            - ($fqdn)
+      try:
+        - apply:
+            file: 10-tlsroute-single-backend.yaml
+        - assert:
+            file: 08-assert-tlsroute.yaml
+
+    - name: 11a-verify-kong-target-count-single
+      description: Verify exactly 1 KongTarget after removing the overlapping backendRef.
+      bindings:
+        - name: expected_kong_target_count
+          value: "1"
+        - name: target_weight
+          value: ""
+      use:
+        template: ../../common/_step_templates/verify-kongTarget-count-tlsroute.yaml
+
+    - name: 11b-verify-tls-traffic-single
+      description: Verify TLS traffic still flows with a single backendRef.
+      use:
+        template: ../../common/_step_templates/verify-tls-traffic-from-host.yaml
+      bindings:
+        - name: request_sni
+          value: ($fqdn)
+
+    # -------------------------------------------------------------------------
+    # Scenario B: re-add the overlapping second backendRef → back to 1 KongTarget.
+    # -------------------------------------------------------------------------
+
+    - name: 12-re-add-overlapping-backendref
+      description: Re-add preview backendRef selecting the same pods. Expect count stays 1.
+      bindings:
+        - name: route_hosts
+          value:
+            - ($fqdn)
+      try:
+        - apply:
+            file: 08-tlsroute.yaml
+        - assert:
+            file: 08-assert-tlsroute.yaml
+
+    - name: 12a-verify-kong-target-count-re-overlapping
+      description: Verify exactly 1 KongTarget after re-adding the overlapping backendRef.
+      bindings:
+        - name: expected_kong_target_count
+          value: "1"
+        - name: target_weight
+          value: ""
+      use:
+        template: ../../common/_step_templates/verify-kongTarget-count-tlsroute.yaml
+
+    # -------------------------------------------------------------------------
+    # Scenario C: second service moves to a different deployment (distinct pods)
+    # → endpoints diverge → 2 KongTargets.
+    # -------------------------------------------------------------------------
+
+    # Step 13a: Create second deployment via the TLS echo template.
+    - name: 13a-create-echo2-service
+      description: Create a second echo deployment for the diverged-backends scenario.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService-with-tls.yaml
+      bindings:
+        - name: echo_deployment_name
+          value: (join('-', [($test_name), 'echo2']))
+        - name: echo_deployment_namespace
+          value: ($namespace)
+
+    # Step 13b: Retarget the preview service selector to the new deployment.
+    - name: 13b-retarget-preview-service
+      description: Update preview service selector to point to echo2 pods (distinct from active).
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: ($echo_preview_service_name)
+                namespace: ($namespace)
+              spec:
+                selector:
+                  app: (join('-', [($test_name), 'echo2']))
+                ports:
+                  - name: tls
+                    port: 1030
+                    protocol: TCP
+                    targetPort: 1030
+
+    - name: 14-update-tlsroute-diverged-backends
+      description: Apply TLSRoute with diverged backends (distinct pod IPs). Expect 2 KongTargets.
+      bindings:
+        - name: route_hosts
+          value:
+            - ($fqdn)
+      try:
+        - apply:
+            file: 12-tlsroute-diverged-backends.yaml
+        - assert:
+            file: 08-assert-tlsroute.yaml
+
+    - name: 14a-verify-kong-target-count-diverged
+      description: Verify 2 KongTargets exist when backends select distinct pods.
+      bindings:
+        - name: expected_kong_target_count
+          value: "2"
+        - name: target_weight
+          value: ""
+      use:
+        template: ../../common/_step_templates/verify-kongTarget-count-tlsroute.yaml
+
+    - name: 14b-verify-tls-traffic-diverged
+      description: Verify TLS traffic flows when backends have distinct endpoints.
+      use:
+        template: ../../common/_step_templates/verify-tls-traffic-from-host.yaml
+      bindings:
+        - name: request_sni
+          value: ($fqdn)
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-tlsroute-overlapping-backends
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

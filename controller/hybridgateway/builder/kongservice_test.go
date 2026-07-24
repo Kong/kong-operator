@@ -216,17 +216,17 @@ func TestKongServiceBuilder_WithProtocol(t *testing.T) {
 		expectedProtocol sdkkonnectcomp.Protocol
 		expectError      bool
 	}{
-		{name: "http", protocol: "http", expectedProtocol: sdkkonnectcomp.ProtocolHTTP},
-		{name: "https", protocol: "https", expectedProtocol: sdkkonnectcomp.ProtocolHTTPS},
-		{name: "grpc", protocol: "grpc", expectedProtocol: sdkkonnectcomp.ProtocolGrpc},
-		{name: "grpcs", protocol: "grpcs", expectedProtocol: sdkkonnectcomp.ProtocolGrpcs},
-		{name: "ws", protocol: "ws", expectedProtocol: sdkkonnectcomp.ProtocolWs},
-		{name: "wss", protocol: "wss", expectedProtocol: sdkkonnectcomp.ProtocolWss},
-		{name: "tls", protocol: "tls", expectedProtocol: sdkkonnectcomp.ProtocolTLS},
-		{name: "tcp", protocol: "tcp", expectedProtocol: sdkkonnectcomp.ProtocolTCP},
-		{name: "tls_passthrough", protocol: "tls_passthrough", expectedProtocol: sdkkonnectcomp.ProtocolTLSPassthrough},
-		{name: "udp", protocol: "udp", expectedProtocol: sdkkonnectcomp.ProtocolUDP},
-		{name: "empty defaults to http", protocol: "", expectedProtocol: sdkkonnectcomp.ProtocolHTTP},
+		{name: "http", protocol: "http", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsHTTP)},
+		{name: "https", protocol: "https", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsHTTPS)},
+		{name: "grpc", protocol: "grpc", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsGrpc)},
+		{name: "grpcs", protocol: "grpcs", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsGrpcs)},
+		{name: "ws", protocol: "ws", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsWs)},
+		{name: "wss", protocol: "wss", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsWss)},
+		{name: "tls", protocol: "tls", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsTLS)},
+		{name: "tcp", protocol: "tcp", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsTCP)},
+		{name: "tls_passthrough", protocol: "tls_passthrough", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsTLSPassthrough)},
+		{name: "udp", protocol: "udp", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsUDP)},
+		{name: "empty defaults to http", protocol: "", expectedProtocol: sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsHTTP)},
 		{name: "unsupported protocol", protocol: "invalid", expectError: true},
 	}
 
@@ -540,4 +540,19 @@ func TestKongServiceBuilder_WithClientCertificateRef(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestKongServiceBuilder_WithSpecTags(t *testing.T) {
+	t.Run("nil leaves tags unset", func(t *testing.T) {
+		svc := NewKongService().WithSpecTags(nil).MustBuild()
+		assert.Nil(t, svc.Spec.Tags)
+	})
+	t.Run("empty leaves tags unset", func(t *testing.T) {
+		svc := NewKongService().WithSpecTags([]string{}).MustBuild()
+		assert.Nil(t, svc.Spec.Tags)
+	})
+	t.Run("sets tags", func(t *testing.T) {
+		svc := NewKongService().WithSpecTags([]string{"foo", "bar"}).MustBuild()
+		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, svc.Spec.Tags)
+	})
 }

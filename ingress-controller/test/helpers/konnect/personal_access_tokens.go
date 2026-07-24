@@ -9,7 +9,7 @@ import (
 	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/sdk"
@@ -37,7 +37,10 @@ func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 		tokenCreated string
 		tokenName    = fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixMilli())
 	)
-	createServiceAccountToken := retry.Do(func() error {
+	createServiceAccountToken := retry.New(
+		retry.Attempts(5),
+		retry.Delay(time.Second),
+	).Do(func() error {
 		createResp, err := s.PersonalAccessTokens.
 			CreatePersonalAccessToken(ctx, *me.User.ID,
 				&sdkkonnectcomp.PersonalAccessTokenCreateRequest{
@@ -75,22 +78,22 @@ func CreateTestPersonalAccessToken(ctx context.Context, t *testing.T) string {
 		tokenID = createResp.PersonalAccessTokenCreateResponse.ID
 		tokenCreated = createResp.PersonalAccessTokenCreateResponse.KonnectToken
 		return nil
-	}, retry.Attempts(5), retry.Delay(time.Second))
+	})
 	require.NoError(t, createServiceAccountToken)
 
 	t.Cleanup(func() {
 		fmt.Printf("deleting test Konnect Personal Access Token: %q\n", tokenID)
-		err := retry.Do(
+		if err := retry.New(
+			retry.Attempts(5),
+			retry.Delay(time.Second),
+		).Do(
 			func() error { //nolint:contextcheck
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				_, err := s.PersonalAccessTokens.DeletePersonalAccessToken(ctx, *me.User.ID, tokenID)
 				return err
 			},
-			retry.Attempts(5),
-			retry.Delay(time.Second),
-		)
-		if err != nil {
+		); err != nil {
 			// Don't fail the test if cleanup fails, just log the error.
 			// Cleanup job will eventually clean up konnect.
 			fmt.Printf("failed to delete test Konnect Personal Access Token %q: %v\n", tokenID, err)

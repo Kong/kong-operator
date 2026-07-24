@@ -15,16 +15,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
-// Scope represents the scope of the object.
-type Scope byte
-
-const (
-	// ScopeCluster represents the cluster scope.
-	ScopeCluster Scope = iota
-	// ScopeNamespace represents the namespace scope.
-	ScopeNamespace
-)
-
 // GetGroupKindScope returns the scope of the object.
 func getGroupKindScope(t *testing.T, cfg *rest.Config, obj client.Object) meta.RESTScopeName {
 	dc := discovery.NewDiscoveryClientForConfigOrDie(cfg)
@@ -114,7 +104,20 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			// TODO: This list has to be updated as we progress through implementing
 			// ControlPlane cross namespaces references for various kinds.
 			// https://github.com/Kong/kong-operator/issues/2873
-			if slices.Contains([]string{"KongService", "KongRoute", "KongUpstream", "KongCertificate", "KongCACertificate", "KongConsumer", "KongConsumerGroup", "KongKey", "KongKeySet", "KongDataPlaneClientCertificate"}, obj.GetObjectKind().GroupVersionKind().Kind) {
+			kindsSupportingCrossNamespaceControlPlaneRef := []string{
+				"KongService",
+				"KongRoute",
+				"KongUpstream",
+				"KongCertificate",
+				"KongCACertificate",
+				"KongConsumer",
+				"KongConsumerGroup",
+				"KongKey",
+				"KongKeySet",
+				"KongDataPlaneClientCertificate",
+				"KongPluginBinding",
+			}
+			if slices.Contains(kindsSupportingCrossNamespaceControlPlaneRef, obj.GetObjectKind().GroupVersionKind().Kind) {
 				testcase.Name = "cpRef (type=konnectNamespacedRef) can have namespace"
 				testcase.ExpectedErrorMessage = nil
 			} else {

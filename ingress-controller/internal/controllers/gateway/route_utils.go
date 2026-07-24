@@ -43,9 +43,10 @@ var (
 // supportedGatewayWithCondition is a struct that wraps a gateway and some further info
 // such as the condition Status condition Accepted of the gateway and the listenerName.
 type supportedGatewayWithCondition struct {
-	gateway      *gatewayapi.Gateway
-	condition    metav1.Condition
-	listenerName string
+	gateway               *gatewayapi.Gateway
+	condition             metav1.Condition
+	listenerName          string
+	attachedListenerNames []gatewayapi.SectionName
 }
 
 func (g supportedGatewayWithCondition) GetName() string {
@@ -186,6 +187,8 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			allowedBySupportedKinds = false
 			allowedByListenerName   = false
 			listenerReady           = false
+
+			attachedListenerNames []gatewayapi.SectionName
 		)
 
 		for _, listener := range gateway.Spec.Listeners {
@@ -264,6 +267,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			}
 
 			matched = true
+			attachedListenerNames = append(attachedListenerNames, listener.Name)
 		}
 
 		if matched {
@@ -273,8 +277,9 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			}
 
 			gateways = append(gateways, supportedGatewayWithCondition{
-				gateway:      &gateway,
-				listenerName: listenerName,
+				gateway:               &gateway,
+				listenerName:          listenerName,
+				attachedListenerNames: attachedListenerNames,
 				condition: metav1.Condition{
 					Type:               string(gatewayapi.RouteConditionAccepted),
 					Status:             metav1.ConditionTrue,
@@ -286,24 +291,36 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			// We failed to match a listener with this route
 
 			// This will also catch a case of not matching listener/section name.
+			//
+			// Cases are ordered to match the sequence in which the loop above checks a
+			// listener, not by RouteReason alphabetically or arbitrarily: each flag can
+			// only become true for a listener that has already passed every check before
+			// it, so "flag N is false across all listeners" means no listener got past
+			// check N. Checking flags out of loop-order would let a listener that failed
+			// an earlier check (e.g. AllowedRoutes/kind) masquerade as having failed a
+			// later one (e.g. SectionName) purely because its later flag was never
+			// reached, reporting the wrong reason. matchingHostname is the exception: it's
+			// only set on a listener that already passed every other check (it's the last
+			// check in the loop), so when non-nil it unambiguously means that listener
+			// failed on hostname alone and can safely stay checked first.
 			reason := gatewayapi.RouteReasonNoMatchingParent
 			switch {
 			case matchingHostname != nil && *matchingHostname == metav1.ConditionFalse:
 				// If there is no matchingHostname, the gateway Status Condition Accepted
 				// must be set to False with reason NoMatchingListenerHostname
 				reason = gatewayapi.RouteReasonNoMatchingListenerHostname
+			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
+				reason = gatewayapi.RouteReasonNotAllowedByListeners
+			case !listenerReady:
+				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			case parentRef.SectionName != nil && !allowedByListenerName:
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			case !listenerReady:
-				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			case parentRef.Port != nil && !portMatched:
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
-				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			}
 
 			var listenerName string
@@ -312,8 +329,9 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			}
 
 			gateways = append(gateways, supportedGatewayWithCondition{
-				gateway:      &gateway,
-				listenerName: listenerName,
+				gateway:               &gateway,
+				listenerName:          listenerName,
+				attachedListenerNames: attachedListenerNames,
 				condition: metav1.Condition{
 					Type:               string(gatewayapi.RouteConditionAccepted),
 					Status:             metav1.ConditionFalse,
@@ -497,6 +515,11 @@ func existsMatchingListenerInStatus[T gatewayapi.RouteT](route T, listener gatew
 				gvk = schema.GroupVersionKind{
 					Group: gatewayv1.GroupVersion.Group,
 					Kind:  "TLSRoute",
+				}
+			case *gatewayapi.GRPCRoute:
+				gvk = schema.GroupVersionKind{
+					Group: gatewayv1.GroupVersion.Group,
+					Kind:  "GRPCRoute",
 				}
 			default:
 				gvk = route.GetObjectKind().GroupVersionKind()
@@ -684,6 +707,28 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 			return true
 		}
 	}
+	return false
+}
+
+func isGatewayProgrammedForRoute(gateway supportedGatewayWithCondition) bool {
+	if !isGatewayProgrammed(gateway.gateway) {
+		return false
+	}
+
+	// If the Gateway spec has no listener that could attach this route, let normal
+	// route acceptance handling set the terminal status. This readiness check is
+	// only intended to wait for listener status to catch up when an attached spec
+	// listener exists but its status is not programmed yet.
+	if len(gateway.attachedListenerNames) == 0 {
+		return true
+	}
+
+	for _, listenerName := range gateway.attachedListenerNames {
+		if err := listenerProgrammedInStatus(listenerName, gateway.gateway.Status.Listeners); err == nil {
+			return true
+		}
+	}
+
 	return false
 }
 
