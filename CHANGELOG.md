@@ -68,6 +68,8 @@
 
 - EventGateway CRDs: added `EventGatewaySchemaRegistry` CRD and reconciliation logic.
   [#5017](https://github.com/Kong/kong-operator/pull/5017)
+- Gateway: Support `TCPRoute` for on-prem gateways.
+  [#4207](https://github.com/Kong/kong-operator/pull/4207)
 
 ### Changed
 

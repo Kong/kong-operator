@@ -1,0 +1,86 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gateway-tcproute-onprem
+spec:
+  description: |
+    Validates that an operator-managed on-prem Gateway supports TCPRoute by:
+    1. Creating a GatewayConfiguration and GatewayClass for on-prem mode.
+    2. Creating a TCP Gateway listener whose SupportedKinds includes GRPCRoute.
+    3. Attaching a TCPRoute to that listener and verifying TCPRoute programmed.
+    4. Verifying end-to-end TCP traffic to a tcpecho backend.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_name
+      value: (join('-', [($namespace), 'gateway']))
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: tcpecho_image
+      value: 'kong/go-echo:latest'
+    - name: tcp_route_name
+      value: tcproute-onprem
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_name
+      value: tcpecho
+    - name: echo_deployment_replicas
+      value: 1
+    - name: tcp_echo_port
+      value: 1025
+    - name: listener_tcp_port
+      value: 8888
+  steps:
+    - name: Create-gateway-configuration
+      description: Create an on-prem GatewayConfiguration with no custom KONG_STREAM_LISTEN.
+      try:
+        - apply:
+            file: 01-gatewayconfiguration.yaml
+        - assert:
+            file: 01-gatewayconfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create a GatewayClass pointing at the on-prem GatewayConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-gateway
+      description: Create an operator-managed Gateway with a TCP listener.
+      try:
+        - apply:
+            file: 02-gateway.yaml 
+        - assert:
+            file: 02-assert-gateway.yaml
+
+    - name: Create-tcpecho
+      description: Create a tcpecho backend Deployment and Service.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+
+    - name: Create-tcproute
+      description: Create a TCPRoute attached to the Gateway's TCP listener. 
+      try:
+        - apply:
+            file: 03-tcproute.yaml
+        - assert:
+            file: 03-assert-tcproute.yaml
+    
+    - name: Verify-tcp-traffic
+      description: Verify that TCP traffic to the Gateway is routed to the tcpecho backend.
+      use:
+        template: ../../common/_step_templates/verify-tcp-traffic-from-host.yaml
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-tcproute-onprem
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

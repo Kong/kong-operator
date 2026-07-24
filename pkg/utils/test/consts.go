@@ -56,6 +56,10 @@ const (
 	WaitTLSRouteTick = time.Second * 1
 	// DefaultTLSRouteWait is the default timeout for checking on TLSRoute resources.
 	DefaultTLSRouteWait = time.Minute * 3
+	// WaitTCPRouteTick is the default timeout tick interval for checking on TCPRoute resources.
+	WaitTCPRouteTick = time.Second * 1
+	// DefaultTCPRouteWait is the default timeout for checking on TCPRoute resources.
+	DefaultTCPRouteWait = time.Minute * 3
 )
 
 // -----------------------------------------------------------------------------

@@ -1,0 +1,13 @@
+# Operator-managed Gateway with a single TLS passthrough (L4) listener.
+# A TLS listener is what drives the operator to generate KONG_STREAM_LISTEN.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($gateway_namespace)
+spec:
+  gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+  listeners:
+    - name: tcp
+      protocol: TCP
+      port: (to_number($listener_tcp_port))

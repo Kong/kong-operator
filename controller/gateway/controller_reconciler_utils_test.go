@@ -933,7 +933,75 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(8888),
 				},
 			},
-			expectedError: errors.New("listener 2 uses unsupported protocol TCP"),
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,443:8443,8888:8888",
+				},
+				{
+					// TCP listener: stream entry without `ssl`.
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8888 reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:   8000,
+				443:  8443,
+				8888: 8888,
+			},
+		},
+		{
+			name: "TCP listener uses known port (reassigned)",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tcp",
+					Protocol: gatewayv1.TCPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:16384",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:16384 reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80: 16384,
+			},
+		},
+		{
+			name: "TCP and TLS listeners co-exist on stream proxy",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tcp",
+					Protocol: gatewayv1.TCPProtocolType,
+					Port:     gatewayv1.PortNumber(9000),
+				},
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(9443),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "9000:9000,9443:9443",
+				},
+				{
+					// TCP entries first (sorted), then TLS entries with `ssl`.
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:9000 reuseport,0.0.0.0:9443 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				9000: 9000,
+				9443: 9443,
+			},
 		},
 	}
 
@@ -1312,6 +1380,25 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 				Protocol: gatewayv1.UDPProtocolType,
 			},
 			expectedSupportedKinds: []gwtypes.RouteGroupKind{},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+				Message:            "Listeners' references are accepted.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name: "no tls, TCP protocol, no allowed routes",
+			listener: gwtypes.Listener{
+				Protocol: gatewayv1.TCPProtocolType,
+			},
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "TCPRoute",
+				},
+			},
 			expectedResolvedRefsCondition: metav1.Condition{
 				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
 				Status:             metav1.ConditionTrue,
@@ -4675,6 +4762,60 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 				},
 			},
 		},
+		{
+			// Regression test for the on-prem TCPRoute path: a KONG_STREAM_LISTEN
+			// entry without the `ssl` flag must be reflected in the DP NetworkPolicy
+			// too, otherwise metallb-routed TCP traffic to the DP pod is dropped and
+			// EchoResponds times out (see CI failure ktf-diag-440076529).
+			name: "dataplane with plain-TCP stream listen",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8888 reuseport",
+				})
+			},
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(8888)),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "dataplane with mixed TCP and TLS stream listeners",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8888 reuseport,0.0.0.0:9443 ssl reuseport",
+				})
+			},
+			// Plain-TCP endpoints come first, then SSL — matches the order in
+			// generateDataPlaneNetworkPolicy.
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(8888)),
+						},
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(9443)),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4747,8 +4888,8 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 			name: "single listener with unsupported protocol is not accepted",
 			listeners: []gwtypes.Listener{
 				{
-					Name:          "tcp",
-					Protocol:      gatewayv1.TCPProtocolType,
+					Name:          "unsupported",
+					Protocol:      gatewayv1.ProtocolType("UnsupportedProtocol"),
 					Port:          80,
 					AllowedRoutes: allowedRoutesFromSame,
 				},
