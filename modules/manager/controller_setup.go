@@ -929,7 +929,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tcpRouteGVR.String(), err)
 		}
 		if hasTCPRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
 		}
 	}
 

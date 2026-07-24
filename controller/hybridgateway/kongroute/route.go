@@ -429,13 +429,16 @@ func routesForTCPRouteRule(
 	routeName := namegen.NewKongRouteNameForTCPRouteRule(tcpRoute, cp, namingParentRef, rule)
 	logger = logger.WithValues("kongroute", routeName)
 
+	tags := pkgmetadata.ExtractTags(tcpRoute)
+
 	routeBuilder := builder.NewKongRoute().WithName(routeName).
 		WithNamespace(metadata.NamespaceFromParentRef(tcpRoute, pRef)).
 		WithLabels(tcpRoute, pRef).
 		WithAnnotations(tcpRoute, pRef).
 		WithSpecName(routeName).
 		WithKongService(serviceName).
-		WithProtocols(sdkkonnectcomp.ProtocolsTCP)
+		WithProtocols(sdkkonnectcomp.ProtocolsTCP).
+		WithSpecTags(tags)
 
 	kongRoute, err := routeBuilder.Build()
 	if err != nil {
