@@ -25,8 +25,19 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SUITE_SCRIPT="${SCRIPT_DIR}/${DIRNAME}/prereq.sh"
 
 if [ -f "${SUITE_SCRIPT}" ]; then
-  echo "[run-prereq] applying prerequisites for suite '${DIRNAME}'"
-  bash "${SUITE_SCRIPT}"
+  case $1 in
+    install)
+      echo "[run-prereq] installing prerequisites for suite '${DIRNAME}'"
+      ;;
+    uninstall)
+      echo "[run-prereq] uninstalling prerequisites for suite '${DIRNAME}'"
+      ;;
+    *)
+      echo "[run-prereq] unknown action '$1', must be 'install' or 'uninstall'" >&2
+      exit 1
+      ;;
+  esac
+  bash "${SUITE_SCRIPT}" "$1"
 else
   echo "[run-prereq] no prerequisites for suite '${DIRNAME}', skipping"
 fi
