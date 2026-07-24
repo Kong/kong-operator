@@ -348,6 +348,20 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 		return u
 	}
 
+	// ownedFieldsRaw computes the FieldsV1 raw JSON that a real Server-Side
+	// Apply of obj would have recorded, by converting obj to its field set via
+	// the real, CRD-derived TypeConverter. Used to build a realistic
+	// ManagedFieldsEntry fixture for a foreign field manager.
+	ownedFieldsRaw := func(obj *unstructured.Unstructured) []byte {
+		typed, err := newTestTypeConverter().ObjectToTyped(obj)
+		require.NoError(t, err)
+		set, err := typed.ToFieldSet()
+		require.NoError(t, err)
+		raw, err := set.ToJSON()
+		require.NoError(t, err)
+		return raw
+	}
+
 	tests := []struct {
 		name            string
 		scheme          *runtime.Scheme
@@ -425,6 +439,32 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			wantWaiting: false,
 		},
 		{
+			// Regression test: even when the preexisting object's values already
+			// match desired, if hybridGatewayStateFieldManager has no managed-fields
+			// entry yet on it (e.g. it's owned by a different field manager),
+			// enforceState must still apply so ownership of the relevant fields is
+			// claimed for hybridGatewayStateFieldManager. Otherwise the object would
+			// never gain a managed-fields entry for our manager until a real value
+			// changes, leaving SSA conflict detection ineffective for it in the
+			// meantime.
+			name:    "applies (claims ownership) when values match but no managed-fields entry exists for our manager",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-claim", "same.example")},
+			preexisting: []client.Object{func() client.Object {
+				u := makeDesiredService("svc-claim", "same.example")
+				u.SetManagedFields([]metav1.ManagedFieldsEntry{{
+					Manager:    "foreign-manager",
+					Operation:  metav1.ManagedFieldsOperationApply,
+					APIVersion: kongServiceGVK.GroupVersion().String(),
+					FieldsType: "FieldsV1",
+					FieldsV1:   &metav1.FieldsV1{Raw: ownedFieldsRaw(&u)},
+				}})
+				return &u
+			}()},
+			wantApplied: true,
+			wantWaiting: false,
+		},
+		{
 			name:    "returns typed conversion error for unsupported group",
 			scheme:  scheme.Get(),
 			desired: []unstructured.Unstructured{newUnstructured("default", "bad-group", schema.GroupVersionKind{Group: "invalid.group", Version: "v1", Kind: "Bad"}, nil)},
@@ -472,7 +512,7 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := fake.NewClientBuilder().WithScheme(tt.scheme)
+			builder := fake.NewClientBuilder().WithScheme(tt.scheme).WithReturnManagedFields()
 			if len(tt.preexisting) > 0 {
 				builder = builder.WithObjects(tt.preexisting...)
 			}

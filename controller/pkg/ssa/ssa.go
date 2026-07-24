@@ -221,7 +221,12 @@ func ApplyIfChanged(
 		return op.Noop, fmt.Errorf("failed to compare existing and desired objects: %w", err)
 	}
 
-	if comparison.IsSame() {
+	// Even if the values already match, force an apply when fieldManager has
+	// no managed-fields entry yet (ownedSet is empty): otherwise the object
+	// would never gain a managed-fields entry for fieldManager until a real
+	// value changes, leaving SSA conflict detection ineffective for it in the
+	// meantime.
+	if comparison.IsSame() && !ownedSet.Empty() {
 		log.Debug(logger, "no changes detected",
 			"object", client.ObjectKeyFromObject(desired),
 			"kind", desired.GetObjectKind().GroupVersionKind().Kind,
