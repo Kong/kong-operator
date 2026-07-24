@@ -244,7 +244,8 @@ func SetupManager(
 		t.Log("Starting standalone health check server")
 		health.NewHealthCheckServer(
 			healthz.Ping, health.NewHealthCheckerFromFunc(mgr.IsReady),
-		).Start(ctx, cfg.ProbeAddr, logger.WithName("health-check"))
+			logger.WithName("health-check"),
+		).Start(ctx, cfg.ProbeAddr)
 	}
 
 	return mgr

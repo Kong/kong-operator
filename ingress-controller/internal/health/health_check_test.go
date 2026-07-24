@@ -56,7 +56,7 @@ func TestHealthCheckServer(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := NewHealthCheckServer(tc.healthzChecker, tc.readyzChecker)
+			h := NewHealthCheckServer(tc.healthzChecker, tc.readyzChecker, logr.Discard())
 			s := httptest.NewServer(h)
 			defer s.Close()
 
@@ -75,7 +75,7 @@ func TestHealthCheckServer(t *testing.T) {
 
 func TestHealthCheckServer_Start(t *testing.T) {
 	// Parameter readyzChecker healthz.Checker does not matter for this test.
-	h := NewHealthCheckServer(healthz.Ping, nil)
+	h := NewHealthCheckServer(healthz.Ping, nil, logr.Discard())
 
 	// Get free local port.
 	port := helpers.GetFreePort(t)
@@ -84,7 +84,7 @@ func TestHealthCheckServer_Start(t *testing.T) {
 	addr := fmt.Sprintf("localhost:%d", port)
 	// Use discard logger to prevent:
 	// panic: Log in goroutine after TestHealthCheckServer_Start has completed: "level"=0 "msg"="healthz server closed"
-	h.Start(ctx, addr, logr.Discard())
+	h.Start(ctx, addr)
 
 	healtzEndpoint := fmt.Sprintf("http://%s/healthz", addr)
 	// Allow some failures just after the server gets started.
