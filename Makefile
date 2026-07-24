@@ -134,6 +134,28 @@ CRDIFY = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-crdify/$(CRDIFY_VERSION)/bin
 crdify: mise yq ## Download crdify locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/crdify@v$(CRDIFY_VERSION)
 
+CHANGELOG_VERSION = $(shell $(YQ) -r '.changelog' < $(TOOLS_VERSIONS_FILE))
+CHANGELOG_BIN = $(PROJECT_DIR)/bin/installs/github-kong-gateway-changelog/$(CHANGELOG_VERSION:v%=%)/changelog
+.PHONY: changelog-tool
+changelog-tool: mise yq ## Download the gateway-changelog generator locally if necessary.
+	$(MAKE) mise-install DEP_VER=github:Kong/gateway-changelog@$(CHANGELOG_VERSION)
+
+.PHONY: changelog
+changelog: changelog-tool ## Assemble CHANGELOG.md for a release from fragments. Usage: make changelog VERSION=vX.Y.Z
+	@test -n "$(VERSION)" || (echo "VERSION is required, e.g. make changelog VERSION=v2.4.0" && exit 1)
+	CHANGELOG_BIN="$(CHANGELOG_BIN)" REPO="Kong/kong-operator" ./scripts/changelog/generate.sh "$(VERSION)"
+
+.PHONY: changelog.verify
+changelog.verify: yq ## Schema-lint changelog fragments in the unreleased dir.
+	YQ="$(YQ)" ./scripts/changelog/verify.sh changelog/unreleased/kong-operator
+
+.PHONY: test.changelog
+test.changelog: ## Run the changelog script golden tests.
+	./scripts/changelog/tests/run.sh
+
+.PHONY: verify.changelog
+verify.changelog: changelog.verify test.changelog ## Verify changelog fragments and scripts.
+
 SKAFFOLD_VERSION = $(shell $(YQ) -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/github-google-container-tools-skaffold/$(SKAFFOLD_VERSION)/skaffold
 .PHONY: skaffold

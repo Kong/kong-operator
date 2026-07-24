@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Test stub mimicking `gateway-changelog generate` when every fragment was
+# skipped (e.g. wrong file extension): emits a title but no entries, the same
+# shape the real tool produces in that failure mode. Ignores all flags.
+set -euo pipefail
+cat <<'EOF'
+
+# stub-title
+
+
+
+EOF

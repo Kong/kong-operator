@@ -285,6 +285,13 @@ jobs:
       - name: Update version in chart and its tests
         run: make test.charts.golden.update
 
+      # Assemble CHANGELOG.md from unreleased fragments and archive them.
+      - name: Generate changelog from fragments
+        env:
+          GITHUB_TOKEN: ${{ secrets.gh-pat }}
+        run: |
+          make changelog VERSION=${{ needs.semver.outputs.fullversion }}
+
       # The generated bundle is part of the release PR.
       # This is done locally in this job, to avoid including unintended changes.
       # If anything needs to be fixed before the release, it should be done on the base branch
@@ -319,6 +326,8 @@ jobs:
             VERSION
             config
             charts
+            CHANGELOG.md
+            changelog
           commit-message: "${{ env.MSG }}"
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>

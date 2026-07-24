@@ -53,3 +53,5 @@ cert-manager: "1.21.0"
 chainsaw: "v0.2.15"
 # renovate: datasource=github-releases depName=fullstorydev/grpcurl
 grpcurl: "v1.9.3"
+# renovate: datasource=github-releases depName=Kong/gateway-changelog
+changelog: "v2.0.3"
