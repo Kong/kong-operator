@@ -1016,22 +1016,25 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 				{
 					Name:       "http",
 					Port:       80,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
 				},
 				{
 					Name:       "https",
 					Port:       443,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
 				},
 				{
 					Name:       "tls",
 					Port:       9443,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(9443),
 				},
 			},
 		},
 		{
-			name: "some invalid listeners",
+			name: "UDP listener supported",
 			listeners: []gwtypes.Listener{
 				{
 					Name:     "http",
@@ -1044,14 +1047,21 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(8899),
 				},
 			},
+			portMap: map[int]int{8899: 8899},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
 					Port:       80,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
 				},
+				{
+					Name:       "udp",
+					Port:       8899,
+					TargetPort: intstr.FromInt(8899),
+					Protocol:   corev1.ProtocolUDP,
+				},
 			},
-			expectedError: errors.New("listener 1 uses unsupported protocol UDP"),
 		},
 		{
 			name: "listener options sets nodeport",
@@ -1077,12 +1087,14 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 				{
 					Name:       "http",
 					Port:       80,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
 					NodePort:   int32(30080),
 				},
 				{
 					Name:       "https",
 					Port:       443,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
 				},
 			},
@@ -1311,7 +1323,12 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.UDPProtocolType,
 			},
-			expectedSupportedKinds: []gwtypes.RouteGroupKind{},
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "UDPRoute",
+				},
+			},
 			expectedResolvedRefsCondition: metav1.Condition{
 				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
 				Status:             metav1.ConditionTrue,
@@ -3643,6 +3660,206 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			ExpectedRoutes: []int32{0, 0},
 			ExpectedError:  []error{nil, nil},
+		},
+		{
+			Name: "1 UDPRoute in the same namespace as the Gateway",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("udp"),
+							Protocol: gwtypes.UDPProtocolType,
+							Port:     53,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "udp-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 UDPRoute not matching due to wrong sectionName",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("udp"),
+							Protocol: gwtypes.UDPProtocolType,
+							Port:     53,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "udp-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:        gwtypes.ObjectName("test-gw"),
+									Group:       (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									SectionName: new(gatewayv1.SectionName("other-listener")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 UDPRoute not matching due to wrong port",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("udp"),
+							Protocol: gwtypes.UDPProtocolType,
+							Port:     53,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "udp-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+									Port:  new(gatewayv1.PortNumber(8080)),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "UDP listener with explicit UDPRoute kind in AllowedRoutes",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("udp"),
+							Protocol: gwtypes.UDPProtocolType,
+							Port:     53,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+								Kinds: []gwtypes.RouteGroupKind{
+									{
+										Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+										Kind:  "UDPRoute",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "udp-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
 		},
 	}
 
