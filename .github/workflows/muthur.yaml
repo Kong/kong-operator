@@ -38,7 +38,7 @@ jobs:
           repositories: |
             ksai
             ${{ github.event.repository.name }}
-          app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+          client-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
           private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
 
       # This authorization action must come from trusted Kong/ksai code, not from any
@@ -87,7 +87,7 @@ jobs:
           repositories: |
             ksai
             ${{ github.event.repository.name }}
-          app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+          client-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
           private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
 
       # kong-operator is public and Kong/ksai is internal, so the action can't be resolved
@@ -122,3 +122,20 @@ jobs:
           organization_id: ${{ secrets.CLAUDE_ORGANIZATION_ID }}
           service_account_id: ${{ secrets.CLAUDE_SERVICE_ACCOUNT_ID }}
           workspace_id: ${{ secrets.CLAUDE_WORKSPACE_ID }}
+
+      # The action's own "checkout source repo" step wipes the whole workspace root
+      # (including _ksai-review), so its post stage can no longer find action.yml there.
+      # Main steps all finish before any post step runs, so re-checking-out here restores
+      # it on disk before the runner loads it for the action's post stage. always() because
+      # the wipe happens regardless of whether the action itself later fails.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        name: restore reviewer action for post stage
+        if: always()
+        with:
+          token: ${{ steps.kong-token.outputs.token }}
+          path: _ksai-review
+          repository: Kong/ksai
+          ref: 79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
+          sparse-checkout: |
+            .github/actions/ai-reviewer-federated
+          persist-credentials: false
