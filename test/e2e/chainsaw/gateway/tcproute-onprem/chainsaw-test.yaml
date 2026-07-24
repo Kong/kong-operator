@@ -6,7 +6,7 @@ spec:
   description: |
     Validates that an operator-managed on-prem Gateway supports TCPRoute by:
     1. Creating a GatewayConfiguration and GatewayClass for on-prem mode.
-    2. Creating a TCP Gateway listener whose SupportedKinds includes GRPCRoute.
+    2. Creating a TCP Gateway listener whose SupportedKinds includes TCPRoute.
     3. Attaching a TCPRoute to that listener and verifying TCPRoute programmed.
     4. Verifying end-to-end TCP traffic to a tcpecho backend.
   bindings:

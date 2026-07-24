@@ -1189,17 +1189,13 @@ func countAttachedUDPRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener,
 // taking into account the ParentRefs' sectionName between the listener and the route.
 // TCPRoute has no hostnames, so only sectionName matching applies.
 func countAttachedTCPRoutes(listener gwtypes.Listener, tcpRoutes []gatewayv1.TCPRoute) int32 {
-	var count int32
-
-	for _, tcpRoute := range tcpRoutes {
-		if lo.ContainsBy(tcpRoute.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
-			return parentRef.SectionName == nil || *parentRef.SectionName == listener.Name
-		}) {
-			count++
-		}
-	}
-
-	return count
+	count := lo.CountBy(tcpRoutes, func(r gatewayv1.TCPRoute) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return parentRef.SectionName == nil || *parentRef.SectionName == listener.Name &&
+				(parentRef.Port == nil || *parentRef.Port == listener.Port)
+		})
+	})
+	return int32(count)
 }
 
 func listenerHostnameIntersectsRouteHostnames(
@@ -1386,11 +1382,9 @@ func setDataPlaneDeploymentListenPorts(
 			portNumber := int(l.Port)
 			// TODO: support multiple listeners using the same port:
 			// https://github.com/Kong/kong-operator/issues/3511
-			// Assign another port if the listener's port is already allocated on Kong DP.
-			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
 			assignStreamPort(i, portNumber)
 			streamPorts = append(streamPorts, streamListenPort{
-				kongPort: portNumber,
+				kongPort: listenerPortToKongListenPort[portNumber],
 				protocol: gatewayv1.TLSProtocolType,
 			})
 		case gatewayv1.UDPProtocolType:
@@ -1402,9 +1396,9 @@ func setDataPlaneDeploymentListenPorts(
 			})
 		case gatewayv1.TCPProtocolType:
 			portNumber := int(l.Port)
-			assignStreamPort(int(l.Port), portNumber)
+			assignStreamPort(i, portNumber)
 			streamPorts = append(streamPorts, streamListenPort{
-				kongPort: portNumber,
+				kongPort: listenerPortToKongListenPort[portNumber],
 				protocol: gatewayv1.TCPProtocolType,
 			})
 		default:

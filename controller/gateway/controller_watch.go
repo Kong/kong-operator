@@ -502,27 +502,7 @@ func (r *Reconciler) listGatewaysAttachedByTCPRoute(ctx context.Context, obj cli
 		return nil
 	}
 
-	gateways := &gatewayv1.GatewayList{}
-	if err := r.List(ctx, gateways); err != nil {
-		logger.Error(err, "Failed to list gateways in watch", "tcproute", client.ObjectKeyFromObject(tcpRoute))
-		return nil
-	}
-	var recs []reconcile.Request
-	for _, gateway := range gateways.Items {
-		for _, parentRef := range tcpRoute.Spec.ParentRefs {
-			if parentRef.Group != nil && string(*parentRef.Group) == gatewayv1.GroupName &&
-				parentRef.Kind != nil && string(*parentRef.Kind) == "Gateway" &&
-				string(parentRef.Name) == gateway.Name {
-				recs = append(recs, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: gateway.Namespace,
-						Name:      gateway.Name,
-					},
-				})
-			}
-		}
-	}
-	return recs
+	return listGatewaysAttachedByRoute(tcpRoute)
 }
 
 // -----------------------------------------------------------------------------
