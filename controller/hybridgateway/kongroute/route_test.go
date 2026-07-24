@@ -214,6 +214,53 @@ func TestRoutesForRule(t *testing.T) {
 	}
 }
 
+func TestRoutesForTCPRouteRule(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+	tcpRoute := &gwtypes.TCPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "TCPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+	port := gwtypes.PortNumber(80)
+	rule := gwtypes.TCPRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "test-service",
+				Port: &port,
+			},
+		}},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+
+	routes, err := RoutesForRule(ctx, logger, cl, tcpRoute, rule, 0, pRef, cp, nil, "test-service", nil)
+	require.NoError(t, err)
+	require.Len(t, routes, 1)
+	kongRoute := routes[0]
+	assert.ElementsMatch(t, []sdkkonnectcomp.Protocols{sdkkonnectcomp.ProtocolsTCP}, kongRoute.Spec.Protocols)
+	assert.Empty(t, kongRoute.Spec.Hosts)
+	assert.Empty(t, kongRoute.Spec.Paths)
+	assert.Empty(t, kongRoute.Spec.Snis)
+	assert.Equal(t, "test-namespace/test-route", kongRoute.Annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation])
+}
+
 func TestRoutesForRule_PrioritizesHeaderOnlyHTTPRouteMatches(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()

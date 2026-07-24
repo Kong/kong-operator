@@ -196,6 +196,35 @@ func TestNewKongUpstreamNameForHTTPRoute(t *testing.T) {
 	}
 }
 
+func TestTCPRouteNames(t *testing.T) {
+	tcpRoute := &gwtypes.TCPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tcp-route",
+			Namespace: "default",
+		},
+	}
+	cp := testControlPlaneRef("test-cp")
+	port := gwtypes.PortNumber(8080)
+	rule := gwtypes.TCPRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "service1",
+				Port: &port,
+			},
+		}},
+	}
+	parentRef := testParentRef(nil)
+
+	upstreamName := NewKongUpstreamNameForTCPRouteRule(tcpRoute, cp, rule)
+	serviceName := NewKongServiceNameForTCPRouteRule(tcpRoute, cp, rule)
+	routeName := NewKongRouteNameForTCPRouteRule(tcpRoute, cp, parentRef, rule)
+
+	assert.True(t, strings.HasPrefix(upstreamName, "tcp.default-service1-8080.1."))
+	assert.True(t, strings.HasPrefix(serviceName, "tcp.default-service1-8080.1."))
+	assert.True(t, strings.HasPrefix(routeName, "tcp.default-tcp-route."))
+	assert.Equal(t, upstreamName, serviceName)
+}
+
 func TestNewKongUpstreamName_Equality(t *testing.T) {
 	tests := []struct {
 		name  string
