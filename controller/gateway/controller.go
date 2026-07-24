@@ -210,6 +210,23 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		log.Info(mgr.GetLogger(), "UDPRoute CRD not found in cluster, skipping watch for UDPRoute resources")
 	}
 
+	tcpRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupName,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "tcproutes",
+	}
+	tcpRouteExist, err := crdChecker.CRDExists(tcpRouteGVR)
+	if err != nil {
+		return err
+	}
+	if tcpRouteExist {
+		blder.Watches(
+			&gatewayv1.TCPRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTCPRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		)
+	}
+
 	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.
 	blder.WatchesRawSource(
 		source.Kind(
