@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,9 +24,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
+	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	k8sobj "github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 )
@@ -44,6 +48,12 @@ type UDPRouteReconciler struct {
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 
+	// If enableReferenceGrant is true, we will check for ReferenceGrant if backend in another
+	// namespace is in backendRefs.
+	// If it is false, referencing backend in different namespace will be rejected.
+	// It's resolved on SetupWithManager call.
+	enableReferenceGrant bool
+
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
 	GatewayNN controllers.OptionalNamespacedName
@@ -51,6 +61,17 @@ type UDPRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// We're verifying whether ReferenceGrant CRD is installed at setup of the UDPRouteReconciler
+	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
+	// when reconciling UDPRoutes.
+	// Once the UDPRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
+	// ReferenceGrant handling again in this reconciler at runtime.
+	r.enableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
+		Resource: "referencegrants",
+	})
+
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("udproute-controller").
 		WithOptions(controller.Options{
@@ -79,6 +100,13 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&gatewayapi.Gateway{},
 			handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForGateway),
 		)
+
+	if r.enableReferenceGrant {
+		blder.Watches(&gatewayapi.ReferenceGrant{},
+			handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForReferenceGrant),
+			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasUDPRouteFrom)),
+		)
+	}
 
 	if r.StatusQueue != nil {
 		blder.WatchesRawSource(
@@ -251,6 +279,54 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(ctx context.Context, obj cl
 	return queue
 }
 
+// listUDPRoutesForReferenceGrant is a watch predicate which finds all UDPRoutes
+// mentioned in a From clause for a ReferenceGrant.
+func (r *UDPRouteReconciler) listUDPRoutesForReferenceGrant(ctx context.Context, obj client.Object) []reconcile.Request {
+	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	if !ok {
+		r.Log.Error(
+			errInvalidType,
+			"Referencegrant watch predicate received unexpected object type",
+			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	udproutes := &gatewayapi.UDPRouteList{}
+	if err := r.List(ctx, udproutes); err != nil {
+		r.Log.Error(err, "Failed to list udproutes in watch", "referencegrant", grant.Name)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, udproute := range udproutes.Items {
+		for _, from := range grant.Spec.From {
+			if string(from.Namespace) == udproute.Namespace &&
+				from.Kind == "UDPRoute" &&
+				from.Group == "gateway.networking.k8s.io" {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: k8stypes.NamespacedName{
+						Namespace: udproute.Namespace,
+						Name:      udproute.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
+}
+
+func referenceGrantHasUDPRouteFrom(obj client.Object) bool {
+	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	if !ok {
+		return false
+	}
+	for _, from := range grant.Spec.From {
+		if from.Kind == "UDPRoute" && from.Group == "gateway.networking.k8s.io" {
+			return true
+		}
+	}
+	return false
+}
+
 // -----------------------------------------------------------------------------
 // UDPRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
@@ -338,15 +414,6 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			debug(log, udproute, "Failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
-		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-			// if the dataplane client has reporting enabled (this is the default and is
-			// tied in with status updates being enabled in the controller manager) then
-			// we will wait until the object is reported as successfully configured before
-			// moving on to status updates.
-			if !r.DataplaneClient.KubernetesObjectIsConfigured(udproute) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-		}
 	} else {
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(udproute); err != nil {
@@ -376,7 +443,11 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// if the dataplane client has reporting enabled (this is the default and is
 		// tied in with status updates being enabled in the controller manager) then
 		// we will wait until the object is reported as successfully configured before
-		// moving on to status updates.
+		// moving on to the remaining status updates.
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(udproute) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(udproute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until udproute is configured.
@@ -438,10 +509,15 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(
 		gateways...,
 	)
 
+	parentStatuses, resolvedRefsChanged, err := r.setRouteConditionResolvedRefsCondition(ctx, udproute, parentStatuses)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+
 	programmedConditionChanged := initializeParentStatusesWithProgrammedCondition(udproute, parentStatuses)
 
 	// if we didn't have to actually make any changes, no status update is needed
-	if !statusChangesWereMade && !programmedConditionChanged {
+	if !statusChangesWereMade && !resolvedRefsChanged && !programmedConditionChanged {
 		return false, ctrl.Result{}, nil
 	}
 
@@ -462,4 +538,127 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(
 
 	// the status needed an update and it was updated successfully
 	return true, ctrl.Result{}, nil
+}
+
+// SetLogger sets the logger.
+func (r *UDPRouteReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
+}
+
+// setRouteConditionResolvedRefsCondition sets a condition of type ResolvedRefs on the route status.
+func (r *UDPRouteReconciler) setRouteConditionResolvedRefsCondition(
+	ctx context.Context,
+	udpRoute *gatewayapi.UDPRoute,
+	parentStatuses map[string]*gatewayapi.RouteParentStatus,
+) (map[string]*gatewayapi.RouteParentStatus, bool, error) {
+	var changed bool
+	resolvedRefsStatus := metav1.ConditionFalse
+	reason, msg, err := r.getUDPRouteRuleReason(ctx, *udpRoute)
+	if err != nil {
+		return nil, false, err
+	}
+	if reason == gatewayapi.RouteReasonResolvedRefs {
+		resolvedRefsStatus = metav1.ConditionTrue
+	}
+
+	// iterate over all the parentStatuses conditions, and if no RouteConditionResolvedRefs is found,
+	// or if the condition is found but has to be changed, update the status and mark it to be updated
+	resolvedRefsCondition := metav1.Condition{
+		Type:               string(gatewayapi.RouteConditionResolvedRefs),
+		Status:             resolvedRefsStatus,
+		ObservedGeneration: udpRoute.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(reason),
+		Message:            msg,
+	}
+	for _, parentStatus := range parentStatuses {
+		var conditionFound bool
+		for i, cond := range parentStatus.Conditions {
+			if cond.Type == string(gatewayapi.RouteConditionResolvedRefs) {
+				if cond.Status != resolvedRefsStatus ||
+					cond.Reason != string(reason) {
+					parentStatus.Conditions[i] = resolvedRefsCondition
+					changed = true
+				}
+				conditionFound = true
+				break
+			}
+		}
+		if !conditionFound {
+			parentStatus.Conditions = append(parentStatus.Conditions, resolvedRefsCondition)
+			changed = true
+		}
+	}
+
+	return parentStatuses, changed, nil
+}
+
+// getUDPRouteRuleReason validates the backendRefs of every rule in the UDPRoute
+// and returns the first failure encountered. When all backendRefs are valid it
+// returns gatewayapi.RouteReasonResolvedRefs.
+func (r *UDPRouteReconciler) getUDPRouteRuleReason(ctx context.Context, udpRoute gatewayapi.UDPRoute) (reason gatewayapi.RouteConditionReason, msg string, err error) {
+	for _, rule := range udpRoute.Spec.Rules {
+		for _, backendRef := range rule.BackendRefs {
+			backendNamespace := udpRoute.Namespace
+			if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+				backendNamespace = string(*backendRef.Namespace)
+			}
+
+			backendRefGK := string(*backendRef.Kind)
+			if gr := string(*backendRef.Group); gr != "" {
+				backendRefGK = gr + "/" + backendRefGK
+			}
+			targetNN := k8stypes.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}
+
+			// Check if the BackendRef GroupKind is supported.
+			if !util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) {
+				return gatewayapi.RouteReasonInvalidKind, fmt.Sprintf("target %s has unsupported type %s", targetNN, backendRefGK), nil
+			}
+
+			// If the object referenced is in another namespace, verify that a
+			// ReferenceGrant permits the reference *before* checking whether the
+			// object exists. Checking existence first would leak, via
+			// BackendNotFound vs RefNotPermitted, whether a resource exists in a
+			// namespace we have no permission to reference.
+			if udpRoute.Namespace != backendNamespace {
+				differentNamespaceMsg := fmt.Sprintf("%s is in a different namespace than the UDPRoute (namespace %s)", targetNN, udpRoute.Namespace)
+				if !r.enableReferenceGrant {
+					return gatewayapi.RouteReasonRefNotPermitted,
+						differentNamespaceMsg + " install ReferenceGrant CRD and configure a proper grant",
+						nil
+				}
+
+				referenceGrantList := &gatewayapi.ReferenceGrantList{}
+				if err := r.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
+					return "", "", err
+				}
+				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"
+				if len(referenceGrantList.Items) == 0 {
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
+				}
+				var isGranted bool
+				for _, grant := range referenceGrantList.Items {
+					if isUDPReferenceGranted(grant.Spec, backendRef, udpRoute.Namespace) {
+						isGranted = true
+						break
+					}
+				}
+				if !isGranted {
+					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
+				}
+			}
+
+			// Check if the referenced object actually exists.
+			// Only Services are currently supported as BackendRef objects.
+			service := &corev1.Service{}
+			if err := r.Get(ctx, targetNN, service); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return "", "", err
+				}
+				return gatewayapi.RouteReasonBackendNotFound, fmt.Sprintf("target %s of type %s does not exist", targetNN, backendRefGK), nil
+			}
+		}
+	}
+
+	return gatewayapi.RouteReasonResolvedRefs, "", nil
 }
