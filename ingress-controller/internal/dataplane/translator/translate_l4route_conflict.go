@@ -9,12 +9,12 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 )
 
-// tL4Route constrains layer-4 Gateway API route types whose listener
+// L4Route constrains layer-4 Gateway API route types whose listener
 // arbitration follows GEP-2645 (single winner per listener; no SNI
 // multiplexing). Embedding gatewayapi.RouteT lets this type parameter be
 // passed directly to the shared listener-attachment predicates in the
 // gatewayapi package.
-type tL4Route interface {
+type L4Route interface {
 	gatewayapi.RouteT
 	*gatewayapi.UDPRoute | *gatewayapi.TCPRoute
 }
@@ -26,7 +26,7 @@ type tL4Route interface {
 //
 // Caller must have already filtered the input to routes whose ParentRef
 // matches the same (Gateway, Listener) tuple.
-func pickWinningL4Route[T tL4Route](routes []T) T {
+func pickWinningL4Route[T L4Route](routes []T) T {
 	var winner T
 	if len(routes) == 0 {
 		return winner
@@ -42,7 +42,7 @@ func pickWinningL4Route[T tL4Route](routes []T) T {
 
 // l4RouteLess returns true if a should sort before b per GEP-2645:
 // older creationTimestamp first, then namespace/name ascending.
-func l4RouteLess[T tL4Route](a, b T) bool {
+func l4RouteLess[T L4Route](a, b T) bool {
 	aTS, bTS := a.GetCreationTimestamp(), b.GetCreationTimestamp()
 	if !aTS.Equal(&bTS) {
 		return aTS.Before(&bTS)
@@ -70,7 +70,7 @@ type l4ListenerKey struct {
 // l4RouteParentRefs returns the ParentRefs of a layer-4 route. Type-switches
 // over the concrete route type since UDPRouteSpec and TCPRouteSpec are
 // distinct types that share the same CommonRouteSpec shape.
-func l4RouteParentRefs[T tL4Route](r T) []gatewayv1.ParentReference {
+func l4RouteParentRefs[T L4Route](r T) []gatewayv1.ParentReference {
 	switch rr := any(r).(type) {
 	case *gatewayapi.UDPRoute:
 		return rr.Spec.ParentRefs
@@ -92,7 +92,7 @@ func parentRefGatewayNN(pr gatewayv1.ParentReference, routeNamespace string) typ
 // ParentRef across the given routes and returns a map keyed by Gateway NN of
 // its listeners matching the given protocol. Gateways not found in storer
 // are omitted.
-func collectL4ListenersByGateway[T tL4Route](
+func collectL4ListenersByGateway[T L4Route](
 	storer store.Storer,
 	routes []T,
 	protocol gatewayv1.ProtocolType,
@@ -145,7 +145,7 @@ func collectL4ListenersByGateway[T tL4Route](
 // AllowedRoutes.Namespaces.From: Selector can't be evaluated here (it needs a
 // Namespace cache the translator doesn't have) and is conservatively treated
 // as not-attached, logged once per candidate.
-func l4RouteListenerAttachments[T tL4Route](
+func l4RouteListenerAttachments[T L4Route](
 	route T,
 	logger logr.Logger,
 	listenersByGateway map[types.NamespacedName][]l4Listener,
