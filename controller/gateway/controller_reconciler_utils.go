@@ -687,12 +687,19 @@ func generateDataPlaneNetworkPolicy(
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_STREAM_LISTEN env: %w", err)
 		}
-		streamListenPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
-			return intstr.FromInt(ep.Port)
-		})
 		streamUDPListenPorts = lo.Map(kongListenConfig.UDPEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
 		})
+		// Include both plain-TCP entries (TCPRoute) and SSL entries (TLSRoute) — the
+		// NetworkPolicy must allow ingress on every port Kong is listening on for stream.
+		streamListenPorts = append(
+			lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+				return intstr.FromInt(ep.Port)
+			}),
+			lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+				return intstr.FromInt(ep.Port)
+			})...,
+		)
 	}
 
 	// Construct the policy to allow the KO pod to access DataPlane admin APIs.
@@ -852,9 +859,8 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 		gatewayv1.HTTPProtocolType:  {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.HTTPSProtocolType: {"HTTPRoute": {}, "GRPCRoute": {}},
 		gatewayv1.TLSProtocolType:   {"TLSRoute": {}},
+		gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
 		gatewayv1.UDPProtocolType:   {"UDPRoute": {}},
-		// TCPRoutes are not supported yet
-		// gatewayv1.TCPProtocolType:   {"TCPRoute": {}},
 	}
 }
 
@@ -1100,6 +1106,15 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 				)
 			}
 			count += countAttachedUDPRoutes(g, listener, udpRoutes)
+		case "TCPRoute":
+			tcpRoutes, err := gatewayutils.ListTCPRoutesForGateway(ctx, cl, g, opts...)
+			if err != nil {
+				return 0, fmt.Errorf(
+					"failed to list TCPRoutes for Gateway %s when counting AttachedRoutes: %w",
+					client.ObjectKeyFromObject(g), err,
+				)
+			}
+			count += countAttachedTCPRoutes(listener, tcpRoutes)
 		// Unsupported route kinds. Should be unreachable.
 		default:
 			return 0, fmt.Errorf("unsupported route kind: %s", k)
@@ -1164,6 +1179,19 @@ func countAttachedUDPRoutes(gateway *gwtypes.Gateway, listener gwtypes.Listener,
 		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
 			return string(parentRef.Name) == gateway.Name &&
 				(parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+				(parentRef.Port == nil || *parentRef.Port == listener.Port)
+		})
+	})
+	return int32(count)
+}
+
+// countAttachedTCPRoutes counts the number of attached TCPRoutes for a given listener,
+// taking into account the ParentRefs' sectionName between the listener and the route.
+// TCPRoute has no hostnames, so only sectionName matching applies.
+func countAttachedTCPRoutes(listener gwtypes.Listener, tcpRoutes []gatewayv1.TCPRoute) int32 {
+	count := lo.CountBy(tcpRoutes, func(r gatewayv1.TCPRoute) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gatewayv1.ParentReference) bool {
+			return (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
 				(parentRef.Port == nil || *parentRef.Port == listener.Port)
 		})
 	})
@@ -1354,8 +1382,6 @@ func setDataPlaneDeploymentListenPorts(
 			portNumber := int(l.Port)
 			// TODO: support multiple listeners using the same port:
 			// https://github.com/Kong/kong-operator/issues/3511
-			// Assign another port if the listener's port is already allocated on Kong DP.
-			// Also re-assign a port if known ports (<1024) are used because we usually cannot listen on those port on Kong DP.
 			assignStreamPort(i, portNumber)
 			streamPorts = append(streamPorts, streamListenPort{
 				kongPort: listenerPortToKongListenPort[portNumber],
@@ -1367,6 +1393,13 @@ func setDataPlaneDeploymentListenPorts(
 			streamPorts = append(streamPorts, streamListenPort{
 				kongPort: listenerPortToKongListenPort[portNumber],
 				protocol: gatewayv1.UDPProtocolType,
+			})
+		case gatewayv1.TCPProtocolType:
+			portNumber := int(l.Port)
+			assignStreamPort(i, portNumber)
+			streamPorts = append(streamPorts, streamListenPort{
+				kongPort: listenerPortToKongListenPort[portNumber],
+				protocol: gatewayv1.TCPProtocolType,
 			})
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
@@ -1486,7 +1519,7 @@ func setDataPlaneIngressServicePorts(
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
 		case gatewayv1.HTTPProtocolType:
 			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyPort)
-		case gatewayv1.TLSProtocolType:
+		case gatewayv1.TLSProtocolType, gatewayv1.TCPProtocolType:
 			targetPort, ok := servicePortMap[int(l.Port)]
 			if !ok {
 				errs = errors.Join(errs, fmt.Errorf("no target port assigned listener %s on port %d", l.Name, l.Port))

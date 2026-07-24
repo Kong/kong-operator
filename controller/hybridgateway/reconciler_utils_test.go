@@ -4,22 +4,32 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"os"
+	"path/filepath"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	aexbuilder "k8s.io/apiextensions-apiserver/pkg/controller/openapi/builder"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
+	kubespec3 "k8s.io/kube-openapi/pkg/spec3"
+	validationspec "k8s.io/kube-openapi/pkg/validation/spec"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	k8syaml "sigs.k8s.io/yaml"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -42,57 +52,61 @@ func newUnstructured(ns, name string, gvk schema.GroupVersionKind, labels map[st
 	return u
 }
 
-func TestPruneDesiredObj(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]any
-		wantMeta map[string]any
-		wantSpec map[string]any
-	}{
-		{
-			name: "removes name and namespace",
-			input: map[string]any{
-				"metadata": map[string]any{
-					"name":      "test-name",
-					"namespace": "test-namespace",
-					"labels":    map[string]any{"foo": "bar"},
-				},
-				"spec": map[string]any{"field": "value"},
-			},
-			wantMeta: map[string]any{"labels": map[string]any{"foo": "bar"}},
-			wantSpec: map[string]any{"field": "value"},
-		},
-		{
-			name: "prunes empty metadata",
-			input: map[string]any{
-				"metadata": map[string]any{},
-			},
-			wantMeta: nil,
-			wantSpec: nil,
-		},
+// hybridGatewayTestCRDManifests lists the real, repo-checked-in CRD manifests
+// for the Kong CRD kinds exercised by enforceState's tests below. Building the
+// TypeConverter from these manifests (rather than a live cluster) keeps this
+// suite fast/offline while still exercising the real CRD OpenAPI schemas.
+var hybridGatewayTestCRDManifests = []string{
+	"configuration.konghq.com_kongtargets.yaml",
+	"configuration.konghq.com_kongroutes.yaml",
+	"configuration.konghq.com_kongpluginbindings.yaml",
+	"configuration.konghq.com_kongservices.yaml",
+	"configuration.konghq.com_kongupstreams.yaml",
+}
+
+// newTestTypeConverter is memoized (via [sync.OnceValue]) since it is expensive
+// to build (reads + parses CRD manifests, builds OpenAPI schemas) and is
+// read-only/safe to share across all tests in this file, including parallel
+// subtests.
+var newTestTypeConverter = sync.OnceValue(func() k8smanagedfields.TypeConverter {
+	var specs []*kubespec3.OpenAPI
+	for _, file := range hybridGatewayTestCRDManifests {
+		path := filepath.Join("..", "..", "config", "crd", "kong-operator", file)
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			panic(fmt.Errorf("failed to read CRD manifest %s: %w", path, err))
+		}
+
+		crd := &apiextensionsv1.CustomResourceDefinition{}
+		if err := k8syaml.Unmarshal(raw, crd); err != nil {
+			panic(fmt.Errorf("failed to unmarshal CRD manifest %s: %w", path, err))
+		}
+
+		for _, v := range crd.Spec.Versions {
+			spec, err := aexbuilder.BuildOpenAPIV3(crd, v.Name, aexbuilder.Options{})
+			if err != nil {
+				panic(fmt.Errorf("failed to build OpenAPI v3 for %s/%s: %w", crd.Name, v.Name, err))
+			}
+			specs = append(specs, spec)
+		}
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			obj := unstructured.Unstructured{Object: tt.input}
-			u := pruneDesiredObj(obj)
-			metadata, hasMeta := u.Object["metadata"]
-			if tt.wantMeta == nil {
-				assert.False(t, hasMeta, "metadata should be missing or nil")
-			} else {
-				metaMap, ok := metadata.(map[string]any)
-				assert.True(t, ok, "metadata should be a map")
-				assert.Equal(t, tt.wantMeta, metaMap)
-			}
-			if tt.wantSpec != nil {
-				assert.Equal(t, tt.wantSpec, u.Object["spec"])
-			} else {
-				_, hasSpec := u.Object["spec"]
-				assert.False(t, hasSpec)
-			}
-		})
+	merged, err := aexbuilder.MergeSpecsV3(specs...)
+	if err != nil {
+		panic(fmt.Errorf("failed to merge CRD OpenAPI v3 specs: %w", err))
 	}
-}
+
+	schemas := map[string]*validationspec.Schema{}
+	if merged.Components != nil {
+		maps.Copy(schemas, merged.Components.Schemas)
+	}
+
+	tc, err := k8smanagedfields.NewTypeConverter(schemas, false)
+	if err != nil {
+		panic(fmt.Errorf("failed to create TypeConverter: %w", err))
+	}
+	return tc
+})
 
 func TestEnforceState_DependencyGating(t *testing.T) {
 	ctx := t.Context()
@@ -115,7 +129,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).Build()
 
-		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -138,7 +152,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(svc).Build()
 
-		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -160,7 +174,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(route).Build()
 
-		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -182,7 +196,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(cert).Build()
 
-		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -212,7 +226,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(cert).WithObjects(cert).Build()
 
-		applied, _, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, _, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		// The desired object was applied (created), so applied should be true.
 		assert.True(t, applied)
@@ -226,7 +240,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).Build()
 
-		applied, _, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, _, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.True(t, applied)
 	})
@@ -334,6 +348,20 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 		return u
 	}
 
+	// ownedFieldsRaw computes the FieldsV1 raw JSON that a real Server-Side
+	// Apply of obj would have recorded, by converting obj to its field set via
+	// the real, CRD-derived TypeConverter. Used to build a realistic
+	// ManagedFieldsEntry fixture for a foreign field manager.
+	ownedFieldsRaw := func(obj *unstructured.Unstructured) []byte {
+		typed, err := newTestTypeConverter().ObjectToTyped(obj)
+		require.NoError(t, err)
+		set, err := typed.ToFieldSet()
+		require.NoError(t, err)
+		raw, err := set.ToJSON()
+		require.NoError(t, err)
+		return raw
+	}
+
 	tests := []struct {
 		name            string
 		scheme          *runtime.Scheme
@@ -411,7 +439,33 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			wantWaiting: false,
 		},
 		{
-			name:    "returns extract managed fields error for unsupported group",
+			// Regression test: even when the preexisting object's values already
+			// match desired, if hybridGatewayStateFieldManager has no managed-fields
+			// entry yet on it (e.g. it's owned by a different field manager),
+			// enforceState must still apply so ownership of the relevant fields is
+			// claimed for hybridGatewayStateFieldManager. Otherwise the object would
+			// never gain a managed-fields entry for our manager until a real value
+			// changes, leaving SSA conflict detection ineffective for it in the
+			// meantime.
+			name:    "applies (claims ownership) when values match but no managed-fields entry exists for our manager",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-claim", "same.example")},
+			preexisting: []client.Object{func() client.Object {
+				u := makeDesiredService("svc-claim", "same.example")
+				u.SetManagedFields([]metav1.ManagedFieldsEntry{{
+					Manager:    "foreign-manager",
+					Operation:  metav1.ManagedFieldsOperationApply,
+					APIVersion: kongServiceGVK.GroupVersion().String(),
+					FieldsType: "FieldsV1",
+					FieldsV1:   &metav1.FieldsV1{Raw: ownedFieldsRaw(&u)},
+				}})
+				return &u
+			}()},
+			wantApplied: true,
+			wantWaiting: false,
+		},
+		{
+			name:    "returns typed conversion error for unsupported group",
 			scheme:  scheme.Get(),
 			desired: []unstructured.Unstructured{newUnstructured("default", "bad-group", schema.GroupVersionKind{Group: "invalid.group", Version: "v1", Kind: "Bad"}, nil)},
 			preexisting: []client.Object{func() client.Object {
@@ -420,19 +474,16 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			}()},
 			wantApplied:     false,
 			wantWaiting:     false,
-			wantErrContains: "failed to extract managed fields",
+			wantErrContains: "failed to convert existing object to TypedValue",
 		},
 		{
-			name:   "returns conversion error for invalid desired payload",
-			scheme: scheme.Get(),
-			desired: []unstructured.Unstructured{func() unstructured.Unstructured {
-				u := makeDesiredService("svc-convert", "ok.example")
-				u.Object["spec"] = map[string]any{"host": make(chan int), "port": int64(80), "protocol": "httproute"}
-				return u
-			}()},
+			name:            "returns conversion error for invalid desired payload",
+			scheme:          scheme.Get(),
+			desired:         []unstructured.Unstructured{makeDesiredService("svc-convert", int64(12345))},
+			preexisting:     []client.Object{func() client.Object { u := makeDesiredService("svc-convert", "ok.example"); return &u }()},
 			wantApplied:     false,
 			wantWaiting:     false,
-			wantErrContains: "failed to create object kind KongService obj default/svc-convert",
+			wantErrContains: "failed to convert desired object to TypedValue",
 		},
 		{
 			name:    "returns conflict error during create apply",
@@ -443,7 +494,7 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 					return apierrors.NewConflict(schema.GroupResource{Group: "configuration.konghq.com", Resource: "kongservices"}, "svc-create-conflict", assert.AnError)
 				},
 			},
-			wantErrContains: "conflict during create of object kind KongService obj default/svc-create-conflict",
+			wantErrContains: "conflict during apply of object kind KongService obj default/svc-create-conflict",
 		},
 		{
 			name:        "returns update error when apply fails on diff",
@@ -455,13 +506,13 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 					return assert.AnError
 				},
 			},
-			wantErrContains: "failed to create object kind KongService obj default/svc-update-err",
+			wantErrContains: "failed to apply object kind KongService obj default/svc-update-err",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := fake.NewClientBuilder().WithScheme(tt.scheme)
+			builder := fake.NewClientBuilder().WithScheme(tt.scheme).WithReturnManagedFields()
 			if len(tt.preexisting) > 0 {
 				builder = builder.WithObjects(tt.preexisting...)
 			}
@@ -475,7 +526,7 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			}
 
 			conv := &fakeHTTPRouteConverter{desired: tt.desired, outputStoreErr: tt.outputStoreErr}
-			applied, waiting, err := enforceState(ctx, cl, logger, conv)
+			applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, conv)
 
 			if tt.wantErrContains != "" {
 				require.Error(t, err)
@@ -2082,7 +2133,7 @@ func TestEnforceState_UpstreamGating(t *testing.T) {
 			cl := builder.Build()
 
 			fakeConv := &fakeHTTPRouteConverter{desired: tt.desired}
-			applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+			applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 
 			if tt.wantErr {
 				require.Error(t, err)

@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -15,11 +16,10 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/managedfields"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -44,16 +44,21 @@ func translate[t converter.RootObject](conv converter.APIConverter[t], ctx conte
 // are returned as errors. All other errors are wrapped with resource kind and name for context.
 //
 // The function performs the following operations:
-// 1. Retrieves the desired state from the converter's output store
-// 2. For each desired resource, checks if it exists in the cluster
-// 3. Creates new resources using server-side apply if they don't exist
-// 4. Skips resources that are marked for deletion
-// 5. Updates existing resources if changes are detected using managed fields comparison
-// 6. Handles conflicts by returning an error for proper error handling
+//  1. Retrieves the desired state from the converter's output store
+//  2. Applies best-effort dependency gating so dependent resources are not created/updated
+//     before their prerequisites are Programmed in Konnect
+//  3. Skips resources that are marked for deletion
+//  4. Delegates the actual create-or-update decision to the shared
+//     controllerpkgssa.ApplyIfChanged helper, which diffs the object against the API server
+//     using structured-merge-diff (via tc) and issues a Server-Side Apply only when a real
+//     difference is detected (or the object doesn't exist yet)
+//  5. Handles conflicts by returning an error for proper error handling
 //
 // Parameters:
 //   - ctx: The context for API calls and cancellation
 //   - cl: The Kubernetes client for CRUD operations
+//   - tc: The shared managedfields.TypeConverter used by controllerpkgssa.ApplyIfChanged for
+//     structured-merge-diff comparisons
 //   - logger: Logger for structured logging with state-enforcement phase
 //   - conv: The APIConverter that provides the desired state
 //
@@ -61,9 +66,10 @@ func translate[t converter.RootObject](conv converter.APIConverter[t], ctx conte
 //   - bool: true if any resources were created or updated in the cluster
 //   - error: Any error that occurred during state enforcement
 //
-// The function uses server-side apply with the "gateway-operator" field manager to ensure
-// proper ownership and conflict resolution when multiple controllers manage the same resources.
-func enforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (applied bool, waiting bool, err error) {
+// The function uses server-side apply with the hybridGatewayStateFieldManager field manager to
+// ensure proper ownership and conflict resolution when multiple controllers manage the same
+// resources.
+func enforceState[t converter.RootObject](ctx context.Context, cl client.Client, tc k8smanagedfields.TypeConverter, logger logr.Logger, conv converter.APIConverter[t]) (applied bool, waiting bool, err error) {
 	logger = logger.WithValues("phase", "state-enforcement")
 	log.Debug(logger, "Starting state enforcement")
 
@@ -257,6 +263,9 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			Namespace: desired.GetNamespace(),
 			Name:      desired.GetName(),
 		}, existing)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return false, false, fmt.Errorf("failed to get object kind %s obj %s: %w", desired.GetKind(), client.ObjectKeyFromObject(&desired), err)
+		}
 
 		// Merge the hybrid-routes annotation from the live object into the desired state so that SSA
 		// owns and persists it atomically with the rest of the resource. When the object does not
@@ -267,81 +276,35 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		}
 
 		namespacedNameDesired := client.ObjectKeyFromObject(&desired)
-		namespacedNameExisting := client.ObjectKeyFromObject(existing)
 
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// Object doesn't exist, create it using server-side apply.
-				log.Debug(logger, "Creating new object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
-				// Set field manager for server-side apply
-				if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(hybridGatewayStateFieldManager), client.ForceOwnership); err != nil {
-					if apierrors.IsConflict(err) {
-						return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
-					}
-					return false, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
-				}
-				objectsCreated++
-				log.Debug(logger, "Successfully created object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
-				stopAtKind = desired.GetKind()
-				continue
-			} else {
-				// Other error getting the object.
-				return false, false, fmt.Errorf("failed to get object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
-			}
-		}
-
-		// Handle the case when resource are marked for deletion.
-		if !existing.GetDeletionTimestamp().IsZero() {
+		// Handle the case when the existing resource is marked for deletion.
+		if err == nil && !existing.GetDeletionTimestamp().IsZero() {
 			log.Debug(logger, "Existing object is marked for deletion, will not enforce state", "kind", existing.GetKind(), "obj", namespacedNameDesired)
 			objectsSkipped++
 			stopAtKind = existing.GetKind()
 			continue
 		}
 
-		// Object exists, check if we need to update it.
-		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, hybridGatewayStateFieldManager, "")
+		// Diff-before-apply against the shared SSA TypeConverter: this fetches the current object
+		// (again; cheap, served from the client's cache) and issues a Server-Side Apply only when
+		// the object doesn't exist yet or a real difference is detected in the fields we own.
+		result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, cl, tc, &desired, hybridGatewayStateFieldManager)
 		if err != nil {
-			return false, false, fmt.Errorf("failed to extract managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
-		}
-		if managedFieldsObj == nil {
-			// No managed fields for our field manager, we should update.
-			log.Debug(logger, "No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
-			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(hybridGatewayStateFieldManager), client.ForceOwnership); err != nil {
-				if apierrors.IsConflict(err) {
-					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
-				}
-				return false, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+			if apierrors.IsConflict(err) {
+				return false, false, fmt.Errorf("conflict during apply of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
+			return false, false, fmt.Errorf("failed to apply object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+		}
+		switch result {
+		case op.Created:
+			objectsCreated++
+			log.Debug(logger, "Successfully created object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
+			stopAtKind = desired.GetKind()
+		case op.Updated:
 			objectsUpdated++
-			log.Debug(logger, "Successfully applied desired state (no managed fields)", "kind", existing.GetKind(), "obj", namespacedNameExisting)
-			continue
-		}
-
-		// Convert desired resource to unstructured.
-		desiredU, err := utils.ToUnstructured(&desired, cl.Scheme())
-		if err != nil {
-			return false, false, fmt.Errorf("failed to convert to unstructured desired obj for kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
-		}
-
-		// Compare the two states.
-		compare, err := managedfields.Compare(managedFieldsObj, pruneDesiredObj(desiredU))
-		if err != nil {
-			return false, false, fmt.Errorf("failed to compare managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
-		}
-
-		if compare.IsSame() {
-			log.Trace(logger, "No changes detected for obj", "kind", existing.GetKind(), "obj", namespacedNameExisting)
-		} else {
-			log.Info(logger, "Changes detected for obj, applying desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting, "changes", compare.String())
-			// Changes detected, apply the desired state using server-side apply.
-			if err := cl.Apply(ctx, client.ApplyConfigurationFromUnstructured(&desired), client.FieldOwner(hybridGatewayStateFieldManager), client.ForceOwnership); err != nil {
-				if apierrors.IsConflict(err) {
-					return false, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
-				}
-				return false, false, fmt.Errorf("failed to update object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
-			}
-			objectsUpdated++
-			log.Debug(logger, "Successfully applied changes to object", "kind", existing.GetKind(), "obj", namespacedNameExisting)
+			log.Debug(logger, "Successfully applied changes to object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
+		case op.Noop, op.Deleted:
+			log.Trace(logger, "No changes detected for obj", "kind", desired.GetKind(), "obj", namespacedNameDesired)
 		}
 	}
 
@@ -625,16 +588,6 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 
 	log.Debug(logger, "Finished orphaned resource cleanup")
 	return false, nil
-}
-
-// pruneDesiredObj removes fields that should not be compared when checking for differences.
-func pruneDesiredObj(obj unstructured.Unstructured) *unstructured.Unstructured {
-	u := obj.DeepCopy()
-	// Remove metadata fields such as name and namespace from the desired object that are not managed by the controller.
-	unstructured.RemoveNestedField(u.Object, "metadata", "name")
-	unstructured.RemoveNestedField(u.Object, "metadata", "namespace")
-	managedfields.PruneEmptyFields(u)
-	return u
 }
 
 // shouldProcessObject determines if an object should be processed in the reconcile loop.

@@ -75,6 +75,8 @@
 
 - EventGateway CRDs: added `EventGatewaySchemaRegistry` CRD and reconciliation logic.
   [#5017](https://github.com/Kong/kong-operator/pull/5017)
+- Gateway: Support `TCPRoute` for on-prem gateways.
+  [#4207](https://github.com/Kong/kong-operator/pull/4207)
 
 ### Changed
 
@@ -94,6 +96,11 @@
   [#4953](https://github.com/Kong/kong-operator/pull/4953)
 - Add timeouts to `ControlPlane`'s health check server
   [#5023](https://github.com/Kong/kong-operator/pull/5023)
+- HybridGateway: use the shared server-side apply `TypeConverterProvider` /
+  `ApplyIfChanged` for state enforcement instead of a bespoke managed-fields
+  diff/apply implementation, removing the now unused
+  `controller/hybridgateway/managedfields` package.
+  [#5052](https://github.com/Kong/kong-operator/pull/5052)
 
 ## [v2.3.0-rc.2]
 

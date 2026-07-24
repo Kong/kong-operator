@@ -18,13 +18,19 @@ package ssa
 
 import (
 	"context"
+	"fmt"
+	"maps"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	aexbuilder "k8s.io/apiextensions-apiserver/pkg/controller/openapi/builder"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,9 +38,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/rest"
+	kubespec3 "k8s.io/kube-openapi/pkg/spec3"
+	validationspec "k8s.io/kube-openapi/pkg/validation/spec"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	k8syaml "sigs.k8s.io/yaml"
 
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -59,19 +68,6 @@ func svcWithPort(port int32) *corev1.Service {
 			}},
 		},
 	}
-}
-
-func depWithReady(ready int32) *appsv1.Deployment {
-	d := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "ns",
-			Name:      "dp",
-		},
-	}
-	d.Status.Replicas = 1
-	d.Status.ReadyReplicas = ready
-	return d
 }
 
 func Test_gvToPathKey(t *testing.T) {
@@ -235,35 +231,50 @@ func Test_ownedFieldSetForSubresource(t *testing.T) {
 }
 
 func Test_MergeObjects(t *testing.T) {
-	tc := managedfields.NewDeducedTypeConverter()
-	base := svcWithPort(80)
-	overlay := svcWithPort(90)
-	overlay.Spec.Selector["extra"] = "true"
+	tc := newRealSchemaTypeConverter()
+	base := kongServiceWithHost("old.example.com")
+	_ = unstructured.SetNestedField(base.Object, "/base-path", "spec", "path")
+	overlay := kongServiceWithHost("new.example.com")
 
 	merged, err := MergeObjects(tc, base, overlay)
 	require.NoError(t, err)
 
-	ports, found, err := unstructured.NestedSlice(merged.Object, "spec", "ports")
+	// overlay wins on conflict.
+	host, found, err := unstructured.NestedString(merged.Object, "spec", "host")
 	require.NoError(t, err)
 	require.True(t, found)
-	require.Len(t, ports, 1)
-	port0 := ports[0].(map[string]any)
-	assert.EqualValues(t, int64(90), port0["port"])
+	assert.Equal(t, "new.example.com", host)
 
-	selector, found, err := unstructured.NestedStringMap(merged.Object, "spec", "selector")
+	// field only set on base is preserved.
+	path, found, err := unstructured.NestedString(merged.Object, "spec", "path")
 	require.NoError(t, err)
 	require.True(t, found)
-	assert.Equal(t, "true", selector["extra"])
+	assert.Equal(t, "/base-path", path)
+
+	// field set identically on both sides survives the merge.
+	port, found, err := unstructured.NestedInt64(merged.Object, "spec", "port")
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.EqualValues(t, 80, port)
 }
 
+// Test_ApplyIfChanged uses a real, CRD-derived OpenAPI schema TypeConverter
+// (via newRealSchemaTypeConverter) rather than managedfields.NewDeducedTypeConverter.
+//
+// This distinction matters: NewDeducedTypeConverter cannot correctly
+// ExtractItems/Compare struct-typed fields in this codebase's usage - even
+// byte-identical objects come back with every field reported as "Added",
+// making comparison.IsSame() always false regardless of whether ownership was
+// previously claimed. A real schema-based TypeConverter (as production uses,
+// see NewTypeConverterProvider) does not have this limitation.
 func Test_ApplyIfChanged(t *testing.T) {
 	scheme := managerscheme.Get()
-	tc := managedfields.NewDeducedTypeConverter()
+	tc := newRealSchemaTypeConverter()
 
 	tests := []struct {
 		name      string
 		objects   []client.Object
-		desired   *corev1.Service
+		desired   *unstructured.Unstructured
 		build     func(client.WithWatch) client.Client
 		repeat    int
 		wantRes   op.Result
@@ -273,22 +284,53 @@ func Test_ApplyIfChanged(t *testing.T) {
 		{
 			name:      "create on not found",
 			objects:   nil,
-			desired:   svcWithPort(80),
+			desired:   kongServiceWithHost("example.com"),
 			build:     func(c client.WithWatch) client.Client { return c },
 			wantRes:   op.Created,
 			verifyObj: true,
 		},
 		{
 			name:    "updated when spec changes",
-			objects: []client.Object{svcWithPort(80)},
-			desired: svcWithPort(90),
+			objects: []client.Object{kongServiceWithHost("old.example.com")},
+			desired: kongServiceWithHost("new.example.com"),
+			build:   func(c client.WithWatch) client.Client { return c },
+			wantRes: op.Updated,
+		},
+		{
+			name: "noop when field manager already owns matching values",
+			objects: []client.Object{func() client.Object {
+				u := kongServiceWithHost("example.com")
+				u.SetManagedFields([]metav1.ManagedFieldsEntry{{
+					Manager:    testFieldManager,
+					Operation:  metav1.ManagedFieldsOperationApply,
+					APIVersion: kongServiceGVK.GroupVersion().String(),
+					FieldsType: "FieldsV1",
+					FieldsV1:   &metav1.FieldsV1{Raw: ownedFieldsRaw(t, tc, u)},
+				}})
+				return u
+			}()},
+			desired: kongServiceWithHost("example.com"),
+			build:   func(c client.WithWatch) client.Client { return c },
+			wantRes: op.Noop,
+		},
+		{
+			// Regression test: even when the live values already match desired, if
+			// fieldManager has no managed-fields entry yet on the existing object
+			// (e.g. it was created/owned by a different manager), ApplyIfChanged
+			// must still issue an apply so that ownership of the relevant fields is
+			// claimed for fieldManager. Otherwise the object would never gain a
+			// managed-fields entry for fieldManager until a real value changes,
+			// leaving SSA conflict detection ineffective for it in the meantime.
+			name:    "claims ownership when values match but no managed-fields entry exists for our manager",
+			objects: []client.Object{kongServiceWithHost("example.com")},
+			desired: kongServiceWithHost("example.com"),
 			build:   func(c client.WithWatch) client.Client { return c },
 			wantRes: op.Updated,
 		},
 		{
 			name:    "get error propagated",
-			objects: []client.Object{svcWithPort(80)},
-			desired: svcWithPort(90),
+			objects: []client.Object{kongServiceWithHost("old.example.com")},
+			desired: kongServiceWithHost("new.example.com"),
 			build: func(c client.WithWatch) client.Client {
 				return interceptor.NewClient(c, interceptor.Funcs{
 					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -302,7 +344,7 @@ func Test_ApplyIfChanged(t *testing.T) {
 		{
 			name:    "apply create error returned with created result",
 			objects: nil,
-			desired: svcWithPort(80),
+			desired: kongServiceWithHost("example.com"),
 			build: func(c client.WithWatch) client.Client {
 				return interceptor.NewClient(c, interceptor.Funcs{
 					Apply: func(ctx context.Context, cl client.WithWatch, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
@@ -317,7 +359,7 @@ func Test_ApplyIfChanged(t *testing.T) {
 
 	for _, tcse := range tests {
 		t.Run(tcse.name, func(t *testing.T) {
-			base := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tcse.objects...).Build()
+			base := fake.NewClientBuilder().WithScheme(scheme).WithReturnManagedFields().WithObjects(tcse.objects...).Build()
 			cl := tcse.build(base)
 			repeat := tcse.repeat
 			if repeat == 0 {
@@ -337,9 +379,12 @@ func Test_ApplyIfChanged(t *testing.T) {
 			}
 
 			if tcse.verifyObj && !tcse.wantErr {
-				got := &corev1.Service{}
+				got := &unstructured.Unstructured{}
+				got.SetGroupVersionKind(kongServiceGVK)
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(tcse.desired), got))
-				assert.Equal(t, tcse.desired.Spec.Ports[0].Port, got.Spec.Ports[0].Port)
+				wantHost, _, _ := unstructured.NestedString(tcse.desired.Object, "spec", "host")
+				gotHost, _, _ := unstructured.NestedString(got.Object, "spec", "host")
+				assert.Equal(t, wantHost, gotHost)
 			}
 		})
 	}
@@ -347,12 +392,12 @@ func Test_ApplyIfChanged(t *testing.T) {
 
 func Test_ApplyStatusIfChanged(t *testing.T) {
 	scheme := managerscheme.Get()
-	tc := managedfields.NewDeducedTypeConverter()
+	tc := newRealSchemaTypeConverter()
 
 	tests := []struct {
 		name    string
 		objects []client.Object
-		desired *appsv1.Deployment
+		desired *unstructured.Unstructured
 		build   func(client.WithWatch) client.Client
 		repeat  int
 		wantRes op.Result
@@ -361,22 +406,22 @@ func Test_ApplyStatusIfChanged(t *testing.T) {
 		{
 			name:    "not found returns error",
 			objects: nil,
-			desired: depWithReady(1),
+			desired: kongServiceWithCondition(metav1.ConditionTrue),
 			build:   func(c client.WithWatch) client.Client { return c },
 			wantRes: op.Noop,
 			wantErr: true,
 		},
 		{
 			name:    "updated when status changes",
-			objects: []client.Object{depWithReady(0)},
-			desired: depWithReady(1),
+			objects: []client.Object{kongServiceWithCondition(metav1.ConditionFalse)},
+			desired: kongServiceWithCondition(metav1.ConditionTrue),
 			build:   func(c client.WithWatch) client.Client { return c },
 			wantRes: op.Updated,
 		},
 		{
 			name:    "get error propagated",
-			objects: []client.Object{depWithReady(0)},
-			desired: depWithReady(1),
+			objects: []client.Object{kongServiceWithCondition(metav1.ConditionFalse)},
+			desired: kongServiceWithCondition(metav1.ConditionTrue),
 			build: func(c client.WithWatch) client.Client {
 				return interceptor.NewClient(c, interceptor.Funcs{
 					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -389,8 +434,8 @@ func Test_ApplyStatusIfChanged(t *testing.T) {
 		},
 		{
 			name:    "status apply error returned with updated result",
-			objects: []client.Object{depWithReady(0)},
-			desired: depWithReady(1),
+			objects: []client.Object{kongServiceWithCondition(metav1.ConditionFalse)},
+			desired: kongServiceWithCondition(metav1.ConditionTrue),
 			build: func(c client.WithWatch) client.Client {
 				return interceptor.NewClient(c, interceptor.Funcs{
 					SubResourceApply: func(ctx context.Context, cl client.Client, subResourceName string, obj runtime.ApplyConfiguration, opts ...client.SubResourceApplyOption) error {
@@ -430,4 +475,99 @@ func Test_ApplyStatusIfChanged(t *testing.T) {
 			}
 		})
 	}
+}
+
+// kongServiceGVK is the GVK of the CRD used to build the real, schema-based
+// TypeConverter shared by this file's tests.
+var kongServiceGVK = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+
+// realSchemaCRDManifests lists the real, repo-checked-in CRD manifest used to
+// build a schema-based TypeConverter, following the same approach as
+// controller/hybridgateway's newTestTypeConverter.
+var realSchemaCRDManifests = []string{
+	"configuration.konghq.com_kongservices.yaml",
+}
+
+// newRealSchemaTypeConverter is memoized (via [sync.OnceValue]) since it is
+// expensive to build (reads + parses CRD manifests, builds OpenAPI schemas)
+// and is read-only/safe to share across tests.
+var newRealSchemaTypeConverter = sync.OnceValue(func() managedfields.TypeConverter {
+	var specs []*kubespec3.OpenAPI
+	for _, file := range realSchemaCRDManifests {
+		path := filepath.Join("..", "..", "..", "config", "crd", "kong-operator", file)
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			panic(fmt.Errorf("failed to read CRD manifest %s: %w", path, err))
+		}
+
+		crd := &apiextensionsv1.CustomResourceDefinition{}
+		if err := k8syaml.Unmarshal(raw, crd); err != nil {
+			panic(fmt.Errorf("failed to unmarshal CRD manifest %s: %w", path, err))
+		}
+
+		for _, v := range crd.Spec.Versions {
+			spec, err := aexbuilder.BuildOpenAPIV3(crd, v.Name, aexbuilder.Options{})
+			if err != nil {
+				panic(fmt.Errorf("failed to build OpenAPI v3 for %s/%s: %w", crd.Name, v.Name, err))
+			}
+			specs = append(specs, spec)
+		}
+	}
+
+	merged, err := aexbuilder.MergeSpecsV3(specs...)
+	if err != nil {
+		panic(fmt.Errorf("failed to merge CRD OpenAPI v3 specs: %w", err))
+	}
+
+	schemas := map[string]*validationspec.Schema{}
+	if merged.Components != nil {
+		maps.Copy(schemas, merged.Components.Schemas)
+	}
+
+	tc, err := managedfields.NewTypeConverter(schemas, false)
+	if err != nil {
+		panic(fmt.Errorf("failed to create TypeConverter: %w", err))
+	}
+	return tc
+})
+
+// kongServiceWithHost returns a KongService named "svc" with the given host.
+func kongServiceWithHost(host string) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(kongServiceGVK)
+	u.SetNamespace("ns")
+	u.SetName("svc")
+	_ = unstructured.SetNestedField(u.Object, host, "spec", "host")
+	_ = unstructured.SetNestedField(u.Object, int64(80), "spec", "port")
+	_ = unstructured.SetNestedField(u.Object, "http", "spec", "protocol")
+	return u
+}
+
+// kongServiceWithCondition returns a KongService named "svc" with a single
+// "Programmed" status condition, for exercising ApplyStatusIfChanged.
+func kongServiceWithCondition(status metav1.ConditionStatus) *unstructured.Unstructured {
+	u := kongServiceWithHost("example.com")
+	cond := map[string]any{
+		"type":               "Programmed",
+		"status":             string(status),
+		"reason":             "Programmed",
+		"message":            "",
+		"lastTransitionTime": "1970-01-01T00:00:00Z",
+	}
+	_ = unstructured.SetNestedSlice(u.Object, []any{cond}, "status", "conditions")
+	return u
+}
+
+// ownedFieldsRaw computes the FieldsV1 raw JSON that a real Server-Side
+// Apply of obj by fieldManager would have recorded, by converting obj to its
+// field set via tc. Used to build realistic ManagedFieldsEntry fixtures.
+func ownedFieldsRaw(t *testing.T, tc managedfields.TypeConverter, obj *unstructured.Unstructured) []byte {
+	t.Helper()
+	typed, err := tc.ObjectToTyped(obj)
+	require.NoError(t, err)
+	set, err := typed.ToFieldSet()
+	require.NoError(t, err)
+	raw, err := set.ToJSON()
+	require.NoError(t, err)
+	return raw
 }

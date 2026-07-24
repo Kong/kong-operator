@@ -487,6 +487,24 @@ func (r *Reconciler) listGatewaysAttachedByUDPRoute(ctx context.Context, obj cli
 	return listGatewaysAttachedByRoute(udpRoute)
 }
 
+// listGatewaysAttachedByTCPRoute is a watch predicate which finds all Gateways mentioned
+// in TCPRoutes' ParentRefs.
+func (r *Reconciler) listGatewaysAttachedByTCPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	tcpRoute, ok := obj.(*gatewayv1.TCPRoute)
+	if !ok {
+		logger.Error(
+			fmt.Errorf("unexpected object type"),
+			"TCPRoute watch predicate received unexpected object type",
+			"expected", "*gatewayapi.TCPRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	return listGatewaysAttachedByRoute(tcpRoute)
+}
+
 // -----------------------------------------------------------------------------
 // GatewayReconciler - Config Defaults
 // -----------------------------------------------------------------------------
