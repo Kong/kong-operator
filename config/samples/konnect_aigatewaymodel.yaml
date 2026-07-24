@@ -135,12 +135,6 @@ spec:
         route:
           paths:
             - /v1/chat/completions
-          # Routes a request to this model when its path matches one of the
-          # aliases below (in addition to the paths/methods/hosts match above).
-          model:
-            type: pathAliases
-            pathAliases:
-              - gpt-4o-mini
       # References to AIGatewayPolicy CRs (by metadata.name). The operator
       # resolves each reference to the referenced CR's Konnect name at
       # reconcile time.
@@ -182,14 +176,6 @@ spec:
       config:
         responseStreaming: always
         route:
-          model:
-            type: headers
-            # route.model.headers is an object keyed by header name (Kong
-            # route header-matching format: { "<header>": [<values>] }), not
-            # a list. Routes a request to this model when headers match:
-            headers:
-              X-Kong-LLM-Model:
-                - gpt-4o-mini-model
           tags:
             - customtag
           paths:
