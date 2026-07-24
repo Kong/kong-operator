@@ -379,8 +379,8 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/klauspost/compress v1.19.0 h1:sXLILfc9jV2QYWkzFOPWStmcUVH2RHEB1JCdY2oVvCQ=
 github.com/klauspost/compress v1.19.0/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
-github.com/kong/go-database-reconciler v1.40.3 h1:myK/p/BjWgKwhLbbuHY3//Q9Ui2YPtR0mkXc7A96XL0=
-github.com/kong/go-database-reconciler v1.40.3/go.mod h1:YlfE6omuZS9Xbm+IlfprZExA1BFESejy4CJhwvWBvKo=
+github.com/kong/go-database-reconciler v1.41.1 h1:QWxz0YuF/dDzuhSrQPNSurWUgHQygf7yCT+G7LmNHKM=
+github.com/kong/go-database-reconciler v1.41.1/go.mod h1:AYYSt3TBXL8QMa1IZwqj4BhSxKMkFXama5ObtgWPoMc=
 github.com/kong/go-kong v0.77.0 h1:bANx78/pE+kbKnL1ssa24Si4xbyBjhkUxwTOI+MrnnI=
 github.com/kong/go-kong v0.77.0/go.mod h1:Wx5aTcMjyUnIF94M5NYFWb/EnuEkqB5STrWvybFSYYQ=
 github.com/kong/kubernetes-telemetry v0.1.14 h1:AWkUATObvA/m8zkaCoBtRmt8em2UqGEHI77twpj9FjM=
