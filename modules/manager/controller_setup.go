@@ -904,8 +904,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		)
 
 		controllers = append(controllers,
-			newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain),
-			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
+			newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider),
+			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider),
 		)
 		tlsRouteGVR := schema.GroupVersionResource{
 			Group:    gatewayv1.GroupVersion.Group,
@@ -917,7 +917,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
 		}
 		if hasTLSRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
 		}
 	}
 
@@ -964,10 +964,10 @@ func newKonnectPluginController[
 	}
 }
 
-func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string) ControllerDef {
+func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string, ssaProvider *controllerpkgssa.TypeConverterProvider) ControllerDef {
 	return ControllerDef{
 		Enabled:    true,
-		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, fqdnMode, clusterDomain),
+		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, fqdnMode, clusterDomain, ssaProvider),
 	}
 }
 
