@@ -24,6 +24,27 @@ import (
 
 var udpRouteTypeMeta = metav1.TypeMeta{Kind: "UDPRoute", APIVersion: gatewayv1.GroupVersion.String()}
 
+// udpProgrammedStatus builds Gateway.Status.Listeners entries that mark each
+// named listener as Programmed and accepting UDPRoute - the status a real
+// GatewayReconciler would have written by the time the Gateway is pushed
+// into the translator's cache (see gateway_controller.go's UpdateObject
+// call), and what listener-attachment arbitration now requires.
+func udpProgrammedStatus(listenerNames ...string) gatewayapi.GatewayStatus {
+	kinds := builder.NewRouteGroupKind().UDPRoute().IntoSlice()
+	statuses := make([]gatewayapi.ListenerStatus, 0, len(listenerNames))
+	for _, name := range listenerNames {
+		statuses = append(statuses, gatewayapi.ListenerStatus{
+			Name:           gatewayapi.SectionName(name),
+			SupportedKinds: kinds,
+			Conditions: []metav1.Condition{{
+				Type:   string(gatewayapi.ListenerConditionProgrammed),
+				Status: metav1.ConditionTrue,
+			}},
+		})
+	}
+	return gatewayapi.GatewayStatus{Listeners: statuses}
+}
+
 func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	testCases := []struct {
 		name                 string
@@ -48,6 +69,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -131,6 +153,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp81"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -265,6 +288,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp81"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -353,6 +377,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							Port:     9999,
 						}},
 					},
+					Status: udpProgrammedStatus("udp"),
 				},
 			},
 			udpRoutes: []*gatewayapi.UDPRoute{
@@ -449,6 +474,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							builder.NewListener("udp8080").WithPort(8080).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp8080"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -655,6 +681,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -736,6 +763,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp81"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -865,6 +893,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp81"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -957,6 +986,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							builder.NewListener("udp8080").WithPort(8080).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp8080"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{

@@ -2,18 +2,15 @@ package gateway
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -408,152 +405,42 @@ func routeMatchesListenerAllowedRoutes[T gatewayapi.RouteT](
 	gatewayNamespace string,
 	parentRefNamespace *gatewayapi.Namespace,
 ) (bool, error) {
-	if listener.AllowedRoutes == nil {
-		return true, nil
+	if !gatewayapi.ListenerAcceptsRouteKind(listener, route) {
+		return false, nil
 	}
 
-	if len(listener.AllowedRoutes.Kinds) > 0 {
-		// Find if the route has a type that's within the listener's supported gatewayapi.
-		_, ok := lo.Find(listener.AllowedRoutes.Kinds, func(rgk gatewayapi.RouteGroupKind) bool {
-			gvk := route.GetObjectKind().GroupVersionKind()
-			return (rgk.Group != nil && string(*rgk.Group) == gvk.Group) && string(rgk.Kind) == gvk.Kind
-		})
-		if !ok {
-			return false, nil
-		}
-	}
-
-	if listener.AllowedRoutes.Namespaces == nil || listener.AllowedRoutes.Namespaces.From == nil {
-		return true, nil
-	}
-
-	switch *listener.AllowedRoutes.Namespaces.From {
-	case gatewayapi.NamespacesFromAll:
-		return true, nil
-
-	case gatewayapi.NamespacesFromSame:
-		// If parentRef didn't specify the namespace then we check if
-		// the gateway is from the same namespace as the route
-		if parentRefNamespace == nil {
-			return gatewayNamespace == route.GetNamespace(), nil
-		}
-		// Otherwise compare routes namespace with parentRef's one.
-		return route.GetNamespace() == string(*parentRefNamespace), nil
-
-	case gatewayapi.NamespacesFromSelector:
-		namespace := corev1.Namespace{}
-		if err := mgrc.Get(ctx, client.ObjectKey{Name: route.GetNamespace()}, &namespace); err != nil {
-			return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
-		}
-
-		s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
-		if err != nil {
-			return false, fmt.Errorf(
-				"failed to convert AllowedRoutes LabelSelector %s to Selector for listener %s: %w",
-				listener.AllowedRoutes.Namespaces.Selector, listener.Name, err,
-			)
-		}
-
-		ok := s.Matches(labels.Set(namespace.Labels))
+	if ok, handled := gatewayapi.ListenerAllowsNamespace(listener, route, gatewayNamespace, parentRefNamespace); handled {
 		return ok, nil
+	}
 
-	default:
+	// From: Selector - the only case that needs an actual API/cache read, so
+	// it stays here rather than in the dependency-free gatewayapi package.
+	namespace := corev1.Namespace{}
+	if err := mgrc.Get(ctx, client.ObjectKey{Name: route.GetNamespace()}, &namespace); err != nil {
+		return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
+	}
+
+	s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+	if err != nil {
 		return false, fmt.Errorf(
-			"unknown listener.AllowedRoutes.Namespaces.From value: %s for listener %s",
-			*listener.AllowedRoutes.Namespaces.From, listener.Name,
+			"failed to convert AllowedRoutes LabelSelector %s to Selector for listener %s: %w",
+			listener.AllowedRoutes.Namespaces.Selector, listener.Name, err,
 		)
 	}
+
+	ok := s.Matches(labels.Set(namespace.Labels))
+	return ok, nil
 }
 
-var (
-	errUnsupportedRouteKind          = errors.New("unsupported route kind")
-	errUnmatchedListenerName         = errors.New("unmatched listener name")
-	errListenerNoProgrammedCondition = errors.New("no Programmed condition found for listener")
-	errListenerNotProgrammedYet      = errors.New("listener not programmed yet")
-)
-
-// existsMatchingReadyListenerInStatus checks if:
+// existsMatchingListenerInStatus checks if:
 // - If a listener status exists with a matching type (via SupportedKinds).
 // - If it matches the requested listener by name (if specified).
-// - And finally check if the provided listener is marked as Ready.
 func existsMatchingListenerInStatus[T gatewayapi.RouteT](route T, listener gatewayapi.Listener, lss []gatewayapi.ListenerStatus) error {
-	listenerFound := false
-
-	// Find listener's status...
-	_, ok := lo.Find(lss, func(ls gatewayapi.ListenerStatus) bool {
-		if ls.Name != listener.Name {
-			return false
-		}
-		listenerFound = true
-
-		// Find if the route has a type that's within the supported types, listed
-		// in listener's status.
-		_, ok := lo.Find(ls.SupportedKinds, func(rgk gatewayapi.RouteGroupKind) bool {
-			// The artificially filled in GVK is needed for testing mostly and for
-			// situations when the object is not coming from the api server.
-			// Related upstream issue: https://github.com/kubernetes/kubernetes/issues/3030
-			var gvk schema.GroupVersionKind
-			switch any(route).(type) {
-			case *gatewayapi.HTTPRoute:
-				gvk = schema.GroupVersionKind{
-					Group: gatewayv1.GroupVersion.Group,
-					Kind:  "HTTPRoute",
-				}
-			case *gatewayapi.TLSRoute:
-				gvk = schema.GroupVersionKind{
-					Group: gatewayv1.GroupVersion.Group,
-					Kind:  "TLSRoute",
-				}
-			case *gatewayapi.GRPCRoute:
-				gvk = schema.GroupVersionKind{
-					Group: gatewayv1.GroupVersion.Group,
-					Kind:  "GRPCRoute",
-				}
-			case *gatewayapi.UDPRoute:
-				gvk = schema.GroupVersionKind{
-					Group: gatewayv1.GroupVersion.Group,
-					Kind:  "UDPRoute",
-				}
-
-			default:
-				gvk = route.GetObjectKind().GroupVersionKind()
-			}
-			return (rgk.Group != nil && string(*rgk.Group) == gvk.Group) && string(rgk.Kind) == gvk.Kind
-		})
-		return ok
-	})
-
-	if !ok && !listenerFound {
-		return errUnmatchedListenerName // Matching Listener's not found.
-	}
-
-	if !ok && listenerFound {
-		return errUnsupportedRouteKind // Listener(s) found but none with matching supported kinds.
-	}
-
-	return nil
+	return gatewayapi.ListenerSupportsRouteInStatus(route, listener.Name, lss)
 }
 
 func listenerProgrammedInStatus(listenerName gatewayapi.SectionName, lss []gatewayapi.ListenerStatus) error {
-	listenerStatus, ok := lo.Find(lss, func(ls gatewayapi.ListenerStatus) bool {
-		return ls.Name == listenerName
-	})
-	if !ok {
-		return errUnmatchedListenerName // Matching Listener's not found.
-	}
-
-	programmedStatus, ok := lo.Find(listenerStatus.Conditions, func(condition metav1.Condition) bool {
-		return condition.Type == string(gatewayapi.ListenerConditionProgrammed)
-	})
-	if !ok {
-		return errListenerNoProgrammedCondition // "Programmed" condition not found in conditions of listener's conditions.
-	}
-
-	if programmedStatus.Status != metav1.ConditionTrue {
-		return errListenerNotProgrammedYet // "Programmed" condition is not true.
-	}
-
-	return nil
+	return gatewayapi.ListenerProgrammed(listenerName, lss)
 }
 
 func listenerHostnameIntersectWithRouteHostnames[H gatewayapi.HostnameT](listener gatewayapi.Listener, hostnames []H) bool {

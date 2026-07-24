@@ -1,7 +1,7 @@
 package translator
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -11,9 +11,11 @@ import (
 
 // tL4Route constrains layer-4 Gateway API route types whose listener
 // arbitration follows GEP-2645 (single winner per listener; no SNI
-// multiplexing). Both pointer types satisfy metav1.Object.
+// multiplexing). Embedding gatewayapi.RouteT lets this type parameter be
+// passed directly to the shared listener-attachment predicates in the
+// gatewayapi package.
 type tL4Route interface {
-	metav1.Object
+	gatewayapi.RouteT
 	*gatewayapi.UDPRoute | *gatewayapi.TCPRoute
 }
 
@@ -48,11 +50,13 @@ func l4RouteLess[T tL4Route](a, b T) bool {
 	return a.GetNamespace()+"/"+a.GetName() < b.GetNamespace()+"/"+b.GetName()
 }
 
-// l4Listener is a minimal projection of gatewayv1.Listener: only the fields
-// needed for layer-4 route arbitration.
+// l4Listener pairs a Gateway listener with its owning Gateway's listener
+// statuses, so that per-route attachment predicates (AllowedRoutes,
+// SupportedKinds, Programmed) can be evaluated later, once a candidate route
+// is known.
 type l4Listener struct {
-	name string
-	port gatewayv1.PortNumber
+	listener gatewayv1.Listener
+	gwStatus []gatewayv1.ListenerStatus
 }
 
 // l4ListenerKey identifies a single Gateway listener: gateway NN + listener
@@ -103,6 +107,12 @@ func collectL4ListenersByGateway[T tL4Route](
 			}
 			seen[gwNN] = struct{}{}
 
+			// TODO: no GatewayClass-controller-ownership check here (unlike
+			// getSupportedGatewayForRoute) - store.Storer doesn't cache
+			// GatewayClass at all. A Gateway managed by a different
+			// controller in the cluster is still resolved and arbitrated
+			// over. Needs a GatewayClass cache/lister added to store.Storer
+			// before this can be checked.
 			gw, err := storer.GetGateway(gwNN.Namespace, gwNN.Name)
 			if err != nil {
 				continue
@@ -113,8 +123,8 @@ func collectL4ListenersByGateway[T tL4Route](
 					continue
 				}
 				ls = append(ls, l4Listener{
-					name: string(l.Name),
-					port: l.Port,
+					listener: l,
+					gwStatus: gw.Status.Listeners,
 				})
 			}
 			if len(ls) > 0 {
@@ -126,31 +136,59 @@ func collectL4ListenersByGateway[T tL4Route](
 }
 
 // l4RouteListenerAttachments expands a route's ParentRefs against the supplied
-// per-Gateway listener index and returns the listener tuples the route attaches
-// to.
-func l4RouteListenerAttachments(
-	routeNamespace string,
-	parentRefs []gatewayv1.ParentReference,
+// per-Gateway listener index and returns the listener tuples the route
+// actually attaches to, applying the same attachment predicates
+// getSupportedGatewayForRoute uses (AllowedRoutes Kind/Namespace, listener
+// SupportedKinds, listener Programmed) so that the arbitration candidate pool
+// matches what the status layer would accept.
+//
+// AllowedRoutes.Namespaces.From: Selector can't be evaluated here (it needs a
+// Namespace cache the translator doesn't have) and is conservatively treated
+// as not-attached, logged once per candidate.
+func l4RouteListenerAttachments[T tL4Route](
+	route T,
+	logger logr.Logger,
 	listenersByGateway map[types.NamespacedName][]l4Listener,
 ) []l4ListenerKey {
 	var out []l4ListenerKey
-	for _, pr := range parentRefs {
-		gwNN := parentRefGatewayNN(pr, routeNamespace)
+	for _, pr := range l4RouteParentRefs(route) {
+		gwNN := parentRefGatewayNN(pr, route.GetNamespace())
 		listeners, ok := listenersByGateway[gwNN]
 		if !ok {
 			continue
 		}
 		for _, l := range listeners {
-			if pr.SectionName != nil && string(*pr.SectionName) != l.name {
+			if pr.SectionName != nil && string(*pr.SectionName) != string(l.listener.Name) {
 				continue
 			}
-			if pr.Port != nil && *pr.Port != l.port {
+			if pr.Port != nil && *pr.Port != l.listener.Port {
+				continue
+			}
+			if !gatewayapi.ListenerAcceptsRouteKind(l.listener, route) {
+				continue
+			}
+			if ok, handled := gatewayapi.ListenerAllowsNamespace(l.listener, route, gwNN.Namespace, pr.Namespace); handled {
+				if !ok {
+					continue
+				}
+			} else {
+				logger.V(1).Info(
+					"skipping L4 arbitration candidate: listener AllowedRoutes uses a namespace Selector, which the translator can't evaluate",
+					"gateway", gwNN, "listener", l.listener.Name,
+					"route", route.GetNamespace()+"/"+route.GetName(),
+				)
+				continue
+			}
+			if err := gatewayapi.ListenerSupportsRouteInStatus(route, l.listener.Name, l.gwStatus); err != nil {
+				continue
+			}
+			if err := gatewayapi.ListenerProgrammed(l.listener.Name, l.gwStatus); err != nil {
 				continue
 			}
 			out = append(out, l4ListenerKey{
 				gateway:      gwNN,
-				listenerName: l.name,
-				port:         l.port,
+				listenerName: string(l.listener.Name),
+				port:         l.listener.Port,
 			})
 		}
 	}
