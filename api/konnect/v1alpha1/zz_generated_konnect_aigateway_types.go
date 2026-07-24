@@ -139,7 +139,7 @@ type KonnectAIGatewayStatus struct {
 	// ConfigVersion contains the ConfigVersion returned by the Konnect API.
 	//
 	// +optional
-	ConfigVersion string `json:"configVersion,omitempty"`
+	ConfigVersion *string `json:"configVersion,omitempty"`
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional

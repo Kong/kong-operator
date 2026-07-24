@@ -37,9 +37,7 @@ func createKonnectAIGateway(
 			Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
 			Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
 		}
-		if v := resp.AIGateway.ConfigVersion; v != nil {
-			obj.Status.ConfigVersion = *v
-		}
+		obj.Status.ConfigVersion = resp.AIGateway.ConfigVersion
 		return nil
 	}
 	req, err := obj.Spec.APISpec.ToCreateAIGatewayRequest()
@@ -65,9 +63,7 @@ func createKonnectAIGateway(
 		Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
 		Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
 	}
-	if v := resp.AIGateway.ConfigVersion; v != nil {
-		obj.Status.ConfigVersion = *v
-	}
+	obj.Status.ConfigVersion = resp.AIGateway.ConfigVersion
 	return nil
 }
 
@@ -101,9 +97,7 @@ func updateKonnectAIGateway(
 			Configuration: strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Configuration, protocolHTTPS), protocolHTTP),
 			Telemetry:     strings.TrimPrefix(strings.TrimPrefix(resp.AIGateway.Endpoints.Telemetry, protocolHTTPS), protocolHTTP),
 		}
-		if v := resp.AIGateway.ConfigVersion; v != nil {
-			obj.Status.ConfigVersion = *v
-		}
+		obj.Status.ConfigVersion = resp.AIGateway.ConfigVersion
 	}
 	return nil
 }
