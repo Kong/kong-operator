@@ -3,6 +3,9 @@ kind: Test
 metadata:
   name: aigateway-policy
 spec:
+  # Skipping this test until related AI model routing issue is resolved.
+  # TODO: https://github.com/Kong/kong-operator/issues/5046
+  skip: true
   description: |
     Konnect AIGateway - Policy. Stands up the Konnect AIGateway control plane
     and creates policies to test the AIGatewayPolicy CRD. Then check for the policies

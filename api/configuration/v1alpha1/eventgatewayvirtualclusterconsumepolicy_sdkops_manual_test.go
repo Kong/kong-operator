@@ -1,25 +1,41 @@
 package v1alpha1
 
-import "testing"
+import (
+	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+)
 
 func TestEventGatewayVirtualClusterConsumePolicyAPISpec_ToCreateRequest_ModifyHeadersAction(t *testing.T) {
-	spec := &EventGatewayVirtualClusterConsumePolicyAPISpec{
-		EventGatewayVirtualClusterConsumePolicyConfig: &EventGatewayVirtualClusterConsumePolicyConfig{
-			Type: EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate,
-			ModifyHeadersPolicyCreate: &EventGatewayModifyHeadersPolicyCreate{
-				Name:        "add-header-1",
-				Description: "Test Consume Policy to add a header",
-				Labels: Labels{
-					"app": "test1",
-					"env": "test",
-				},
-				Config: EventGatewayModifyHeadersPolicyCreateConfig{
-					Actions: []EventGatewayModifyHeaderAction{
-						{
-							Op: EventGatewayModifyHeaderActionTypeSet,
-							Set: &EventGatewayModifyHeaderSetAction{
-								Key:   "x-added-header",
-								Value: "added-value",
+	ctx := t.Context()
+	scheme := runtime.NewScheme()
+	if err := AddToScheme(scheme); err != nil {
+		t.Fatalf("AddToScheme() error = %v", err)
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	obj := &EventGatewayVirtualClusterConsumePolicy{
+		Spec: EventGatewayVirtualClusterConsumePolicySpec{
+			APISpec: EventGatewayVirtualClusterConsumePolicyAPISpec{
+				EventGatewayVirtualClusterConsumePolicyConfig: &EventGatewayVirtualClusterConsumePolicyConfig{
+					Type: EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate,
+					ModifyHeadersPolicyCreate: &EventGatewayModifyHeadersPolicyCreate{
+						Name:        "add-header-1",
+						Description: "Test Consume Policy to add a header",
+						Labels: Labels{
+							"app": "test1",
+							"env": "test",
+						},
+						Config: EventGatewayModifyHeadersPolicyCreateConfig{
+							Actions: []EventGatewayModifyHeaderAction{
+								{
+									Op: EventGatewayModifyHeaderActionTypeSet,
+									Set: &EventGatewayModifyHeaderSetAction{
+										Key:   "x-added-header",
+										Value: "added-value",
+									},
+								},
 							},
 						},
 					},
@@ -28,7 +44,7 @@ func TestEventGatewayVirtualClusterConsumePolicyAPISpec_ToCreateRequest_ModifyHe
 		},
 	}
 
-	req, err := spec.ToCreateEventGatewayVirtualClusterConsumePolicyRequest()
+	req, err := obj.ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 	if err != nil {
 		t.Fatalf("ToCreateEventGatewayVirtualClusterConsumePolicyRequest() error = %v", err)
 	}

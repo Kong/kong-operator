@@ -914,7 +914,7 @@ type EventGatewayConsumeSchemaValidationPolicyJSONConfig struct {
 	// A reference to a schema Registry.
 	//
 	// +optional
-	SchemaRegistry *EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	SchemaRegistry *EventGatewaySchemaRegistryRef `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -941,123 +941,6 @@ type EventGatewayConsumeSchemaValidationPolicyJSONConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=mark;skip
 	ValueValidationAction ConsumeValueValidationAction `json:"valueValidationAction,omitzero"`
-}
-
-// EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
-// Only one of the fields should be set based on the Type.
-type EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=id;name
-	Type EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType `json:"type,omitempty"`
-
-	// ID configuration.
-	//
-	// +optional
-	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
-	// Name configuration.
-	//
-	// +optional
-	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-}
-
-// EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType represents the type of schema_registry.
-type EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType string
-
-// EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType values.
-const (
-	EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeID   EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType = "id"
-	EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeName EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType = "name"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry type: %w", err)
-	}
-	m["type"] = typeBytes
-	switch u.Type {
-	case EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeID:
-		if u.ID != nil {
-			raw, err := json.Marshal(u.ID)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry Id: %w", err)
-			}
-			m["id"] = raw
-		}
-	case EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeName:
-		if u.Name != nil {
-			raw, err := json.Marshal(u.Name)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry Name: %w", err)
-			}
-			m["name"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryType(probe.Type)
-	switch probe.Type {
-	case "id":
-		payload, ok := raw["id"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByID
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry Id: %w", err)
-		}
-		u.ID = &val
-	case "name":
-		payload, ok := raw["name"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByName
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry Name: %w", err)
-		}
-		u.Name = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *EventGatewayConsumeSchemaValidationPolicyJSONConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfig: nil receiver")
-	}
-	type alias EventGatewayConsumeSchemaValidationPolicyJSONConfig
-	aux := alias{}
-	aux.SchemaRegistry = &EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfig: %w", err)
-	}
-	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
-		aux.SchemaRegistry = nil
-	}
-	*s = EventGatewayConsumeSchemaValidationPolicyJSONConfig(aux)
-	return nil
 }
 
 // EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig The
@@ -1096,7 +979,7 @@ type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig struct {
 	// A reference to a schema Registry.
 	//
 	// +optional
-	SchemaRegistry *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	SchemaRegistry *EventGatewaySchemaRegistryRef `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -1123,123 +1006,6 @@ type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=mark;skip
 	ValueValidationAction ConsumeValueValidationAction `json:"valueValidationAction,omitzero"`
-}
-
-// EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
-// Only one of the fields should be set based on the Type.
-type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=id;name
-	Type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType `json:"type,omitempty"`
-
-	// ID configuration.
-	//
-	// +optional
-	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
-	// Name configuration.
-	//
-	// +optional
-	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-}
-
-// EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType represents the type of schema_registry.
-type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType string
-
-// EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType values.
-const (
-	EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID   EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "id"
-	EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "name"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry type: %w", err)
-	}
-	m["type"] = typeBytes
-	switch u.Type {
-	case EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID:
-		if u.ID != nil {
-			raw, err := json.Marshal(u.ID)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Id: %w", err)
-			}
-			m["id"] = raw
-		}
-	case EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName:
-		if u.Name != nil {
-			raw, err := json.Marshal(u.Name)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Name: %w", err)
-			}
-			m["name"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType(probe.Type)
-	switch probe.Type {
-	case "id":
-		payload, ok := raw["id"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByID
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Id: %w", err)
-		}
-		u.ID = &val
-	case "name":
-		payload, ok := raw["name"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByName
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Name: %w", err)
-		}
-		u.Name = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig: nil receiver")
-	}
-	type alias EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig
-	aux := alias{}
-	aux.SchemaRegistry = &EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig: %w", err)
-	}
-	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
-		aux.SchemaRegistry = nil
-	}
-	*s = EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig(aux)
-	return nil
 }
 
 // EventGatewayDecryptPolicy Decrypts Kafka records or keys using AES_256_GCM.
