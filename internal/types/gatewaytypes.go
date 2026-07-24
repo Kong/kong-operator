@@ -58,7 +58,6 @@ type (
 	TCPRouteSpec           = gatewayv1.TCPRouteSpec
 	TCPRouteStatus         = gatewayv1.TCPRouteStatus
 	TCPRouteRule           = gatewayv1.TCPRouteRule
-	TCPRouteStatus         = gatewayv1.TCPRouteStatus
 	GRPCRoute              = gatewayv1.GRPCRoute
 	GRPCRouteList          = gatewayv1.GRPCRouteList
 	GRPCRouteSpec          = gatewayv1.GRPCRouteSpec
