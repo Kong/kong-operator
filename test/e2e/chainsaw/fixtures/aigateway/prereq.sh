@@ -15,9 +15,21 @@ KONG_MOCK_TIMEOUT="${KONG_MOCK_TIMEOUT:-180s}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Namespace first, then the rest of the manifests in this directory.
-kubectl apply -f "${SCRIPT_DIR}/00-namespace.yaml"
-kubectl apply -f "${SCRIPT_DIR}"
+case $1 in
+  install)
+    # Namespace first, then the rest of the manifests in this directory.
+    kubectl apply -f "${SCRIPT_DIR}/00-namespace.yaml"
+    kubectl apply -f "${SCRIPT_DIR}"
 
-kubectl -n kong-aigateway-mock rollout status deploy/ollama --timeout="${OLLAMA_TIMEOUT}"
-kubectl -n kong-aigateway-mock rollout status deploy/kong-mock --timeout="${KONG_MOCK_TIMEOUT}"
+    kubectl -n kong-aigateway-mock rollout status deploy/ollama --timeout="${OLLAMA_TIMEOUT}"
+    kubectl -n kong-aigateway-mock rollout status deploy/kong-mock --timeout="${KONG_MOCK_TIMEOUT}"
+    ;;
+  uninstall)
+    kubectl delete --ignore-not-found=true -f "${SCRIPT_DIR}"
+    kubectl delete --ignore-not-found=true -f "${SCRIPT_DIR}/00-namespace.yaml"
+    ;;
+  *)
+    echo "unknown action '$1', must be 'install' or 'uninstall'" >&2
+    exit 1
+    ;;
+esac
