@@ -327,6 +327,9 @@ apiGroupVersions:
                 - name: Telemetry
                   json: telemetry
                   respPath: Endpoints.Telemetry
+            - statusField: ConfigVersion
+              statusJSON: configVersion
+              respPath: ConfigVersion
         reconciler: {}
 
       - path: /v1/ai-gateways/{gatewayId}/identity
