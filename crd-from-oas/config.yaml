@@ -228,6 +228,13 @@ apiGroupVersions:
               group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
         name: EventGatewayVirtualClusterConsumePolicy
+        references:
+          - path: spec.apiSpec.schemaValidation.config.json.schemaRegistry
+            kinds: [EventGatewaySchemaRegistry]
+            resolvesTo: name
+          - path: spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry
+            kinds: [EventGatewaySchemaRegistry]
+            resolvesTo: name
         schemaFieldOmissions:
           EventGatewayModifyHeadersPolicyCreate:
             - parentPolicyID
