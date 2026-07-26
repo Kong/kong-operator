@@ -329,32 +329,7 @@ func ListTCPRoutesForGateway(
 	var tcpRoutes []gwtypes.TCPRoute
 	for _, tcpRoute := range tcpRoutesList.Items {
 		if !lo.ContainsBy(tcpRoute.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
-			gwGVK := gateway.GroupVersionKind()
-			if parentRef.Group != nil && string(*parentRef.Group) != gwGVK.Group {
-				return false
-			}
-			if parentRef.Kind != nil && string(*parentRef.Kind) != gwGVK.Kind {
-				return false
-			}
-			if string(parentRef.Name) != gateway.Name {
-				return false
-			}
-
-			if parentRef.SectionName != nil {
-				if !lo.ContainsBy(gateway.Spec.Listeners, func(listener gwtypes.Listener) bool {
-					if listener.Name != *parentRef.SectionName {
-						return false
-					}
-					if parentRef.Port != nil && listener.Port != *parentRef.Port {
-						return false
-					}
-					return true
-				}) {
-					return false
-				}
-			}
-
-			return true
+			return parentRefMatchGateway(tcpRoute.Namespace, parentRef, gateway)
 		}) {
 			continue
 		}
