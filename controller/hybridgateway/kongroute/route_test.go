@@ -222,7 +222,20 @@ func TestRoutesForTCPRouteRule(t *testing.T) {
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 	require.NoError(t, gatewayv1.Install(scheme))
 
-	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{{
+				Name:     "tcp",
+				Protocol: gatewayv1.TCPProtocolType,
+				Port:     gwtypes.PortNumber(8898),
+			}},
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
 	tcpRoute := &gwtypes.TCPRoute{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TCPRoute",
@@ -258,6 +271,9 @@ func TestRoutesForTCPRouteRule(t *testing.T) {
 	assert.Empty(t, kongRoute.Spec.Hosts)
 	assert.Empty(t, kongRoute.Spec.Paths)
 	assert.Empty(t, kongRoute.Spec.Snis)
+	require.Len(t, kongRoute.Spec.Destinations, 1)
+	require.NotNil(t, kongRoute.Spec.Destinations[0].Port)
+	assert.Equal(t, int64(8898), *kongRoute.Spec.Destinations[0].Port)
 	assert.Equal(t, "test-namespace/test-route", kongRoute.Annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation])
 }
 
@@ -666,7 +682,20 @@ func TestRoutesForTCPRouteRule_TagsAnnotation(t *testing.T) {
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 	require.NoError(t, gatewayv1.Install(scheme))
 
-	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{{
+				Name:     "tcp",
+				Protocol: gatewayv1.TCPProtocolType,
+				Port:     gwtypes.PortNumber(8898),
+			}},
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
 
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
 	cp := &commonv1alpha1.ControlPlaneRef{

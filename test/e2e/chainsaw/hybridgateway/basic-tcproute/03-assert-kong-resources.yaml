@@ -9,6 +9,8 @@ metadata:
 spec:
   protocols:
     - tcp
+  destinations:
+    - port: (to_number($listener_tcp_port))
   (serviceRef.namespacedRef.name != null): true
 status:
   (conditions[?type == 'Programmed']):

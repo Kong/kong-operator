@@ -429,6 +429,14 @@ func routesForTCPRouteRule(
 	routeName := namegen.NewKongRouteNameForTCPRouteRule(tcpRoute, cp, namingParentRef, rule)
 	logger = logger.WithValues("kongroute", routeName)
 
+	// Kong requires at least one of sources, destinations or snis on a route whose
+	// protocols include tcp. Derive the destination ports from the parent Gateway's
+	// TCP listeners so Kong can match incoming connections by the port they arrive on.
+	ports, err := tcpDestinationPorts(ctx, cl, tcpRoute, pRef)
+	if err != nil {
+		return nil, err
+	}
+
 	tags := pkgmetadata.ExtractTags(tcpRoute)
 
 	routeBuilder := builder.NewKongRoute().WithName(routeName).
@@ -438,6 +446,7 @@ func routesForTCPRouteRule(
 		WithSpecName(routeName).
 		WithKongService(serviceName).
 		WithProtocols(sdkkonnectcomp.ProtocolsTCP).
+		WithDestinations(ports).
 		WithSpecTags(tags)
 
 	kongRoute, err := routeBuilder.Build()
@@ -450,6 +459,25 @@ func routesForTCPRouteRule(
 	}
 
 	return []*configurationv1alpha1.KongRoute{kongRoute.DeepCopy()}, nil
+}
+
+// tcpDestinationPorts resolves the destination ports for a TCPRoute rule from the
+// TCP listeners of the parent Gateway referenced by parentRef.
+func tcpDestinationPorts(
+	ctx context.Context, cl client.Client, tcpRoute *gwtypes.TCPRoute, parentRef *gwtypes.ParentReference,
+) ([]int32, error) {
+	ns := tcpRoute.Namespace
+	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
+		ns = string(*parentRef.Namespace)
+	}
+
+	gw := &gwtypes.Gateway{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: string(parentRef.Name)}, gw); err != nil {
+		return nil, fmt.Errorf("failed to get parent Gateway %s/%s for TCPRoute %s/%s: %w",
+			ns, parentRef.Name, tcpRoute.Namespace, tcpRoute.Name, err)
+	}
+
+	return gatewayutils.TCPPortsFromListeners(gw, parentRef.SectionName, parentRef.Port), nil
 }
 
 // protocolsFromGatewayListener derives Kong route protocols from the Gateway listener
