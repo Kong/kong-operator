@@ -436,6 +436,13 @@ func routesForTCPRouteRule(
 	if err != nil {
 		return nil, err
 	}
+	// A tcp route requires at least one destination. If the parent Gateway has no TCP
+	// listener matching parentRef, we cannot build a valid route, so fail here rather
+	// than emitting an inert, destination-less KongRoute that Kong would reject.
+	if len(ports) == 0 {
+		return nil, fmt.Errorf("no TCP listener found on Gateway %s for TCPRoute %s/%s",
+			pRef.Name, tcpRoute.Namespace, tcpRoute.Name)
+	}
 
 	tags := pkgmetadata.ExtractTags(tcpRoute)
 
