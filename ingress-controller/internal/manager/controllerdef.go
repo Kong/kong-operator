@@ -153,6 +153,16 @@ func setupControllers(
 				ReferenceIndexers: referenceIndexers,
 			},
 		},
+		{
+			Enabled: c.GatewayAPIGatewayController && (c.GatewayAPITCPRouteController || c.GatewayAPIUDPRouteController),
+			Controller: &configuration.CoreV1NamespaceReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Namespace"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
+			},
+		},
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------

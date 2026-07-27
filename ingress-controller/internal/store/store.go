@@ -64,6 +64,7 @@ type Storer interface {
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetConfigMap(namespace, name string) (*corev1.ConfigMap, error)
 	GetService(namespace, name string) (*corev1.Service, error)
+	GetNamespace(name string) (*corev1.Namespace, error)
 	GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error)
 	ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error)
 
@@ -94,6 +95,7 @@ type Storer interface {
 
 	// Gateway API resources.
 	GetGateway(namespace string, name string) (*gatewayapi.Gateway, error)
+	GetGatewayClass(name string) (*gatewayapi.GatewayClass, error)
 	ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error)
 	ListUDPRoutes() ([]*gatewayapi.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayapi.TCPRoute, error)
@@ -176,6 +178,18 @@ func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 		return nil, NotFoundError{fmt.Sprintf("Service %v not found", key)}
 	}
 	return service.(*corev1.Service), nil
+}
+
+// GetNamespace returns a Namespace using its name as key.
+func (s Store) GetNamespace(name string) (*corev1.Namespace, error) {
+	namespace, exists, err := s.stores.Namespace.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("Namespace %v not found", name)}
+	}
+	return namespace.(*corev1.Namespace), nil
 }
 
 // ListIngressesV1 returns the list of Ingresses in the Ingress v1 store.
@@ -546,6 +560,18 @@ func (s Store) GetGateway(namespace string, name string) (*gatewayapi.Gateway, e
 	return obj.(*gatewayapi.Gateway), nil
 }
 
+// GetGatewayClass returns the GatewayClass resource having the specified name.
+func (s Store) GetGatewayClass(name string) (*gatewayapi.GatewayClass, error) {
+	obj, exists, err := s.stores.GatewayClass.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("GatewayClass %v not found", name)}
+	}
+	return obj.(*gatewayapi.GatewayClass), nil
+}
+
 // GetKongVault returns kongvault resource having specified name.
 func (s Store) GetKongVault(name string) (*configurationv1alpha1.KongVault, error) {
 	p, exists, err := s.stores.KongVault.GetByKey(name)
@@ -754,6 +780,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &corev1.Secret{}, nil
 	case corev1.SchemeGroupVersion.WithKind("ConfigMap"):
 		return &corev1.ConfigMap{}, nil
+	case corev1.SchemeGroupVersion.WithKind("Namespace"):
+		return &corev1.Namespace{}, nil
 	// ----------------------------------------------------------------------------
 	// Kubernetes Discovery APIs
 	// ----------------------------------------------------------------------------
@@ -764,6 +792,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("Gateway"):
 		return &gatewayapi.Gateway{}, nil
+	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GatewayClass"):
+		return &gatewayapi.GatewayClass{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("HTTPRoute"):
 		return &gatewayapi.HTTPRoute{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GRPCRoute"):

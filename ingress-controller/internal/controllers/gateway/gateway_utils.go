@@ -86,7 +86,7 @@ func isGatewayClassUnmanaged(anns map[string]string) bool {
 // isGatewayClassControlled returns boolean if the GatewayClass
 // is controlled by this controller and is configured for unmanaged mode.
 func isGatewayClassControlled(gatewayClass *gatewayapi.GatewayClass) bool {
-	return gatewayClass.Spec.ControllerName == GetControllerName()
+	return gatewayapi.GatewayClassControlledBy(gatewayClass, GetControllerName())
 }
 
 // pruneGatewayStatusConds cleans out old status conditions if the Gateway currently has more

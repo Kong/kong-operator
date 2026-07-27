@@ -18,11 +18,21 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
 
 var udpRouteTypeMeta = metav1.TypeMeta{Kind: "UDPRoute", APIVersion: gatewayv1.GroupVersion.String()}
+
+// defaultOwnedGatewayClass matches the unset (zero-value) GatewayClassName
+// used by the Gateway fixtures below, so listener-attachment arbitration's
+// GatewayClass-ownership check (see collectL4ListenersByGateway) passes for
+// them the same way a real Gateway's non-empty GatewayClassName would.
+var defaultOwnedGatewayClass = &gatewayapi.GatewayClass{
+	ObjectMeta: metav1.ObjectMeta{Name: ""},
+	Spec:       gatewayapi.GatewayClassSpec{ControllerName: mgrconsts.GetControllerName()},
+}
 
 // udpProgrammedStatus builds Gateway.Status.Listeners entries that mark each
 // named listener as Programmed and accepting UDPRoute - the status a real
@@ -608,9 +618,10 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
-				Gateways:  tc.gateways,
-				UDPRoutes: tc.udpRoutes,
-				Services:  tc.services,
+				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				Gateways:       tc.gateways,
+				UDPRoutes:      tc.udpRoutes,
+				Services:       tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakestore)
@@ -1116,9 +1127,10 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
-				Gateways:  tc.gateways,
-				UDPRoutes: tc.udpRoutes,
-				Services:  tc.services,
+				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				Gateways:       tc.gateways,
+				UDPRoutes:      tc.udpRoutes,
+				Services:       tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakestore)
