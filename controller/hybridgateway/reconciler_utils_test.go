@@ -1289,6 +1289,189 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 	}
 }
 
+// TestShouldProcessObject_TCPRoute guards against regressions of the missing
+// *gwtypes.TCPRoute case in referencesSupportedGateway: without it, a fresh
+// TCPRoute (no finalizer yet) referencing a supported Gateway was never picked
+// up for processing, so it never got a finalizer or a status.
+func TestShouldProcessObject_TCPRoute(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+
+	ourGateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-gateway",
+			Namespace: "default",
+			UID:       "our-gateway-uid",
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "kong",
+		},
+	}
+
+	ourKonnectExtension := &konnectv1alpha2.KonnectExtension{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-gateway",
+			Namespace: "default",
+			Labels: map[string]string{
+				"gateway-operator.konghq.com/managed-by": "gateway",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "Gateway",
+					Name:       "our-gateway",
+					UID:        "our-gateway-uid",
+				},
+			},
+		},
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "our-cp",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ourControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-cp",
+			Namespace: "default",
+		},
+	}
+
+	otherGateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "other-gateway",
+			Namespace: "default",
+			UID:       "other-gateway-uid",
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "other-class",
+		},
+	}
+
+	testCases := []struct {
+		name           string
+		setupRoute     func() *gwtypes.TCPRoute
+		clientObjects  []client.Object
+		expectedResult bool
+		description    string
+	}{
+		{
+			name: "object with finalizer should be processed",
+			setupRoute: func() *gwtypes.TCPRoute {
+				return &gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{finalizerconst.HybridTCPRouteFinalizer},
+					},
+				}
+			},
+			clientObjects:  []client.Object{},
+			expectedResult: true,
+			description:    "Objects with our finalizer should be processed regardless of Gateway reference.",
+		},
+		{
+			name: "object without finalizer but referencing our Gateway should be processed",
+			setupRoute: func() *gwtypes.TCPRoute {
+				gatewayName := gwtypes.ObjectName("our-gateway")
+				return &gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "default",
+					},
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: gatewayName},
+							},
+						},
+					},
+				}
+			},
+			clientObjects:  []client.Object{ourGateway, ourKonnectExtension, ourControlPlane},
+			expectedResult: true,
+			description:    "Objects without finalizer but referencing our Gateway should be processed.",
+		},
+		{
+			name: "object without finalizer referencing other Gateway should be skipped",
+			setupRoute: func() *gwtypes.TCPRoute {
+				gatewayName := gwtypes.ObjectName("other-gateway")
+				return &gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "default",
+					},
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: gatewayName},
+							},
+						},
+					},
+				}
+			},
+			clientObjects:  []client.Object{otherGateway},
+			expectedResult: false,
+			description:    "Objects without finalizer referencing unsupported Gateway should be skipped.",
+		},
+		{
+			name: "object without finalizer and no Gateway reference should be skipped",
+			setupRoute: func() *gwtypes.TCPRoute {
+				return &gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "default",
+					},
+				}
+			},
+			clientObjects:  []client.Object{},
+			expectedResult: false,
+			description:    "Objects without finalizer and no Gateway reference should be skipped.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			route := tc.setupRoute()
+			route.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   gwtypes.GroupName,
+				Version: "v1",
+				Kind:    "TCPRoute",
+			})
+
+			scheme := runtime.NewScheme()
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+				&gwtypes.TCPRoute{}, &gwtypes.Gateway{}, &gwtypes.GatewayClass{},
+			)
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: "konnect.konghq.com", Version: "v1alpha2"},
+				&konnectv1alpha2.KonnectExtension{},
+				&konnectv1alpha2.KonnectExtensionList{},
+				&konnectv1alpha2.KonnectGatewayControlPlane{},
+				&konnectv1alpha2.KonnectGatewayControlPlaneList{},
+			)
+			require.NoError(t, gatewayv1.Install(scheme))
+
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tc.clientObjects...).
+				Build()
+
+			shouldProcess := shouldProcessObject[gwtypes.TCPRoute](ctx, cl, route, logger)
+			assert.Equal(t, tc.expectedResult, shouldProcess, tc.description)
+		})
+	}
+}
+
 func TestShouldProcessObject_Gateway(t *testing.T) {
 	ctx := t.Context()
 	logger := logr.Discard()
