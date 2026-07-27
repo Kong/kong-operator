@@ -85,6 +85,7 @@ func ListenerAllowsNamespace[T RouteT](
 		return false, false
 
 	default:
+		// The From field is CRD-enum-constrained (All/Same/Selector)
 		return false, true
 	}
 }

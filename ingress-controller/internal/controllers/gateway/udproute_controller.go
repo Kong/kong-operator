@@ -576,7 +576,7 @@ func (r *UDPRouteReconciler) setRouteConditionResolvedRefsCondition(
 		for i, cond := range parentStatus.Conditions {
 			if cond.Type == string(gatewayapi.RouteConditionResolvedRefs) {
 				if cond.Status != resolvedRefsStatus ||
-					cond.Reason != string(reason) {
+					cond.Reason != string(reason) || cond.Message != msg {
 					parentStatus.Conditions[i] = resolvedRefsCondition
 					changed = true
 				}
@@ -604,9 +604,13 @@ func (r *UDPRouteReconciler) getUDPRouteRuleReason(ctx context.Context, udpRoute
 				backendNamespace = string(*backendRef.Namespace)
 			}
 
-			backendRefGK := string(*backendRef.Kind)
-			if gr := string(*backendRef.Group); gr != "" {
-				backendRefGK = gr + "/" + backendRefGK
+			var backendRefKind gatewayapi.Kind
+			if backendRef.Kind != nil {
+				backendRefKind = *backendRef.Kind
+			}
+			backendRefGK := string(backendRefKind)
+			if backendRef.Group != nil && *backendRef.Group != "" {
+				backendRefGK = string(*backendRef.Group) + "/" + backendRefGK
 			}
 			targetNN := k8stypes.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}
 

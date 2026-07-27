@@ -26,10 +26,13 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 		return result
 	}
 
+	var errs []error
+
 	// Validate first; keep only structurally-valid routes for arbitration.
 	valid := make([]*gatewayapi.UDPRoute, 0, len(udpRouteList))
 	for _, r := range udpRouteList {
 		if err := validateUDPRoute(r); err != nil {
+			errs = append(errs, err)
 			t.registerTranslationFailure(err.Error(), r)
 			continue
 		}
@@ -61,7 +64,6 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 		winningPorts[winner] = append(winningPorts[winner], key.port)
 	}
 
-	var errs []error
 	for _, r := range valid {
 		ports, ok := winningPorts[r]
 		if !ok {
