@@ -569,10 +569,56 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 			},
 			expectedAcceptedCondition: metav1.Condition{
 				Type:               string(gatewayv1.GatewayConditionAccepted),
-				Status:             metav1.ConditionFalse,
+				Status:             metav1.ConditionTrue,
 				Reason:             string(gatewayv1.GatewayReasonListenersNotValid),
 				ObservedGeneration: 1,
 				Message:            "Listener 1 is not accepted. Listener 2 is conflicted.",
+			},
+		},
+		{
+			name: "one accepted and one unsupported protocol listener - gateway accepted with ListenersNotValid",
+			listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "http",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+				{
+					Name: "invalid",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonUnsupportedProtocol),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectedAcceptedCondition: metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.GatewayReasonListenersNotValid),
+				ObservedGeneration: 1,
+				Message:            "Listener 1 is not accepted.",
 			},
 		},
 	}

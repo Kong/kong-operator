@@ -8,11 +8,6 @@ import (
 )
 
 var skippedTestsShared = []string{
-	// newly added in gateway api v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4662
-	tests.GatewayListenerUnsupportedProtocol.ShortName,
-	tests.GatewayInvalidParametersRef.ShortName,
-	tests.HTTPRouteNoBackendRefs.ShortName,
-
 	// failed after bumping gateway api to v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4661
 	tests.HTTPRouteWeight.ShortName,
 

@@ -71,6 +71,13 @@
   provisioning silently failed with
   `expected "<image>:<tag>" format, got: <full-ref>`.
   [#5036](https://github.com/Kong/kong-operator/pull/5036)
+- Hybridgateway: an `HTTPRoute` rule with omitted or empty `backendRefs` now
+  responds with `500` instead of Kong's default `503` for an empty upstream, by
+  binding a `request-termination` plugin to the generated Kong service. Rules
+  that already produce a response via a `RequestRedirect` filter are excluded.
+  This fixes the `HTTPRouteNoBackendRefs` Gateway API conformance test for the
+  hybrid gateway.
+  [#5066](https://github.com/Kong/kong-operator/pull/5066)
 
 ### Added
 
