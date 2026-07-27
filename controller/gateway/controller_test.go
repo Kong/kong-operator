@@ -546,6 +546,60 @@ func Test_deploymentOptionsDeepEqual_Hardened(t *testing.T) {
 			"hardened setting never gets patched by provisionDataPlane")
 }
 
+// Test_deploymentOptionsDeepEqual_LabelsAndAnnotations is a regression test for the
+// DataPlane's spec.deployment.labels/annotations never being updated by
+// provisionDataPlane: the comparator used to gate whether the owned DataPlane needs
+// a patch didn't compare Labels/Annotations, so a labels/annotations-only change
+// from the GatewayConfiguration would never be detected and the patch would be
+// skipped forever.
+func Test_deploymentOptionsDeepEqual_LabelsAndAnnotations(t *testing.T) {
+	t.Run("labels", func(t *testing.T) {
+		original := &operatorv1beta1.DataPlaneDeploymentOptions{
+			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Labels: map[string]string{"foo": "bar", "animal": "cat"},
+			},
+		}
+		changed := original.DeepCopy()
+		changed.Labels = map[string]string{"animal": "dog", "foo": "baz"}
+
+		assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+			"identical DeploymentOptions must be reported as equal")
+		assert.False(t, deploymentOptionsDeepEqual(original, changed),
+			"a labels-only change must not be reported as equal, or the DataPlane's "+
+				"labels never get patched by provisionDataPlane")
+	})
+
+	t.Run("annotations", func(t *testing.T) {
+		original := &operatorv1beta1.DataPlaneDeploymentOptions{
+			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Annotations: map[string]string{"foo": "bar", "animal": "cat"},
+			},
+		}
+		changed := original.DeepCopy()
+		changed.Annotations = map[string]string{"animal": "dog", "foo": "baz"}
+
+		assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+			"identical DeploymentOptions must be reported as equal")
+		assert.False(t, deploymentOptionsDeepEqual(original, changed),
+			"an annotations-only change must not be reported as equal, or the "+
+				"DataPlane's annotations never get patched by provisionDataPlane")
+	})
+
+	t.Run("nil and empty map are treated as equal", func(t *testing.T) {
+		nilLabels := &operatorv1beta1.DataPlaneDeploymentOptions{}
+		emptyLabels := &operatorv1beta1.DataPlaneDeploymentOptions{
+			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Labels:      map[string]string{},
+				Annotations: map[string]string{},
+			},
+		}
+
+		assert.True(t, deploymentOptionsDeepEqual(nilLabels, emptyLabels),
+			"nil and empty Labels/Annotations must be reported as equal to avoid "+
+				"an infinite reconciliation loop")
+	})
+}
+
 func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 	testcases := []struct {
 		name     string

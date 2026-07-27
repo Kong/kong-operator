@@ -32516,6 +32516,14 @@ spec:
                   DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
                   resource "Deployment") which are created and managed for the DataPlane resource.
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Annotations are custom annotations that are propagated to the DataPlane
+                      Deployment metadata by the operator.
+                    maxProperties: 64
+                    type: object
                   hardened:
                     default: disabled
                     description: |-
@@ -32530,6 +32538,14 @@ spec:
                     - enabled
                     - disabled
                     type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Labels are custom labels that are propagated to the DataPlane Deployment
+                      metadata by the operator.
+                    maxProperties: 64
+                    type: object
                   podTemplateSpec:
                     description: |-
                       PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
@@ -81349,6 +81365,14 @@ spec:
                       DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
                       resource "Deployment") which are created and managed for the DataPlane resource.
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Annotations are custom annotations that are propagated to the DataPlane
+                          Deployment metadata by the operator.
+                        maxProperties: 64
+                        type: object
                       hardened:
                         default: disabled
                         description: |-
@@ -81363,6 +81387,14 @@ spec:
                         - enabled
                         - disabled
                         type: string
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Labels are custom labels that are propagated to the DataPlane Deployment
+                          metadata by the operator.
+                        maxProperties: 64
+                        type: object
                       podTemplateSpec:
                         description: |-
                           PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
@@ -90936,6 +90968,14 @@ spec:
                       DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
                       resource "Deployment") which are created and managed for the DataPlane resource.
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Annotations are custom annotations that are propagated to the DataPlane
+                          Deployment metadata by the operator.
+                        maxProperties: 64
+                        type: object
                       hardened:
                         default: disabled
                         description: |-
@@ -90950,6 +90990,14 @@ spec:
                         - enabled
                         - disabled
                         type: string
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Labels are custom labels that are propagated to the DataPlane Deployment
+                          metadata by the operator.
+                        maxProperties: 64
+                        type: object
                       podTemplateSpec:
                         description: |-
                           PodTemplateSpec defines PodTemplateSpec for Deployment's pods.

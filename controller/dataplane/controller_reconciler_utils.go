@@ -343,6 +343,39 @@ func ensureDataPlaneIngressServiceAnnotationsUpdated(
 	return shouldUpdate, existingAnnotations, nil
 }
 
+// ensureDataPlaneDeploymentAnnotationsUpdated updates annotations of the existing Deployment
+// owned by the `DataPlane`. It first removes outdated annotations and then updates annotations
+// in the current spec of the `DataPlane`.
+func ensureDataPlaneDeploymentAnnotationsUpdated(
+	dataplane *operatorv1beta1.DataPlane, existingAnnotations map[string]string, generatedAnnotations map[string]string,
+) (bool, map[string]string, error) {
+	// Remove annotations applied from a previous version of the DataPlane but removed in the current version.
+	// Should be done before updating new annotations, because the updating process will overwrite the annotation
+	// to save last applied annotations.
+	outdatedAnnotations, err := extractOutdatedDataPlaneDeploymentAnnotations(dataplane, existingAnnotations)
+	if err != nil {
+		return true, existingAnnotations, fmt.Errorf("failed to extract outdated annotations: %w", err)
+	}
+	var shouldUpdate bool
+	for k := range outdatedAnnotations {
+		if _, ok := existingAnnotations[k]; ok {
+			delete(existingAnnotations, k)
+			shouldUpdate = true
+		}
+	}
+	if generatedAnnotations != nil && existingAnnotations == nil {
+		existingAnnotations = map[string]string{}
+	}
+	// Set annotations by current specified Deployment annotations.
+	for k, v := range generatedAnnotations {
+		if existingAnnotations[k] != v {
+			existingAnnotations[k] = v
+			shouldUpdate = true
+		}
+	}
+	return shouldUpdate, existingAnnotations, nil
+}
+
 // dataPlaneIngressServiceIsReady returns:
 //   - true for DataPlanes that do not have the Ingress Service type set as LoadBalancer
 //   - true for DataPlanes that have the Ingress Service type set as LoadBalancer and
