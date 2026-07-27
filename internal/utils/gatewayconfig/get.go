@@ -74,6 +74,18 @@ func GetFromParametersRef(
 	return &gatewayConfig, nil
 }
 
+// ValidateParametersRefGroupKind checks whether the LocalParametersRef references
+// a supported group/kind (gateway-operator.konghq.com/GatewayConfiguration).
+// Returns an error describing the invalid reference if not.
+func ValidateParametersRefGroupKind(parametersRef *gatewayv1.LocalParametersReference) error {
+	if string(parametersRef.Group) != operatorv2beta1.SchemeGroupVersion.Group ||
+		string(parametersRef.Kind) != "GatewayConfiguration" {
+		return fmt.Errorf("invalid parametersRef: only %s/GatewayConfiguration is supported, got %s/%s",
+			operatorv2beta1.SchemeGroupVersion.Group, parametersRef.Group, parametersRef.Kind)
+	}
+	return nil
+}
+
 // IsGatewayHybrid returns true if the GatewayConfiguration specifies the gateway to be a Konnect hybrid gateway.
 func IsGatewayHybrid(gwConfig *gwtypes.GatewayConfiguration) bool {
 	return gwConfig.Spec.Konnect != nil && gwConfig.Spec.Konnect.APIAuthConfigurationRef != nil

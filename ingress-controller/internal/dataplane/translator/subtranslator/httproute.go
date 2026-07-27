@@ -263,7 +263,16 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	// the response must have a status code of 500. Since The default behavior of Kong is returning 503
 	// if there is no backend for a service, we inject a plugin that terminates all requests with 500
 	// as status code.
-	if len(service.Backends) == 0 && len(backendRefs) != 0 {
+	// We also need to handle the case where no backendRefs were provided at all (omitted or empty),
+	// which per the Gateway API spec should also result in a 500 response.
+	// However, if any rule has a RequestRedirect filter that can produce a response without backends,
+	// we skip the request-termination plugin because it has higher Kong priority than the redirect
+	// plugin and would intercept the request before the redirect could fire.
+	if len(service.Backends) == 0 && !lo.SomeBy(rulesMeta, func(m httpRouteRuleMeta) bool {
+		return lo.SomeBy(m.Rule.Filters, func(f gatewayapi.HTTPRouteFilter) bool {
+			return f.Type == gatewayapi.HTTPRouteFilterRequestRedirect
+		})
+	}) {
 		if service.Plugins == nil {
 			service.Plugins = make([]kong.Plugin, 0)
 		}
@@ -274,6 +283,12 @@ func translateHTTPRouteRulesMetaToKongstateService(
 				"message":     "no existing backendRef provided",
 			},
 		})
+		// Use the .invalid host suffix for services with no backends to avoid
+		// reusing Kong balancer state when the same logical service later becomes valid.
+		// This also applies when no backendRefs were provided at all.
+		if len(backendRefs) == 0 {
+			service.Host = new(serviceName + invalidBackendRefsServiceHostSuffix)
+		}
 	}
 
 	// applyTimeoutToServiceFromHTTPRouteRule applies timeouts from HTTPRoute to the service.

@@ -191,8 +191,11 @@ func SetProgrammed(resource ConditionsAndGenerationAware) {
 }
 
 // SetAcceptedConditionOnGateway sets the gateway Accepted condition according to the Gateway API specification.
+// Per the spec, if at least one listener is accepted the Gateway MUST be Accepted=True
+// (with reason ListenersNotValid when some listeners are invalid); only when ALL listeners
+// are not accepted does the Gateway become Accepted=False.
 func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGenerationAware) {
-	oldCondition, NewCondition := metav1.Condition{}, metav1.Condition{
+	oldCondition, newCondition := metav1.Condition{}, metav1.Condition{
 		Type:               string(gatewayv1.GatewayConditionAccepted),
 		Status:             metav1.ConditionTrue,
 		Reason:             string(gatewayv1.GatewayReasonAccepted),
@@ -200,39 +203,55 @@ func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGe
 		LastTransitionTime: metav1.Now(),
 	}
 
-	// If even a single listener is not accepted or is conflicted, the gateway needs
-	// to be marked as not accepted.
-	for i, listStatus := range resource.GetListenersConditions() {
+	var acceptedListenerCount int
+	var hasInvalidListener bool
+
+	listenerConditions := resource.GetListenersConditions()
+	for i, listStatus := range listenerConditions {
+		listenerAccepted := true
 		for _, listCond := range listStatus.Conditions {
 			if listCond.Type == string(gatewayv1.GatewayConditionAccepted) {
 				if listCond.Status == metav1.ConditionFalse {
-					if NewCondition.Message != "" {
-						NewCondition.Message = fmt.Sprintf("%s ", NewCondition.Message)
+					listenerAccepted = false
+					if newCondition.Message != "" {
+						newCondition.Message = fmt.Sprintf("%s ", newCondition.Message)
 					}
-					NewCondition.Status = metav1.ConditionFalse
-					NewCondition.Reason = string(gatewayv1.GatewayReasonListenersNotValid)
-					NewCondition.Message = fmt.Sprintf("%sListener %d is not accepted.", NewCondition.Message, i)
+					newCondition.Message = fmt.Sprintf("%sListener %d is not accepted.", newCondition.Message, i)
 				}
 			}
 			if listCond.Type == string(gatewayv1.ListenerConditionConflicted) {
 				if listCond.Status == metav1.ConditionTrue {
-					if NewCondition.Message != "" {
-						NewCondition.Message = fmt.Sprintf("%s ", NewCondition.Message)
+					listenerAccepted = false
+					if newCondition.Message != "" {
+						newCondition.Message = fmt.Sprintf("%s ", newCondition.Message)
 					}
-					NewCondition.Status = metav1.ConditionFalse
-					NewCondition.Reason = string(gatewayv1.GatewayReasonListenersNotValid)
-					NewCondition.Message = fmt.Sprintf("%sListener %d is conflicted.", NewCondition.Message, i)
+					newCondition.Message = fmt.Sprintf("%sListener %d is conflicted.", newCondition.Message, i)
 				}
 			}
 		}
-	}
-	if NewCondition.Message == "" {
-		NewCondition.Message = "All listeners are accepted."
+		if listenerAccepted {
+			acceptedListenerCount++
+		} else {
+			hasInvalidListener = true
+		}
 	}
 
-	if NewCondition.Status != oldCondition.Status ||
-		NewCondition.Reason != oldCondition.Reason {
-		SetCondition(NewCondition, resource)
+	if hasInvalidListener {
+		newCondition.Reason = string(gatewayv1.GatewayReasonListenersNotValid)
+		// If at least one listener is accepted the Gateway MUST be Accepted=True
+		// with reason ListenersNotValid per the Gateway API spec.
+		if acceptedListenerCount == 0 {
+			newCondition.Status = metav1.ConditionFalse
+		}
+	}
+
+	if newCondition.Message == "" {
+		newCondition.Message = "All listeners are accepted."
+	}
+
+	if newCondition.Status != oldCondition.Status ||
+		newCondition.Reason != oldCondition.Reason {
+		SetCondition(newCondition, resource)
 	}
 }
 

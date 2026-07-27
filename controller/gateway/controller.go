@@ -307,6 +307,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client); err != nil {
 		return ctrl.Result{}, err
 	}
+	// Validate the infrastructure.parametersRef early. If it references an
+	// unsupported group/kind the Gateway MUST be Accepted=False with
+	// reason InvalidParameters per the Gateway API spec.
+	if gateway.Spec.Infrastructure != nil && gateway.Spec.Infrastructure.ParametersRef != nil {
+		if err := gwconfigutils.ValidateParametersRefGroupKind(gateway.Spec.Infrastructure.ParametersRef); err != nil {
+			k8sutils.SetCondition(metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.GatewayReasonInvalidParameters),
+				Message:            err.Error(),
+				ObservedGeneration: gateway.Generation,
+				LastTransitionTime: metav1.Now(),
+			}, gwConditionAware)
+		}
+	}
 	acceptedCondition, _ := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionAccepted), gwConditionAware)
 	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
 	if gatewayStatusNeedsUpdate(oldGwConditionsAware, gwConditionAware) {
