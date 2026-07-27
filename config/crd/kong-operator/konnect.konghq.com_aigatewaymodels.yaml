@@ -2659,7 +2659,6 @@ spec:
                                             This must be set when running a target model on Gemini on Vertex Model
                                             Garden.
                                           maxLength: 253
-                                          minLength: 1
                                           type: string
                                         locationID:
                                           description: The Google Cloud location ID
@@ -2675,7 +2674,6 @@ spec:
                                           type: string
                                       required:
                                       - apiEndpoint
-                                      - endpointID
                                       - locationID
                                       - projectID
                                       type: object
@@ -5411,7 +5409,6 @@ spec:
                                             This must be set when running a target model on Gemini on Vertex Model
                                             Garden.
                                           maxLength: 253
-                                          minLength: 1
                                           type: string
                                         locationID:
                                           description: The Google Cloud location ID
@@ -5427,7 +5424,6 @@ spec:
                                           type: string
                                       required:
                                       - apiEndpoint
-                                      - endpointID
                                       - locationID
                                       - projectID
                                       type: object

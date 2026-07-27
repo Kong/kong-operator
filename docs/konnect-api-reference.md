@@ -1603,8 +1603,8 @@ This feature is currently in beta and is subject to change.<br /><br />Server-si
 | Field | Description |
 | --- | --- |
 | `forwardClientHeaders` _string_ | Whether to forward the client request headers to the upstream server when calling the tools. |
+| `label` _string_ | The label of the MCP server. This is used to filter the exported MCP tools. |
 | `session` _[AIGatewayMCPServerServerConfigBaseSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesession)_ | Enable managed session when Kong responds as MCP server in listener, conversion-listener, or upstream-server modes. This doesn't affect the passthrough-listener mode as the state in that mode is maintained by the upstream MCP servers. |
-| `tag` _string_ | The tag of the MCP server. This is used to filter the exported MCP tools. The field should contain exactly one tag. |
 | `timeout` _int_ | The timeout for calling the tools in milliseconds. |
 
 _Appears in:_
@@ -1796,9 +1796,9 @@ specific to `upstream-server` mode.
 | Field | Description |
 | --- | --- |
 | `forwardClientHeaders` _string_ | Whether to forward the client request headers to the upstream server when calling the tools. |
+| `label` _string_ | The label of the MCP server. This is used to filter the exported MCP tools. |
 | `preserveUpstreamToolNames` _string_ | If enabled, the original upstream tool names are preserved as-is when Kong acts as an MCP server. If disabled (`false`), the service name will be prepended to the MCP tool names to avoid name collisions when multiple services are used. |
 | `session` _[AIGatewayMCPServerUpstreamServerServerConfigSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsession)_ | Enable managed session when Kong responds as MCP server in listener, conversion-listener, or upstream-server modes. This doesn't affect the passthrough-listener mode as the state in that mode is maintained by the upstream MCP servers. |
-| `tag` _string_ | The tag of the MCP server. This is used to filter the exported MCP tools. The field should contain exactly one tag. |
 | `timeout` _int_ | The timeout for calling the tools in milliseconds. |
 | `toolsListAuth` _[AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigtoolslistauth)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an Upstream Server's MCP Server Tools' Authentication. |
 
@@ -3417,6 +3417,22 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 _Appears in:_
 
 - [AIGatewayModelProviderGeminiConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidergeminiconfigauth)
+
+#### AIGatewayModelProviderConfigAuthVertex
+
+
+AIGatewayModelProviderConfigAuthVertex **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Configuration for Vertex model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `serviceAccountJSON` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | Full JSON string of the GCP service account to authenticate. If not set, the service account JSON will be from the environment variable GCP_SERVICE_ACCOUNT. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `useGcpServiceAccount` _string_ | Use the Google Cloud Service Account (or user-assigned identity) to authenticate with Vertex-provider models. |
+
+_Appears in:_
+
 - [AIGatewayModelProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfigauth)
 
 #### AIGatewayModelProviderConfigType
@@ -3948,7 +3964,7 @@ _Appears in:_
 
 
 AIGatewayModelProviderVertex **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Config for GCP model provider.
+This feature is currently in beta and is subject to change.<br /><br />Config for Vertex model provider.
 
 
 
@@ -3991,7 +4007,7 @@ Only one of the fields should be set based on the Type.
 | --- | --- |
 | `type` _[AIGatewayModelProviderVertexConfigAuthType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfigauthtype)_ | Type designates the type of configuration. |
 | `basic` _[AIGatewayModelProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic configuration. |
-| `gcp` _[AIGatewayModelProviderConfigAuthGCP](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcp)_ | GCP configuration. |
+| `vertex` _[AIGatewayModelProviderConfigAuthVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthvertex)_ | Vertex configuration. |
 
 _Appears in:_
 
@@ -4015,7 +4031,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `basic` |  |
-| `gcp` |  |
+| `vertex` |  |
 
 #### AIGatewayModelProviderVllm
 
@@ -7650,6 +7666,7 @@ _Appears in:_
 - [AIGatewayModelProviderConfigAuthBasicHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicheaders)
 - [AIGatewayModelProviderConfigAuthBasicParams](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicparams)
 - [AIGatewayModelProviderConfigAuthGCP](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcp)
+- [AIGatewayModelProviderConfigAuthVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthvertex)
 
 #### SensitiveDataSourceType
 
