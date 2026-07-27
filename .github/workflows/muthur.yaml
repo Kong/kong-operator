@@ -43,7 +43,7 @@ jobs:
 
       # This authorization action must come from trusted Kong/ksai code, not from any
       # PR-controlled content.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: checkout trusted authz action
         with:
           token: ${{ steps.token.outputs.token }}
@@ -93,7 +93,7 @@ jobs:
       # kong-operator is public and Kong/ksai is internal, so the action can't be resolved
       # via a remote `uses:` (unlike the gate job's authz check, which hits the same wall and
       # is worked around the same way): check it out locally via sparse-checkout instead.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: checkout trusted reviewer action
         with:
           token: ${{ steps.kong-token.outputs.token }}
@@ -128,7 +128,7 @@ jobs:
       # Main steps all finish before any post step runs, so re-checking-out here restores
       # it on disk before the runner loads it for the action's post stage. always() because
       # the wipe happens regardless of whether the action itself later fails.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: restore reviewer action for post stage
         if: always()
         with:
