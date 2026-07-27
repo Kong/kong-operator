@@ -108,6 +108,11 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 			}
 		}
 
+		if isHostlessRoute(route) {
+			log.Debug(logger, "Route does not use hostname matching", "listener", listener.Name)
+			return []string{}, nil
+		}
+
 		// If the listener has no hostname, it means it accepts all HTTPRoute hostnames.
 		// No need to do further checks.
 		if listener.Hostname == nil || *listener.Hostname == "" {
@@ -141,6 +146,15 @@ func getHostnamesByParentRef[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRou
 
 	log.Debug(logger, "Finished processing hostnames", "finalHostnames", hostnames)
 	return hostnames, nil
+}
+
+func isHostlessRoute[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](route TPtr) bool {
+	switch any(route).(type) {
+	case *gwtypes.TCPRoute:
+		return true
+	default:
+		return false
+	}
 }
 
 func routeHostNamesString[T gwtypes.SupportedRoute](route T) []string {
