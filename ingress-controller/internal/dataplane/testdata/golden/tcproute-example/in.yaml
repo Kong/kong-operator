@@ -8,6 +8,18 @@ spec:
   - name: tcp
     protocol: TCP
     port: 1025
+status:
+  listeners:
+  - name: tcp
+    supportedKinds:
+    - group: gateway.networking.k8s.io
+      kind: TCPRoute
+    conditions:
+    - type: Programmed
+      status: "True"
+      reason: Programmed
+      message: ""
+      lastTransitionTime: "2024-01-01T00:00:00Z"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: TCPRoute
