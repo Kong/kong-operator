@@ -41,9 +41,10 @@ const (
 // ControlPlane is always set. For EventTypeDeregister it may be a stub carrying
 // only the Name and Namespace needed for cancellation.
 type CPEvent struct {
-	Type          EventType
-	KonnectClient sdkops.SDKWrapper
-	ControlPlane  *konnectv1alpha2.KonnectGatewayControlPlane
+	Type                    EventType
+	KonnectClient           sdkops.SDKWrapper
+	KonnectClientForPolling sdkops.SDKWrapper
+	ControlPlane            *konnectv1alpha2.KonnectGatewayControlPlane
 }
 
 // SignalManager manages a set of per-UUID background goroutines that periodically
@@ -91,7 +92,7 @@ func (s *SignalManager) run(ctx context.Context) {
 			case ev := <-s.cpCh:
 				switch ev.Type {
 				case EventTypeRegister:
-					s.registerControlPlane(ev.KonnectClient, ev.ControlPlane)
+					s.registerControlPlane(ev)
 				case EventTypeDeregister:
 					s.deregisterControlPlane(ev.ControlPlane)
 				}
@@ -127,7 +128,13 @@ func (s *SignalManager) NotifyMCPServerDeleted(namespace, cpName string) {
 
 // registerControlPlane registers the control plane and starts a dedicated goroutine for it.
 // If the control plane is already registered, registerControlPlane is a no-op.
-func (s *SignalManager) registerControlPlane(konnectClient sdkops.SDKWrapper, cp *konnectv1alpha2.KonnectGatewayControlPlane) {
+func (s *SignalManager) registerControlPlane(ev CPEvent) {
+	var (
+		konnectClient           = ev.KonnectClient
+		konnectClientForPolling = ev.KonnectClientForPolling
+		cp                      = ev.ControlPlane
+	)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -152,7 +159,7 @@ func (s *SignalManager) registerControlPlane(konnectClient sdkops.SDKWrapper, cp
 
 	go func() {
 		defer cancel()
-		s.mcpCPSignalRoutine(ctx, cp, konnectClient, fetchEventCh, resetCh)
+		s.mcpCPSignalRoutine(ctx, cp, konnectClientForPolling, fetchEventCh, resetCh)
 	}()
 }
 

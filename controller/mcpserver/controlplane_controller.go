@@ -25,10 +25,11 @@ import (
 type MCPServerCPReconciler struct {
 	client.Client
 
-	ControllerOptions controller.Options
-	LoggingMode       logging.Mode
-	SignalManager     *SignalManager
-	SdkFactory        sdkops.SDKFactory
+	ControllerOptions    controller.Options
+	LoggingMode          logging.Mode
+	SignalManager        *SignalManager
+	SdkFactory           sdkops.SDKFactory
+	SdkFactoryForPolling sdkops.SDKFactory
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -96,12 +97,12 @@ func (r *MCPServerCPReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to parse server URL %q: %w", apiAuth.Status.ServerURL, err)
 	}
-	konnectClient := r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token))
 
 	r.SignalManager.EmitControlPlaneEvent(ctx, CPEvent{
-		Type:          EventTypeRegister,
-		KonnectClient: konnectClient,
-		ControlPlane:  &controlPlane,
+		Type:                    EventTypeRegister,
+		KonnectClient:           r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token)),
+		KonnectClientForPolling: r.SdkFactoryForPolling.NewKonnectSDK(srv, sdkops.SDKToken(token)),
+		ControlPlane:            &controlPlane,
 	})
 
 	return ctrl.Result{}, nil

@@ -1013,16 +1013,19 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 }
 
 func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options, ssaProvider *controllerpkgssa.TypeConverterProvider) []ControllerDef {
-	reconcileEventCh := make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
-	sm := mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
-	sdkFactory := sdkops.NewSDKFactory()
-	controllerFactory := konnectControllerFactory{
-		sdkFactory:        sdkFactory,
-		loggingMode:       c.LoggingMode,
-		client:            mgr.GetClient(),
-		syncPeriod:        c.KonnectSyncPeriod,
-		controllerOptions: ctrlOpts,
-	}
+	var (
+		reconcileEventCh     = make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
+		sm                   = mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
+		sdkFactory           = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)))
+		sdkFactoryForPolling = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnectLongPolling()))
+		controllerFactory    = konnectControllerFactory{
+			sdkFactory:        sdkFactory,
+			loggingMode:       c.LoggingMode,
+			client:            mgr.GetClient(),
+			syncPeriod:        c.KonnectSyncPeriod,
+			controllerOptions: ctrlOpts,
+		}
+	)
 	return []ControllerDef{
 		{
 			Enabled: true,
@@ -1041,11 +1044,12 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 		{
 			Enabled: true,
 			Controller: &mcpserver.MCPServerCPReconciler{
-				ControllerOptions: ctrlOpts,
-				Client:            mgr.GetClient(),
-				LoggingMode:       c.LoggingMode,
-				SignalManager:     sm,
-				SdkFactory:        sdkFactory,
+				ControllerOptions:    ctrlOpts,
+				Client:               mgr.GetClient(),
+				LoggingMode:          c.LoggingMode,
+				SignalManager:        sm,
+				SdkFactory:           sdkFactory,
+				SdkFactoryForPolling: sdkFactoryForPolling,
 			},
 		},
 		// Generic KonnectEntityReconciler for MCPServer: resolves ControlPlaneRef,

@@ -78,7 +78,7 @@ func (r *MCPServerReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 				&handler.EnqueueRequestForObject{},
 			),
 		).
-		Complete(reconcile.AsReconciler[*konnectv1alpha1.MCPServer](r.Client, r))
+		Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // Reconcile reconciles the MCPServer resource.
