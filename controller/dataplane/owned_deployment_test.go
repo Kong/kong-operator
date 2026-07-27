@@ -229,6 +229,92 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 	}
 }
 
+// TestDeploymentBuilder_BuildAndDeploy_LabelsAndAnnotations verifies that
+// spec.deployment.labels/annotations are propagated onto the generated
+// Deployment on creation, kept in sync on update, and that operator-managed
+// annotations that are removed from the DataPlane spec are removed from the
+// Deployment too (without clobbering annotations set by other actors).
+func TestDeploymentBuilder_BuildAndDeploy_LabelsAndAnnotations(t *testing.T) {
+	logger := logr.Discard()
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, appsv1.AddToScheme(scheme))
+	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
+
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-dataplane",
+			Namespace: "default",
+			UID:       "test-uid",
+		},
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Annotations: map[string]string{"foo": "bar"},
+						Labels:      map[string]string{"foo": "bar"},
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: "kong/kong-gateway:3.11",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.
+		NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(dataplane).
+		Build()
+
+	newBuilder := func() *DeploymentBuilder {
+		return NewDeploymentBuilder(logger, fakeClient).
+			WithDefaultImage("kong:3.0").
+			WithClusterCertificate("test-cert")
+	}
+
+	deployment, res, err := newBuilder().BuildAndDeploy(t.Context(), dataplane, true, false)
+	require.NoError(t, err)
+	require.Equal(t, op.Created, res)
+	require.NotNil(t, deployment)
+	assert.Equal(t, "bar", deployment.Labels["foo"])
+	assert.Equal(t, "bar", deployment.Annotations["foo"])
+	assert.JSONEq(t, `{"foo":"bar"}`, deployment.Annotations[consts.AnnotationLastAppliedAnnotations])
+
+	// Simulate an annotation added by another actor (e.g. kubectl), which must
+	// survive the next reconciliation since it was never tracked by the operator.
+	var existing appsv1.Deployment
+	require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(deployment), &existing))
+	existing.Annotations["added-by-other-actor"] = "keep-me"
+	require.NoError(t, fakeClient.Update(t.Context(), &existing))
+
+	// Update the DataPlane spec: drop "foo", add "baz".
+	dataplane.Spec.Deployment.Annotations = map[string]string{"baz": "qux"}
+	dataplane.Spec.Deployment.Labels = map[string]string{"baz": "qux"}
+
+	deployment, res, err = newBuilder().BuildAndDeploy(t.Context(), dataplane, true, false)
+	require.NoError(t, err)
+	require.Equal(t, op.Updated, res)
+	require.NotNil(t, deployment)
+
+	assert.Equal(t, "qux", deployment.Labels["baz"])
+	assert.NotContains(t, deployment.Labels, "foo")
+	assert.Equal(t, dataplane.Name, deployment.Labels["app"], "base app label must survive the merge")
+
+	assert.Equal(t, "qux", deployment.Annotations["baz"])
+	assert.NotContains(t, deployment.Annotations, "foo", "annotation removed from spec must be removed from the Deployment")
+	assert.Equal(t, "keep-me", deployment.Annotations["added-by-other-actor"], "annotations set by other actors must be preserved")
+	assert.JSONEq(t, `{"baz":"qux"}`, deployment.Annotations[consts.AnnotationLastAppliedAnnotations])
+}
+
 // TestDeploymentBuilder_BuildAndDeploy_ScalingOnlyChangeIsNoop is a regression test
 // for the DataPlane's HPA not being updated when only spec.deployment.scaling
 // changes: reconcileDataPlaneDeployment used to hash the whole DataPlane spec
@@ -392,7 +478,7 @@ func TestGenerateDataPlaneDeployment(t *testing.T) {
 			additionalLabels := map[string]string{}
 			maps.Copy(additionalLabels, tc.additionalLabels)
 
-			deployment, err := generateDataPlaneDeployment(tc.validateDataPlaneImage, tc.dataplane, tc.defaultImage, additionalLabels)
+			deployment, err := generateDataPlaneDeployment(logr.Discard(), tc.validateDataPlaneImage, tc.dataplane, tc.defaultImage, additionalLabels)
 
 			if tc.expectError {
 				assert.Error(t, err)
@@ -420,6 +506,48 @@ func TestGenerateDataPlaneDeployment(t *testing.T) {
 			assert.Equal(t, tc.expectedImage, proxyContainer.Image)
 		})
 	}
+}
+
+func TestGenerateDataPlaneDeployment_LabelsAndAnnotations(t *testing.T) {
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-dataplane",
+			Namespace: "default",
+			UID:       "test-uid",
+		},
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Annotations: map[string]string{
+							"deployment-annotation": "value",
+						},
+						Labels: map[string]string{
+							"deployment-label": "value",
+						},
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: consts.DataPlaneProxyContainerName,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	deployment, err := generateDataPlaneDeployment(logr.Discard(), false, dataplane, "kong:3.0", nil)
+	require.NoError(t, err)
+	require.NotNil(t, deployment)
+
+	assert.Equal(t, "value", deployment.Labels["deployment-label"])
+	assert.Equal(t, "value", deployment.Annotations["deployment-annotation"])
+	// the base "app" label set by the generator must survive the merge.
+	assert.Equal(t, dataplane.Name, deployment.Labels["app"])
 }
 
 func TestApplyDeploymentUserPatchesForDataPlane(t *testing.T) {
@@ -590,6 +718,16 @@ func (s errorCountSink) Info(_ int, _ string, _ ...any)    {}
 func (s errorCountSink) Error(_ error, _ string, _ ...any) { *s.count++ }
 func (s errorCountSink) WithValues(_ ...any) logr.LogSink  { return s }
 func (s errorCountSink) WithName(_ string) logr.LogSink    { return s }
+
+// infoCountSink is a minimal logr.LogSink that counts Info() calls.
+type infoCountSink struct{ count *int }
+
+func (s infoCountSink) Init(logr.RuntimeInfo)             {}
+func (s infoCountSink) Enabled(int) bool                  { return true }
+func (s infoCountSink) Info(_ int, _ string, _ ...any)    { *s.count++ }
+func (s infoCountSink) Error(_ error, _ string, _ ...any) {}
+func (s infoCountSink) WithValues(_ ...any) logr.LogSink  { return s }
+func (s infoCountSink) WithName(_ string) logr.LogSink    { return s }
 
 func TestWarnOperatorManagedEnvVars(t *testing.T) {
 	scheme := runtime.NewScheme()

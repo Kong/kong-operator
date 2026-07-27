@@ -43,6 +43,12 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 						DeploymentOptions: operatorv1beta1.DeploymentOptions{
 							Replicas: new(int32(2)),
+							Annotations: map[string]string{
+								"deployment-annotation": "value",
+							},
+							Labels: map[string]string{
+								"deployment-label": "value",
+							},
 						},
 					},
 				},
@@ -51,6 +57,12 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv2beta1.DeploymentOptions{
 						Replicas: new(int32(2)),
+						Annotations: map[string]string{
+							"deployment-annotation": "value",
+						},
+						Labels: map[string]string{
+							"deployment-label": "value",
+						},
 					},
 				},
 			},
@@ -325,6 +337,12 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 					Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 						DeploymentOptions: operatorv2beta1.DeploymentOptions{
 							Replicas: new(int32(2)),
+							Annotations: map[string]string{
+								"deployment-annotation": "value",
+							},
+							Labels: map[string]string{
+								"deployment-label": "value",
+							},
 						},
 					},
 				},
@@ -355,6 +373,12 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						Replicas: new(int32(2)),
+						Annotations: map[string]string{
+							"deployment-annotation": "value",
+						},
+						Labels: map[string]string{
+							"deployment-label": "value",
+						},
 					},
 				},
 			},
@@ -513,6 +537,12 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv2beta1.DeploymentOptions{
 								Replicas: new(int32(2)),
+								Annotations: map[string]string{
+									"deployment-annotation": "value",
+								},
+								Labels: map[string]string{
+									"deployment-label": "value",
+								},
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -593,6 +623,7 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 				require.Equal(t, original.Spec.ControlPlaneOptions.WatchNamespaces, roundTrip.Spec.ControlPlaneOptions.WatchNamespaces)
 			}
 
+			require.Equal(t, original.Spec.DataPlaneOptions.Deployment, roundTrip.Spec.DataPlaneOptions.Deployment)
 			require.Equal(t, original.Spec.Extensions, roundTrip.Spec.Extensions)
 			require.ElementsMatch(t, original.Spec.ControlPlaneOptions.FeatureGates, roundTrip.Spec.ControlPlaneOptions.FeatureGates)
 			require.ElementsMatch(t, original.Spec.ControlPlaneOptions.Controllers, roundTrip.Spec.ControlPlaneOptions.Controllers)

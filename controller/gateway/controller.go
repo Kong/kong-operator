@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"time"
@@ -1156,6 +1157,14 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DataPlaneDeploymentOptio
 	}
 
 	if !reflect.DeepEqual(o1.Scaling, o2.Scaling) {
+		return false
+	}
+
+	if !maps.Equal(o1.Labels, o2.Labels) {
+		return false
+	}
+
+	if !maps.Equal(o1.Annotations, o2.Annotations) {
 		return false
 	}
 
