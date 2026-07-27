@@ -10364,6 +10364,12 @@ type PageTitle string
 // used.
 type PageVisibilityStatus string
 
+// PortalDefaultAPIVisibility The default visibility of APIs in the portal.
+type PortalDefaultAPIVisibility string
+
+// PortalDefaultPageVisibility The default visibility of pages in the portal.
+type PortalDefaultPageVisibility string
+
 // PortalFooterMenuSection is a type alias.
 type PortalFooterMenuSection struct {
 	//
