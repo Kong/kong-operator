@@ -9,7 +9,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/configuration"
@@ -338,8 +337,8 @@ func setupControllers(
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/ReferenceGrant"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "referencegrants",
 				}),
 				Controller: &gateway.ReferenceGrantReconciler{

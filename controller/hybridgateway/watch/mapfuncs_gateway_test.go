@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
@@ -401,7 +400,7 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 
 func Test_MapGatewayForReferenceGrant(t *testing.T) {
 	secretKind := gatewayv1.Kind("Secret")
-	gatewayKind := gatewayv1beta1.Kind("Gateway")
+	gatewayKind := gatewayv1.Kind("Gateway")
 	ns1 := gatewayv1.Namespace("ns1")
 	ns2 := gatewayv1.Namespace("ns2")
 	gwGroup := gatewayv1.Group(gwtypes.GroupName)
@@ -1020,7 +1019,7 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 
 func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 	secretKind := gatewayv1.Kind("Secret")
-	gatewayKind := gatewayv1beta1.Kind("Gateway")
+	gatewayKind := gatewayv1.Kind("Gateway")
 	ns1 := gatewayv1.Namespace("ns1")
 	ns2 := gatewayv1.Namespace("ns2")
 	gwGroup := gatewayv1.Group(gwtypes.GroupName)

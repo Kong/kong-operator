@@ -263,13 +263,13 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Resource: "gateways",
 				},
 				{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "referencegrants",
 				},
 				{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
+					Group:    gatewayv1.GroupVersion.Group,
+					Version:  gatewayv1.GroupVersion.Version,
 					Resource: "httproutes",
 				},
 				gwtypes.GatewayConfigurationGVR(),
@@ -285,7 +285,7 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 			gvrs: []schema.GroupVersionResource{
 				operatorv1alpha1.AIGatewayGVR(),
 				{
-					Group:    gatewayv1beta1.GroupVersion.Group,
+					Group:    gatewayv1.GroupVersion.Group,
 					Version:  gatewayv1beta1.GroupVersion.Version,
 					Resource: "referencegrants",
 				},

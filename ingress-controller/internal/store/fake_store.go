@@ -17,7 +17,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -276,7 +275,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeFor[*gatewayapi.TCPRoute]():                          schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TCPRoute"),
 		reflect.TypeFor[*gatewayapi.TLSRoute]():                          schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TLSRoute"),
 		reflect.TypeFor[*gatewayapi.GRPCRoute]():                         schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GRPCRoute"),
-		reflect.TypeFor[*gatewayapi.ReferenceGrant]():                    schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"),
+		reflect.TypeFor[*gatewayapi.ReferenceGrant]():                    schema.GroupVersion(gatewayv1.GroupVersion).WithKind("ReferenceGrant"),
 		reflect.TypeFor[*gatewayapi.Gateway]():                           schema.GroupVersion(gatewayv1.GroupVersion).WithKind("Gateway"),
 		reflect.TypeFor[*gatewayapi.BackendTLSPolicy]():                  schema.GroupVersion(gatewayv1alpha3.GroupVersion).WithKind("BackendTLSPolicy"),
 		reflect.TypeFor[*configurationv1alpha1.IngressClassParameters](): configurationv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),

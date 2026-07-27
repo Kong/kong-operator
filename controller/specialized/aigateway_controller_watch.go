@@ -11,7 +11,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
@@ -98,7 +97,7 @@ func (r *AIGatewayReconciler) listAIGatewaysForReferenceGrants(ctx context.Conte
 
 	namespaces := []string{}
 	for _, from := range referenceGrant.Spec.From {
-		if from.Group != gatewayv1beta1.Group(operatorv1alpha1.SchemeGroupVersion.Group) || from.Kind != gatewayv1beta1.Kind("AIGateway") {
+		if from.Group != gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group) || from.Kind != gatewayv1.Kind("AIGateway") {
 			continue
 		}
 		ns := string(from.Namespace)
@@ -134,6 +133,6 @@ func referenceGrantReferencesAIGateway(obj client.Object) bool {
 		return false
 	}
 	return lo.ContainsBy(referenceGrant.Spec.From, func(from gwtypes.ReferenceGrantFrom) bool {
-		return from.Group == gatewayv1beta1.Group(operatorv1alpha1.SchemeGroupVersion.Group) && from.Kind == gatewayv1beta1.Kind("AIGateway")
+		return from.Group == gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group) && from.Kind == gatewayv1.Kind("AIGateway")
 	})
 }

@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	conformanceconfig "sigs.k8s.io/gateway-api/conformance/utils/config"
@@ -226,7 +225,7 @@ func waitForConformanceResourcesCleanup(ctx context.Context, cl client.Client, l
 			}
 		}
 
-		var grants gatewayv1beta1.ReferenceGrantList
+		var grants gatewayv1.ReferenceGrantList
 		if err := cl.List(ctx, &grants); err != nil {
 			return false, nil //nolint:nilerr
 		}
