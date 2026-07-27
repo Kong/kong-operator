@@ -89,12 +89,7 @@ spec:
                     - Disabled
                     type: string
                   defaultAPIVisibility:
-                    description: |-
-                      The default visibility of APIs in the portal.
-                      If set to `public`, newly published APIs are visible to unauthenticated
-                      developers.
-                      If set to `private`, newly published APIs are hidden from unauthenticated
-                      developers.
+                    description: The default visibility of APIs in the portal.
                     enum:
                     - public
                     - private
@@ -163,12 +158,7 @@ spec:
                       rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef)
                         : true'
                   defaultPageVisibility:
-                    description: |-
-                      The default visibility of pages in the portal.
-                      If set to `public`, newly created pages are visible to unauthenticated
-                      developers.
-                      If set to `private`, newly created pages are hidden from unauthenticated
-                      developers.
+                    description: The default visibility of pages in the portal.
                     enum:
                     - public
                     - private
