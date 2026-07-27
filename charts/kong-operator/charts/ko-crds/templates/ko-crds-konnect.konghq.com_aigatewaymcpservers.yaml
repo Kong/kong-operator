@@ -394,6 +394,11 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              label:
+                                description: The label of the MCP server. This is
+                                  used to filter the exported MCP tools.
+                                maxLength: 253
+                                type: string
                               session:
                                 description: |-
                                   Enable managed session when Kong responds as MCP server in listener,
@@ -792,13 +797,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
@@ -1883,6 +1881,11 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              label:
+                                description: The label of the MCP server. This is
+                                  used to filter the exported MCP tools.
+                                maxLength: 253
+                                type: string
                               session:
                                 description: |-
                                   Enable managed session when Kong responds as MCP server in listener,
@@ -2281,13 +2284,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
@@ -2953,6 +2949,11 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              label:
+                                description: The label of the MCP server. This is
+                                  used to filter the exported MCP tools.
+                                maxLength: 253
+                                type: string
                               session:
                                 description: |-
                                   Enable managed session when Kong responds as MCP server in listener,
@@ -3351,13 +3352,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
@@ -3972,6 +3966,11 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              label:
+                                description: The label of the MCP server. This is
+                                  used to filter the exported MCP tools.
+                                maxLength: 253
+                                type: string
                               preserveUpstreamToolNames:
                                 description: |-
                                   If enabled, the original upstream tool names are preserved as-is when Kong
@@ -4381,13 +4380,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.

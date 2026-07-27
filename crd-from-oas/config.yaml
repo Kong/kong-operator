@@ -442,7 +442,7 @@ apiGroupVersions:
             type: Secret
           - path: spec.apiSpec.gemini.config.auth.gcp.serviceAccountJSON
             type: Secret
-          - path: spec.apiSpec.vertex.config.auth.gcp.serviceAccountJSON
+          - path: spec.apiSpec.vertex.config.auth.vertex.serviceAccountJSON
             type: Secret
         ops:
           sdk:
