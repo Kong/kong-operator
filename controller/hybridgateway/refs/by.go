@@ -31,6 +31,8 @@ func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object
 		return byRoute(ctx, cl, o)
 	case *gwtypes.TLSRoute:
 		return byRoute(ctx, cl, o)
+	case *gwtypes.TCPRoute:
+		return byRoute(ctx, cl, o)
 	default:
 		return nil, nil
 	}
