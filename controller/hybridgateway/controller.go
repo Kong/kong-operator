@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -72,16 +73,20 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 	fqdnMode bool
 	// ClusterDomain is the cluster domain to use for FQDN (empty uses service.namespace.svc format).
 	clusterDomain string
+	// typeConverter is the shared, live-rebuilding managedfields.TypeConverter used for
+	// server-side apply structured-merge-diff comparisons/extractions in enforceState.
+	typeConverter k8smanagedfields.TypeConverter
 }
 
 // NewHybridGatewayReconciler creates a new instance of GatewayAPIHybridReconciler for the specified
 // generic types t and tPtr. It initializes the reconciler with the client from the provided manager.
-func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
+func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string, typeConverter k8smanagedfields.TypeConverter) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
 		Client:        mgr.GetClient(),
 		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorder(ControllerName)),
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+		typeConverter: typeConverter,
 	}
 }
 
@@ -239,7 +244,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	}
 
 	// Phase 4: State Enforcement.
-	applied, waiting, err := enforceState(ctx, r.Client, logger, conv)
+	applied, waiting, err := enforceState(ctx, r.Client, r.typeConverter, logger, conv)
 	if err != nil {
 		// Record state enforcement failure event.
 		r.eventRecorder.Eventf(

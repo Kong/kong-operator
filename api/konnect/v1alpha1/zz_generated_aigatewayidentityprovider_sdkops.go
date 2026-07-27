@@ -54,6 +54,14 @@ var AIGatewayIdentityProviderSDKOpsBoolFields = []AIGatewayIdentityProviderSDKOp
 		},
 	},
 	{
+		Label: "openid-connect.config.consumer_groups_optional",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"consumer_groups_optional",
+		},
+	},
+	{
 		Label: "openid-connect.config.consumer_optional",
 		Path: []string{
 			"openid-connect",
@@ -151,6 +159,36 @@ func normalizeAIGatewayIdentityProviderSDKOpsBoolField(value any, path []string)
 	}
 }
 
+// AIGatewayIdentityProviderSDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var AIGatewayIdentityProviderSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"key-auth",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"key-auth",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"openid-connect",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"openid-connect",
+			"managed_by",
+		},
+	},
+}
+
 func (s *AIGatewayIdentityProviderAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -164,7 +202,7 @@ func (s *AIGatewayIdentityProviderAPISpec) marshalSDKOpsPayload() (map[string]an
 	rawPayload = flattenSensitiveData(rawPayload)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	renamed := renameKeysToSDK(rawPayload)
+	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayIdentityProviderSDKOpsFreeformKeyFields)
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert AIGatewayIdentityProviderAPISpec SDK payload to map")

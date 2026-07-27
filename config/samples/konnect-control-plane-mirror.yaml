@@ -7,15 +7,15 @@ spec:
   source: Mirror
   mirror:
     konnect:
-      id: 03b496a0-a38a-4370-8e50-9a9e71cef6df
+      id: f88f88aa-6f35-49b6-8509-bb35ca10ebb5
   konnect:
     authRef:
-      name: konnect-api-auth-dev
+      name: konnect-api-auth
 ---
 kind: KonnectAPIAuthConfiguration
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: konnect-api-auth-dev
+  name: konnect-api-auth
 spec:
   type: token
   token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

@@ -35,6 +35,16 @@ func TestIsSSAProviderNeeded(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "AIGateway DataPlane controller enabled",
+			cfg:  Config{AIGatewayDataPlaneControllerEnabled: true},
+			want: true,
+		},
+		{
+			name: "Konnect controllers enabled (hybridgateway)",
+			cfg:  Config{KonnectControllersEnabled: true},
+			want: true,
+		},
+		{
 			name: "both enabled",
 			cfg: Config{
 				KEGDataPlaneControllerEnabled: true,

@@ -14,6 +14,18 @@ import (
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
+// EventGatewaySchemaRegistrySDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var EventGatewaySchemaRegistrySDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"confluent",
+			"labels",
+		},
+	},
+}
+
 func (s *EventGatewaySchemaRegistryAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -27,7 +39,7 @@ func (s *EventGatewaySchemaRegistryAPISpec) marshalSDKOpsPayload() (map[string]a
 	rawPayload = flattenSensitiveData(rawPayload)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	renamed := renameKeysToSDK(rawPayload)
+	renamed := renameKeysToSDKExcept(rawPayload, EventGatewaySchemaRegistrySDKOpsFreeformKeyFields)
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert EventGatewaySchemaRegistryAPISpec SDK payload to map")

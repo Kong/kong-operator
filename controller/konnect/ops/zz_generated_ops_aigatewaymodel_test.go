@@ -33,7 +33,7 @@ func testGeneratedAIGatewayModelForSDKOps() *konnectv1alpha1.AIGatewayModel {
 			APISpec: konnectv1alpha1.AIGatewayModelAPISpec{
 				AIGatewayModelConfig: &konnectv1alpha1.AIGatewayModelConfig{
 					Type: konnectv1alpha1.AIGatewayModelConfigTypeAPI,
-					API:  &konnectv1alpha1.AIGatewayModelAPI{DisplayName: "test-display-name", Name: "test-model", Capabilities: []string{"llm/v1/chat"}, Formats: []konnectv1alpha1.AIGatewayModelFormat{{Type: "openai"}}, Config: konnectv1alpha1.AIGatewayModelAPIConfig{Model: konnectv1alpha1.AIGatewayModelAPIConfigModel{Alias: "test-alias"}, Route: konnectv1alpha1.AIGatewayRouteConfig{Paths: []string{"/chat"}}}, Targets: []konnectv1alpha1.AIGatewayTarget{{Name: "target-model", Provider: konnectv1alpha1.AIGatewayModelProviderRef{Name: "provider-1"}, Config: &konnectv1alpha1.AIGatewayTargetConfig{Type: konnectv1alpha1.AIGatewayTargetConfigTypeAnthropic, Anthropic: &konnectv1alpha1.AIGatewayTargetAnthropicConfig{}}}}},
+					API:  &konnectv1alpha1.AIGatewayModelAPI{DisplayName: "test-display-name", Name: "test-model", Capabilities: []string{"llm/v1/chat"}, Formats: []konnectv1alpha1.AIGatewayModelFormat{{Type: "openai"}}, Config: konnectv1alpha1.AIGatewayModelAPIConfig{Route: konnectv1alpha1.AIGatewayModelRouteConfig{Paths: []string{"/chat"}}}, Targets: []konnectv1alpha1.AIGatewayTarget{{Name: "target-model", Provider: konnectv1alpha1.AIGatewayModelProviderRef{Name: "provider-1"}, Config: &konnectv1alpha1.AIGatewayTargetConfig{Type: konnectv1alpha1.AIGatewayTargetConfigTypeAnthropic, Anthropic: &konnectv1alpha1.AIGatewayTargetAnthropicConfig{}}}}},
 				},
 			},
 		},

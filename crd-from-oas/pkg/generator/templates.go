@@ -202,7 +202,11 @@ type {{.EntityName}}Status struct {
 	// {{.StatusField}} contains the {{.StatusField}} returned by the Konnect API.
 	//
 	// +optional
+{{- if .RespPath}}
+	{{.StatusField}} *string ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
+{{- else}}
 	{{.StatusField}} *{{$.EntityName}}{{.StatusField}} ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
+{{- end}}
 {{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
@@ -210,6 +214,7 @@ type {{.EntityName}}Status struct {
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitzero"` + "`" + `
 }
 {{- range .ResponseStatusFields}}
+{{- if not .RespPath}}
 
 // {{$.EntityName}}{{.StatusField}} holds the {{.StatusField}} from the Konnect API response.
 type {{$.EntityName}}{{.StatusField}} struct {
@@ -220,6 +225,7 @@ type {{$.EntityName}}{{.StatusField}} struct {
 	{{.Name}} string ` + "`" + `json:"{{.JSON}},omitempty"` + "`" + `
 {{- end}}
 }
+{{- end}}
 {{- end}}
 `
 
@@ -665,6 +671,23 @@ var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
 {{- end}}
 }
 {{- end}}
+{{- if .FreeformKeyFields}}
+
+// {{$.EntityName}}SDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+{{- range .FreeformKeyFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+{{- end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
@@ -681,7 +704,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
+	{{- if $.FreeformKeyFields}}
+	payload = renameKeysToSDKExcept(payload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	payload = renameKeysToSDK(payload)
+	{{- end}}
 	{{- if $.BoolFields}}
 	if pm, ok := payload.(map[string]any); ok {
 		if err := normalize{{$.EntityName}}SDKOpsBoolFields(pm); err != nil {
@@ -1332,6 +1359,40 @@ var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
 {{- end}}
 }
 {{- end}}
+{{- if .UnionUnwrapFields}}
+
+// {{$.EntityName}}SDKOpsUnionUnwrapFields lists property-level oneOf fields
+// with no OAS discriminator, whose payload must be unwrapped from the CRD's
+// discriminated shape to the Konnect SDK's non-discriminated shape.
+var {{$.EntityName}}SDKOpsUnionUnwrapFields = []sdkOpsUnionUnwrapField{
+{{- range .UnionUnwrapFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+{{- end}}
+{{- if .FreeformKeyFields}}
+
+// {{$.EntityName}}SDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+{{- range .FreeformKeyFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+{{- end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
@@ -1348,7 +1409,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
+	{{- if $.FreeformKeyFields}}
+	renamed := renameKeysToSDKExcept(rawPayload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	renamed := renameKeysToSDK(rawPayload)
+	{{- end}}
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert {{$.EntityName}}APISpec SDK payload to map")
@@ -1357,6 +1422,9 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
 	}
+	{{- end }}
+	{{- if $.UnionUnwrapFields}}
+	unwrapSDKOpsUnionFields(payload, {{$.EntityName}}SDKOpsUnionUnwrapFields)
 	{{- end }}
 	{{- if $.ConstFields}}
 	injectSDKOpsConstFields(payload, {{$.EntityName}}SDKOpsConstFields)
@@ -1435,6 +1503,11 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.CreateVariantTypeName}}: %w", err)
 		}
+		{{- if $.UnionUnwrapFields}}
+		if err := assignSDKOpsUnionMembers(&member, data, {{$.EntityName}}SDKOpsUnionUnwrapFields, "{{.JSONName}}"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
+		{{- end}}
 		body := {{$compAlias}}.{{.WrappedCreateConstructorName}}(member)
 		return &{{$opsAlias}}.{{$typeName}}{
 			{{$bodyField}}: {{if $bodyFieldPointer}}&body{{else}}body{{end}},
@@ -1452,6 +1525,11 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.CreateVariantTypeName}}: %w", err)
 		}
+		{{- if $.UnionUnwrapFields}}
+		if err := assignSDKOpsUnionMembers(&member, data, {{$.EntityName}}SDKOpsUnionUnwrapFields, "{{.JSONName}}"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
+		{{- end}}
 		target := {{$importAlias}}.{{.CreateConstructorName}}(member)
 		return &target, nil
 {{- end}}
@@ -1492,6 +1570,11 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.UpdateVariantTypeName}}: %w", err)
 		}
+		{{- if $.UnionUnwrapFields}}
+		if err := assignSDKOpsUnionMembers(&member, data, {{$.EntityName}}SDKOpsUnionUnwrapFields, "{{.JSONName}}"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
+		{{- end}}
 		target := {{$importAlias}}.{{.UpdateConstructorName}}(member)
 		return &target, nil
 		{{- else}}
@@ -2232,6 +2315,10 @@ const commonTypesTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
 {{- if .KonnectStatusImport}}
 {{- if .KonnectStatusImport.Alias}}
 	{{.KonnectStatusImport.Alias}} "{{.KonnectStatusImport.Path}}"
@@ -2271,6 +2358,10 @@ import (
 ` + renameKeysToSDKHelper + `
 
 ` + injectSDKOpsConstFieldsHelper + `
+
+` + unwrapSDKOpsUnionFieldsHelper + `
+
+` + assignSDKOpsUnionMembersHelper + `
 `
 
 // opsPerEntityFileHeaderTemplate renders the shared file header (preamble,
@@ -2328,12 +2419,16 @@ func create{{.Entity}}(
 			return fmt.Errorf("failed getting mirrored %s: %w", obj.GetTypeName(), ErrNilResponse)
 		}
 		obj.SetKonnectID(id)
-{{- if .ResponseStatusFields}}
+{{- if .HasNestedResponseStatusFields}}
 		const (
 			protocolHTTPS = "https://"
 			protocolHTTP  = "http://"
 		)
+{{- end}}
 {{- range .ResponseStatusFields}}
+{{- if .RespPath}}
+		obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
+{{- else}}
 		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
 {{- range .Fields}}
 			{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
@@ -2441,18 +2536,22 @@ func create{{.Entity}}(
 
 	obj.SetKonnectID(resp.{{.RespField}}.ID)
 {{- end}}
-{{- if .ResponseStatusFields}}
+{{- if .HasNestedResponseStatusFields}}
 	const (
 		protocolHTTPS = "https://"
 		protocolHTTP  = "http://"
 	)
 {{- end}}
 {{- range .ResponseStatusFields}}
+{{- if .RespPath}}
+	obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
+{{- else}}
 	obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
 {{- range .Fields}}
 		{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
 {{- end}}
 	}
+{{- end}}
 {{- end}}
 {{- range .Associations}}
 
@@ -2527,26 +2626,47 @@ func update{{.Entity}}(
 {{- end}}
 	req.{{.EntityIDField}} = id
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, *req)
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, *req)
 {{- else if .UpdateWrapped}}
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 		{{.EntityIDField}}: id,
 		{{.UpdateBodyField}}: {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}},
 	})
 {{- else if .UpdateOmitsEntityID}}
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
 {{- else}}
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
 {{- end}}
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return create{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk, obj)
 		})
 	}
+{{- if .ResponseStatusFields}}
+{{- if .HasNestedResponseStatusFields}}
+	const (
+		protocolHTTPS = "https://"
+		protocolHTTP  = "http://"
+	)
+{{- end}}
+	if resp != nil && resp.{{.RespField}} != nil {
+{{- range .ResponseStatusFields}}
+{{- if .RespPath}}
+		obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
+{{- else}}
+		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
+{{- range .Fields}}
+			{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
+{{- end}}
+		}
+{{- end}}
+{{- end}}
+	}
+{{- end}}
 {{- range .Associations}}
 
 	if err := enforce{{$.Entity}}{{.GoFieldName}}(ctx, cl, sdk, obj, {{(index $.Parents 0).VarName}}); err != nil {

@@ -259,7 +259,7 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 			// Konnect-ID'd) AIGatewayModelProvider — see ExtraSeedObjects,
 			// which the fixture's fake client seeds accordingly.
 			VariantValue: fmt.Sprintf(
-				`&%[1]s.AIGatewayModelAPI{DisplayName: "test-display-name", Name: "test-model", Capabilities: []string{"llm/v1/chat"}, Formats: []%[1]s.AIGatewayModelFormat{{Type: "openai"}}, Config: %[1]s.AIGatewayModelAPIConfig{Model: %[1]s.AIGatewayModelAPIConfigModel{Alias: "test-alias"}, Route: %[1]s.AIGatewayRouteConfig{Paths: []string{"/chat"}}}, Targets: []%[1]s.AIGatewayTarget{{Name: "target-model", Provider: %[1]s.AIGatewayModelProviderRef{Name: "provider-1"}, Config: &%[1]s.AIGatewayTargetConfig{Type: %[1]s.AIGatewayTargetConfigTypeAnthropic, Anthropic: &%[1]s.AIGatewayTargetAnthropicConfig{}}}}}`,
+				`&%[1]s.AIGatewayModelAPI{DisplayName: "test-display-name", Name: "test-model", Capabilities: []string{"llm/v1/chat"}, Formats: []%[1]s.AIGatewayModelFormat{{Type: "openai"}}, Config: %[1]s.AIGatewayModelAPIConfig{Route: %[1]s.AIGatewayModelRouteConfig{Paths: []string{"/chat"}}}, Targets: []%[1]s.AIGatewayTarget{{Name: "target-model", Provider: %[1]s.AIGatewayModelProviderRef{Name: "provider-1"}, Config: &%[1]s.AIGatewayTargetConfig{Type: %[1]s.AIGatewayTargetConfigTypeAnthropic, Anthropic: &%[1]s.AIGatewayTargetAnthropicConfig{}}}}}`,
 				apiAlias,
 			),
 			ExtraSeedObjects: []string{

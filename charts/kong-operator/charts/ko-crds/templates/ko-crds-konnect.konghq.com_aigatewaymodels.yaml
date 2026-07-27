@@ -1451,22 +1451,6 @@ spec:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
                             type: integer
-                          model:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-                            properties:
-                              alias:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  An alias for the model, used to select the target virtual model when passed
-                                  in the "model" parameter of the request body.
-                                  When not set, this defaults to the AI Gateway model's name.
-                                maxLength: 253
-                                type: string
-                            type: object
                           proxy:
                             description: |-
                               HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
@@ -1582,6 +1566,56 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              model:
+                                description: Configuration for routing to this model
+                                  using an alias.
+                                properties:
+                                  body:
+                                    description: Body configuration.
+                                    properties:
+                                      body:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request body.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - body
+                                    type: object
+                                  headers:
+                                    description: Headers configuration.
+                                    properties:
+                                      headers:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request headers.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - headers
+                                    type: object
+                                  path:
+                                    description: Path configuration.
+                                    properties:
+                                      pathAliases:
+                                        description: Value that will cause this route
+                                          to match if present in the request path.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - pathAliases
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - body
+                                    - headers
+                                    - path
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
                               paths:
                                 description: A list of paths that match this route.
                                 items:
@@ -1680,6 +1714,7 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - vertex
                               maxLength: 253
                               type: string
                           type: object
@@ -4157,16 +4192,6 @@ spec:
                               **Pre-release Feature**
                               This feature is currently in beta and is subject to change.
                             properties:
-                              alias:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  An alias for the model, used to select the target virtual model when passed
-                                  in the "model" parameter of the request body.
-                                  When not set, this defaults to the AI Gateway model's name.
-                                maxLength: 253
-                                type: string
                               nameHeader:
                                 description: |-
                                   **Pre-release Feature**
@@ -4293,6 +4318,56 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              model:
+                                description: Configuration for routing to this model
+                                  using an alias.
+                                properties:
+                                  body:
+                                    description: Body configuration.
+                                    properties:
+                                      body:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request body.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - body
+                                    type: object
+                                  headers:
+                                    description: Headers configuration.
+                                    properties:
+                                      headers:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request headers.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - headers
+                                    type: object
+                                  path:
+                                    description: Path configuration.
+                                    properties:
+                                      pathAliases:
+                                        description: Value that will cause this route
+                                          to match if present in the request path.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - pathAliases
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - body
+                                    - headers
+                                    - path
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
                               paths:
                                 description: A list of paths that match this route.
                                 items:
@@ -4391,6 +4466,7 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - vertex
                               maxLength: 253
                               type: string
                           type: object

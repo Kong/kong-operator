@@ -128,6 +128,36 @@ func normalizeEventGatewayVirtualClusterProducePolicySDKOpsBoolField(value any, 
 	}
 }
 
+// EventGatewayVirtualClusterProducePolicySDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var EventGatewayVirtualClusterProducePolicySDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"encrypt",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"encrypt_fields",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"modify_headers",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"schema_validation",
+			"labels",
+		},
+	},
+}
+
 func (s *EventGatewayVirtualClusterProducePolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -140,7 +170,7 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) marshalSDKOpsPayload() 
 	}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	renamed := renameKeysToSDK(rawPayload)
+	renamed := renameKeysToSDKExcept(rawPayload, EventGatewayVirtualClusterProducePolicySDKOpsFreeformKeyFields)
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert EventGatewayVirtualClusterProducePolicyAPISpec SDK payload to map")

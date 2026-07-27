@@ -253,6 +253,34 @@ func ListTLSRoutesForGateway(
 	}), nil
 }
 
+// ListUDPRoutesForGateway is a helper function which returns a list of UDPRoutes
+// that have the provided Gateway set as parent in their spec.
+func ListUDPRoutesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+	opts ...client.ListOption,
+) ([]gwtypes.UDPRoute, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list UDPRoutes for gateway: Gateway %s was missing namespace", gateway.Name)
+	}
+
+	var udpRouteList gwtypes.UDPRouteList
+	err := c.List(
+		ctx,
+		&udpRouteList,
+		opts...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("can't list UDPRoutes for gateway: %w", err)
+	}
+	return lo.Filter(udpRouteList.Items, func(r gwtypes.UDPRoute, _ int) bool {
+		return lo.ContainsBy(r.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
+			return parentRefMatchGateway(r.Namespace, parentRef, gateway)
+		})
+	}), nil
+}
+
 // ListGRPCRoutesForGateway is a helper function which returns a list of GRPCRoutes
 // that have the provided Gateway set as parent in their spec.parentRefs.
 func ListGRPCRoutesForGateway(
@@ -279,6 +307,37 @@ func ListGRPCRoutesForGateway(
 			return parentRefMatchGateway(r.Namespace, parentRef, gateway)
 		})
 	}), nil
+}
+
+// ListTCPRoutesForGateway is a helper function which returns a list of TCPRoutes
+// that have the provided Gateway set as parent in their status.
+func ListTCPRoutesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+	opts ...client.ListOption,
+) ([]gwtypes.TCPRoute, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list TCPRoutes for gateway: Gateway %s was missing namespace", gateway.Name)
+	}
+
+	var tcpRoutesList gwtypes.TCPRouteList
+	if err := c.List(ctx, &tcpRoutesList, opts...); err != nil {
+		return nil, fmt.Errorf("can't list TCPRoutes for gateway: %w", err)
+	}
+
+	var tcpRoutes []gwtypes.TCPRoute
+	for _, tcpRoute := range tcpRoutesList.Items {
+		if !lo.ContainsBy(tcpRoute.Spec.ParentRefs, func(parentRef gwtypes.ParentReference) bool {
+			return parentRefMatchGateway(tcpRoute.Namespace, parentRef, gateway)
+		}) {
+			continue
+		}
+
+		tcpRoutes = append(tcpRoutes, tcpRoute)
+	}
+
+	return tcpRoutes, nil
 }
 
 // GetDataPlaneServiceName is a helper function that retrieves the name of the service owned by provided dataplane.
