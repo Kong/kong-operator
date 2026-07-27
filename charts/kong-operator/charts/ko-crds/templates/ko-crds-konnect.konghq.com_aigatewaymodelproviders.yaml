@@ -4344,32 +4344,21 @@ spec:
                                     maxItems: 1
                                     type: array
                                 type: object
-                              gcp:
-                                description: GCP configuration.
+                              type:
+                                description: Type designates the type of configuration.
+                                enum:
+                                - basic
+                                - vertex
+                                minLength: 1
+                                type: string
+                              vertex:
+                                description: Vertex configuration.
                                 properties:
-                                  metadataURL:
-                                    description: |-
-                                      Custom metadata URL for GCP authentication.
-                                      Useful for restricted network environments or custom GCP endpoints.
-                                      If not set, Kong will use the default Google metadata endpoint.
-                                      This field is
-                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                    maxLength: 253
-                                    type: string
-                                  oauthTokenURL:
-                                    description: |-
-                                      Custom OAuth token URL for GCP authentication.
-                                      Useful for restricted network environments or custom GCP endpoints.
-                                      If not set, Kong will use the default Google OAuth token endpoint.
-                                      This field is
-                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                    maxLength: 253
-                                    type: string
                                   serviceAccountJSON:
                                     description: |-
                                       Full JSON string of the GCP service account to authenticate.
-                                      If not set (and gcp_use_service_account is true), the service account JSON
-                                      will be from the environment variable GCP_SERVICE_ACCOUNT.
+                                      If not set, the service account JSON will be from the environment variable
+                                      GCP_SERVICE_ACCOUNT.
                                       This field is
                                       [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
                                     properties:
@@ -4427,20 +4416,14 @@ spec:
                                       rule: 'self.type == ''inline'' ? has(self.value)
                                         : has(self.secretRef)'
                                   useGcpServiceAccount:
-                                    description: Use service account auth for GCP-based
-                                      providers and models.
+                                    description: |-
+                                      Use the Google Cloud Service Account (or user-assigned identity) to
+                                      authenticate with Vertex-provider models.
                                     enum:
                                     - Enabled
                                     - Disabled
                                     type: string
                                 type: object
-                              type:
-                                description: Type designates the type of configuration.
-                                enum:
-                                - basic
-                                - gcp
-                                minLength: 1
-                                type: string
                             required:
                             - type
                             type: object

@@ -44731,6 +44731,10 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              label:
+                                description: The label of the MCP server. This is used to filter the exported MCP tools.
+                                maxLength: 253
+                                type: string
                               session:
                                 description: |-
                                   Enable managed session when Kong responds as MCP server in listener,
@@ -45111,13 +45115,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in milliseconds.
                                 type: integer
@@ -46171,6 +46168,10 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              label:
+                                description: The label of the MCP server. This is used to filter the exported MCP tools.
+                                maxLength: 253
+                                type: string
                               session:
                                 description: |-
                                   Enable managed session when Kong responds as MCP server in listener,
@@ -46551,13 +46552,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in milliseconds.
                                 type: integer
@@ -47195,6 +47189,10 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              label:
+                                description: The label of the MCP server. This is used to filter the exported MCP tools.
+                                maxLength: 253
+                                type: string
                               session:
                                 description: |-
                                   Enable managed session when Kong responds as MCP server in listener,
@@ -47575,13 +47573,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in milliseconds.
                                 type: integer
@@ -48176,6 +48167,10 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              label:
+                                description: The label of the MCP server. This is used to filter the exported MCP tools.
+                                maxLength: 253
+                                type: string
                               preserveUpstreamToolNames:
                                 description: |-
                                   If enabled, the original upstream tool names are preserved as-is when Kong
@@ -48567,13 +48562,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in milliseconds.
                                 type: integer
@@ -53239,32 +53227,21 @@ spec:
                                     maxItems: 1
                                     type: array
                                 type: object
-                              gcp:
-                                description: GCP configuration.
+                              type:
+                                description: Type designates the type of configuration.
+                                enum:
+                                - basic
+                                - vertex
+                                minLength: 1
+                                type: string
+                              vertex:
+                                description: Vertex configuration.
                                 properties:
-                                  metadataURL:
-                                    description: |-
-                                      Custom metadata URL for GCP authentication.
-                                      Useful for restricted network environments or custom GCP endpoints.
-                                      If not set, Kong will use the default Google metadata endpoint.
-                                      This field is
-                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                    maxLength: 253
-                                    type: string
-                                  oauthTokenURL:
-                                    description: |-
-                                      Custom OAuth token URL for GCP authentication.
-                                      Useful for restricted network environments or custom GCP endpoints.
-                                      If not set, Kong will use the default Google OAuth token endpoint.
-                                      This field is
-                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                    maxLength: 253
-                                    type: string
                                   serviceAccountJSON:
                                     description: |-
                                       Full JSON string of the GCP service account to authenticate.
-                                      If not set (and gcp_use_service_account is true), the service account JSON
-                                      will be from the environment variable GCP_SERVICE_ACCOUNT.
+                                      If not set, the service account JSON will be from the environment variable
+                                      GCP_SERVICE_ACCOUNT.
                                       This field is
                                       [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
                                     properties:
@@ -53317,19 +53294,14 @@ spec:
                                     - message: value required when type=inline; secretRef required when type=secretRef
                                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   useGcpServiceAccount:
-                                    description: Use service account auth for GCP-based providers and models.
+                                    description: |-
+                                      Use the Google Cloud Service Account (or user-assigned identity) to
+                                      authenticate with Vertex-provider models.
                                     enum:
                                     - Enabled
                                     - Disabled
                                     type: string
                                 type: object
-                              type:
-                                description: Type designates the type of configuration.
-                                enum:
-                                - basic
-                                - gcp
-                                minLength: 1
-                                type: string
                             required:
                             - type
                             type: object
@@ -56398,7 +56370,6 @@ spec:
                                             This must be set when running a target model on Gemini on Vertex Model
                                             Garden.
                                           maxLength: 253
-                                          minLength: 1
                                           type: string
                                         locationID:
                                           description: The Google Cloud location ID for the model endpoint.
@@ -56412,7 +56383,6 @@ spec:
                                           type: string
                                       required:
                                       - apiEndpoint
-                                      - endpointID
                                       - locationID
                                       - projectID
                                       type: object
@@ -58935,7 +58905,6 @@ spec:
                                             This must be set when running a target model on Gemini on Vertex Model
                                             Garden.
                                           maxLength: 253
-                                          minLength: 1
                                           type: string
                                         locationID:
                                           description: The Google Cloud location ID for the model endpoint.
@@ -58949,7 +58918,6 @@ spec:
                                           type: string
                                       required:
                                       - apiEndpoint
-                                      - endpointID
                                       - locationID
                                       - projectID
                                       type: object

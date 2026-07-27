@@ -1973,16 +1973,16 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 			}
 		}
 	}
-	// Resolve spec.apiSpec.vertex.config.auth.gcp.serviceAccountJSON
+	// Resolve spec.apiSpec.vertex.config.auth.vertex.serviceAccountJSON
 	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Vertex != nil {
 			if apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth != nil {
-				if apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.GCP != nil {
+				if apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex != nil {
 					{
-						src := apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON
+						src := apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON
 						if src.Type == SensitiveDataSourceTypeSecretRef {
 							if src.SecretRef == nil {
-								return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.vertex.config.auth.gcp.serviceAccountJSON")
+								return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.vertex.config.auth.vertex.serviceAccountJSON")
 							}
 							namespace := obj.GetNamespace()
 							if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
@@ -1997,7 +1997,7 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 								return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
 							}
 							resolved := string(secretBytes)
-							apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON.Value = &resolved
+							apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON.Value = &resolved
 						}
 					}
 				}
@@ -2423,9 +2423,9 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex != nil {
 			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth != nil {
-				if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.GCP != nil {
-					if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON.SecretRef != nil {
-						refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.GCP.ServiceAccountJSON.SecretRef)
+				if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex != nil {
+					if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON.SecretRef != nil {
+						refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON.SecretRef)
 					}
 				}
 			}

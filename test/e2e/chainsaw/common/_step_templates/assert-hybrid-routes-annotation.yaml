@@ -1,0 +1,61 @@
+# Template for asserting that a shared Kong resource's gateway-operator.konghq.com/hybrid-routes
+# annotation contains EXACTLY the expected set of HTTPRoute references (not just "contains one",
+# but the full CSV set, catching both missing and stale/leftover entries).
+#
+# The resource is located via kongResource_name.sh using an anchor HTTPRoute that is guaranteed
+# to still reference it at the time of the check (any route in expected_http_routes works; when
+# checking that a route's entry has been fully removed, use one of the *other* routes still
+# sharing the resource as the anchor).
+#
+# Required bindings:
+#   - namespace: Namespace where the resource is located.
+#   - resource_type: Full plural.group resource type (e.g. kongservices.configuration.konghq.com).
+#   - gateway_name: Name of the Gateway.
+#   - gateway_namespace: Namespace of the Gateway.
+#   - anchor_http_route_name: Name of an HTTPRoute still referencing the resource, used to locate it.
+#   - anchor_http_route_namespace: Namespace of the anchor HTTPRoute.
+#   - expected_http_routes: Comma-separated "namespace/name" HTTPRoute refs expected to be the
+#     exact set present in the annotation. Use "" to assert the annotation is absent/empty.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-hybrid-routes-annotation
+spec:
+  try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: RESOURCE_TYPE
+            value: ($resource_type)
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+          - name: HTTP_ROUTE_NAME
+            value: ($anchor_http_route_name)
+          - name: HTTP_ROUTE_NAMESPACE
+            value: ($anchor_http_route_namespace)
+          - name: REQUIRED_CONDITION_TYPE
+            value: Programmed
+          - name: REQUIRED_CONDITION_STATUS
+            value: "True"
+        content: |
+          bash ../../common/scripts/kongResource_name.sh
+        outputs:
+          - name: resolved_resource_name
+            value: (json_parse($stdout).name)
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: RESOURCE_TYPE
+            value: ($resource_type)
+          - name: RESOURCE_NAME
+            value: ($resolved_resource_name)
+          - name: EXPECTED_ROUTES
+            value: ($expected_http_routes)
+        content: |
+          bash ../../common/scripts/assert_hybrid_routes_annotation.sh
+        check:
+          (json_parse($stdout).match): true

@@ -77,6 +77,11 @@
   [#5017](https://github.com/Kong/kong-operator/pull/5017)
 - Gateway: Support `TCPRoute` for on-prem gateways.
   [#4207](https://github.com/Kong/kong-operator/pull/4207)
+- Gateway: Support `UDPRoute` for on-prem gateways.
+  [#4747](https://github.com/Kong/kong-operator/pull/4747)
+  [#5028](https://github.com/Kong/kong-operator/pull/5028)
+  [#5031](https://github.com/Kong/kong-operator/pull/5031)
+  [#5033](https://github.com/Kong/kong-operator/pull/5033)
 - Hybridgateway: add controller and translator support for Gateway API `TCPRoute` resources.
   [#4727](https://github.com/Kong/kong-operator/pull/4727)
   [#5018](https://github.com/Kong/kong-operator/pull/5018)

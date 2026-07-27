@@ -1738,6 +1738,11 @@ type AIGatewayMCPServerServerConfigBase struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
+	// The label of the MCP server. This is used to filter the exported MCP tools.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Label string `json:"label,omitzero"`
 	// Enable managed session when Kong responds as MCP server in listener,
 	// conversion-listener, or upstream-server modes.
 	// This doesn't affect the passthrough-listener mode as the state in that mode
@@ -1746,13 +1751,6 @@ type AIGatewayMCPServerServerConfigBase struct {
 	//
 	// +optional
 	Session AIGatewayMCPServerServerConfigBaseSession `json:"session,omitzero"`
-	// The tag of the MCP server.
-	// This is used to filter the exported MCP tools.
-	// The field should contain exactly one tag.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Tag string `json:"tag,omitzero"`
 	// The timeout for calling the tools in milliseconds.
 	//
 	// +optional
@@ -2070,6 +2068,11 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
+	// The label of the MCP server. This is used to filter the exported MCP tools.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Label string `json:"label,omitzero"`
 	// If enabled, the original upstream tool names are preserved as-is when Kong
 	// acts as an MCP server.
 	// If disabled (`false`), the service name will be prepended to the MCP tool
@@ -2088,13 +2091,6 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	//
 	// +optional
 	Session AIGatewayMCPServerUpstreamServerServerConfigSession `json:"session,omitzero"`
-	// The tag of the MCP server.
-	// This is used to filter the exported MCP tools.
-	// The field should contain exactly one tag.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Tag string `json:"tag,omitzero"`
 	// The timeout for calling the tools in milliseconds.
 	//
 	// +optional
@@ -5765,6 +5761,28 @@ type AIGatewayModelProviderConfigAuthGCP struct {
 	UseGcpServiceAccount string `json:"useGcpServiceAccount,omitzero"`
 }
 
+// AIGatewayModelProviderConfigAuthVertex **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for Vertex model provider.
+type AIGatewayModelProviderConfigAuthVertex struct {
+	// Full JSON string of the GCP service account to authenticate.
+	// If not set, the service account JSON will be from the environment variable
+	// GCP_SERVICE_ACCOUNT.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	ServiceAccountJSON SensitiveDataSource `json:"serviceAccountJSON,omitzero"`
+	// Use the Google Cloud Service Account (or user-assigned identity) to
+	// authenticate with Vertex-provider models.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	UseGcpServiceAccount string `json:"useGcpServiceAccount,omitzero"`
+}
+
 // AIGatewayModelProviderDashscope **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderDashscope struct {
@@ -6548,7 +6566,7 @@ type AIGatewayModelProviderVercelConfig struct {
 // AIGatewayModelProviderVertex **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 //
-// Config for GCP model provider.
+// Config for Vertex model provider.
 type AIGatewayModelProviderVertex struct {
 	//
 	//
@@ -6611,17 +6629,17 @@ type AIGatewayModelProviderVertexConfigAuth struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=basic;gcp
+	// +kubebuilder:validation:Enum=basic;vertex
 	Type AIGatewayModelProviderVertexConfigAuthType `json:"type,omitempty"`
 
 	// Basic configuration.
 	//
 	// +optional
 	Basic *AIGatewayModelProviderConfigAuthBasic `json:"basic,omitempty"`
-	// GCP configuration.
+	// Vertex configuration.
 	//
 	// +optional
-	GCP *AIGatewayModelProviderConfigAuthGCP `json:"gcp,omitempty"`
+	Vertex *AIGatewayModelProviderConfigAuthVertex `json:"vertex,omitempty"`
 }
 
 // AIGatewayModelProviderVertexConfigAuthType represents the type of auth.
@@ -6629,8 +6647,8 @@ type AIGatewayModelProviderVertexConfigAuthType string
 
 // AIGatewayModelProviderVertexConfigAuthType values.
 const (
-	AIGatewayModelProviderVertexConfigAuthTypeBasic AIGatewayModelProviderVertexConfigAuthType = "basic"
-	AIGatewayModelProviderVertexConfigAuthTypeGCP   AIGatewayModelProviderVertexConfigAuthType = "gcp"
+	AIGatewayModelProviderVertexConfigAuthTypeBasic  AIGatewayModelProviderVertexConfigAuthType = "basic"
+	AIGatewayModelProviderVertexConfigAuthTypeVertex AIGatewayModelProviderVertexConfigAuthType = "vertex"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -6650,13 +6668,13 @@ func (u AIGatewayModelProviderVertexConfigAuth) MarshalJSON() ([]byte, error) {
 			}
 			m["basic"] = raw
 		}
-	case AIGatewayModelProviderVertexConfigAuthTypeGCP:
-		if u.GCP != nil {
-			raw, err := json.Marshal(u.GCP)
+	case AIGatewayModelProviderVertexConfigAuthTypeVertex:
+		if u.Vertex != nil {
+			raw, err := json.Marshal(u.Vertex)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth gcp: %w", err)
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth vertex: %w", err)
 			}
-			m["gcp"] = raw
+			m["vertex"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -6689,16 +6707,16 @@ func (u *AIGatewayModelProviderVertexConfigAuth) UnmarshalJSON(data []byte) erro
 			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth basic: %w", err)
 		}
 		u.Basic = &val
-	case "gcp":
-		payload, ok := raw["gcp"]
+	case "vertex":
+		payload, ok := raw["vertex"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayModelProviderConfigAuthGCP
+		var val AIGatewayModelProviderConfigAuthVertex
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth gcp: %w", err)
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth vertex: %w", err)
 		}
-		u.GCP = &val
+		u.Vertex = &val
 	}
 	return nil
 }
@@ -6714,7 +6732,7 @@ func (s *AIGatewayModelProviderVertexConfig) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfig: %w", err)
 	}
-	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.GCP == nil {
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.Vertex == nil {
 		aux.Auth = nil
 	}
 	*s = AIGatewayModelProviderVertexConfig(aux)
@@ -10001,8 +10019,7 @@ type AIGatewayTargetVertexConfigGcpEnvironment struct {
 	// Garden.
 	//
 	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	EndpointID string `json:"endpointID,omitzero"`
 	// The Google Cloud location ID for the model endpoint.

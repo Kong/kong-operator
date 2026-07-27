@@ -25,6 +25,7 @@ var commonSupportedFeatures = []features.FeatureName{
 	features.SupportHTTPRoute,
 	features.SupportTLSRoute,
 	features.SupportGRPCRoute,
+	features.SupportUDPRoute,
 	features.SupportReferenceGrant,
 
 	// Gateway extended.
