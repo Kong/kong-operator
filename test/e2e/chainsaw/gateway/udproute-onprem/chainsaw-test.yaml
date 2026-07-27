@@ -99,16 +99,14 @@ spec:
                 value: (json_parse($stdout))
         - script:
             env:
-              - name: NAMESPACE
-                value: ($gateway_namespace)
               - name: PROXY_IP
                 value: ($proxy.proxy_ip_address)
               - name: PROXY_PORT
                 value: ($listener_udp_port)
-              - name: EXPECTED_POD
+              - name: EXPECTED_RESPONSE
                 value: ($echo_older_name)
             content: |
-              bash ../../common/scripts/verify_udp_response.sh
+              bash ../../common/scripts/host_connectivity_test_udp.sh
 
     - name: Create-second-udproute
       description: |
@@ -152,16 +150,14 @@ spec:
                 value: (json_parse($stdout))
         - script:
             env:
-              - name: NAMESPACE
-                value: ($gateway_namespace)
               - name: PROXY_IP
                 value: ($proxy.proxy_ip_address)
               - name: PROXY_PORT
                 value: ($listener_udp_port)
-              - name: EXPECTED_POD
+              - name: EXPECTED_RESPONSE
                 value: ($echo_older_name)
             content: |
-              bash ../../common/scripts/verify_udp_response.sh
+              bash ../../common/scripts/host_connectivity_test_udp.sh
 
     - name: Verify-udp-traffic-reaches-third
       description: |
@@ -181,16 +177,14 @@ spec:
                 value: (json_parse($stdout))
         - script:
             env:
-              - name: NAMESPACE
-                value: ($gateway_namespace)
               - name: PROXY_IP
                 value: ($proxy.proxy_ip_address)
               - name: PROXY_PORT
                 value: ($listener_udp_extra_port)
-              - name: EXPECTED_POD
+              - name: EXPECTED_RESPONSE
                 value: ($echo_third_name)
             content: |
-              bash ../../common/scripts/verify_udp_response.sh
+              bash ../../common/scripts/host_connectivity_test_udp.sh
 
     - name: Delete-winner-udproute
       description: |
@@ -225,16 +219,14 @@ spec:
                 value: (json_parse($stdout))
         - script:
             env:
-              - name: NAMESPACE
-                value: ($gateway_namespace)
               - name: PROXY_IP
                 value: ($proxy.proxy_ip_address)
               - name: PROXY_PORT
                 value: ($listener_udp_port)
-              - name: EXPECTED_POD
+              - name: EXPECTED_RESPONSE
                 value: ($echo_newer_name)
             content: |
-              bash ../../common/scripts/verify_udp_response.sh
+              bash ../../common/scripts/host_connectivity_test_udp.sh
 
     - name: Delete-loser-udproute
       description: Delete the same-listener loser and verify only the third route remains attached.
