@@ -31,6 +31,11 @@ var supportedTypes = []cacheStoreSupportedType{
 		Type:    "EndpointSlice",
 		Package: "discoveryv1",
 	},
+	{
+		Type:    "Namespace",
+		Package: "corev1",
+		KeyFunc: clusterWideKeyFunc,
+	},
 	// Gateway API types
 	{
 		Type:    "HTTPRoute",
@@ -59,6 +64,11 @@ var supportedTypes = []cacheStoreSupportedType{
 	{
 		Type:    "Gateway",
 		Package: "gatewayapi",
+	},
+	{
+		Type:    "GatewayClass",
+		Package: "gatewayapi",
+		KeyFunc: clusterWideKeyFunc,
 	},
 	{
 		Type:    "BackendTLSPolicy",

@@ -2,10 +2,12 @@ package translator
 
 import (
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 )
 
@@ -107,16 +109,16 @@ func collectL4ListenersByGateway[T L4Route](
 			}
 			seen[gwNN] = struct{}{}
 
-			// TODO: no GatewayClass-controller-ownership check here (unlike
-			// getSupportedGatewayForRoute) - store.Storer doesn't cache
-			// GatewayClass at all. A Gateway managed by a different
-			// controller in the cluster is still resolved and arbitrated
-			// over. Needs a GatewayClass cache/lister added to store.Storer
-			// before this can be checked.
 			gw, err := storer.GetGateway(gwNN.Namespace, gwNN.Name)
 			if err != nil {
 				continue
 			}
+
+			gwc, err := storer.GetGatewayClass(string(gw.Spec.GatewayClassName))
+			if err != nil || !gatewayapi.GatewayClassControlledBy(gwc, mgrconsts.GetControllerName()) {
+				continue
+			}
+
 			var ls []l4Listener
 			for _, l := range gw.Spec.Listeners {
 				if l.Protocol != protocol {
@@ -141,15 +143,16 @@ func collectL4ListenersByGateway[T L4Route](
 // getSupportedGatewayForRoute uses (AllowedRoutes Kind/Namespace, listener
 // SupportedKinds, listener Programmed) so that the arbitration candidate pool
 // matches what the status layer would accept.
-//
-// AllowedRoutes.Namespaces.From: Selector can't be evaluated here (it needs a
-// Namespace cache the translator doesn't have) and is conservatively treated
-// as not-attached, logged once per candidate.
 func l4RouteListenerAttachments[T L4Route](
 	route T,
 	logger logr.Logger,
+	storer store.Storer,
 	listenersByGateway map[types.NamespacedName][]l4Listener,
 ) []l4ListenerKey {
+	getNamespace := func(name string) (*corev1.Namespace, error) {
+		return storer.GetNamespace(name)
+	}
+
 	var out []l4ListenerKey
 	for _, pr := range l4RouteParentRefs(route) {
 		gwNN := parentRefGatewayNN(pr, route.GetNamespace())
@@ -167,16 +170,14 @@ func l4RouteListenerAttachments[T L4Route](
 			if !gatewayapi.ListenerAcceptsRouteKind(l.listener, route) {
 				continue
 			}
-			if ok, handled := gatewayapi.ListenerAllowsNamespace(l.listener, route, gwNN.Namespace, pr.Namespace); handled {
-				if !ok {
-					continue
-				}
-			} else {
+			if ok, err := gatewayapi.ListenerAllowsNamespace(l.listener, route, gwNN.Namespace, pr.Namespace, getNamespace); err != nil {
 				logger.V(1).Info(
-					"skipping L4 arbitration candidate: listener AllowedRoutes uses a namespace Selector, which the translator can't evaluate",
+					"skipping L4 arbitration candidate: failed to evaluate listener AllowedRoutes namespaces",
 					"gateway", gwNN, "listener", l.listener.Name,
-					"route", route.GetNamespace()+"/"+route.GetName(),
+					"route", route.GetNamespace()+"/"+route.GetName(), "err", err.Error(),
 				)
+				continue
+			} else if !ok {
 				continue
 			}
 			if err := gatewayapi.ListenerSupportsRouteInStatus(route, l.listener.Name, l.gwStatus); err != nil {

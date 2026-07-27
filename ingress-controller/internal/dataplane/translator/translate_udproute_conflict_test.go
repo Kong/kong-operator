@@ -6,11 +6,14 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 )
 
 func mkUDPRoute(ns, name string, created time.Time) *gatewayapi.UDPRoute {
@@ -196,9 +199,10 @@ func TestUDPRouteListenerAttachments(t *testing.T) {
 		},
 	}
 
+	storer := store.NewFakeStoreEmpty()
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := l4RouteListenerAttachments(tc.route, logr.Discard(), tc.gateways)
+			got := l4RouteListenerAttachments(tc.route, logr.Discard(), storer, tc.gateways)
 			assert.ElementsMatch(t, tc.wantTargets, got)
 		})
 	}
@@ -222,11 +226,32 @@ func TestUDPRouteListenerAttachments_Predicates(t *testing.T) {
 		Namespaces: &gatewayv1.RouteNamespaces{From: &fromSame},
 	}
 
-	selectorRestricted := mkL4Listener("l1", 53)
 	fromSelector := gatewayv1.NamespacesFromSelector
+	selectorRestricted := mkL4Listener("l1", 53)
 	selectorRestricted.listener.AllowedRoutes = &gatewayv1.AllowedRoutes{
-		Namespaces: &gatewayv1.RouteNamespaces{From: &fromSelector},
+		Namespaces: &gatewayv1.RouteNamespaces{
+			From:     &fromSelector,
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"team": "checkout"}},
+		},
 	}
+
+	storer, err := store.NewFakeStore(store.FakeObjects{
+		Namespaces: []*corev1.Namespace{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "app",
+					Labels: map[string]string{"team": "checkout"},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "other",
+					Labels: map[string]string{"team": "platform"},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
 
 	tests := []struct {
 		name        string
@@ -261,8 +286,22 @@ func TestUDPRouteListenerAttachments_Predicates(t *testing.T) {
 			},
 		},
 		{
-			name:        "AllowedRoutes Namespace Selector can't be verified, excluded",
-			route:       mkUDPRouteWithParents("app", parentRef("gw-ns", "gw", "", 0)),
+			name:     "AllowedRoutes Namespace Selector matching route namespace labels attaches",
+			route:    mkUDPRouteWithParents("app", parentRef("gw-ns", "gw", "", 0)),
+			listener: selectorRestricted,
+			wantTargets: []l4ListenerKey{
+				{gateway: gw, listenerName: "l1", port: 53},
+			},
+		},
+		{
+			name:        "AllowedRoutes Namespace Selector not matching route namespace labels is excluded",
+			route:       mkUDPRouteWithParents("other", parentRef("gw-ns", "gw", "", 0)),
+			listener:    selectorRestricted,
+			wantTargets: nil,
+		},
+		{
+			name:        "AllowedRoutes Namespace Selector, route namespace not found, is excluded",
+			route:       mkUDPRouteWithParents("unknown-ns", parentRef("gw-ns", "gw", "", 0)),
 			listener:    selectorRestricted,
 			wantTargets: nil,
 		},
@@ -271,7 +310,7 @@ func TestUDPRouteListenerAttachments_Predicates(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			gateways := map[types.NamespacedName][]l4Listener{gw: {tc.listener}}
-			got := l4RouteListenerAttachments(tc.route, logr.Discard(), gateways)
+			got := l4RouteListenerAttachments(tc.route, logr.Discard(), storer, gateways)
 			assert.ElementsMatch(t, tc.wantTargets, got)
 		})
 	}

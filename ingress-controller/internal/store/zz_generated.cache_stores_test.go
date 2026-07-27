@@ -49,6 +49,10 @@ func TestCacheStores(t *testing.T) {
 			objectToStore: &discoveryv1.EndpointSlice{},
 		},
 		{
+			name:          "Namespace",
+			objectToStore: &corev1.Namespace{},
+		},
+		{
 			name:          "HTTPRoute",
 			objectToStore: &gatewayapi.HTTPRoute{},
 		},
@@ -75,6 +79,10 @@ func TestCacheStores(t *testing.T) {
 		{
 			name:          "Gateway",
 			objectToStore: &gatewayapi.Gateway{},
+		},
+		{
+			name:          "GatewayClass",
+			objectToStore: &gatewayapi.GatewayClass{},
 		},
 		{
 			name:          "BackendTLSPolicy",

@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -162,7 +161,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 		}
 
 		// If the GatewayClass does not match this controller then skip it
-		if gatewayClass.Spec.ControllerName != GetControllerName() {
+		if !gatewayapi.GatewayClassControlledBy(&gatewayClass, GetControllerName()) {
 			continue
 		}
 
@@ -421,27 +420,15 @@ func routeMatchesListenerAllowedRoutes[T gatewayapi.RouteT](
 		return false, nil
 	}
 
-	if ok, handled := gatewayapi.ListenerAllowsNamespace(listener, route, gatewayNamespace, parentRefNamespace); handled {
-		return ok, nil
+	getNamespace := func(name string) (*corev1.Namespace, error) {
+		namespace := &corev1.Namespace{}
+		if err := mgrc.Get(ctx, client.ObjectKey{Name: name}, namespace); err != nil {
+			return nil, err
+		}
+		return namespace, nil
 	}
 
-	// From: Selector - the only case that needs an actual API/cache read, so
-	// it stays here rather than in the dependency-free gatewayapi package.
-	namespace := corev1.Namespace{}
-	if err := mgrc.Get(ctx, client.ObjectKey{Name: route.GetNamespace()}, &namespace); err != nil {
-		return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
-	}
-
-	s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
-	if err != nil {
-		return false, fmt.Errorf(
-			"failed to convert AllowedRoutes LabelSelector %s to Selector for listener %s: %w",
-			listener.AllowedRoutes.Namespaces.Selector, listener.Name, err,
-		)
-	}
-
-	ok := s.Matches(labels.Set(namespace.Labels))
-	return ok, nil
+	return gatewayapi.ListenerAllowsNamespace(listener, route, gatewayNamespace, parentRefNamespace, getNamespace)
 }
 
 // existsMatchingListenerInStatus checks if:

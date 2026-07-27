@@ -2,9 +2,12 @@ package gatewayapi
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -51,43 +54,64 @@ func ListenerAcceptsRouteKind[T RouteT](listener Listener, route T) bool {
 	return ok
 }
 
-// ListenerAllowsNamespace evaluates listener's AllowedRoutes.Namespaces for
-// the From: All and Same cases, which require no additional I/O.
-//
-// handled is false for From: Selector, which needs the route's Namespace
-// object (for its labels) that the caller must resolve itself; ok is
-// meaningless when handled is false.
+// NamespaceGetter resolves a Namespace object by name. Implemented by both
+// the KIC controller (backed by a cached client.Reader) and the translator
+// (backed by store.Storer), so ListenerAllowsNamespace can evaluate
+// AllowedRoutes.Namespaces.From: Selector identically in both places.
+type NamespaceGetter func(name string) (*corev1.Namespace, error)
+
+// ListenerAllowsNamespace evaluates listener's AllowedRoutes.Namespaces
+// against route, covering the All, Same and Selector cases. getNamespace is
+// only invoked (and only needs to resolve route's namespace) for the
+// Selector case.
 func ListenerAllowsNamespace[T RouteT](
-	listener Listener, route T, gatewayNamespace string, parentRefNamespace *Namespace,
-) (ok bool, handled bool) {
+	listener Listener, route T, gatewayNamespace string, parentRefNamespace *Namespace, getNamespace NamespaceGetter,
+) (bool, error) {
 	if listener.AllowedRoutes == nil || listener.AllowedRoutes.Namespaces == nil || listener.AllowedRoutes.Namespaces.From == nil {
-		return true, true
+		return true, nil
 	}
 
 	switch *listener.AllowedRoutes.Namespaces.From {
 	case NamespacesFromAll:
-		return true, true
+		return true, nil
 
 	case NamespacesFromSame:
 		// If parentRef didn't specify the namespace then we check if
 		// the gateway is from the same namespace as the route
 		if parentRefNamespace == nil {
-			return gatewayNamespace == route.GetNamespace(), true
+			return gatewayNamespace == route.GetNamespace(), nil
 		}
 		// Otherwise compare routes namespace with parentRef's one.
-		return route.GetNamespace() == string(*parentRefNamespace), true
+		return route.GetNamespace() == string(*parentRefNamespace), nil
 
 	case NamespacesFromSelector:
-		// TODO: no Namespace cache available to callers that only have a
-		// store.Storer (e.g. the translator) - can't evaluate the selector
-		// here. Needs a Namespace cache/lister added to that layer before
-		// this can be handled like NamespacesFromSame/All.
-		return false, false
+		namespace, err := getNamespace(route.GetNamespace())
+		if err != nil {
+			return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
+		}
+
+		s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+		if err != nil {
+			return false, fmt.Errorf(
+				"failed to convert AllowedRoutes LabelSelector %s to Selector for listener %s: %w",
+				listener.AllowedRoutes.Namespaces.Selector, listener.Name, err,
+			)
+		}
+
+		return s.Matches(labels.Set(namespace.Labels)), nil
 
 	default:
-		// The From field is CRD-enum-constrained (All/Same/Selector)
-		return false, true
+		// The From field is CRD-enum-constrained (All/Same/Selector), should not happen.
+		return false, fmt.Errorf(
+			"unknown listener.AllowedRoutes.Namespaces.From value: %s for listener %s",
+			*listener.AllowedRoutes.Namespaces.From, listener.Name,
+		)
 	}
+}
+
+// GatewayClassControlledBy reports whether gatewayClass is managed by controllerName.
+func GatewayClassControlledBy(gatewayClass *GatewayClass, controllerName GatewayController) bool {
+	return gatewayClass.Spec.ControllerName == controllerName
 }
 
 // ListenerSupportsRouteInStatus checks if:
