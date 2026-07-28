@@ -444,7 +444,30 @@ func routesForTCPRouteRule(
 			pRef.Name, tcpRoute.Namespace, tcpRoute.Name)
 	}
 
+	return RoutesForTCPRouteRuleWithPorts(ctx, logger, cl, tcpRoute, rule, pRef, cp, namingParentRef, serviceName, ports)
+}
+
+// RoutesForTCPRouteRuleWithPorts generates an L4 Kong route for the given TCPRoute rule
+// using the already-arbitrated Gateway listener ports supplied by the caller.
+func RoutesForTCPRouteRuleWithPorts(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	tcpRoute *gwtypes.TCPRoute,
+	rule gwtypes.TCPRouteRule,
+	pRef *gwtypes.ParentReference,
+	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
+	serviceName string,
+	ports []int32,
+) ([]*configurationv1alpha1.KongRoute, error) {
+	if len(ports) == 0 {
+		return nil, fmt.Errorf("no TCP listener ports selected for TCPRoute %s/%s", tcpRoute.Namespace, tcpRoute.Name)
+	}
+
 	tags := pkgmetadata.ExtractTags(tcpRoute)
+	routeName := namegen.NewKongRouteNameForTCPRouteRule(tcpRoute, cp, namingParentRef, rule)
+	logger = logger.WithValues("kongroute", routeName)
 
 	routeBuilder := builder.NewKongRoute().WithName(routeName).
 		WithNamespace(metadata.NamespaceFromParentRef(tcpRoute, pRef)).
