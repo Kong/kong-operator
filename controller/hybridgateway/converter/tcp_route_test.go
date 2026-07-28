@@ -2,6 +2,7 @@ package converter
 
 import (
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
@@ -69,6 +70,90 @@ func TestTCPRouteConverter_Translate(t *testing.T) {
 	assert.Empty(t, kongRoute.Spec.Hosts)
 	assert.Empty(t, kongRoute.Spec.Paths)
 	assert.Equal(t, "default/test-route", kongRoute.Annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation])
+}
+
+func TestTCPRouteConverter_TranslateKeepsOldestRouteForSameListener(t *testing.T) {
+	olderRoute := newTCPRouteForTranslation()
+	olderRoute.CreationTimestamp = metav1.NewTime(time.Unix(1, 0))
+	newerRoute := newTCPRouteForTranslation()
+	newerRoute.Name = "newer-route"
+	newerRoute.CreationTimestamp = metav1.NewTime(time.Unix(2, 0))
+
+	gateway := newTCPGateway()
+	gateway.UID = types.UID("gateway-uid")
+	objects := append(
+		newKonnectGatewayStandardObjects(gateway),
+		newerRoute,
+		newService("default"),
+		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+	converter := newTCPRouteConverter(olderRoute, fakeClient, false, "")
+
+	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
+	require.NoError(t, err)
+	require.Equal(t, 5, resourceCount)
+
+	output, err := converter.GetOutputStore(t.Context(), logr.Discard())
+	require.NoError(t, err)
+
+	var kongRoute *configurationv1alpha1.KongRoute
+	for _, obj := range output {
+		if obj.GetKind() != "KongRoute" {
+			continue
+		}
+		converted := &configurationv1alpha1.KongRoute{}
+		require.NoError(t, fakeClient.Scheme().Convert(&obj, converted, nil))
+		kongRoute = converted
+	}
+
+	require.NotNil(t, kongRoute)
+	require.Len(t, kongRoute.Spec.Destinations, 1)
+	require.NotNil(t, kongRoute.Spec.Destinations[0].Port)
+	assert.Equal(t, int64(80), *kongRoute.Spec.Destinations[0].Port)
+}
+
+func TestTCPRouteConverter_TranslateSkipsNewerRouteForSameListener(t *testing.T) {
+	olderRoute := newTCPRouteForTranslation()
+	olderRoute.Name = "older-route"
+	olderRoute.CreationTimestamp = metav1.NewTime(time.Unix(1, 0))
+	newerRoute := newTCPRouteForTranslation()
+	newerRoute.CreationTimestamp = metav1.NewTime(time.Unix(2, 0))
+
+	gateway := newTCPGateway()
+	gateway.UID = types.UID("gateway-uid")
+	objects := append(
+		newKonnectGatewayStandardObjects(gateway),
+		olderRoute,
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+	converter := newTCPRouteConverter(newerRoute, fakeClient, false, "")
+
+	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
+	require.NoError(t, err)
+	assert.Zero(t, resourceCount)
+
+	output, err := converter.GetOutputStore(t.Context(), logr.Discard())
+	require.NoError(t, err)
+	assert.Empty(t, output)
+}
+
+func TestPickWinningTCPRouteTieBreaksByNamespaceAndName(t *testing.T) {
+	route := newTCPRouteForTranslation()
+	route.Namespace = "b"
+	route.Name = "a"
+	route.CreationTimestamp = metav1.NewTime(time.Unix(1, 0))
+	winnerByNamespace := newTCPRouteForTranslation()
+	winnerByNamespace.Namespace = "a"
+	winnerByNamespace.Name = "z"
+	winnerByNamespace.CreationTimestamp = route.CreationTimestamp
+	winnerByName := newTCPRouteForTranslation()
+	winnerByName.Namespace = "b"
+	winnerByName.Name = "0"
+	winnerByName.CreationTimestamp = route.CreationTimestamp
+
+	require.Same(t, winnerByNamespace, pickWinningTCPRoute([]*gwtypes.TCPRoute{route, winnerByNamespace}))
+	require.Same(t, winnerByName, pickWinningTCPRoute([]*gwtypes.TCPRoute{route, winnerByName}))
 }
 
 func TestTCPRouteConverter_TranslateBackendClientCertificate(t *testing.T) {
