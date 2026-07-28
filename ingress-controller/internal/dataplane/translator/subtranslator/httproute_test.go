@@ -936,7 +936,72 @@ func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatch
 	require.Equal(t, map[string][]string{"version": {"two"}}, oneHeaderRoute.Headers)
 	require.Equal(t, kong.StringSlice(kongHTTPRouteHeaderOnlyRegexPath), oneHeaderRoute.Paths)
 	require.Equal(t, kong.StringSlice(kongHTTPRouteHeaderOnlyRegexPath), twoHeaderRoute.Paths)
-	require.Empty(t, colorBlueRoute.Paths)
+	require.Equal(t, kong.StringSlice(kongHTTPRouteHeaderOnlyRegexPath), colorBlueRoute.Paths)
+}
+
+func TestAssignTraditionalRoutePriorityToSplitHTTPRouteMatchesStableAcrossUnrelatedClasses(t *testing.T) {
+	stableHTTPRoute := &gatewayapi.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "stable",
+		},
+	}
+	unrelatedHTTPRoute := &gatewayapi.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "unrelated",
+		},
+	}
+
+	stableMatches := []SplitHTTPRouteMatch{
+		{
+			Source:     stableHTTPRoute,
+			RuleIndex:  0,
+			MatchIndex: 0,
+			Match:      builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+		},
+		{
+			Source:     stableHTTPRoute,
+			RuleIndex:  1,
+			MatchIndex: 0,
+			Match:      builder.NewHTTPRouteMatch().WithPathExact("/very-long").Build(),
+		},
+	}
+	matchesWithUnrelatedLowerClass := append([]SplitHTTPRouteMatch{}, stableMatches...)
+	matchesWithUnrelatedLowerClass = append(matchesWithUnrelatedLowerClass, SplitHTTPRouteMatch{
+		Source:     unrelatedHTTPRoute,
+		RuleIndex:  0,
+		MatchIndex: 0,
+		Match:      builder.NewHTTPRouteMatch().WithHeader("version", "two").Build(),
+	})
+
+	originalPriorities := httpRouteMatchPrioritiesByRuleMatch(
+		assignTraditionalRoutePriorityToSplitHTTPRouteMatches(stableMatches),
+	)
+	prioritiesWithUnrelatedRoute := httpRouteMatchPrioritiesByRuleMatch(
+		assignTraditionalRoutePriorityToSplitHTTPRouteMatches(matchesWithUnrelatedLowerClass),
+	)
+
+	for _, key := range []httpRouteMatchPriorityKey{
+		{
+			Namespace:   "default",
+			Name:        "stable",
+			RuleNumber:  0,
+			MatchNumber: 0,
+		},
+		{
+			Namespace:   "default",
+			Name:        "stable",
+			RuleNumber:  1,
+			MatchNumber: 0,
+		},
+	} {
+		require.Equal(t, originalPriorities[key], prioritiesWithUnrelatedRoute[key])
+	}
+	require.Greater(t,
+		originalPriorities[httpRouteMatchPriorityKey{Namespace: "default", Name: "stable", RuleNumber: 1, MatchNumber: 0}],
+		originalPriorities[httpRouteMatchPriorityKey{Namespace: "default", Name: "stable", RuleNumber: 0, MatchNumber: 0}],
+	)
 }
 
 func TestGetKongServiceNameByBackendRefs(t *testing.T) {

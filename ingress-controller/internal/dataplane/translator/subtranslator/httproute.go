@@ -383,31 +383,25 @@ func groupTraditionalHTTPRouteMatchesWithPrioritiesByRule(
 	return ret
 }
 
-// traditionalMatchPriorityClassSize is the size of the priority range reserved for each Gateway
-// API precedence class by assignTraditionalRoutePriorityToSplitHTTPRouteMatches. It must exceed
-// the largest possible within-route offset, i.e. the maximum number of matches in one HTTPRoute
-// (16 rules with 64 matches each), minus one.
-const traditionalMatchPriorityClassSize = 1 << 10
-
 // assignTraditionalRoutePriorityToSplitHTTPRouteMatches assigns the priorities translated to the
 // regex_priority of Kong routes generated from the given split matches.
 //
-// The Gateway API precedence class of each match (encoded from its path type and length, method,
-// header and query parameter counts) is ranked across all HTTPRoutes, and matches sharing both
-// the HTTPRoute and the class are additionally ordered by their rule and match indexes, since
-// within one HTTPRoute earlier rules must win ties. The priority of a match is
-// classRank*traditionalMatchPriorityClassSize + withinRouteOffset.
+// The Gateway API precedence class of each match (encoded from its hostname specificity, path type
+// and length, method, header and query parameter counts) is used directly, with the expression-router
+// resource-kind bits stripped off. Matches sharing both the HTTPRoute and the class are additionally
+// ordered by their rule and match indexes, since within one HTTPRoute earlier rules must win ties.
+// The priority of a match is class + withinRouteOffset.
 //
-// A match's priority deliberately depends only on the set of precedence classes present and on
-// the match's own HTTPRoute, so that adding or removing an HTTPRoute whose match shapes are
-// already present does not renumber Kong routes translated from other HTTPRoutes. The trade-off
-// is that ties between equally specific matches of different HTTPRoutes are not broken by
-// creation timestamp as the Gateway API specifies; they keep the data plane's unspecified
-// relative order, as they did before priorities were introduced.
+// A match's priority deliberately depends only on its own precedence traits and HTTPRoute-local tie
+// position, so adding or removing unrelated HTTPRoutes does not renumber Kong routes translated from
+// other HTTPRoutes. The trade-off is that ties between equally specific matches of different
+// HTTPRoutes are not broken by creation timestamp as the Gateway API specifies; they keep the data
+// plane's unspecified relative order, as they did before priorities were introduced.
+// EncodeToPriority leaves the lowest 12 bits for relative order, while HTTPRoute allows at most
+// 1024 matches in one resource, so adding the HTTPRoute-local offset preserves class ordering.
 //
-// Matches in the lowest present class with no within-route tie get priority 0, which is
-// translated to an unset regex_priority, so configurations where all matches share the same
-// specificity are unaffected.
+// Matches in the empty precedence class with no within-route tie get priority 0, which is
+// translated to an unset regex_priority.
 func assignTraditionalRoutePriorityToSplitHTTPRouteMatches(
 	splitMatches []SplitHTTPRouteMatch,
 ) []SplitHTTPRouteMatchToKongRoutePriority {
@@ -418,18 +412,11 @@ func assignTraditionalRoutePriorityToSplitHTTPRouteMatches(
 	}
 
 	classes := make([]RoutePriorityType, len(splitMatches))
-	classSet := make(map[RoutePriorityType]struct{}, len(splitMatches))
 	matchCountByRouteAndClass := make(map[routeAndClass]int, len(splitMatches))
 	for i, match := range splitMatches {
-		class := calculateHTTPRouteMatchPriorityTraits(match).EncodeToPriority()
+		class := traditionalHTTPRouteMatchPriorityClass(match)
 		classes[i] = class
-		classSet[class] = struct{}{}
 		matchCountByRouteAndClass[routeAndClass{match.Source.Namespace, match.Source.Name, class}]++
-	}
-
-	rankByClass := make(map[RoutePriorityType]RoutePriorityType, len(classSet))
-	for rank, class := range slices.Sorted(maps.Keys(classSet)) {
-		rankByClass[class] = RoutePriorityType(rank)
 	}
 
 	// splitMatches are appended in rule and match order within each HTTPRoute, so earlier
@@ -442,10 +429,15 @@ func assignTraditionalRoutePriorityToSplitHTTPRouteMatches(
 		seenByRouteAndClass[key]++
 		matchesWithPriorities = append(matchesWithPriorities, SplitHTTPRouteMatchToKongRoutePriority{
 			Match:    match,
-			Priority: rankByClass[classes[i]]*traditionalMatchPriorityClassSize + RoutePriorityType(offset),
+			Priority: classes[i] + RoutePriorityType(offset),
 		})
 	}
 	return matchesWithPriorities
+}
+
+func traditionalHTTPRouteMatchPriorityClass(match SplitHTTPRouteMatch) RoutePriorityType {
+	const httpRouteResourceKindPriority = RoutePriorityType(ResourceKindBitsHTTPRoute << FromResourceKindPriorityShiftBits)
+	return calculateHTTPRouteMatchPriorityTraits(match).EncodeToPriority() - httpRouteResourceKindPriority
 }
 
 // translateHTTPRouteRulesMetaToKongstateRoutes translate the matches and filters under the rules sharing the same backends

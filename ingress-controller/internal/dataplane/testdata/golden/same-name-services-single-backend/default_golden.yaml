@@ -17,6 +17,7 @@ services:
     - ~/test$
     - /test/
     preserve_host: true
+    regex_priority: 33554432
     strip_path: true
     tags:
     - k8s-name:test

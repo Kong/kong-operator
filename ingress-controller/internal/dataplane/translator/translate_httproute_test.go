@@ -40,13 +40,15 @@ type testCaseIngressRulesFromHTTPRoutes struct {
 	expected     func(routes []*gatewayapi.HTTPRoute) ingressRules
 }
 
-// ingressRulesCmpOpts ignores RegexPriority since the assigned values depend on the
-// relative specificity of all the matches in a test case, which is not what these
-// translation tests exercise.
 var ingressRulesCmpOpts = []cmp.Option{
 	cmp.AllowUnexported(SecretNameToSNIs{}, kongstate.ServiceBackend{}),
-	cmpopts.IgnoreFields(kong.Route{}, "RegexPriority"),
 }
+
+// ingressRulesCmpOptsIgnoringRegexPriority is used by broad shape-translation tests that
+// do not exercise HTTPRoute match precedence.
+var ingressRulesCmpOptsIgnoringRegexPriority = append(ingressRulesCmpOpts,
+	cmpopts.IgnoreFields(kong.Route{}, "RegexPriority"),
+)
 
 func TestValidateHTTPRoute(t *testing.T) {
 	testCases := []struct {
@@ -1552,7 +1554,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			p.ingressRulesFromHTTPRoutesWithCombinedService(tt.routes, &ingressRules)
 			// verify that we receive the expected values
 			expectedIngressRules := tt.expected(tt.routes)
-			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, ingressRulesCmpOpts...))
+			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, ingressRulesCmpOptsIgnoringRegexPriority...))
 		})
 	}
 }
@@ -2121,7 +2123,7 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 			p.ingressRulesFromHTTPRoutesWithCombinedService(tc.routes, &ingressRules)
 			// verify that we receive the expected values
 			expectedIngressRules := tc.expected(tc.routes)
-			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, ingressRulesCmpOpts...))
+			assert.Empty(t, cmp.Diff(expectedIngressRules, ingressRules, ingressRulesCmpOptsIgnoringRegexPriority...))
 		})
 	}
 }
@@ -2186,7 +2188,8 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
-									Name: new("httproute.default.basic-httproute.0.0"),
+									Name:          new("httproute.default.basic-httproute.0.0"),
+									RegexPriority: new(8657043456),
 									Paths: []*string{
 										new("~/httpbin$"),
 									},

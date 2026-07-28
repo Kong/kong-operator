@@ -28,6 +28,7 @@ services:
       - k8s-group:gateway.networking.k8s.io
       - k8s-version:v1
     preserve_host: true
+    regex_priority: 50331648
     strip_path: false
     tags:
     - k8s-name:httproute-testing
