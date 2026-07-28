@@ -104,6 +104,20 @@ type DeploymentOptions struct {
 	// +optional
 	Scaling *Scaling `json:"scaling,omitempty"`
 
+	// Annotations are custom annotations that are propagated to the AI Gateway
+	// Deployment metadata by the operator.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Labels are custom labels that are propagated to the AI Gateway Deployment
+	// metadata by the operator.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	Labels map[string]string `json:"labels,omitempty"`
+
 	// PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
 	// It's being applied on top of the generated Deployments using
 	// [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"strings"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,6 +17,7 @@ import (
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/reservedkeys"
 	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -141,60 +141,20 @@ func extractOutdatedDataPlaneIngressServiceAnnotations(
 	return outdatedAnnotations, nil
 }
 
-// isReservedDataPlaneDeploymentKey reports whether a label/annotation key is reserved
+// dataPlaneDeploymentReservedKeys reports whether a label/annotation key is reserved
 // for internal operator or Kubernetes use and must be dropped from any
 // spec.deployment.labels/annotations provided by the user.
-func isReservedDataPlaneDeploymentKey(key string) bool {
-	return strings.HasPrefix(key, consts.OperatorLabelPrefix) ||
-		key == "app" ||
-		key == "deployment.kubernetes.io/revision"
-}
-
-// filterReservedDataPlaneDeploymentKeys drops any reserved key from keys, logging a
-// warning for each one so it's clear why a user-provided label/annotation didn't take
-// effect on the DataPlane's Deployment.
-//
-// This is logged at Info rather than Error level: it's an expected, routine
-// situation (not a bug), and controller-runtime's zap logger attaches a full stack
-// trace to every Error-level log line in production mode, which would otherwise
-// spam the logs on every reconcile of a DataPlane whose spec sets a reserved key.
-func filterReservedDataPlaneDeploymentKeys(
-	logger logr.Logger, dataplane *operatorv1beta1.DataPlane, metadataType string, keys map[string]string,
-) map[string]string {
-	if len(keys) == 0 {
-		return nil
-	}
-	filtered := make(map[string]string, len(keys))
-	for k, v := range keys {
-		if isReservedDataPlaneDeploymentKey(k) {
-			log.Info(
-				logger,
-				"Ignoring reserved key in spec.deployment, it is managed by the operator and cannot be overridden",
-				"metadataType", metadataType, "key", k, "dataplane", fmt.Sprintf("%s/%s", dataplane.Namespace, dataplane.Name),
-			)
-			continue
-		}
-		filtered[k] = v
-	}
-	return filtered
-}
+var dataPlaneDeploymentReservedKeys = reservedkeys.NewChecker("app", "deployment.kubernetes.io/revision")
 
 func addAnnotationsForDataPlaneDeployment(logger logr.Logger, deployment *appsv1.Deployment, dataplane operatorv1beta1.DataPlane) {
 	specAnnotations := extractDataPlaneDeploymentAnnotations(&dataplane)
 	if specAnnotations == nil {
 		return
 	}
-	specAnnotations = filterReservedDataPlaneDeploymentKeys(logger, &dataplane, "annotation", specAnnotations)
-	annotations := deployment.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	maps.Copy(annotations, specAnnotations)
-	encodedSpecAnnotations, err := json.Marshal(specAnnotations)
-	if err == nil {
-		annotations[consts.AnnotationLastAppliedAnnotations] = string(encodedSpecAnnotations)
-	}
-	deployment.SetAnnotations(annotations)
+
+	obj := &metav1.ObjectMeta{Namespace: dataplane.Namespace, Name: dataplane.Name, Annotations: specAnnotations}
+	specAnnotations = reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, obj, dataPlaneDeploymentReservedKeys)
+	deployment.Annotations = reservedkeys.MergeAnnotationsTracked(deployment.Annotations, specAnnotations)
 }
 
 func extractDataPlaneDeploymentAnnotations(dataplane *operatorv1beta1.DataPlane) map[string]string {
@@ -202,21 +162,13 @@ func extractDataPlaneDeploymentAnnotations(dataplane *operatorv1beta1.DataPlane)
 }
 
 func addLabelsForDataPlaneDeployment(logger logr.Logger, deployment *appsv1.Deployment, dataplane operatorv1beta1.DataPlane) {
-	specLabels := extractDataPlaneDeploymentLabels(&dataplane)
+	specLabels := dataplane.Spec.Deployment.Labels
 	if specLabels == nil {
 		return
 	}
-	specLabels = filterReservedDataPlaneDeploymentKeys(logger, &dataplane, "label", specLabels)
-	lbls := deployment.GetLabels()
-	if lbls == nil {
-		lbls = make(map[string]string)
-	}
-	maps.Copy(lbls, specLabels)
-	deployment.SetLabels(lbls)
-}
-
-func extractDataPlaneDeploymentLabels(dataplane *operatorv1beta1.DataPlane) map[string]string {
-	return dataplane.Spec.Deployment.Labels
+	obj := &metav1.ObjectMeta{Namespace: dataplane.Namespace, Name: dataplane.Name, Labels: specLabels}
+	specLabels = reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, obj, dataPlaneDeploymentReservedKeys)
+	deployment.Labels = reservedkeys.Merge(deployment.Labels, specLabels)
 }
 
 // extractOutdatedDataPlaneDeploymentAnnotations returns the last applied annotations
@@ -224,25 +176,9 @@ func extractDataPlaneDeploymentLabels(dataplane *operatorv1beta1.DataPlane) map[
 func extractOutdatedDataPlaneDeploymentAnnotations(
 	dataplane *operatorv1beta1.DataPlane, existingAnnotations map[string]string,
 ) (map[string]string, error) {
-	if existingAnnotations == nil {
-		return nil, nil
-	}
-	lastAppliedAnnotationsEncoded, ok := existingAnnotations[consts.AnnotationLastAppliedAnnotations]
-	if !ok {
-		return nil, nil
-	}
-	outdatedAnnotations := map[string]string{}
-	err := json.Unmarshal([]byte(lastAppliedAnnotationsEncoded), &outdatedAnnotations)
+	outdatedAnnotations, err := reservedkeys.ExtractOutdated(extractDataPlaneDeploymentAnnotations(dataplane), existingAnnotations)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode last applied annotations: %w", err)
-	}
-	// If an annotation is present in last applied annotations but not in current spec of annotations,
-	// the annotation is outdated and should be removed.
-	// So we remove the annotations present in current spec in last applied annotations,
-	// the remaining annotations are outdated and should be removed.
-	currentSpecifiedAnnotations := extractDataPlaneDeploymentAnnotations(dataplane)
-	for k := range currentSpecifiedAnnotations {
-		delete(outdatedAnnotations, k)
+		return nil, err
 	}
 	return outdatedAnnotations, nil
 }
