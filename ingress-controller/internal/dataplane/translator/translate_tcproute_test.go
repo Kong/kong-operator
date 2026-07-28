@@ -401,9 +401,10 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeStore, err := store.NewFakeStore(store.FakeObjects{
-				Gateways:  tc.gateways,
-				TCPRoutes: tc.tcpRoutes,
-				Services:  tc.services,
+				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				Gateways:       tc.gateways,
+				TCPRoutes:      tc.tcpRoutes,
+				Services:       tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakeStore)
@@ -775,9 +776,10 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeStore, err := store.NewFakeStore(store.FakeObjects{
-				Gateways:  tc.gateways,
-				TCPRoutes: tc.tcpRoutes,
-				Services:  tc.services,
+				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				Gateways:       tc.gateways,
+				TCPRoutes:      tc.tcpRoutes,
+				Services:       tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakeStore)

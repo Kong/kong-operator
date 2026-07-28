@@ -45,7 +45,7 @@ func (t *Translator) ingressRulesFromTCPRoutes() ingressRules {
 	attachments := make(map[l4ListenerKey][]*gatewayapi.TCPRoute)
 	attachedRoutes := make(map[*gatewayapi.TCPRoute]struct{})
 	for _, r := range valid {
-		listenerKeys := l4RouteListenerAttachments(r, t.logger, listenersByGateway)
+		listenerKeys := l4RouteListenerAttachments(r, t.logger, t.storer, listenersByGateway)
 		for _, k := range listenerKeys {
 			attachments[k] = append(attachments[k], r)
 			attachedRoutes[r] = struct{}{}
