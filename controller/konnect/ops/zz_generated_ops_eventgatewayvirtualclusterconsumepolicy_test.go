@@ -10,9 +10,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func testGeneratedEventGatewayVirtualClusterConsumePolicyForSDKOps() *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy {
@@ -43,12 +45,13 @@ func TestCreateEventGatewayVirtualClusterConsumePolicy_UsesSDKOpsConversion(t *t
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayVirtualClusterConsumePolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	virtualClusterID := "virtualClusterID-1"
 	obj.SetVirtualClusterID(virtualClusterID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayVirtualClusterConsumePolicyRequest()
+	expectedRequest, err := obj.ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
@@ -66,7 +69,7 @@ func TestCreateEventGatewayVirtualClusterConsumePolicy_UsesSDKOpsConversion(t *t
 		}, nil).
 		Once()
 
-	require.NoError(t, createEventGatewayVirtualClusterConsumePolicy(ctx, sdk, obj))
+	require.NoError(t, createEventGatewayVirtualClusterConsumePolicy(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -75,12 +78,13 @@ func TestCreateEventGatewayVirtualClusterConsumePolicy_PropagatesSDKError(t *tes
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayVirtualClusterConsumePolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	virtualClusterID := "virtualClusterID-1"
 	obj.SetVirtualClusterID(virtualClusterID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayVirtualClusterConsumePolicyRequest()
+	expectedRequest, err := obj.ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
@@ -94,7 +98,7 @@ func TestCreateEventGatewayVirtualClusterConsumePolicy_PropagatesSDKError(t *tes
 		Return(nil, sdkErr).
 		Once()
 
-	err = createEventGatewayVirtualClusterConsumePolicy(ctx, sdk, obj)
+	err = createEventGatewayVirtualClusterConsumePolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -103,13 +107,14 @@ func TestUpdateEventGatewayVirtualClusterConsumePolicy_UsesSDKOpsConversion(t *t
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayVirtualClusterConsumePolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	virtualClusterID := "virtualClusterID-1"
 	obj.SetVirtualClusterID(virtualClusterID)
 	obj.SetKonnectID("eventgatewayvirtualclusterconsumepolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterConsumePolicyRequest()
+	expectedRequest, err := obj.ToUpdateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
@@ -123,7 +128,7 @@ func TestUpdateEventGatewayVirtualClusterConsumePolicy_UsesSDKOpsConversion(t *t
 		Return(&sdkkonnectops.UpdateEventGatewayVirtualClusterConsumePolicyResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateEventGatewayVirtualClusterConsumePolicy(ctx, sdk, obj))
+	require.NoError(t, updateEventGatewayVirtualClusterConsumePolicy(ctx, cl, sdk, obj))
 }
 
 func TestUpdateEventGatewayVirtualClusterConsumePolicy_PropagatesSDKError(t *testing.T) {
@@ -131,13 +136,14 @@ func TestUpdateEventGatewayVirtualClusterConsumePolicy_PropagatesSDKError(t *tes
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayVirtualClusterConsumePolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	virtualClusterID := "virtualClusterID-1"
 	obj.SetVirtualClusterID(virtualClusterID)
 	obj.SetKonnectID("eventgatewayvirtualclusterconsumepolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterConsumePolicyRequest()
+	expectedRequest, err := obj.ToUpdateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
@@ -152,7 +158,7 @@ func TestUpdateEventGatewayVirtualClusterConsumePolicy_PropagatesSDKError(t *tes
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateEventGatewayVirtualClusterConsumePolicy(ctx, sdk, obj)
+	err = updateEventGatewayVirtualClusterConsumePolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

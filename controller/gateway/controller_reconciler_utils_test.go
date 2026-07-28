@@ -569,10 +569,56 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 			},
 			expectedAcceptedCondition: metav1.Condition{
 				Type:               string(gatewayv1.GatewayConditionAccepted),
-				Status:             metav1.ConditionFalse,
+				Status:             metav1.ConditionTrue,
 				Reason:             string(gatewayv1.GatewayReasonListenersNotValid),
 				ObservedGeneration: 1,
 				Message:            "Listener 1 is not accepted. Listener 2 is conflicted.",
+			},
+		},
+		{
+			name: "one accepted and one unsupported protocol listener - gateway accepted with ListenersNotValid",
+			listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "http",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+				{
+					Name: "invalid",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonUnsupportedProtocol),
+							ObservedGeneration: 1,
+						},
+						{
+							Type:               string(gatewayv1.ListenerConditionConflicted),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonNoConflicts),
+							ObservedGeneration: 1,
+						},
+					},
+				},
+			},
+			expectedAcceptedCondition: metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.GatewayReasonListenersNotValid),
+				ObservedGeneration: 1,
+				Message:            "Listener 1 is not accepted.",
 			},
 		},
 	}
@@ -933,7 +979,75 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(8888),
 				},
 			},
-			expectedError: errors.New("listener 2 uses unsupported protocol TCP"),
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,443:8443,8888:8888",
+				},
+				{
+					// TCP listener: stream entry without `ssl`.
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8888 reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:   8000,
+				443:  8443,
+				8888: 8888,
+			},
+		},
+		{
+			name: "TCP listener uses known port (reassigned)",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tcp",
+					Protocol: gatewayv1.TCPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:16384",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:16384 reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80: 16384,
+			},
+		},
+		{
+			name: "TCP and TLS listeners co-exist on stream proxy",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tcp",
+					Protocol: gatewayv1.TCPProtocolType,
+					Port:     gatewayv1.PortNumber(9000),
+				},
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(9443),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "9000:9000,9443:9443",
+				},
+				{
+					// TCP entries first (sorted), then TLS entries with `ssl`.
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:9000 reuseport,0.0.0.0:9443 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				9000: 9000,
+				9443: 9443,
+			},
 		},
 	}
 
@@ -1016,22 +1130,25 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 				{
 					Name:       "http",
 					Port:       80,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
 				},
 				{
 					Name:       "https",
 					Port:       443,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
 				},
 				{
 					Name:       "tls",
 					Port:       9443,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(9443),
 				},
 			},
 		},
 		{
-			name: "some invalid listeners",
+			name: "UDP listener supported",
 			listeners: []gwtypes.Listener{
 				{
 					Name:     "http",
@@ -1044,14 +1161,21 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(8899),
 				},
 			},
+			portMap: map[int]int{8899: 8899},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
 					Port:       80,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
 				},
+				{
+					Name:       "udp",
+					Port:       8899,
+					TargetPort: intstr.FromInt(8899),
+					Protocol:   corev1.ProtocolUDP,
+				},
 			},
-			expectedError: errors.New("listener 1 uses unsupported protocol UDP"),
 		},
 		{
 			name: "listener options sets nodeport",
@@ -1077,12 +1201,14 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 				{
 					Name:       "http",
 					Port:       80,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
 					NodePort:   int32(30080),
 				},
 				{
 					Name:       "https",
 					Port:       443,
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
 				},
 			},
@@ -1311,7 +1437,31 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.UDPProtocolType,
 			},
-			expectedSupportedKinds: []gwtypes.RouteGroupKind{},
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "UDPRoute",
+				},
+			},
+			expectedResolvedRefsCondition: metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.ListenerReasonResolvedRefs),
+				Message:            "Listeners' references are accepted.",
+				ObservedGeneration: generation,
+			},
+		},
+		{
+			name: "no tls, TCP protocol, no allowed routes",
+			listener: gwtypes.Listener{
+				Protocol: gatewayv1.TCPProtocolType,
+			},
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
+				{
+					Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+					Kind:  "TCPRoute",
+				},
+			},
 			expectedResolvedRefsCondition: metav1.Condition{
 				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
 				Status:             metav1.ConditionTrue,
@@ -1822,6 +1972,12 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 			opts: GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv2beta1.DeploymentOptions{
+						Annotations: map[string]string{
+							"deployment-annotation": "value",
+						},
+						Labels: map[string]string{
+							"deployment-label": "value",
+						},
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -1837,6 +1993,12 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Annotations: map[string]string{
+							"deployment-annotation": "value",
+						},
+						Labels: map[string]string{
+							"deployment-label": "value",
+						},
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -3644,6 +3806,206 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			ExpectedRoutes: []int32{0, 0},
 			ExpectedError:  []error{nil, nil},
 		},
+		{
+			Name: "1 UDPRoute in the same namespace as the Gateway",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("udp"),
+							Protocol: gwtypes.UDPProtocolType,
+							Port:     53,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "udp-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 UDPRoute not matching due to wrong sectionName",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("udp"),
+							Protocol: gwtypes.UDPProtocolType,
+							Port:     53,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "udp-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:        gwtypes.ObjectName("test-gw"),
+									Group:       (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:        new(gwtypes.Kind("Gateway")),
+									SectionName: new(gatewayv1.SectionName("other-listener")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "1 UDPRoute not matching due to wrong port",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("udp"),
+							Protocol: gwtypes.UDPProtocolType,
+							Port:     53,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "udp-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+									Port:  new(gatewayv1.PortNumber(8080)),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{0},
+			ExpectedError:  []error{nil},
+		},
+		{
+			Name: "UDP listener with explicit UDPRoute kind in AllowedRoutes",
+			Gateway: gwtypes.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gw",
+					Namespace: "test-namespace",
+				},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
+						{
+							Name:     gatewayv1.SectionName("udp"),
+							Protocol: gwtypes.UDPProtocolType,
+							Port:     53,
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Namespaces: &gwtypes.RouteNamespaces{
+									From: new(gwtypes.NamespacesFromSame),
+								},
+								Kinds: []gwtypes.RouteGroupKind{
+									{
+										Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+										Kind:  "UDPRoute",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Objects: []client.Object{
+				&gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "udp-route-1",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name:  gwtypes.ObjectName("test-gw"),
+									Group: (*gwtypes.Group)(&gatewayv1.GroupVersion.Group),
+									Kind:  new(gwtypes.Kind("Gateway")),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedRoutes: []int32{1},
+			ExpectedError:  []error{nil},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4675,6 +5037,60 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 				},
 			},
 		},
+		{
+			// Regression test for the on-prem TCPRoute path: a KONG_STREAM_LISTEN
+			// entry without the `ssl` flag must be reflected in the DP NetworkPolicy
+			// too, otherwise metallb-routed TCP traffic to the DP pod is dropped and
+			// EchoResponds times out (see CI failure ktf-diag-440076529).
+			name: "dataplane with plain-TCP stream listen",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8888 reuseport",
+				})
+			},
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(8888)),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "dataplane with mixed TCP and TLS stream listeners",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8888 reuseport,0.0.0.0:9443 ssl reuseport",
+				})
+			},
+			// Plain-TCP endpoints come first, then SSL — matches the order in
+			// generateDataPlaneNetworkPolicy.
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(8888)),
+						},
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(9443)),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4747,8 +5163,8 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 			name: "single listener with unsupported protocol is not accepted",
 			listeners: []gwtypes.Listener{
 				{
-					Name:          "tcp",
-					Protocol:      gatewayv1.TCPProtocolType,
+					Name:          "unsupported",
+					Protocol:      gatewayv1.ProtocolType("UnsupportedProtocol"),
 					Port:          80,
 					AllowedRoutes: allowedRoutesFromSame,
 				},

@@ -1,0 +1,6 @@
+# NOTE: all validations are documented in:
+# https://github.com/kubernetes-sigs/crdify/blob/main/docs/validations.md
+
+validations:
+- name: description
+  enforcement: Warn

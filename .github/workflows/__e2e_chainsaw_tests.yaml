@@ -41,7 +41,7 @@ jobs:
       uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: download e2e image artifact
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -51,7 +51,7 @@ jobs:
     - name: load docker image
       run: docker load -i kong-operator_e2e.tar
 
-    - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+    - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
       with:
         install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind
 
@@ -92,22 +92,16 @@ jobs:
     - name: Apply chainsaw suite prerequisites
       run: make test.e2e.chainsaw.prereq DIRNAME=${{ matrix.suite }}
 
-    - name: set kong ee version
-      run: |
-        echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
-        echo "TEST_KONG_TAG=$(yq -ojson -r '.chainsaw.kong-ee' < test/test_dependencies.yaml )" >> $GITHUB_ENV
-
     - name: run chainsaw e2e tests
       id: chainsaw-tests
       env:
-        GATEWAY_IMAGE: ${{ env.TEST_KONG_IMAGE }}:${{ env.TEST_KONG_TAG }}
         KONNECT_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONNECT_SERVER_URL: us.api.konghq.tech
         TEST_ID: ${{ env.TEST_ID }}
         CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.suite }}
         CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
       run: |
-        # Use the suite name to target the specific test directory
+        # Use CHAINSAW_TEST_DIR to target the specific test directory
         make test.e2e.chainsaw
 
     - name: Upload debug snapshots as artifacts

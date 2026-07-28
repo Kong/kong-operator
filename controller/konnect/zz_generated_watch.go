@@ -49,6 +49,8 @@ func reconciliationWatchOptionsForEntity[
 		return EventGatewayListenerReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayListenerPolicy:
 		return EventGatewayListenerPolicyReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.EventGatewaySchemaRegistry:
+		return EventGatewaySchemaRegistryReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:
 		return EventGatewayVirtualClusterReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:

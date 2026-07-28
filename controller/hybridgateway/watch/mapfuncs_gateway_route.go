@@ -24,6 +24,7 @@ const (
 	// REVIEW: define the kinds in some common packages?
 	kindHTTPRoute = "HTTPRoute"
 	kindTLSRoute  = "TLSRoute"
+	kindTCPRoute  = "TCPRoute"
 )
 
 // kongResource is a type constraint that encompasses all Kong resource types
@@ -81,6 +82,8 @@ func MapRouteForGateway[T gwtypes.SupportedRoute](cl client.Client, route T) han
 			requests, err = listHTTPRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 		case gwtypes.TLSRoute:
 			requests, err = listTLSRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
+		case gwtypes.TCPRoute:
+			requests, err = listTCPRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 		default:
 			// Unsupported types.
 			return nil
@@ -121,6 +124,8 @@ func MapRouteForGatewayClass[T gwtypes.SupportedRoute](cl client.Client, route T
 				gwRequests, err = listHTTPRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 			case gwtypes.TLSRoute:
 				gwRequests, err = listTLSRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
+			case gwtypes.TCPRoute:
+				gwRequests, err = listTCPRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 			default:
 				return nil
 			}
@@ -151,6 +156,8 @@ func MapRouteForService[T gwtypes.SupportedRoute](cl client.Client, route T) han
 			requests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case gwtypes.TLSRoute:
 			requests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		case gwtypes.TCPRoute:
+			requests, err = listTCPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		default:
 			return nil
 		}
@@ -190,6 +197,8 @@ func MapRouteForEndpointSlice[T gwtypes.SupportedRoute](cl client.Client, route 
 			requests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case gwtypes.TLSRoute:
 			requests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		case gwtypes.TCPRoute:
+			requests, err = listTCPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		default:
 			return nil
 		}
@@ -219,6 +228,8 @@ func MapRouteForReferenceGrant[TList gwtypes.SupportedRouteList,
 			kind = "HTTPRoute"
 		case gwtypes.TLSRouteList:
 			kind = "TLSRoute"
+		case gwtypes.TCPRouteList:
+			kind = "TCPRoute"
 		}
 		var requests []reconcile.Request
 		for _, from := range rg.Spec.From {
@@ -237,6 +248,8 @@ func MapRouteForReferenceGrant[TList gwtypes.SupportedRouteList,
 			case *gwtypes.HTTPRouteList:
 				requests = append(requests, mapRouteInListForReferenceGrant(l.Items, rg)...)
 			case *gwtypes.TLSRouteList:
+				requests = append(requests, mapRouteInListForReferenceGrant(l.Items, rg)...)
+			case *gwtypes.TCPRouteList:
 				requests = append(requests, mapRouteInListForReferenceGrant(l.Items, rg)...)
 			}
 		}
@@ -258,6 +271,10 @@ func mapRouteInListForReferenceGrant[T gwtypes.SupportedRoute, TPtr gwtypes.Supp
 				}
 			}
 		case gwtypes.TLSRoute:
+			for _, rule := range r.Spec.Rules {
+				backendRefs = append(backendRefs, rule.BackendRefs...)
+			}
+		case gwtypes.TCPRoute:
 			for _, rule := range r.Spec.Rules {
 				backendRefs = append(backendRefs, rule.BackendRefs...)
 			}

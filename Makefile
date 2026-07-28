@@ -181,11 +181,10 @@ TELEPRESENCE= $(PROJECT_DIR)/bin/installs/github-telepresenceio-telepresence/$(T
 download.telepresence: mise yq ## Download telepresence locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:telepresenceio/telepresence
 
-MARKDOWNLINT_VERSION = $(shell $(YQ) -r '.markdownlint-cli2' < $(TOOLS_VERSIONS_FILE))
-MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_VERSION)/bin/markdownlint-cli2
+MARKDOWNLINT_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["markdownlint-cli2"].version' < $(MISE_FILE))
 .PHONY: download.markdownlint-cli2
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
-	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
+	$(MAKE) mise-install DEP_VER=markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
 HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:helm/helm"].version' < $(MISE_FILE))
 HELM = helm
@@ -289,7 +288,7 @@ lint.actions: download.actionlint download.shellcheck
 
 .PHONY: lint.markdownlint
 lint.markdownlint: download.markdownlint-cli2
-	$(MARKDOWNLINT) \
+	mise x markdownlint-cli2@$(MARKDOWNLINT_VERSION) -- markdownlint-cli2 \
 		CHANGELOG.md \
 		README.md \
 		FEATURES.md \
@@ -845,11 +844,17 @@ CHAINSAW_FIXTURES_DIR ?= ./test/e2e/chainsaw/fixtures
 .PHONY: test.e2e.chainsaw.prereq
 test.e2e.chainsaw.prereq: export DIRNAME := $(DIRNAME)
 test.e2e.chainsaw.prereq: ## Apply prerequisite fixtures for a chainsaw suite (usage: DIRNAME=<suite>).
-	bash $(CHAINSAW_FIXTURES_DIR)/run-prereq.sh
+	bash $(CHAINSAW_FIXTURES_DIR)/run-prereq.sh install
+
+.PHONY: test.e2e.chainsaw.prereq.uninstall
+test.e2e.chainsaw.prereq.uninstall: export DIRNAME := $(DIRNAME)
+test.e2e.chainsaw.prereq.uninstall:
+	bash $(CHAINSAW_FIXTURES_DIR)/run-prereq.sh uninstall
 
 .PHONY: test.e2e.chainsaw
 test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
-	GATEWAY_IMAGE=$(shell $(YQ) -ojson -r '.chainsaw.kong-ee' < $(TEST_DEPENDENCIES_FILE))
+	GATEWAY_IMAGE=kong/kong-gateway:$(shell $(YQ) -ojson -r '.chainsaw.kong-ee' < $(TEST_DEPENDENCIES_FILE)) \
+	AIGW_DP_IMAGE=kong/kong-ai-gateway-dev:$(shell $(YQ) -ojson -r '.chainsaw.aigw-dp' < $(TEST_DEPENDENCIES_FILE)) \
 	GRPCURL_BIN=$(GRPCURL) \
 		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
 

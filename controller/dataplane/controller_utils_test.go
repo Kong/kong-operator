@@ -663,3 +663,160 @@ func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
 		})
 	}
 }
+
+func TestAddAnnotationsForDataPlaneDeployment(t *testing.T) {
+	testCases := []struct {
+		name                string
+		existingAnnotations map[string]string
+		specAnnotations     map[string]string
+		expectedAnnotations map[string]string
+		expectedInfoCount   int
+	}{
+		{
+			name:                "no-op when DataPlane has no deployment annotations",
+			existingAnnotations: map[string]string{"existing": "val"},
+			expectedAnnotations: map[string]string{"existing": "val"},
+		},
+		{
+			name:                "new keys merged, conflicting keys overridden, last-applied tracked",
+			existingAnnotations: map[string]string{"existing": "val", "conflict": "old"},
+			specAnnotations:     map[string]string{"new": "val", "conflict": "new"},
+			expectedAnnotations: map[string]string{
+				"existing":                              "val",
+				"new":                                   "val",
+				"conflict":                              "new",
+				consts.AnnotationLastAppliedAnnotations: `{"conflict":"new","new":"val"}`,
+			},
+		},
+		{
+			name:            "nil existing annotations initialized correctly",
+			specAnnotations: map[string]string{"k": "v"},
+			expectedAnnotations: map[string]string{
+				"k":                                     "v",
+				consts.AnnotationLastAppliedAnnotations: `{"k":"v"}`,
+			},
+		},
+		{
+			name: "reserved keys are dropped and a warning is logged",
+			specAnnotations: map[string]string{
+				"safe":                           "val",
+				consts.OperatorLabelPrefix + "x": "val",
+			},
+			expectedAnnotations: map[string]string{
+				"safe":                                  "val",
+				consts.AnnotationLastAppliedAnnotations: `{"safe":"val"}`,
+			},
+			expectedInfoCount: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataplane := operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{Annotations: tc.specAnnotations},
+						},
+					},
+				},
+			}
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Annotations: tc.existingAnnotations}}
+			var infoCount int
+			addAnnotationsForDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, dataplane)
+			require.Equal(t, tc.expectedAnnotations, deployment.Annotations)
+			assert.Equal(t, tc.expectedInfoCount, infoCount)
+		})
+	}
+}
+
+func TestAddLabelsForDataPlaneDeployment(t *testing.T) {
+	testCases := []struct {
+		name              string
+		existingLabels    map[string]string
+		specLabels        map[string]string
+		expectedLabels    map[string]string
+		expectedInfoCount int
+	}{
+		{
+			name:           "no-op when DataPlane has no deployment labels",
+			existingLabels: map[string]string{"existing": "val"},
+			expectedLabels: map[string]string{"existing": "val"},
+		},
+		{
+			name:           "new keys merged, conflicting keys overridden",
+			existingLabels: map[string]string{"existing": "val", "conflict": "old"},
+			specLabels:     map[string]string{"new": "val", "conflict": "new"},
+			expectedLabels: map[string]string{"existing": "val", "new": "val", "conflict": "new"},
+		},
+		{
+			name:           "nil existing labels initialized correctly",
+			specLabels:     map[string]string{"k": "v"},
+			expectedLabels: map[string]string{"k": "v"},
+		},
+		{
+			name:              "reserved keys are dropped and a warning is logged",
+			specLabels:        map[string]string{"safe": "val", "app": "should-not-override-selector"},
+			expectedLabels:    map[string]string{"safe": "val"},
+			expectedInfoCount: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataplane := operatorv1beta1.DataPlane{
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{Labels: tc.specLabels},
+						},
+					},
+				},
+			}
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Labels: tc.existingLabels}}
+			var infoCount int
+			addLabelsForDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, dataplane)
+			require.Equal(t, tc.expectedLabels, deployment.Labels)
+			assert.Equal(t, tc.expectedInfoCount, infoCount)
+		})
+	}
+}
+
+func TestFilterReservedDataPlaneDeploymentKeys(t *testing.T) {
+	testCases := []struct {
+		name           string
+		keys           map[string]string
+		expectedKept   map[string]string
+		expectedIgnore int
+	}{
+		{
+			name: "reserved keys dropped, safe keys kept",
+			keys: map[string]string{
+				"safe-key":                          "val",
+				consts.OperatorLabelPrefix + "foo":  "val",
+				"app":                               "should-not-override-selector",
+				"deployment.kubernetes.io/revision": "1",
+			},
+			expectedKept:   map[string]string{"safe-key": "val"},
+			expectedIgnore: 3,
+		},
+		{
+			name:           "no reserved keys - nothing dropped, no warnings",
+			keys:           map[string]string{"safe-key": "val", "another": "val2"},
+			expectedKept:   map[string]string{"safe-key": "val", "another": "val2"},
+			expectedIgnore: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var infoCount int
+			logger := logr.New(infoCountSink{count: &infoCount})
+			dataplane := &operatorv1beta1.DataPlane{ObjectMeta: metav1.ObjectMeta{Name: "dp", Namespace: "default"}}
+
+			filtered := filterReservedDataPlaneDeploymentKeys(logger, dataplane, "annotation", tc.keys)
+			require.Equal(t, tc.expectedKept, filtered)
+			assert.Equal(t, tc.expectedIgnore, infoCount, "expected a warning to be logged per reserved key dropped")
+		})
+	}
+}

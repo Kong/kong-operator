@@ -141,6 +141,17 @@ func (a AssociationConfig) RefTypeName() string {
 	return a.Kinds[0] + "Ref"
 }
 
+// SourceConfig declares whether a generated root CRD supports being a Mirror of
+// an existing Konnect entity in addition to the default Origin behavior. When
+// SupportsMirror is true the generator emits Source/Mirror spec fields, spec-level
+// CEL, an optional-pointer APISpec, GetSource/GetMirror accessors, and a Mirror
+// short-circuit in the generated create/update/delete ops.
+type SourceConfig struct {
+	// SupportsMirror enables Origin+Mirror. When false (or when the source block
+	// is omitted entirely) the entity stays Origin-only.
+	SupportsMirror bool `yaml:"supportsMirror,omitempty"`
+}
+
 // SecretReferenceConfig configures a single sensitive field that can be provided
 // inline or sourced from a Kubernetes Secret.
 //
@@ -203,6 +214,9 @@ type TypeConfig struct {
 	OpsRequireClient bool `yaml:"-"`
 	// OpsSkipGetForUID skips generation of the getForUID function for this entity.
 	OpsSkipGetForUID bool `yaml:"-"`
+	// OpsSkipRootUnionMetadataFields opts an entity out of labels/tags/name
+	// detection inside root-union (discriminated-union) request-body variants.
+	OpsSkipRootUnionMetadataFields bool `yaml:"-"`
 	// OpsUseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	OpsUseUIDTagFilter bool `yaml:"-"`
@@ -229,6 +243,20 @@ type TypeConfig struct {
 	// When set, reconciler wiring files (interface methods, watch options,
 	// index files) are generated for this entity.
 	Reconciler *ReconcilerConfig `yaml:"reconciler,omitempty"`
+	// Source declares Origin/Mirror support for this (root) entity. Nil => Origin-only.
+	Source *SourceConfig `yaml:"-"`
+	// OneOfVariantNamesFromTitle lists generated union wrapper type names (e.g.
+	// "AIGatewayModelRouteConfigModel") for which anonymous oneOf variants (no
+	// $ref) are named after their OAS `title` instead of the generic
+	// Variant1/Variant2/... fallback. A titled variant whose schema has
+	// exactly one nested property is additionally flattened onto the wrapper
+	// field directly, avoiding a doubled JSON key like
+	// route.model.pathAliases.pathAliases. Declared under whichever entity's
+	// config block is convenient — the names are matched against the
+	// generated union type regardless of which entity or shared schema it
+	// belongs to. Opt-in only: unlisted unions keep the existing generic
+	// naming and shape.
+	OneOfVariantNamesFromTitle []string `yaml:"oneOfVariantNamesFromTitle,omitempty"`
 }
 
 // ParentRefConfig overrides the spec field for the parent reference when the
@@ -426,8 +454,13 @@ type ResponseStatusFieldConfig struct {
 	StatusField string `yaml:"statusField"`
 	// StatusJSON is the json tag for the status field, e.g. "endpoints".
 	StatusJSON string `yaml:"statusJSON"`
-	// Fields lists the scalar sub-fields of the new status struct.
-	Fields []ResponseStatusSubField `yaml:"fields"`
+	// Fields lists the scalar sub-fields of the new status struct. Mutually
+	// exclusive with RespPath.
+	Fields []ResponseStatusSubField `yaml:"fields,omitempty"`
+	// RespPath, when set, makes this a scalar string status field populated
+	// directly from resp.{RespField}.{RespPath} (a *string on the SDK response
+	// type). Mutually exclusive with Fields.
+	RespPath string `yaml:"respPath,omitempty"`
 }
 
 // ResponseStatusSubField is one scalar field in a response-derived status struct.
@@ -449,6 +482,11 @@ type typeOpsYAML struct {
 	// Use when the SDK list endpoint does not support UID-label filtering, or
 	// when the hand-written implementation already exists.
 	SkipGetForUID bool `yaml:"skipGetForUID,omitempty"`
+	// SkipRootUnionMetadataFields opts an entity out of labels/tags/name
+	// detection inside root-union (discriminated-union) request-body variants.
+	// Defaults to false (detection enabled). Set true to preserve pre-existing
+	// generated output for entities not yet reviewed for this behavior.
+	SkipRootUnionMetadataFields bool `yaml:"skipRootUnionMetadataFields,omitempty"`
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool `yaml:"useUIDTagFilter,omitempty"`
@@ -477,6 +515,10 @@ type typeConfigYAML struct {
 	SecretReferences     []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
 	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
 	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
+	Source               *SourceConfig           `yaml:"source,omitempty"`
+	// OneOfVariantNamesFromTitle lists generated union wrapper type names opted
+	// into title-based anonymous variant naming. See TypeConfig's doc comment.
+	OneOfVariantNamesFromTitle []string `yaml:"oneOfVariantNamesFromTitle,omitempty"`
 }
 
 // UnmarshalYAML preserves the in-memory Ops map shape while allowing
@@ -488,20 +530,23 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	*tc = TypeConfig{
-		Path:                 raw.Path,
-		Name:                 raw.Name,
-		SchemaFieldOmissions: raw.SchemaFieldOmissions,
-		CEL:                  raw.CEL,
-		References:           raw.References,
-		Associations:         raw.Associations,
-		SecretReferences:     raw.SecretReferences,
-		Reconciler:           raw.Reconciler,
+		Path:                       raw.Path,
+		Name:                       raw.Name,
+		SchemaFieldOmissions:       raw.SchemaFieldOmissions,
+		CEL:                        raw.CEL,
+		References:                 raw.References,
+		Associations:               raw.Associations,
+		SecretReferences:           raw.SecretReferences,
+		Reconciler:                 raw.Reconciler,
+		Source:                     raw.Source,
+		OneOfVariantNamesFromTitle: raw.OneOfVariantNamesFromTitle,
 	}
 
 	if raw.Ops != nil {
 		tc.Ops = raw.Ops.Operations
 		tc.OpsRequireClient = raw.Ops.RequireClient
 		tc.OpsSkipGetForUID = raw.Ops.SkipGetForUID
+		tc.OpsSkipRootUnionMetadataFields = raw.Ops.SkipRootUnionMetadataFields
 		tc.OpsUseUIDTagFilter = raw.Ops.UseUIDTagFilter
 		tc.OpsListCallStylePositional = raw.Ops.ListCallStylePositional
 		tc.OpsGetForUID = raw.Ops.GetForUID
@@ -521,6 +566,9 @@ type EntityOpsConfig struct {
 	RequireClient bool
 	// SkipGetForUID skips generation of the getForUID function for this entity.
 	SkipGetForUID bool
+	// SkipRootUnionMetadataFields opts an entity out of labels/tags/name
+	// detection inside root-union (discriminated-union) request-body variants.
+	SkipRootUnionMetadataFields bool
 	// UseUIDTagFilter enables generated getForUID code to pass the object's
 	// Kubernetes UID tag as a list query filter when the API supports it.
 	UseUIDTagFilter bool
@@ -627,6 +675,39 @@ func (c *APIGroupVersionConfig) ReconcilerConfigs(pathToEntityName map[string]st
 	return result
 }
 
+// SourceConfigs builds a mapping from entity name to source config using the
+// provided pathToEntityName mapping (built after parsing the OpenAPI spec).
+func (c *APIGroupVersionConfig) SourceConfigs(pathToEntityName map[string]string) map[string]*SourceConfig {
+	result := make(map[string]*SourceConfig)
+	for _, tc := range c.Types {
+		if tc.Source == nil {
+			continue
+		}
+		entityName, ok := pathToEntityName[tc.Path]
+		if !ok {
+			continue
+		}
+		result[entityName] = tc.Source
+	}
+	return result
+}
+
+// OneOfVariantNamesFromTitleUnions builds the set of generated union wrapper
+// type names opted into naming anonymous oneOf variants after their OAS title,
+// aggregated across every entity's configuration.
+func (c *APIGroupVersionConfig) OneOfVariantNamesFromTitleUnions() map[string]bool {
+	result := make(map[string]bool)
+	for _, tc := range c.Types {
+		for _, unionTypeName := range tc.OneOfVariantNamesFromTitle {
+			if unionTypeName == "" {
+				continue
+			}
+			result[unionTypeName] = true
+		}
+	}
+	return result
+}
+
 // OpsConfig builds a mapping from entity name to operations config using the provided
 // pathToEntityName mapping (built after parsing the OpenAPI spec).
 func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) map[string]*EntityOpsConfig {
@@ -641,14 +722,15 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		}
 		requireClient := tc.OpsRequireClient || len(tc.SecretReferences) > 0
 		result[entityName] = &EntityOpsConfig{
-			Ops:                     tc.Ops,
-			RequireClient:           requireClient,
-			SkipGetForUID:           tc.OpsSkipGetForUID,
-			UseUIDTagFilter:         tc.OpsUseUIDTagFilter,
-			ListCallStylePositional: tc.OpsListCallStylePositional,
-			GetForUID:               tc.OpsGetForUID,
-			SDK:                     tc.OpsSDK,
-			ResponseStatusFields:    tc.OpsResponseStatusFields,
+			Ops:                         tc.Ops,
+			RequireClient:               requireClient,
+			SkipGetForUID:               tc.OpsSkipGetForUID,
+			SkipRootUnionMetadataFields: tc.OpsSkipRootUnionMetadataFields,
+			UseUIDTagFilter:             tc.OpsUseUIDTagFilter,
+			ListCallStylePositional:     tc.OpsListCallStylePositional,
+			GetForUID:                   tc.OpsGetForUID,
+			SDK:                         tc.OpsSDK,
+			ResponseStatusFields:        tc.OpsResponseStatusFields,
 		}
 	}
 	return result
@@ -815,9 +897,6 @@ func (tc *TypeConfig) validate() error {
 		if len(ref.Kinds) > 1 && ref.RefTypeName == "" {
 			return fmt.Errorf("reference %q: refTypeName is required when multiple kinds are configured", ref.Path)
 		}
-		if len(ref.Kinds) == 1 && ref.RefTypeName != "" {
-			return fmt.Errorf("reference %q: refTypeName must not be set when a single kind is configured", ref.Path)
-		}
 	}
 	seenAssocNames := make(map[string]bool)
 	for i, a := range tc.Associations {
@@ -896,6 +975,20 @@ func (tc *TypeConfig) validate() error {
 		} else if err := validateGetForUIDMatchFields("ops.getForUID.matchFields", tc.OpsGetForUID.MatchFields); err != nil {
 			return err
 		}
+	}
+	for i, f := range tc.OpsResponseStatusFields {
+		if f.StatusField == "" {
+			return fmt.Errorf("ops.responseStatusFields[%d].statusField is required", i)
+		}
+		if f.StatusJSON == "" {
+			return fmt.Errorf("ops.responseStatusFields[%d].statusJSON is required", i)
+		}
+		if len(f.Fields) > 0 == (f.RespPath != "") {
+			return fmt.Errorf("ops.responseStatusFields[%d] (%s): exactly one of fields or respPath is required", i, f.StatusField)
+		}
+	}
+	if tc.Source != nil && tc.Source.SupportsMirror && strings.Contains(tc.Path, "{") {
+		return fmt.Errorf("source.supportsMirror is only supported on root entities (path %q has path parameters)", tc.Path)
 	}
 	return nil
 }

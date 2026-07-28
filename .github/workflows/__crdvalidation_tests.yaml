@@ -17,7 +17,8 @@ env:
 
 jobs:
   crd-validation-tests:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    # NOTE: This job can take longer than the default timeout so we bump it to 15 minutes.
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 15) }}
     runs-on: ubuntu-latest
     name: ${{ matrix.crd_validation_test.name }} - ${{ matrix.cluster_version }}
     strategy:
@@ -40,16 +41,16 @@ jobs:
       uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: go.mod
         cache: false
     - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
     - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
 
-    - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+    - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
       with:
         install: false
 

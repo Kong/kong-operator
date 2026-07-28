@@ -6,7 +6,7 @@ metadata:
 spec:
   type: token
   token: kpat_XXXXXXXXXXXXXXXXXXX
-  serverURL: us.api.konghq.tech
+  serverURL: us.api.konghq.com
 ---
 kind: KonnectGatewayControlPlane
 apiVersion: konnect.konghq.com/v1alpha2

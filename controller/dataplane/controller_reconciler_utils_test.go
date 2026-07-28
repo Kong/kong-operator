@@ -18,6 +18,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
@@ -102,6 +103,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							Hardened: commonv1alpha1.HardeningStateEnabled,
 							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
@@ -156,9 +158,9 @@ func TestDeploymentBuilder(t *testing.T) {
 				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
-				require.Len(t, deployment.Spec.Template.Spec.Volumes, 2)
+				require.Len(t, deployment.Spec.Template.Spec.Volumes, 4)
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
-				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
+				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 4)
 
 				certificateVolume := corev1.Volume{}
 				certificateVolume.Secret = &corev1.SecretVolumeSource{}
@@ -203,6 +205,14 @@ func TestDeploymentBuilder(t *testing.T) {
 						MountPath: "/var/test/",
 						ReadOnly:  true,
 					},
+					{
+						Name:      "tmp",
+						MountPath: "/tmp",
+					},
+					{
+						Name:      "var-kong",
+						MountPath: "/var/kong",
+					},
 				},
 					deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
 				)
@@ -218,6 +228,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							Hardened: commonv1alpha1.HardeningStateEnabled,
 							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
@@ -261,9 +272,9 @@ func TestDeploymentBuilder(t *testing.T) {
 				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
-				require.Len(t, deployment.Spec.Template.Spec.Volumes, 2)
+				require.Len(t, deployment.Spec.Template.Spec.Volumes, 4)
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
-				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
+				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 4)
 
 				certificateVolume := corev1.Volume{}
 				certificateVolume.Secret = &corev1.SecretVolumeSource{}
@@ -302,6 +313,14 @@ func TestDeploymentBuilder(t *testing.T) {
 						Name:      "test-volume",
 						MountPath: "/var/test/",
 						ReadOnly:  true,
+					},
+					{
+						Name:      "tmp",
+						MountPath: "/tmp",
+					},
+					{
+						Name:      "var-kong",
+						MountPath: "/var/kong",
 					},
 					{
 						Name:      consts.ClusterCertificateVolume,
@@ -357,6 +376,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							Hardened: commonv1alpha1.HardeningStateEnabled,
 							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
@@ -421,6 +441,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							Hardened: commonv1alpha1.HardeningStateEnabled,
 							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
@@ -492,6 +513,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							Hardened: commonv1alpha1.HardeningStateEnabled,
 							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
@@ -556,6 +578,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							Hardened: commonv1alpha1.HardeningStateEnabled,
 							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{

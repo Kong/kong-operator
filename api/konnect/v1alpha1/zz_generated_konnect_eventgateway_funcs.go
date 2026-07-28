@@ -51,6 +51,12 @@ func (obj *KonnectEventGateway) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the KonnectEventGateway's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *KonnectEventGateway) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the KonnectEventGateway Kind name.
 func (obj KonnectEventGateway) GetTypeName() string {
 	return "KonnectEventGateway"

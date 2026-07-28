@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.2.1
+    kubernetes-configuration.konghq.com/version: v2.3.0-rc.2
   name: portals.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -88,20 +88,8 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
-                  createDefaultContent:
-                    description: Use to create the portal page default content upon
-                      creation of this portal
-                    enum:
-                    - Enabled
-                    - Disabled
-                    type: string
                   defaultAPIVisibility:
-                    description: |-
-                      The default visibility of APIs in the portal.
-                      If set to `public`, newly published APIs are visible to unauthenticated
-                      developers.
-                      If set to `private`, newly published APIs are hidden from unauthenticated
-                      developers.
+                    description: The default visibility of APIs in the portal.
                     enum:
                     - public
                     - private
@@ -170,12 +158,7 @@ spec:
                       rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef)
                         : true'
                   defaultPageVisibility:
-                    description: |-
-                      The default visibility of pages in the portal.
-                      If set to `public`, newly created pages are visible to unauthenticated
-                      developers.
-                      If set to `private`, newly created pages are hidden from unauthenticated
-                      developers.
+                    description: The default visibility of pages in the portal.
                     enum:
                     - public
                     - private
@@ -208,12 +191,6 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     type: object
-                  mcpServerEnabled:
-                    description: Whether the portal has the MCP server enabled
-                    enum:
-                    - Enabled
-                    - Disabled
-                    type: string
                   name:
                     description: |-
                       The name of the portal, used to distinguish it from other portals.

@@ -26,6 +26,17 @@ type opsFileImport struct {
 	Path  string
 }
 
+// hasNestedResponseStatusFields reports whether any entry generates a nested
+// status struct (has Fields) rather than a scalar RespPath field.
+func hasNestedResponseStatusFields(fields []config.ResponseStatusFieldConfig) bool {
+	for _, f := range fields {
+		if len(f.Fields) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // generateEntityOpsFile emits a zz_generated_ops_<entity>.go file containing
 // create<Entity>, update<Entity>, delete<Entity>, and get<Entity>ForUID
 // functions (whichever are configured). It returns the file plus metadata for
@@ -79,17 +90,24 @@ func (g *Generator) generateEntityOpsFile(
 		deleteNeedsOpsImport := deleteData != nil &&
 			(deleteData.DeleteFullyWrapped ||
 				(deleteData.DeleteAsUpdate && (deleteData.DeletePutWrapped || deleteData.DeletePutFullyWrapped)))
-		needsOpsImport := (updateData != nil && updateData.UpdateWrapped) ||
+		needsOpsImport := (updateData != nil && updateData.UpdateWrapped && !updateData.UpdateFullyWrapped) ||
 			deleteNeedsOpsImport ||
 			getForUIDNeedsOpsImport
 		needsClientImport := (createData != nil && createData.NeedsClient) || (updateData != nil && updateData.NeedsClient)
-		needsStringsImport := createData != nil && len(createData.ResponseStatusFields) > 0
+		needsStringsImport := (createData != nil && createData.HasNestedResponseStatusFields) ||
+			(updateData != nil && updateData.HasNestedResponseStatusFields)
 		needsJSONImport := createData != nil && createData.RespRootUnion != nil
 
 		extraImportSet := make(map[string]string)
 		if deleteData != nil && deleteData.DeleteAsUpdate && deleteData.DeletePutReqImportPath != "" &&
 			!strings.HasSuffix(deleteData.DeletePutReqImportPath, "/operations") {
 			extraImportSet[deleteData.DeletePutReqImportPath] = sdkImportAlias(deleteData.DeletePutReqImportPath)
+		}
+		if (createData != nil && createData.SupportsMirror) ||
+			(updateData != nil && updateData.SupportsMirror) ||
+			(deleteData != nil && deleteData.SupportsMirror) {
+			const commonPath = "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+			extraImportSet[commonPath] = "commonv1alpha1"
 		}
 		extraImports := make([]opsFileImport, 0, len(extraImportSet))
 		for path, alias := range extraImportSet {
@@ -486,11 +504,41 @@ func isSingletonNoID(schema *parser.Schema) bool {
 // metadata injection in the generated create function. labelsPointer is true
 // when the labels map uses nullable string values (map[string]*string in the
 // SDK), which requires the pointer-valued helper variant.
-func metadataFields(schema *parser.Schema) (hasTags, hasLabels, labelsPointer bool) {
+//
+// When the schema is a root-level discriminated union (no properties of its
+// own, only oneOf variants), tags/labels declared inside any variant also
+// count — unless the entity opted out via ops.skipRootUnionMetadataFields
+// (see EntityOpsConfig.SkipRootUnionMetadataFields), which preserves prior
+// generated output for entities not yet reviewed for this behavior.
+func metadataFields(schema *parser.Schema, opsConfig *config.EntityOpsConfig) (hasTags, hasLabels, labelsPointer bool) {
 	if schema == nil {
 		return false, false, false
 	}
-	for _, prop := range schema.Properties {
+	hasTags, hasLabels, labelsPointer = scanMetadataProperties(schema.Properties)
+	if len(schema.Properties) > 0 || len(schema.OneOf) == 0 {
+		return hasTags, hasLabels, labelsPointer
+	}
+	if opsConfig != nil && opsConfig.SkipRootUnionMetadataFields {
+		return hasTags, hasLabels, labelsPointer
+	}
+	for _, variant := range schema.OneOf {
+		if variant == nil {
+			continue
+		}
+		vTags, vLabels, vPointer := scanMetadataProperties(variant.Properties)
+		hasTags = hasTags || vTags
+		if vLabels {
+			hasLabels = true
+			labelsPointer = labelsPointer || vPointer
+		}
+	}
+	return hasTags, hasLabels, labelsPointer
+}
+
+// scanMetadataProperties reports whether props declares a "tags" array
+// property or a "labels" object/map property. See metadataFields.
+func scanMetadataProperties(props []*parser.Property) (hasTags, hasLabels, labelsPointer bool) {
+	for _, prop := range props {
 		if prop == nil {
 			continue
 		}

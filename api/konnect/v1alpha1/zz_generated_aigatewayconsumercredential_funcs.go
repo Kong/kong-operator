@@ -53,6 +53,12 @@ func (obj *AIGatewayConsumerCredential) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the AIGatewayConsumerCredential's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *AIGatewayConsumerCredential) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the AIGatewayConsumerCredential Kind name.
 func (obj AIGatewayConsumerCredential) GetTypeName() string {
 	return "AIGatewayConsumerCredential"
@@ -118,6 +124,11 @@ func (obj *AIGatewayConsumerCredential) GetAIGatewayConsumerRef() commonv1alpha1
 // GetParentRef returns the reference to the parent entity.
 func (obj *AIGatewayConsumerCredential) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetAIGatewayConsumerRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *AIGatewayConsumerCredential) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.AIGatewayConsumerRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

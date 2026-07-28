@@ -15,16 +15,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
-// Scope represents the scope of the object.
-type Scope byte
-
-const (
-	// ScopeCluster represents the cluster scope.
-	ScopeCluster Scope = iota
-	// ScopeNamespace represents the namespace scope.
-	ScopeNamespace
-)
-
 // GetGroupKindScope returns the scope of the object.
 func getGroupKindScope(t *testing.T, cfg *rest.Config, obj client.Object) meta.RESTScopeName {
 	dc := discovery.NewDiscoveryClientForConfigOrDie(cfg)

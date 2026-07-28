@@ -24,6 +24,12 @@ func (obj *EventGatewayDataPlaneCertificate) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayDataPlaneCertificate's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayDataPlaneCertificate) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the EventGatewayDataPlaneCertificate Kind name.
 func (obj EventGatewayDataPlaneCertificate) GetTypeName() string {
 	return "EventGatewayDataPlaneCertificate"
@@ -78,6 +84,11 @@ func (obj *EventGatewayDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayDataPlaneCertificate) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayDataPlaneCertificate) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.GatewayRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

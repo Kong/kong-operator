@@ -1,0 +1,23 @@
+#
+# ponytail: finalizer gap (ref #16) — KonnectAIGateway can be deleted while
+# AIGatewayDataPlane still references it. A referencing finalizer on KonnectAIGateway
+# gated on an AIGatewayDataPlane list lookup would prevent orphaning. Add when
+# cross-resource protection is implemented in controller/aigateway/dataplane/controller.go.
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ($aigw_dp_name)
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'KonnectAIGatewayResolved']):
+    - status: 'False'
+      reason: NotFound
+  (conditions[?type == 'CertificateProvisioned']):
+    - status: 'True'
+      reason: CertificateProvisioned
+  (conditions[?type == 'KonnectCertificateRegistered']):
+    - status: 'True'
+      reason: KonnectCertificateRegistered
+  (conditions[?type == 'Ready']):
+    - status: 'False'
+      reason: DependenciesNotReady

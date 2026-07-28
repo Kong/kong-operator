@@ -120,7 +120,10 @@ func gatewayConfigDataPlaneOptionsV2ToV1(o *operatorv2beta1.GatewayConfigDataPla
 		DeploymentOptions: DeploymentOptions{
 			Replicas:        o.Deployment.Replicas,
 			PodTemplateSpec: o.Deployment.PodTemplateSpec,
+			Annotations:     o.Deployment.Annotations,
+			Labels:          o.Deployment.Labels,
 		},
+		Hardened: o.Deployment.Hardened,
 	}
 	if o.Deployment.Rollout != nil {
 		deployment.Rollout = &Rollout{
@@ -203,7 +206,10 @@ func gatewayConfigDataPlaneOptionsV1ToV2(o *GatewayConfigDataPlaneOptions) *oper
 		DeploymentOptions: operatorv2beta1.DeploymentOptions{
 			Replicas:        o.Deployment.Replicas,
 			PodTemplateSpec: o.Deployment.PodTemplateSpec,
+			Annotations:     o.Deployment.Annotations,
+			Labels:          o.Deployment.Labels,
 		},
+		Hardened: o.Deployment.Hardened,
 	}
 	if o.Deployment.Rollout != nil &&
 		o.Deployment.Rollout.Strategy.BlueGreen != nil {

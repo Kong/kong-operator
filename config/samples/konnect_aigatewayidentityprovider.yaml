@@ -7,7 +7,7 @@ spec:
   type: token
   token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
-  serverURL: us.api.konghq.tech
+  serverURL: us.api.konghq.com
 ---
 kind: KonnectAIGateway
 apiVersion: konnect.konghq.com/v1alpha1
@@ -71,6 +71,7 @@ spec:
       displayName: My OpenID Connect Identity Provider
       config:
         issuer: https://my-idp.example.com/.well-known/openid-configuration
+        cacheTokensSalt: my-cache-salt
         clientID:
           - my-client-id
         clientSecret:

@@ -20,8 +20,11 @@ import (
 {{- if .ObjectRefImport}}
 	{{.ObjectRefImport.Alias}} "{{.ObjectRefImport.Path}}"
 {{- end}}
-{{- if .HasRootReconciler}}
+{{- if or .HasRootReconciler .SupportsMirror}}
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+{{- end}}
+{{- if .NeedsCommonV1Alpha1Import}}
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 {{- end}}
 )
 
@@ -63,12 +66,34 @@ type {{.EntityName}}List struct {
 }
 
 // {{.EntityName}}Spec defines the desired state of {{.EntityName}}.
+{{- if .SupportsMirror}}
+//
+// +kubebuilder:validation:XValidation:message="spec.source is immutable", rule="!has(self.source) && !has(oldSelf.source) ? true : self.source == oldSelf.source"
+// +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror", rule="self.source != 'Mirror' || has(self.mirror)"
+// +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin", rule="self.source != 'Origin' || !has(self.mirror)"
+// +kubebuilder:validation:XValidation:message="apiSpec must be set for type Origin", rule="self.source != 'Origin' || has(self.apiSpec)"
+// +kubebuilder:validation:XValidation:message="apiSpec cannot be set for type Mirror", rule="self.source != 'Mirror' || !has(self.apiSpec)"
+{{- end}}
 type {{.EntityName}}Spec struct {
 {{- if .HasRootReconciler}}
 	// KonnectConfiguration is the Konnect configuration for this entity.
 	//
 	// +required
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration ` + "`" + `json:"konnect"` + "`" + `
+{{- end}}
+{{- if .SupportsMirror}}
+
+	// Source represents the source type of the Konnect entity.
+	//
+	// +kubebuilder:validation:Enum=Origin;Mirror
+	// +optional
+	// +kubebuilder:default=Origin
+	Source *commonv1alpha1.EntitySource ` + "`" + `json:"source,omitempty"` + "`" + `
+
+	// Mirror is the Konnect Mirror configuration, only applicable when source is Mirror.
+	//
+	// +optional
+	Mirror *konnectv1alpha2.MirrorSpec ` + "`" + `json:"mirror,omitempty"` + "`" + `
 {{- end}}
 {{- if .ParentRef}}
 	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
@@ -95,7 +120,11 @@ type {{.EntityName}}Spec struct {
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
+{{- if .SupportsMirror}}
+	APISpec *{{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitempty"` + "`" + `
+{{- else}}
 	APISpec {{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitzero"` + "`" + `
+{{- end}}
 }
 {{- range .Associations}}
 
@@ -173,7 +202,11 @@ type {{.EntityName}}Status struct {
 	// {{.StatusField}} contains the {{.StatusField}} returned by the Konnect API.
 	//
 	// +optional
+{{- if .RespPath}}
+	{{.StatusField}} *string ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
+{{- else}}
 	{{.StatusField}} *{{$.EntityName}}{{.StatusField}} ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
+{{- end}}
 {{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
@@ -181,6 +214,7 @@ type {{.EntityName}}Status struct {
 	ObservedGeneration int64 ` + "`" + `json:"observedGeneration,omitzero"` + "`" + `
 }
 {{- range .ResponseStatusFields}}
+{{- if not .RespPath}}
 
 // {{$.EntityName}}{{.StatusField}} holds the {{.StatusField}} from the Konnect API response.
 type {{$.EntityName}}{{.StatusField}} struct {
@@ -191,6 +225,7 @@ type {{$.EntityName}}{{.StatusField}} struct {
 	{{.Name}} string ` + "`" + `json:"{{.JSON}},omitempty"` + "`" + `
 {{- end}}
 }
+{{- end}}
 {{- end}}
 `
 
@@ -209,6 +244,11 @@ import (
 ){{end}}{{if .KonnectLabelsField}}
 // GetKonnectLabels gets the Konnect labels from the object's API spec.
 func (obj *{{.EntityName}}) GetKonnectLabels() map[string]string {
+{{- if .SupportsMirror}}
+	if obj.Spec.APISpec == nil {
+		return nil
+	}
+{{- end}}
 	if obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} == nil {
 		return nil
 	}
@@ -223,6 +263,14 @@ func (obj *{{.EntityName}}) GetKonnectLabels() map[string]string {
 
 // SetKonnectLabels sets the Konnect labels in the object's API spec.
 func (obj *{{.EntityName}}) SetKonnectLabels(labels map[string]string) {
+{{- if .SupportsMirror}}
+	if obj.Spec.APISpec == nil {
+		if labels == nil {
+			return
+		}
+		obj.Spec.APISpec = &{{.EntityName}}APISpec{}
+	}
+{{- end}}
 	if labels == nil {
 		obj.Spec.APISpec.{{.KonnectLabelsField.FieldName}} = nil
 		return
@@ -251,6 +299,34 @@ func (obj *{{.EntityName}}) SetKonnectID(id string) {
 func (obj *{{.EntityName}}) GetKonnectID() string {
 	return obj.Status.ID
 }
+{{- if .NameAccessor}}
+
+// GetKonnectName returns the {{.EntityName}}'s identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *{{.EntityName}}) GetKonnectName() string {
+{{- if .SupportsMirror}}
+	if obj.Spec.APISpec == nil {
+		return ""
+	}
+{{- end}}
+{{- if .NameAccessor.IsUnion}}
+	if obj.Spec.APISpec.{{.NameAccessor.WrapperFieldName}} == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.{{.NameAccessor.WrapperFieldName}}.Type {
+{{- range .NameAccessor.Variants}}
+	case {{.TypeConst}}:
+		if obj.Spec.APISpec.{{$.NameAccessor.WrapperFieldName}}.{{.FieldName}} != nil {
+			return string(obj.Spec.APISpec.{{$.NameAccessor.WrapperFieldName}}.{{.FieldName}}.Name)
+		}
+{{- end}}
+	}
+	return ""
+{{- else}}
+	return string(obj.Spec.APISpec.Name)
+{{- end}}
+}
+{{- end}}
 
 // GetTypeName returns the {{.EntityName}} Kind name.
 func (obj {{.EntityName}}) GetTypeName() string {
@@ -276,6 +352,18 @@ func (obj *{{.EntityName}}) GetConditions() []metav1.Condition {
 func (obj *{{.EntityName}}) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+{{- if .SupportsMirror}}
+
+// GetSource returns the source type (Origin or Mirror) of the {{.EntityName}}.
+func (obj *{{.EntityName}}) GetSource() *commonv1alpha1.EntitySource {
+	return obj.Spec.Source
+}
+
+// GetMirror returns the Konnect Mirror configuration of the {{.EntityName}}.
+func (obj *{{.EntityName}}) GetMirror() *konnectv1alpha2.MirrorSpec {
+	return obj.Spec.Mirror
+}
+{{- end}}
 {{- range .Dependencies}}
 
 // Get{{.EntityName}}ID returns the Konnect ID of the parent {{.EntityName}}.
@@ -307,6 +395,11 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 	return obj.Get{{.SetParentIDEntityName}}Ref()
 }
 
+// SetParentRef sets the reference to the parent entity.
+func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
+	obj.Spec.{{.ParentRefGoFieldName}} = ref
+}
+
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
 	obj.Set{{.ParentStatusEntityName}}ID(id)
@@ -332,6 +425,11 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 {{- else}}
 	return obj.Get{{.RootRefDependency.EntityName}}Ref()
 {{- end}}
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
+	obj.Spec.{{.RootRefDependency.FieldName}} = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
@@ -573,6 +671,23 @@ var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
 {{- end}}
 }
 {{- end}}
+{{- if .FreeformKeyFields}}
+
+// {{$.EntityName}}SDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+{{- range .FreeformKeyFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+{{- end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
@@ -589,7 +704,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
+	{{- if $.FreeformKeyFields}}
+	payload = renameKeysToSDKExcept(payload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	payload = renameKeysToSDK(payload)
+	{{- end}}
 	{{- if $.BoolFields}}
 	if pm, ok := payload.(map[string]any); ok {
 		if err := normalize{{$.EntityName}}SDKOpsBoolFields(pm); err != nil {
@@ -776,7 +895,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 		payload = map[string]any{}
 	}
 {{- range $.References}}
-{{- if not .ACLNested}}
+{{- if not .NestedRef}}
 	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
 	if err != nil {
 		return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
@@ -785,7 +904,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}
 {{- end}}
 {{- end}}
-{{- template "sdkOpsACLRefInjections" $}}
+{{- template "sdkOpsRefInjections" $}}
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal {{$.EntityName}} SDK payload with references: %w", err)
@@ -858,6 +977,25 @@ const sdkOpsReferenceSharedDefines = `
 // RefsAt{{$.EntityName}}{{.GoResolverName}} returns the references at {{.Path}},
 // or nil when any ancestor is unset.
 func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeName}} {
+{{- if .NestedArrayScalar}}
+{{- range .ArrayGuardExprs}}
+	if {{.}} == nil {
+		return nil
+	}
+{{- end}}
+	var refs []{{.TypeName}}
+	for i := range {{.ArrayPath}} {
+{{- if .ArrayLeafPointer}}
+		if {{.ArrayPath}}[i].{{.ArrayLeafName}} == nil {
+			continue
+		}
+		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafName}})
+{{- else}}
+		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafName}})
+{{- end}}
+	}
+	return refs
+{{- else}}
 {{- $path := "obj.Spec.APISpec"}}
 {{- range .GoPathSegments}}
 {{- $path = printf "%s.%s" $path .Name}}
@@ -867,7 +1005,12 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeN
 	}
 {{- end}}
 {{- end}}
+{{- if .SingleValueObjectRef}}
+	return []{{.TypeName}}{*{{$path}}}
+{{- else}}
 	return {{$path}}
+{{- end}}
+{{- end}}
 }
 {{end}}
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the CR references in {{.Path}}
@@ -915,7 +1058,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 				continue
 			}
 {{- if $ref.ResolvesToName}}
-			resolvedValue = string(referenced.Spec.APISpec.Name)
+			resolvedValue = referenced.GetKonnectName()
 {{- else}}
 			resolvedValue = konnectID
 {{- end}}
@@ -948,7 +1091,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, string(referenced.Spec.APISpec.Name))
+		resolved = append(resolved, referenced.GetKonnectName())
 {{- else}}
 		id := referenced.GetKonnectID()
 		if id == "" {
@@ -980,31 +1123,93 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 }
 {{- end}}
 {{- end}}
-{{- define "sdkOpsACLRefInjections"}}
-{{- range .ACLRefInjections}}
+{{- define "sdkOpsRefInjections"}}
+{{- range .RefInjections}}
+{{- $inj := .}}
+{{- if .UnionVar}}
 	// {{.Path}} carries CR references: rebuild the "{{.SDKUnionKey}}" union
 	// value in the SDK payload from the CRD ACL union's selected variant with the
 	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
 	// CRD union leaves the payload untouched.
+{{- else if .ArrayKey}}
+	// {{.Path}} carries a CR reference: inject the resolved Konnect values into
+	// each element of the "{{.ArrayKey}}" array in the SDK payload, preserving
+	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+{{- else if .ObjectWrap}}
+	// {{.Path}} carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "{{.ObjectWrapKey}}",
+	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
+	// that part of the config wasn't set, so the payload is left untouched.
+{{- else}}
+	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
+	// ancestor pointer means that part of the config wasn't set, so the payload
+	// is left untouched.
+{{- end}}
 	if {{.Cond}} {
+{{- if .UnionVar}}
 		{{.UnionVar}} := {{.UnionExpr}}
+{{- end}}
 {{- range .ParentNavs}}
 		{{.Var}}, _ := {{.Parent}}["{{.Key}}"].(map[string]any)
 		if {{.Var}} == nil {
 			{{.Var}} = map[string]any{}
 		}
 {{- end}}
+{{- if .UnionVar}}
 		switch {
-{{- $group := .}}
 {{- range .Variants}}
-		case {{$group.UnionVar}}.Type == {{.TypeConst}}:
+		case {{$inj.UnionVar}}.Type == {{.TypeConst}}:
 			resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
 			}
-			{{$group.TargetVar}}["{{$group.SDKUnionKey}}"] = map[string]any{"{{.LeafSDKKey}}": resolved{{.ResolverName}}}
+			{{$inj.TargetVar}}["{{$inj.SDKUnionKey}}"] = map[string]any{"{{.LeafSDKKey}}": resolved{{.ResolverName}}}
 {{- end}}
 		}
+{{- else if .ArrayKey}}
+{{- range .Variants}}
+		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
+		}
+		if arr, ok := {{$inj.TargetVar}}["{{$inj.ArrayKey}}"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := el["{{.LeafSDKKey}}"]; !has {
+					continue
+				}
+				if ri < len(resolved{{.ResolverName}}) {
+					el["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
+					ri++
+				}
+			}
+		}
+{{- end}}
+{{- else if .ObjectWrap}}
+{{- range .Variants}}
+		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
+		}
+		if len(resolved{{.ResolverName}}) > 0 {
+			{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
+		}
+{{- end}}
+{{- else}}
+{{- range .Variants}}
+		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
+		}
+		{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}
+{{- end}}
+{{- end}}
 {{- range .ParentNavsReversed}}
 		{{.Parent}}["{{.Key}}"] = {{.Var}}
 {{- end}}
@@ -1154,6 +1359,40 @@ var {{$.EntityName}}SDKOpsConstFields = []sdkOpsConstField{
 {{- end}}
 }
 {{- end}}
+{{- if .UnionUnwrapFields}}
+
+// {{$.EntityName}}SDKOpsUnionUnwrapFields lists property-level oneOf fields
+// with no OAS discriminator, whose payload must be unwrapped from the CRD's
+// discriminated shape to the Konnect SDK's non-discriminated shape.
+var {{$.EntityName}}SDKOpsUnionUnwrapFields = []sdkOpsUnionUnwrapField{
+{{- range .UnionUnwrapFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+{{- end}}
+{{- if .FreeformKeyFields}}
+
+// {{$.EntityName}}SDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+{{- range .FreeformKeyFields}}
+	{
+		Path: []string{
+{{- range .Path}}
+			"{{.}}",
+{{- end}}
+		},
+	},
+{{- end}}
+}
+{{- end}}
 
 func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
@@ -1170,7 +1409,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
+	{{- if $.FreeformKeyFields}}
+	renamed := renameKeysToSDKExcept(rawPayload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	renamed := renameKeysToSDK(rawPayload)
+	{{- end}}
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert {{$.EntityName}}APISpec SDK payload to map")
@@ -1179,6 +1422,9 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	if err := normalize{{$.EntityName}}SDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize {{$.EntityName}}APISpec SDK payload: %w", err)
 	}
+	{{- end }}
+	{{- if $.UnionUnwrapFields}}
+	unwrapSDKOpsUnionFields(payload, {{$.EntityName}}SDKOpsUnionUnwrapFields)
 	{{- end }}
 	{{- if $.ConstFields}}
 	injectSDKOpsConstFields(payload, {{$.EntityName}}SDKOpsConstFields)
@@ -1257,6 +1503,11 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.CreateVariantTypeName}}: %w", err)
 		}
+		{{- if $.UnionUnwrapFields}}
+		if err := assignSDKOpsUnionMembers(&member, data, {{$.EntityName}}SDKOpsUnionUnwrapFields, "{{.JSONName}}"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
+		{{- end}}
 		body := {{$compAlias}}.{{.WrappedCreateConstructorName}}(member)
 		return &{{$opsAlias}}.{{$typeName}}{
 			{{$bodyField}}: {{if $bodyFieldPointer}}&body{{else}}body{{end}},
@@ -1274,6 +1525,11 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.CreateVariantTypeName}}: %w", err)
 		}
+		{{- if $.UnionUnwrapFields}}
+		if err := assignSDKOpsUnionMembers(&member, data, {{$.EntityName}}SDKOpsUnionUnwrapFields, "{{.JSONName}}"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
+		{{- end}}
 		target := {{$importAlias}}.{{.CreateConstructorName}}(member)
 		return &target, nil
 {{- end}}
@@ -1314,6 +1570,11 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into {{.UpdateVariantTypeName}}: %w", err)
 		}
+		{{- if $.UnionUnwrapFields}}
+		if err := assignSDKOpsUnionMembers(&member, data, {{$.EntityName}}SDKOpsUnionUnwrapFields, "{{.JSONName}}"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
+		{{- end}}
 		target := {{$importAlias}}.{{.UpdateConstructorName}}(member)
 		return &target, nil
 		{{- else}}
@@ -1488,7 +1749,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	if err != nil {
 		return nil, err
 	}
-{{- template "sdkOpsACLRefInjections" $}}
+{{- template "sdkOpsRefInjections" $}}
 	return spec.{{.FromPayloadMethodName}}(payload)
 {{- else}}
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
@@ -1557,12 +1818,14 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 {{- if .NeedsFakeClient}}
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 {{- end}}
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	{{.APIAlias}} "{{.APIPackagePath}}"
+{{- if .NeedsFakeClient}}
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+{{- end}}
 )
 
 func testGenerated{{.Entity}}ForSDKOps() *{{.APIAlias}}.{{.Entity}} {
@@ -1578,7 +1841,7 @@ func testGenerated{{.Entity}}ForSDKOps() *{{.APIAlias}}.{{.Entity}} {
 			Generation: 3,
 		},
 		Spec: {{.APIAlias}}.{{.Entity}}Spec{
-			APISpec: {{.APIAlias}}.{{.Entity}}APISpec{
+			APISpec: {{if .SupportsMirror}}&{{end}}{{.APIAlias}}.{{.Entity}}APISpec{
 {{- range .FixtureFields}}
 				{{.FieldName}}: {{.TestValue}},
 {{- end}}
@@ -1600,7 +1863,7 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.{{.Create.MockConstructorName}}(t)
 {{- if .Create.NeedsClient}}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
 {{- end}}
 	obj := testGenerated{{.Entity}}ForSDKOps()
 {{- range .Create.Parents}}
@@ -1616,13 +1879,14 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
-	{{$reqBody}}.Tags = GenerateTagsForObject(obj, {{$reqBody}}.Tags...)
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
 {{- else if .Create.HasLabels}}
 {{- if .Create.LabelsPointer}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabels(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -1686,7 +1950,7 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.{{.Create.MockConstructorName}}(t)
 {{- if .Create.NeedsClient}}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
 {{- end}}
 	obj := testGenerated{{.Entity}}ForSDKOps()
 {{- range .Create.Parents}}
@@ -1702,13 +1966,14 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
-	{{$reqBody}}.Tags = GenerateTagsForObject(obj, {{$reqBody}}.Tags...)
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
 {{- else if .Create.HasLabels}}
 {{- if .Create.LabelsPointer}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabels(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -1752,7 +2017,7 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.{{.Update.MockConstructorName}}(t)
 {{- if .Update.NeedsClient}}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
 {{- end}}
 	obj := testGenerated{{.Entity}}ForSDKOps()
 {{- range .Update.Parents}}
@@ -1770,13 +2035,14 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
-	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
 {{- else if .Update.HasLabels}}
 {{- if .Update.LabelsPointer}}
-	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -1828,7 +2094,7 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.{{.Update.MockConstructorName}}(t)
 {{- if .Update.NeedsClient}}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
 {{- end}}
 	obj := testGenerated{{.Entity}}ForSDKOps()
 {{- range .Update.Parents}}
@@ -1846,13 +2112,14 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
-	expectedRequest.Tags = GenerateTagsForObject(obj, expectedRequest.Tags...)
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
 {{- else if .Update.HasLabels}}
 {{- if .Update.LabelsPointer}}
-	expectedRequest.Labels = WithKubernetesMetadataLabelsPtr(obj, expectedRequest.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -2048,6 +2315,10 @@ const commonTypesTemplate = sharedGeneratedFilePreamble + `
 package {{.APIVersion}}
 
 import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
 {{- if .KonnectStatusImport}}
 {{- if .KonnectStatusImport.Alias}}
 	{{.KonnectStatusImport.Alias}} "{{.KonnectStatusImport.Path}}"
@@ -2087,6 +2358,10 @@ import (
 ` + renameKeysToSDKHelper + `
 
 ` + injectSDKOpsConstFieldsHelper + `
+
+` + unwrapSDKOpsUnionFieldsHelper + `
+
+` + assignSDKOpsUnionMembersHelper + `
 `
 
 // opsPerEntityFileHeaderTemplate renders the shared file header (preamble,
@@ -2132,6 +2407,38 @@ func create{{.Entity}}(
 	sdk sdkkonnectgo.{{.SDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .SupportsMirror}}
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		// Mirror: the entity already exists in Konnect; fetch it by ID instead of creating it.
+		id := string(obj.Spec.Mirror.Konnect.ID)
+		resp, err := sdk.{{.GetSDKMethod}}(ctx, id)
+		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
+			return errWrap
+		}
+		if resp == nil || resp.{{.RespField}} == nil {
+			return fmt.Errorf("failed getting mirrored %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+		obj.SetKonnectID(id)
+{{- if .HasNestedResponseStatusFields}}
+		const (
+			protocolHTTPS = "https://"
+			protocolHTTP  = "http://"
+		)
+{{- end}}
+{{- range .ResponseStatusFields}}
+{{- if .RespPath}}
+		obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
+{{- else}}
+		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
+{{- range .Fields}}
+			{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
+{{- end}}
+		}
+{{- end}}
+{{- end}}
+		return nil
+	}
+{{- end}}
 {{- range .Parents}}
 	{{.VarName}} := obj.{{.IDGetter}}()
 	if {{.VarName}} == "" {
@@ -2149,13 +2456,26 @@ func create{{.Entity}}(
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
 {{- $reqBody := "req"}}{{if and .CreateFullyWrapped .CreateBodyField}}{{$reqBody = printf "req.%s" .CreateBodyField}}{{end}}
+{{- $labelsTarget := $reqBody}}{{if .LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .LabelsUnionField}}{{end}}
 {{- if .HasTags}}
-	{{$reqBody}}.Tags = GenerateTagsForObject(obj, {{$reqBody}}.Tags...)
+{{- if .LabelsUnionField}}
+	if {{$reqBody}}.{{.LabelsUnionField}} != nil {
+{{- end}}
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
+{{- if .LabelsUnionField}}
+	}
+{{- end}}
 {{- else if .HasLabels}}
+{{- if .LabelsUnionField}}
+	if {{$reqBody}}.{{.LabelsUnionField}} != nil {
+{{- end}}
 {{- if .LabelsPointer}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	{{$reqBody}}.Labels = WithKubernetesMetadataLabels(obj, {{$reqBody}}.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
+{{- if .LabelsUnionField}}
+	}
 {{- end}}
 {{- end}}
 {{- if .CreateFullyWrapped}}
@@ -2216,18 +2536,22 @@ func create{{.Entity}}(
 
 	obj.SetKonnectID(resp.{{.RespField}}.ID)
 {{- end}}
-{{- if .ResponseStatusFields}}
+{{- if .HasNestedResponseStatusFields}}
 	const (
 		protocolHTTPS = "https://"
 		protocolHTTP  = "http://"
 	)
 {{- end}}
 {{- range .ResponseStatusFields}}
+{{- if .RespPath}}
+	obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
+{{- else}}
 	obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
 {{- range .Fields}}
 		{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
 {{- end}}
 	}
+{{- end}}
 {{- end}}
 {{- range .Associations}}
 
@@ -2250,6 +2574,11 @@ func update{{.Entity}}(
 	sdk sdkkonnectgo.{{.UpdateSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .SupportsMirror}}
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
+{{- end}}
 {{- range .Parents}}
 	{{.VarName}} := obj.{{.IDGetter}}()
 	if {{.VarName}} == "" {
@@ -2269,13 +2598,26 @@ func update{{.Entity}}(
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
+{{- $labelsTarget := "req"}}{{if .LabelsFieldPath}}{{$labelsTarget = printf "req.%s" .LabelsFieldPath}}{{end}}
 {{- if .HasTags}}
-	req.Tags = GenerateTagsForObject(obj, req.Tags...)
+{{- if .LabelsFieldGuard}}
+	if {{.LabelsFieldGuard}} {
+{{- end}}
+	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
+{{- if .LabelsFieldGuard}}
+	}
+{{- end}}
 {{- else if .HasLabels}}
+{{- if .LabelsFieldGuard}}
+	if {{.LabelsFieldGuard}} {
+{{- end}}
 {{- if .LabelsPointer}}
-	req.Labels = WithKubernetesMetadataLabelsPtr(obj, req.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
-	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
+	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
+{{- if .LabelsFieldGuard}}
+	}
 {{- end}}
 {{- end}}
 {{- if .UpdateFullyWrapped}}
@@ -2284,26 +2626,47 @@ func update{{.Entity}}(
 {{- end}}
 	req.{{.EntityIDField}} = id
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, *req)
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, *req)
 {{- else if .UpdateWrapped}}
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 		{{.EntityIDField}}: id,
 		{{.UpdateBodyField}}: {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}},
 	})
 {{- else if .UpdateOmitsEntityID}}
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
 {{- else}}
 
-	_, err = sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
+	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, id, {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}})
 {{- end}}
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return create{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk, obj)
 		})
 	}
+{{- if .ResponseStatusFields}}
+{{- if .HasNestedResponseStatusFields}}
+	const (
+		protocolHTTPS = "https://"
+		protocolHTTP  = "http://"
+	)
+{{- end}}
+	if resp != nil && resp.{{.RespField}} != nil {
+{{- range .ResponseStatusFields}}
+{{- if .RespPath}}
+		obj.Status.{{.StatusField}} = resp.{{$.RespField}}.{{.RespPath}}
+{{- else}}
+		obj.Status.{{.StatusField}} = &{{$.APIAlias}}.{{$.Entity}}{{.StatusField}}{
+{{- range .Fields}}
+			{{.Name}}: strings.TrimPrefix(strings.TrimPrefix(resp.{{$.RespField}}.{{.RespPath}}, protocolHTTPS), protocolHTTP),
+{{- end}}
+		}
+{{- end}}
+{{- end}}
+	}
+{{- end}}
 {{- range .Associations}}
 
 	if err := enforce{{$.Entity}}{{.GoFieldName}}(ctx, cl, sdk, obj, {{(index $.Parents 0).VarName}}); err != nil {
@@ -2326,6 +2689,11 @@ func delete{{.Entity}}(
 	sdk sdkkonnectgo.{{.DeleteSDKInterface}},
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
+{{- if .SupportsMirror}}
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
+{{- end}}
 {{- range .Parents}}
 	{{.VarName}} := obj.{{.IDGetter}}()
 	if {{.VarName}} == "" {

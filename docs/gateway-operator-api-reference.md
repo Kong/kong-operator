@@ -744,7 +744,10 @@ resource "Deployment") which are created and managed for the DataPlane resource.
 | `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v1beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
 | `rollout` _[Rollout](#gateway-operator-konghq-com-v1beta1-types-rollout)_ | Rollout describes a custom rollout strategy. |
+| `hardened` _[HardeningState](#common-konghq-com-v1alpha1-types-hardeningstate)_ | Hardened indicates whether the operator should apply a hardened security context (non-root user, read-only root filesystem, dropped capabilities) and the related volumes and environment variables to the DataPlane's proxy container.<br /><br />Enabling this on an existing DataPlane causes a rolling restart of its Pods. |
 
 _Appears in:_
 
@@ -888,6 +891,7 @@ DataPlaneServicePort contains information on service's port.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | The name of this port within the service. This must be a DNS_LABEL. All ports within a ServiceSpec must have unique names. When considering the endpoints for a Service, this must match the 'name' field in the EndpointPort. Optional if only one ServicePort is defined on this service. |
+| `protocol` _[Protocol](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#protocol-v1-core)_ | The IP protocol for this port. Supports "TCP" and "UDP". Defaults to "TCP". |
 | `port` _int32_ | The port that will be exposed by this service. |
 | `targetPort` _k8s.io/apimachinery/pkg/util/intstr.IntOrString_ | Number or name of the port to access on the pods targeted by the service. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME. If this is a string, it will be looked up as a named port in the target Pod's container ports. If this is not specified, the value of the 'port' field is used (an identity map). This field is ignored for services with clusterIP=None, and should be omitted or set equal to the 'port' field. More info: https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service |
 | `nodePort` _int32_ | The port on each node on which this service is exposed when type is NodePort or LoadBalancer. Usually assigned by the system. If a value is specified, in-range, and not in use it will be used, otherwise the operation will fail. If not specified, a port will be allocated if this Service requires one. If this field is specified when creating a Service which does not need it, creation will fail. This field will be wiped when updating a Service to no longer need it (e.g. changing type from NodePort to ClusterIP).<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport<br /><br />Can only be specified if type is NodePort or LoadBalancer. |
@@ -967,6 +971,8 @@ version, as well as Env variable overrides.
 | `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v1beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
 
 _Appears in:_
 
@@ -2069,7 +2075,10 @@ resource "Deployment") which are created and managed for the DataPlane resource.
 | `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v2beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
 | `rollout` _[Rollout](#gateway-operator-konghq-com-v2beta1-types-rollout)_ | Rollout describes a custom rollout strategy. |
+| `hardened` _[HardeningState](#common-konghq-com-v1alpha1-types-hardeningstate)_ | Hardened indicates whether the operator should apply a hardened security context (non-root user, read-only root filesystem, dropped capabilities) and the related volumes and environment variables to the DataPlane's proxy container.<br /><br />Enabling this on an existing DataPlane causes a rolling restart of its Pods. |
 
 _Appears in:_
 
@@ -2091,6 +2100,8 @@ version, as well as Env variable overrides.
 | `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#gateway-operator-konghq-com-v2beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
 
 _Appears in:_
 

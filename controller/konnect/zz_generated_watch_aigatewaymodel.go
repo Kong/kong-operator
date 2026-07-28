@@ -34,9 +34,9 @@ func AIGatewayModelReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.AIGatewayConsumer{},
+				&konnectv1alpha1.AIGatewayPolicy{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueAIGatewayModelForAIGatewayConsumer(cl),
+					enqueueAIGatewayModelForAIGatewayPolicy(cl),
 				),
 			)
 		},
@@ -45,6 +45,14 @@ func AIGatewayModelReconciliationWatchOptions(
 				&konnectv1alpha1.AIGatewayConsumerGroup{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayModelForAIGatewayConsumerGroup(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&konnectv1alpha1.AIGatewayModelProvider{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayModelForAIGatewayModelProvider(cl),
 				),
 			)
 		},
@@ -77,17 +85,17 @@ func enqueueAIGatewayModelForKonnectAIGateway(
 	}
 }
 
-func enqueueAIGatewayModelForAIGatewayConsumer(
+func enqueueAIGatewayModelForAIGatewayPolicy(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		ref, ok := obj.(*konnectv1alpha1.AIGatewayConsumer)
+		ref, ok := obj.(*konnectv1alpha1.AIGatewayPolicy)
 		if !ok {
 			return nil
 		}
 		var l konnectv1alpha1.AIGatewayModelList
 		if err := cl.List(ctx, &l, client.MatchingFields{
-			index.IndexFieldAIGatewayModelOnAIGatewayConsumerRef: client.ObjectKeyFromObject(ref).String(),
+			index.IndexFieldAIGatewayModelOnAIGatewayPolicyRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}
@@ -106,6 +114,24 @@ func enqueueAIGatewayModelForAIGatewayConsumerGroup(
 		var l konnectv1alpha1.AIGatewayModelList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayModelForAIGatewayModelProvider(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*konnectv1alpha1.AIGatewayModelProvider)
+		if !ok {
+			return nil
+		}
+		var l konnectv1alpha1.AIGatewayModelList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayModelOnAIGatewayModelProviderRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

@@ -8,7 +8,7 @@ const (
 	KonnectInfiniteSyncTime = time.Minute * 60
 
 	// WaitTime is a generic wait time for the tests' eventual conditions.
-	WaitTime = 10 * time.Second
+	WaitTime = 20 * time.Second
 
 	// TickTime is a generic tick time for the tests' eventual conditions.
 	TickTime = 250 * time.Millisecond

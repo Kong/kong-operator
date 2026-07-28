@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.2.1
+    kubernetes-configuration.konghq.com/version: v2.3.0-rc.2
   name: aigatewayidentityproviders.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -211,6 +211,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this identity provider instance, used
                           as a stable human-readable reference.
                           This value is immutable after creation.
@@ -238,6 +241,13 @@ spec:
                             items:
                               type: string
                             type: array
+                          cacheTokensSalt:
+                            description: |-
+                              Salt used for generating the cache key that is used for caching the token
+                              endpoint requests.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
                           clientID:
                             description: |-
                               An array of strings representing the client id for the OpenID Connect
@@ -322,6 +332,21 @@ spec:
                                 type: string
                               type: array
                             type: array
+                          consumerGroupsClaim:
+                            description: |-
+                              The claim used for consumer groups mapping.
+                              If multiple values are set, it means the claim is inside a nested object of
+                              the token payload.
+                            items:
+                              type: string
+                            type: array
+                          consumerGroupsOptional:
+                            description: Do not terminate the request if consumer
+                              groups mapping fails.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                           consumerOptional:
                             description: Do not terminate the request if consumer
                               mapping fails.
@@ -343,6 +368,8 @@ spec:
                             - Enabled
                             - Disabled
                             type: string
+                        required:
+                        - cacheTokensSalt
                         type: object
                       displayName:
                         description: The display name for this identity provider instance.
@@ -381,6 +408,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this identity provider instance, used
                           as a stable human-readable reference.
                           This value is immutable after creation.

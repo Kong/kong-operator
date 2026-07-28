@@ -138,6 +138,57 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		}
+	case *gwtypes.TCPRoute:
+		return []Watcher{
+			{
+				MapRouteForGateway(cl, gwtypes.TCPRoute{}),
+				&gwtypes.Gateway{},
+			},
+			{
+				MapRouteForGatewayClass(cl, gwtypes.TCPRoute{}),
+				&gwtypes.GatewayClass{},
+			},
+			{
+				MapRouteForService(cl, gwtypes.TCPRoute{}),
+				&corev1.Service{},
+			},
+			{
+				MapRouteForEndpointSlice(cl, gwtypes.TCPRoute{}),
+				&discoveryv1.EndpointSlice{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindTCPRoute),
+				&configurationv1alpha1.KongUpstream{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongTarget](kindTCPRoute),
+				&configurationv1alpha1.KongTarget{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongService](kindTCPRoute),
+				&configurationv1alpha1.KongService{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongRoute](kindTCPRoute),
+				&configurationv1alpha1.KongRoute{},
+			},
+			{
+				MapTCPRouteForReferenceGrant(cl),
+				&gwtypes.ReferenceGrant{},
+			},
+			{
+				MapTCPRouteForClientCertSecret(cl),
+				&corev1.Secret{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindTCPRoute),
+				&configurationv1alpha1.KongCertificate{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindTCPRoute),
+				&configurationv1alpha1.KongReferenceGrant{},
+			},
+		}
 	case *gwtypes.Gateway:
 		return []Watcher{
 			{

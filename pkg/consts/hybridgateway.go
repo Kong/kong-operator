@@ -34,6 +34,10 @@ const (
 	// indicating which TLSRoutes are associated with the resource.
 	HybridRouteTLSRouteAnnotation = "hybrid-routes-TLSRoute"
 
+	// HybridRouteTCPRouteAnnotation is used to annotate resources created for hybrid gateways,
+	// indicating which TCPRoutes are associated with the resource.
+	HybridRouteTCPRouteAnnotation = "hybrid-routes-TCPRoute"
+
 	// GatewayOperatorHybridRoutesHTTPRouteAnnotation is the fully qualified annotation key
 	// used to annotate resources created for hybrid gateways, indicating which HTTPRoute
 	// is associated with the resource.
@@ -43,6 +47,11 @@ const (
 	// used to annotate resources created for hybrid gateways, indicating which TLSRoute
 	// is associated with the resource.
 	GatewayOperatorHybridRoutesTLSRouteAnnotation = OperatorAnnotationPrefix + HybridRouteTLSRouteAnnotation
+
+	// GatewayOperatorHybridRoutesTCPRouteAnnotation is the fully qualified annotation key
+	// used to annotate resources created for hybrid gateways, indicating which TCPRoute
+	// is associated with the resource.
+	GatewayOperatorHybridRoutesTCPRouteAnnotation = OperatorAnnotationPrefix + HybridRouteTCPRouteAnnotation
 
 	// GatewayOperatorHybridListenerPortLabel is the fully qualified label key
 	// used to label resources created for hybrid gateways, indicating the listener port

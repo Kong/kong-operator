@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,6 +38,8 @@ const (
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tlsroutes,verbs=get;list;watch;patch
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tlsroutes/status,verbs=get;update
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes,verbs=get;list;watch;patch
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes/status,verbs=get;update
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes/status,verbs=get;update;patch
@@ -70,16 +73,20 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 	fqdnMode bool
 	// ClusterDomain is the cluster domain to use for FQDN (empty uses service.namespace.svc format).
 	clusterDomain string
+	// typeConverter is the shared, live-rebuilding managedfields.TypeConverter used for
+	// server-side apply structured-merge-diff comparisons/extractions in enforceState.
+	typeConverter k8smanagedfields.TypeConverter
 }
 
 // NewHybridGatewayReconciler creates a new instance of GatewayAPIHybridReconciler for the specified
 // generic types t and tPtr. It initializes the reconciler with the client from the provided manager.
-func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
+func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string, typeConverter k8smanagedfields.TypeConverter) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
 		Client:        mgr.GetClient(),
 		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorder(ControllerName)),
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+		typeConverter: typeConverter,
 	}
 }
 
@@ -237,7 +244,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	}
 
 	// Phase 4: State Enforcement.
-	applied, waiting, err := enforceState(ctx, r.Client, logger, conv)
+	applied, waiting, err := enforceState(ctx, r.Client, r.typeConverter, logger, conv)
 	if err != nil {
 		// Record state enforcement failure event.
 		r.eventRecorder.Eventf(
@@ -245,25 +252,6 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 			corev1.EventTypeWarning,
 			eventconst.EventReasonStateEnforcementFailed,
 			fmt.Sprintf("State enforcement failed: %v", err),
-		)
-		return ctrl.Result{}, err
-	}
-
-	// Phase 4b: Atomically record this Route in the hybrid-routes annotation of every shared Kong
-	// resource. This runs regardless of whether enforceState applied or is waiting, so resources
-	// created in this (or an earlier) reconcile are tracked promptly and concurrent Routes sharing
-	// a resource do not clobber each other's entry.
-	annotationsMissing, err := reconcileSharedRouteAnnotations[t, tPtr](ctx, r.Client, logger, conv)
-	if err != nil {
-		if result, ok := requeueOnConflict(err, logger, "Hybrid-routes annotation sync conflicted, requeueing"); ok {
-			return result, nil
-		}
-		r.eventRecorder.Eventf(
-			obj,
-			corev1.EventTypeWarning,
-			eventconst.EventReasonStateEnforcementFailed,
-			"Hybrid-routes annotation sync failed: %v",
-			err,
 		)
 		return ctrl.Result{}, err
 	}
@@ -284,16 +272,6 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	// schedule a short requeue as a safety net in case watch events are delayed.
 	if waiting {
 		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
-	}
-
-	// In steady state (enforceState applied nothing and is not waiting) every desired Kong resource
-	// existed when enforceState ran. If the annotation sync above then found one missing, another
-	// Route deleted the shared resource in the window before this Route recorded itself. No watch
-	// event will re-trigger this Route (the delete event maps via the annotation, which no longer
-	// lists it), so requeue to let the next reconcile recreate the resource and re-record this Route.
-	if annotationsMissing {
-		log.Debug(logger, "Shared Kong resource missing during annotation sync, requeueing to recreate")
-		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
 	// Phase 4.5: Readiness gate before orphan cleanup.

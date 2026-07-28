@@ -73,11 +73,33 @@ type opsUpdateFuncData struct {
 	// UpdateBodyField is used only for single-parent wrapped updates. e.g. "UpdateIdentityProvider".
 	UpdateBodyField      string
 	UpdateReqBodyPointer bool // true when SDK body param is a pointer
-	NeedsClient          bool // true when the generated update function needs client.Client
-	HasReferences        bool // true when parent ref replacement needs an entity-level request builder
+	// LabelsFieldPath is the dotted Go field path, relative to req, needed to
+	// reach a .Labels/.Tags field when the update request body is (or wraps) a
+	// root-level discriminated union — e.g. "SchemaRegistryUpdate.SchemaRegistryConfluentSensitiveDataAware"
+	// for a fully-wrapped update whose body is itself a union. Empty when req
+	// has a direct .Labels/.Tags field (the common, non-union case).
+	LabelsFieldPath string
+	// LabelsFieldGuard is a ready-to-emit Go boolean expression guarding every
+	// pointer segment in LabelsFieldPath (e.g. "req.SchemaRegistryUpdate != nil
+	// && req.SchemaRegistryUpdate.SchemaRegistryConfluentSensitiveDataAware != nil").
+	// Empty when LabelsFieldPath is empty.
+	LabelsFieldGuard string
+	NeedsClient      bool // true when the generated update function needs client.Client
+	HasReferences    bool // true when parent ref replacement needs an entity-level request builder
 	// Associations lists the top-level spec association fields whose membership
 	// is enforced by a hand-written helper called after the entity is updated.
 	Associations []opsAssociationData
+	// SupportsMirror is true when the entity opted into Origin+Mirror. The
+	// generated update function then early-returns a no-op for Mirror entities.
+	SupportsMirror bool
+	// RespField is the field name on the SDK update response wrapper holding
+	// the updated entity (schema.UpdateSuccessResponseRef). Only set when
+	// ResponseStatusFields is non-empty.
+	RespField            string
+	ResponseStatusFields []config.ResponseStatusFieldConfig
+	// HasNestedResponseStatusFields is true when at least one ResponseStatusFields
+	// entry generates a nested struct (i.e. has Fields, not a scalar RespPath).
+	HasNestedResponseStatusFields bool
 }
 
 func qualifiedSDKTypeName(importPath, typeName string) string {
@@ -175,33 +197,108 @@ func (g *Generator) generateOpsUpdateFuncBody(
 	if callShape == nil {
 		return nil, nil
 	}
-	hasTags, hasLabels, labelsPointer := metadataFields(schema)
+	hasTags, hasLabels, labelsPointer := metadataFields(schema, opsConfig)
 	associations := g.opsAssociations(entityName)
 	// Association enforcement helpers need the controller-runtime client.
 	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName) || len(associations) > 0
 
+	if len(opsConfig.ResponseStatusFields) > 0 && schema.UpdateSuccessResponseRef == "" {
+		return nil, fmt.Errorf("entity %q: ops.responseStatusFields requires a 2xx response ref for update op", entityName)
+	}
+
+	labelsFieldPath, err := resolveUpdateLabelsFieldPath(entityName, callShape, hasLabels || hasTags)
+	if err != nil {
+		return nil, err
+	}
+
 	return &opsUpdateFuncData{
-		Entity:               entityName,
-		APIAlias:             g.config.APIGroupPackageAlias,
-		UpdateSDKInterface:   callShape.SDKInterface,
-		UpdateSDKMethod:      callShape.SDKMethod,
-		UpdateReqMethod:      callShape.ReqMethod,
-		UpdateReqType:        callShape.ReqType,
-		HasTags:              hasTags,
-		HasLabels:            hasLabels,
-		LabelsPointer:        labelsPointer,
-		Parents:              callShape.Parents,
-		UpdateWrapped:        callShape.Wrapped,
-		UpdateFullyWrapped:   callShape.FullyWrapped,
-		ParentIDField:        callShape.ParentIDField,
-		EntityIDField:        callShape.EntityIDField,
-		UpdateBodyField:      callShape.BodyField,
-		UpdateReqBodyPointer: callShape.ReqBodyPointer,
-		NeedsClient:          needsClient,
-		HasReferences:        g.entityHasParentRefReplacement(entityName),
-		UpdateOmitsEntityID:  callShape.OmitsEntityID,
-		Associations:         associations,
+		APIAlias:                      g.config.APIGroupPackageAlias,
+		Associations:                  associations,
+		Entity:                        entityName,
+		EntityIDField:                 callShape.EntityIDField,
+		HasLabels:                     hasLabels,
+		HasNestedResponseStatusFields: hasNestedResponseStatusFields(opsConfig.ResponseStatusFields),
+		HasReferences:                 g.entityHasParentRefReplacement(entityName),
+		HasTags:                       hasTags,
+		LabelsFieldGuard:              labelsFieldGuardExpr("req", labelsFieldPath),
+		LabelsFieldPath:               labelsFieldPath,
+		LabelsPointer:                 labelsPointer,
+		NeedsClient:                   needsClient,
+		ParentIDField:                 callShape.ParentIDField,
+		Parents:                       callShape.Parents,
+		RespField:                     schema.UpdateSuccessResponseRef,
+		ResponseStatusFields:          opsConfig.ResponseStatusFields,
+		SupportsMirror:                g.entitySupportsMirror(entityName),
+		UpdateBodyField:               callShape.BodyField,
+		UpdateFullyWrapped:            callShape.FullyWrapped,
+		UpdateOmitsEntityID:           callShape.OmitsEntityID,
+		UpdateReqBodyPointer:          callShape.ReqBodyPointer,
+		UpdateReqMethod:               callShape.ReqMethod,
+		UpdateReqType:                 callShape.ReqType,
+		UpdateSDKInterface:            callShape.SDKInterface,
+		UpdateSDKMethod:               callShape.SDKMethod,
+		UpdateWrapped:                 callShape.Wrapped,
 	}, nil
+}
+
+// resolveUpdateLabelsFieldPath returns the dotted Go field path, relative to
+// req, needed to reach a .Labels/.Tags field when the update request body is
+// (or wraps) a root-level discriminated union. Returns "" when req has a
+// direct .Labels/.Tags field (the common, non-union case) or when no
+// labels/tags were detected at all. Requires the union (if any) to resolve to
+// exactly one member; a request type with multiple members has no single
+// field to target and must opt out via ops.skipRootUnionMetadataFields.
+func resolveUpdateLabelsFieldPath(entityName string, callShape *updateOpCallShape, needed bool) (string, error) {
+	if !needed {
+		return "", nil
+	}
+
+	checkImportPath, checkType := callShape.ReqImportPath, callShape.ReqType
+	var bodyField string
+	if callShape.FullyWrapped {
+		bodyInfo, err := ParseSDKRequestBodyInfo(callShape.ReqImportPath, callShape.ReqType)
+		if err != nil {
+			return "", fmt.Errorf("entity %q: inspect update request body: %w", entityName, err)
+		}
+		bodyField = bodyInfo.FieldName
+		checkImportPath, checkType = "github.com/Kong/sdk-konnect-go/models/components", bodyInfo.TypeName
+	}
+
+	memberFields, err := ParseSDKUnionMemberFieldNames(checkImportPath, checkType)
+	if err != nil {
+		return "", fmt.Errorf("entity %q: inspect update request union: %w", entityName, err)
+	}
+	switch len(memberFields) {
+	case 0:
+		return bodyField, nil
+	case 1:
+		if bodyField == "" {
+			return memberFields[0], nil
+		}
+		return bodyField + "." + memberFields[0], nil
+	default:
+		return "", fmt.Errorf(
+			"entity %q: labels/tags detected on multi-variant union update body %q; set ops.skipRootUnionMetadataFields to opt out",
+			entityName, checkType,
+		)
+	}
+}
+
+// labelsFieldGuardExpr builds a Go boolean expression guarding every pointer
+// segment of a dotted field path (e.g. base="req", path="A.B" produces
+// "req.A != nil && req.A.B != nil"). Returns "" when path is empty.
+func labelsFieldGuardExpr(base, path string) string {
+	if path == "" {
+		return ""
+	}
+	segments := strings.Split(path, ".")
+	guards := make([]string, 0, len(segments))
+	prefix := base
+	for _, seg := range segments {
+		prefix = prefix + "." + seg
+		guards = append(guards, prefix+" != nil")
+	}
+	return strings.Join(guards, " && ")
 }
 
 // GenerateOpsUpdateDispatcher emits zz_generated_ops_update.go with

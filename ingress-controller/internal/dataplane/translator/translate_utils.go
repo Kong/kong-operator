@@ -75,8 +75,9 @@ func generateKongServiceFromBackendRefWithName(
 	// In the context of the gateway API conformance tests, if there is no service for the backend,
 	// the response must have a status code of 500. Since The default behavior of Kong is returning 503
 	// if there is no backend for a service, we inject a plugin that terminates all requests with 500
-	// as status code
-	if len(service.Backends) == 0 && len(backendRefs) != 0 {
+	// as status code. This applies both when backendRefs were provided but invalid, and when
+	// no backendRefs were provided at all (omitted or empty).
+	if len(service.Backends) == 0 {
 		if service.Plugins == nil {
 			service.Plugins = make([]kong.Plugin, 0)
 		}

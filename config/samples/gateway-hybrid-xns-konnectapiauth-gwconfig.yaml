@@ -12,7 +12,7 @@ metadata:
 spec:
   type: token
   token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  serverURL: us.api.konghq.tech
+  serverURL: us.api.konghq.com
 ---
 apiVersion: v1
 kind: Namespace

@@ -39,11 +39,13 @@ type FakeObjects struct {
 	GRPCRoutes         []*gatewayapi.GRPCRoute
 	ReferenceGrants    []*gatewayapi.ReferenceGrant
 	Gateways           []*gatewayapi.Gateway
+	GatewayClasses     []*gatewayapi.GatewayClass
 	BackendTLSPolicies []*gatewayapi.BackendTLSPolicy
 
 	IngressClassParametersV1alpha1 []*configurationv1alpha1.IngressClassParameters
 	Services                       []*corev1.Service
 	EndpointSlices                 []*discoveryv1.EndpointSlice
+	Namespaces                     []*corev1.Namespace
 	Secrets                        []*corev1.Secret
 	ConfigMaps                     []*corev1.ConfigMap
 	KongPlugins                    []*configurationv1.KongPlugin
@@ -126,6 +128,12 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	gatewayClassStore := cache.NewStore(clusterWideKeyFunc)
+	for _, gwc := range objects.GatewayClasses {
+		if err := gatewayClassStore.Add(gwc); err != nil {
+			return nil, err
+		}
+	}
 	backendTLSPolicyStore := cache.NewStore(namespacedKeyFunc)
 	for _, policy := range objects.BackendTLSPolicies {
 		if err := backendTLSPolicyStore.Add(policy); err != nil {
@@ -157,6 +165,12 @@ func NewFakeStore(
 	for _, e := range objects.EndpointSlices {
 		err := endpointSliceStore.Add(e)
 		if err != nil {
+			return nil, err
+		}
+	}
+	namespaceStore := cache.NewStore(clusterWideKeyFunc)
+	for _, n := range objects.Namespaces {
+		if err := namespaceStore.Add(n); err != nil {
 			return nil, err
 		}
 	}
@@ -228,10 +242,12 @@ func NewFakeStore(
 			GRPCRoute:        grpcrouteStore,
 			ReferenceGrant:   referencegrantStore,
 			Gateway:          gatewayStore,
+			GatewayClass:     gatewayClassStore,
 			BackendTLSPolicy: backendTLSPolicyStore,
 
 			Service:       serviceStore,
 			EndpointSlice: endpointSliceStore,
+			Namespace:     namespaceStore,
 			Secret:        secretsStore,
 			ConfigMap:     configMapStore,
 			Plugin:        kongPluginsStore,
@@ -278,10 +294,12 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeFor[*gatewayapi.GRPCRoute]():                         schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GRPCRoute"),
 		reflect.TypeFor[*gatewayapi.ReferenceGrant]():                    schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"),
 		reflect.TypeFor[*gatewayapi.Gateway]():                           schema.GroupVersion(gatewayv1.GroupVersion).WithKind("Gateway"),
+		reflect.TypeFor[*gatewayapi.GatewayClass]():                      schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GatewayClass"),
 		reflect.TypeFor[*gatewayapi.BackendTLSPolicy]():                  schema.GroupVersion(gatewayv1alpha3.GroupVersion).WithKind("BackendTLSPolicy"),
 		reflect.TypeFor[*configurationv1alpha1.IngressClassParameters](): configurationv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),
 		reflect.TypeFor[*corev1.Service]():                               corev1.SchemeGroupVersion.WithKind("Service"),
 		reflect.TypeFor[*discoveryv1.EndpointSlice]():                    discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),
+		reflect.TypeFor[*corev1.Namespace]():                             corev1.SchemeGroupVersion.WithKind("Namespace"),
 		reflect.TypeFor[*corev1.Secret]():                                corev1.SchemeGroupVersion.WithKind("Secret"),
 		reflect.TypeFor[*configurationv1.KongPlugin]():                   configurationv1.GroupVersion.WithKind("KongPlugin"),
 		reflect.TypeFor[*configurationv1.KongClusterPlugin]():            configurationv1.GroupVersion.WithKind("KongClusterPlugin"),
@@ -320,10 +338,12 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.GRPCRoutes)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.ReferenceGrants)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Gateways)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.GatewayClasses)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.BackendTLSPolicies)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.IngressClassParametersV1alpha1)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Services)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.EndpointSlices)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.Namespaces)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Secrets)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongPlugins)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongClusterPlugins)...)

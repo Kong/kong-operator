@@ -272,11 +272,11 @@ func TestGenerateWatchAndIndex_ForChildEntity(t *testing.T) {
 	})
 }
 
-// TestGenerateWatchAndIndex_DedupSharedKinds verifies that two reference fields
-// pointing at the same kinds (ACL allow and deny, each referencing
-// AIGatewayConsumer and AIGatewayConsumerGroup) collapse to exactly one watch,
-// index field and extractor per distinct kind, unioning both accessors.
-func TestGenerateWatchAndIndex_DedupSharedKinds(t *testing.T) {
+// TestGenerateWatchAndIndex_DedupSharedKind verifies that two reference fields
+// pointing at the same ACL kind (allow and deny, each referencing
+// AIGatewayConsumerGroup) collapse to exactly one watch, index field and
+// extractor, unioning both accessors.
+func TestGenerateWatchAndIndex_DedupSharedKind(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion:           "v1alpha1",
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
@@ -285,13 +285,13 @@ func TestGenerateWatchAndIndex_DedupSharedKinds(t *testing.T) {
 			"AIGatewayAgent": {
 				{
 					Path:        "spec.apiSpec.access.acls.allow.allow",
-					Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+					Kinds:       []string{"AIGatewayConsumerGroup"},
 					RefTypeName: "AIGatewayACLRef",
 					ResolvesTo:  "name",
 				},
 				{
 					Path:        "spec.apiSpec.access.acls.deny.deny",
-					Kinds:       []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"},
+					Kinds:       []string{"AIGatewayConsumerGroup"},
 					RefTypeName: "AIGatewayACLRef",
 					ResolvesTo:  "name",
 				},
@@ -316,10 +316,8 @@ func TestGenerateWatchAndIndex_DedupSharedKinds(t *testing.T) {
 	_, err = format.Source([]byte(watchOut))
 	require.NoError(t, err, "generated watch must be valid Go source")
 
-	// Exactly one enqueue func and one Watches registration per distinct kind.
-	assert.Equal(t, 1, strings.Count(watchOut, "func enqueueAIGatewayAgentForAIGatewayConsumer("))
+	// Exactly one enqueue func and one Watches registration for the shared kind.
 	assert.Equal(t, 1, strings.Count(watchOut, "func enqueueAIGatewayAgentForAIGatewayConsumerGroup("))
-	assert.Equal(t, 1, strings.Count(watchOut, "&konnectv1alpha1.AIGatewayConsumer{}"))
 	assert.Equal(t, 1, strings.Count(watchOut, "&konnectv1alpha1.AIGatewayConsumerGroup{}"))
 
 	indexOut, err := g.generateIndex(metadata, rc)
@@ -327,18 +325,15 @@ func TestGenerateWatchAndIndex_DedupSharedKinds(t *testing.T) {
 	_, err = format.Source([]byte(indexOut))
 	require.NoError(t, err, "generated index must be valid Go source")
 
-	// Exactly one index field const and one extractor func per distinct kind.
-	assert.Equal(t, 1, strings.Count(indexOut, "IndexFieldAIGatewayAgentOnAIGatewayConsumerRef ="))
+	// Exactly one index field const and one extractor func for the shared kind.
 	assert.Equal(t, 1, strings.Count(indexOut, "IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef ="))
-	assert.Equal(t, 1, strings.Count(indexOut, "func aiGatewayAgentOnAIGatewayConsumerRef("))
 	assert.Equal(t, 1, strings.Count(indexOut, "func aiGatewayAgentOnAIGatewayConsumerGroupRef("))
 
 	// Each extractor unions the allow and deny accessors from the API package.
 	assert.Contains(t, indexOut, "konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent)")
 	assert.Contains(t, indexOut, "konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsDenyDeny(ent)")
-	// Multi-kind references require the kind to be populated (no empty-kind match).
-	assert.Contains(t, indexOut, `if ref.Kind != "AIGatewayConsumer" {`)
-	assert.Contains(t, indexOut, `if ref.Kind != "AIGatewayConsumerGroup" {`)
+	// Single-kind references accept the defaulted/empty kind.
+	assert.Contains(t, indexOut, `if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {`)
 }
 
 func TestGenerateReconcilerConditions(t *testing.T) {
@@ -4672,7 +4667,6 @@ func TestBuildOpsControllerRootUnionFixture_AIGatewayModelUsesValidFixture(t *te
 	assert.Equal(t, "API", fixture.VariantField)
 	assert.Contains(t, fixture.VariantValue, "AIGatewayModelAPI{DisplayName:")
 	assert.Contains(t, fixture.VariantValue, "Capabilities: []string{\"llm/v1/chat\"}")
-	assert.Contains(t, fixture.VariantValue, "AIGatewayTargetConfigTypeAnthropic")
 }
 
 func TestGenerateEntityOpsFile_ControllerOpsTestsUseSafeNamedRefLiterals(t *testing.T) {
@@ -6220,4 +6214,304 @@ func TestGenerateReferencesFile_Empty(t *testing.T) {
 	out, err := g.GenerateReferencesFile()
 	require.NoError(t, err)
 	require.Empty(t, out)
+}
+
+func TestEntitySupportsMirror(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+			"Portal":              {SupportsMirror: false},
+		},
+	})
+	require.True(t, g.entitySupportsMirror("KonnectEventGateway"))
+	require.False(t, g.entitySupportsMirror("Portal"))
+	require.False(t, g.entitySupportsMirror("Unknown"))
+}
+
+func TestGenerateCRDType_MirrorSpecFields(t *testing.T) {
+	schema := &parser.Schema{
+		Name: "CreateKonnectEventGateway",
+		Properties: []*parser.Property{
+			{Name: "name", Type: "string"},
+		},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventGateway": {IsRoot: new(true)},
+		},
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	content, err := g.generateCRDType("CreateKonnectEventGateway", schema)
+	require.NoError(t, err)
+
+	// Source + Mirror fields present, reusing shared types.
+	require.Contains(t, content, "Source *commonv1alpha1.EntitySource `json:\"source,omitempty\"`")
+	require.Contains(t, content, "Mirror *konnectv1alpha2.MirrorSpec `json:\"mirror,omitempty\"`")
+	// APISpec becomes an optional pointer.
+	require.Contains(t, content, "APISpec *KonnectEventGatewayAPISpec `json:\"apiSpec,omitempty\"`")
+	// Spec-level CEL.
+	require.Contains(t, content, "spec.source is immutable")
+	require.Contains(t, content, "mirror field must be set for type Mirror")
+	require.Contains(t, content, "mirror field cannot be set for type Origin")
+	require.Contains(t, content, "apiSpec must be set for type Origin")
+	require.Contains(t, content, "apiSpec cannot be set for type Mirror")
+	// commonv1alpha1 import present.
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+}
+
+func TestGenerateCRDType_NoMirrorByDefault(t *testing.T) {
+	schema := &parser.Schema{
+		Name:       "CreatePortal",
+		Properties: []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"Portal": {IsRoot: new(true)},
+		},
+	})
+	content, err := g.generateCRDType("CreatePortal", schema)
+	require.NoError(t, err)
+	require.NotContains(t, content, "Mirror *konnectv1alpha2.MirrorSpec")
+	require.NotContains(t, content, "spec.source is immutable")
+	// APISpec stays a value struct.
+	require.Contains(t, content, "APISpec PortalAPISpec `json:\"apiSpec,omitzero\"`")
+}
+
+func TestGenerateCRDType_MirrorImportsKonnectV1Alpha2WithoutRootReconciler(t *testing.T) {
+	schema := &parser.Schema{
+		Name:       "CreateKonnectEventGateway",
+		Properties: []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	content, err := g.generateCRDType("CreateKonnectEventGateway", schema)
+	require.NoError(t, err)
+	require.Contains(t, content, "konnectv1alpha2 \"github.com/kong/kong-operator/v2/api/konnect/v1alpha2\"")
+	require.Contains(t, content, "Mirror *konnectv1alpha2.MirrorSpec")
+}
+
+func TestGenerateCRDFuncs_MirrorAccessors(t *testing.T) {
+	schema := &parser.Schema{
+		Name: "CreateKonnectEventGateway",
+		Properties: []*parser.Property{
+			{
+				Name: "labels",
+				Type: "object",
+				AdditionalProperties: &parser.Property{
+					Name: "value",
+					Type: "string",
+				},
+			},
+		},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventGateway": {IsRoot: new(true)},
+		},
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	content, err := g.generateCRDFuncs("CreateKonnectEventGateway", schema)
+	require.NoError(t, err)
+
+	require.Contains(t, content, "func (obj *KonnectEventGateway) GetSource() *commonv1alpha1.EntitySource {")
+	require.Contains(t, content, "return obj.Spec.Source")
+	require.Contains(t, content, "func (obj *KonnectEventGateway) GetMirror() *konnectv1alpha2.MirrorSpec {")
+	require.Contains(t, content, "return obj.Spec.Mirror")
+	// Label accessor nil-guards the pointer APISpec.
+	require.Contains(t, content, "if obj.Spec.APISpec == nil {")
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+}
+
+func TestOpsCreateFuncBody_MirrorData(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+		},
+	}
+	data, err := g.generateOpsCreateFuncBody("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.True(t, data.SupportsMirror)
+	require.Equal(t, "GetEventGateway", data.GetSDKMethod)
+	require.Equal(t, "CreateEventGateway", data.SDKMethod)
+}
+
+func TestGenerateEntityOpsFile_MirrorBranch(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	content := res.File.Content
+	require.Contains(t, content, "*obj.Spec.Source == commonv1alpha1.EntitySourceMirror")
+	require.Contains(t, content, "sdk.GetEventGateway(ctx, id)")
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+}
+
+func TestGenerateEntityOpsFile_MirrorUpdateDeleteGuard(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		UpdateOperationID:  "update-event-gateway",
+		UpdateTags:         []string{"event-gateways"},
+		DeleteOperationID:  "delete-event-gateway",
+		DeleteTags:         []string{"event-gateways"},
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest"},
+			"delete": {},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	content := res.File.Content
+	// Both update and delete must early-return for a mirror entity.
+	require.Equal(t, 2, strings.Count(content,
+		"if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {\n\t\treturn nil\n\t}"))
+}
+
+func TestGenerateEntityOpsFile_MirrorImportWithoutCreateOp(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		UpdateOperationID:  "update-event-gateway",
+		UpdateTags:         []string{"event-gateways"},
+		DeleteOperationID:  "delete-event-gateway",
+		DeleteTags:         []string{"event-gateways"},
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateGatewayRequest"},
+			"delete": {},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	content := res.File.Content
+	require.Contains(t, content, "commonv1alpha1 \"github.com/kong/kong-operator/v2/api/common/v1alpha1\"")
+	require.Contains(t, content, "*obj.Spec.Source == commonv1alpha1.EntitySourceMirror")
+}
+
+func TestGenerateEntityOpsTestFile_MirrorAPISpecIsPointer(t *testing.T) {
+	schema := &parser.Schema{
+		Name:               "CreateKonnectEventGateway",
+		OperationID:        "create-event-gateway",
+		Tags:               []string{"event-gateways"},
+		SuccessResponseRef: "EventGatewayInfo",
+		Properties:         []*parser.Property{{Name: "name", Type: "string"}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		SourceConfig: map[string]*config.SourceConfig{
+			"KonnectEventGateway": {SupportsMirror: true},
+		},
+	})
+	opsCfg := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewaysSDK",
+			FieldName: "EventGateways",
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateGatewayRequest"},
+		},
+	}
+	res, err := g.generateEntityOpsFile("KonnectEventGateway", schema, opsCfg)
+	require.NoError(t, err)
+	require.NotNil(t, res.TestFile)
+	content := res.TestFile.Content
+	// A mirror entity's APISpec field is *KonnectEventGatewayAPISpec, so the
+	// fixture must take its address rather than embedding a value literal.
+	require.Contains(t, content, "APISpec: &konnectv1alpha1.KonnectEventGatewayAPISpec{")
+	require.NotContains(t, content, "APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{")
 }

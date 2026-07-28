@@ -40,7 +40,7 @@ func CreateGeneratedOps[
 	case *konnectv1alpha1.AIGatewayIdentityProvider:
 		return createAIGatewayIdentityProvider(ctx, cl, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayMCPServer:
-		return createAIGatewayMCPServer(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
+		return createAIGatewayMCPServer(ctx, cl, sdk.GetAIGatewayMCPServersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModel:
 		return createAIGatewayModel(ctx, cl, sdk.GetAIGatewayModelsSDK(), ent)
 	case *konnectv1alpha1.AIGatewayModelProvider:
@@ -55,10 +55,12 @@ func CreateGeneratedOps[
 		return createEventGatewayListener(ctx, sdk.GetEventGatewayListenersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayListenerPolicy:
 		return createEventGatewayListenerPolicy(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
+	case *configurationv1alpha1.EventGatewaySchemaRegistry:
+		return createEventGatewaySchemaRegistry(ctx, cl, sdk.GetEventGatewaySchemaRegistriesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:
 		return createEventGatewayVirtualCluster(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
-		return createEventGatewayVirtualClusterConsumePolicy(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
+		return createEventGatewayVirtualClusterConsumePolicy(ctx, cl, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicy:
 		return createEventGatewayVirtualClusterPolicy(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:

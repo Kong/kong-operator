@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -38,6 +39,11 @@ type opsCreateFuncData struct {
 	HasTags                 bool
 	HasLabels               bool
 	LabelsPointer           bool
+	// LabelsUnionField is the union member Go field name to inject labels/tags
+	// through when the create request body is a root-level discriminated union
+	// (e.g. "SchemaRegistryConfluent"). Empty when the request type has a direct
+	// .Labels/.Tags field (the common, non-union case).
+	LabelsUnionField string
 	// Parents holds metadata for each parent dependency (outermost first).
 	// Single-parent entities have len(Parents)==1; root entities have len==0.
 	Parents []parentInfo
@@ -56,9 +62,21 @@ type opsCreateFuncData struct {
 	SingletonNoID        bool
 	RespRootUnion        *opsCreateRootUnionResponseData
 	ResponseStatusFields []config.ResponseStatusFieldConfig
+	// HasNestedResponseStatusFields is true when at least one ResponseStatusFields
+	// entry generates a nested struct (i.e. has Fields, not a scalar RespPath).
+	// Gates emission of the protocolHTTPS/protocolHTTP consts, which only the
+	// nested TrimPrefix path uses.
+	HasNestedResponseStatusFields bool
 	// Associations lists the top-level spec association fields whose membership
 	// is enforced by a hand-written helper called after the entity is created.
 	Associations []opsAssociationData
+	// SupportsMirror is true when the entity opted into Origin+Mirror. The
+	// generated create function then branches on obj.Spec.Source: Mirror fetches
+	// the existing Konnect entity by ID instead of creating it.
+	SupportsMirror bool
+	// GetSDKMethod is the SDK get-by-ID method name used by the Mirror branch,
+	// derived from SDKMethod by swapping the "Create" prefix for "Get".
+	GetSDKMethod string
 }
 
 // opsAssociationData is the per-association template data for the ops
@@ -113,7 +131,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 	if err != nil {
 		return nil, fmt.Errorf("entity %q: resolve create SDK interface: %w", entityName, err)
 	}
-	hasTags, hasLabels, labelsPointer := metadataFields(schema)
+	hasTags, hasLabels, labelsPointer := metadataFields(schema, opsConfig)
 	associations := g.opsAssociations(entityName)
 	// Association enforcement helpers need the controller-runtime client.
 	needsClient := opsConfig.RequireClient || g.entityHasReferences(entityName) || len(associations) > 0
@@ -130,13 +148,44 @@ func (g *Generator) generateOpsCreateFuncBody(
 
 	// For fully-wrapped requests the JSON body lives under a named field on the
 	// operations wrapper; label/tag injection must target that field.
-	var createBodyField string
+	var createBodyField, createBodyTypeName string
 	if createFullyWrapped {
 		bodyInfo, err := ParseSDKRequestBodyInfo(createReqImportPath, createReqType)
 		if err != nil {
 			return nil, fmt.Errorf("entity %q: inspect create request body: %w", entityName, err)
 		}
 		createBodyField = bodyInfo.FieldName
+		createBodyTypeName = bodyInfo.TypeName
+	}
+
+	// When labels/tags are declared inside a root-union request body's variant
+	// (see metadataFields), the SDK request type returned by ToXXX() has no
+	// direct .Labels/.Tags field — it's nested under the selected union member.
+	// Resolve that member field name so the template can inject through it.
+	// Requires exactly one union member; a request type with multiple members
+	// (e.g. AIGatewayModelProvider's 19 variants) has no single field to target
+	// and must opt out via ops.skipRootUnionMetadataFields instead of guessing.
+	var labelsUnionField string
+	if hasLabels || hasTags {
+		checkImportPath, checkType := createReqImportPath, createReqType
+		if createFullyWrapped {
+			checkImportPath, checkType = "github.com/Kong/sdk-konnect-go/models/components", createBodyTypeName
+		}
+		memberFields, err := ParseSDKUnionMemberFieldNames(checkImportPath, checkType)
+		if err != nil {
+			return nil, fmt.Errorf("entity %q: inspect create request union: %w", entityName, err)
+		}
+		switch len(memberFields) {
+		case 0:
+			// Flat request type; labels/tags are set directly on req.
+		case 1:
+			labelsUnionField = memberFields[0]
+		default:
+			return nil, fmt.Errorf(
+				"entity %q: labels/tags detected on multi-variant union create body %q; set ops.skipRootUnionMetadataFields to opt out",
+				entityName, checkType,
+			)
+		}
 	}
 
 	var respRootUnion *opsCreateRootUnionResponseData
@@ -156,27 +205,31 @@ func (g *Generator) generateOpsCreateFuncBody(
 	}
 
 	return &opsCreateFuncData{
-		Entity:               entityName,
-		APIAlias:             g.config.APIGroupPackageAlias,
-		SDKInterface:         sdkInterface,
-		SDKMethod:            sdkMethod,
-		CreateReqMethod:      createReqMethod,
-		CreateReqType:        createReqType,
-		CreateReqBodyPointer: schema.CreateReqBodyPointer,
-		NeedsClient:          needsClient,
-		HasReferences:        g.entityHasParentRefReplacement(entityName),
-		RespField:            schema.SuccessResponseRef,
-		HasTags:              hasTags,
-		HasLabels:            hasLabels,
-		LabelsPointer:        labelsPointer,
-		Parents:              parents,
-		CreateFullyWrapped:   createFullyWrapped,
-		CreateBodyField:      createBodyField,
-		RespIDIsPointer:      schema.RespIDIsPointer,
-		SingletonNoID:        isSingletonNoID(schema),
-		RespRootUnion:        respRootUnion,
-		ResponseStatusFields: opsConfig.ResponseStatusFields,
-		Associations:         associations,
+		APIAlias:                      g.config.APIGroupPackageAlias,
+		Associations:                  associations,
+		CreateBodyField:               createBodyField,
+		CreateFullyWrapped:            createFullyWrapped,
+		CreateReqBodyPointer:          schema.CreateReqBodyPointer,
+		CreateReqMethod:               createReqMethod,
+		CreateReqType:                 createReqType,
+		Entity:                        entityName,
+		GetSDKMethod:                  "Get" + strings.TrimPrefix(sdkMethod, "Create"),
+		HasLabels:                     hasLabels,
+		HasNestedResponseStatusFields: hasNestedResponseStatusFields(opsConfig.ResponseStatusFields),
+		HasReferences:                 g.entityHasParentRefReplacement(entityName),
+		HasTags:                       hasTags,
+		LabelsPointer:                 labelsPointer,
+		LabelsUnionField:              labelsUnionField,
+		NeedsClient:                   needsClient,
+		Parents:                       parents,
+		RespField:                     schema.SuccessResponseRef,
+		RespIDIsPointer:               schema.RespIDIsPointer,
+		ResponseStatusFields:          opsConfig.ResponseStatusFields,
+		RespRootUnion:                 respRootUnion,
+		SDKInterface:                  sdkInterface,
+		SDKMethod:                     sdkMethod,
+		SingletonNoID:                 isSingletonNoID(schema),
+		SupportsMirror:                g.entitySupportsMirror(entityName),
 	}, nil
 }
 

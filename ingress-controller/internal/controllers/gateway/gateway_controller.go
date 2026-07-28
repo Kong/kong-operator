@@ -150,6 +150,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Client:           r.Client,
 		Log:              r.Log.WithName(strings.ToUpper(gatewayapi.V1GroupVersion) + "GatewayClass"),
 		Scheme:           r.Scheme,
+		DataplaneClient:  r.DataplaneClient,
 		CacheSyncTimeout: r.CacheSyncTimeout,
 	}
 

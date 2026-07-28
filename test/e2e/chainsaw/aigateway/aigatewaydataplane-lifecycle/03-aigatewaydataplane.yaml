@@ -1,0 +1,25 @@
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ($aigw_dp_name)
+  namespace: ($namespace)
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($aigw_cp_name)
+  deployment:
+    replicas: 1
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: aigw
+            image: ($aigw_dp_image)
+  network:
+    services:
+      ingress:
+        type: LoadBalancer
+        ports:
+          - name: ingress
+            port: 443
+            targetPort: 8443

@@ -27,6 +27,11 @@ func (*EventGatewayListenerPolicy) PersistsKonnectID() bool {
 	return true
 }
 
+// PersistsKonnectID reports whether EventGatewaySchemaRegistry persists a Konnect ID in status.
+func (*EventGatewaySchemaRegistry) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether EventGatewayVirtualCluster persists a Konnect ID in status.
 func (*EventGatewayVirtualCluster) PersistsKonnectID() bool {
 	return true

@@ -4,22 +4,32 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"os"
+	"path/filepath"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	aexbuilder "k8s.io/apiextensions-apiserver/pkg/controller/openapi/builder"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
+	kubespec3 "k8s.io/kube-openapi/pkg/spec3"
+	validationspec "k8s.io/kube-openapi/pkg/validation/spec"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	k8syaml "sigs.k8s.io/yaml"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -42,57 +52,61 @@ func newUnstructured(ns, name string, gvk schema.GroupVersionKind, labels map[st
 	return u
 }
 
-func TestPruneDesiredObj(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]any
-		wantMeta map[string]any
-		wantSpec map[string]any
-	}{
-		{
-			name: "removes name and namespace",
-			input: map[string]any{
-				"metadata": map[string]any{
-					"name":      "test-name",
-					"namespace": "test-namespace",
-					"labels":    map[string]any{"foo": "bar"},
-				},
-				"spec": map[string]any{"field": "value"},
-			},
-			wantMeta: map[string]any{"labels": map[string]any{"foo": "bar"}},
-			wantSpec: map[string]any{"field": "value"},
-		},
-		{
-			name: "prunes empty metadata",
-			input: map[string]any{
-				"metadata": map[string]any{},
-			},
-			wantMeta: nil,
-			wantSpec: nil,
-		},
+// hybridGatewayTestCRDManifests lists the real, repo-checked-in CRD manifests
+// for the Kong CRD kinds exercised by enforceState's tests below. Building the
+// TypeConverter from these manifests (rather than a live cluster) keeps this
+// suite fast/offline while still exercising the real CRD OpenAPI schemas.
+var hybridGatewayTestCRDManifests = []string{
+	"configuration.konghq.com_kongtargets.yaml",
+	"configuration.konghq.com_kongroutes.yaml",
+	"configuration.konghq.com_kongpluginbindings.yaml",
+	"configuration.konghq.com_kongservices.yaml",
+	"configuration.konghq.com_kongupstreams.yaml",
+}
+
+// newTestTypeConverter is memoized (via [sync.OnceValue]) since it is expensive
+// to build (reads + parses CRD manifests, builds OpenAPI schemas) and is
+// read-only/safe to share across all tests in this file, including parallel
+// subtests.
+var newTestTypeConverter = sync.OnceValue(func() k8smanagedfields.TypeConverter {
+	var specs []*kubespec3.OpenAPI
+	for _, file := range hybridGatewayTestCRDManifests {
+		path := filepath.Join("..", "..", "config", "crd", "kong-operator", file)
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			panic(fmt.Errorf("failed to read CRD manifest %s: %w", path, err))
+		}
+
+		crd := &apiextensionsv1.CustomResourceDefinition{}
+		if err := k8syaml.Unmarshal(raw, crd); err != nil {
+			panic(fmt.Errorf("failed to unmarshal CRD manifest %s: %w", path, err))
+		}
+
+		for _, v := range crd.Spec.Versions {
+			spec, err := aexbuilder.BuildOpenAPIV3(crd, v.Name, aexbuilder.Options{})
+			if err != nil {
+				panic(fmt.Errorf("failed to build OpenAPI v3 for %s/%s: %w", crd.Name, v.Name, err))
+			}
+			specs = append(specs, spec)
+		}
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			obj := unstructured.Unstructured{Object: tt.input}
-			u := pruneDesiredObj(obj)
-			metadata, hasMeta := u.Object["metadata"]
-			if tt.wantMeta == nil {
-				assert.False(t, hasMeta, "metadata should be missing or nil")
-			} else {
-				metaMap, ok := metadata.(map[string]any)
-				assert.True(t, ok, "metadata should be a map")
-				assert.Equal(t, tt.wantMeta, metaMap)
-			}
-			if tt.wantSpec != nil {
-				assert.Equal(t, tt.wantSpec, u.Object["spec"])
-			} else {
-				_, hasSpec := u.Object["spec"]
-				assert.False(t, hasSpec)
-			}
-		})
+	merged, err := aexbuilder.MergeSpecsV3(specs...)
+	if err != nil {
+		panic(fmt.Errorf("failed to merge CRD OpenAPI v3 specs: %w", err))
 	}
-}
+
+	schemas := map[string]*validationspec.Schema{}
+	if merged.Components != nil {
+		maps.Copy(schemas, merged.Components.Schemas)
+	}
+
+	tc, err := k8smanagedfields.NewTypeConverter(schemas, false)
+	if err != nil {
+		panic(fmt.Errorf("failed to create TypeConverter: %w", err))
+	}
+	return tc
+})
 
 func TestEnforceState_DependencyGating(t *testing.T) {
 	ctx := t.Context()
@@ -115,7 +129,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).Build()
 
-		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -138,7 +152,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(svc).Build()
 
-		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -160,7 +174,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(route).Build()
 
-		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -182,7 +196,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithObjects(cert).Build()
 
-		applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.False(t, applied)
 		assert.True(t, waiting)
@@ -212,7 +226,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(cert).WithObjects(cert).Build()
 
-		applied, _, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, _, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		// The desired object was applied (created), so applied should be true.
 		assert.True(t, applied)
@@ -226,7 +240,7 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 		fakeConv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desired}}
 		cl := fake.NewClientBuilder().WithScheme(s).Build()
 
-		applied, _, err := enforceState(ctx, cl, logger, fakeConv)
+		applied, _, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 		require.NoError(t, err)
 		assert.True(t, applied)
 	})
@@ -334,6 +348,20 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 		return u
 	}
 
+	// ownedFieldsRaw computes the FieldsV1 raw JSON that a real Server-Side
+	// Apply of obj would have recorded, by converting obj to its field set via
+	// the real, CRD-derived TypeConverter. Used to build a realistic
+	// ManagedFieldsEntry fixture for a foreign field manager.
+	ownedFieldsRaw := func(obj *unstructured.Unstructured) []byte {
+		typed, err := newTestTypeConverter().ObjectToTyped(obj)
+		require.NoError(t, err)
+		set, err := typed.ToFieldSet()
+		require.NoError(t, err)
+		raw, err := set.ToJSON()
+		require.NoError(t, err)
+		return raw
+	}
+
 	tests := []struct {
 		name            string
 		scheme          *runtime.Scheme
@@ -411,7 +439,33 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			wantWaiting: false,
 		},
 		{
-			name:    "returns extract managed fields error for unsupported group",
+			// Regression test: even when the preexisting object's values already
+			// match desired, if hybridGatewayStateFieldManager has no managed-fields
+			// entry yet on it (e.g. it's owned by a different field manager),
+			// enforceState must still apply so ownership of the relevant fields is
+			// claimed for hybridGatewayStateFieldManager. Otherwise the object would
+			// never gain a managed-fields entry for our manager until a real value
+			// changes, leaving SSA conflict detection ineffective for it in the
+			// meantime.
+			name:    "applies (claims ownership) when values match but no managed-fields entry exists for our manager",
+			scheme:  scheme.Get(),
+			desired: []unstructured.Unstructured{makeDesiredService("svc-claim", "same.example")},
+			preexisting: []client.Object{func() client.Object {
+				u := makeDesiredService("svc-claim", "same.example")
+				u.SetManagedFields([]metav1.ManagedFieldsEntry{{
+					Manager:    "foreign-manager",
+					Operation:  metav1.ManagedFieldsOperationApply,
+					APIVersion: kongServiceGVK.GroupVersion().String(),
+					FieldsType: "FieldsV1",
+					FieldsV1:   &metav1.FieldsV1{Raw: ownedFieldsRaw(&u)},
+				}})
+				return &u
+			}()},
+			wantApplied: true,
+			wantWaiting: false,
+		},
+		{
+			name:    "returns typed conversion error for unsupported group",
 			scheme:  scheme.Get(),
 			desired: []unstructured.Unstructured{newUnstructured("default", "bad-group", schema.GroupVersionKind{Group: "invalid.group", Version: "v1", Kind: "Bad"}, nil)},
 			preexisting: []client.Object{func() client.Object {
@@ -420,19 +474,16 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			}()},
 			wantApplied:     false,
 			wantWaiting:     false,
-			wantErrContains: "failed to extract managed fields",
+			wantErrContains: "failed to convert existing object to TypedValue",
 		},
 		{
-			name:   "returns conversion error for invalid desired payload",
-			scheme: scheme.Get(),
-			desired: []unstructured.Unstructured{func() unstructured.Unstructured {
-				u := makeDesiredService("svc-convert", "ok.example")
-				u.Object["spec"] = map[string]any{"host": make(chan int), "port": int64(80), "protocol": "httproute"}
-				return u
-			}()},
+			name:            "returns conversion error for invalid desired payload",
+			scheme:          scheme.Get(),
+			desired:         []unstructured.Unstructured{makeDesiredService("svc-convert", int64(12345))},
+			preexisting:     []client.Object{func() client.Object { u := makeDesiredService("svc-convert", "ok.example"); return &u }()},
 			wantApplied:     false,
 			wantWaiting:     false,
-			wantErrContains: "failed to create object kind KongService obj default/svc-convert",
+			wantErrContains: "failed to convert desired object to TypedValue",
 		},
 		{
 			name:    "returns conflict error during create apply",
@@ -443,7 +494,7 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 					return apierrors.NewConflict(schema.GroupResource{Group: "configuration.konghq.com", Resource: "kongservices"}, "svc-create-conflict", assert.AnError)
 				},
 			},
-			wantErrContains: "conflict during create of object kind KongService obj default/svc-create-conflict",
+			wantErrContains: "conflict during apply of object kind KongService obj default/svc-create-conflict",
 		},
 		{
 			name:        "returns update error when apply fails on diff",
@@ -455,13 +506,13 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 					return assert.AnError
 				},
 			},
-			wantErrContains: "failed to create object kind KongService obj default/svc-update-err",
+			wantErrContains: "failed to apply object kind KongService obj default/svc-update-err",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := fake.NewClientBuilder().WithScheme(tt.scheme)
+			builder := fake.NewClientBuilder().WithScheme(tt.scheme).WithReturnManagedFields()
 			if len(tt.preexisting) > 0 {
 				builder = builder.WithObjects(tt.preexisting...)
 			}
@@ -475,7 +526,7 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			}
 
 			conv := &fakeHTTPRouteConverter{desired: tt.desired, outputStoreErr: tt.outputStoreErr}
-			applied, waiting, err := enforceState(ctx, cl, logger, conv)
+			applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, conv)
 
 			if tt.wantErrContains != "" {
 				require.Error(t, err)
@@ -1233,6 +1284,189 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 			cl := builder.Build()
 
 			shouldProcess := shouldProcessObject[gwtypes.HTTPRoute](ctx, cl, route, logger)
+			assert.Equal(t, tc.expectedResult, shouldProcess, tc.description)
+		})
+	}
+}
+
+// TestShouldProcessObject_TCPRoute guards against regressions of the missing
+// *gwtypes.TCPRoute case in referencesSupportedGateway: without it, a fresh
+// TCPRoute (no finalizer yet) referencing a supported Gateway was never picked
+// up for processing, so it never got a finalizer or a status.
+func TestShouldProcessObject_TCPRoute(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+
+	ourGateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-gateway",
+			Namespace: "default",
+			UID:       "our-gateway-uid",
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "kong",
+		},
+	}
+
+	ourKonnectExtension := &konnectv1alpha2.KonnectExtension{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-gateway",
+			Namespace: "default",
+			Labels: map[string]string{
+				"gateway-operator.konghq.com/managed-by": "gateway",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "Gateway",
+					Name:       "our-gateway",
+					UID:        "our-gateway-uid",
+				},
+			},
+		},
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "our-cp",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ourControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-cp",
+			Namespace: "default",
+		},
+	}
+
+	otherGateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "other-gateway",
+			Namespace: "default",
+			UID:       "other-gateway-uid",
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "other-class",
+		},
+	}
+
+	testCases := []struct {
+		name           string
+		setupRoute     func() *gwtypes.TCPRoute
+		clientObjects  []client.Object
+		expectedResult bool
+		description    string
+	}{
+		{
+			name: "object with finalizer should be processed",
+			setupRoute: func() *gwtypes.TCPRoute {
+				return &gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{finalizerconst.HybridTCPRouteFinalizer},
+					},
+				}
+			},
+			clientObjects:  []client.Object{},
+			expectedResult: true,
+			description:    "Objects with our finalizer should be processed regardless of Gateway reference.",
+		},
+		{
+			name: "object without finalizer but referencing our Gateway should be processed",
+			setupRoute: func() *gwtypes.TCPRoute {
+				gatewayName := gwtypes.ObjectName("our-gateway")
+				return &gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "default",
+					},
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: gatewayName},
+							},
+						},
+					},
+				}
+			},
+			clientObjects:  []client.Object{ourGateway, ourKonnectExtension, ourControlPlane},
+			expectedResult: true,
+			description:    "Objects without finalizer but referencing our Gateway should be processed.",
+		},
+		{
+			name: "object without finalizer referencing other Gateway should be skipped",
+			setupRoute: func() *gwtypes.TCPRoute {
+				gatewayName := gwtypes.ObjectName("other-gateway")
+				return &gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "default",
+					},
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: gatewayName},
+							},
+						},
+					},
+				}
+			},
+			clientObjects:  []client.Object{otherGateway},
+			expectedResult: false,
+			description:    "Objects without finalizer referencing unsupported Gateway should be skipped.",
+		},
+		{
+			name: "object without finalizer and no Gateway reference should be skipped",
+			setupRoute: func() *gwtypes.TCPRoute {
+				return &gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "default",
+					},
+				}
+			},
+			clientObjects:  []client.Object{},
+			expectedResult: false,
+			description:    "Objects without finalizer and no Gateway reference should be skipped.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			route := tc.setupRoute()
+			route.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   gwtypes.GroupName,
+				Version: "v1",
+				Kind:    "TCPRoute",
+			})
+
+			scheme := runtime.NewScheme()
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+				&gwtypes.TCPRoute{}, &gwtypes.Gateway{}, &gwtypes.GatewayClass{},
+			)
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: "konnect.konghq.com", Version: "v1alpha2"},
+				&konnectv1alpha2.KonnectExtension{},
+				&konnectv1alpha2.KonnectExtensionList{},
+				&konnectv1alpha2.KonnectGatewayControlPlane{},
+				&konnectv1alpha2.KonnectGatewayControlPlaneList{},
+			)
+			require.NoError(t, gatewayv1.Install(scheme))
+
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tc.clientObjects...).
+				Build()
+
+			shouldProcess := shouldProcessObject[gwtypes.TCPRoute](ctx, cl, route, logger)
 			assert.Equal(t, tc.expectedResult, shouldProcess, tc.description)
 		})
 	}
@@ -2082,7 +2316,7 @@ func TestEnforceState_UpstreamGating(t *testing.T) {
 			cl := builder.Build()
 
 			fakeConv := &fakeHTTPRouteConverter{desired: tt.desired}
-			applied, waiting, err := enforceState(ctx, cl, logger, fakeConv)
+			applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -2335,91 +2569,103 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 	}
 }
 
-func TestStripHybridRouteAnnotations(t *testing.T) {
+func TestHybridRouteAnnotationInfo(t *testing.T) {
 	tests := []struct {
-		name string
-		in   map[string]string
-		want map[string]string
+		name    string
+		wantKey string
+		wantRef string
+		runFn   func() (string, string)
 	}{
 		{
-			name: "removes hybrid-routes keys, keeps others",
-			in: map[string]string{
-				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/r1,ns/r2",
-				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns/t1",
-				consts.GatewayOperatorHybridGatewaysAnnotation:        "ns/gw",
-				"unrelated": "keep",
-			},
-			want: map[string]string{
-				consts.GatewayOperatorHybridGatewaysAnnotation: "ns/gw",
-				"unrelated": "keep",
+			name:    "HTTPRoute returns HTTPRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation,
+			wantRef: "ns/route-a",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "route-a", Namespace: "ns"},
+				})
 			},
 		},
 		{
-			name: "no annotations is a no-op",
-			in:   nil,
-			want: nil,
+			name:    "TLSRoute returns TLSRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesTLSRouteAnnotation,
+			wantRef: "ns/tls-route",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.TLSRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "tls-route", Namespace: "ns"},
+				})
+			},
+		},
+		{
+			name:    "Gateway returns empty strings",
+			wantKey: "",
+			wantRef: "",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "ns"},
+				})
+			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &unstructured.Unstructured{}
-			obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"})
-			if tt.in != nil {
-				obj.SetAnnotations(tt.in)
-			}
-			stripHybridRouteAnnotations(obj)
-			assert.Equal(t, tt.want, obj.GetAnnotations())
+			key, ref := tt.runFn()
+			assert.Equal(t, tt.wantKey, key)
+			assert.Equal(t, tt.wantRef, ref)
 		})
 	}
 }
 
-func TestReconcileSharedRouteAnnotations(t *testing.T) {
-	ctx := context.Background()
-	logger := logr.Discard()
+func TestMergeHybridRouteAnnotation(t *testing.T) {
 	upstreamGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongUpstream"}
+	annotationKey := consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	routeRef := "ns/route-a"
 
-	root := gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "route-a",
-			Namespace: "ns",
+	tests := []struct {
+		name           string
+		existingAnns   map[string]string
+		desiredAnns    map[string]string
+		wantAnnotation string
+	}{
+		{
+			name:           "empty existing sets annotation to routeRef",
+			existingAnns:   nil,
+			desiredAnns:    nil,
+			wantAnnotation: "ns/route-a",
+		},
+		{
+			name:           "existing has other routes, appends routeRef",
+			existingAnns:   map[string]string{annotationKey: "ns/other-route"},
+			desiredAnns:    nil,
+			wantAnnotation: "ns/other-route,ns/route-a",
+		},
+		{
+			name:           "routeRef already present, annotation is unchanged",
+			existingAnns:   map[string]string{annotationKey: "ns/other-route,ns/route-a"},
+			desiredAnns:    nil,
+			wantAnnotation: "ns/other-route,ns/route-a",
+		},
+		{
+			name:           "desired already has unrelated annotations, only hybrid-routes key is set",
+			existingAnns:   nil,
+			desiredAnns:    map[string]string{"unrelated": "keep"},
+			wantAnnotation: "ns/route-a",
 		},
 	}
-	routeKey := client.ObjectKeyFromObject(&root).String()
-
-	// Desired KongUpstream (without the hybrid-routes annotation, as applied by enforceState).
-	desired := newUnstructured("ns", "up-1", upstreamGVK, nil)
-
-	// One shared upstream already exists with another Route recorded; the absent upstream is not
-	// created here but is reported back via the missing return value so the reconciler can requeue.
-	existing := newUnstructured("ns", "up-1", upstreamGVK, nil)
-	existing.SetAnnotations(map[string]string{
-		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/other-route",
-	})
-
-	missingDesired := newUnstructured("ns", "up-missing", upstreamGVK, nil)
-
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(&existing).Build()
-	fakeConv := &fakeHTTPRouteConverter{
-		root:    root,
-		desired: []unstructured.Unstructured{desired, missingDesired},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			desired := newUnstructured("ns", "up-1", upstreamGVK, nil)
+			if tt.desiredAnns != nil {
+				desired.SetAnnotations(tt.desiredAnns)
+			}
+			existing := newUnstructured("ns", "up-1", upstreamGVK, nil)
+			if tt.existingAnns != nil {
+				existing.SetAnnotations(tt.existingAnns)
+			}
+			mergeHybridRouteAnnotation(&desired, &existing, annotationKey, routeRef)
+			assert.Equal(t, tt.wantAnnotation, desired.GetAnnotations()[annotationKey])
+		})
 	}
-
-	annotationsMissing, err := reconcileSharedRouteAnnotations[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv)
-	require.NoError(t, err)
-	assert.True(t, annotationsMissing, "absent desired upstream must be reported missing so the reconciler requeues")
-
-	got := &unstructured.Unstructured{}
-	got.SetGroupVersionKind(upstreamGVK)
-	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "up-1"}, got))
-	assert.Equal(t, "ns/other-route,"+routeKey, got.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
-
-	// The missing upstream must not have been created.
-	missing := &unstructured.Unstructured{}
-	missing.SetGroupVersionKind(upstreamGVK)
-	err = cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "up-missing"}, missing)
-	assert.True(t, apierrors.IsNotFound(err))
 }
 
 func TestRequeueOnConflict(t *testing.T) {

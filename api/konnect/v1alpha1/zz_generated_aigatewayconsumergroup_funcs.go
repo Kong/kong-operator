@@ -53,6 +53,12 @@ func (obj *AIGatewayConsumerGroup) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the AIGatewayConsumerGroup's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *AIGatewayConsumerGroup) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the AIGatewayConsumerGroup Kind name.
 func (obj AIGatewayConsumerGroup) GetTypeName() string {
 	return "AIGatewayConsumerGroup"
@@ -102,6 +108,11 @@ func (obj *AIGatewayConsumerGroup) GetKonnectAIGatewayRef() commonv1alpha1.Objec
 // GetParentRef returns the reference to the parent entity.
 func (obj *AIGatewayConsumerGroup) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetKonnectAIGatewayRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *AIGatewayConsumerGroup) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.AIGatewayRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

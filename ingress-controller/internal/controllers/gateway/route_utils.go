@@ -2,18 +2,14 @@ package gateway
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -165,7 +161,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 		}
 
 		// If the GatewayClass does not match this controller then skip it
-		if gatewayClass.Spec.ControllerName != GetControllerName() {
+		if !gatewayapi.GatewayClassControlledBy(&gatewayClass, GetControllerName()) {
 			continue
 		}
 
@@ -291,24 +287,36 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			// We failed to match a listener with this route
 
 			// This will also catch a case of not matching listener/section name.
+			//
+			// Cases are ordered to match the sequence in which the loop above checks a
+			// listener, not by RouteReason alphabetically or arbitrarily: each flag can
+			// only become true for a listener that has already passed every check before
+			// it, so "flag N is false across all listeners" means no listener got past
+			// check N. Checking flags out of loop-order would let a listener that failed
+			// an earlier check (e.g. AllowedRoutes/kind) masquerade as having failed a
+			// later one (e.g. SectionName) purely because its later flag was never
+			// reached, reporting the wrong reason. matchingHostname is the exception: it's
+			// only set on a listener that already passed every other check (it's the last
+			// check in the loop), so when non-nil it unambiguously means that listener
+			// failed on hostname alone and can safely stay checked first.
 			reason := gatewayapi.RouteReasonNoMatchingParent
 			switch {
 			case matchingHostname != nil && *matchingHostname == metav1.ConditionFalse:
 				// If there is no matchingHostname, the gateway Status Condition Accepted
 				// must be set to False with reason NoMatchingListenerHostname
 				reason = gatewayapi.RouteReasonNoMatchingListenerHostname
+			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
+				reason = gatewayapi.RouteReasonNotAllowedByListeners
+			case !listenerReady:
+				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			case parentRef.SectionName != nil && !allowedByListenerName:
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			case !listenerReady:
-				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			case parentRef.Port != nil && !portMatched:
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
-				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			}
 
 			var listenerName string
@@ -408,146 +416,30 @@ func routeMatchesListenerAllowedRoutes[T gatewayapi.RouteT](
 	gatewayNamespace string,
 	parentRefNamespace *gatewayapi.Namespace,
 ) (bool, error) {
-	if listener.AllowedRoutes == nil {
-		return true, nil
+	if !gatewayapi.ListenerAcceptsRouteKind(listener, route) {
+		return false, nil
 	}
 
-	if len(listener.AllowedRoutes.Kinds) > 0 {
-		// Find if the route has a type that's within the listener's supported gatewayapi.
-		_, ok := lo.Find(listener.AllowedRoutes.Kinds, func(rgk gatewayapi.RouteGroupKind) bool {
-			gvk := route.GetObjectKind().GroupVersionKind()
-			return (rgk.Group != nil && string(*rgk.Group) == gvk.Group) && string(rgk.Kind) == gvk.Kind
-		})
-		if !ok {
-			return false, nil
+	getNamespace := func(name string) (*corev1.Namespace, error) {
+		namespace := &corev1.Namespace{}
+		if err := mgrc.Get(ctx, client.ObjectKey{Name: name}, namespace); err != nil {
+			return nil, err
 		}
+		return namespace, nil
 	}
 
-	if listener.AllowedRoutes.Namespaces == nil || listener.AllowedRoutes.Namespaces.From == nil {
-		return true, nil
-	}
-
-	switch *listener.AllowedRoutes.Namespaces.From {
-	case gatewayapi.NamespacesFromAll:
-		return true, nil
-
-	case gatewayapi.NamespacesFromSame:
-		// If parentRef didn't specify the namespace then we check if
-		// the gateway is from the same namespace as the route
-		if parentRefNamespace == nil {
-			return gatewayNamespace == route.GetNamespace(), nil
-		}
-		// Otherwise compare routes namespace with parentRef's one.
-		return route.GetNamespace() == string(*parentRefNamespace), nil
-
-	case gatewayapi.NamespacesFromSelector:
-		namespace := corev1.Namespace{}
-		if err := mgrc.Get(ctx, client.ObjectKey{Name: route.GetNamespace()}, &namespace); err != nil {
-			return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
-		}
-
-		s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
-		if err != nil {
-			return false, fmt.Errorf(
-				"failed to convert AllowedRoutes LabelSelector %s to Selector for listener %s: %w",
-				listener.AllowedRoutes.Namespaces.Selector, listener.Name, err,
-			)
-		}
-
-		ok := s.Matches(labels.Set(namespace.Labels))
-		return ok, nil
-
-	default:
-		return false, fmt.Errorf(
-			"unknown listener.AllowedRoutes.Namespaces.From value: %s for listener %s",
-			*listener.AllowedRoutes.Namespaces.From, listener.Name,
-		)
-	}
+	return gatewayapi.ListenerAllowsNamespace(listener, route, gatewayNamespace, parentRefNamespace, getNamespace)
 }
 
-var (
-	errUnsupportedRouteKind          = errors.New("unsupported route kind")
-	errUnmatchedListenerName         = errors.New("unmatched listener name")
-	errListenerNoProgrammedCondition = errors.New("no Programmed condition found for listener")
-	errListenerNotProgrammedYet      = errors.New("listener not programmed yet")
-)
-
-// existsMatchingReadyListenerInStatus checks if:
+// existsMatchingListenerInStatus checks if:
 // - If a listener status exists with a matching type (via SupportedKinds).
 // - If it matches the requested listener by name (if specified).
-// - And finally check if the provided listener is marked as Ready.
 func existsMatchingListenerInStatus[T gatewayapi.RouteT](route T, listener gatewayapi.Listener, lss []gatewayapi.ListenerStatus) error {
-	listenerFound := false
-
-	// Find listener's status...
-	_, ok := lo.Find(lss, func(ls gatewayapi.ListenerStatus) bool {
-		if ls.Name != listener.Name {
-			return false
-		}
-		listenerFound = true
-
-		// Find if the route has a type that's within the supported types, listed
-		// in listener's status.
-		_, ok := lo.Find(ls.SupportedKinds, func(rgk gatewayapi.RouteGroupKind) bool {
-			// The artificially filled in GVK is needed for testing mostly and for
-			// situations when the object is not coming from the api server.
-			// Related upstream issue: https://github.com/kubernetes/kubernetes/issues/3030
-			var gvk schema.GroupVersionKind
-			switch any(route).(type) {
-			case *gatewayapi.HTTPRoute:
-				gvk = schema.GroupVersionKind{
-					Group: gatewayv1.GroupVersion.Group,
-					Kind:  "HTTPRoute",
-				}
-			case *gatewayapi.TLSRoute:
-				gvk = schema.GroupVersionKind{
-					Group: gatewayv1.GroupVersion.Group,
-					Kind:  "TLSRoute",
-				}
-			case *gatewayapi.GRPCRoute:
-				gvk = schema.GroupVersionKind{
-					Group: gatewayv1.GroupVersion.Group,
-					Kind:  "GRPCRoute",
-				}
-			default:
-				gvk = route.GetObjectKind().GroupVersionKind()
-			}
-			return (rgk.Group != nil && string(*rgk.Group) == gvk.Group) && string(rgk.Kind) == gvk.Kind
-		})
-		return ok
-	})
-
-	if !ok && !listenerFound {
-		return errUnmatchedListenerName // Matching Listener's not found.
-	}
-
-	if !ok && listenerFound {
-		return errUnsupportedRouteKind // Listener(s) found but none with matching supported kinds.
-	}
-
-	return nil
+	return gatewayapi.ListenerSupportsRouteInStatus(route, listener.Name, lss)
 }
 
 func listenerProgrammedInStatus(listenerName gatewayapi.SectionName, lss []gatewayapi.ListenerStatus) error {
-	listenerStatus, ok := lo.Find(lss, func(ls gatewayapi.ListenerStatus) bool {
-		return ls.Name == listenerName
-	})
-	if !ok {
-		return errUnmatchedListenerName // Matching Listener's not found.
-	}
-
-	programmedStatus, ok := lo.Find(listenerStatus.Conditions, func(condition metav1.Condition) bool {
-		return condition.Type == string(gatewayapi.ListenerConditionProgrammed)
-	})
-	if !ok {
-		return errListenerNoProgrammedCondition // "Programmed" condition not found in conditions of listener's conditions.
-	}
-
-	if programmedStatus.Status != metav1.ConditionTrue {
-		return errListenerNotProgrammedYet // "Programmed" condition is not true.
-	}
-
-	return nil
+	return gatewayapi.ListenerProgrammed(listenerName, lss)
 }
 
 func listenerHostnameIntersectWithRouteHostnames[H gatewayapi.HostnameT](listener gatewayapi.Listener, hostnames []H) bool {
@@ -760,6 +652,60 @@ func isTLSReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef g
 	}
 	for _, from := range grantSpec.From {
 		if from.Group != gatewayv1.GroupName || from.Kind != "TLSRoute" || fromNamespace != string(from.Namespace) {
+			continue
+		}
+
+		for _, to := range grantSpec.To {
+			if backendRefGroup == to.Group &&
+				backendRefKind == to.Kind &&
+				(to.Name == nil || *to.Name == backendRef.Name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// isUDPReferenceGranted checks that the backendRef referenced by the UDPRoute is granted by a ReferenceGrant.
+func isUDPReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef gatewayapi.BackendRef, fromNamespace string) bool {
+	var backendRefGroup gatewayapi.Group
+	var backendRefKind gatewayapi.Kind
+
+	if backendRef.Group != nil {
+		backendRefGroup = *backendRef.Group
+	}
+	if backendRef.Kind != nil {
+		backendRefKind = *backendRef.Kind
+	}
+	for _, from := range grantSpec.From {
+		if from.Group != gatewayv1.GroupName || from.Kind != "UDPRoute" || fromNamespace != string(from.Namespace) {
+			continue
+		}
+
+		for _, to := range grantSpec.To {
+			if backendRefGroup == to.Group &&
+				backendRefKind == to.Kind &&
+				(to.Name == nil || *to.Name == backendRef.Name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// isTCPReferenceGranted checks that the backendRef referenced by the TCPRoute is granted by a ReferenceGrant.
+func isTCPReferenceGranted(grantSpec gatewayapi.ReferenceGrantSpec, backendRef gatewayapi.BackendRef, fromNamespace string) bool {
+	var backendRefGroup gatewayapi.Group
+	var backendRefKind gatewayapi.Kind
+
+	if backendRef.Group != nil {
+		backendRefGroup = *backendRef.Group
+	}
+	if backendRef.Kind != nil {
+		backendRefKind = *backendRef.Kind
+	}
+	for _, from := range grantSpec.From {
+		if from.Group != gatewayv1.GroupName || from.Kind != "TCPRoute" || fromNamespace != string(from.Namespace) {
 			continue
 		}
 

@@ -20,6 +20,10 @@ type opsControllerRootUnionFixture struct {
 	VariantField    string
 	VariantTypeName string
 	VariantValue    string
+	// ExtraSeedObjects are Go expressions (each yielding a client.Object) for
+	// objects the fixture's fake client must have pre-seeded — e.g. a
+	// "programmed" CR that VariantValue holds a resolvable reference to.
+	ExtraSeedObjects []string
 }
 
 type opsControllerCreateTestData struct {
@@ -55,6 +59,13 @@ type opsControllerTestFileData struct {
 	Delete                *opsControllerDeleteTestData
 	NeedsFakeClient       bool
 	NeedsComponentsImport bool
+	// SupportsMirror is true when the entity opted into Origin+Mirror. The
+	// generated Spec.APISpec field is then a pointer, so the fixture literal
+	// must take its address instead of embedding a value.
+	SupportsMirror bool
+	// ExtraSeedObjects mirrors RootUnion.ExtraSeedObjects, hoisted to the
+	// top level for template convenience.
+	ExtraSeedObjects []string
 }
 
 func (g *Generator) generateEntityOpsTestFile(
@@ -82,13 +93,19 @@ func (g *Generator) generateEntityOpsTestFile(
 	fixtureFields := g.buildOpsControllerTestFields(entityName, schema.Properties)
 	rootUnion := buildOpsControllerRootUnionFixture(entityName, schema, g.config.APIGroupPackageAlias)
 
+	var extraSeedObjects []string
+	if rootUnion != nil {
+		extraSeedObjects = rootUnion.ExtraSeedObjects
+	}
 	data := opsControllerTestFileData{
-		Entity:         entityName,
-		FixtureName:    EntityFilePrefix(entityName),
-		APIAlias:       g.config.APIGroupPackageAlias,
-		APIPackagePath: g.config.APIGroupPackagePath,
-		FixtureFields:  fixtureFields,
-		RootUnion:      rootUnion,
+		Entity:           entityName,
+		FixtureName:      EntityFilePrefix(entityName),
+		APIAlias:         g.config.APIGroupPackageAlias,
+		APIPackagePath:   g.config.APIGroupPackagePath,
+		FixtureFields:    fixtureFields,
+		RootUnion:        rootUnion,
+		SupportsMirror:   g.entitySupportsMirror(entityName),
+		ExtraSeedObjects: extraSeedObjects,
 	}
 
 	if createData != nil {
@@ -237,10 +254,24 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 			TypeConstName:   "AIGatewayModelConfigTypeAPI",
 			VariantField:    "API",
 			VariantTypeName: "AIGatewayModelAPI",
+			// targets is required (minItems: 1) by the SDK request schema, and
+			// its Provider ref must resolve against a real, "programmed" (i.e.
+			// Konnect-ID'd) AIGatewayModelProvider — see ExtraSeedObjects,
+			// which the fixture's fake client seeds accordingly.
 			VariantValue: fmt.Sprintf(
-				`&%[1]s.AIGatewayModelAPI{DisplayName: "test-display-name", Name: "test-model", Capabilities: []string{"llm/v1/chat"}, Formats: []%[1]s.AIGatewayModelFormat{{Type: "openai"}}, Config: %[1]s.AIGatewayModelAPIConfig{Model: %[1]s.AIGatewayModelAPIConfigModel{Alias: "test-alias"}, Route: %[1]s.AIGatewayRouteConfig{Paths: []string{"/chat"}}}, Targets: []%[1]s.AIGatewayTarget{{Name: "target-model", Provider: "provider-1", Config: &%[1]s.AIGatewayTargetConfig{Type: %[1]s.AIGatewayTargetConfigTypeAnthropic, Anthropic: &%[1]s.AIGatewayTargetAnthropicConfig{}}}}}`,
+				`&%[1]s.AIGatewayModelAPI{DisplayName: "test-display-name", Name: "test-model", Capabilities: []string{"llm/v1/chat"}, Formats: []%[1]s.AIGatewayModelFormat{{Type: "openai"}}, Config: %[1]s.AIGatewayModelAPIConfig{Route: %[1]s.AIGatewayModelRouteConfig{Paths: []string{"/chat"}}}, Targets: []%[1]s.AIGatewayTarget{{Name: "target-model", Provider: %[1]s.AIGatewayModelProviderRef{Name: "provider-1"}, Config: &%[1]s.AIGatewayTargetConfig{Type: %[1]s.AIGatewayTargetConfigTypeAnthropic, Anthropic: &%[1]s.AIGatewayTargetAnthropicConfig{}}}}}`,
 				apiAlias,
 			),
+			ExtraSeedObjects: []string{
+				fmt.Sprintf(
+					`func() *%[1]s.AIGatewayModelProvider {
+		p := &%[1]s.AIGatewayModelProvider{ObjectMeta: metav1.ObjectMeta{Name: "provider-1", Namespace: "default"}}
+		p.SetKonnectID("provider-1-kid")
+		return p
+	}()`,
+					apiAlias,
+				),
+			},
 		}
 	case "AIGatewayIdentityProvider":
 		return &opsControllerRootUnionFixture{
@@ -261,6 +292,17 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 			VariantTypeName: "AIGatewayModelProviderAnthropic",
 			VariantValue: fmt.Sprintf(
 				`&%[1]s.AIGatewayModelProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: %[1]s.AIGatewayModelProviderAnthropicConfig{Auth: %[1]s.AIGatewayModelProviderConfigAuthBasic{Headers: []%[1]s.AIGatewayModelProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("test-value")}}}}}}`,
+				apiAlias,
+			),
+		}
+	case "EventGatewaySchemaRegistry":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "EventGatewaySchemaRegistryConfig",
+			TypeConstName:   "EventGatewaySchemaRegistryConfigTypeSchemaRegistryConfluent",
+			VariantField:    "SchemaRegistryConfluent",
+			VariantTypeName: "SchemaRegistryConfluent",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.SchemaRegistryConfluent{Name: "test-schema-registry", Config: %[1]s.SchemaRegistryConfluentConfig{SchemaType: "avro", Endpoint: "https://schema-registry.example.com"}}`,
 				apiAlias,
 			),
 		}

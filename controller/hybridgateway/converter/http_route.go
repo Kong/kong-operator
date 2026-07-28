@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -562,7 +563,13 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			}
 			ruleOutputs = append(ruleOutputs, filterOutputs...)
 
-			if len(rule.BackendRefs) > 0 && len(targets) == 0 {
+			// Per the Gateway API spec, an HTTPRoute rule that resolves to no valid backend must
+			// respond with 500. This covers both invalid backendRefs (present but unresolvable) and
+			// omitted or empty backendRefs. Kong's default for a service with an empty upstream is
+			// 503, so we bind a request-termination plugin to the service to return 500 instead.
+			// A rule whose RequestRedirect filter already produces a response without a backend is
+			// excluded: its redirect plugin must handle the request instead of terminating it.
+			if len(targets) == 0 && !ruleHasRedirectFilter(rule) {
 				terminationPlugin, err := plugin.RequestTerminationForBackendNotFound(
 					ctx,
 					logger,
@@ -629,4 +636,16 @@ type hybridGatewayParent struct {
 	parentRef gwtypes.ParentReference
 	cpRef     *commonv1alpha1.ControlPlaneRef
 	hostnames []string
+}
+
+// ruleHasRedirectFilter reports whether the rule has a RequestRedirect filter. Such a filter
+// produces an HTTP response without needing a backend, so a rule that has one must not get a
+// request-termination plugin injected when it resolves to no backend targets.
+func ruleHasRedirectFilter(rule gwtypes.HTTPRouteRule) bool {
+	for _, f := range rule.Filters {
+		if f.Type == gatewayv1.HTTPRouteFilterRequestRedirect {
+			return true
+		}
+	}
+	return false
 }

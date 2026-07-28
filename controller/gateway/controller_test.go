@@ -505,6 +505,101 @@ func TestProvisionControlPlane_UpdatesExtensionsWhenOnlyExtensionsDiffer(t *test
 	require.Equal(t, gatewayConfig.Spec.Extensions, updatedControlPlane.Spec.Extensions)
 }
 
+// Test_deploymentOptionsDeepEqual_Scaling is a regression test for the DataPlane's
+// spec.deployment.scaling never being updated by provisionDataPlane: the comparator
+// used to gate whether the owned DataPlane needs a patch only compared Replicas and
+// PodTemplateSpec, silently ignoring Scaling, so a scaling-only change from the
+// GatewayConfiguration was never detected and the patch was skipped forever.
+func Test_deploymentOptionsDeepEqual_Scaling(t *testing.T) {
+	original := &operatorv1beta1.DataPlaneDeploymentOptions{
+		DeploymentOptions: operatorv1beta1.DeploymentOptions{
+			Scaling: &operatorv1beta1.Scaling{
+				HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+					MinReplicas: new(int32(2)),
+					MaxReplicas: 3,
+				},
+			},
+		},
+	}
+	changed := original.DeepCopy()
+	changed.Scaling.HorizontalScaling.MinReplicas = new(int32(1))
+	changed.Scaling.HorizontalScaling.MaxReplicas = 2
+
+	assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+		"identical DeploymentOptions must be reported as equal")
+	assert.False(t, deploymentOptionsDeepEqual(original, changed),
+		"a scaling-only change must not be reported as equal, or the DataPlane's "+
+			"scaling never gets patched by provisionDataPlane")
+}
+
+func Test_deploymentOptionsDeepEqual_Hardened(t *testing.T) {
+	original := &operatorv1beta1.DataPlaneDeploymentOptions{
+		Hardened: commonv1alpha1.HardeningStateDisabled,
+	}
+	changed := original.DeepCopy()
+	changed.Hardened = commonv1alpha1.HardeningStateEnabled
+
+	assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+		"identical DeploymentOptions must be reported as equal")
+	assert.False(t, deploymentOptionsDeepEqual(original, changed),
+		"a hardened-only change must not be reported as equal, or the DataPlane's "+
+			"hardened setting never gets patched by provisionDataPlane")
+}
+
+// Test_deploymentOptionsDeepEqual_LabelsAndAnnotations is a regression test for the
+// DataPlane's spec.deployment.labels/annotations never being updated by
+// provisionDataPlane: the comparator used to gate whether the owned DataPlane needs
+// a patch didn't compare Labels/Annotations, so a labels/annotations-only change
+// from the GatewayConfiguration would never be detected and the patch would be
+// skipped forever.
+func Test_deploymentOptionsDeepEqual_LabelsAndAnnotations(t *testing.T) {
+	t.Run("labels", func(t *testing.T) {
+		original := &operatorv1beta1.DataPlaneDeploymentOptions{
+			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Labels: map[string]string{"foo": "bar", "animal": "cat"},
+			},
+		}
+		changed := original.DeepCopy()
+		changed.Labels = map[string]string{"animal": "dog", "foo": "baz"}
+
+		assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+			"identical DeploymentOptions must be reported as equal")
+		assert.False(t, deploymentOptionsDeepEqual(original, changed),
+			"a labels-only change must not be reported as equal, or the DataPlane's "+
+				"labels never get patched by provisionDataPlane")
+	})
+
+	t.Run("annotations", func(t *testing.T) {
+		original := &operatorv1beta1.DataPlaneDeploymentOptions{
+			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Annotations: map[string]string{"foo": "bar", "animal": "cat"},
+			},
+		}
+		changed := original.DeepCopy()
+		changed.Annotations = map[string]string{"animal": "dog", "foo": "baz"}
+
+		assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+			"identical DeploymentOptions must be reported as equal")
+		assert.False(t, deploymentOptionsDeepEqual(original, changed),
+			"an annotations-only change must not be reported as equal, or the "+
+				"DataPlane's annotations never get patched by provisionDataPlane")
+	})
+
+	t.Run("nil and empty map are treated as equal", func(t *testing.T) {
+		nilLabels := &operatorv1beta1.DataPlaneDeploymentOptions{}
+		emptyLabels := &operatorv1beta1.DataPlaneDeploymentOptions{
+			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Labels:      map[string]string{},
+				Annotations: map[string]string{},
+			},
+		}
+
+		assert.True(t, deploymentOptionsDeepEqual(nilLabels, emptyLabels),
+			"nil and empty Labels/Annotations must be reported as equal to avoid "+
+				"an infinite reconciliation loop")
+	})
+}
+
 func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 	testcases := []struct {
 		name     string

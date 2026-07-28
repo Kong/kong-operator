@@ -24,6 +24,37 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayVirtualClusterConsumePolicy's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayVirtualClusterConsumePolicy) GetKonnectName() string {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.Type {
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeDecryptPolicy:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.DecryptPolicy != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.DecryptPolicy.Name)
+		}
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordDecryptFieldsPolicyCreate:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordDecryptFieldsPolicyCreate != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordDecryptFieldsPolicyCreate.Name)
+		}
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ModifyHeadersPolicyCreate != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ModifyHeadersPolicyCreate.Name)
+		}
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeConsumeSchemaValidationPolicy:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy.Name)
+		}
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeSkipRecordPolicyCreate:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.SkipRecordPolicyCreate != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.SkipRecordPolicyCreate.Name)
+		}
+	}
+	return ""
+}
+
 // GetTypeName returns the EventGatewayVirtualClusterConsumePolicy Kind name.
 func (obj EventGatewayVirtualClusterConsumePolicy) GetTypeName() string {
 	return "EventGatewayVirtualClusterConsumePolicy"
@@ -89,6 +120,11 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) GetEventGatewayVirtualCluste
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayVirtualClusterConsumePolicy) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayVirtualClusterRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayVirtualClusterConsumePolicy) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.EventGatewayVirtualClusterRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

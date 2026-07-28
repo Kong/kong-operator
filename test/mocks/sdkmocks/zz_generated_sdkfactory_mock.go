@@ -23,6 +23,7 @@ type generatedMockSDKWrapper struct {
 	EventGatewayDataPlaneCertificatesSDK         *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	EventGatewayListenersSDK                     *mocks.MockEventGatewayListenersSDK
 	EventGatewayListenerPoliciesSDK              *mocks.MockEventGatewayListenerPoliciesSDK
+	EventGatewaySchemaRegistriesSDK              *mocks.MockEventGatewaySchemaRegistriesSDK
 	EventGatewayVirtualClustersSDK               *mocks.MockEventGatewayVirtualClustersSDK
 	EventGatewayVirtualClusterConsumePoliciesSDK *mocks.MockEventGatewayVirtualClusterConsumePoliciesSDK
 	EventGatewayVirtualClusterPoliciesSDK        *mocks.MockEventGatewayVirtualClusterPoliciesSDK
@@ -54,6 +55,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		EventGatewayDataPlaneCertificatesSDK:         mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		EventGatewayListenersSDK:                     mocks.NewMockEventGatewayListenersSDK(t),
 		EventGatewayListenerPoliciesSDK:              mocks.NewMockEventGatewayListenerPoliciesSDK(t),
+		EventGatewaySchemaRegistriesSDK:              mocks.NewMockEventGatewaySchemaRegistriesSDK(t),
 		EventGatewayVirtualClustersSDK:               mocks.NewMockEventGatewayVirtualClustersSDK(t),
 		EventGatewayVirtualClusterConsumePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t),
 		EventGatewayVirtualClusterPoliciesSDK:        mocks.NewMockEventGatewayVirtualClusterPoliciesSDK(t),
@@ -134,6 +136,11 @@ func (m generatedMockSDKWrapper) GetEventGatewayListenersSDK() sdkkonnectgo.Even
 // GetEventGatewayListenerPoliciesSDK returns the SDK to operate EventGatewayListenerPolicy.
 func (m generatedMockSDKWrapper) GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatewayListenerPoliciesSDK {
 	return m.EventGatewayListenerPoliciesSDK
+}
+
+// GetEventGatewaySchemaRegistriesSDK returns the SDK to operate EventGatewaySchemaRegistry.
+func (m generatedMockSDKWrapper) GetEventGatewaySchemaRegistriesSDK() sdkkonnectgo.EventGatewaySchemaRegistriesSDK {
+	return m.EventGatewaySchemaRegistriesSDK
 }
 
 // GetEventGatewayVirtualClustersSDK returns the SDK to operate EventGatewayVirtualCluster.

@@ -593,12 +593,10 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		assert.True(t, *keg.SecurityContext.ReadOnlyRootFilesystem)
 		assert.EqualValues(t, 65532, *keg.SecurityContext.RunAsUser)
 		assert.EqualValues(t, 65532, *keg.SecurityContext.RunAsGroup)
+		assert.True(t, *keg.SecurityContext.RunAsNonRoot)
 		require.NotNil(t, keg.SecurityContext.Capabilities)
-		assert.Contains(t, keg.SecurityContext.Capabilities.Drop, corev1.Capability("NET_RAW"))
-
-		// Pod-level security context preserved.
-		require.NotNil(t, deploy.Spec.Template.Spec.SecurityContext)
-		assert.True(t, *deploy.Spec.Template.Spec.SecurityContext.RunAsNonRoot)
+		assert.Contains(t, keg.SecurityContext.Capabilities.Drop, corev1.Capability("ALL"))
+		assert.Contains(t, keg.SecurityContext.Capabilities.Add, corev1.Capability("NET_BIND_SERVICE"))
 	})
 
 	t.Run("Deployment: spec.config overrides reflected in env vars; other base env vars preserved", func(t *testing.T) {

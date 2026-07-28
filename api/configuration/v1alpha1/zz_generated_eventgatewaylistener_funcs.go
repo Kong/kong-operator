@@ -53,6 +53,12 @@ func (obj *EventGatewayListener) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayListener's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayListener) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the EventGatewayListener Kind name.
 func (obj EventGatewayListener) GetTypeName() string {
 	return "EventGatewayListener"
@@ -107,6 +113,11 @@ func (obj *EventGatewayListener) GetEventGatewayRef() commonv1alpha1.ObjectRef {
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayListener) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayListener) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.GatewayRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

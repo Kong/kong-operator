@@ -93,6 +93,9 @@ type AIGatewayConsumerCredentialAPISpec struct {
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this credential, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.

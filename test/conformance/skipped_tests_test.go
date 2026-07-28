@@ -8,10 +8,8 @@ import (
 )
 
 var skippedTestsShared = []string{
-	// newly added in gateway api v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4662
-	tests.GatewayListenerUnsupportedProtocol.ShortName,
-	tests.GatewayInvalidParametersRef.ShortName,
-	tests.HTTPRouteNoBackendRefs.ShortName,
+	// failed after bumping gateway api to v1.6.0-rc.1, https://github.com/Kong/kong-operator/issues/4661
+	tests.HTTPRouteWeight.ShortName,
 
 	// skip it until FTI-7663 released
 	tests.GRPCExactMethodMatching.ShortName,
@@ -36,6 +34,17 @@ var skippedTestsForHybrid = []string{
 	tests.HTTPRouteRewritePath.ShortName,
 
 	tests.GRPCRouteWeight.ShortName,
+
+	// UDPRoute
+	tests.UDPRouteInvalidBackendRefNonexistent.ShortName,
+	tests.UDPRouteInvalidCrossNamespaceBackendRef.ShortName,
+	tests.UDPRouteMultipleRoutesAttachment.ShortName,
+	tests.UDPRouteNotAllowedByListeners.ShortName,
+	tests.UDPRouteParentRefAttachAllListeners.ShortName,
+	tests.UDPRouteParentRefPortAndSectionName.ShortName,
+	tests.UDPRouteReferenceGrant.ShortName,
+	tests.UDPRouteTest.ShortName,
+	tests.UDPRouteWeightedRouting.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.

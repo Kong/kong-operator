@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
@@ -24,6 +25,13 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test-namespace",
 				Name:      "dp-1",
+			},
+			Spec: operatorv1beta1.DataPlaneSpec{
+				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+						Hardened: commonv1alpha1.HardeningStateEnabled,
+					},
+				},
 			},
 		}
 		d, err := GenerateNewDeploymentForDataPlane(dp, consts.DefaultDataPlaneImage)
@@ -129,6 +137,10 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						Value: "random-value",
 					},
 					{
+						Name:  "KONG_PREFIX",
+						Value: "/var/kong",
+					},
+					{
 						Name:  "ENV1",
 						Value: "VALUE1",
 					},
@@ -165,6 +177,10 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name:  "KONG_PREFIX",
+						Value: "/var/kong",
+					},
 					{
 						Name:  "ENV1",
 						Value: "custom-value",
@@ -206,6 +222,10 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+					{
+						Name:  "KONG_PREFIX",
+						Value: "/var/kong",
+					},
 					{
 						Name:  "ENV1",
 						Value: "custom-value",
@@ -256,6 +276,10 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						Value: "custom-env-value",
 					},
 					{
+						Name:  "KONG_PREFIX",
+						Value: "/var/kong",
+					},
+					{
 						Name:  "ENV1",
 						Value: "custom-value",
 					},
@@ -290,6 +314,14 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							Name: consts.DataPlaneProxyContainerName,
 							VolumeMounts: []corev1.VolumeMount{
 								{
+									Name:      "tmp",
+									MountPath: "/tmp",
+								},
+								{
+									Name:      "var-kong",
+									MountPath: "/var/kong",
+								},
+								{
 									Name:      "volume1",
 									MountPath: "/volume1",
 								},
@@ -301,16 +333,19 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			Expected: func() corev1.PodTemplateSpec {
 				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
-				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes,
-					corev1.Volume{
+				d.Spec.Template.Spec.Volumes = append(
+					[]corev1.Volume{{
 						Name: "volume1",
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{
 								SizeLimit: resource.NewQuantity(1000, resource.DecimalSI),
 							},
 						},
-					})
-				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts,
+					}},
+					d.Spec.Template.Spec.Volumes...,
+				)
+				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					d.Spec.Template.Spec.Containers[0].VolumeMounts,
 					corev1.VolumeMount{
 						Name:      "volume1",
 						MountPath: "/volume1",
@@ -433,15 +468,20 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				}
 				SetDefaultsContainer(&sidecarContainer)
 				d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, sidecarContainer)
-				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, corev1.Volume{
-					Name: "new_volume",
-					VolumeSource: corev1.VolumeSource{
-						HostPath: &corev1.HostPathVolumeSource{
-							Path: "/host/path",
-							Type: new(corev1.HostPathUnset),
+				d.Spec.Template.Spec.Volumes = append(
+					[]corev1.Volume{
+						{
+							Name: "new_volume",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/host/path",
+									Type: new(corev1.HostPathUnset),
+								},
+							},
 						},
 					},
-				})
+					d.Spec.Template.Spec.Volumes...,
+				)
 				return d.Spec.Template
 			},
 		},
@@ -553,13 +593,15 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					},
 				}
 				SetDefaultsVolume(&volume)
-				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, volume)
+				d.Spec.Template.Spec.Volumes = append([]corev1.Volume{volume}, d.Spec.Template.Spec.Volumes...)
 				require.Len(t, d.Spec.Template.Spec.Containers, 1)
-				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts,
-					corev1.VolumeMount{
+				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+					[]corev1.VolumeMount{{
 						Name:      "new_volume",
 						MountPath: "/new_volume",
-					})
+					}},
+					d.Spec.Template.Spec.Containers[0].VolumeMounts...,
+				)
 				return d.Spec.Template
 			},
 		},
@@ -593,7 +635,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			Expected: func() corev1.PodTemplateSpec {
 				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
-				d.Spec.Template.Spec.Volumes = []corev1.Volume{
+				d.Spec.Template.Spec.Volumes = append([]corev1.Volume{
 					{
 						Name: "hostpath-volume",
 						VolumeSource: corev1.VolumeSource{
@@ -603,13 +645,13 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							},
 						},
 					},
-				}
+				}, d.Spec.Template.Spec.Volumes...)
 				d.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-					d.Spec.Template.Spec.Containers[0].VolumeMounts,
-					corev1.VolumeMount{
+					[]corev1.VolumeMount{{
 						Name:      "hostpath-volumemount",
 						MountPath: "/var/log/hostpath",
-					},
+					}},
+					d.Spec.Template.Spec.Containers[0].VolumeMounts...,
 				)
 
 				return d.Spec.Template
@@ -642,17 +684,16 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 					{
 						Name: "LIMIT",
-						// NOTE: this is an artifact of the strategic merge patch at work.
-						// This values comes from the first entry in the base patch.
-						// In order to overcome this we need to re-state the base values
-						// in the slice.
-						Value: "VALUE1",
 						ValueFrom: &corev1.EnvVarSource{
 							ResourceFieldRef: &corev1.ResourceFieldSelector{
 								Resource: "limits.cpu",
 								Divisor:  *resource.NewQuantity(1, resource.DecimalSI),
 							},
 						},
+					},
+					{
+						Name:  "KONG_PREFIX",
+						Value: "/var/kong",
 					},
 					{
 						Name:  "ENV1",
@@ -710,6 +751,10 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 					{
+						Name:  "KONG_PREFIX",
+						Value: "/var/kong",
+					},
+					{
 						Name:  "ENV1",
 						Value: "VALUE1",
 					},
@@ -751,7 +796,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			if !assert.Empty(t, diff) {
 				b := bytes.Buffer{}
 				require.NoError(t, json.NewEncoder(&b).Encode(result))
-				t.Logf("result:\n%s", pretty.Sprint(b.Bytes()))
+				t.Logf("result:\n%s", pretty.Sprint(b.String()))
 			}
 		})
 	}

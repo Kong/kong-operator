@@ -181,6 +181,8 @@ rules:
   - eventgatewaylistenerpolicies/status
   - eventgatewaylisteners/finalizers
   - eventgatewaylisteners/status
+  - eventgatewayschemaregistries/finalizers
+  - eventgatewayschemaregistries/status
   - eventgatewayvirtualclusterconsumepolicies/finalizers
   - eventgatewayvirtualclusterconsumepolicies/status
   - eventgatewayvirtualclusterpolicies/finalizers
@@ -224,6 +226,7 @@ rules:
   - eventgatewaybackendclusters
   - eventgatewaylistenerpolicies
   - eventgatewaylisteners
+  - eventgatewayschemaregistries
   - eventgatewayvirtualclusterconsumepolicies
   - eventgatewayvirtualclusterpolicies
   - eventgatewayvirtualclusterproducepolicies
@@ -381,7 +384,6 @@ rules:
   - gatewayclasses
   - grpcroutes
   - referencegrants
-  - tcproutes
   - udproutes
   verbs:
   - get
@@ -442,6 +444,7 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - tcproutes
   - tlsroutes
   verbs:
   - get

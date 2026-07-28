@@ -3,7 +3,6 @@ package gateway
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -14,10 +13,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
@@ -42,8 +41,10 @@ var GetControllerName = mgrconsts.GetControllerName
 type GatewayClassReconciler struct {
 	client.Client
 
-	Log              logr.Logger
-	Scheme           *runtime.Scheme
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	DataplaneClient controllers.DataPlane
+
 	CacheSyncTimeout time.Duration
 }
 
@@ -60,30 +61,14 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		}).
 		// watch GatewayClass objects
+		//
+		// No watch predicate here: every GatewayClass must be cached (not just
+		// ones we control), so that a reassignment away from this controller's
+		// ControllerName is observed and the cache stops treating its Gateways
+		// as owned. Reconcile still gates the Accepted status write on
+		// isGatewayClassControlled below.
 		For(&gatewayapi.GatewayClass{}).
-		// set the event filters
-		WithEventFilter(predicate.NewPredicateFuncs(r.GatewayClassIsUnmanaged)).
-		Complete(reconcile.AsReconciler[*gatewayapi.GatewayClass](mgr.GetClient(), r))
-}
-
-// -----------------------------------------------------------------------------
-// GatewayClass Controller - Watch Predicates
-// -----------------------------------------------------------------------------
-
-// GatewayClassIsUnmanaged is a watch predicate which filters out reconciliation events for
-// gateway objects which aren't annotated as unmanaged.
-func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool {
-	gatewayClass, ok := obj.(*gatewayapi.GatewayClass)
-	if !ok {
-		r.Log.Error(
-			fmt.Errorf("unexpected object type"),
-			"Gatewayclass watch predicate received unexpected object type",
-			"expected", "*gatewayapi.GatewayClass", "found", reflect.TypeOf(obj),
-		)
-		return false
-	}
-
-	return isGatewayClassControlled(gatewayClass)
+		Complete(r)
 }
 
 // -----------------------------------------------------------------------------
@@ -95,10 +80,26 @@ func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *GatewayClassReconciler) Reconcile(ctx context.Context, gwc *gatewayapi.GatewayClass) (ctrl.Result, error) {
-	log := r.Log.WithValues("GatewayV1GatewayClass", client.ObjectKeyFromObject(gwc))
+func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("GatewayV1GatewayClass", req.NamespacedName)
 
 	log.V(logging.DebugLevel).Info("Processing gatewayclass")
+
+	gwc := new(gatewayapi.GatewayClass)
+	if err := r.Get(ctx, req.NamespacedName, gwc); err != nil {
+		if apierrors.IsNotFound(err) {
+			gwc.Name = req.Name
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(gwc)
+		}
+		return ctrl.Result{}, err
+	}
+
+	// The translator needs the GatewayClass cached (ControllerName) to evaluate
+	// listener-attachment ownership the same way this controller does, regardless
+	// of whether it has been accepted yet.
+	if err := r.DataplaneClient.UpdateObject(gwc); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	if isGatewayClassControlled(gwc) {
 		alreadyAccepted := util.CheckCondition(

@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -187,7 +186,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 	if updated {
 		if err := r.Update(ctx, ext); err != nil {
 			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 			}
 			// in case the finalizer removal fails because the resource does not exist, ignore the error.
 			if isFinalizerToBeRemoved && apierrors.IsNotFound(err) {
@@ -232,7 +231,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			if updated {
 				if err := r.Update(ctx, ext); err != nil {
 					if apierrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+						return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
 					if apierrors.IsNotFound(err) {
@@ -389,22 +388,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 
 	apiAuthRef, err := getKonnectAPIAuthRefNN(cp, ext)
 	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return ctrl.Result{}, err
-		}
 		if cleanup {
-			// In case if KonnectExtension is during deletion and respective KonnectGatewayControlPlane
-			// has been already deleted, take apiAuthRef from the status, because it contains the last
-			// known reference and it is needed to perform all reconciliation steps.
-			apiAuthRef = types.NamespacedName{
-				Name: ext.Status.Konnect.AuthRef.Name,
-				// ext.Status.Konnect.AuthRef.Namespace is never nil as enforced in the status update.
-				Namespace: *ext.Status.Konnect.AuthRef.Namespace,
-			}
-		} else {
-			// Requeue until the reference becomes valid.
+			// The ControlPlane is gone and the extension was never fully provisioned
+			// (Status.Konnect / AuthRef is nil), so there is no server-side resource to clean up.
 			return ctrl.Result{}, nil
 		}
+		return ctrl.Result{}, err
 	}
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
@@ -465,6 +454,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 		}
 		certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] = newMappedIDsStr
 		if err := r.Update(ctx, certificateSecret); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
+			if apierrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -643,7 +638,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			if updated {
 				if err := r.Update(ctx, certificateSecret); err != nil {
 					if apierrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+						return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 					}
 					// in case the finalizer removal fails because the resource does not exist, ignore the error.
 					if apierrors.IsNotFound(err) {

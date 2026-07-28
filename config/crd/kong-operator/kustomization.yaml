@@ -8,6 +8,7 @@ resources:
   - configuration.konghq.com_eventgatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaylistenerpolicies.yaml
   - configuration.konghq.com_eventgatewaylisteners.yaml
+  - configuration.konghq.com_eventgatewayschemaregistries.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterconsumepolicies.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterpolicies.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterproducepolicies.yaml

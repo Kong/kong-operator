@@ -1,0 +1,532 @@
+# Hybrid Routes Annotation on Shared Resources test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-hybrid-routes-annotation
+spec:
+  description: |
+    This test is dedicated to validating that the gateway-operator.konghq.com/hybrid-routes
+    annotation is handled correctly on every Kong resource kind that can be shared across
+    multiple HTTPRoutes (KongService, KongUpstream, KongTarget) when those routes reference
+    the same backendRefs set. The annotation value is a comma-separated list of "namespace/name"
+    HTTPRoute refs; this test asserts the EXACT set present (not just "contains one entry"),
+    covering: simultaneous registration of multiple routes, removal of a single route's entry
+    on delete, and the entry moving from an old shared resource to a new one when a route's
+    backendRefs are updated. Traffic is also verified at every stage.
+
+  bindings:
+    # Common bindings - using chainsaw-provided $namespace.
+    - name: test_name
+      value: ($namespace)
+    - name: kong_namespace
+      value: ($namespace)
+
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+
+    - name: httproute_one_name
+      value: shared-backends-one
+    - name: httproute_two_name
+      value: shared-backends-two
+    - name: httproute_three_name
+      value: shared-backends-three
+    - name: httproute_one_path
+      value: /shared-backends-one
+    - name: httproute_two_path
+      value: /shared-backends-two
+    - name: httproute_three_path
+      value: /shared-backends-three
+
+    # Fully-qualified "namespace/name" refs for each route, as they appear in the
+    # hybrid-routes annotation value.
+    - name: httproute_one_ref
+      value: (join('/', [($kong_namespace), ($httproute_one_name)]))
+    - name: httproute_two_ref
+      value: (join('/', [($kong_namespace), ($httproute_two_name)]))
+    - name: httproute_three_ref
+      value: (join('/', [($kong_namespace), ($httproute_three_name)]))
+
+    - name: http_method
+      value: "GET"
+    - name: host_header
+      value: ""
+
+    - name: operator_namespace
+      value: kong-system
+
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+
+  steps:
+    # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 2a: Create the secret for Konnect authentication.
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    # Step 2b: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 4: Create the GatewayClass that will be used by the Gateway.
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
+    - name: Create-gateway
+      description: Create Gateway with TLS listener for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway.yaml
+
+    # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
+    - name: Assert-kong-certificate
+      description: Assert that the KongCertificate resource is created for the TLS secret.
+      use:
+        template: ../../common/_step_templates/assert-kongCertificate.yaml
+
+    # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
+    - name: Assert-kong-sni
+      description: Assert that the KongSNI resource is created for the SNI hostname.
+      use:
+        template: ../../common/_step_templates/assert-kongSNI.yaml
+      bindings:
+        - name: resource_type
+          value: "kongcertificates.configuration.konghq.com"
+
+    # Step 9: Create the echo service that will receive the routed traffic.
+    - name: Create-echo-service
+      description: Create and assert an echo service to route traffic to.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+        with:
+          bindings:
+            - name: echo_deployment_name
+              value: echo
+
+    # Step 10: Create the secondary echo service for shared backends.
+    - name: Create-echo-secondary-service
+      description: Create and assert a secondary echo service.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+        with:
+          bindings:
+            - name: echo_deployment_name
+              value: echo-secondary
+
+    # Step 11: Create 3 HTTPRoutes sharing the same backendRefs set. This is the precondition
+    # for KongService/KongUpstream/KongTarget to be shared across all three routes.
+    - name: create-httproutes-shared-backendrefs
+      description: Create 3 HTTPRoutes sharing the same backendRefs set
+      try:
+        - apply:
+            file: 01-httproutes.yaml
+        - assert:
+            file: 02-assert-httproutes.yaml
+
+    # Step 12: Sanity-check the shared KongService is healthy (Programmed, Konnect fields
+    # populated) before asserting the exact annotation contents.
+    - name: assert-kongservice-baseline
+      description: Assert the shared KongService is Programmed and synced to Konnect
+      use:
+        template: ../../common/_step_templates/assert-kongService.yaml
+      bindings:
+        - name: http_route_name
+          value: ($httproute_one_name)
+        - name: http_route_namespace
+          value: ($kong_namespace)
+
+    # Step 13: Sanity-check the shared KongUpstream is healthy.
+    - name: assert-kongupstream-baseline
+      description: Assert the shared KongUpstream is Programmed and synced to Konnect
+      use:
+        template: ../../common/_step_templates/assert-kongUpstream.yaml
+      bindings:
+        - name: http_route_name
+          value: ($httproute_one_name)
+        - name: http_route_namespace
+          value: ($kong_namespace)
+
+    # Step 14: Sanity-check a shared KongTarget is healthy.
+    - name: assert-kongtarget-baseline
+      description: Assert a shared KongTarget is Programmed and synced to Konnect
+      use:
+        template: ../../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: http_route_name
+          value: ($httproute_one_name)
+        - name: http_route_namespace
+          value: ($kong_namespace)
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+
+    # Step 15: Assert the shared KongService's hybrid-routes annotation lists all three routes
+    # simultaneously - proving that concurrent registrations from different HTTPRoutes don't
+    # clobber each other's entry.
+    - name: assert-annotation-all-routes-kongservice
+      description: Assert KongService annotation contains exactly all three routes
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_one_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: (join(',', [($httproute_one_ref), ($httproute_two_ref), ($httproute_three_ref)]))
+
+    # Step 16: Same check as above, for the shared KongUpstream.
+    - name: assert-annotation-all-routes-kongupstream
+      description: Assert KongUpstream annotation contains exactly all three routes
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_one_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: (join(',', [($httproute_one_ref), ($httproute_two_ref), ($httproute_three_ref)]))
+
+    # Step 17: Same check as above, for a shared KongTarget.
+    - name: assert-annotation-all-routes-kongtarget
+      description: Assert KongTarget annotation contains exactly all three routes
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongtargets.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_one_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: (join(',', [($httproute_one_ref), ($httproute_two_ref), ($httproute_three_ref)]))
+
+    # Step 18: Verify traffic for route one.
+    - name: verify-traffic-route-one
+      description: Verify route one serves traffic
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: ($httproute_one_path)
+        - name: listener_http_port
+          value: "80"
+
+    # Step 19: Verify traffic for route two.
+    - name: verify-traffic-route-two
+      description: Verify route two serves traffic
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: ($httproute_two_path)
+        - name: listener_http_port
+          value: "80"
+
+    # Step 20: Verify traffic for route three.
+    - name: verify-traffic-route-three
+      description: Verify route three serves traffic
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: ($httproute_three_path)
+        - name: listener_http_port
+          value: "80"
+
+    # Step 21: Delete route two.
+    - name: delete-httproute-two
+      description: Delete route two
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($kong_namespace)
+              name: ($httproute_two_name)
+
+    # Step 22: Assert route two's entry was atomically removed from the shared KongService's
+    # annotation, leaving routes one/three untouched.
+    - name: assert-annotation-after-delete-kongservice
+      description: Assert KongService annotation no longer lists route two
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_one_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: (join(',', [($httproute_one_ref), ($httproute_three_ref)]))
+
+    # Step 23: Same check as above, for the shared KongUpstream.
+    - name: assert-annotation-after-delete-kongupstream
+      description: Assert KongUpstream annotation no longer lists route two
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_one_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: (join(',', [($httproute_one_ref), ($httproute_three_ref)]))
+
+    # Step 24: Same check as above, for a shared KongTarget.
+    - name: assert-annotation-after-delete-kongtarget
+      description: Assert KongTarget annotation no longer lists route two
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongtargets.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_one_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: (join(',', [($httproute_one_ref), ($httproute_three_ref)]))
+
+    # Step 25: Verify route one still serves traffic after deletion.
+    - name: verify-traffic-after-delete-route-one
+      description: Verify route one still serves traffic after deletion
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: ($httproute_one_path)
+        - name: listener_http_port
+          value: "80"
+
+    # Step 26: Verify route three still serves traffic after deletion.
+    - name: verify-traffic-after-delete-route-three
+      description: Verify route three still serves traffic after deletion
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: ($httproute_three_path)
+        - name: listener_http_port
+          value: "80"
+
+    # Step 27: Update route three to use a different (non-shared) backendRefs set.
+    - name: update-remaining-httproute-backendrefs
+      description: Update route three to use a different backendRefs set
+      try:
+        - apply:
+            file: 03-update-httproute.yaml
+        - assert:
+            file: 04-assert-updated-httproute.yaml
+
+    # Step 28: Sanity-check the (now solely-owned) KongService for route one is still healthy.
+    - name: assert-kongservice-route-one-after-update
+      description: Assert KongService for route one after update
+      use:
+        template: ../../common/_step_templates/assert-kongService.yaml
+      bindings:
+        - name: http_route_name
+          value: ($httproute_one_name)
+        - name: http_route_namespace
+          value: ($kong_namespace)
+
+    # Step 29: Sanity-check the new dedicated KongService for route three is healthy.
+    - name: assert-kongservice-route-three-after-update
+      description: Assert KongService for route three after update
+      use:
+        template: ../../common/_step_templates/assert-kongService.yaml
+      bindings:
+        - name: http_route_name
+          value: ($httproute_three_name)
+        - name: http_route_namespace
+          value: ($kong_namespace)
+
+    # Step 30: Assert route three's entry was removed from the OLD shared KongService's
+    # annotation (still needed by route one only).
+    - name: assert-annotation-old-kongservice-after-update
+      description: Assert old shared KongService annotation now lists only route one
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_one_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: ($httproute_one_ref)
+
+    # Step 31: Assert route three's entry is present on the NEW KongService backing its
+    # updated backendRefs.
+    - name: assert-annotation-new-kongservice-after-update
+      description: Assert new KongService annotation lists only route three
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_three_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: ($httproute_three_ref)
+
+    # Step 32: Same before/after check as steps 30-31, for KongUpstream.
+    - name: assert-annotation-old-kongupstream-after-update
+      description: Assert old shared KongUpstream annotation now lists only route one
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_one_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: ($httproute_one_ref)
+
+    - name: assert-annotation-new-kongupstream-after-update
+      description: Assert new KongUpstream annotation lists only route three
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_three_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: ($httproute_three_ref)
+
+    # Step 33: Same before/after check as steps 30-31, for KongTarget.
+    - name: assert-annotation-old-kongtarget-after-update
+      description: Assert old shared KongTarget annotation now lists only route one
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongtargets.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_one_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: ($httproute_one_ref)
+
+    - name: assert-annotation-new-kongtarget-after-update
+      description: Assert new KongTarget annotation lists only route three
+      use:
+        template: ../../common/_step_templates/assert-hybrid-routes-annotation.yaml
+      bindings:
+        - name: resource_type
+          value: "kongtargets.configuration.konghq.com"
+        - name: anchor_http_route_name
+          value: ($httproute_three_name)
+        - name: anchor_http_route_namespace
+          value: ($kong_namespace)
+        - name: expected_http_routes
+          value: ($httproute_three_ref)
+
+    # Step 34: Verify route one still serves traffic after update.
+    - name: verify-traffic-final-route-one
+      description: Verify route one still serves traffic after update
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: ($httproute_one_path)
+        - name: listener_http_port
+          value: "80"
+
+    # Step 35: Verify route three still serves traffic after update.
+    - name: verify-traffic-final-route-three
+      description: Verify route three still serves traffic after update
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: ($httproute_three_path)
+        - name: listener_http_port
+          value: "80"
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-httproute-hybrid-routes-annotation
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

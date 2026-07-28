@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.2.1
+    kubernetes-configuration.konghq.com/version: v2.3.0-rc.2
   name: aigatewaymcpservers.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -129,8 +129,8 @@ spec:
                     properties:
                       access:
                         description: |-
-                          AIGatewayMCPServerConversionListenerAccess represents a union type for access.
-                          Only one of the fields should be set based on the AclAttributeType.
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
                         properties:
                           aclAttributeType:
                             description: AclAttributeType designates the type of configuration.
@@ -143,8 +143,11 @@ spec:
                             description: Consumer configuration.
                             properties:
                               acls:
-                                description: Access control rules for allowing or
-                                  denying consumer groups.
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Access control rules for allowing or denying consumer groups.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are
@@ -161,6 +164,9 @@ spec:
                                 type: object
                               defaultToolAcls:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   Default access control rules for allowing or denying consumer groups to
                                   tools.
                                 properties:
@@ -191,8 +197,11 @@ spec:
                                 minLength: 1
                                 type: string
                               acls:
-                                description: Access control rules for allowing or
-                                  denying consumer groups.
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Access control rules for allowing or denying consumer groups.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are
@@ -209,6 +218,9 @@ spec:
                                 type: object
                               defaultToolAcls:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   Default access control rules for allowing or denying consumer groups to
                                   tools.
                                 properties:
@@ -232,11 +244,18 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: Routing, logging, and server configuration for
-                          the MCP Server.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Routing, logging, and server configuration for the MCP Server.
                         properties:
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -248,18 +267,17 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              statistics:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
                             type: object
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
                             type: integer
                           route:
-                            description: Configuration for an AI Gateway route.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -362,7 +380,11 @@ spec:
                                 type: array
                             type: object
                           server:
-                            description: Server-side configuration for the MCP Server.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Server-side configuration for the MCP Server.
                             properties:
                               forwardClientHeaders:
                                 description: |-
@@ -371,6 +393,11 @@ spec:
                                 enum:
                                 - Enabled
                                 - Disabled
+                                type: string
+                              label:
+                                description: The label of the MCP server. This is
+                                  used to filter the exported MCP tools.
+                                maxLength: 253
                                 type: string
                               session:
                                 description: |-
@@ -401,8 +428,11 @@ spec:
                                     - Disabled
                                     type: string
                                   redis:
-                                    description: Config for connecting to a Cloud
-                                      Provider's Redis instance.
+                                    description: |-
+                                      **Pre-release Feature**
+                                      This feature is currently in beta and is subject to change.
+
+                                      Config for connecting to a Cloud Provider's Redis instance.
                                     properties:
                                       cloudAuthentication:
                                         description: Auth related config for connecting
@@ -767,13 +797,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
@@ -834,6 +857,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -844,7 +870,27 @@ spec:
                       policies:
                         description: List of policy references.
                         items:
-                          type: string
+                          description: |-
+                            AIGatewayPolicyRef references an AIGatewayPolicy in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayPolicy
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayPolicy
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace is reserved for future cross-namespace
+                                support.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                       tools:
                         description: List of tools exposed by this MCP Server.
@@ -859,6 +905,9 @@ spec:
                               properties:
                                 acls:
                                   description: |-
+                                    **Pre-release Feature**
+                                    This feature is currently in beta and is subject to change.
+
                                     Access control rules for allowing or denying consumer groups access to this
                                     tool.
                                     When configured, these will override the default access control rules
@@ -879,7 +928,9 @@ spec:
                                   type: object
                               type: object
                             annotations:
-                              description: AIGatewayMCPToolAnnotations is a type alias.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               properties:
                                 destructiveHint:
                                   description: If true, the tool may perform destructive
@@ -923,6 +974,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The headers of the exported API.
                                 By default, Kong will extract the headers from API configuration.
                                 If the configured headers are not exactly matched, this field is required.
@@ -959,6 +1013,9 @@ spec:
                               minLength: 1
                               type: string
                             parameters:
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               items:
                                 description: |-
                                   AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
@@ -1019,6 +1076,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The query arguments of the exported API.
                                 If the generated query arguments are not exactly matched, this field is
                                 required.
@@ -1027,6 +1087,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API requestBody specification defined in OpenAPI JSON format.
                                 For example,
                                 '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -1039,6 +1102,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API responses specification defined in OpenAPI JSON format.
                                 This specification will be used to validate the upstream response and map it
                                 back to the structuredOutput.
@@ -1075,11 +1141,18 @@ spec:
                     description: ConversionOnly configuration.
                     properties:
                       config:
-                        description: Routing, logging, and request body size limits
-                          for the MCP Server.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Routing, logging, and request body size limits for the MCP Server.
                         properties:
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -1091,18 +1164,17 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              statistics:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
                             type: object
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
                             type: integer
                           route:
-                            description: Configuration for an AI Gateway route.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -1259,6 +1331,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -1269,7 +1344,27 @@ spec:
                       policies:
                         description: List of policy references.
                         items:
-                          type: string
+                          description: |-
+                            AIGatewayPolicyRef references an AIGatewayPolicy in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayPolicy
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayPolicy
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace is reserved for future cross-namespace
+                                support.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                       tools:
                         description: List of tools exposed by this MCP Server.
@@ -1284,6 +1379,9 @@ spec:
                               properties:
                                 acls:
                                   description: |-
+                                    **Pre-release Feature**
+                                    This feature is currently in beta and is subject to change.
+
                                     Access control rules for allowing or denying consumer groups access to this
                                     tool.
                                     When configured, these will override the default access control rules
@@ -1304,7 +1402,9 @@ spec:
                                   type: object
                               type: object
                             annotations:
-                              description: AIGatewayMCPToolAnnotations is a type alias.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               properties:
                                 destructiveHint:
                                   description: If true, the tool may perform destructive
@@ -1348,6 +1448,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The headers of the exported API.
                                 By default, Kong will extract the headers from API configuration.
                                 If the configured headers are not exactly matched, this field is required.
@@ -1384,6 +1487,9 @@ spec:
                               minLength: 1
                               type: string
                             parameters:
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               items:
                                 description: |-
                                   AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
@@ -1444,6 +1550,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The query arguments of the exported API.
                                 If the generated query arguments are not exactly matched, this field is
                                 required.
@@ -1452,6 +1561,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API requestBody specification defined in OpenAPI JSON format.
                                 For example,
                                 '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -1464,6 +1576,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API responses specification defined in OpenAPI JSON format.
                                 This specification will be used to validate the upstream response and map it
                                 back to the structuredOutput.
@@ -1501,8 +1616,8 @@ spec:
                     properties:
                       access:
                         description: |-
-                          AIGatewayMCPServerListenerAccess represents a union type for access.
-                          Only one of the fields should be set based on the AclAttributeType.
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
                         properties:
                           aclAttributeType:
                             description: AclAttributeType designates the type of configuration.
@@ -1515,8 +1630,11 @@ spec:
                             description: Consumer configuration.
                             properties:
                               acls:
-                                description: Access control rules for allowing or
-                                  denying consumer groups.
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Access control rules for allowing or denying consumer groups.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are
@@ -1533,6 +1651,9 @@ spec:
                                 type: object
                               defaultToolAcls:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   Default access control rules for allowing or denying consumer groups to
                                   tools.
                                 properties:
@@ -1563,8 +1684,11 @@ spec:
                                 minLength: 1
                                 type: string
                               acls:
-                                description: Access control rules for allowing or
-                                  denying consumer groups.
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Access control rules for allowing or denying consumer groups.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are
@@ -1581,6 +1705,9 @@ spec:
                                 type: object
                               defaultToolAcls:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   Default access control rules for allowing or denying consumer groups to
                                   tools.
                                 properties:
@@ -1604,11 +1731,18 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: Routing, logging, and server configuration for
-                          the MCP Server.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Routing, logging, and server configuration for the MCP Server.
                         properties:
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -1620,18 +1754,17 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              statistics:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
                             type: object
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
                             type: integer
                           route:
-                            description: Configuration for an AI Gateway route.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -1734,7 +1867,11 @@ spec:
                                 type: array
                             type: object
                           server:
-                            description: Server-side configuration for the MCP Server.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Server-side configuration for the MCP Server.
                             properties:
                               forwardClientHeaders:
                                 description: |-
@@ -1743,6 +1880,11 @@ spec:
                                 enum:
                                 - Enabled
                                 - Disabled
+                                type: string
+                              label:
+                                description: The label of the MCP server. This is
+                                  used to filter the exported MCP tools.
+                                maxLength: 253
                                 type: string
                               session:
                                 description: |-
@@ -1773,8 +1915,11 @@ spec:
                                     - Disabled
                                     type: string
                                   redis:
-                                    description: Config for connecting to a Cloud
-                                      Provider's Redis instance.
+                                    description: |-
+                                      **Pre-release Feature**
+                                      This feature is currently in beta and is subject to change.
+
+                                      Config for connecting to a Cloud Provider's Redis instance.
                                     properties:
                                       cloudAuthentication:
                                         description: Auth related config for connecting
@@ -2139,13 +2284,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
@@ -2195,6 +2333,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -2205,7 +2346,27 @@ spec:
                       policies:
                         description: List of policy references.
                         items:
-                          type: string
+                          description: |-
+                            AIGatewayPolicyRef references an AIGatewayPolicy in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayPolicy
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayPolicy
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace is reserved for future cross-namespace
+                                support.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                       tools:
                         description: List of tools exposed by this MCP Server.
@@ -2219,6 +2380,9 @@ spec:
                               properties:
                                 acls:
                                   description: |-
+                                    **Pre-release Feature**
+                                    This feature is currently in beta and is subject to change.
+
                                     Access control rules for allowing or denying consumer groups access to this
                                     tool.
                                     When configured, these will override the default access control rules
@@ -2239,7 +2403,9 @@ spec:
                                   type: object
                               type: object
                             annotations:
-                              description: AIGatewayMCPToolAnnotations is a type alias.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               properties:
                                 destructiveHint:
                                   description: If true, the tool may perform destructive
@@ -2283,6 +2449,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The headers of the exported API.
                                 By default, Kong will extract the headers from API configuration.
                                 If the configured headers are not exactly matched, this field is required.
@@ -2318,6 +2487,9 @@ spec:
                               minLength: 1
                               type: string
                             parameters:
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               items:
                                 description: |-
                                   AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
@@ -2378,6 +2550,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The query arguments of the exported API.
                                 If the generated query arguments are not exactly matched, this field is
                                 required.
@@ -2386,6 +2561,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API requestBody specification defined in OpenAPI JSON format.
                                 For example,
                                 '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -2398,6 +2576,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API responses specification defined in OpenAPI JSON format.
                                 This specification will be used to validate the upstream response and map it
                                 back to the structuredOutput.
@@ -2434,8 +2615,8 @@ spec:
                     properties:
                       access:
                         description: |-
-                          AIGatewayMCPServerPassthroughListenerAccess represents a union type for access.
-                          Only one of the fields should be set based on the AclAttributeType.
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
                         properties:
                           aclAttributeType:
                             description: AclAttributeType designates the type of configuration.
@@ -2448,8 +2629,11 @@ spec:
                             description: Consumer configuration.
                             properties:
                               acls:
-                                description: Access control rules for allowing or
-                                  denying consumer groups.
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Access control rules for allowing or denying consumer groups.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are
@@ -2466,6 +2650,9 @@ spec:
                                 type: object
                               defaultToolAcls:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   Default access control rules for allowing or denying consumer groups to
                                   tools.
                                 properties:
@@ -2496,8 +2683,11 @@ spec:
                                 minLength: 1
                                 type: string
                               acls:
-                                description: Access control rules for allowing or
-                                  denying consumer groups.
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Access control rules for allowing or denying consumer groups.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are
@@ -2514,6 +2704,9 @@ spec:
                                 type: object
                               defaultToolAcls:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   Default access control rules for allowing or denying consumer groups to
                                   tools.
                                 properties:
@@ -2537,11 +2730,18 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: Routing, logging, and server configuration for
-                          the MCP Server.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Routing, logging, and server configuration for the MCP Server.
                         properties:
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -2549,11 +2749,6 @@ spec:
                                 - Disabled
                                 type: string
                               payloads:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              statistics:
                                 enum:
                                 - Enabled
                                 - Disabled
@@ -2633,7 +2828,11 @@ spec:
                                 type: string
                             type: object
                           route:
-                            description: Configuration for an AI Gateway route.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -2736,7 +2935,11 @@ spec:
                                 type: array
                             type: object
                           server:
-                            description: Server-side configuration for the MCP Server.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Server-side configuration for the MCP Server.
                             properties:
                               forwardClientHeaders:
                                 description: |-
@@ -2745,6 +2948,11 @@ spec:
                                 enum:
                                 - Enabled
                                 - Disabled
+                                type: string
+                              label:
+                                description: The label of the MCP server. This is
+                                  used to filter the exported MCP tools.
+                                maxLength: 253
                                 type: string
                               session:
                                 description: |-
@@ -2775,8 +2983,11 @@ spec:
                                     - Disabled
                                     type: string
                                   redis:
-                                    description: Config for connecting to a Cloud
-                                      Provider's Redis instance.
+                                    description: |-
+                                      **Pre-release Feature**
+                                      This feature is currently in beta and is subject to change.
+
+                                      Config for connecting to a Cloud Provider's Redis instance.
                                     properties:
                                       cloudAuthentication:
                                         description: Auth related config for connecting
@@ -3141,13 +3352,6 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
@@ -3208,6 +3412,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -3218,7 +3425,27 @@ spec:
                       policies:
                         description: List of policy references.
                         items:
-                          type: string
+                          description: |-
+                            AIGatewayPolicyRef references an AIGatewayPolicy in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayPolicy
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayPolicy
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace is reserved for future cross-namespace
+                                support.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                       tools:
                         description: List of tools exposed by this MCP Server.
@@ -3232,6 +3459,9 @@ spec:
                               properties:
                                 acls:
                                   description: |-
+                                    **Pre-release Feature**
+                                    This feature is currently in beta and is subject to change.
+
                                     Access control rules for allowing or denying consumer groups access to this
                                     tool.
                                     When configured, these will override the default access control rules
@@ -3252,7 +3482,9 @@ spec:
                                   type: object
                               type: object
                             annotations:
-                              description: AIGatewayMCPToolAnnotations is a type alias.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               properties:
                                 destructiveHint:
                                   description: If true, the tool may perform destructive
@@ -3296,6 +3528,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The headers of the exported API.
                                 By default, Kong will extract the headers from API configuration.
                                 If the configured headers are not exactly matched, this field is required.
@@ -3331,6 +3566,9 @@ spec:
                               minLength: 1
                               type: string
                             parameters:
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               items:
                                 description: |-
                                   AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
@@ -3391,6 +3629,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The query arguments of the exported API.
                                 If the generated query arguments are not exactly matched, this field is
                                 required.
@@ -3399,6 +3640,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API requestBody specification defined in OpenAPI JSON format.
                                 For example,
                                 '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -3411,6 +3655,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API responses specification defined in OpenAPI JSON format.
                                 This specification will be used to validate the upstream response and map it
                                 back to the structuredOutput.
@@ -3457,8 +3704,8 @@ spec:
                     properties:
                       access:
                         description: |-
-                          AIGatewayMCPServerUpstreamServerAccess represents a union type for access.
-                          Only one of the fields should be set based on the AclAttributeType.
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
                         properties:
                           aclAttributeType:
                             description: AclAttributeType designates the type of configuration.
@@ -3471,8 +3718,11 @@ spec:
                             description: Consumer configuration.
                             properties:
                               acls:
-                                description: Access control rules for allowing or
-                                  denying consumer groups.
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Access control rules for allowing or denying consumer groups.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are
@@ -3489,6 +3739,9 @@ spec:
                                 type: object
                               defaultToolAcls:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   Default access control rules for allowing or denying consumer groups to
                                   tools.
                                 properties:
@@ -3519,8 +3772,11 @@ spec:
                                 minLength: 1
                                 type: string
                               acls:
-                                description: Access control rules for allowing or
-                                  denying consumer groups.
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Access control rules for allowing or denying consumer groups.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are
@@ -3537,6 +3793,9 @@ spec:
                                 type: object
                               defaultToolAcls:
                                 description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
                                   Default access control rules for allowing or denying consumer groups to
                                   tools.
                                 properties:
@@ -3560,11 +3819,18 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: Routing, logging, and server configuration for
-                          the MCP Server.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Routing, logging, and server configuration for the MCP Server.
                         properties:
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -3576,18 +3842,17 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              statistics:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
                             type: object
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
                             type: integer
                           route:
-                            description: Configuration for an AI Gateway route.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -3701,6 +3966,11 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              label:
+                                description: The label of the MCP server. This is
+                                  used to filter the exported MCP tools.
+                                maxLength: 253
+                                type: string
                               preserveUpstreamToolNames:
                                 description: |-
                                   If enabled, the original upstream tool names are preserved as-is when Kong
@@ -3741,8 +4011,11 @@ spec:
                                     - Disabled
                                     type: string
                                   redis:
-                                    description: Config for connecting to a Cloud
-                                      Provider's Redis instance.
+                                    description: |-
+                                      **Pre-release Feature**
+                                      This feature is currently in beta and is subject to change.
+
+                                      Config for connecting to a Cloud Provider's Redis instance.
                                     properties:
                                       cloudAuthentication:
                                         description: Auth related config for connecting
@@ -4107,20 +4380,16 @@ spec:
                                     maxLength: 253
                                     type: string
                                 type: object
-                              tag:
-                                description: |-
-                                  The tag of the MCP server.
-                                  This is used to filter the exported MCP tools.
-                                  The field should contain exactly one tag.
-                                maxLength: 253
-                                type: string
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
                                 type: integer
                               toolsListAuth:
-                                description: Configuration for an Upstream Server's
-                                  MCP Server Tools' Authentication.
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Configuration for an Upstream Server's MCP Server Tools' Authentication.
                                 properties:
                                   credentials:
                                     description: Credentials configuration.
@@ -4279,6 +4548,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -4289,7 +4561,27 @@ spec:
                       policies:
                         description: List of policy references.
                         items:
-                          type: string
+                          description: |-
+                            AIGatewayPolicyRef references an AIGatewayPolicy in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayPolicy
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayPolicy
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace is reserved for future cross-namespace
+                                support.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                       tools:
                         description: List of tools exposed by this MCP Server.
@@ -4306,6 +4598,9 @@ spec:
                               properties:
                                 acls:
                                   description: |-
+                                    **Pre-release Feature**
+                                    This feature is currently in beta and is subject to change.
+
                                     Access control rules for allowing or denying consumer groups access to this
                                     tool.
                                     When configured, these will override the default access control rules
@@ -4326,7 +4621,9 @@ spec:
                                   type: object
                               type: object
                             annotations:
-                              description: AIGatewayMCPToolAnnotations is a type alias.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               properties:
                                 destructiveHint:
                                   description: If true, the tool may perform destructive
@@ -4370,6 +4667,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The headers of the exported API.
                                 By default, Kong will extract the headers from API configuration.
                                 If the configured headers are not exactly matched, this field is required.
@@ -4417,6 +4717,9 @@ spec:
                                 for the same tool name, if present.
                               x-kubernetes-preserve-unknown-fields: true
                             parameters:
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
                               items:
                                 description: |-
                                   AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
@@ -4477,6 +4780,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The query arguments of the exported API.
                                 If the generated query arguments are not exactly matched, this field is
                                 required.
@@ -4485,6 +4791,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API requestBody specification defined in OpenAPI JSON format.
                                 For example,
                                 '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -4497,6 +4806,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
                                 The API responses specification defined in OpenAPI JSON format.
                                 This specification will be used to validate the upstream response and map it
                                 back to the structuredOutput.

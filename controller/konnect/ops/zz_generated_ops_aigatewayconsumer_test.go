@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func testGeneratedAIGatewayConsumerForSDKOps() *konnectv1alpha1.AIGatewayConsumer {
@@ -47,7 +47,7 @@ func TestCreateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumersSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayConsumerForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -85,7 +85,7 @@ func TestCreateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumersSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayConsumerForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -117,7 +117,7 @@ func TestUpdateAIGatewayConsumer_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumersSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayConsumerForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -153,7 +153,7 @@ func TestUpdateAIGatewayConsumer_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayConsumersSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayConsumerForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)

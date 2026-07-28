@@ -53,6 +53,12 @@ func (obj *AIGatewayPolicy) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the AIGatewayPolicy's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *AIGatewayPolicy) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the AIGatewayPolicy Kind name.
 func (obj AIGatewayPolicy) GetTypeName() string {
 	return "AIGatewayPolicy"
@@ -102,6 +108,11 @@ func (obj *AIGatewayPolicy) GetKonnectAIGatewayRef() commonv1alpha1.ObjectRef {
 // GetParentRef returns the reference to the parent entity.
 func (obj *AIGatewayPolicy) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetKonnectAIGatewayRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *AIGatewayPolicy) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.AIGatewayRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

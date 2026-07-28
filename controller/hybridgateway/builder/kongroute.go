@@ -149,6 +149,21 @@ func (b *KongRouteBuilder) WithSNIs(snis []string) *KongRouteBuilder {
 	return b
 }
 
+// WithDestinations sets the destinations (by port) for the KongRoute.
+// Each port becomes a Kong stream-route destination so Kong can match incoming
+// TCP connections by the port the parent Gateway listener accepts traffic on.
+// Kong requires at least one of sources, destinations or snis to be set on a
+// route whose protocols include tcp.
+func (b *KongRouteBuilder) WithDestinations(ports []int32) *KongRouteBuilder {
+	for _, p := range ports {
+		port := int64(p)
+		b.route.Spec.Destinations = append(b.route.Spec.Destinations, sdkkonnectcomp.Destinations{
+			Port: &port,
+		})
+	}
+	return b
+}
+
 // WithOwner sets the owner reference for the KongRoute to the given route.
 func (b *KongRouteBuilder) WithOwner(owner client.Object) *KongRouteBuilder {
 	if owner == nil {

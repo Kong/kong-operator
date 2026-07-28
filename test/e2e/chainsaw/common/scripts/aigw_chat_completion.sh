@@ -50,7 +50,9 @@ kubectl -n "${NAMESPACE}" wait --for=condition=Ready "pod/${POD}" --timeout=120s
 for ATTEMPT in $(seq 1 "${MAX_RETRIES}"); do
   OUT="$(kubectl -n "${NAMESPACE}" exec "${POD}" -- sh -c \
     "curl -sk -m 60 -o /tmp/b -D /tmp/h -w '%{http_code}' -X POST '${URL}' \
-       -H 'Content-Type: application/json' -d '${BODY}'; echo; \
+       -H 'X-Kong-LLM-Model: ${MODEL_ALIAS}' \
+       -H 'Content-Type: application/json' \
+       -d '${BODY}'; echo; \
      grep -i '^${EXPECT_HEADER}:' /tmp/h | head -1 | cut -d' ' -f2- | tr -d '\r'" \
     2>/dev/null || true)"
   CODE="$(printf '%s\n' "${OUT}" | sed -n '1p')"

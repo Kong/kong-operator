@@ -65,7 +65,7 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("GatewayV1Alpha2ReferenceGrant", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1ReferenceGrant", req.NamespacedName)
 	grant := new(gatewayapi.ReferenceGrant)
 	if err := r.Get(ctx, req.NamespacedName, grant); err != nil {
 		// if the queued object is no longer present in the proxy cache we need

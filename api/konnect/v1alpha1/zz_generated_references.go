@@ -88,14 +88,37 @@ func (e ReferenceDifferentGatewayError) Error() string {
 	return fmt.Sprintf("%s %s/%s belongs to Gateway %q, not referrer Gateway %q", e.Kind, e.Namespace, e.Name, e.ReferencedGatewayID, e.ReferrerGatewayID)
 }
 
-// AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+// AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.
 type AIGatewayACLRef struct {
 	// Kind is the kind of the referenced object.
 	//
+	// +optional
+	// +kubebuilder:validation:Enum=AIGatewayConsumerGroup
+	// +kubebuilder:default=AIGatewayConsumerGroup
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
 	// +required
-	// +kubebuilder:validation:Enum=AIGatewayConsumer;AIGatewayConsumerGroup
-	Kind string `json:"kind"`
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// AIGatewayModelProviderRef references an AIGatewayModelProvider in the cluster. The referenced
+// object's Konnect name is used where the Konnect API accepts it.
+type AIGatewayModelProviderRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=AIGatewayModelProvider
+	// +kubebuilder:default=AIGatewayModelProvider
+	Kind string `json:"kind,omitempty"`
 
 	// Name is the name of the referenced object.
 	//

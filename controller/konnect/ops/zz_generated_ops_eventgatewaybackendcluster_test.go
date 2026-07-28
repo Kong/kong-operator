@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func testGeneratedEventGatewayBackendClusterForSDKOps() *configurationv1alpha1.EventGatewayBackendCluster {
@@ -46,7 +46,7 @@ func TestCreateEventGatewayBackendCluster_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayBackendClustersSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayBackendClusterForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -77,7 +77,7 @@ func TestCreateEventGatewayBackendCluster_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayBackendClustersSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayBackendClusterForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -104,7 +104,7 @@ func TestUpdateEventGatewayBackendCluster_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayBackendClustersSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayBackendClusterForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -133,7 +133,7 @@ func TestUpdateEventGatewayBackendCluster_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayBackendClustersSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayBackendClusterForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)

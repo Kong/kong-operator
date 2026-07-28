@@ -26,6 +26,10 @@ var (
 		Kind:       "TLSRoute",
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
+	tcpRouteTypeMeta = metav1.TypeMeta{
+		Kind:       kindTCPRoute,
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
 )
 
 func TestExtractStripPath(t *testing.T) {
@@ -299,6 +303,26 @@ func TestBuildAnnotationsObjectKeyCreation(t *testing.T) {
 		routeAnnotation := result[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
 
 		expectedRouteKey := client.ObjectKeyFromObject(httpRoute)
+		assert.Equal(t, expectedRouteKey.String(), routeAnnotation)
+	})
+
+	t.Run("creates correct ObjectKey for TCPRoute", func(t *testing.T) {
+		tcpRoute := &gwtypes.TCPRoute{
+			TypeMeta: tcpRouteTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "test-namespace",
+			},
+		}
+		parentRef := &gwtypes.ParentReference{
+			Name:      "test-gateway",
+			Namespace: nil,
+		}
+
+		result := BuildAnnotations(tcpRoute, parentRef)
+		routeAnnotation := result[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation]
+
+		expectedRouteKey := client.ObjectKeyFromObject(tcpRoute)
 		assert.Equal(t, expectedRouteKey.String(), routeAnnotation)
 	})
 }
@@ -766,13 +790,32 @@ func TestGetRoutesWithKind(t *testing.T) {
 			expected: []string{"test-namespace/test-route"},
 		},
 		{
+			name:      "single route - TCPRoute",
+			routeKind: kindTCPRoute,
+			existingAnnotations: map[string]string{
+				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation: "test-namespace/test-route",
+			},
+			expected: []string{"test-namespace/test-route"},
+		},
+		{
 			name:      "multiple routes with different kinds",
 			routeKind: kindTLSRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2,ns3/route3",
+				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation:  "ns4/route4,ns5/route5",
 			},
 			expected: []string{"ns2/route2", "ns3/route3"},
+		},
+		{
+			name:      "multiple TCPRoutes with different kinds",
+			routeKind: kindTCPRoute,
+			existingAnnotations: map[string]string{
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
+				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2,ns3/route3",
+				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation:  "ns4/route4,ns5/route5",
+			},
+			expected: []string{"ns4/route4", "ns5/route5"},
 		},
 		{
 			name:      "unsupported route kind",
@@ -780,6 +823,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2,ns3/route3",
+				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation:  "ns4/route4,ns5/route5",
 			},
 			expected: []string{},
 		},
@@ -878,6 +922,27 @@ func TestSetRoutesWithKind(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2",
 			},
 			routeKind:          kindTLSRoute,
+			routes:             []string{"ns1/route1"},
+			expectedAnnotation: "ns1/route1",
+			expectModification: true,
+		},
+		{
+			name: "set same routes - TCPRoute",
+			existingAnnotations: map[string]string{
+				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation: "ns1/route1",
+			},
+			routeKind:          kindTCPRoute,
+			routes:             []string{"ns1/route1"},
+			expectedAnnotation: "ns1/route1",
+			expectModification: false,
+		},
+		{
+			name: "replace routes - TCPRoute",
+			existingAnnotations: map[string]string{
+				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
+				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation:  "ns2/route2",
+			},
+			routeKind:          kindTCPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: true,

@@ -51,6 +51,22 @@ const (
 	// yet programmed in Konnect.
 	EventGatewayListenerRefReasonNotProgrammed = "NotProgrammed"
 
+	// EventGatewaySchemaRegistryRefValidConditionType is the type of the condition that indicates
+	// whether the EventGatewaySchemaRegistry reference is valid and points to an existing
+	// EventGatewaySchemaRegistry.
+	EventGatewaySchemaRegistryRefValidConditionType = "EventGatewaySchemaRegistryRefValid"
+
+	// EventGatewaySchemaRegistryRefReasonValid is the reason used with the EventGatewaySchemaRegistryRefValid
+	// condition type indicating that the EventGatewaySchemaRegistry reference is valid.
+	EventGatewaySchemaRegistryRefReasonValid = "Valid"
+	// EventGatewaySchemaRegistryRefReasonInvalid is the reason used with the EventGatewaySchemaRegistryRefValid
+	// condition type indicating that the EventGatewaySchemaRegistry reference is invalid.
+	EventGatewaySchemaRegistryRefReasonInvalid = "Invalid"
+	// EventGatewaySchemaRegistryRefReasonNotProgrammed is the reason used with the EventGatewaySchemaRegistryRefValid
+	// condition type indicating that the referenced EventGatewaySchemaRegistry exists but is not
+	// yet programmed in Konnect.
+	EventGatewaySchemaRegistryRefReasonNotProgrammed = "NotProgrammed"
+
 	// EventGatewayVirtualClusterRefValidConditionType is the type of the condition that indicates
 	// whether the EventGatewayVirtualCluster reference is valid and points to an existing
 	// EventGatewayVirtualCluster.

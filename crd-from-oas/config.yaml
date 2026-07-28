@@ -69,6 +69,24 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+      - path: /v1/event-gateways/{gatewayId}/schema-registries
+        name: EventGatewaySchemaRegistry
+        secretReferences:
+          - path: spec.apiSpec.confluent.config.authentication.basic.password
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewaySchemaRegistriesSDK
+            fieldName: EventGatewaySchemaRegistries
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.SchemaRegistryCreate
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewaySchemaRegistryRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -95,6 +113,10 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
             fieldName: EventGatewayListenerPolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle) once create/update
+          # label injection has been reviewed for this entity.
+          skipRootUnionMetadataFields: true
           getForUID:
             listItemsSource: slice
             rootUnion:
@@ -186,6 +208,11 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
             fieldName: EventGatewayVirtualClusterProducePolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterProducePolicyRequest
           update:
@@ -201,6 +228,13 @@ apiGroupVersions:
               group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
         name: EventGatewayVirtualClusterConsumePolicy
+        references:
+          - path: spec.apiSpec.schemaValidation.config.json.schemaRegistry
+            kinds: [EventGatewaySchemaRegistry]
+            resolvesTo: name
+          - path: spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry
+            kinds: [EventGatewaySchemaRegistry]
+            resolvesTo: name
         schemaFieldOmissions:
           EventGatewayModifyHeadersPolicyCreate:
             - parentPolicyID
@@ -212,6 +246,11 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK
             fieldName: EventGatewayVirtualClusterConsumePolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterConsumePolicyRequest
           update:
@@ -231,6 +270,11 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterPoliciesSDK
             fieldName: EventGatewayVirtualClusterPolicies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterClusterLevelPolicyRequest
           update:
@@ -261,6 +305,8 @@ apiGroupVersions:
       # AI Gateway APIs
       - path: /v1/ai-gateways
         name: KonnectAIGateway
+        source:
+          supportsMirror: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewaysSDK
@@ -281,6 +327,9 @@ apiGroupVersions:
                 - name: Telemetry
                   json: telemetry
                   respPath: Endpoints.Telemetry
+            - statusField: ConfigVersion
+              statusJSON: configVersion
+              respPath: ConfigVersion
         reconciler: {}
 
       - path: /v1/ai-gateways/{gatewayId}/identity
@@ -292,6 +341,11 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayIdentityProvidersSDK
             fieldName: AIGatewayIdentityProviders
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayIdentityProviderRequest
           update:
@@ -306,14 +360,40 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
+        # AIGatewayModelRouteConfig's "model" field is an inline oneOf whose
+        # variants have no OAS discriminator/$ref, so they'd otherwise generate
+        # as generic Variant1/Variant2/Variant3. Name them from their OAS
+        # titles (matching the SDK's AIGatewayModelRouteConfigBody/Headers/
+        # PathAliases) instead. Each variant also has exactly one nested
+        # property, so it's flattened onto the wrapper field directly (e.g.
+        # Body apiextensionsv1.JSON, PathAliases []string) instead of a
+        # single-field wrapper struct, avoiding a doubled JSON key like
+        # route.model.pathAliases.pathAliases. Opt-in only: unlisted unions
+        # elsewhere are unaffected.
+        oneOfVariantNamesFromTitle:
+          - AIGatewayModelRouteConfigModel
         references:
+          - path: spec.apiSpec.api.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.model.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
           - path: spec.apiSpec.api.access.acls.allow.allow
-            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
             resolvesTo: name
           - path: spec.apiSpec.api.access.acls.deny.deny
-            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
+            resolvesTo: name
+          - path: spec.apiSpec.api.targets.provider
+            kinds: [AIGatewayModelProvider]
+            refTypeName: AIGatewayModelProviderRef
+            resolvesTo: name
+          - path: spec.apiSpec.model.targets.provider
+            kinds: [AIGatewayModelProvider]
+            refTypeName: AIGatewayModelProviderRef
             resolvesTo: name
         ops:
           sdk:
@@ -322,6 +402,10 @@ apiGroupVersions:
           # List responses are root unions whose wrapper does not expose top-level
           # GetID/GetLabels accessors, so conflict lookup stays hand-written for now.
           skipGetForUID: true
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle) once create/update
+          # label injection has been reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest
           update:
@@ -358,12 +442,18 @@ apiGroupVersions:
             type: Secret
           - path: spec.apiSpec.gemini.config.auth.gcp.serviceAccountJSON
             type: Secret
-          - path: spec.apiSpec.vertex.config.auth.gcp.serviceAccountJSON
+          - path: spec.apiSpec.vertex.config.auth.vertex.serviceAccountJSON
             type: Secret
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelProvidersSDK
             fieldName: AIGatewayModelProviders
+          # TODO: this entity has 19 union variants; root-union metadata
+          # detection cannot resolve a single injection field today (the
+          # generator requires exactly one union member). Needs generator
+          # support for multi-variant label injection before this can be
+          # enabled, and a getForUID match strategy.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelProviderRequest
           update:
@@ -383,11 +473,11 @@ apiGroupVersions:
             kinds: [AIGatewayPolicy]
             resolvesTo: name
           - path: spec.apiSpec.access.acls.allow.allow
-            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
             resolvesTo: name
           - path: spec.apiSpec.access.acls.deny.deny
-            kinds: [AIGatewayConsumer, AIGatewayConsumerGroup]
+            kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
             resolvesTo: name
         ops:
@@ -468,6 +558,22 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/mcp-servers
         name: AIGatewayMCPServer
+        references:
+          - path: spec.apiSpec.conversion-listener.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.conversion-only.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.listener.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.passthrough-listener.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
+          - path: spec.apiSpec.upstream-server.policies
+            kinds: [AIGatewayPolicy]
+            resolvesTo: name
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayMCPServersSDK
@@ -475,6 +581,10 @@ apiGroupVersions:
           # List responses are root unions whose wrapper does not expose top-level
           # GetID/GetLabels accessors, so conflict lookup stays hand-written for now.
           skipGetForUID: true
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle) once create/update
+          # label injection has been reviewed for this entity.
+          skipRootUnionMetadataFields: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayMCPServerRequest
           update:

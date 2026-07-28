@@ -8,12 +8,20 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
-// AIGatewayACLS Access control rules.
-// Configure exactly one of `allow` or `deny`.
+// AIGatewayACLS **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Access control rules. Configure exactly one of `allow` or `deny`.
 type AIGatewayACLS map[string]string
 
-// AIGatewayAgentAccess Access control configuration for an agent.
+// AIGatewayAgentAccess **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Access control configuration for an agent.
 type AIGatewayAgentAccess struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Access control rules. Configure exactly one of `allow` or `deny`.
 	//
 	// +optional
@@ -137,16 +145,20 @@ func (s *AIGatewayAgentAccess) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayAllowACL is a type alias.
+// AIGatewayAllowACL **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayAllowACL struct {
-	// List of Consumers, Consumer Groups, or Authenticated Groups that are
+	// List of Consumer Groups Names, or Authenticated Groups Names that are
 	// permitted access.
 	//
 	// +required
 	Allow []AIGatewayACLRef `json:"allow,omitempty"`
 }
 
-// AIGatewayAzureEmbeddingsModelConfig Azure-specific configuration for a model.
+// AIGatewayAzureEmbeddingsModelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Azure-specific configuration for a model.
 type AIGatewayAzureEmbeddingsModelConfig struct {
 	// The Azure OpenAI API version to use.
 	//
@@ -161,14 +173,15 @@ type AIGatewayAzureEmbeddingsModelConfig struct {
 	DeploymentID string `json:"deploymentID,omitzero"`
 	// The URL of the embeddings model.
 	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayBedrockEmbeddingsModelConfig AWS Bedrock-specific configuration for
-// a model.
+// AIGatewayBedrockEmbeddingsModelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// AWS Bedrock-specific configuration for a model.
 type AIGatewayBedrockEmbeddingsModelConfig struct {
 	// S3 bucket prefix for batch inference jobs.
 	//
@@ -194,8 +207,7 @@ type AIGatewayBedrockEmbeddingsModelConfig struct {
 	Region string `json:"region,omitzero"`
 	// The URL of the embeddings model.
 	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 	// S3 URI for storing video generation outputs.
@@ -205,26 +217,10 @@ type AIGatewayBedrockEmbeddingsModelConfig struct {
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
 }
 
-// AIGatewayDatabricksEmbeddingsModelConfig Databricks-specific configuration
-// for a model.
-type AIGatewayDatabricksEmbeddingsModelConfig struct {
-	// The URL of the embeddings model.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	UpstreamURL string `json:"upstreamURL,omitzero"`
-	// The Databricks workspace instance ID.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	WorkspaceInstanceID string `json:"workspaceInstanceID,omitzero"`
-}
-
-// AIGatewayDenyACL is a type alias.
+// AIGatewayDenyACL **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayDenyACL struct {
-	// List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+	// List of Consumer Groups Names, or Authenticated Groups Names that are denied
 	// access.
 	//
 	// +required
@@ -238,7 +234,7 @@ type AIGatewayEmbeddingsModelConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=azure;bedrock;databricks;gemini;huggingface;vercel;vertex
+	// +kubebuilder:validation:Enum=azure;bedrock;gemini;huggingface;mistral;ollama;openai;vertex
 	Type AIGatewayEmbeddingsModelConfigType `json:"type,omitempty"`
 
 	// Azure configuration.
@@ -249,10 +245,6 @@ type AIGatewayEmbeddingsModelConfig struct {
 	//
 	// +optional
 	Bedrock *AIGatewayBedrockEmbeddingsModelConfig `json:"bedrock,omitempty"`
-	// Databricks configuration.
-	//
-	// +optional
-	Databricks *AIGatewayDatabricksEmbeddingsModelConfig `json:"databricks,omitempty"`
 	// Gemini configuration.
 	//
 	// +optional
@@ -261,10 +253,18 @@ type AIGatewayEmbeddingsModelConfig struct {
 	//
 	// +optional
 	Huggingface *AIGatewayHuggingfaceEmbeddingsModelConfig `json:"huggingface,omitempty"`
-	// Vercel configuration.
+	// Mistral configuration.
 	//
 	// +optional
-	Vercel *AIGatewayVercelEmbeddingsModelConfig `json:"vercel,omitempty"`
+	Mistral *AIGatewayMistralEmbeddingsModelConfig `json:"mistral,omitempty"`
+	// Ollama configuration.
+	//
+	// +optional
+	Ollama *AIGatewayOllamaEmbeddingsModelConfig `json:"ollama,omitempty"`
+	// Openai configuration.
+	//
+	// +optional
+	Openai *AIGatewayOpenaiEmbeddingsModelConfig `json:"openai,omitempty"`
 	// Vertex configuration.
 	//
 	// +optional
@@ -278,10 +278,11 @@ type AIGatewayEmbeddingsModelConfigType string
 const (
 	AIGatewayEmbeddingsModelConfigTypeAzure       AIGatewayEmbeddingsModelConfigType = "azure"
 	AIGatewayEmbeddingsModelConfigTypeBedrock     AIGatewayEmbeddingsModelConfigType = "bedrock"
-	AIGatewayEmbeddingsModelConfigTypeDatabricks  AIGatewayEmbeddingsModelConfigType = "databricks"
 	AIGatewayEmbeddingsModelConfigTypeGemini      AIGatewayEmbeddingsModelConfigType = "gemini"
 	AIGatewayEmbeddingsModelConfigTypeHuggingface AIGatewayEmbeddingsModelConfigType = "huggingface"
-	AIGatewayEmbeddingsModelConfigTypeVercel      AIGatewayEmbeddingsModelConfigType = "vercel"
+	AIGatewayEmbeddingsModelConfigTypeMistral     AIGatewayEmbeddingsModelConfigType = "mistral"
+	AIGatewayEmbeddingsModelConfigTypeOllama      AIGatewayEmbeddingsModelConfigType = "ollama"
+	AIGatewayEmbeddingsModelConfigTypeOpenai      AIGatewayEmbeddingsModelConfigType = "openai"
 	AIGatewayEmbeddingsModelConfigTypeVertex      AIGatewayEmbeddingsModelConfigType = "vertex"
 )
 
@@ -310,14 +311,6 @@ func (u AIGatewayEmbeddingsModelConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["bedrock"] = raw
 		}
-	case AIGatewayEmbeddingsModelConfigTypeDatabricks:
-		if u.Databricks != nil {
-			raw, err := json.Marshal(u.Databricks)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig databricks: %w", err)
-			}
-			m["databricks"] = raw
-		}
 	case AIGatewayEmbeddingsModelConfigTypeGemini:
 		if u.Gemini != nil {
 			raw, err := json.Marshal(u.Gemini)
@@ -334,13 +327,29 @@ func (u AIGatewayEmbeddingsModelConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["huggingface"] = raw
 		}
-	case AIGatewayEmbeddingsModelConfigTypeVercel:
-		if u.Vercel != nil {
-			raw, err := json.Marshal(u.Vercel)
+	case AIGatewayEmbeddingsModelConfigTypeMistral:
+		if u.Mistral != nil {
+			raw, err := json.Marshal(u.Mistral)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig vercel: %w", err)
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig mistral: %w", err)
 			}
-			m["vercel"] = raw
+			m["mistral"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeOllama:
+		if u.Ollama != nil {
+			raw, err := json.Marshal(u.Ollama)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig ollama: %w", err)
+			}
+			m["ollama"] = raw
+		}
+	case AIGatewayEmbeddingsModelConfigTypeOpenai:
+		if u.Openai != nil {
+			raw, err := json.Marshal(u.Openai)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig openai: %w", err)
+			}
+			m["openai"] = raw
 		}
 	case AIGatewayEmbeddingsModelConfigTypeVertex:
 		if u.Vertex != nil {
@@ -391,16 +400,6 @@ func (u *AIGatewayEmbeddingsModelConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig bedrock: %w", err)
 		}
 		u.Bedrock = &val
-	case "databricks":
-		payload, ok := raw["databricks"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayDatabricksEmbeddingsModelConfig
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig databricks: %w", err)
-		}
-		u.Databricks = &val
 	case "gemini":
 		payload, ok := raw["gemini"]
 		if !ok || len(payload) == 0 {
@@ -421,16 +420,36 @@ func (u *AIGatewayEmbeddingsModelConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig huggingface: %w", err)
 		}
 		u.Huggingface = &val
-	case "vercel":
-		payload, ok := raw["vercel"]
+	case "mistral":
+		payload, ok := raw["mistral"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayVercelEmbeddingsModelConfig
+		var val AIGatewayMistralEmbeddingsModelConfig
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig vercel: %w", err)
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig mistral: %w", err)
 		}
-		u.Vercel = &val
+		u.Mistral = &val
+	case "ollama":
+		payload, ok := raw["ollama"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayOllamaEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig ollama: %w", err)
+		}
+		u.Ollama = &val
+	case "openai":
+		payload, ok := raw["openai"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayOpenaiEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig openai: %w", err)
+		}
+		u.Openai = &val
 	case "vertex":
 		payload, ok := raw["vertex"]
 		if !ok || len(payload) == 0 {
@@ -449,28 +468,33 @@ func (u *AIGatewayEmbeddingsModelConfig) UnmarshalJSON(data []byte) error {
 // In some cases, this may be the entity name or ID.
 type AIGatewayEntityIdentifier string
 
-// AIGatewayGeminiEmbeddingsModelConfig Google Gemini-specific configuration for
-// a model.
+// AIGatewayGeminiEmbeddingsModelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Google Gemini-specific configuration for a model.
 type AIGatewayGeminiEmbeddingsModelConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for a model hosted on Google Cloud Project.
 	//
 	// +optional
 	GcpEnvironment GCPModelConfig `json:"gcpEnvironment,omitzero"`
 	// The URL of the embeddings model.
 	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayHuggingfaceEmbeddingsModelConfig Hugging Face-specific configuration
-// for a model.
+// AIGatewayHuggingfaceEmbeddingsModelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Hugging Face-specific configuration for a model.
 type AIGatewayHuggingfaceEmbeddingsModelConfig struct {
 	// The URL of the embeddings model.
 	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 	// Whether to use the Hugging Face inference cache.
@@ -485,7 +509,10 @@ type AIGatewayHuggingfaceEmbeddingsModelConfig struct {
 	WaitForModel string `json:"waitForModel,omitzero"`
 }
 
-// AIGatewayIdentityProviderKeyAuth Configuration for an identity provider.
+// AIGatewayIdentityProviderKeyAuth **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for an identity provider.
 type AIGatewayIdentityProviderKeyAuth struct {
 	// Configuration for the Kong Key auth identity provider.
 	// For advanced use cases, additional config properties can be sent in the
@@ -524,6 +551,9 @@ type AIGatewayIdentityProviderKeyAuth struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this identity provider instance, used
 	// as a stable human-readable reference.
 	// This value is immutable after creation.
@@ -580,8 +610,10 @@ type AIGatewayIdentityProviderKeyAuthConfig struct {
 	KeyNames []string `json:"keyNames,omitempty"`
 }
 
-// AIGatewayIdentityProviderOpenIDConnect Configuration for an identity
-// provider.
+// AIGatewayIdentityProviderOpenIDConnect **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for an identity provider.
 type AIGatewayIdentityProviderOpenIDConnect struct {
 	// Configuration for the OpenID Connect identity provider.
 	// For advanced use cases, additional config properties can be sent in the
@@ -620,6 +652,9 @@ type AIGatewayIdentityProviderOpenIDConnect struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this identity provider instance, used
 	// as a stable human-readable reference.
 	// This value is immutable after creation.
@@ -642,6 +677,14 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	//
 	// +optional
 	AuthMethods []string `json:"authMethods,omitempty"`
+	// Salt used for generating the cache key that is used for caching the token
+	// endpoint requests.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	CacheTokensSalt string `json:"cacheTokensSalt,omitzero"`
 	// An array of strings representing the client id for the OpenID Connect
 	// provider.
 	// When multiple values are provided, the client ID and secrets pairs
@@ -665,6 +708,19 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	//
 	// +optional
 	ConsumerClaims [][]string `json:"consumerClaims,omitempty"`
+	// The claim used for consumer groups mapping.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	//
+	//
+	// +optional
+	ConsumerGroupsClaim []string `json:"consumerGroupsClaim,omitempty"`
+	// Do not terminate the request if consumer groups mapping fails.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConsumerGroupsOptional string `json:"consumerGroupsOptional,omitzero"`
 	// Do not terminate the request if consumer mapping fails.
 	//
 	//
@@ -688,12 +744,26 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	SSLVerify string `json:"sslVerify,omitzero"`
 }
 
-// AIGatewayIdentityProviderReference Reference to a provider instance.
-// This is either the identity provider ID or the identity provider name.
+// AIGatewayIdentityProviderReference Reference to a identity provider instance
+// by name.
 type AIGatewayIdentityProviderReference string
 
-// AIGatewayMCPACLs Access control rules for MCP resources.
-// Configure `allow`, `deny`, or both.
+// AIGatewayLoggingConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for AI Gateway logging.
+type AIGatewayLoggingConfig struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
+}
+
+// AIGatewayMCPACLs **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Access control rules for MCP resources. Configure `allow`, `deny`, or both.
 type AIGatewayMCPACLs struct {
 	// List of consumer groups that are permitted access.
 	//
@@ -712,7 +782,8 @@ type AIGatewayMCPConversionTool struct {
 	//
 	// +optional
 	Access AIGatewayMCPConversionToolAccess `json:"access,omitzero"`
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Annotations AIGatewayMCPToolAnnotations `json:"annotations,omitzero"`
@@ -722,6 +793,9 @@ type AIGatewayMCPConversionTool struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Description string `json:"description,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The headers of the exported API.
 	// By default, Kong will extract the headers from API configuration.
 	// If the configured headers are not exactly matched, this field is required.
@@ -754,7 +828,8 @@ type AIGatewayMCPConversionTool struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Parameters []AIGatewayMCPToolParameter `json:"parameters,omitempty"`
@@ -766,12 +841,18 @@ type AIGatewayMCPConversionTool struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Path string `json:"path,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The query arguments of the exported API.
 	// If the generated query arguments are not exactly matched, this field is
 	// required.
 	//
 	// +optional
 	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The API requestBody specification defined in OpenAPI JSON format.
 	// For example,
 	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -782,6 +863,9 @@ type AIGatewayMCPConversionTool struct {
 	//
 	// +optional
 	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The API responses specification defined in OpenAPI JSON format.
 	// This specification will be used to validate the upstream response and map it
 	// back to the structuredOutput.
@@ -807,11 +891,13 @@ type AIGatewayMCPConversionTool struct {
 
 // AIGatewayMCPConversionToolAccess is a type alias.
 type AIGatewayMCPConversionToolAccess struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Access control rules for allowing or denying consumer groups access to this
 	// tool.
 	// When configured, these will override the default access control rules
 	// defined on the MCP Server.
-	//
 	//
 	// +optional
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
@@ -916,12 +1002,19 @@ func (u *AIGatewayMCPServerBaseACLProperties) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayMCPServerBaseACLPropertiesConsumer is a type alias.
+// AIGatewayMCPServerBaseACLPropertiesConsumer **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPServerBaseACLPropertiesConsumer struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Access control rules for allowing or denying consumer groups.
 	//
 	// +optional
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Default access control rules for allowing or denying consumer groups to
 	// tools.
 	//
@@ -929,7 +1022,8 @@ type AIGatewayMCPServerBaseACLPropertiesConsumer struct {
 	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
 }
 
-// AIGatewayMCPServerBaseACLPropertiesOauth is a type alias.
+// AIGatewayMCPServerBaseACLPropertiesOauth **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPServerBaseACLPropertiesOauth struct {
 	// The claim in the OAuth2 access token to use as the subject for ACL
 	// evaluation when `acl_attribute_type` is set to `oauth_access_token`.
@@ -941,10 +1035,16 @@ type AIGatewayMCPServerBaseACLPropertiesOauth struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	AccessTokenClaimField string `json:"accessTokenClaimField,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Access control rules for allowing or denying consumer groups.
 	//
 	// +optional
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Default access control rules for allowing or denying consumer groups to
 	// tools.
 	//
@@ -952,12 +1052,17 @@ type AIGatewayMCPServerBaseACLPropertiesOauth struct {
 	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
 }
 
-// AIGatewayMCPServerConversionListener is a type alias.
+// AIGatewayMCPServerConversionListener **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPServerConversionListener struct {
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Access *AIGatewayMCPServerConversionListenerAccess `json:"access,omitempty"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Routing, logging, and server configuration for the MCP Server.
 	//
 	// +required
@@ -995,6 +1100,9 @@ type AIGatewayMCPServerConversionListener struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.
@@ -1007,7 +1115,7 @@ type AIGatewayMCPServerConversionListener struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -1131,8 +1239,12 @@ func (s *AIGatewayMCPServerConversionListener) UnmarshalJSON(data []byte) error 
 	return nil
 }
 
-// AIGatewayMCPServerConversionOnly is a type alias.
+// AIGatewayMCPServerConversionOnly **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPServerConversionOnly struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Routing, logging, and request body size limits for the MCP Server.
 	//
 	// +required
@@ -1170,6 +1282,9 @@ type AIGatewayMCPServerConversionOnly struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.
@@ -1182,19 +1297,24 @@ type AIGatewayMCPServerConversionOnly struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
 	Tools []AIGatewayMCPConversionTool `json:"tools,omitempty"`
 }
 
-// AIGatewayMCPServerListener is a type alias.
+// AIGatewayMCPServerListener **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPServerListener struct {
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Access *AIGatewayMCPServerListenerAccess `json:"access,omitempty"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Routing, logging, and server configuration for the MCP Server.
 	//
 	// +required
@@ -1232,6 +1352,9 @@ type AIGatewayMCPServerListener struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.
@@ -1244,7 +1367,7 @@ type AIGatewayMCPServerListener struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -1368,9 +1491,14 @@ func (s *AIGatewayMCPServerListener) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayMCPServerNoUpstreamConfig Routing, logging, and server configuration
-// for the MCP Server.
+// AIGatewayMCPServerNoUpstreamConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Routing, logging, and server configuration for the MCP Server.
 type AIGatewayMCPServerNoUpstreamConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -1379,18 +1507,26 @@ type AIGatewayMCPServerNoUpstreamConfig struct {
 	//
 	// +optional
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for an AI Gateway route.
 	//
 	// +optional
 	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Server-side configuration for the MCP Server.
 	//
 	// +optional
 	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
 }
 
-// AIGatewayMCPServerNoUpstreamConfigLogging Configuration for AI Gateway
-// logging.
+// AIGatewayMCPServerNoUpstreamConfigLogging **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for AI Gateway logging.
 type AIGatewayMCPServerNoUpstreamConfigLogging struct {
 	//
 	//
@@ -1402,19 +1538,19 @@ type AIGatewayMCPServerNoUpstreamConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
-// AIGatewayMCPServerPassthroughListener is a type alias.
+// AIGatewayMCPServerPassthroughListener **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPServerPassthroughListener struct {
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Access *AIGatewayMCPServerPassthroughListenerAccess `json:"access,omitempty"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Routing, logging, and server configuration for the MCP Server.
 	//
 	// +required
@@ -1452,6 +1588,9 @@ type AIGatewayMCPServerPassthroughListener struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.
@@ -1464,7 +1603,7 @@ type AIGatewayMCPServerPassthroughListener struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -1588,8 +1727,10 @@ func (s *AIGatewayMCPServerPassthroughListener) UnmarshalJSON(data []byte) error
 	return nil
 }
 
-// AIGatewayMCPServerServerConfigBase Server-side configuration for the MCP
-// Server.
+// AIGatewayMCPServerServerConfigBase **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Server-side configuration for the MCP Server.
 type AIGatewayMCPServerServerConfigBase struct {
 	// Whether to forward the client request headers to the upstream server when
 	// calling the tools.
@@ -1597,6 +1738,11 @@ type AIGatewayMCPServerServerConfigBase struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
+	// The label of the MCP server. This is used to filter the exported MCP tools.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Label string `json:"label,omitzero"`
 	// Enable managed session when Kong responds as MCP server in listener,
 	// conversion-listener, or upstream-server modes.
 	// This doesn't affect the passthrough-listener mode as the state in that mode
@@ -1605,13 +1751,6 @@ type AIGatewayMCPServerServerConfigBase struct {
 	//
 	// +optional
 	Session AIGatewayMCPServerServerConfigBaseSession `json:"session,omitzero"`
-	// The tag of the MCP server.
-	// This is used to filter the exported MCP tools.
-	// The field should contain exactly one tag.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Tag string `json:"tag,omitzero"`
 	// The timeout for calling the tools in milliseconds.
 	//
 	// +optional
@@ -1633,6 +1772,9 @@ type AIGatewayMCPServerServerConfigBaseSession struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Managed string `json:"managed,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Config for connecting to a Cloud Provider's Redis instance.
 	//
 	// +optional
@@ -1666,12 +1808,17 @@ type AIGatewayMCPServerServerConfigBaseSessionClient struct {
 	Secrets []string `json:"secrets,omitempty"`
 }
 
-// AIGatewayMCPServerUpstreamServer is a type alias.
+// AIGatewayMCPServerUpstreamServer **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPServerUpstreamServer struct {
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Access *AIGatewayMCPServerUpstreamServerAccess `json:"access,omitempty"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Routing, logging, and server configuration for the MCP Server.
 	//
 	// +required
@@ -1709,6 +1856,9 @@ type AIGatewayMCPServerUpstreamServer struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.
@@ -1721,7 +1871,7 @@ type AIGatewayMCPServerUpstreamServer struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -1845,9 +1995,14 @@ func (s *AIGatewayMCPServerUpstreamServer) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayMCPServerUpstreamServerConfig Routing, logging, and server
-// configuration for the MCP Server.
+// AIGatewayMCPServerUpstreamServerConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Routing, logging, and server configuration for the MCP Server.
 type AIGatewayMCPServerUpstreamServerConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -1856,6 +2011,9 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	//
 	// +optional
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for an AI Gateway route.
 	//
 	// +optional
@@ -1884,8 +2042,10 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	URL string `json:"url,omitzero"`
 }
 
-// AIGatewayMCPServerUpstreamServerConfigLogging Configuration for AI Gateway
-// logging.
+// AIGatewayMCPServerUpstreamServerConfigLogging **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for AI Gateway logging.
 type AIGatewayMCPServerUpstreamServerConfigLogging struct {
 	//
 	//
@@ -1897,11 +2057,6 @@ type AIGatewayMCPServerUpstreamServerConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
 // AIGatewayMCPServerUpstreamServerServerConfig Server-side configuration
@@ -1913,6 +2068,11 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
+	// The label of the MCP server. This is used to filter the exported MCP tools.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Label string `json:"label,omitzero"`
 	// If enabled, the original upstream tool names are preserved as-is when Kong
 	// acts as an MCP server.
 	// If disabled (`false`), the service name will be prepended to the MCP tool
@@ -1931,17 +2091,13 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	//
 	// +optional
 	Session AIGatewayMCPServerUpstreamServerServerConfigSession `json:"session,omitzero"`
-	// The tag of the MCP server.
-	// This is used to filter the exported MCP tools.
-	// The field should contain exactly one tag.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Tag string `json:"tag,omitzero"`
 	// The timeout for calling the tools in milliseconds.
 	//
 	// +optional
 	Timeout int `json:"timeout,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for an Upstream Server's MCP Server Tools' Authentication.
 	//
 	// +optional
@@ -1963,6 +2119,9 @@ type AIGatewayMCPServerUpstreamServerServerConfigSession struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Managed string `json:"managed,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Config for connecting to a Cloud Provider's Redis instance.
 	//
 	// +optional
@@ -2212,7 +2371,9 @@ func (u *AIGatewayMCPServerUpstreamServerServerToolAuthConfig) UnmarshalJSON(dat
 	return nil
 }
 
-// AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials is a type alias.
+// AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials **Pre-release
+// Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials struct {
 	// Header name used to send the fetched access token to the upstream MCP
 	// server.
@@ -2270,7 +2431,8 @@ type AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials struct {
 	TokenEndpoint string `json:"tokenEndpoint,omitzero"`
 }
 
-// AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt is a type alias.
+// AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt struct {
 	// Header name used to send the fetched access token to the upstream MCP
 	// server.
@@ -2301,9 +2463,14 @@ type AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt struct {
 	Scope string `json:"scope,omitzero"`
 }
 
-// AIGatewayMCPServerWithUpstreamConfig Routing, logging, and server
-// configuration for the MCP Server.
+// AIGatewayMCPServerWithUpstreamConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Routing, logging, and server configuration for the MCP Server.
 type AIGatewayMCPServerWithUpstreamConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -2317,10 +2484,16 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	//
 	// +optional
 	Proxy AIGatewayProxyConfig `json:"proxy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for an AI Gateway route.
 	//
 	// +optional
 	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Server-side configuration for the MCP Server.
 	//
 	// +optional
@@ -2337,8 +2510,10 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	URL string `json:"url,omitzero"`
 }
 
-// AIGatewayMCPServerWithUpstreamConfigLogging Configuration for AI Gateway
-// logging.
+// AIGatewayMCPServerWithUpstreamConfigLogging **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for AI Gateway logging.
 type AIGatewayMCPServerWithUpstreamConfigLogging struct {
 	//
 	//
@@ -2350,16 +2525,16 @@ type AIGatewayMCPServerWithUpstreamConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
-// AIGatewayMCPServerWithUpstreamNoProxyConfig Routing, logging, and server
-// configuration for the MCP Server.
+// AIGatewayMCPServerWithUpstreamNoProxyConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Routing, logging, and server configuration for the MCP Server.
 type AIGatewayMCPServerWithUpstreamNoProxyConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -2368,10 +2543,16 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfig struct {
 	//
 	// +optional
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for an AI Gateway route.
 	//
 	// +optional
 	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Server-side configuration for the MCP Server.
 	//
 	// +optional
@@ -2388,8 +2569,10 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfig struct {
 	URL string `json:"url,omitzero"`
 }
 
-// AIGatewayMCPServerWithUpstreamNoProxyConfigLogging Configuration for AI
-// Gateway logging.
+// AIGatewayMCPServerWithUpstreamNoProxyConfigLogging **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for AI Gateway logging.
 type AIGatewayMCPServerWithUpstreamNoProxyConfigLogging struct {
 	//
 	//
@@ -2401,16 +2584,17 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
-// AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig Routing, logging,
-// and request body size limits for the MCP Server.
+// AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig **Pre-release
+// Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Routing, logging, and request body size limits for the MCP Server.
 type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -2419,6 +2603,9 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
 	//
 	// +optional
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for an AI Gateway route.
 	//
 	// +optional
@@ -2436,6 +2623,9 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
 }
 
 // AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging
+// **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
 // Configuration for AI Gateway logging.
 type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging struct {
 	//
@@ -2448,14 +2638,10 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
 }
 
-// AIGatewayMCPToolAnnotations is a type alias.
+// AIGatewayMCPToolAnnotations **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayMCPToolAnnotations struct {
 	// If true, the tool may perform destructive updates
 	//
@@ -2491,7 +2677,8 @@ type AIGatewayMCPToolBase struct {
 	//
 	// +optional
 	Access AIGatewayMCPToolBaseAccess `json:"access,omitzero"`
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Annotations AIGatewayMCPToolAnnotations `json:"annotations,omitzero"`
@@ -2501,6 +2688,9 @@ type AIGatewayMCPToolBase struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Description string `json:"description,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The headers of the exported API.
 	// By default, Kong will extract the headers from API configuration.
 	// If the configured headers are not exactly matched, this field is required.
@@ -2532,7 +2722,8 @@ type AIGatewayMCPToolBase struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Parameters []AIGatewayMCPToolParameter `json:"parameters,omitempty"`
@@ -2544,12 +2735,18 @@ type AIGatewayMCPToolBase struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Path string `json:"path,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The query arguments of the exported API.
 	// If the generated query arguments are not exactly matched, this field is
 	// required.
 	//
 	// +optional
 	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The API requestBody specification defined in OpenAPI JSON format.
 	// For example,
 	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -2560,6 +2757,9 @@ type AIGatewayMCPToolBase struct {
 	//
 	// +optional
 	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The API responses specification defined in OpenAPI JSON format.
 	// This specification will be used to validate the upstream response and map it
 	// back to the structuredOutput.
@@ -2585,17 +2785,22 @@ type AIGatewayMCPToolBase struct {
 
 // AIGatewayMCPToolBaseAccess is a type alias.
 type AIGatewayMCPToolBaseAccess struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Access control rules for allowing or denying consumer groups access to this
 	// tool.
 	// When configured, these will override the default access control rules
 	// defined on the MCP Server.
 	//
-	//
 	// +optional
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
 }
 
-// AIGatewayMCPToolHeaders The headers of the exported API.
+// AIGatewayMCPToolHeaders **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// The headers of the exported API.
 // By default, Kong will extract the headers from API configuration.
 // If the configured headers are not exactly matched, this field is required.
 type AIGatewayMCPToolHeaders map[string]string
@@ -2640,13 +2845,18 @@ type AIGatewayMCPToolParameter struct {
 	Schema apiextensionsv1.JSON `json:"schema,omitzero"`
 }
 
-// AIGatewayMCPToolQuery The query arguments of the exported API.
+// AIGatewayMCPToolQuery **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// The query arguments of the exported API.
 // If the generated query arguments are not exactly matched, this field is
 // required.
 type AIGatewayMCPToolQuery map[string]string
 
-// AIGatewayMCPToolRequestBody The API requestBody specification defined in
-// OpenAPI JSON format.
+// AIGatewayMCPToolRequestBody **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// The API requestBody specification defined in OpenAPI JSON format.
 // For example,
 // '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
 // See
@@ -2655,8 +2865,10 @@ type AIGatewayMCPToolQuery map[string]string
 // Note that `$ref` is not supported.
 type AIGatewayMCPToolRequestBody map[string]string
 
-// AIGatewayMCPToolResponses The API responses specification defined in OpenAPI
-// JSON format.
+// AIGatewayMCPToolResponses **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// The API responses specification defined in OpenAPI JSON format.
 // This specification will be used to validate the upstream response and map it
 // back to the structuredOutput.
 // For example,
@@ -2676,7 +2888,8 @@ type AIGatewayMCPUpstreamTool struct {
 	//
 	// +optional
 	Access AIGatewayMCPUpstreamToolAccess `json:"access,omitzero"`
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Annotations AIGatewayMCPToolAnnotations `json:"annotations,omitzero"`
@@ -2686,6 +2899,9 @@ type AIGatewayMCPUpstreamTool struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Description string `json:"description,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The headers of the exported API.
 	// By default, Kong will extract the headers from API configuration.
 	// If the configured headers are not exactly matched, this field is required.
@@ -2731,7 +2947,8 @@ type AIGatewayMCPUpstreamTool struct {
 	//
 	// +optional
 	OutputSchema apiextensionsv1.JSON `json:"outputSchema,omitzero"`
-	//
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
 	// +optional
 	Parameters []AIGatewayMCPToolParameter `json:"parameters,omitempty"`
@@ -2743,12 +2960,18 @@ type AIGatewayMCPUpstreamTool struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Path string `json:"path,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The query arguments of the exported API.
 	// If the generated query arguments are not exactly matched, this field is
 	// required.
 	//
 	// +optional
 	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The API requestBody specification defined in OpenAPI JSON format.
 	// For example,
 	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -2759,6 +2982,9 @@ type AIGatewayMCPUpstreamTool struct {
 	//
 	// +optional
 	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// The API responses specification defined in OpenAPI JSON format.
 	// This specification will be used to validate the upstream response and map it
 	// back to the structuredOutput.
@@ -2784,19 +3010,34 @@ type AIGatewayMCPUpstreamTool struct {
 
 // AIGatewayMCPUpstreamToolAccess is a type alias.
 type AIGatewayMCPUpstreamToolAccess struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Access control rules for allowing or denying consumer groups access to this
 	// tool.
 	// When configured, these will override the default access control rules
 	// defined on the MCP Server.
 	//
-	//
 	// +optional
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+}
+
+// AIGatewayMistralEmbeddingsModelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+type AIGatewayMistralEmbeddingsModelConfig struct {
+	// The URL of the embeddings model.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
 // AIGatewayModelAPI Configuration for proxying asynchronous requests/responses
 // to/from an AI Gateway model using the files and batches APIs.
 type AIGatewayModelAPI struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Access control configuration for a model.
 	//
 	// +optional
@@ -2847,6 +3088,9 @@ type AIGatewayModelAPI struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.
@@ -2859,7 +3103,7 @@ type AIGatewayModelAPI struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// One or more backend models that this model entry routes to.
 	//
 	// +required
@@ -2869,23 +3113,25 @@ type AIGatewayModelAPI struct {
 // AIGatewayModelAPIConfig Routing, logging, and load balancing configuration
 // for the model.
 type AIGatewayModelAPIConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for a model's load balancer when multiple target models are
 	// configured.
 	//
 	// +optional
 	Balancer *AIGatewayModelAPIConfigBalancer `json:"balancer,omitempty"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
-	Logging AIGatewayModelAPIConfigLogging `json:"logging,omitzero"`
+	Logging AIGatewayLoggingConfig `json:"logging,omitzero"`
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
-	//
-	//
-	// +required
-	Model AIGatewayModelAPIConfigModel `json:"model,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
 	//
@@ -2897,36 +3143,13 @@ type AIGatewayModelAPIConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=allow;always;deny
 	ResponseStreaming string `json:"responseStreaming,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for an AI Gateway route.
 	//
 	// +required
-	Route AIGatewayRouteConfig `json:"route,omitzero"`
-}
-
-// AIGatewayModelAPIConfigLogging Configuration for AI Gateway logging.
-type AIGatewayModelAPIConfigLogging struct {
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
-}
-
-// AIGatewayModelAPIConfigModel is a type alias.
-type AIGatewayModelAPIConfigModel struct {
-	// An alias for the model, used to select the target virtual model when passed
-	// in the "model" parameter of the request body.
-	// When not set, this defaults to the AI Gateway model's name.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Alias string `json:"alias,omitzero"`
+	Route AIGatewayModelRouteConfig `json:"route,omitzero"`
 }
 
 // AIGatewayModelAPIConfigBalancer represents a union type for balancer.
@@ -3161,8 +3384,14 @@ func (s *AIGatewayModelAPIConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayModelAccess Access control configuration for a model.
+// AIGatewayModelAccess **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Access control configuration for a model.
 type AIGatewayModelAccess struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Access control rules. Configure exactly one of `allow` or `deny`.
 	//
 	// +optional
@@ -3291,6 +3520,45 @@ func (s *AIGatewayModelAccess) UnmarshalJSON(data []byte) error {
 	}
 	*s = AIGatewayModelAccess(aux)
 	return nil
+}
+
+// AIGatewayModelAliasConfig Configuration for routing to this model using an
+// alias.
+type AIGatewayModelAliasConfig map[string]string
+
+// AIGatewayModelAliasConfigBody Configuration for routing requests to a
+// specific model using a request body property.
+type AIGatewayModelAliasConfigBody struct {
+	// Value indexed by property name that will cause this route to match if
+	// present in the request body.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxProperties=1
+	Body apiextensionsv1.JSON `json:"body,omitzero"`
+}
+
+// AIGatewayModelAliasConfigHeaders Configuration for routing requests to a
+// specific model using a header.
+type AIGatewayModelAliasConfigHeaders struct {
+	// Value indexed by property name that will cause this route to match if
+	// present in the request headers.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxProperties=1
+	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
+}
+
+// AIGatewayModelAliasConfigPath Configuration for routing requests to a
+// specific model using a path alias.
+type AIGatewayModelAliasConfigPath struct {
+	// Value that will cause this route to match if present in the request path.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxItems=1
+	PathAliases []string `json:"pathAliases,omitempty"`
 }
 
 // AIGatewayModelBalancerConfig represents a union type for AIGatewayModelBalancerConfig.
@@ -3507,7 +3775,8 @@ func (u *AIGatewayModelBalancerConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayModelBalancerConsistentHashingConfig is a type alias.
+// AIGatewayModelBalancerConsistentHashingConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelBalancerConsistentHashingConfig struct {
 	//
 	//
@@ -3574,7 +3843,8 @@ type AIGatewayModelBalancerConsistentHashingConfig struct {
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
-// AIGatewayModelBalancerLeastConnectionsConfig is a type alias.
+// AIGatewayModelBalancerLeastConnectionsConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelBalancerLeastConnectionsConfig struct {
 	//
 	//
@@ -3636,7 +3906,8 @@ type AIGatewayModelBalancerLeastConnectionsConfig struct {
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
-// AIGatewayModelBalancerLowestLatencyConfig is a type alias.
+// AIGatewayModelBalancerLowestLatencyConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelBalancerLowestLatencyConfig struct {
 	//
 	//
@@ -3706,7 +3977,8 @@ type AIGatewayModelBalancerLowestLatencyConfig struct {
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
-// AIGatewayModelBalancerLowestUsageConfig is a type alias.
+// AIGatewayModelBalancerLowestUsageConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelBalancerLowestUsageConfig struct {
 	//
 	//
@@ -3775,7 +4047,8 @@ type AIGatewayModelBalancerLowestUsageConfig struct {
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
-// AIGatewayModelBalancerPriorityConfig is a type alias.
+// AIGatewayModelBalancerPriorityConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelBalancerPriorityConfig struct {
 	//
 	//
@@ -3837,7 +4110,8 @@ type AIGatewayModelBalancerPriorityConfig struct {
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
-// AIGatewayModelBalancerRoundRobinConfig is a type alias.
+// AIGatewayModelBalancerRoundRobinConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelBalancerRoundRobinConfig struct {
 	//
 	//
@@ -3899,7 +4173,8 @@ type AIGatewayModelBalancerRoundRobinConfig struct {
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
-// AIGatewayModelBalancerSemanticConfig is a type alias.
+// AIGatewayModelBalancerSemanticConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelBalancerSemanticConfig struct {
 	//
 	//
@@ -3957,6 +4232,9 @@ type AIGatewayModelBalancerSemanticConfig struct {
 	// +kubebuilder:validation:Minimum=10
 	// +kubebuilder:validation:Maximum=65536
 	Slots int `json:"slots,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for the vector database used by the model.
 	//
 	// +required
@@ -3979,6 +4257,9 @@ type AIGatewayModelBalancerSemanticConfigEmbeddings struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	AllowAuthOverride string `json:"allowAuthOverride,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for an embeddings model.
 	//
 	// +required
@@ -3989,8 +4270,7 @@ type AIGatewayModelBalancerSemanticConfigEmbeddings struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
-	// Reference to a model provider instance.
-	// This is either the model provider ID or the model provider name.
+	// Reference to a model provider instance by name.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -4005,7 +4285,7 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=azure;bedrock;databricks;gemini;huggingface;vercel;vertex
+	// +kubebuilder:validation:Enum=azure;bedrock;gemini;huggingface;mistral;ollama;openai;vertex
 	Type AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType `json:"type,omitempty"`
 
 	// Azure configuration.
@@ -4016,10 +4296,6 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
 	//
 	// +optional
 	Bedrock *AIGatewayBedrockEmbeddingsModelConfig `json:"bedrock,omitempty"`
-	// Databricks configuration.
-	//
-	// +optional
-	Databricks *AIGatewayDatabricksEmbeddingsModelConfig `json:"databricks,omitempty"`
 	// Gemini configuration.
 	//
 	// +optional
@@ -4028,10 +4304,18 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
 	//
 	// +optional
 	Huggingface *AIGatewayHuggingfaceEmbeddingsModelConfig `json:"huggingface,omitempty"`
-	// Vercel configuration.
+	// Mistral configuration.
 	//
 	// +optional
-	Vercel *AIGatewayVercelEmbeddingsModelConfig `json:"vercel,omitempty"`
+	Mistral *AIGatewayMistralEmbeddingsModelConfig `json:"mistral,omitempty"`
+	// Ollama configuration.
+	//
+	// +optional
+	Ollama *AIGatewayOllamaEmbeddingsModelConfig `json:"ollama,omitempty"`
+	// Openai configuration.
+	//
+	// +optional
+	Openai *AIGatewayOpenaiEmbeddingsModelConfig `json:"openai,omitempty"`
 	// Vertex configuration.
 	//
 	// +optional
@@ -4045,10 +4329,11 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType string
 const (
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeAzure       AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "azure"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeBedrock     AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "bedrock"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeDatabricks  AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "databricks"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeGemini      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "gemini"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeHuggingface AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "huggingface"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVercel      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vercel"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeMistral     AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "mistral"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOllama      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "ollama"
+	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "openai"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vertex"
 )
 
@@ -4077,14 +4362,6 @@ func (u AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) MarshalJSON() ([]b
 			}
 			m["bedrock"] = raw
 		}
-	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeDatabricks:
-		if u.Databricks != nil {
-			raw, err := json.Marshal(u.Databricks)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig databricks: %w", err)
-			}
-			m["databricks"] = raw
-		}
 	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeGemini:
 		if u.Gemini != nil {
 			raw, err := json.Marshal(u.Gemini)
@@ -4101,13 +4378,29 @@ func (u AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) MarshalJSON() ([]b
 			}
 			m["huggingface"] = raw
 		}
-	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVercel:
-		if u.Vercel != nil {
-			raw, err := json.Marshal(u.Vercel)
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeMistral:
+		if u.Mistral != nil {
+			raw, err := json.Marshal(u.Mistral)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vercel: %w", err)
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig mistral: %w", err)
 			}
-			m["vercel"] = raw
+			m["mistral"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOllama:
+		if u.Ollama != nil {
+			raw, err := json.Marshal(u.Ollama)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig ollama: %w", err)
+			}
+			m["ollama"] = raw
+		}
+	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai:
+		if u.Openai != nil {
+			raw, err := json.Marshal(u.Openai)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig openai: %w", err)
+			}
+			m["openai"] = raw
 		}
 	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex:
 		if u.Vertex != nil {
@@ -4158,16 +4451,6 @@ func (u *AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) UnmarshalJSON(dat
 			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig bedrock: %w", err)
 		}
 		u.Bedrock = &val
-	case "databricks":
-		payload, ok := raw["databricks"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayDatabricksEmbeddingsModelConfig
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig databricks: %w", err)
-		}
-		u.Databricks = &val
 	case "gemini":
 		payload, ok := raw["gemini"]
 		if !ok || len(payload) == 0 {
@@ -4188,16 +4471,36 @@ func (u *AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) UnmarshalJSON(dat
 			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig huggingface: %w", err)
 		}
 		u.Huggingface = &val
-	case "vercel":
-		payload, ok := raw["vercel"]
+	case "mistral":
+		payload, ok := raw["mistral"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayVercelEmbeddingsModelConfig
+		var val AIGatewayMistralEmbeddingsModelConfig
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vercel: %w", err)
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig mistral: %w", err)
 		}
-		u.Vercel = &val
+		u.Mistral = &val
+	case "ollama":
+		payload, ok := raw["ollama"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayOllamaEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig ollama: %w", err)
+		}
+		u.Ollama = &val
+	case "openai":
+		payload, ok := raw["openai"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayOpenaiEmbeddingsModelConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig openai: %w", err)
+		}
+		u.Openai = &val
 	case "vertex":
 		payload, ok := raw["vertex"]
 		if !ok || len(payload) == 0 {
@@ -4223,7 +4526,7 @@ func (s *AIGatewayModelBalancerSemanticConfigEmbeddings) UnmarshalJSON(data []by
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddings: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Databricks == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Vercel == nil && aux.Config.Vertex == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Vertex == nil {
 		aux.Config = nil
 	}
 	*s = AIGatewayModelBalancerSemanticConfigEmbeddings(aux)
@@ -4353,13 +4656,16 @@ type AIGatewayModelFormat struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai
+	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai;vertex
 	Type string `json:"type,omitzero"`
 }
 
 // AIGatewayModelModel Configuration for proxying synchronous requests/responses
 // to/from an AI Gateway model using generative APIs.
 type AIGatewayModelModel struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Access control configuration for a model.
 	//
 	// +optional
@@ -4410,6 +4716,9 @@ type AIGatewayModelModel struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.
@@ -4422,7 +4731,7 @@ type AIGatewayModelModel struct {
 	// List of policy references.
 	//
 	// +optional
-	Policies []string `json:"policies,omitempty"`
+	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// One or more backend models that this model entry routes to.
 	//
 	// +required
@@ -4432,22 +4741,29 @@ type AIGatewayModelModel struct {
 // AIGatewayModelModelConfig Routing, logging, and load balancing configuration
 // for the model.
 type AIGatewayModelModelConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for a model's load balancer when multiple target models are
 	// configured.
 	//
 	// +optional
 	Balancer *AIGatewayModelModelConfigBalancer `json:"balancer,omitempty"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
-	Logging AIGatewayModelModelConfigLogging `json:"logging,omitzero"`
+	Logging AIGatewayLoggingConfig `json:"logging,omitzero"`
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
-	//
-	// +required
+	// +optional
 	Model AIGatewayModelModelConfigModel `json:"model,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
@@ -4460,36 +4776,21 @@ type AIGatewayModelModelConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=allow;always;deny
 	ResponseStreaming string `json:"responseStreaming,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for an AI Gateway route.
 	//
 	// +required
-	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	Route AIGatewayModelRouteConfig `json:"route,omitzero"`
 }
 
-// AIGatewayModelModelConfigLogging Configuration for AI Gateway logging.
-type AIGatewayModelModelConfigLogging struct {
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Payloads string `json:"payloads,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Statistics string `json:"statistics,omitzero"`
-}
-
-// AIGatewayModelModelConfigModel is a type alias.
+// AIGatewayModelModelConfigModel **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelModelConfigModel struct {
-	// An alias for the model, used to select the target virtual model when passed
-	// in the "model" parameter of the request body.
-	// When not set, this defaults to the AI Gateway model's name.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Alias string `json:"alias,omitzero"`
 	// Display the model name selected in the X-Kong-LLM-Model response header
 	//
 	// +optional
@@ -4729,7 +5030,8 @@ func (s *AIGatewayModelModelConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayModelProviderAnthropic Configuration for an upstream model provider.
+// AIGatewayModelProviderAnthropic **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderAnthropic struct {
 	// Configuration for the model provider.
 	//
@@ -4763,6 +5065,9 @@ type AIGatewayModelProviderAnthropic struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -4776,14 +5081,19 @@ type AIGatewayModelProviderAnthropic struct {
 
 // AIGatewayModelProviderAnthropicConfig Configuration for the model provider.
 type AIGatewayModelProviderAnthropicConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderAzure Config for Azure model provider.
+// AIGatewayModelProviderAzure **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Config for Azure model provider.
 type AIGatewayModelProviderAzure struct {
 	//
 	//
@@ -4817,6 +5127,9 @@ type AIGatewayModelProviderAzure struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -4959,7 +5272,10 @@ func (s *AIGatewayModelProviderAzureConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayModelProviderBedrock Config for AWS model provider.
+// AIGatewayModelProviderBedrock **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Config for AWS model provider.
 type AIGatewayModelProviderBedrock struct {
 	//
 	//
@@ -4993,6 +5309,9 @@ type AIGatewayModelProviderBedrock struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5129,7 +5448,8 @@ func (s *AIGatewayModelProviderBedrockConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayModelProviderCerebras Configuration for an upstream model provider.
+// AIGatewayModelProviderCerebras **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderCerebras struct {
 	// Configuration for the model provider.
 	//
@@ -5163,6 +5483,9 @@ type AIGatewayModelProviderCerebras struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5176,14 +5499,17 @@ type AIGatewayModelProviderCerebras struct {
 
 // AIGatewayModelProviderCerebrasConfig Configuration for the model provider.
 type AIGatewayModelProviderCerebrasConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderCohere Configuration for an upstream model provider.
+// AIGatewayModelProviderCohere **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderCohere struct {
 	// Configuration for the model provider.
 	//
@@ -5217,6 +5543,9 @@ type AIGatewayModelProviderCohere struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5230,14 +5559,19 @@ type AIGatewayModelProviderCohere struct {
 
 // AIGatewayModelProviderCohereConfig Configuration for the model provider.
 type AIGatewayModelProviderCohereConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderConfigAuthAWS Configuration for AWS model provider.
+// AIGatewayModelProviderConfigAuthAWS **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for AWS model provider.
 type AIGatewayModelProviderConfigAuthAWS struct {
 	// The access key id for authenticating with static IAM User credentials.
 	// This field is
@@ -5283,7 +5617,10 @@ type AIGatewayModelProviderConfigAuthAWS struct {
 	StsEndpointURL string `json:"stsEndpointURL,omitzero"`
 }
 
-// AIGatewayModelProviderConfigAuthAzure Configuration for Azure model provider.
+// AIGatewayModelProviderConfigAuthAzure **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for Azure model provider.
 type AIGatewayModelProviderConfigAuthAzure struct {
 	// If azure_use_managed_identity is set to true, and you need to use a
 	// different user-assigned identity for this LLM instance, set the client ID.
@@ -5320,8 +5657,10 @@ type AIGatewayModelProviderConfigAuthAzure struct {
 	UseManagedIdentity string `json:"useManagedIdentity,omitzero"`
 }
 
-// AIGatewayModelProviderConfigAuthBasic Basic auth config for an upstream model
-// provider.
+// AIGatewayModelProviderConfigAuthBasic **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Basic auth config for an upstream model provider.
 type AIGatewayModelProviderConfigAuthBasic struct {
 	//
 	//
@@ -5381,7 +5720,10 @@ type AIGatewayModelProviderConfigAuthBasicParams struct {
 	Value SensitiveDataSource `json:"value,omitzero"`
 }
 
-// AIGatewayModelProviderConfigAuthGCP Configuration for GCP model provider.
+// AIGatewayModelProviderConfigAuthGCP **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for GCP model provider.
 type AIGatewayModelProviderConfigAuthGCP struct {
 	// Custom metadata URL for GCP authentication.
 	// Useful for restricted network environments or custom GCP endpoints.
@@ -5419,7 +5761,30 @@ type AIGatewayModelProviderConfigAuthGCP struct {
 	UseGcpServiceAccount string `json:"useGcpServiceAccount,omitzero"`
 }
 
-// AIGatewayModelProviderDashscope Configuration for an upstream model provider.
+// AIGatewayModelProviderConfigAuthVertex **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for Vertex model provider.
+type AIGatewayModelProviderConfigAuthVertex struct {
+	// Full JSON string of the GCP service account to authenticate.
+	// If not set, the service account JSON will be from the environment variable
+	// GCP_SERVICE_ACCOUNT.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	ServiceAccountJSON SensitiveDataSource `json:"serviceAccountJSON,omitzero"`
+	// Use the Google Cloud Service Account (or user-assigned identity) to
+	// authenticate with Vertex-provider models.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	UseGcpServiceAccount string `json:"useGcpServiceAccount,omitzero"`
+}
+
+// AIGatewayModelProviderDashscope **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderDashscope struct {
 	// Configuration for the model provider.
 	//
@@ -5453,6 +5818,9 @@ type AIGatewayModelProviderDashscope struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5466,15 +5834,17 @@ type AIGatewayModelProviderDashscope struct {
 
 // AIGatewayModelProviderDashscopeConfig Configuration for the model provider.
 type AIGatewayModelProviderDashscopeConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderDatabricks Configuration for an upstream model
-// provider.
+// AIGatewayModelProviderDatabricks **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderDatabricks struct {
 	// Configuration for the model provider.
 	//
@@ -5508,6 +5878,9 @@ type AIGatewayModelProviderDatabricks struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5521,14 +5894,17 @@ type AIGatewayModelProviderDatabricks struct {
 
 // AIGatewayModelProviderDatabricksConfig Configuration for the model provider.
 type AIGatewayModelProviderDatabricksConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderDeepseek Configuration for an upstream model provider.
+// AIGatewayModelProviderDeepseek **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderDeepseek struct {
 	// Configuration for the model provider.
 	//
@@ -5562,6 +5938,9 @@ type AIGatewayModelProviderDeepseek struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5575,14 +5954,19 @@ type AIGatewayModelProviderDeepseek struct {
 
 // AIGatewayModelProviderDeepseekConfig Configuration for the model provider.
 type AIGatewayModelProviderDeepseekConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderGemini Config for GCP model provider.
+// AIGatewayModelProviderGemini **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Config for GCP model provider.
 type AIGatewayModelProviderGemini struct {
 	//
 	//
@@ -5616,6 +6000,9 @@ type AIGatewayModelProviderGemini struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5752,8 +6139,8 @@ func (s *AIGatewayModelProviderGeminiConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayModelProviderHuggingface Configuration for an upstream model
-// provider.
+// AIGatewayModelProviderHuggingface **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderHuggingface struct {
 	// Configuration for the model provider.
 	//
@@ -5787,6 +6174,9 @@ type AIGatewayModelProviderHuggingface struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5800,14 +6190,17 @@ type AIGatewayModelProviderHuggingface struct {
 
 // AIGatewayModelProviderHuggingfaceConfig Configuration for the model provider.
 type AIGatewayModelProviderHuggingfaceConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderKimi Configuration for an upstream model provider.
+// AIGatewayModelProviderKimi **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderKimi struct {
 	// Configuration for the model provider.
 	//
@@ -5841,6 +6234,9 @@ type AIGatewayModelProviderKimi struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5854,14 +6250,17 @@ type AIGatewayModelProviderKimi struct {
 
 // AIGatewayModelProviderKimiConfig Configuration for the model provider.
 type AIGatewayModelProviderKimiConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderLlama2 Configuration for an upstream model provider.
+// AIGatewayModelProviderLlama2 **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderLlama2 struct {
 	// Configuration for the model provider.
 	//
@@ -5895,6 +6294,9 @@ type AIGatewayModelProviderLlama2 struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5908,14 +6310,17 @@ type AIGatewayModelProviderLlama2 struct {
 
 // AIGatewayModelProviderLlama2Config Configuration for the model provider.
 type AIGatewayModelProviderLlama2Config struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderMistral Configuration for an upstream model provider.
+// AIGatewayModelProviderMistral **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderMistral struct {
 	// Configuration for the model provider.
 	//
@@ -5949,6 +6354,9 @@ type AIGatewayModelProviderMistral struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -5962,14 +6370,17 @@ type AIGatewayModelProviderMistral struct {
 
 // AIGatewayModelProviderMistralConfig Configuration for the model provider.
 type AIGatewayModelProviderMistralConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderOllama Configuration for an upstream model provider.
+// AIGatewayModelProviderOllama **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderOllama struct {
 	// Configuration for the model provider.
 	//
@@ -6003,6 +6414,9 @@ type AIGatewayModelProviderOllama struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -6016,14 +6430,17 @@ type AIGatewayModelProviderOllama struct {
 
 // AIGatewayModelProviderOllamaConfig Configuration for the model provider.
 type AIGatewayModelProviderOllamaConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderOpenai Configuration for an upstream model provider.
+// AIGatewayModelProviderOpenai **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderOpenai struct {
 	// Configuration for the model provider.
 	//
@@ -6057,6 +6474,9 @@ type AIGatewayModelProviderOpenai struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -6070,18 +6490,21 @@ type AIGatewayModelProviderOpenai struct {
 
 // AIGatewayModelProviderOpenaiConfig Configuration for the model provider.
 type AIGatewayModelProviderOpenaiConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderReference Reference to a model provider instance.
-// This is either the model provider ID or the model provider name.
+// AIGatewayModelProviderReference Reference to a model provider instance by
+// name.
 type AIGatewayModelProviderReference string
 
-// AIGatewayModelProviderVercel Configuration for an upstream model provider.
+// AIGatewayModelProviderVercel **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderVercel struct {
 	// Configuration for the model provider.
 	//
@@ -6115,6 +6538,9 @@ type AIGatewayModelProviderVercel struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -6128,14 +6554,19 @@ type AIGatewayModelProviderVercel struct {
 
 // AIGatewayModelProviderVercelConfig Configuration for the model provider.
 type AIGatewayModelProviderVercelConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderVertex Config for GCP model provider.
+// AIGatewayModelProviderVertex **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Config for Vertex model provider.
 type AIGatewayModelProviderVertex struct {
 	//
 	//
@@ -6169,6 +6600,9 @@ type AIGatewayModelProviderVertex struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -6195,17 +6629,17 @@ type AIGatewayModelProviderVertexConfigAuth struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=basic;gcp
+	// +kubebuilder:validation:Enum=basic;vertex
 	Type AIGatewayModelProviderVertexConfigAuthType `json:"type,omitempty"`
 
 	// Basic configuration.
 	//
 	// +optional
 	Basic *AIGatewayModelProviderConfigAuthBasic `json:"basic,omitempty"`
-	// GCP configuration.
+	// Vertex configuration.
 	//
 	// +optional
-	GCP *AIGatewayModelProviderConfigAuthGCP `json:"gcp,omitempty"`
+	Vertex *AIGatewayModelProviderConfigAuthVertex `json:"vertex,omitempty"`
 }
 
 // AIGatewayModelProviderVertexConfigAuthType represents the type of auth.
@@ -6213,8 +6647,8 @@ type AIGatewayModelProviderVertexConfigAuthType string
 
 // AIGatewayModelProviderVertexConfigAuthType values.
 const (
-	AIGatewayModelProviderVertexConfigAuthTypeBasic AIGatewayModelProviderVertexConfigAuthType = "basic"
-	AIGatewayModelProviderVertexConfigAuthTypeGCP   AIGatewayModelProviderVertexConfigAuthType = "gcp"
+	AIGatewayModelProviderVertexConfigAuthTypeBasic  AIGatewayModelProviderVertexConfigAuthType = "basic"
+	AIGatewayModelProviderVertexConfigAuthTypeVertex AIGatewayModelProviderVertexConfigAuthType = "vertex"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -6234,13 +6668,13 @@ func (u AIGatewayModelProviderVertexConfigAuth) MarshalJSON() ([]byte, error) {
 			}
 			m["basic"] = raw
 		}
-	case AIGatewayModelProviderVertexConfigAuthTypeGCP:
-		if u.GCP != nil {
-			raw, err := json.Marshal(u.GCP)
+	case AIGatewayModelProviderVertexConfigAuthTypeVertex:
+		if u.Vertex != nil {
+			raw, err := json.Marshal(u.Vertex)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth gcp: %w", err)
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth vertex: %w", err)
 			}
-			m["gcp"] = raw
+			m["vertex"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -6273,16 +6707,16 @@ func (u *AIGatewayModelProviderVertexConfigAuth) UnmarshalJSON(data []byte) erro
 			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth basic: %w", err)
 		}
 		u.Basic = &val
-	case "gcp":
-		payload, ok := raw["gcp"]
+	case "vertex":
+		payload, ok := raw["vertex"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayModelProviderConfigAuthGCP
+		var val AIGatewayModelProviderConfigAuthVertex
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth gcp: %w", err)
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth vertex: %w", err)
 		}
-		u.GCP = &val
+		u.Vertex = &val
 	}
 	return nil
 }
@@ -6298,14 +6732,15 @@ func (s *AIGatewayModelProviderVertexConfig) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfig: %w", err)
 	}
-	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.GCP == nil {
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.Vertex == nil {
 		aux.Auth = nil
 	}
 	*s = AIGatewayModelProviderVertexConfig(aux)
 	return nil
 }
 
-// AIGatewayModelProviderVllm Configuration for an upstream model provider.
+// AIGatewayModelProviderVllm **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderVllm struct {
 	// Configuration for the model provider.
 	//
@@ -6339,6 +6774,9 @@ type AIGatewayModelProviderVllm struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -6352,14 +6790,17 @@ type AIGatewayModelProviderVllm struct {
 
 // AIGatewayModelProviderVllmConfig Configuration for the model provider.
 type AIGatewayModelProviderVllmConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderXai Configuration for an upstream model provider.
+// AIGatewayModelProviderXai **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderXai struct {
 	// Configuration for the model provider.
 	//
@@ -6393,6 +6834,9 @@ type AIGatewayModelProviderXai struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
 	// This value is immutable after creation.
@@ -6406,11 +6850,246 @@ type AIGatewayModelProviderXai struct {
 
 // AIGatewayModelProviderXaiConfig Configuration for the model provider.
 type AIGatewayModelProviderXaiConfig struct {
-	// Basic auth config for an upstream model provider.
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Basic auth config for an upstream model provider.
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelRouteConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for an AI Gateway route.
+type AIGatewayModelRouteConfig struct {
+	// One or more lists of values indexed by header name that will cause this
+	// route to match if present in the request.
+	// The `Host` header cannot be used with this attribute: hosts should be
+	// specified using the `hosts` attribute.
+	// When `headers` contains only one value and that value starts with the
+	// special prefix `~*`, the value is interpreted as a regular expression.
+	//
+	// +optional
+	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
+	// A list of domain names that match this route.
+	// Note that the hosts value is case sensitive.
+	//
+	// +optional
+	Hosts []string `json:"hosts,omitempty"`
+	// The status code Kong responds with when all properties of a route match
+	// except the protocol i.e.
+	// if the protocol of the request is `HTTP` instead of `HTTPS`.
+	// `Location` header is injected by Kong if the field is set to 301, 302, 307
+	// or 308.
+	// Note: This config applies only if the route is configured to only accept the
+	// `https` protocol.
+	//
+	// +optional
+	HTTPSRedirectStatusCode int `json:"httpsRedirectStatusCode,omitzero"`
+	// A list of HTTP methods that match this route.
+	//
+	// +optional
+	Methods []string `json:"methods,omitempty"`
+	// Configuration for routing to this model using an alias.
+	//
+	// +optional
+	Model *AIGatewayModelRouteConfigModel `json:"model,omitempty"`
+	// A list of paths that match this route.
+	//
+	// +optional
+	Paths []string `json:"paths,omitempty"`
+	// When matching a route via one of the `hosts` domain names, use the request
+	// `Host` header in the upstream request headers.
+	// If set to `false`, the upstream `Host` header will be that of the service's
+	// `host`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	PreserveHost string `json:"preserveHost,omitzero"`
+	// An array of the protocols this route should allow.
+	// See the [route Object](#route-object) section for a list of accepted
+	// protocols.
+	// When set to only `https`, HTTP requests are answered with an upgrade error.
+	// When set to only `http`, HTTPS requests are answered with an error.
+	//
+	// +optional
+	Protocols []string `json:"protocols,omitempty"`
+	// A number used to choose which route resolves a given request when several
+	// routes match it using regexes simultaneously.
+	// When two routes match the path and have the same `regex_priority`, the older
+	// one (lowest `created_at`) is used.
+	// Note that the priority for non-regex routes is different (longer non-regex
+	// routes are matched before shorter ones).
+	//
+	// +optional
+	RegexPriority int `json:"regexPriority,omitzero"`
+	// Whether to enable request body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that receive
+	// data with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RequestBuffering string `json:"requestBuffering,omitzero"`
+	// Whether to enable response body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that send data
+	// with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ResponseBuffering string `json:"responseBuffering,omitzero"`
+	// When matching a route via one of the `paths`, strip the matching prefix from
+	// the upstream request URL.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	StripPath string `json:"stripPath,omitzero"`
+	// An optional set of strings associated with the route for grouping and
+	// filtering.
+	//
+	// +optional
+	Tags []string `json:"tags,omitempty"`
+}
+
+// AIGatewayModelRouteConfigModel represents a union type for model.
+// Only one of the fields should be set based on the Type.
+type AIGatewayModelRouteConfigModel struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=body;headers;path
+	Type AIGatewayModelRouteConfigModelType `json:"type,omitempty"`
+
+	// Body configuration.
+	//
+	// +optional
+	Body *AIGatewayModelAliasConfigBody `json:"body,omitempty"`
+	// Headers configuration.
+	//
+	// +optional
+	Headers *AIGatewayModelAliasConfigHeaders `json:"headers,omitempty"`
+	// Path configuration.
+	//
+	// +optional
+	Path *AIGatewayModelAliasConfigPath `json:"path,omitempty"`
+}
+
+// AIGatewayModelRouteConfigModelType represents the type of model.
+type AIGatewayModelRouteConfigModelType string
+
+// AIGatewayModelRouteConfigModelType values.
+const (
+	AIGatewayModelRouteConfigModelTypeBody    AIGatewayModelRouteConfigModelType = "body"
+	AIGatewayModelRouteConfigModelTypeHeaders AIGatewayModelRouteConfigModelType = "headers"
+	AIGatewayModelRouteConfigModelTypePath    AIGatewayModelRouteConfigModelType = "path"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelRouteConfigModel) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelRouteConfigModelTypeBody:
+		if u.Body != nil {
+			raw, err := json.Marshal(u.Body)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Body: %w", err)
+			}
+			m["body"] = raw
+		}
+	case AIGatewayModelRouteConfigModelTypeHeaders:
+		if u.Headers != nil {
+			raw, err := json.Marshal(u.Headers)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Headers: %w", err)
+			}
+			m["headers"] = raw
+		}
+	case AIGatewayModelRouteConfigModelTypePath:
+		if u.Path != nil {
+			raw, err := json.Marshal(u.Path)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Path: %w", err)
+			}
+			m["path"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelRouteConfigModelType(probe.Type)
+	switch probe.Type {
+	case "body":
+		payload, ok := raw["body"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelAliasConfigBody
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Body: %w", err)
+		}
+		u.Body = &val
+	case "headers":
+		payload, ok := raw["headers"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelAliasConfigHeaders
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Headers: %w", err)
+		}
+		u.Headers = &val
+	case "path":
+		payload, ok := raw["path"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelAliasConfigPath
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Path: %w", err)
+		}
+		u.Path = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelRouteConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfig: nil receiver")
+	}
+	type alias AIGatewayModelRouteConfig
+	aux := alias{}
+	aux.Model = &AIGatewayModelRouteConfigModel{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfig: %w", err)
+	}
+	if aux.Model != nil && aux.Model.Type == "" && aux.Model.Body == nil && aux.Model.Headers == nil && aux.Model.Path == nil {
+		aux.Model = nil
+	}
+	*s = AIGatewayModelRouteConfig(aux)
+	return nil
 }
 
 // AIGatewayModelVectorDBConfig represents a union type for AIGatewayModelVectorDBConfig.
@@ -6512,7 +7191,8 @@ func (u *AIGatewayModelVectorDBConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayModelVectorDBConfigPgVector is a type alias.
+// AIGatewayModelVectorDBConfigPgVector **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
 type AIGatewayModelVectorDBConfigPgVector struct {
 	// the database of the pgvector database
 	//
@@ -6606,8 +7286,10 @@ type AIGatewayModelVectorDBConfigPgVectorSSL struct {
 	Version string `json:"version,omitzero"`
 }
 
-// AIGatewayModelVectorDBConfigRedis Config for connecting to a Cloud Provider's
-// Redis instance.
+// AIGatewayModelVectorDBConfigRedis **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Config for connecting to a Cloud Provider's Redis instance.
 type AIGatewayModelVectorDBConfigRedis struct {
 	// Auth related config for connecting to a Cloud Provider's Redis instance.
 	//
@@ -7109,6 +7791,30 @@ func (s *AIGatewayModelVectorDBConfigRedis) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// AIGatewayOllamaEmbeddingsModelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Ollama-specific configuration for a model.
+type AIGatewayOllamaEmbeddingsModelConfig struct {
+	// The URL of the embeddings model.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayOpenaiEmbeddingsModelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Openai-specific configuration for a model.
+type AIGatewayOpenaiEmbeddingsModelConfig struct {
+	// The URL of the embeddings model.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
 // AIGatewayProxyConfig HTTP/HTTPS proxy configuration for outbound requests to
 // the upstream AI provider.
 type AIGatewayProxyConfig struct {
@@ -7211,8 +7917,10 @@ type AIGatewayProxyURL struct {
 	Protocol string `json:"protocol,omitzero"`
 }
 
-// AIGatewayRedisAWSAuthentication AWS specific configs for connecting to a
-// Cloud Provider's redis instance.
+// AIGatewayRedisAWSAuthentication **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// AWS specific configs for connecting to a Cloud Provider's redis instance.
 type AIGatewayRedisAWSAuthentication struct {
 	// AWS Access Key ID to be used for authentication.
 	// This field is
@@ -7270,8 +7978,10 @@ type AIGatewayRedisAWSAuthentication struct {
 	SecretAccessKey string `json:"secretAccessKey,omitzero"`
 }
 
-// AIGatewayRedisAzureAuthentication Azure specific configs for connecting to a
-// Cloud Provider's redis instance.
+// AIGatewayRedisAzureAuthentication **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Azure specific configs for connecting to a Cloud Provider's redis instance.
 type AIGatewayRedisAzureAuthentication struct {
 	// Azure Client ID.
 	// This field is
@@ -7299,8 +8009,10 @@ type AIGatewayRedisAzureAuthentication struct {
 	TenantID string `json:"tenantID,omitzero"`
 }
 
-// AIGatewayRedisCloudConfiguration Config for connecting to a Cloud Provider's
-// Redis instance.
+// AIGatewayRedisCloudConfiguration **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Config for connecting to a Cloud Provider's Redis instance.
 type AIGatewayRedisCloudConfiguration struct {
 	// Auth related config for connecting to a Cloud Provider's Redis instance.
 	//
@@ -7785,8 +8497,10 @@ func (s *AIGatewayRedisCloudConfiguration) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayRedisGCPAuthentication GCP specific configs for connecting to a
-// Cloud Provider's redis instance.
+// AIGatewayRedisGCPAuthentication **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// GCP specific configs for connecting to a Cloud Provider's redis instance.
 type AIGatewayRedisGCPAuthentication struct {
 	// GCP Service Account JSON.
 	// This field is
@@ -7798,7 +8512,10 @@ type AIGatewayRedisGCPAuthentication struct {
 	ServiceAccountJSON string `json:"serviceAccountJSON,omitzero"`
 }
 
-// AIGatewayRouteConfig Configuration for an AI Gateway route.
+// AIGatewayRouteConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for an AI Gateway route.
 type AIGatewayRouteConfig struct {
 	// One or more lists of values indexed by header name that will cause this
 	// route to match if present in the request.
@@ -7893,6 +8610,9 @@ type AIGatewayTarget struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	AllowAuthOverride string `json:"allowAuthOverride,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for a target model.
 	//
 	// +required
@@ -7904,13 +8624,10 @@ type AIGatewayTarget struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
-	// Reference to a model provider instance.
-	// This is either the model provider ID or the model provider name.
+	// Reference to a model provider instance by name.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Provider AIGatewayModelProviderReference `json:"provider,omitzero"`
+	Provider AIGatewayModelProviderRef `json:"provider,omitzero"`
 	// The semantic description of the target, required if using semantic load
 	// balancing.
 	// Specially, setting this to 'CATCHALL' will indicate such target to be used
@@ -7946,7 +8663,10 @@ func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayTargetAnthropicConfig Anthropic-specific configuration for a model.
+// AIGatewayTargetAnthropicConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Anthropic-specific configuration for a model.
 type AIGatewayTargetAnthropicConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -7991,7 +8711,10 @@ type AIGatewayTargetAnthropicConfig struct {
 	Version string `json:"version,omitzero"`
 }
 
-// AIGatewayTargetAzureConfig Azure-specific configuration for a model.
+// AIGatewayTargetAzureConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Azure-specific configuration for a model.
 type AIGatewayTargetAzureConfig struct {
 	// The Azure OpenAI API version to use.
 	//
@@ -8042,7 +8765,10 @@ type AIGatewayTargetAzureConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
+// AIGatewayTargetBedrockConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// AWS Bedrock-specific configuration for a model.
 type AIGatewayTargetBedrockConfig struct {
 	// S3 bucket prefix for batch inference jobs.
 	//
@@ -8109,7 +8835,10 @@ type AIGatewayTargetBedrockConfig struct {
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
 }
 
-// AIGatewayTargetCerebrasConfig Cerebras-specific configuration for a model.
+// AIGatewayTargetCerebrasConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Cerebras-specific configuration for a model.
 type AIGatewayTargetCerebrasConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -8149,7 +8878,10 @@ type AIGatewayTargetCerebrasConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetCohereConfig Cohere-specific configuration for a model.
+// AIGatewayTargetCohereConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Cohere-specific configuration for a model.
 type AIGatewayTargetCohereConfig struct {
 	// Cohere API version. `v1` uses the legacy `/v1/chat` endpoint; `v2` (default)
 	// uses `/v2/chat` and supports tool calling.
@@ -8698,8 +9430,10 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayTargetDashscopeConfig Alibaba DashScope-specific configuration for a
-// model.
+// AIGatewayTargetDashscopeConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Alibaba DashScope-specific configuration for a model.
 type AIGatewayTargetDashscopeConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -8744,8 +9478,10 @@ type AIGatewayTargetDashscopeConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetDatabricksConfig Databricks-specific configuration for a
-// model.
+// AIGatewayTargetDatabricksConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Databricks-specific configuration for a model.
 type AIGatewayTargetDatabricksConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -8791,7 +9527,10 @@ type AIGatewayTargetDatabricksConfig struct {
 	WorkspaceInstanceID string `json:"workspaceInstanceID,omitzero"`
 }
 
-// AIGatewayTargetDeepseekConfig Deepseek-specific configuration for a model.
+// AIGatewayTargetDeepseekConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Deepseek-specific configuration for a model.
 type AIGatewayTargetDeepseekConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -8831,12 +9570,18 @@ type AIGatewayTargetDeepseekConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetGeminiConfig Google Gemini-specific configuration for a model.
+// AIGatewayTargetGeminiConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Google Gemini-specific configuration for a model.
 type AIGatewayTargetGeminiConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for a model hosted on Google Cloud Project.
 	//
 	// +optional
@@ -8875,8 +9620,10 @@ type AIGatewayTargetGeminiConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetHuggingfaceConfig Hugging Face-specific configuration for a
-// model.
+// AIGatewayTargetHuggingfaceConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Hugging Face-specific configuration for a model.
 type AIGatewayTargetHuggingfaceConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -8926,8 +9673,10 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	WaitForModel string `json:"waitForModel,omitzero"`
 }
 
-// AIGatewayTargetKimiConfig Kimi (Moonshot AI)-specific configuration for a
-// model.
+// AIGatewayTargetKimiConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Kimi (Moonshot AI)-specific configuration for a model.
 type AIGatewayTargetKimiConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -8974,7 +9723,10 @@ type AIGatewayTargetKimiConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetLlama2Config Llama2-specific configuration for a model.
+// AIGatewayTargetLlama2Config **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Llama2-specific configuration for a model.
 type AIGatewayTargetLlama2Config struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -9022,7 +9774,10 @@ type AIGatewayTargetLlama2Config struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetMistralConfig Mistral-specific configuration for a model.
+// AIGatewayTargetMistralConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Mistral-specific configuration for a model.
 type AIGatewayTargetMistralConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -9069,7 +9824,10 @@ type AIGatewayTargetMistralConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetOllamaConfig Ollama-specific configuration for a model.
+// AIGatewayTargetOllamaConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Ollama-specific configuration for a model.
 type AIGatewayTargetOllamaConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -9109,7 +9867,10 @@ type AIGatewayTargetOllamaConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetOpenaiConfig Openai-specific configuration for a model.
+// AIGatewayTargetOpenaiConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Openai-specific configuration for a model.
 type AIGatewayTargetOpenaiConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -9149,8 +9910,10 @@ type AIGatewayTargetOpenaiConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetVercelConfig Vercel AI Gateway-specific configuration for a
-// model.
+// AIGatewayTargetVercelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Vercel AI Gateway-specific configuration for a model.
 type AIGatewayTargetVercelConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -9190,12 +9953,18 @@ type AIGatewayTargetVercelConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetVertexConfig Google Vertex-specific configuration for a model.
+// AIGatewayTargetVertexConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Google Vertex-specific configuration for a model.
 type AIGatewayTargetVertexConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for a model hosted on Google Cloud Project.
 	//
 	// +optional
@@ -9234,8 +10003,10 @@ type AIGatewayTargetVertexConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetVertexConfigGcpEnvironment Configuration for a model hosted on
-// Google Cloud Project.
+// AIGatewayTargetVertexConfigGcpEnvironment **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for a model hosted on Google Cloud Project.
 type AIGatewayTargetVertexConfigGcpEnvironment struct {
 	// The custom API endpoint for the Gemini model.
 	//
@@ -9248,8 +10019,7 @@ type AIGatewayTargetVertexConfigGcpEnvironment struct {
 	// Garden.
 	//
 	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	EndpointID string `json:"endpointID,omitzero"`
 	// The Google Cloud location ID for the model endpoint.
@@ -9266,7 +10036,10 @@ type AIGatewayTargetVertexConfigGcpEnvironment struct {
 	ProjectID string `json:"projectID,omitzero"`
 }
 
-// AIGatewayTargetVllmConfig Vllm-specific configuration for a model.
+// AIGatewayTargetVllmConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Vllm-specific configuration for a model.
 type AIGatewayTargetVllmConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -9307,7 +10080,10 @@ type AIGatewayTargetVllmConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetXaiConfig Xai-specific configuration for a model.
+// AIGatewayTargetXaiConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Xai-specific configuration for a model.
 type AIGatewayTargetXaiConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
@@ -9347,28 +10123,21 @@ type AIGatewayTargetXaiConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayVercelEmbeddingsModelConfig Vercel AI Gateway-specific configuration
-// for a model.
-type AIGatewayVercelEmbeddingsModelConfig struct {
-	// The URL of the embeddings model.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	UpstreamURL string `json:"upstreamURL,omitzero"`
-}
-
-// AIGatewayVertexEmbeddingsModelConfig Google Vertex-specific configuration for
-// a model.
+// AIGatewayVertexEmbeddingsModelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Google Vertex-specific configuration for a model.
 type AIGatewayVertexEmbeddingsModelConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
 	// Configuration for a model hosted on Google Cloud Project.
 	//
 	// +optional
 	GcpEnvironment GCPModelConfig `json:"gcpEnvironment,omitzero"`
 	// The URL of the embeddings model.
 	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
@@ -9422,7 +10191,10 @@ type CreatePortalCustomDomainSSLWithCustomCertificate struct {
 // Description is a type alias.
 type Description string
 
-// GCPModelConfig Configuration for a model hosted on Google Cloud Project.
+// GCPModelConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration for a model hosted on Google Cloud Project.
 type GCPModelConfig struct {
 	// The custom API endpoint for the Gemini model.
 	//
@@ -9591,6 +10363,12 @@ type PageTitle string
 // If not provided, the default_page_visibility value of the portal will be
 // used.
 type PageVisibilityStatus string
+
+// PortalDefaultAPIVisibility The default visibility of APIs in the portal.
+type PortalDefaultAPIVisibility string
+
+// PortalDefaultPageVisibility The default visibility of pages in the portal.
+type PortalDefaultPageVisibility string
 
 // PortalFooterMenuSection is a type alias.
 type PortalFooterMenuSection struct {

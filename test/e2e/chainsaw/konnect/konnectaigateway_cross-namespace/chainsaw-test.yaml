@@ -75,6 +75,8 @@ spec:
                 apiSpec:
                   name: ($aigw0_name)
                   displayName: ($aigw0_name)
+                  labels:
+                    test: konnectaigateway-cross-namespace
                 konnect:
                   authRef:
                     name: ($auth0_name)
@@ -151,6 +153,8 @@ spec:
                 apiSpec:
                   name: ($aigw_name)
                   displayName: ($aigw_name)
+                  labels:
+                    test: konnectaigateway-cross-namespace
                 konnect:
                   authRef:
                     name: ($auth_name)

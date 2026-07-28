@@ -3,6 +3,7 @@ package translator
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
@@ -17,11 +18,42 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
 
 var udpRouteTypeMeta = metav1.TypeMeta{Kind: "UDPRoute", APIVersion: gatewayv1.GroupVersion.String()}
+
+// defaultOwnedGatewayClass matches the unset (zero-value) GatewayClassName
+// used by the Gateway fixtures below, so listener-attachment arbitration's
+// GatewayClass-ownership check (see collectL4ListenersByGateway) passes for
+// them the same way a real Gateway's non-empty GatewayClassName would.
+var defaultOwnedGatewayClass = &gatewayapi.GatewayClass{
+	ObjectMeta: metav1.ObjectMeta{Name: ""},
+	Spec:       gatewayapi.GatewayClassSpec{ControllerName: mgrconsts.GetControllerName()},
+}
+
+// udpProgrammedStatus builds Gateway.Status.Listeners entries that mark each
+// named listener as Programmed and accepting UDPRoute - the status a real
+// GatewayReconciler would have written by the time the Gateway is pushed
+// into the translator's cache (see gateway_controller.go's UpdateObject
+// call), and what listener-attachment arbitration now requires.
+func udpProgrammedStatus(listenerNames ...string) gatewayapi.GatewayStatus {
+	kinds := builder.NewRouteGroupKind().UDPRoute().IntoSlice()
+	statuses := make([]gatewayapi.ListenerStatus, 0, len(listenerNames))
+	for _, name := range listenerNames {
+		statuses = append(statuses, gatewayapi.ListenerStatus{
+			Name:           gatewayapi.SectionName(name),
+			SupportedKinds: kinds,
+			Conditions: []metav1.Condition{{
+				Type:   string(gatewayapi.ListenerConditionProgrammed),
+				Status: metav1.ConditionTrue,
+			}},
+		})
+	}
+	return gatewayapi.GatewayStatus{Listeners: statuses}
+}
 
 func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	testCases := []struct {
@@ -47,6 +79,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -130,6 +163,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp81"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -264,6 +298,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp81"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -341,6 +376,101 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			},
 		},
 		{
+			name: "two UDPRoutes on the same listener — only the older one wins",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "udp-gw"},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{{
+							Name:     "udp",
+							Protocol: gatewayapi.UDPProtocolType,
+							Port:     9999,
+						}},
+					},
+					Status: udpProgrammedStatus("udp"),
+				},
+			},
+			udpRoutes: []*gatewayapi.UDPRoute{
+				{
+					TypeMeta: udpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "default",
+						Name:              "older",
+						CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+					},
+					Spec: gatewayapi.UDPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayv1.ParentReference{{
+								Name: gatewayv1.ObjectName("udp-gw"),
+							}},
+						},
+						Rules: []gatewayapi.UDPRouteRule{{
+							BackendRefs: []gatewayv1.BackendRef{{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: "svc-older",
+									Kind: new(gatewayv1.Kind("Service")),
+									Port: new(gatewayv1.PortNumber(53)),
+								},
+							}},
+						}},
+					},
+				},
+				{
+					TypeMeta: udpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "default",
+						Name:              "newer",
+						CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
+					},
+					Spec: gatewayapi.UDPRouteSpec{
+						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+							ParentRefs: []gatewayv1.ParentReference{{
+								Name: gatewayv1.ObjectName("udp-gw"),
+							}},
+						},
+						Rules: []gatewayapi.UDPRouteRule{{
+							BackendRefs: []gatewayv1.BackendRef{{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: "svc-newer",
+									Kind: new(gatewayv1.Kind("Service")),
+									Port: new(gatewayv1.PortNumber(53)),
+								},
+							}},
+						}},
+					},
+				},
+			},
+			services: []*corev1.Service{
+				{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-older"}},
+				{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-newer"}},
+			},
+			expectedKongServices: []kongstate.Service{
+				{
+					Service: kong.Service{
+						Name:     new("udproute.default.older.0"),
+						Protocol: new("udp"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						builder.NewKongstateServiceBackend("svc-older").
+							WithNamespace("default").
+							WithPortNumber(53).
+							MustBuild(),
+					},
+				},
+			},
+			expectedKongRoutes: map[string][]kongstate.Route{
+				"udproute.default.older.0": {
+					{
+						Route: kong.Route{
+							Name:         new("udproute.default.older.0.0"),
+							Destinations: []*kong.CIDRPort{{Port: new(9999)}},
+							Protocols:    kong.StringSlice("udp"),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "multiple UDPRoutes with translation errors",
 			gateways: []*gatewayapi.Gateway{
 				{
@@ -354,6 +484,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 							builder.NewListener("udp8080").WithPort(8080).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp8080"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -487,9 +618,10 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
-				Gateways:  tc.gateways,
-				UDPRoutes: tc.udpRoutes,
-				Services:  tc.services,
+				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				Gateways:       tc.gateways,
+				UDPRoutes:      tc.udpRoutes,
+				Services:       tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakestore)
@@ -560,6 +692,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -641,6 +774,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp81"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -770,6 +904,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp81"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -862,6 +997,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 							builder.NewListener("udp8080").WithPort(8080).UDP().Build(),
 						},
 					},
+					Status: udpProgrammedStatus("udp80", "udp8080"),
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -991,9 +1127,10 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
-				Gateways:  tc.gateways,
-				UDPRoutes: tc.udpRoutes,
-				Services:  tc.services,
+				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				Gateways:       tc.gateways,
+				UDPRoutes:      tc.udpRoutes,
+				Services:       tc.services,
 			})
 			require.NoError(t, err)
 			translator := mustNewTranslator(t, fakestore)

@@ -14,6 +14,22 @@ import (
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
+// AIGatewayConsumerCredentialSDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var AIGatewayConsumerCredentialSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"managed_by",
+		},
+	},
+}
+
 func (s *AIGatewayConsumerCredentialAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -27,7 +43,7 @@ func (s *AIGatewayConsumerCredentialAPISpec) marshalSDKOpsPayload() ([]byte, err
 	payload = flattenSensitiveData(payload)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	payload = renameKeysToSDK(payload)
+	payload = renameKeysToSDKExcept(payload, AIGatewayConsumerCredentialSDKOpsFreeformKeyFields)
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal normalized AIGatewayConsumerCredentialAPISpec: %w", err)

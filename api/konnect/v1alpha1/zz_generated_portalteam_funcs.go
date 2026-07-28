@@ -24,6 +24,12 @@ func (obj *PortalTeam) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the PortalTeam's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *PortalTeam) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the PortalTeam Kind name.
 func (obj PortalTeam) GetTypeName() string {
 	return "PortalTeam"
@@ -73,6 +79,11 @@ func (obj *PortalTeam) GetPortalRef() commonv1alpha1.ObjectRef {
 // GetParentRef returns the reference to the parent entity.
 func (obj *PortalTeam) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetPortalRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *PortalTeam) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.PortalRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

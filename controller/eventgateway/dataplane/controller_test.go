@@ -378,14 +378,17 @@ func TestReconciler_Reconcile(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			egdp := newReconcileEGDP()
+			typeConverter := managedfields.NewDeducedTypeConverter()
 			base := fake.NewClientBuilder().
 				WithScheme(scheme).
+				WithTypeConverters(typeConverter).
 				WithObjects(tc.objects...).
 				WithStatusSubresource(egdp, &configurationv1alpha1.EventGatewayDataPlaneCertificate{}).
 				Build()
 
 			recorder := events.NewFakeRecorder(30)
 			r := newTestReconciler(base, recorder)
+			r.TypeConverter = typeConverter
 
 			count := tc.reconcileCount
 			if count == 0 {

@@ -16,3 +16,13 @@ type ObjectWithControlPlaneRef[T any] interface {
 	SetControlPlaneRef(*commonv1alpha1.ControlPlaneRef)
 	GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
 }
+
+// ObjectWithParentRef is an interface for objects that have a ParentRef
+// and support deepcopy and condition setting.
+type ObjectWithParentRef[T any] interface {
+	client.Object
+	DeepCopy() T
+	SetConditions([]metav1.Condition)
+	SetParentRef(commonv1alpha1.ObjectRef)
+	GetParentRef() commonv1alpha1.ObjectRef
+}

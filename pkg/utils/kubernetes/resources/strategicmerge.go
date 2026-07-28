@@ -29,14 +29,24 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON for patch %s: %w", patch.Name, err)
 	}
+	defaultPatchBase := &corev1.PodTemplateSpec{}
+	SetDefaultsPodTemplateSpec(defaultPatchBase)
+	defaultPatchBaseBytes, err := json.Marshal(defaultPatchBase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON for default patch base: %w", err)
+	}
+	mergePatchBytes, err := strategicpatch.CreateTwoWayMergePatch(defaultPatchBaseBytes, patchBytes, &corev1.PodTemplateSpec{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create merge patch for %s: %w", patch.Name, err)
+	}
 
 	// Calculate the patch result.
-	jsonResultBytes, err := strategicpatch.StrategicMergePatch(baseBytes, patchBytes, &corev1.PodTemplateSpec{})
+	jsonResultBytes, err := strategicpatch.StrategicMergePatch(baseBytes, mergePatchBytes, &corev1.PodTemplateSpec{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate merge patch for %s: %w", base.Name, err)
 	}
 
-	patchResult := base.DeepCopy()
+	patchResult := &corev1.PodTemplateSpec{}
 	if err := json.Unmarshal(jsonResultBytes, patchResult); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal merged %s: %w", base.Name, err)
 	}
@@ -148,17 +158,17 @@ func SetDefaultsContainer(c *corev1.Container) {
 		}
 	}
 
-	for _, e := range c.Env {
-		if e.ValueFrom != nil {
-			if e.ValueFrom.FieldRef != nil {
-				pkgapiscorev1.SetDefaults_ObjectFieldSelector(e.ValueFrom.FieldRef)
+	for i := range c.Env {
+		if c.Env[i].ValueFrom != nil {
+			if c.Env[i].ValueFrom.FieldRef != nil {
+				pkgapiscorev1.SetDefaults_ObjectFieldSelector(c.Env[i].ValueFrom.FieldRef)
 			}
 
-			if e.ValueFrom.ResourceFieldRef != nil {
+			if c.Env[i].ValueFrom.ResourceFieldRef != nil {
 				// NOTE: Divisor defaults to 1 but doesn't have a SetDefaults function.
 				// Ensure that the divisor is set to 1 if it's not set.
-				if e.ValueFrom.ResourceFieldRef.Divisor.IsZero() {
-					e.ValueFrom.ResourceFieldRef.Divisor = _quantityOne
+				if c.Env[i].ValueFrom.ResourceFieldRef.Divisor.IsZero() {
+					c.Env[i].ValueFrom.ResourceFieldRef.Divisor = _quantityOne
 				}
 			}
 		}

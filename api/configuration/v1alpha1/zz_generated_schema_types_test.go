@@ -605,6 +605,45 @@ func TestNamespaceExactAllowListItem_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestSchemaRegistryAuthenticationBasic_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec SchemaRegistryAuthenticationBasic
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestSchemaRegistryConfluent_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec SchemaRegistryConfluent
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestSchemaRegistryConfluentConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec SchemaRegistryConfluentConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestSchemaRegistryReferenceByID_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1043,62 +1082,6 @@ func TestEventGatewayConsumeSchemaValidationPolicyConfigUnmarshalJSON_NilReceive
 	}
 }
 
-func TestEventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryUnmarshalJSON_NilReceiver(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload []byte
-	}{
-		{name: "Id", payload: []byte("{\"type\":\"id\",\"id\":{}}")},
-		{name: "Name", payload: []byte("{\"type\":\"name\",\"name\":{}}")},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var target *EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry
-			err := target.UnmarshalJSON(tt.payload)
-			if err == nil {
-				t.Fatal("expected error for nil receiver")
-			}
-			if got, want := err.Error(), "unmarshaling EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistry: nil receiver"; got != want {
-				t.Fatalf("unexpected error: got %q want %q", got, want)
-			}
-		})
-	}
-}
-
-func TestEventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryUnmarshalJSON_NilReceiver(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload []byte
-	}{
-		{name: "Id", payload: []byte("{\"type\":\"id\",\"id\":{}}")},
-		{name: "Name", payload: []byte("{\"type\":\"name\",\"name\":{}}")},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var target *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry
-			err := target.UnmarshalJSON(tt.payload)
-			if err == nil {
-				t.Fatal("expected error for nil receiver")
-			}
-			if got, want := err.Error(), "unmarshaling EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistry: nil receiver"; got != want {
-				t.Fatalf("unexpected error: got %q want %q", got, want)
-			}
-		})
-	}
-}
-
 func TestEventGatewayEncryptConfigEncryptionKeyUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1379,6 +1362,60 @@ func TestForwardToVirtualClusterPolicyConfigUnmarshalJSON_NilReceiver(t *testing
 	}
 }
 
+func TestSchemaRegistryAuthenticationSchemeUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "basic", payload: []byte("{\"type\":\"basic\",\"basic\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *SchemaRegistryAuthenticationScheme
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling SchemaRegistryAuthenticationScheme: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestSchemaRegistryConfluentConfigAuthenticationUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "basic", payload: []byte("{\"type\":\"basic\",\"basic\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *SchemaRegistryConfluentConfigAuthentication
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling SchemaRegistryConfluentConfigAuthentication: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestVirtualClusterAuthenticationSchemeUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1570,118 +1607,6 @@ func TestEventGatewayConsumeSchemaValidationPolicyUnmarshalJSON_DecodesUnionFiel
 			t.Parallel()
 
 			var target EventGatewayConsumeSchemaValidationPolicy
-			if err := json.Unmarshal(tt.payload, &target); err != nil {
-				t.Fatalf("json.Unmarshal() error = %v", err)
-			}
-			tt.assert(t, target)
-		})
-	}
-}
-
-func TestEventGatewayConsumeSchemaValidationPolicyJSONConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload []byte
-		assert  func(*testing.T, EventGatewayConsumeSchemaValidationPolicyJSONConfig)
-	}{
-		{
-			name:    "SchemaRegistry/Id",
-			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
-			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyJSONConfig) {
-				t.Helper()
-				if target.SchemaRegistry == nil {
-					t.Fatalf("SchemaRegistry should be allocated")
-				}
-				if got, want := target.SchemaRegistry.Type, EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeID; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.SchemaRegistry.ID == nil {
-					t.Fatalf("SchemaRegistry.ID should be allocated")
-				}
-			},
-		},
-		{
-			name:    "SchemaRegistry/Name",
-			payload: []byte("{\"schemaRegistry\":{\"type\":\"name\",\"name\":{}}}"),
-			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyJSONConfig) {
-				t.Helper()
-				if target.SchemaRegistry == nil {
-					t.Fatalf("SchemaRegistry should be allocated")
-				}
-				if got, want := target.SchemaRegistry.Type, EventGatewayConsumeSchemaValidationPolicyJSONConfigSchemaRegistryTypeName; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.SchemaRegistry.Name == nil {
-					t.Fatalf("SchemaRegistry.Name should be allocated")
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var target EventGatewayConsumeSchemaValidationPolicyJSONConfig
-			if err := json.Unmarshal(tt.payload, &target); err != nil {
-				t.Fatalf("json.Unmarshal() error = %v", err)
-			}
-			tt.assert(t, target)
-		})
-	}
-}
-
-func TestEventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload []byte
-		assert  func(*testing.T, EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig)
-	}{
-		{
-			name:    "SchemaRegistry/Id",
-			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
-			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig) {
-				t.Helper()
-				if target.SchemaRegistry == nil {
-					t.Fatalf("SchemaRegistry should be allocated")
-				}
-				if got, want := target.SchemaRegistry.Type, EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.SchemaRegistry.ID == nil {
-					t.Fatalf("SchemaRegistry.ID should be allocated")
-				}
-			},
-		},
-		{
-			name:    "SchemaRegistry/Name",
-			payload: []byte("{\"schemaRegistry\":{\"type\":\"name\",\"name\":{}}}"),
-			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig) {
-				t.Helper()
-				if target.SchemaRegistry == nil {
-					t.Fatalf("SchemaRegistry should be allocated")
-				}
-				if got, want := target.SchemaRegistry.Type, EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.SchemaRegistry.Name == nil {
-					t.Fatalf("SchemaRegistry.Name should be allocated")
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var target EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}
@@ -2106,6 +2031,46 @@ func TestForwardToVirtualClusterPolicyUnmarshalJSON_DecodesUnionFields(t *testin
 			t.Parallel()
 
 			var target ForwardToVirtualClusterPolicy
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestSchemaRegistryConfluentConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, SchemaRegistryConfluentConfig)
+	}{
+		{
+			name:    "Authentication/basic",
+			payload: []byte("{\"authentication\":{\"type\":\"basic\",\"basic\":{}}}"),
+			assert: func(t *testing.T, target SchemaRegistryConfluentConfig) {
+				t.Helper()
+				if target.Authentication == nil {
+					t.Fatalf("Authentication should be allocated")
+				}
+				if got, want := target.Authentication.Type, SchemaRegistryConfluentConfigAuthenticationTypeSchemaRegistryAuthenticationBasic; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Authentication.SchemaRegistryAuthenticationBasic == nil {
+					t.Fatalf("Authentication.SchemaRegistryAuthenticationBasic should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target SchemaRegistryConfluentConfig
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

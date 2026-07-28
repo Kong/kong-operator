@@ -72,6 +72,18 @@ type Config struct {
 	// When set, a spec-level ref-list field and its ref struct(s) are emitted and
 	// the generated create/update ops call a hand-written enforcement helper.
 	Associations map[string][]config.AssociationConfig
+	// SourceConfig maps entity names to their Origin/Mirror source configuration.
+	// When an entry has SupportsMirror true, the generator emits Source/Mirror spec
+	// fields, spec-level CEL, an optional-pointer APISpec, GetSource/GetMirror
+	// accessors, and a Mirror short-circuit in the generated ops.
+	SourceConfig map[string]*config.SourceConfig
+	// OneOfVariantNamesFromTitle is the set of generated union wrapper type
+	// names for which anonymous oneOf variants (no $ref) are named after their
+	// OAS `title` instead of the generic Variant1/Variant2/... fallback.
+	// A titled variant whose schema has exactly one nested property is also
+	// flattened onto the wrapper field directly (see buildUnionVariants),
+	// avoiding a doubled JSON key like route.model.pathAliases.pathAliases.
+	OneOfVariantNamesFromTitle map[string]bool
 }
 
 // Generator generates Go CRD types from parsed OpenAPI schemas.
@@ -208,6 +220,13 @@ func (g *Generator) hasSecretRefs(entityName string) bool {
 // hasAnySecretRefs returns true if any entity in the config has SecretReferences.
 func (g *Generator) hasAnySecretRefs() bool {
 	return len(g.config.SecretReferences) > 0
+}
+
+// entitySupportsMirror reports whether the entity opted into Origin+Mirror via
+// source.supportsMirror in the config.
+func (g *Generator) entitySupportsMirror(entityName string) bool {
+	sc, ok := g.config.SourceConfig[entityName]
+	return ok && sc != nil && sc.SupportsMirror
 }
 
 // buildSensitiveLeaves pre-computes per-schema and per-entity maps of sensitive
@@ -1364,7 +1383,7 @@ func (g *Generator) collectSchemaCursors(
 		case len(prop.OneOf) > 0:
 			// Property-level discriminated union: variants are accessed via their
 			// discriminator-value JSON tag under the property's own JSON tag.
-			for _, variant := range buildUnionVariants(prop, generatedUnionTypeName(prop, entityName)) {
+			for _, variant := range g.buildUnionVariants(prop, generatedUnionTypeName(prop, entityName)) {
 				variantTag := jsonName(variant.discValue)
 				variantCursor := propCursor.Sub(variantTag)
 				variantPath := propPath + "." + variantTag
@@ -1402,7 +1421,7 @@ func (g *Generator) collectSchemaCursors(
 	// Variant fields are flattened directly under apiSpec (no intermediate key).
 	if len(schema.OneOf) > 0 {
 		rootProp := buildRootUnionProperty(schema)
-		for _, variant := range buildUnionVariants(rootProp, generatedUnionTypeName(rootProp, "")) {
+		for _, variant := range g.buildUnionVariants(rootProp, generatedUnionTypeName(rootProp, "")) {
 			variantTag := jsonName(variant.discValue)
 			variantCursor := cursor.Sub(variantTag)
 			variantPath := path + "." + variantTag
@@ -1457,7 +1476,7 @@ func (g *Generator) validateCursorAtLevel(path string, cursor *config.FieldConfi
 	// Root-level oneOf: variant tags are valid directly at this level.
 	if len(schema.OneOf) > 0 {
 		rootProp := buildRootUnionProperty(schema)
-		for _, variant := range buildUnionVariants(rootProp, generatedUnionTypeName(rootProp, "")) {
+		for _, variant := range g.buildUnionVariants(rootProp, generatedUnionTypeName(rootProp, "")) {
 			validTags[jsonName(variant.discValue)] = true
 		}
 	}
@@ -1980,8 +1999,18 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				body.WriteString("}\n\n")
 				g.writeNestedInlineTypes(&body, schema.Properties, emittedNested, "", goName, schemaCursor)
 				g.writeDedicatedSensitiveTypesForSchema(&body, goName)
-				// Emit union type definitions for any property-level oneOf.
+				// Emit union type definitions for any property-level oneOf, except
+				// fields ref-ified by schemaTypeRefFields: writeSchemaTypeField
+				// already swapped those to the generated ref struct type (e.g.
+				// *EventGatewaySchemaRegistryRef), so no oneOf sub-type or its
+				// UnmarshalJSON override should be emitted for them.
+				refFieldsForType := g.schemaTypeRefFields()[goName]
+				unionProps := make([]*parser.Property, 0, len(schema.Properties))
 				for _, prop := range schema.Properties {
+					if refFieldsForType[jsonName(prop.Name)] != "" {
+						continue
+					}
+					unionProps = append(unionProps, prop)
 					if g.shouldSkipSchemaProperty(goName, prop) || len(prop.OneOf) == 0 {
 						continue
 					}
@@ -1991,7 +2020,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					}
 					g.writeUnionTypeDefinition(&body, prop, goName, emittedNested, "", propCursor)
 				}
-				if wrapper := emitUnionWrapperUnmarshalJSON(goName, buildUnionFieldSpecs(schema.Properties, goName)); wrapper != "" {
+				if wrapper := emitUnionWrapperUnmarshalJSON(goName, g.buildUnionFieldSpecs(unionProps, goName)); wrapper != "" {
 					body.WriteString(wrapper)
 				}
 			case schema.Type == "boolean":
@@ -2184,8 +2213,15 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	switch {
 	case isSensitive && isScalarArraySensitiveLeaf(prop):
 		goType = "[]SensitiveDataSource"
-	case refTypeName != "":
+	case refTypeName != "" && prop.Type == "array":
 		goType = "[]" + refTypeName
+	case refTypeName != "" && (!prop.Required || prop.Nullable):
+		// Scalar leaf ref-ified inside a non-leaf array (see refFieldTarget):
+		// the "many" cardinality already comes from the enclosing array, so
+		// this leaf is one ref per element, not a slice.
+		goType = "*" + refTypeName
+	case refTypeName != "":
+		goType = refTypeName
 	case isSensitive:
 		leafType, _ := g.schemaFieldSensitiveType(typeName, jsonFieldName)
 		goType = leafType.sensitiveGoTypeName()
@@ -2299,7 +2335,7 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 				}
 				g.writeUnionTypeDefinition(buf, nested, typeName, emitted, entityName, propCursor.Sub(jsonTagForProperty(nested)))
 			}
-			if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Items.Properties, typeName)); wrapper != "" {
+			if wrapper := emitUnionWrapperUnmarshalJSON(typeName, g.buildUnionFieldSpecs(prop.Items.Properties, typeName)); wrapper != "" {
 				buf.WriteString(wrapper)
 			}
 			continue
@@ -2337,7 +2373,7 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 			}
 			g.writeUnionTypeDefinition(buf, nested, typeName, emitted, entityName, inlineCursor.Sub(jsonTagForProperty(nested)))
 		}
-		if wrapper := emitUnionWrapperUnmarshalJSON(typeName, buildUnionFieldSpecs(prop.Properties, typeName)); wrapper != "" {
+		if wrapper := emitUnionWrapperUnmarshalJSON(typeName, g.buildUnionFieldSpecs(prop.Properties, typeName)); wrapper != "" {
 			buf.WriteString(wrapper)
 		}
 	}
@@ -2438,6 +2474,25 @@ func isScalarStringIntOneOf(variants []*parser.Property, schemas map[string]*par
 		}
 	}
 	return types["string"] && types["integer"]
+}
+
+// commonV1Alpha1ImportPath is the Go import path of the shared common/v1alpha1
+// package. It defines EntitySource, which backs the generated spec.source field
+// on mirror-capable entities.
+const commonV1Alpha1ImportPath = "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+
+// needsCommonV1Alpha1Import reports whether a generated types file must add an
+// explicit commonv1alpha1 import for the mirror spec.source field.
+//
+// It is needed only for mirror-capable entities (spec.source is emitted only for
+// them). Even then it is skipped when the ObjectRef import already brings in the
+// same package — that import points at commonV1Alpha1ImportPath too, so re-adding
+// it would produce a duplicate import in the generated file.
+func (g *Generator) needsCommonV1Alpha1Import(entityName string, objectRefImport *config.ImportConfig) bool {
+	if !g.entitySupportsMirror(entityName) {
+		return false
+	}
+	return objectRefImport == nil || objectRefImport.Path != commonV1Alpha1ImportPath
 }
 
 func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string, error) {
@@ -2655,6 +2710,8 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
 		TypeXValidations          []string
+		SupportsMirror            bool
+		NeedsCommonV1Alpha1Import bool
 	}{
 		EntityName:                entityName,
 		Schema:                    schema,
@@ -2677,6 +2734,8 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
 		TypeXValidations:          typeXValidations,
+		SupportsMirror:            g.entitySupportsMirror(entityName),
+		NeedsCommonV1Alpha1Import: g.needsCommonV1Alpha1Import(entityName, objectRefImport),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -2700,7 +2759,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		buf.WriteString(unionTypes)
 	}
 
-	apiSpecUnionFields := buildCRDAPISpecUnionFieldSpecs(schema)
+	apiSpecUnionFields := g.buildCRDAPISpecUnionFieldSpecs(schema)
 	if wrapper := emitInlineUnionWrapperMarshalJSON(entityName+"APISpec", apiSpecUnionFields); wrapper != "" {
 		buf.WriteString("\n")
 		buf.WriteString(wrapper)
@@ -2718,7 +2777,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 }
 
 func (g *Generator) generateCRDTypeTests(entityName string, schema *parser.Schema) string {
-	unionSpecs := buildCRDAPISpecUnionFieldSpecs(schema)
+	unionSpecs := g.buildCRDAPISpecUnionFieldSpecs(schema)
 	var wrapperSpecs []unionWrapperTestSpec
 	if len(unionSpecs) > 0 {
 		wrapperSpecs = []unionWrapperTestSpec{{
@@ -2760,7 +2819,7 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 		// generator actually produced a union wrapper, i.e. when there are no
 		// properties alongside the oneOf.
 		if len(schema.Properties) == 0 && hasRefVariants(schema.OneOf) && schema.Discriminator != "" {
-			rootSpec := buildUnionFieldSpec(goName, goName, refName, &parser.Property{
+			rootSpec := g.buildUnionFieldSpec(goName, goName, refName, &parser.Property{
 				Name:                 goName,
 				OneOf:                schema.OneOf,
 				Discriminator:        schema.Discriminator,
@@ -2769,7 +2828,20 @@ func (g *Generator) generateSchemaTypesTests(refs map[string]bool, parsed *parse
 			unionSpecs = appendUniqueUnionFieldSpec(unionSpecs, seenUnionTypes, rootSpec)
 		}
 
-		fields := buildUnionFieldSpecs(schema.Properties, goName)
+		// Exclude fields ref-ified by schemaTypeRefFields: writeSchemaTypeField
+		// already swapped those to the generated ref struct type (e.g.
+		// *EventGatewaySchemaRegistryRef), so no oneOf sub-type or its
+		// MarshalJSON/UnmarshalJSON test should be generated for them (mirrors
+		// the same exclusion in generateSchemaTypes).
+		refFieldsForType := g.schemaTypeRefFields()[goName]
+		unionTestProps := make([]*parser.Property, 0, len(schema.Properties))
+		for _, prop := range schema.Properties {
+			if refFieldsForType[jsonName(prop.Name)] != "" {
+				continue
+			}
+			unionTestProps = append(unionTestProps, prop)
+		}
+		fields := g.buildUnionFieldSpecs(unionTestProps, goName)
 		if len(fields) == 0 {
 			continue
 		}
@@ -2831,6 +2903,17 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	}
 	if g.entityHasReferences(entityName) && g.objectRefImported() {
 		imports = appendUniqueImportConfig(imports, g.config.CommonTypes.ObjectRef.Import)
+	}
+	supportsMirror := g.entitySupportsMirror(entityName)
+	if supportsMirror {
+		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+			Alias: "commonv1alpha1",
+			Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+		})
+		imports = appendUniqueImportConfig(imports, &config.ImportConfig{
+			Alias: defaultKonnectStatusAlias,
+			Path:  defaultKonnectStatusPackage,
+		})
 	}
 
 	funcsFuncMap := template.FuncMap{
@@ -2905,6 +2988,8 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		AncestorDependencies               []*parser.Dependency
 		AncestorEntityTypes                []string
 		SingletonNoID                      bool
+		SupportsMirror                     bool
+		NameAccessor                       *TemplateNameAccessor
 	}{
 		EntityName:                entityName,
 		APIVersion:                g.config.APIVersion,
@@ -2938,6 +3023,8 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		AncestorDependencies:               ancestorDependencies,
 		AncestorEntityTypes:                ancestorEntityTypes,
 		SingletonNoID:                      isSingletonNoID(schema),
+		SupportsMirror:                     supportsMirror,
+		NameAccessor:                       g.entityNameAccessor(schema),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -3107,12 +3194,29 @@ type unionVariant struct {
 	fieldName  string           // Go field name used by the wrapper.
 	goTypeName string           // Go type name used by the wrapper field.
 	source     *parser.Property // Original property schema, used for anonymous inline members.
+	// flattened is true when this anonymous variant's single nested property is
+	// used directly as the wrapper field's type instead of a synthetic
+	// single-field wrapper struct (avoids e.g. route.model.pathAliases.pathAliases).
+	flattened bool
+	// flattenedNilable is true when the flattened type is already nil-able
+	// (slice/map) so the wrapper field is declared without a pointer, per
+	// Kubernetes API conventions against pointers to slices/maps.
+	flattenedNilable bool
 }
 
 // buildUnionVariants builds the ordered list of variants for a property-level oneOf
 // union. Uses the OAS discriminator mapping when present (for correct snake_case
 // values); falls back to extractVariantNames when no discriminator is available.
-func buildUnionVariants(prop *parser.Property, unionTypeName string) []unionVariant {
+//
+// When unionTypeName is opted into g.config.OneOfVariantNamesFromTitle, an
+// anonymous variant (no $ref) with a non-empty OAS title is named from that
+// title exactly like a $ref variant is named from its ref name — reusing the
+// same dedup/cleanup pipeline (extractVariantNames et al.) — instead of the
+// generic Variant1/Variant2/... fallback. Such a variant whose schema has
+// exactly one nested property is additionally flattened (see unionVariant.flattened).
+func (g *Generator) buildUnionVariants(prop *parser.Property, unionTypeName string) []unionVariant {
+	titleNames := g.config.OneOfVariantNamesFromTitle[unionTypeName]
+
 	if len(prop.DiscriminatorMapping) > 0 {
 		values := make([]string, 0, len(prop.DiscriminatorMapping))
 		for v := range prop.DiscriminatorMapping {
@@ -3139,8 +3243,11 @@ func buildUnionVariants(prop *parser.Property, unionTypeName string) []unionVari
 	rawNames := make([]string, 0, len(prop.OneOf))
 	for _, v := range prop.OneOf {
 		name := v.Name
-		if v.RefName != "" {
+		switch {
+		case v.RefName != "":
 			name = v.RefName
+		case titleNames && v.Title != "":
+			name = v.Title
 		}
 		rawNames = append(rawNames, name)
 	}
@@ -3150,14 +3257,35 @@ func buildUnionVariants(prop *parser.Property, unionTypeName string) []unionVari
 	for i, v := range prop.OneOf {
 		fieldName := fixInitialisms(goFieldName(fieldNames[i]))
 		goTypeName := anonymousUnionVariantTypeName(unionTypeName, fieldName)
-		if v.RefName != "" {
+		switch {
+		case v.RefName != "":
 			goTypeName = fixInitialisms(v.RefName)
+		case titleNames && v.Title != "":
+			goTypeName = fixInitialisms(goFieldName(v.Title))
 		}
+
+		// A titled anonymous variant whose OAS schema has exactly one nested
+		// property (the common "match by a single field" shape, e.g.
+		// AIGatewayModelRouteConfigPathAliases{path_aliases}) is flattened:
+		// the wrapper field uses that property's own Go type directly instead
+		// of a synthetic single-field wrapper struct, avoiding a doubled JSON
+		// key like route.model.pathAliases.pathAliases.
+		var flattened, flattenedNilable bool
+		if v.RefName == "" && titleNames && v.Title != "" && len(v.Properties) == 1 {
+			inner := v.Properties[0]
+			goTypeName = g.goType(inner)
+			flattened = true
+			flattenedNilable = inner.Type == "array" ||
+				(inner.Type == "object" && inner.AdditionalProperties != nil)
+		}
+
 		variants = append(variants, unionVariant{
-			discValue:  discValues[i],
-			fieldName:  fieldName,
-			goTypeName: goTypeName,
-			source:     v,
+			discValue:        discValues[i],
+			fieldName:        fieldName,
+			goTypeName:       goTypeName,
+			source:           v,
+			flattened:        flattened,
+			flattenedNilable: flattenedNilable,
 		})
 	}
 	return variants
@@ -3168,7 +3296,7 @@ func buildUnionVariants(prop *parser.Property, unionTypeName string) []unionVari
 // package-scoped collisions for common property names like "config".
 func (g *Generator) generateUnionType(prop *parser.Property, typeNamePrefix string) string {
 	typeName := generatedUnionTypeName(prop, typeNamePrefix)
-	variants := buildUnionVariants(prop, typeName)
+	variants := g.buildUnionVariants(prop, typeName)
 	return emitDiscriminatedUnionCode(typeName, prop.Name, unionDiscriminatorJSONName(prop), variants)
 }
 
@@ -3188,7 +3316,7 @@ func (g *Generator) writeUnionTypeDefinition(buf *strings.Builder, prop *parser.
 }
 
 func (g *Generator) writeAnonymousUnionVariantTypes(buf *strings.Builder, prop *parser.Property, unionTypeName string, emitted map[string]bool, entityName string, parentCursor *config.FieldConfig) {
-	for _, variant := range buildUnionVariants(prop, unionTypeName) {
+	for _, variant := range g.buildUnionVariants(prop, unionTypeName) {
 		if variant.source == nil || variant.source.RefName != "" {
 			continue
 		}
@@ -3198,6 +3326,11 @@ func (g *Generator) writeAnonymousUnionVariantTypes(buf *strings.Builder, prop *
 
 func (g *Generator) writeAnonymousUnionVariantType(buf *strings.Builder, variant unionVariant, emitted map[string]bool, entityName string, parentCursor *config.FieldConfig, parentDiscriminator string) {
 	if variant.source == nil {
+		return
+	}
+	if variant.flattened {
+		// The wrapper field already uses the single nested property's own
+		// (possibly built-in) Go type directly — no standalone type to define.
 		return
 	}
 	if emitted[variant.goTypeName] {
@@ -3228,7 +3361,7 @@ func (g *Generator) writeAnonymousUnionVariantType(buf *strings.Builder, variant
 		}
 		g.writeUnionTypeDefinition(buf, nested, variant.goTypeName, emitted, entityName, parentCursor.Sub(jsonTagForProperty(nested)))
 	}
-	if wrapper := emitUnionWrapperUnmarshalJSON(variant.goTypeName, buildUnionFieldSpecs(variant.source.Properties, variant.goTypeName)); wrapper != "" {
+	if wrapper := emitUnionWrapperUnmarshalJSON(variant.goTypeName, g.buildUnionFieldSpecs(variant.source.Properties, variant.goTypeName)); wrapper != "" {
 		buf.WriteString(wrapper)
 	}
 }
@@ -3328,14 +3461,22 @@ func buildUnionFieldVariants(variants []unionVariant, typeName string) []unionFi
 			DiscValue:   v.discValue,
 			FieldName:   v.fieldName,
 			TypeConst:   typeName + "Type" + v.fieldName,
-			TestPayload: unionVariantTestPayload(v.source),
+			TestPayload: unionVariantTestPayload(v),
 		})
 	}
 
 	return result
 }
 
-func unionVariantTestPayload(prop *parser.Property) string {
+// unionVariantTestPayload returns a JSON literal that round-trips into
+// v's wrapper field. For a flattened variant (see unionVariant.flattened) the
+// payload must match the shape of the inner property's own type (e.g. "[]"
+// for a flattened array), not the discarded wrapper struct's shape.
+func unionVariantTestPayload(v unionVariant) string {
+	prop := v.source
+	if v.flattened && prop != nil && len(prop.Properties) == 1 {
+		prop = prop.Properties[0]
+	}
 	if prop == nil || isInlineObjectWithProperties(prop) {
 		return "{}"
 	}
@@ -3354,7 +3495,7 @@ func unionVariantTestPayload(prop *parser.Property) string {
 	}
 }
 
-func buildUnionFieldSpec(fieldName, typeName, jsonName string, prop *parser.Property) unionFieldSpec {
+func (g *Generator) buildUnionFieldSpec(fieldName, typeName, jsonName string, prop *parser.Property) unionFieldSpec {
 	discriminatorJSONName := unionDiscriminatorJSONName(prop)
 	return unionFieldSpec{
 		FieldName:              fieldName,
@@ -3363,7 +3504,7 @@ func buildUnionFieldSpec(fieldName, typeName, jsonName string, prop *parser.Prop
 		TypeName:               typeName,
 		DiscriminatorJSONName:  discriminatorJSONName,
 		DiscriminatorFieldName: fixInitialisms(goFieldName(discriminatorJSONName)),
-		Variants:               buildUnionFieldVariants(buildUnionVariants(prop, typeName), typeName),
+		Variants:               buildUnionFieldVariants(g.buildUnionVariants(prop, typeName), typeName),
 	}
 }
 
@@ -3374,13 +3515,13 @@ func unionDiscriminatorJSONName(prop *parser.Property) string {
 	return "type"
 }
 
-func buildUnionFieldSpecs(props []*parser.Property, typeNamePrefix string) []unionFieldSpec {
+func (g *Generator) buildUnionFieldSpecs(props []*parser.Property, typeNamePrefix string) []unionFieldSpec {
 	fields := make([]unionFieldSpec, 0)
 	for _, prop := range props {
 		if skipProperty(prop) || len(prop.OneOf) == 0 {
 			continue
 		}
-		fields = append(fields, buildUnionFieldSpec(
+		fields = append(fields, g.buildUnionFieldSpec(
 			goFieldName(prop.Name),
 			generatedUnionTypeName(prop, typeNamePrefix),
 			prop.Name,
@@ -3390,14 +3531,14 @@ func buildUnionFieldSpecs(props []*parser.Property, typeNamePrefix string) []uni
 	return fields
 }
 
-func buildCRDAPISpecUnionFieldSpecs(schema *parser.Schema) []unionFieldSpec {
+func (g *Generator) buildCRDAPISpecUnionFieldSpecs(schema *parser.Schema) []unionFieldSpec {
 	fields := make([]unionFieldSpec, 0, len(schema.Properties)+1)
 	if len(schema.OneOf) > 0 {
 		rootProp := buildRootUnionProperty(schema)
 		typeName := generatedUnionTypeName(rootProp, "")
-		fields = append(fields, buildUnionFieldSpec(typeName, typeName, "", rootProp))
+		fields = append(fields, g.buildUnionFieldSpec(typeName, typeName, "", rootProp))
 	}
-	fields = append(fields, buildUnionFieldSpecs(schema.Properties, parser.GetEntityNameFromType(schema.Name))...)
+	fields = append(fields, g.buildUnionFieldSpecs(schema.Properties, parser.GetEntityNameFromType(schema.Name))...)
 	return fields
 }
 
@@ -3637,6 +3778,23 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	fmt.Fprintf(&buf, "\t%s %sType `json:\"%s,omitempty\"`\n\n", discriminatorFieldName, typeName, discriminatorJSONName)
 
 	for _, v := range variants {
+		if v.flattened && v.source != nil && len(v.source.Properties) == 1 {
+			// Flattened variant: reuse the same comment/marker machinery normal
+			// fields use (KubebuilderTags), rather than the generic "+optional"
+			// below, so validation like MaxItems/MaxProperties carries over.
+			inner := v.source.Properties[0]
+			buf.WriteString(formatComment(inner.Description))
+			buf.WriteString("\n\t//\n")
+			for _, tag := range KubebuilderTags(inner, nil) {
+				fmt.Fprintf(&buf, "\t// %s\n", tag)
+			}
+			ptr := "*"
+			if v.flattenedNilable {
+				ptr = ""
+			}
+			fmt.Fprintf(&buf, "\t%s %s%s `json:\"%s,omitempty\"`\n", v.fieldName, ptr, v.goTypeName, jsonName(v.discValue))
+			continue
+		}
 		fmt.Fprintf(&buf, "\t// %s configuration.\n", v.fieldName)
 		buf.WriteString("\t//\n")
 		buf.WriteString("\t// +optional\n")
@@ -3710,7 +3868,11 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 		buf.WriteString("\t\tif err := json.Unmarshal(payload, &val); err != nil {\n")
 		fmt.Fprintf(&buf, "\t\t\treturn fmt.Errorf(\"unmarshaling %s %s: %%w\", err)\n", typeName, v.discValue)
 		buf.WriteString("\t\t}\n")
-		fmt.Fprintf(&buf, "\t\tu.%s = &val\n", v.fieldName)
+		if v.flattenedNilable {
+			fmt.Fprintf(&buf, "\t\tu.%s = val\n", v.fieldName)
+		} else {
+			fmt.Fprintf(&buf, "\t\tu.%s = &val\n", v.fieldName)
+		}
 	}
 	buf.WriteString("\t}\n")
 	buf.WriteString("\treturn nil\n")
@@ -3867,7 +4029,7 @@ func anonymousUnionVariantTypeName(unionTypeName, fieldName string) string {
 // an OAS discriminator.  It delegates to emitDiscriminatedUnionCode after building
 // the variant list from the schema's DiscriminatorMapping.
 func (g *Generator) emitDiscriminatedUnionType(goName string, schema *parser.Schema) string {
-	variants := buildUnionVariants(buildRootUnionProperty(schema), goName)
+	variants := g.buildUnionVariants(buildRootUnionProperty(schema), goName)
 	return emitDiscriminatedUnionCode(goName, goName, unionDiscriminatorJSONName(buildRootUnionProperty(schema)), variants)
 }
 
@@ -4130,6 +4292,17 @@ type GoPathSegment struct {
 	// schema; only set when UnionVariant is true. SDK payload injection uses it
 	// to refuse rebuilding a union value whose member has sibling fields.
 	VariantProperties int
+	// Array is true when this hop is a non-leaf array-of-objects the walk
+	// descended through (e.g. "targets" in "api.targets.provider"). The final
+	// segment's cardinality then comes from this array rather than the leaf
+	// itself, so the leaf is ref-ified as a scalar, not a slice.
+	Array bool
+	// ObjectRefLeaf is true when this is the final segment and it resolves to
+	// a single object-typed field (a oneOf, or a $ref to a oneOf schema) rather
+	// than an array — e.g. "schemaValidation.config.json.schemaRegistry",
+	// whose OAS leaf is a $ref to a oneOf-by-id/by-name reference object. Such
+	// a leaf is ref-ified as a single *<RefType>, not a slice.
+	ObjectRefLeaf bool
 }
 
 // TemplateAssociationConfig is the per-association data used by crdTypeTemplate
@@ -4209,10 +4382,37 @@ type TemplateReferenceConfig struct {
 	// ResolvesToName is true when references resolve to the referenced CR's Konnect
 	// name rather than its Konnect ID.
 	ResolvesToName bool
-	// ACLNested is true for AIGatewayACLRef references that are nested inside the
-	// AIGateway ACL union. Such references are excluded from the flat leaf-key
-	// payload assignment and injected via an ACL-specific payload rewrite instead.
-	ACLNested bool
+	// NestedArrayScalar is true when the reference path resolves to a scalar
+	// leaf inside a single non-leaf array of objects (e.g. "api.targets.provider").
+	// Such references need a ranging RefsAt accessor instead of the linear one
+	// (see ArrayGuardExprs/ArrayPath/ArrayLeafName/ArrayLeafPointer below).
+	NestedArrayScalar bool
+	// ArrayGuardExprs are the Go expressions to nil-guard, in order, before
+	// ranging ArrayPath (one per pointer segment preceding and including the
+	// array). Only set when NestedArrayScalar is true.
+	ArrayGuardExprs []string
+	// ArrayPath is the Go expression for the enclosing array itself, e.g.
+	// "obj.Spec.APISpec.AIGatewayModelConfig.API.Targets". Only set when
+	// NestedArrayScalar is true.
+	ArrayPath string
+	// ArrayLeafName is the Go field name of the scalar leaf on the array's
+	// element type, e.g. "Provider". Only set when NestedArrayScalar is true.
+	ArrayLeafName string
+	// ArrayLeafPointer is true when the leaf field on the element type is a
+	// pointer (the leaf is optional). Only set when NestedArrayScalar is true.
+	ArrayLeafPointer bool
+	// SingleValueObjectRef is true when the reference path resolves to a single
+	// object-typed leaf (e.g. "schemaValidation.config.json.schemaRegistry",
+	// whose OAS leaf is a $ref to a oneOf-by-id/by-name reference object)
+	// rather than an array. The RefsAt accessor wraps the single *<RefType>
+	// leaf in a one-element slice so the existing []string resolver plumbing
+	// is reused unchanged; injection then wraps the resolved value back into
+	// an {"<ObjectWrapKey>": value} object (see ObjectWrap on TemplateRefInjection).
+	SingleValueObjectRef bool
+	// ObjectWrapKey is the SDK payload key the resolved value is wrapped
+	// under for a SingleValueObjectRef (e.g. "name" or "id", from ResolvesTo).
+	// Only set when SingleValueObjectRef is true.
+	ObjectWrapKey string
 }
 
 // templateReferences returns the references for an entity with computed Go field names.
@@ -4250,34 +4450,58 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 				goPathSegments = goPath
 			}
 		}
-		aclNested := false
-		for _, seg := range goPathSegments {
-			if seg.UnionWrapper {
-				aclNested = ref.TypeName() == "AIGatewayACLRef"
-				break
+		nestedArrayScalar := isNestedArrayScalar(goPathSegments)
+		var arrayGuardExprs []string
+		var arrayPath, arrayLeafName string
+		var arrayLeafPointer bool
+		if nestedArrayScalar {
+			var pathBuilder strings.Builder
+			pathBuilder.WriteString("obj.Spec.APISpec")
+			for _, seg := range goPathSegments[:len(goPathSegments)-1] {
+				pathBuilder.WriteByte('.')
+				pathBuilder.WriteString(seg.Name)
+				if seg.Pointer {
+					arrayGuardExprs = append(arrayGuardExprs, pathBuilder.String())
+				}
 			}
+			arrayPath = pathBuilder.String()
+			leaf := goPathSegments[len(goPathSegments)-1]
+			arrayLeafName = leaf.Name
+			arrayLeafPointer = leaf.Pointer
+		}
+		var singleValueObjectRef bool
+		var objectWrapKey string
+		if len(goPathSegments) > 0 && goPathSegments[len(goPathSegments)-1].ObjectRefLeaf {
+			singleValueObjectRef = true
+			objectWrapKey = ref.ResolvesTo
 		}
 		result[i] = TemplateReferenceConfig{
-			ReferenceConfig:  ref,
-			GoFieldName:      goFieldNameStr,
-			JSONFieldName:    tail,
-			SDKJSONFieldName: sdkJSONKey(tail),
-			DefaultKind:      defaultKind,
-			GoResolverName:   goResolverName,
-			NestedRef:        nested,
-			RefsExpr:         refsExpr,
-			GoPathSegments:   goPathSegments,
-			MultiKind:        len(ref.Kinds) > 1,
-			ResolvesToName:   ref.ResolvesTo == "name",
-			ACLNested:        aclNested,
+			ReferenceConfig:      ref,
+			GoFieldName:          goFieldNameStr,
+			JSONFieldName:        tail,
+			SDKJSONFieldName:     sdkJSONKey(tail),
+			DefaultKind:          defaultKind,
+			GoResolverName:       goResolverName,
+			NestedRef:            nested,
+			RefsExpr:             refsExpr,
+			GoPathSegments:       goPathSegments,
+			MultiKind:            len(ref.Kinds) > 1,
+			ResolvesToName:       ref.ResolvesTo == "name",
+			NestedArrayScalar:    nestedArrayScalar,
+			ArrayGuardExprs:      arrayGuardExprs,
+			ArrayPath:            arrayPath,
+			ArrayLeafName:        arrayLeafName,
+			ArrayLeafPointer:     arrayLeafPointer,
+			SingleValueObjectRef: singleValueObjectRef,
+			ObjectWrapKey:        objectWrapKey,
 		}
 	}
 	return result
 }
 
-// TemplateACLRefParentNav is one sibling-preserving navigation hop from the SDK
-// payload root down to the map holding the ACL union value being rebuilt.
-type TemplateACLRefParentNav struct {
+// TemplateRefParentNav is one sibling-preserving navigation hop from the SDK
+// payload root down to the map holding the value being written.
+type TemplateRefParentNav struct {
 	// Var is the local variable holding the map at this hop.
 	Var string
 	// Key is the hop's key in its parent map (SDK snake_case form).
@@ -4286,177 +4510,328 @@ type TemplateACLRefParentNav struct {
 	Parent string
 }
 
-// TemplateACLRefVariant is one AIGateway ACL variant arm. When the CRD ACL
-// union's discriminator selects this arm, the ACL union value in the SDK
-// payload is rebuilt as {"allow": <resolved names>} or {"deny": <resolved names>}.
-type TemplateACLRefVariant struct {
-	// GoMemberField is the variant member field on the CRD union struct.
+// TemplateRefVariant is one arm written at a TemplateRefInjection's own SDK
+// payload key. A direct injection (UnionVar empty) has exactly one variant
+// with no TypeConst; an AIGatewayACLRef injection (UnionVar set) has one
+// variant per configured allow/deny reference sharing that union, each
+// selected by TypeConst.
+type TemplateRefVariant struct {
+	// GoMemberField is the variant member field on the CRD union struct for
+	// an ACL injection, or the leaf field itself for a direct injection. Used
+	// only to detect duplicate references sharing one TemplateRefInjection.
 	GoMemberField string
-	// LeafSDKKey is the SDK payload key of the leaf array inside the variant
-	// member object.
+	// LeafSDKKey is the SDK payload key this variant writes: the ACL variant
+	// member's key (e.g. "allow") for an ACL injection, or the leaf array's
+	// own key for a direct injection.
 	LeafSDKKey string
 	// ResolverName is the resolver-name suffix (TemplateReferenceConfig.GoResolverName).
 	ResolverName string
-	// TypeConst is the generated discriminator constant for this ACL union arm.
+	// TypeConst is the generated discriminator constant selecting this arm.
+	// Empty for a direct injection, which has no discriminator to switch on.
 	TypeConst string
 	// RefPath is the full configured reference path, used in error messages.
 	RefPath string
 }
 
-// TemplateACLRefInjection describes the SDK payload injection block for
-// AIGatewayACLRef references grouped under one "access.acls" union. The
-// generated code rebuilds the ACL union value from the CRD union's selected
-// variant while preserving sibling keys of every ancestor map; when the CRD ACL
-// union pointer is nil the payload is left untouched (pointer omitempty
-// semantics: absent means "not configured").
-type TemplateACLRefInjection struct {
-	// Path is the CRD path of the ACL union wrapper (the configured reference
-	// path minus the variant and leaf segments), used in the generated comment.
+// TemplateRefInjection describes one SDK payload injection block for a
+// nested reference. Every nested reference reduces to the same shape:
+// nil-guard down to a "write" Go path segment, navigate the matching JSON
+// keys from "payload" while preserving every sibling key, then overwrite
+// that segment's own key.
+//
+// For AIGatewayACLRef (UnionVar set), the write segment is the
+// "access.acls" union wrapper: Konnect expects exactly one of
+// {"allow": [...]} or {"deny": [...]}, so the write switches on the CRD
+// union's Type to rebuild that value from the matching entry in Variants.
+//
+// For every other nested reference (UnionVar empty, e.g. a "policies" field
+// sitting directly on a root-union variant), the write segment is the leaf
+// itself: the write is a direct overwrite with Variants' single entry's
+// resolved value, no discriminator needed.
+//
+// Either way, a nil ancestor pointer along the chain means that part of the
+// config wasn't set, so the payload is left untouched.
+type TemplateRefInjection struct {
+	// Path is the CRD path used in the generated comment: the ACL union
+	// wrapper's path (the configured reference path minus its variant and
+	// leaf segments) for an ACL injection, or the full reference path for a
+	// direct injection.
 	Path string
 	// Cond guards the whole block: nil checks for every pointer hop up to and
-	// including the union wrapper, joined with &&.
+	// including the write segment, joined with &&.
 	Cond string
-	// UnionVar is the local variable bound to the CRD union pointer.
+	// UnionVar is the local variable bound to the CRD union pointer at the
+	// write segment. Set only for AIGatewayACLRef injections.
 	UnionVar string
-	// UnionExpr is the Go expression yielding the CRD union pointer.
+	// UnionExpr is the Go expression yielding the CRD union pointer. Set only
+	// for AIGatewayACLRef injections.
 	UnionExpr string
-	// SDKUnionKey is the union value's key in its parent payload map.
+	// SDKUnionKey is the write segment's own key in its parent payload map.
+	// Set only for AIGatewayACLRef injections.
 	SDKUnionKey string
-	// TargetVar is the variable holding the parent payload map of the union
-	// value (the last ParentNavs var, or "payload" when the union is top-level).
+	// TargetVar is the variable holding the parent payload map of the write
+	// segment's own key (the last ParentNavs var, or "payload" when the write
+	// segment is a direct child of spec.apiSpec).
 	TargetVar string
-	// ParentNavs are the sibling-preserving navigation hops from "payload" down
-	// to TargetVar, in descent order.
-	ParentNavs []TemplateACLRefParentNav
+	// ParentNavs are the sibling-preserving navigation hops from "payload"
+	// down to TargetVar, in descent order.
+	ParentNavs []TemplateRefParentNav
 	// ParentNavsReversed are the same hops in write-back (innermost-first) order.
-	ParentNavsReversed []TemplateACLRefParentNav
-	// Variants are the union's arms, one per configured reference.
-	Variants []TemplateACLRefVariant
+	ParentNavsReversed []TemplateRefParentNav
+	// Variants are the arms written at the write segment's key: one per
+	// configured AIGatewayACLRef allow/deny reference sharing that union, or
+	// exactly one for a direct injection.
+	Variants []TemplateRefVariant
+	// ArrayKey is TargetVar's own key holding the enclosing array, set only
+	// when a scalar leaf is ref-ified inside a non-leaf array of objects
+	// (e.g. "api.targets.provider"). The write ranges TargetVar[ArrayKey] and
+	// overwrites each element's own LeafSDKKey in place, rather than
+	// overwriting TargetVar's own key wholesale.
+	ArrayKey string
+	// ObjectWrap is true when the reference resolves to a single object-typed
+	// leaf (e.g. "schemaValidation.config.json.schemaRegistry"). The write
+	// wraps the single resolved value as {"<ObjectWrapKey>": value} instead of
+	// writing the resolved slice/string directly.
+	ObjectWrap bool
+	// ObjectWrapKey is the key the resolved value is wrapped under (e.g. "name"
+	// or "id"). Only set when ObjectWrap is true.
+	ObjectWrapKey string
 }
 
-// aclRefInjections groups AIGatewayACLRef references by their access.acls union
-// ancestor and computes the ACL-specific payload-injection plan for each group.
-// This intentionally supports only refs ending in access.acls.allow.allow or
-// access.acls.deny.deny; it is not a general nested-union payload rewrite
-// engine.
-func aclRefInjections(refs []TemplateReferenceConfig) ([]TemplateACLRefInjection, error) {
-	var groups []TemplateACLRefInjection
-	groupIndex := map[string]int{}
+// refInjections computes the SDK payload injection plan for every nested
+// reference (len(GoPathSegments) > 1): both AIGatewayACLRef references,
+// which reconstruct the discriminated "access.acls" sub-value, and every
+// other nested reference (e.g. a "policies" leaf sitting directly on a
+// root-union variant member), which just overwrites its own key. See
+// TemplateRefInjection for how both shapes share one nil-guard/navigation
+// computation and differ only in what gets written.
+//
+// AIGatewayACLRef references are grouped and rendered before every other
+// nested reference, each category picking local variable names from its own
+// pool — so, e.g., an "api.policies" reference and an "api.access.acls..."
+// reference reaching through the same "api" segment each get a plain "api"
+// local rather than one of them being bumped to "api2".
+func refInjections(refs []TemplateReferenceConfig) ([]TemplateRefInjection, error) {
+	var aclGroups, directGroups []TemplateRefInjection
+	aclUsedVars, aclGroupIndex := newRefInjectionUsedVars(), map[string]int{}
+	directUsedVars, directGroupIndex := newRefInjectionUsedVars(), map[string]int{}
 	for _, ref := range refs {
-		segs := ref.GoPathSegments
-		hasUnion := false
-		for _, seg := range segs {
-			if seg.UnionWrapper {
-				hasUnion = true
-				break
-			}
+		if !ref.NestedRef {
+			continue
 		}
-		if hasUnion && ref.TypeName() != "AIGatewayACLRef" {
-			return nil, fmt.Errorf("reference path %q: SDK-union references must use refTypeName AIGatewayACLRef", ref.Path)
+		var err error
+		if ref.TypeName() == "AIGatewayACLRef" {
+			aclGroups, err = appendRefInjection(ref, aclUsedVars, aclGroupIndex, aclGroups)
+		} else {
+			directGroups, err = appendRefInjection(ref, directUsedVars, directGroupIndex, directGroups)
 		}
-		if ref.TypeName() == "AIGatewayACLRef" && !isSupportedAIGatewayACLRefPath(ref.Path) {
+		if err != nil {
+			return nil, err
+		}
+	}
+	return append(aclGroups, directGroups...), nil
+}
+
+func newRefInjectionUsedVars() map[string]bool {
+	return map[string]bool{
+		"payload": true, "data": true, "err": true,
+		"obj": true, "ctx": true, "cl": true, "spec": true,
+	}
+}
+
+// appendRefInjection computes the injection plan for one nested reference and
+// either merges it into an existing group in groups (an AIGatewayACLRef
+// sharing a prior reference's "access.acls" union) or appends a new group,
+// returning the updated slice.
+func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, groupIndex map[string]int, groups []TemplateRefInjection) ([]TemplateRefInjection, error) {
+	segs := ref.GoPathSegments
+	if len(segs) < 2 {
+		return nil, fmt.Errorf("reference path %q: nested reference could not be resolved to a Go field-access chain", ref.Path)
+	}
+	isACL := ref.TypeName() == "AIGatewayACLRef"
+	// isArrayElement is true for a scalar leaf ref-ified inside a non-leaf
+	// array of objects (e.g. "api.targets.provider"): the write target is the
+	// enclosing array, whose elements get their own leaf key overwritten in
+	// place, rather than a single key holding the whole resolved value.
+	isArrayElement := !isACL && isNestedArrayScalar(segs)
+	// isObjectRefLeaf is true when the leaf itself is a single object-typed
+	// reference (see GoPathSegment.ObjectRefLeaf), e.g.
+	// "schemaValidation.config.json.schemaRegistry". Passing through a
+	// property-level union en route to it is safe: Cond already nil-guards
+	// every union-variant pointer hop up to and including the leaf, so the
+	// injection only runs when that variant (and the leaf) is actually set,
+	// and the write overwrites the leaf's own key in place rather than
+	// reconstructing the union itself (unlike AIGatewayACLRef).
+	isObjectRefLeaf := !isACL && !isArrayElement && segs[len(segs)-1].ObjectRefLeaf
+
+	// writeIdx is the segment whose own JSON key gets overwritten (or, for
+	// isArrayElement, whose key holds the array ranged in place): the
+	// innermost "access.acls" union wrapper for AIGatewayACLRef, the
+	// enclosing array for isArrayElement, or the leaf itself for everything
+	// else.
+	var writeIdx int
+	switch {
+	case isACL:
+		// Check the supported-shape suffix before relying on writeIdx —
+		// an AIGatewayACLRef path that doesn't reach a union at all (e.g.
+		// a plain $ref hop) must fail here, not by indexing with -1 below.
+		if !isSupportedAIGatewayACLRefPath(ref.Path) {
 			return nil, fmt.Errorf("reference path %q: AIGatewayACLRef SDK payload injection only supports paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
 		}
-		if !ref.ACLNested {
-			continue
-		}
-		// The innermost union wrapper is the ACL union whose value gets rebuilt.
-		unionIdx := -1
+		writeIdx = -1
 		for i, seg := range segs {
 			if seg.UnionWrapper {
-				unionIdx = i
+				writeIdx = i
 			}
 		}
-		if unionIdx < 0 || len(segs) != unionIdx+3 || !segs[unionIdx+1].UnionVariant {
+	case isArrayElement:
+		writeIdx = len(segs) - 2
+	default:
+		writeIdx = len(segs) - 1
+	}
+	if !isACL && !isObjectRefLeaf {
+		// A property-level union (a JSON key of its own, e.g.
+		// "access.acls") is unwrapped nowhere else in the SDK payload
+		// builder, so a non-ACL reference passing through one would
+		// leave its CRD-side "type" wrapper and variant-key nesting
+		// untouched.
+		for _, seg := range segs[:writeIdx] {
+			if seg.UnionWrapper && seg.JSONKey != "" {
+				return nil, fmt.Errorf("reference path %q: nested references through a property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+			}
+		}
+	}
+
+	var variant TemplateRefVariant
+	arrayKey := ""
+	switch {
+	case isACL:
+		if writeIdx < 0 || len(segs) != writeIdx+3 || !segs[writeIdx+1].UnionVariant {
 			return nil, fmt.Errorf("reference path %q: AIGatewayACLRef SDK payload injection requires the leaf array directly on the ACL union variant member", ref.Path)
 		}
-		if segs[unionIdx].UnionTypeName == "" {
+		if segs[writeIdx].UnionTypeName == "" {
 			return nil, fmt.Errorf("reference path %q: AIGatewayACLRef SDK payload injection requires union type metadata", ref.Path)
 		}
-		if segs[unionIdx].JSONKey != "acls" {
+		if segs[writeIdx].JSONKey != "acls" {
 			return nil, fmt.Errorf("reference path %q: AIGatewayACLRef SDK payload injection requires the union field to be access.acls", ref.Path)
 		}
-		if segs[unionIdx+1].VariantProperties != 1 {
-			return nil, fmt.Errorf("reference path %q: ACL union variant member %q has sibling fields that a rebuilt SDK payload value would drop", ref.Path, segs[unionIdx+1].Name)
+		if segs[writeIdx+1].VariantProperties != 1 {
+			return nil, fmt.Errorf("reference path %q: ACL union variant member %q has sibling fields that a rebuilt SDK payload value would drop", ref.Path, segs[writeIdx+1].Name)
 		}
-
-		variant := TemplateACLRefVariant{
-			GoMemberField: segs[unionIdx+1].Name,
-			LeafSDKKey:    sdkJSONKey(segs[unionIdx+2].JSONKey),
+		variant = TemplateRefVariant{
+			GoMemberField: segs[writeIdx+1].Name,
+			LeafSDKKey:    sdkJSONKey(segs[writeIdx+2].JSONKey),
 			ResolverName:  ref.GoResolverName,
-			TypeConst:     segs[unionIdx].UnionTypeName + "Type" + segs[unionIdx+1].Name,
+			TypeConst:     segs[writeIdx].UnionTypeName + "Type" + segs[writeIdx+1].Name,
 			RefPath:       ref.Path,
 		}
-
-		names := make([]string, 0, unionIdx+1)
-		for _, seg := range segs[:unionIdx+1] {
-			names = append(names, seg.Name)
+	case isArrayElement:
+		leaf := segs[len(segs)-1]
+		variant = TemplateRefVariant{
+			GoMemberField: leaf.Name,
+			LeafSDKKey:    sdkJSONKey(leaf.JSONKey),
+			ResolverName:  ref.GoResolverName,
+			RefPath:       ref.Path,
 		}
-		groupKey := strings.Join(names, ".")
-		if idx, ok := groupIndex[groupKey]; ok {
-			for _, existing := range groups[idx].Variants {
-				if existing.GoMemberField == variant.GoMemberField {
-					return nil, fmt.Errorf("reference path %q: duplicate reference for union variant %q", ref.Path, variant.GoMemberField)
-				}
+		arrayKey = sdkJSONKey(segs[writeIdx].JSONKey)
+	default:
+		variant = TemplateRefVariant{
+			GoMemberField: segs[writeIdx].Name,
+			LeafSDKKey:    ref.SDKJSONFieldName,
+			ResolverName:  ref.GoResolverName,
+			RefPath:       ref.Path,
+		}
+	}
+
+	// groupKey identifies the write segment itself (inclusive), so
+	// AIGatewayACLRef references sharing the same "access.acls" union
+	// collapse into one group's Variants; a direct reference's groupKey
+	// is unique to its own leaf and never collides.
+	names := make([]string, 0, writeIdx+1)
+	var conds []string
+	for j := 0; j <= writeIdx; j++ {
+		names = append(names, segs[j].Name)
+		if segs[j].Pointer {
+			conds = append(conds, "obj.Spec.APISpec."+strings.Join(names, ".")+" != nil")
+		}
+	}
+	groupKey := strings.Join(names, ".")
+	if idx, ok := groupIndex[groupKey]; ok {
+		for _, existing := range groups[idx].Variants {
+			if existing.GoMemberField == variant.GoMemberField {
+				return nil, fmt.Errorf("reference path %q: duplicate reference for union variant %q", ref.Path, variant.GoMemberField)
 			}
-			groups[idx].Variants = append(groups[idx].Variants, variant)
+		}
+		groups[idx].Variants = append(groups[idx].Variants, variant)
+		return groups, nil
+	}
+
+	parent := "payload"
+	var navs []TemplateRefParentNav
+	for _, seg := range segs[:writeIdx] {
+		if seg.JSONKey == "" {
+			// Inline hop (root-union config wrapper): no payload key.
 			continue
 		}
-
-		unionExpr := "obj.Spec.APISpec." + groupKey
-		conds := make([]string, 0, unionIdx+1)
-		for j := range unionIdx {
-			if segs[j].Pointer {
-				conds = append(conds, "obj.Spec.APISpec."+strings.Join(names[:j+1], ".")+" != nil")
-			}
-		}
-		conds = append(conds, unionExpr+" != nil")
-
-		usedVars := map[string]bool{
-			"payload": true, "data": true, "err": true,
-			"obj": true, "ctx": true, "cl": true, "spec": true,
-		}
-		unionVar := uniqueLocalVar(goLocalVarFromKey(segs[unionIdx].JSONKey), usedVars)
-		parent := "payload"
-		var navs []TemplateACLRefParentNav
-		for j := range unionIdx {
-			if segs[j].JSONKey == "" {
-				// Inline hop (root-union config wrapper): no payload key.
-				continue
-			}
-			navVar := uniqueLocalVar(goLocalVarFromKey(segs[j].JSONKey), usedVars)
-			navs = append(navs, TemplateACLRefParentNav{
-				Var:    navVar,
-				Key:    sdkJSONKey(segs[j].JSONKey),
-				Parent: parent,
-			})
-			parent = navVar
-		}
-		reversed := make([]TemplateACLRefParentNav, 0, len(navs))
-		for _, v := range slices.Backward(navs) {
-			reversed = append(reversed, v)
-		}
-
-		pathParts := strings.Split(ref.Path, ".")
-		groupIndex[groupKey] = len(groups)
-		groups = append(groups, TemplateACLRefInjection{
-			Path:               strings.Join(pathParts[:len(pathParts)-2], "."),
-			Cond:               strings.Join(conds, " && "),
-			UnionVar:           unionVar,
-			UnionExpr:          unionExpr,
-			SDKUnionKey:        sdkJSONKey(segs[unionIdx].JSONKey),
-			TargetVar:          parent,
-			ParentNavs:         navs,
-			ParentNavsReversed: reversed,
-			Variants:           []TemplateACLRefVariant{variant},
+		navVar := uniqueLocalVar(goLocalVarFromKey(seg.JSONKey), usedVars)
+		navs = append(navs, TemplateRefParentNav{
+			Var:    navVar,
+			Key:    sdkJSONKey(seg.JSONKey),
+			Parent: parent,
 		})
+		parent = navVar
 	}
-	return groups, nil
+	reversed := make([]TemplateRefParentNav, 0, len(navs))
+	for _, v := range slices.Backward(navs) {
+		reversed = append(reversed, v)
+	}
+
+	injection := TemplateRefInjection{
+		Path:               ref.Path,
+		Cond:               strings.Join(conds, " && "),
+		TargetVar:          parent,
+		ParentNavs:         navs,
+		ParentNavsReversed: reversed,
+		Variants:           []TemplateRefVariant{variant},
+		ArrayKey:           arrayKey,
+	}
+	if isACL {
+		pathParts := strings.Split(ref.Path, ".")
+		injection.Path = strings.Join(pathParts[:len(pathParts)-2], ".")
+		injection.UnionVar = uniqueLocalVar(goLocalVarFromKey(segs[writeIdx].JSONKey), usedVars)
+		injection.UnionExpr = "obj.Spec.APISpec." + groupKey
+		injection.SDKUnionKey = sdkJSONKey(segs[writeIdx].JSONKey)
+	}
+	if isObjectRefLeaf {
+		injection.ObjectWrap = true
+		injection.ObjectWrapKey = ref.ObjectWrapKey
+	}
+
+	groupIndex[groupKey] = len(groups)
+	return append(groups, injection), nil
 }
 
 func isSupportedAIGatewayACLRefPath(path string) bool {
 	return strings.HasSuffix(path, ".access.acls.allow.allow") ||
 		strings.HasSuffix(path, ".access.acls.deny.deny")
+}
+
+// isNestedArrayScalar reports whether goPath resolves a scalar leaf sitting
+// directly inside exactly one non-leaf array of objects (e.g.
+// "api.targets.provider": ..., Array(targets), leaf(provider)). Any prefix of
+// object/union hops before the array is fine — they are already handled
+// generically by the pointer nil-guards in the generated accessor.
+func isNestedArrayScalar(goPath []GoPathSegment) bool {
+	if len(goPath) < 2 {
+		return false
+	}
+	arrayCount := 0
+	for _, seg := range goPath {
+		if seg.Array {
+			arrayCount++
+		}
+	}
+	return arrayCount == 1 && goPath[len(goPath)-2].Array
 }
 
 // goLocalVarFromKey derives a Go local-variable name from a payload key, e.g.
@@ -4571,11 +4946,31 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 				return err
 			}
 			if len(goPath) > 1 {
-				if ref.TypeName() != "AIGatewayACLRef" {
-					return fmt.Errorf("reference path %q: nested references must use refTypeName AIGatewayACLRef", ref.Path)
-				}
-				if !isSupportedAIGatewayACLRefPath(ref.Path) {
-					return fmt.Errorf("reference path %q: AIGatewayACLRef references only support paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
+				// Nested AIGatewayACLRef references reconstruct a discriminated
+				// "access.acls" sub-value (rather than overwriting a single key), so
+				// they're restricted to the one shape aclRefInjections supports. Every
+				// other nested reference (e.g. a "policies" leaf sitting directly on a
+				// root-union variant member) is handled generically by
+				// nestedRefInjections, which only needs a resolvable Go field-access
+				// chain ending in an array leaf — already guaranteed by refFieldTarget —
+				// as long as it doesn't pass through a property-level union (like
+				// "access.acls"), whose CRD-side "type" wrapper and variant-key
+				// nesting only AIGatewayACLRef's reconstruction unwraps correctly.
+				// An ObjectRefLeaf is exempt from this restriction: it overwrites its
+				// own key in place with a plain object value, and flattenSDKUnions
+				// (see zz_generated_common_types.go) already collapses any number of
+				// ancestor type/value union wrappers generically, so no reconstruction
+				// is needed regardless of how many unions the path passes through.
+				if ref.TypeName() == "AIGatewayACLRef" {
+					if !isSupportedAIGatewayACLRefPath(ref.Path) {
+						return fmt.Errorf("reference path %q: AIGatewayACLRef references only support paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
+					}
+				} else if !goPath[len(goPath)-1].ObjectRefLeaf {
+					for _, seg := range goPath[:len(goPath)-1] {
+						if seg.UnionWrapper && seg.JSONKey != "" {
+							return fmt.Errorf("reference path %q: nested references through a property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+						}
+					}
 				}
 			}
 			target := refTarget{schemaType: schemaType, field: field}
@@ -4712,6 +5107,11 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 	var union *parser.Property
 	var unionPrefix string
 	var goPathSegments []GoPathSegment
+	// sawArray tracks whether the walk has descended through a non-leaf array
+	// of objects (see the Array segments below), which allows the final
+	// segment to be a scalar rather than an array (its "many" cardinality
+	// comes from the enclosing array instead).
+	var sawArray bool
 
 	// Root-level oneOf: the entity schema is itself a discriminated union. The
 	// generated APISpec embeds a *<Entity>Config union wrapper (inline in JSON,
@@ -4738,7 +5138,7 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 		if union != nil {
 			// Descend into the union variant whose JSON name matches the segment.
 			var matched *unionVariant
-			for _, v := range buildUnionVariants(union, generatedUnionTypeName(union, unionPrefix)) {
+			for _, v := range g.buildUnionVariants(union, generatedUnionTypeName(union, unionPrefix)) {
 				if jsonName(v.discValue) == seg {
 					vc := v
 					matched = &vc
@@ -4776,10 +5176,19 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 		}
 
 		if final {
-			if prop.Type != "array" {
+			// An object-ref leaf is a single object field (an inline oneOf, or a
+			// $ref to a oneOf schema, e.g. SchemaRegistryReference's by-id/by-name
+			// variants) standing in for one reference, rather than an array of them.
+			objectRefLeaf := prop.Type != "array" && (len(prop.OneOf) > 0 || len(prop.AnyOf) > 0 ||
+				(prop.RefName != "" && refTargetHasRootOneOf(g.parsed, prop.RefName)))
+			if prop.Type != "array" && !sawArray && !objectRefLeaf {
 				return "", "", nil, fmt.Errorf("reference path %q must be an array property, got %q", ref.Path, prop.Type)
 			}
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			// A scalar leaf inside a non-leaf array (sawArray), or a single
+			// object-ref leaf, is a pointer when the leaf field itself is
+			// optional (an array-typed leaf is never a pointer).
+			leafPointer := prop.Type != "array" && (!prop.Required || prop.Nullable)
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: leafPointer, JSONKey: jsonName(prop.Name), ObjectRefLeaf: objectRefLeaf})
 			return typeName, jsonName(prop.Name), goPathSegments, nil
 		}
 
@@ -4796,6 +5205,27 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			})
 			union = prop
 			unionPrefix = typeName
+		case prop.RefName != "" && !prop.IsReference && refTargetHasRootOneOf(g.parsed, prop.RefName):
+			// $ref to a discriminated-union schema (e.g. a "config" property
+			// whose value is itself a oneOf component schema): descend as a
+			// union, mirroring the entity root-oneOf handling above, rather
+			// than as a plain object.
+			refSchema := g.parsed.Schemas[prop.RefName]
+			u := &parser.Property{
+				Name:                 fixInitialisms(prop.RefName),
+				OneOf:                refSchema.OneOf,
+				Discriminator:        refSchema.Discriminator,
+				DiscriminatorMapping: refSchema.DiscriminatorMapping,
+			}
+			goPathSegments = append(goPathSegments, GoPathSegment{
+				Name:          goFieldName(prop.Name),
+				Pointer:       true,
+				JSONKey:       jsonName(prop.Name),
+				UnionWrapper:  true,
+				UnionTypeName: u.Name,
+			})
+			union = u
+			unionPrefix = ""
 		case prop.RefName != "" && !prop.IsReference:
 			// $ref properties whose target schema is anyOf-registered are
 			// rendered as a pointer (see goTypeInCRD/writeSchemaField's
@@ -4813,7 +5243,8 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			typeName = g.inlineTypeName(entityName, typeName, prop.Name)
 			schema = &parser.Schema{Properties: prop.Properties}
 		case prop.Type == "array" && prop.Items != nil && prop.Items.RefName != "":
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name), Array: true})
+			sawArray = true
 			itemSchema := g.parsed.Schemas[prop.Items.RefName]
 			if itemSchema == nil {
 				return "", "", nil, fmt.Errorf("reference path %q: schema %q not found", ref.Path, prop.Items.RefName)
@@ -4821,7 +5252,8 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			schema = itemSchema
 			typeName = fixInitialisms(prop.Items.RefName)
 		case prop.Type == "array" && prop.Items != nil && len(prop.Items.Properties) > 0:
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name)})
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), JSONKey: jsonName(prop.Name), Array: true})
+			sawArray = true
 			typeName = g.inlineTypeName(entityName, typeName, prop.Name)
 			schema = &parser.Schema{Properties: prop.Items.Properties}
 		default:
@@ -4894,6 +5326,84 @@ func (g *Generator) unionVariantSchema(union *parser.Property, variant unionVari
 		return s, fixInitialisms(refName), nil
 	}
 	return nil, "", fmt.Errorf("cannot descend into union variant %q", variant.discValue)
+}
+
+// TemplateNameAccessor describes how the generated GetKonnectName() method
+// reads an entity's "name" property. Ordinary entities have it as a
+// top-level field; root-oneOf entities (e.g. AIGatewayModelProvider, whose
+// request schema is a discriminated union of provider types) carry "name" on
+// each variant instead, so GetKonnectName() switches on the union's type.
+type TemplateNameAccessor struct {
+	// IsUnion is true when "name" must be read from a root-level discriminated
+	// union's selected variant rather than a shared top-level field.
+	IsUnion bool
+	// WrapperFieldName is the Go (embedded) field name of the root-union
+	// wrapper, e.g. "AIGatewayModelProviderConfig". Only set when IsUnion.
+	WrapperFieldName string
+	// Variants are the union arms that have their own "name" property. Arms
+	// without one are skipped: GetKonnectName() falls through to "" for them.
+	// Only set when IsUnion.
+	Variants []TemplateNameAccessorVariant
+}
+
+// TemplateNameAccessorVariant is one union arm with its own "name" property.
+type TemplateNameAccessorVariant struct {
+	// TypeConst is the discriminator constant selecting this variant.
+	TypeConst string
+	// FieldName is the variant's Go field name on the union wrapper.
+	FieldName string
+}
+
+// entityNameAccessor determines how to read entityName's "name" property for
+// the generated GetKonnectName() method (see crdFuncsTemplate), accounting
+// for root-oneOf entities whose "name" lives on each variant. Returns nil
+// when no "name" property is reachable, in which case no GetKonnectName() is
+// emitted.
+func (g *Generator) entityNameAccessor(schema *parser.Schema) *TemplateNameAccessor {
+	if !hasRootOneOf(schema) {
+		for _, p := range schema.Properties {
+			if jsonName(p.Name) == "name" {
+				return &TemplateNameAccessor{}
+			}
+		}
+		return nil
+	}
+	if g.parsed == nil {
+		// unionVariantSchema needs the parsed spec to resolve each variant's
+		// schema; without it there's no way to tell which variants carry
+		// "name", so skip generating GetKonnectName() rather than guess.
+		return nil
+	}
+
+	union := buildRootUnionProperty(schema)
+	typeName := generatedUnionTypeName(union, "")
+	variants := g.buildUnionVariants(union, typeName)
+	fieldVariants := buildUnionFieldVariants(variants, typeName)
+	result := &TemplateNameAccessor{IsUnion: true, WrapperFieldName: typeName}
+	for i, v := range variants {
+		variantSchema, _, err := g.unionVariantSchema(union, v)
+		if err != nil {
+			continue
+		}
+		hasName := false
+		for _, p := range variantSchema.Properties {
+			if jsonName(p.Name) == "name" {
+				hasName = true
+				break
+			}
+		}
+		if !hasName {
+			continue
+		}
+		result.Variants = append(result.Variants, TemplateNameAccessorVariant{
+			TypeConst: fieldVariants[i].TypeConst,
+			FieldName: fieldVariants[i].FieldName,
+		})
+	}
+	if len(result.Variants) == 0 {
+		return nil
+	}
+	return result
 }
 
 // entityHasReferences returns true if the entity has at least one configured reference.
@@ -5016,6 +5526,12 @@ type sdkOpsMethod struct {
 	ImportAlias string
 	ImportPath  string
 
+	// OpName is the config op name ("create", "update", ...) this method was
+	// built from. Used to tell create and update methods apart reliably;
+	// MethodName can't be pattern-matched for this because the SDK request
+	// type name doesn't always start with "Create" (e.g. "SchemaRegistryCreate").
+	OpName string
+
 	NestedUnionFields []sdkOpsNestedUnionField
 
 	// IsOperationsWrapped is true when the method's SDK type is in the operations
@@ -5117,9 +5633,11 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	}
 	boolFields := g.collectSDKOpsBoolFields(schema)
 	constFields := g.collectSDKOpsConstFields(schema)
+	unionUnwrapFields := g.collectSDKOpsUnionUnwrapFields(schema)
+	freeformKeyFields := g.collectSDKOpsFreeformKeyFields(schema)
 
 	if hasRootOneOf(schema) {
-		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields, constFields)
+		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields, constFields, unionUnwrapFields, freeformKeyFields)
 	}
 
 	componentsPath := "github.com/Kong/sdk-konnect-go/models/components"
@@ -5171,7 +5689,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	}
 
 	references := g.templateReferences(entityName)
-	aclInjections, err := aclRefInjections(references)
+	injections, err := refInjections(references)
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)
 	}
@@ -5183,13 +5701,14 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		Imports                 []*sdkOpsImport
 		BoolFields              []sdkOpsBoolField
 		ConstFields             []sdkOpsConstField
+		FreeformKeyFields       []sdkOpsFreeformKeyField
 		Methods                 []sdkOpsMethod
 		NeedsClient             bool
 		SecretReferences        []SecretReferenceForTemplate
 		NeedsSecretFetchImport  bool
 		HasReferences           bool
 		References              []TemplateReferenceConfig
-		ACLRefInjections        []TemplateACLRefInjection
+		RefInjections           []TemplateRefInjection
 		HasParentRefReplacement bool
 		ParentRefReplacesField  string
 		ParentStatusEntityName  string
@@ -5199,13 +5718,14 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		Imports:                 imports,
 		BoolFields:              boolFields,
 		ConstFields:             constFields,
+		FreeformKeyFields:       freeformKeyFields,
 		Methods:                 standardMethods,
 		NeedsClient:             opsConfig.RequireClient || g.entityHasReferences(entityName),
 		SecretReferences:        secretReferences,
 		NeedsSecretFetchImport:  secretReferencesNeedCoreV1Import(secretReferences),
 		HasReferences:           g.entityHasReferences(entityName),
 		References:              references,
-		ACLRefInjections:        aclInjections,
+		RefInjections:           injections,
 		HasParentRefReplacement: hasParentRefReplacement,
 		ParentRefReplacesField:  parentRefReplacesField,
 		ParentStatusEntityName:  parentStatusEntityName,
@@ -5271,6 +5791,8 @@ func (g *Generator) generateRootUnionSDKOps(
 	methods []sdkOpsMethod,
 	boolFields []sdkOpsBoolField,
 	constFields []sdkOpsConstField,
+	unionUnwrapFields []sdkOpsUnionUnwrapField,
+	freeformKeyFields []sdkOpsFreeformKeyField,
 ) (string, error) {
 	rootUnionTypeName := goFieldName(entityName + "Config")
 
@@ -5311,8 +5833,9 @@ func (g *Generator) generateRootUnionSDKOps(
 
 	rootUnionMethods := make([]sdkOpsRootUnionMethod, 0, len(methods))
 	hasUpdateMethod := false
+	updateIsOperationsWrapped := false
 	for _, method := range methods {
-		isCreate := strings.HasPrefix(method.MethodName, "ToCreate")
+		isCreate := method.OpName == "create"
 		if !isCreate {
 			hasUpdateMethod = true
 		}
@@ -5321,9 +5844,13 @@ func (g *Generator) generateRootUnionSDKOps(
 			IsCreate:              isCreate,
 			FromPayloadMethodName: strings.ToLower(method.MethodName[:1]) + method.MethodName[1:] + "FromPayload",
 		}
-		m.IsOperationsWrapped = isOperationsWrapped
+		// Operations-wrapping is per-method: create and update can target
+		// different SDK type shapes (e.g. EventGatewaySchemaRegistry's create
+		// is a bare components union while its update is operations-wrapped).
+		methodIsOperationsWrapped := strings.Contains(method.ImportAlias, "sdkkonnectoper")
+		m.IsOperationsWrapped = methodIsOperationsWrapped
 		m.ComponentsImportAlias = componentsImportAlias
-		if isOperationsWrapped {
+		if methodIsOperationsWrapped {
 			bodyInfo, err := ParseSDKRequestBodyInfo(method.ImportPath, method.TypeName)
 			if err != nil {
 				return "", fmt.Errorf("failed to inspect SDK request body for %s %s: %w", entityName, method.TypeName, err)
@@ -5331,6 +5858,9 @@ func (g *Generator) generateRootUnionSDKOps(
 			m.BodyTypeName = bodyInfo.TypeName
 			m.BodyFieldName = bodyInfo.FieldName
 			m.BodyFieldPointer = bodyInfo.Pointer
+			if !isCreate {
+				updateIsOperationsWrapped = true
+			}
 		}
 		rootUnionMethods = append(rootUnionMethods, m)
 	}
@@ -5360,7 +5890,7 @@ func (g *Generator) generateRootUnionSDKOps(
 	// the OAS shape misclassifies variants whose only required $ref property is a
 	// scalar (e.g. a named string), which the SDK collapses to a plain type.
 	updateSDKTypeIsUnion := false
-	if hasUpdateMethod && !isOperationsWrapped && updateMethodTypeName != "" {
+	if hasUpdateMethod && !updateIsOperationsWrapped && updateMethodTypeName != "" {
 		memberFields, err := ParseSDKUnionMemberFieldNames(updateMethodImportPath, updateMethodTypeName)
 		if err != nil {
 			return "", fmt.Errorf("failed to inspect SDK update type %s for %s: %w", updateMethodTypeName, entityName, err)
@@ -5402,14 +5932,14 @@ func (g *Generator) generateRootUnionSDKOps(
 		// "openid-connect"). Use the discriminator-derived spelling so
 		// generated constructor calls match the SDK exactly.
 		ctorSuffix := pascalFromKebab(discValue)
-		if hasUpdateMethod && !isOperationsWrapped && updateSDKTypeIsUnion {
+		if hasUpdateMethod && !updateIsOperationsWrapped && updateSDKTypeIsUnion {
 			// The SDK update request is a discriminated union (same shape as
 			// create); rebuild the selected variant directly via its update
 			// constructor instead of targeting a nested payload field.
 			updateVariantTypeName = fixInitialisms(variantRefName)
 			updateConstructorName = "Create" + updateMethodTypeName + ctorSuffix
 			updateDirectUnion = true
-		} else if hasUpdateMethod && !isOperationsWrapped {
+		} else if hasUpdateMethod && !updateIsOperationsWrapped {
 			updatePayloadProp, err := findRootUnionUpdatePayloadProperty(variant.Properties)
 			if err != nil {
 				// Heuristic: when a root-union update variant exposes multiple required
@@ -5460,7 +5990,7 @@ func (g *Generator) generateRootUnionSDKOps(
 	}
 
 	references := g.templateReferences(entityName)
-	aclInjections, err := aclRefInjections(references)
+	injections, err := refInjections(references)
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)
 	}
@@ -5475,13 +6005,15 @@ func (g *Generator) generateRootUnionSDKOps(
 		Imports                []*sdkOpsImport
 		BoolFields             []sdkOpsBoolField
 		ConstFields            []sdkOpsConstField
+		UnionUnwrapFields      []sdkOpsUnionUnwrapField
+		FreeformKeyFields      []sdkOpsFreeformKeyField
 		Methods                []sdkOpsRootUnionMethod
 		Variants               []sdkOpsRootUnionVariant
 		NeedsClient            bool
 		SecretReferences       []SecretReferenceForTemplate
 		NeedsSecretFetchImport bool
 		References             []TemplateReferenceConfig
-		ACLRefInjections       []TemplateACLRefInjection
+		RefInjections          []TemplateRefInjection
 	}{
 		APIVersion:             g.config.APIVersion,
 		EntityName:             entityName,
@@ -5489,13 +6021,15 @@ func (g *Generator) generateRootUnionSDKOps(
 		Imports:                imports,
 		BoolFields:             boolFields,
 		ConstFields:            constFields,
+		UnionUnwrapFields:      unionUnwrapFields,
+		FreeformKeyFields:      freeformKeyFields,
 		Methods:                rootUnionMethods,
 		Variants:               variants,
 		NeedsClient:            opsConfig.RequireClient || g.entityHasReferences(entityName),
 		SecretReferences:       secretReferences,
 		NeedsSecretFetchImport: secretReferencesNeedCoreV1Import(secretReferences),
 		References:             references,
-		ACLRefInjections:       aclInjections,
+		RefInjections:          injections,
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
@@ -5708,6 +6242,7 @@ func (g *Generator) buildSDKOpsMethods(opsConfig *config.EntityOpsConfig) ([]*sd
 			TypeName:    typeName,
 			ImportAlias: alias,
 			ImportPath:  importPath,
+			OpName:      opName,
 		})
 	}
 
@@ -5794,6 +6329,251 @@ func (g *Generator) collectSDKOpsBoolFieldsFromProperty(prop *parser.Property, p
 
 func sdkOpsBoolFieldLabel(path []string) string {
 	return strings.Join(path, ".")
+}
+
+// sdkOpsUnionUnwrapField records the path to a property-level oneOf that has
+// no OAS discriminator, so its Konnect SDK type expects the non-discriminated
+// wire shape {"<member>": <value>} rather than the CRD's synthesized
+// {"type": "<member>", "<member>": <value>}. See unwrapSDKOpsUnionFieldsHelper.
+type sdkOpsUnionUnwrapField struct {
+	Path []string
+}
+
+// collectSDKOpsUnionUnwrapFields finds property-level oneOf fields that lack
+// an OAS discriminator, mirroring collectSDKOpsBoolFields' walk (including the
+// root-oneOf variant traversal) so it reaches unions nested inside a root
+// union's own variants (e.g. AIGatewayModel's api.config.route.model).
+func (g *Generator) collectSDKOpsUnionUnwrapFields(schema *parser.Schema) []sdkOpsUnionUnwrapField {
+	if schema == nil {
+		return nil
+	}
+
+	var fields []sdkOpsUnionUnwrapField
+	for _, prop := range schema.Properties {
+		g.collectSDKOpsUnionUnwrapFieldsFromProperty(prop, []string{prop.Name}, &fields)
+	}
+	if len(schema.OneOf) > 0 {
+		rawVariantNames := make([]string, 0, len(schema.OneOf))
+		for _, variant := range schema.OneOf {
+			variantName := variant.Name
+			if variant.RefName != "" {
+				variantName = variant.RefName
+			}
+			rawVariantNames = append(rawVariantNames, variantName)
+		}
+		variantNames := extractVariantNames(rawVariantNames)
+		discValueForRef := make(map[string]string, len(schema.DiscriminatorMapping))
+		for discValue, refName := range schema.DiscriminatorMapping {
+			discValueForRef[refName] = discValue
+		}
+		for i, variant := range schema.OneOf {
+			variantRefName := variant.Name
+			if variant.RefName != "" {
+				variantRefName = variant.RefName
+			}
+			variantJSONName := discValueForRef[variantRefName]
+			if variantJSONName == "" {
+				variantJSONName = strings.ToLower(variantNames[i])
+			}
+			for _, nestedProp := range variant.Properties {
+				g.collectSDKOpsUnionUnwrapFieldsFromProperty(nestedProp, []string{variantJSONName, nestedProp.Name}, &fields)
+			}
+		}
+	}
+
+	sort.Slice(fields, func(i, j int) bool {
+		return strings.Join(fields[i].Path, ".") < strings.Join(fields[j].Path, ".")
+	})
+
+	return fields
+}
+
+func (g *Generator) collectSDKOpsUnionUnwrapFieldsFromProperty(prop *parser.Property, path []string, fields *[]sdkOpsUnionUnwrapField) {
+	if prop == nil || skipProperty(prop) || prop.IsReference {
+		return
+	}
+
+	if len(prop.OneOf) > 0 && prop.Discriminator == "" && allVariantsAnonymousSingleProperty(prop.OneOf) {
+		*fields = append(*fields, sdkOpsUnionUnwrapField{Path: append([]string(nil), path...)})
+		// The whole sub-map unwraps atomically as one unit; no need to recurse
+		// into the variants themselves for this purpose.
+		return
+	}
+
+	if prop.Items != nil {
+		g.collectSDKOpsUnionUnwrapFieldsFromProperty(prop.Items, append(path, "[]"), fields)
+	}
+	for _, nestedProp := range prop.Properties {
+		g.collectSDKOpsUnionUnwrapFieldsFromProperty(nestedProp, append(path, nestedProp.Name), fields)
+	}
+	if prop.AdditionalProperties != nil {
+		g.collectSDKOpsUnionUnwrapFieldsFromProperty(prop.AdditionalProperties, append(path, "{}"), fields)
+	}
+}
+
+// allVariantsAnonymousSingleProperty reports whether every variant of a
+// no-discriminator oneOf is an anonymous (no $ref), single-property object —
+// the shape buildUnionVariants flattens directly onto the wrapper field (see
+// unionVariant.flattened) and whose Konnect SDK member type keeps that one
+// property's own key with "type" dropped (e.g. AIGatewayModelRouteConfigModel's
+// Body/Headers/PathAliases).
+//
+// This deliberately excludes two other no-discriminator shapes that need
+// different handling and must NOT be touched here:
+//   - $ref variants (e.g. AIGatewayAllowACL/AIGatewayDenyACL): flattenSDKUnions'
+//     existing object-branch logic already produces the right SDK shape for
+//     these, and some entities additionally rebuild them by hand afterward.
+//   - bare scalar/array variants with no properties at all (e.g. ResourceNames'
+//     Str/[]EventGatewayACLResourceName members): the Konnect SDK expects the
+//     fully bare value with no wrapper key at all, which is exactly what
+//     flattenSDKUnions' existing non-object branch already produces.
+func allVariantsAnonymousSingleProperty(variants []*parser.Property) bool {
+	if len(variants) == 0 {
+		return false
+	}
+	for _, v := range variants {
+		if v.RefName != "" || len(v.Properties) != 1 {
+			return false
+		}
+	}
+	return true
+}
+
+// sdkOpsFreeformKeyField records the path to a free-form/data-keyed subtree
+// (an apiextensionsv1.JSON field, or an additionalProperties map whose values
+// aren't themselves renameable structs) whose keys are user data — e.g. an
+// HTTP header name — and must survive renameKeysToSDK's camelCase→snake_case
+// pass verbatim. See renameKeysToSDKExcept.
+type sdkOpsFreeformKeyField struct {
+	Path []string
+}
+
+// collectSDKOpsFreeformKeyFields finds free-form/map-data fields, mirroring
+// collectSDKOpsUnionUnwrapFields' walk (including the root-oneOf variant
+// traversal) so it reaches free-form fields nested inside a root union's own
+// variants (e.g. AIGatewayModel's api.config.route.headers).
+func (g *Generator) collectSDKOpsFreeformKeyFields(schema *parser.Schema) []sdkOpsFreeformKeyField {
+	if schema == nil {
+		return nil
+	}
+
+	var fields []sdkOpsFreeformKeyField
+	for _, prop := range schema.Properties {
+		g.collectSDKOpsFreeformKeyFieldsFromProperty(prop, []string{prop.Name}, &fields)
+	}
+	if len(schema.OneOf) > 0 {
+		rawVariantNames := make([]string, 0, len(schema.OneOf))
+		for _, variant := range schema.OneOf {
+			variantName := variant.Name
+			if variant.RefName != "" {
+				variantName = variant.RefName
+			}
+			rawVariantNames = append(rawVariantNames, variantName)
+		}
+		variantNames := extractVariantNames(rawVariantNames)
+		discValueForRef := make(map[string]string, len(schema.DiscriminatorMapping))
+		for discValue, refName := range schema.DiscriminatorMapping {
+			discValueForRef[refName] = discValue
+		}
+		for i, variant := range schema.OneOf {
+			variantRefName := variant.Name
+			if variant.RefName != "" {
+				variantRefName = variant.RefName
+			}
+			variantJSONName := discValueForRef[variantRefName]
+			if variantJSONName == "" {
+				variantJSONName = strings.ToLower(variantNames[i])
+			}
+			for _, nestedProp := range variant.Properties {
+				g.collectSDKOpsFreeformKeyFieldsFromProperty(nestedProp, []string{variantJSONName, nestedProp.Name}, &fields)
+			}
+		}
+	}
+
+	sort.Slice(fields, func(i, j int) bool {
+		return strings.Join(fields[i].Path, ".") < strings.Join(fields[j].Path, ".")
+	})
+
+	return fields
+}
+
+func (g *Generator) collectSDKOpsFreeformKeyFieldsFromProperty(prop *parser.Property, path []string, fields *[]sdkOpsFreeformKeyField) {
+	if prop == nil || skipProperty(prop) {
+		return
+	}
+
+	if g.isFreeformKeyProperty(prop) {
+		*fields = append(*fields, sdkOpsFreeformKeyField{Path: append([]string(nil), path...)})
+		// The whole subtree's keys are data; don't recurse into it.
+		return
+	}
+
+	if prop.Items != nil {
+		g.collectSDKOpsFreeformKeyFieldsFromProperty(prop.Items, append(path, "[]"), fields)
+	}
+	for _, nestedProp := range prop.Properties {
+		g.collectSDKOpsFreeformKeyFieldsFromProperty(nestedProp, append(path, nestedProp.Name), fields)
+	}
+	if prop.AdditionalProperties != nil {
+		g.collectSDKOpsFreeformKeyFieldsFromProperty(prop.AdditionalProperties, append(path, "{}"), fields)
+	}
+	// A property-level oneOf's variants are flattened directly onto the
+	// wrapper field on the wire (see allVariantsAnonymousSingleProperty), so a
+	// free-form variant member (e.g. AIGatewayModelRouteConfigModel's Body/
+	// Headers) is reached at the same path depth as prop itself, keyed by the
+	// variant's own property name.
+	//
+	// ponytail: this path only matches in the root-union SDK-ops pipeline,
+	// where renameKeysToSDKExcept runs before flattenSDKUnions so the CRD's
+	// nested {"type":..., "<member>": {...}} shape is still intact. The
+	// standard (non-root-union) pipeline flattens before renaming, hoisting
+	// the free-form keys up to prop's own level — a path collected here
+	// wouldn't match there. No non-root-union entity has a free-form member
+	// under a property-level oneOf today; fix the standard pipeline's
+	// ordering too if one is ever added.
+	for _, variant := range prop.OneOf {
+		for _, nestedProp := range variant.Properties {
+			g.collectSDKOpsFreeformKeyFieldsFromProperty(nestedProp, append(path, nestedProp.Name), fields)
+		}
+	}
+}
+
+// isFreeformKeyProperty reports whether prop's JSON object keys are user data
+// rather than CRD field names: either an apiextensionsv1.JSON field (an
+// object with no declared properties) or an additionalProperties map whose
+// value type has no renameable field names of its own (scalar, or itself
+// free-form). A map of structs (map[string]<struct>) is deliberately
+// excluded — its values still need their own field names renamed.
+func (g *Generator) isFreeformKeyProperty(prop *parser.Property) bool {
+	if prop == nil || prop.IsReference || len(prop.OneOf) > 0 || len(prop.AnyOf) > 0 {
+		return false
+	}
+	if prop.RefName != "" {
+		if g == nil || g.parsed == nil {
+			return false
+		}
+		refSchema := g.parsed.Schemas[prop.RefName]
+		if refSchema == nil {
+			return false
+		}
+		if refSchema.AdditionalProperties != nil {
+			return isFreeformOrScalarValue(refSchema.AdditionalProperties)
+		}
+		return refSchema.Type == "object" && len(refSchema.Properties) == 0
+	}
+	if prop.Type != "object" {
+		return false
+	}
+	if prop.AdditionalProperties != nil {
+		return isFreeformOrScalarValue(prop.AdditionalProperties)
+	}
+	return len(prop.Properties) == 0
+}
+
+// isFreeformOrScalarValue reports whether a map's value type carries no
+// renameable field names of its own: a scalar, or itself a free-form object.
+func isFreeformOrScalarValue(value *parser.Property) bool {
+	return value != nil && value.RefName == "" && len(value.Properties) == 0 && len(value.OneOf) == 0
 }
 
 // collectSDKOpsConstFields finds discriminator fields that were stripped from
@@ -6164,9 +6944,12 @@ func formatSchemaComment(name, desc string) string {
 	return strings.Join(result, "\n") + "\n"
 }
 
-// goFieldName converts property name to Go field name (PascalCase).
+// goFieldName converts property name to Go field name (PascalCase). Both "_"
+// and "-" are treated as word separators, since discriminator values (e.g.
+// "conversion-listener") use kebab-case while most OAS property names use
+// snake_case.
 func goFieldName(name string) string {
-	parts := strings.Split(name, "_")
+	parts := strings.FieldsFunc(name, func(r rune) bool { return r == '_' || r == '-' })
 	for i, part := range parts {
 		if len(part) > 0 {
 			// Handle common acronyms
@@ -6319,6 +7102,13 @@ func isRefProperty(prop *parser.Property) bool {
 // hasRootOneOf returns true if the schema has root-level oneOf (i.e., the schema itself is a union type).
 func hasRootOneOf(schema *parser.Schema) bool {
 	return len(schema.OneOf) > 0
+}
+
+// refTargetHasRootOneOf reports whether refName names a schema with root-level
+// oneOf, tolerating an unresolved refName (returns false rather than panicking).
+func refTargetHasRootOneOf(parsed *parser.ParsedSpec, refName string) bool {
+	schema := parsed.Schemas[refName]
+	return schema != nil && hasRootOneOf(schema)
 }
 
 // skipProperty returns true if the property should be skipped in CRD generation.

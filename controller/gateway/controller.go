@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"time"
@@ -191,6 +192,42 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		log.Info(mgr.GetLogger(), "GRPCRoute CRD not found in cluster, skipping watch for GRPCRoute resources")
 	}
 
+	udpRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "udproutes",
+	}
+	udpRouteExist, err := crdChecker.CRDExists(udpRouteGVR)
+	if err != nil {
+		return fmt.Errorf("failed to check if UDPRoute CRD exists: %w", err)
+	}
+	if udpRouteExist {
+		blder.Watches(
+			&gwtypes.UDPRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByUDPRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		)
+	} else {
+		log.Info(mgr.GetLogger(), "UDPRoute CRD not found in cluster, skipping watch for UDPRoute resources")
+	}
+
+	tcpRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupName,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "tcproutes",
+	}
+	tcpRouteExist, err := crdChecker.CRDExists(tcpRouteGVR)
+	if err != nil {
+		return err
+	}
+	if tcpRouteExist {
+		blder.Watches(
+			&gatewayv1.TCPRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTCPRoute),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		)
+	}
+
 	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.
 	blder.WatchesRawSource(
 		source.Kind(
@@ -270,6 +307,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	gwConditionAware.initProgrammedAndListenersStatus()
 	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client); err != nil {
 		return ctrl.Result{}, err
+	}
+	// Validate the infrastructure.parametersRef early. If it references an
+	// unsupported group/kind the Gateway MUST be Accepted=False with
+	// reason InvalidParameters per the Gateway API spec.
+	if gateway.Spec.Infrastructure != nil && gateway.Spec.Infrastructure.ParametersRef != nil {
+		if err := gwconfigutils.ValidateParametersRefGroupKind(gateway.Spec.Infrastructure.ParametersRef); err != nil {
+			k8sutils.SetCondition(metav1.Condition{
+				Type:               string(gatewayv1.GatewayConditionAccepted),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.GatewayReasonInvalidParameters),
+				Message:            err.Error(),
+				ObservedGeneration: gateway.Generation,
+				LastTransitionTime: metav1.Now(),
+			}, gwConditionAware)
+		}
 	}
 	acceptedCondition, _ := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionAccepted), gwConditionAware)
 	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
@@ -1095,7 +1147,7 @@ func dataPlaneSpecDeepEqual(specCurrent, specExpected *operatorv1beta1.DataPlane
 		reflect.DeepEqual(specCurrent.PluginsToInstall, specExpected.PluginsToInstall)
 
 	// TODO: Doesn't take .Rollout field into account.
-	return deploymentOptionsDeepEqual(&specCurrent.Deployment.DeploymentOptions, &specExpected.Deployment.DeploymentOptions) &&
+	return deploymentOptionsDeepEqual(&specCurrent.Deployment, &specExpected.Deployment) &&
 		compare.NetworkOptionsDeepEqual(&specCurrent.Network, &specExpected.Network) &&
 		compare.DataPlaneResourceOptionsDeepEqual(&specCurrent.Resources, &specExpected.Resources) &&
 		extensionsEqual &&
@@ -1106,7 +1158,7 @@ func controlPlaneSpecDeepEqual(spec1, spec2 *gwtypes.ControlPlaneOptions) bool {
 	return reflect.DeepEqual(spec1, spec2)
 }
 
-func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {
+func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DataPlaneDeploymentOptions, envVarsToIgnore ...string) bool { //nolint:unparam
 	if o1 == nil && o2 == nil {
 		return true
 	}
@@ -1116,6 +1168,22 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVa
 	}
 
 	if !reflect.DeepEqual(o1.Replicas, o2.Replicas) {
+		return false
+	}
+
+	if !reflect.DeepEqual(o1.Scaling, o2.Scaling) {
+		return false
+	}
+
+	if !maps.Equal(o1.Labels, o2.Labels) {
+		return false
+	}
+
+	if !maps.Equal(o1.Annotations, o2.Annotations) {
+		return false
+	}
+
+	if o1.Hardened != o2.Hardened {
 		return false
 	}
 

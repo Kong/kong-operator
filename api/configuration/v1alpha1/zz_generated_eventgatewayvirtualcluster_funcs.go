@@ -53,6 +53,12 @@ func (obj *EventGatewayVirtualCluster) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayVirtualCluster's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayVirtualCluster) GetKonnectName() string {
+	return string(obj.Spec.APISpec.Name)
+}
+
 // GetTypeName returns the EventGatewayVirtualCluster Kind name.
 func (obj EventGatewayVirtualCluster) GetTypeName() string {
 	return "EventGatewayVirtualCluster"
@@ -102,6 +108,11 @@ func (obj *EventGatewayVirtualCluster) GetEventGatewayBackendClusterRef() common
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayVirtualCluster) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayBackendClusterRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayVirtualCluster) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.EventGatewayBackendClusterRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

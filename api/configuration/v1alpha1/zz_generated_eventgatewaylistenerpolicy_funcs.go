@@ -24,6 +24,25 @@ func (obj *EventGatewayListenerPolicy) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayListenerPolicy's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayListenerPolicy) GetKonnectName() string {
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.EventGatewayListenerPolicyConfig.Type {
+	case EventGatewayListenerPolicyConfigTypeForwardToVirtualClust:
+		if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust != nil {
+			return string(obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Name)
+		}
+	case EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen:
+		if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+			return string(obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Name)
+		}
+	}
+	return ""
+}
+
 // GetTypeName returns the EventGatewayListenerPolicy Kind name.
 func (obj EventGatewayListenerPolicy) GetTypeName() string {
 	return "EventGatewayListenerPolicy"
@@ -89,6 +108,11 @@ func (obj *EventGatewayListenerPolicy) GetEventGatewayListenerRef() commonv1alph
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayListenerPolicy) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayListenerRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayListenerPolicy) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.EventGatewayListenerRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

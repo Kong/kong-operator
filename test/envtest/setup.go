@@ -2,6 +2,7 @@ package envtest
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"strings"
@@ -15,7 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -64,10 +65,62 @@ func WithAdditionalCRDPaths(paths []string) OptionModifier {
 	}
 }
 
+const (
+	// maxEnvtestStartAttempts bounds how many times we rebuild testEnv when the
+	// webhook server's port was stolen between allocation and bind (EADDRINUSE).
+	maxEnvtestStartAttempts = 10
+	// webhookBindProbe is how long we wait for ws.Start to surface a bind error
+	// before treating the server as successfully serving. Binding is synchronous
+	// and near-instant, so this only adds latency on the (common) success path.
+	webhookBindProbe = 500 * time.Millisecond
+)
+
 var once sync.Once = sync.Once{}
 
+func createWebhookServer(scheme *runtime.Scheme, webhookOpts envtest.WebhookInstallOptions) webhook.Server {
+	ws := webhook.NewServer(webhook.Options{
+		Port:    webhookOpts.LocalServingPort,
+		Host:    webhookOpts.LocalServingHost,
+		CertDir: webhookOpts.LocalServingCertDir,
+	})
+	ws.Register("/convert", conversion.NewWebhookHandler(scheme, conversion.NewRegistry()))
+	return ws
+}
+
+func createTestEnv(scheme *runtime.Scheme, crdPaths []string) *envtest.Environment {
+	testEnv := &envtest.Environment{
+		ControlPlaneStopTimeout: time.Second * 60,
+		Scheme:                  scheme,
+	}
+	if len(crdPaths) > 0 {
+		testEnv.CRDInstallOptions = envtest.CRDInstallOptions{
+			Paths:              crdPaths,
+			Scheme:             scheme,
+			ErrorIfPathMissing: true,
+			MaxTime:            30 * time.Second,
+		}
+	}
+
+	return testEnv
+}
+
+func generateCRDPaths(opts Options) []string {
+	crdPaths := make([]string, 0, 3)
+	if opts.InstallGatewayCRDs {
+		crdPaths = append(crdPaths, kcfg.GatewayAPIExperimentalCRDsPath())
+	}
+	if opts.InstallKongCRDs {
+		crdPaths = append(crdPaths,
+			kcfg.KongOperatorCRDsPath(),
+			kcfg.IngressControllerIncubatorCRDsPath(),
+		)
+	}
+	crdPaths = append(crdPaths, opts.AdditionalCRDPaths...)
+	return crdPaths
+}
+
 // Setup sets up a test k8s API server environment and returned the configuration.
-func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme, optModifiers ...OptionModifier) (*rest.Config, *corev1.Namespace) {
+func Setup(t *testing.T, ctx context.Context, scheme *runtime.Scheme, optModifiers ...OptionModifier) (*rest.Config, *corev1.Namespace) {
 	once.Do(func() {
 		f, err := testutil.SetupControllerLogger("stdout")
 		require.NoError(t, err)
@@ -83,44 +136,48 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme, optModi
 		opts = mod(opts)
 	}
 
-	crdPaths := make([]string, 0, 3)
-	if opts.InstallGatewayCRDs {
-		crdPaths = append(crdPaths, kcfg.GatewayAPIExperimentalCRDsPath())
-	}
-	if opts.InstallKongCRDs {
-		crdPaths = append(crdPaths,
-			kcfg.KongOperatorCRDsPath(),
-			kcfg.IngressControllerIncubatorCRDsPath(),
-		)
-	}
-	crdPaths = append(crdPaths, opts.AdditionalCRDPaths...)
+	var (
+		crdPaths = generateCRDPaths(opts)
+		testEnv  *envtest.Environment
+		cfg      *rest.Config
+	)
+	for attempt := 1; ; attempt++ {
+		testEnv = createTestEnv(scheme, crdPaths)
+		t.Logf("starting envtest environment for test %s (attempt %d)...", t.Name(), attempt)
+		var err error
+		cfg, err = testEnv.Start()
+		require.NoError(t, err)
 
-	testEnv := &envtest.Environment{
-		ControlPlaneStopTimeout: time.Second * 60,
-		Scheme:                  scheme,
-	}
-	if len(crdPaths) > 0 {
-		testEnv.CRDInstallOptions = envtest.CRDInstallOptions{
-			Paths:              crdPaths,
-			Scheme:             scheme,
-			ErrorIfPathMissing: true,
-			MaxTime:            30 * time.Second,
+		errCh := make(chan error, 1)
+		go func() {
+			ws := createWebhookServer(scheme, testEnv.WebhookInstallOptions)
+			errCh <- ws.Start(ctx)
+		}()
+
+		select {
+		case err := <-errCh:
+			// ws.Start binds synchronously, so a fast return means it failed to bind.
+			// The port envtest allocated can be stolen by another process between
+			// allocation and bind; retry with a freshly allocated port in that case.
+			if attempt < maxEnvtestStartAttempts && errors.Is(err, syscall.EADDRINUSE) {
+				t.Logf("webhook server bind failed (%v); restarting envtest with a fresh port", err)
+				_ = testEnv.Stop()
+				continue
+			}
+			require.NoError(t, err)
+
+		case <-time.After(webhookBindProbe):
+			// The server is now serving (Start is blocking in Serve). Keep reporting
+			// its eventual return error for the rest of the test run.
+			go func() {
+				assert.NoError(t, <-errCh)
+			}()
+
+		case <-ctx.Done():
+			t.Fatalf("context canceled while waiting for webhook server to start: %v", ctx.Err())
 		}
+		break
 	}
-
-	t.Logf("starting envtest environment for test %s...", t.Name())
-	cfg, err := testEnv.Start()
-	require.NoError(t, err)
-
-	ws := webhook.NewServer(webhook.Options{
-		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
-		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
-		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
-	})
-	ws.Register("/convert", conversion.NewWebhookHandler(scheme, conversion.NewRegistry()))
-	go func() {
-		assert.NoError(t, ws.Start(ctx))
-	}()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -175,7 +232,7 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme, optModi
 	return cfg, ns
 }
 
-func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
+func installGatewayCRDs(t *testing.T, scheme *runtime.Scheme, cfg *rest.Config) {
 	t.Helper()
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,

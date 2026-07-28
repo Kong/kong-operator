@@ -29,6 +29,7 @@ type CacheStores struct {
 	Secret                         cache.Store
 	ConfigMap                      cache.Store
 	EndpointSlice                  cache.Store
+	Namespace                      cache.Store
 	HTTPRoute                      cache.Store
 	UDPRoute                       cache.Store
 	TCPRoute                       cache.Store
@@ -36,6 +37,7 @@ type CacheStores struct {
 	GRPCRoute                      cache.Store
 	ReferenceGrant                 cache.Store
 	Gateway                        cache.Store
+	GatewayClass                   cache.Store
 	BackendTLSPolicy               cache.Store
 	Plugin                         cache.Store
 	ClusterPlugin                  cache.Store
@@ -59,6 +61,7 @@ func NewCacheStores() CacheStores {
 		Secret:                         cache.NewStore(namespacedKeyFunc),
 		ConfigMap:                      cache.NewStore(namespacedKeyFunc),
 		EndpointSlice:                  cache.NewStore(namespacedKeyFunc),
+		Namespace:                      cache.NewStore(clusterWideKeyFunc),
 		HTTPRoute:                      cache.NewStore(namespacedKeyFunc),
 		UDPRoute:                       cache.NewStore(namespacedKeyFunc),
 		TCPRoute:                       cache.NewStore(namespacedKeyFunc),
@@ -66,6 +69,7 @@ func NewCacheStores() CacheStores {
 		GRPCRoute:                      cache.NewStore(namespacedKeyFunc),
 		ReferenceGrant:                 cache.NewStore(namespacedKeyFunc),
 		Gateway:                        cache.NewStore(namespacedKeyFunc),
+		GatewayClass:                   cache.NewStore(clusterWideKeyFunc),
 		BackendTLSPolicy:               cache.NewStore(namespacedKeyFunc),
 		Plugin:                         cache.NewStore(namespacedKeyFunc),
 		ClusterPlugin:                  cache.NewStore(clusterWideKeyFunc),
@@ -99,6 +103,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.ConfigMap.Get(obj)
 	case *discoveryv1.EndpointSlice:
 		return c.EndpointSlice.Get(obj)
+	case *corev1.Namespace:
+		return c.Namespace.Get(obj)
 	case *gatewayapi.HTTPRoute:
 		return c.HTTPRoute.Get(obj)
 	case *gatewayapi.UDPRoute:
@@ -113,6 +119,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.ReferenceGrant.Get(obj)
 	case *gatewayapi.Gateway:
 		return c.Gateway.Get(obj)
+	case *gatewayapi.GatewayClass:
+		return c.GatewayClass.Get(obj)
 	case *gatewayapi.BackendTLSPolicy:
 		return c.BackendTLSPolicy.Get(obj)
 	case *kongv1.KongPlugin:
@@ -156,6 +164,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.ConfigMap.Add(obj)
 	case *discoveryv1.EndpointSlice:
 		return c.EndpointSlice.Add(obj)
+	case *corev1.Namespace:
+		return c.Namespace.Add(obj)
 	case *gatewayapi.HTTPRoute:
 		return c.HTTPRoute.Add(obj)
 	case *gatewayapi.UDPRoute:
@@ -170,6 +180,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.ReferenceGrant.Add(obj)
 	case *gatewayapi.Gateway:
 		return c.Gateway.Add(obj)
+	case *gatewayapi.GatewayClass:
+		return c.GatewayClass.Add(obj)
 	case *gatewayapi.BackendTLSPolicy:
 		return c.BackendTLSPolicy.Add(obj)
 	case *kongv1.KongPlugin:
@@ -213,6 +225,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.ConfigMap.Delete(obj)
 	case *discoveryv1.EndpointSlice:
 		return c.EndpointSlice.Delete(obj)
+	case *corev1.Namespace:
+		return c.Namespace.Delete(obj)
 	case *gatewayapi.HTTPRoute:
 		return c.HTTPRoute.Delete(obj)
 	case *gatewayapi.UDPRoute:
@@ -227,6 +241,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.ReferenceGrant.Delete(obj)
 	case *gatewayapi.Gateway:
 		return c.Gateway.Delete(obj)
+	case *gatewayapi.GatewayClass:
+		return c.GatewayClass.Delete(obj)
 	case *gatewayapi.BackendTLSPolicy:
 		return c.BackendTLSPolicy.Delete(obj)
 	case *kongv1.KongPlugin:
@@ -260,6 +276,7 @@ func (c CacheStores) ListAllStores() []cache.Store {
 		c.Secret,
 		c.ConfigMap,
 		c.EndpointSlice,
+		c.Namespace,
 		c.HTTPRoute,
 		c.UDPRoute,
 		c.TCPRoute,
@@ -267,6 +284,7 @@ func (c CacheStores) ListAllStores() []cache.Store {
 		c.GRPCRoute,
 		c.ReferenceGrant,
 		c.Gateway,
+		c.GatewayClass,
 		c.BackendTLSPolicy,
 		c.Plugin,
 		c.ClusterPlugin,
@@ -289,6 +307,7 @@ func (c CacheStores) SupportedTypes() []client.Object {
 		&corev1.Secret{},
 		&corev1.ConfigMap{},
 		&discoveryv1.EndpointSlice{},
+		&corev1.Namespace{},
 		&gatewayapi.HTTPRoute{},
 		&gatewayapi.UDPRoute{},
 		&gatewayapi.TCPRoute{},
@@ -296,6 +315,7 @@ func (c CacheStores) SupportedTypes() []client.Object {
 		&gatewayapi.GRPCRoute{},
 		&gatewayapi.ReferenceGrant{},
 		&gatewayapi.Gateway{},
+		&gatewayapi.GatewayClass{},
 		&gatewayapi.BackendTLSPolicy{},
 		&kongv1.KongPlugin{},
 		&kongv1.KongClusterPlugin{},

@@ -24,6 +24,21 @@ func (obj *EventGatewayVirtualClusterPolicy) GetKonnectID() string {
 	return obj.Status.ID
 }
 
+// GetKonnectName returns the EventGatewayVirtualClusterPolicy's identifying name (the Konnect
+// API's "name" field), distinct from GetName's Kubernetes object name.
+func (obj *EventGatewayVirtualClusterPolicy) GetKonnectName() string {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig == nil {
+		return ""
+	}
+	switch obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.Type {
+	case EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.EventGatewayACLsPolicy != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.EventGatewayACLsPolicy.Name)
+		}
+	}
+	return ""
+}
+
 // GetTypeName returns the EventGatewayVirtualClusterPolicy Kind name.
 func (obj EventGatewayVirtualClusterPolicy) GetTypeName() string {
 	return "EventGatewayVirtualClusterPolicy"
@@ -89,6 +104,11 @@ func (obj *EventGatewayVirtualClusterPolicy) GetEventGatewayVirtualClusterRef() 
 // GetParentRef returns the reference to the parent entity.
 func (obj *EventGatewayVirtualClusterPolicy) GetParentRef() commonv1alpha1.ObjectRef {
 	return obj.GetEventGatewayVirtualClusterRef()
+}
+
+// SetParentRef sets the reference to the parent entity.
+func (obj *EventGatewayVirtualClusterPolicy) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.EventGatewayVirtualClusterRef = ref
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

@@ -157,31 +157,30 @@ func TestAIGatewayAgent(t *testing.T) {
 
 	t.Run("should resolve ACL references after referenced consumer is programmed", func(t *testing.T) {
 		const (
-			agentID             = "ai-agent-acl-12345"
-			consumerKonnectName = "acl-consumer-konnect-name"
-			consumerKonnectID   = "acl-consumer-kid-1"
+			agentID                  = "ai-agent-acl-12345"
+			consumerGroupKonnectName = "acl-consumer-group-konnect-name"
+			consumerGroupKonnectID   = "acl-consumer-group-kid-1"
 		)
 
-		t.Log("Creating an unprogrammed AIGatewayConsumer to be referenced by the agent ACL")
-		consumer := &konnectv1alpha1.AIGatewayConsumer{
-			ObjectMeta: metav1.ObjectMeta{Name: "acl-consumer", Namespace: ns.Name},
-			Spec: konnectv1alpha1.AIGatewayConsumerSpec{
+		t.Log("Creating an unprogrammed AIGatewayConsumerGroup to be referenced by the agent ACL")
+		consumerGroup := &konnectv1alpha1.AIGatewayConsumerGroup{
+			ObjectMeta: metav1.ObjectMeta{Name: "acl-consumer-group", Namespace: ns.Name},
+			Spec: konnectv1alpha1.AIGatewayConsumerGroupSpec{
 				AIGatewayRef: commonv1alpha1.ObjectRef{
 					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gateway.Name},
 				},
-				APISpec: konnectv1alpha1.AIGatewayConsumerAPISpec{
-					Name:        konnectv1alpha1.AIGatewayEntityIdentifier(consumerKonnectName),
-					DisplayName: "ACL Consumer",
-					Type:        "api-key",
+				APISpec: konnectv1alpha1.AIGatewayConsumerGroupAPISpec{
+					Name:        konnectv1alpha1.AIGatewayEntityIdentifier(consumerGroupKonnectName),
+					DisplayName: "ACL Consumer Group",
 				},
 			},
 		}
-		require.NoError(t, clientNamespaced.Create(ctx, consumer))
+		require.NoError(t, clientNamespaced.Create(ctx, consumerGroup))
 
 		w := envtest.SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
 
-		t.Log("Creating AIGatewayAgent that references the consumer via an ACL allow rule")
+		t.Log("Creating AIGatewayAgent that references the consumer group via an ACL allow rule")
 		agent := deploy.AIGatewayAgent(t, ctx, clientNamespaced, gateway, func(o client.Object) {
 			a, ok := o.(*konnectv1alpha1.AIGatewayAgent)
 			if !ok {
@@ -192,7 +191,7 @@ func TestAIGatewayAgent(t *testing.T) {
 					Type: konnectv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
 					Allow: &konnectv1alpha1.AIGatewayAllowACL{
 						Allow: []konnectv1alpha1.AIGatewayACLRef{
-							{Kind: "AIGatewayConsumer", Name: consumer.Name},
+							{Kind: "AIGatewayConsumerGroup", Name: consumerGroup.Name},
 						},
 					},
 				},
@@ -210,29 +209,29 @@ func TestAIGatewayAgent(t *testing.T) {
 					cond.Status == metav1.ConditionFalse &&
 					cond.Reason == konnectv1alpha1.KonnectReferencesResolvedReasonNotProgrammed
 			},
-			"AIGatewayAgent didn't report KonnectReferencesResolved=False/ReferenceNotProgrammed for the unprogrammed consumer",
+			"AIGatewayAgent didn't report KonnectReferencesResolved=False/ReferenceNotProgrammed for the unprogrammed consumer group",
 		)
 
-		t.Log("Setting up SDK expectation: after the consumer is programmed, the resolved Konnect name must be pushed")
+		t.Log("Setting up SDK expectation: after the consumer group is programmed, the resolved Konnect name must be pushed")
 		sdk.AIGatewayAgentsSDK.EXPECT().
 			CreateAiGatewayAgent(mock.Anything, konnectAIGatewayID, mock.MatchedBy(func(req sdkkonnectcomp.CreateAIGatewayAgentRequest) bool {
 				return req.Access != nil &&
 					req.Access.Acls != nil &&
 					req.Access.Acls.AIGatewayAllowACL != nil &&
 					len(req.Access.Acls.AIGatewayAllowACL.Allow) == 1 &&
-					req.Access.Acls.AIGatewayAllowACL.Allow[0] == consumerKonnectName
+					req.Access.Acls.AIGatewayAllowACL.Allow[0] == consumerGroupKonnectName
 			})).
 			Return(&sdkkonnectops.CreateAiGatewayAgentResponse{
 				AIGatewayAgent: &sdkkonnectcomp.AIGatewayAgent{ID: agentID},
 			}, nil)
 
-		t.Log("Programming the referenced consumer by setting its Konnect ID")
+		t.Log("Programming the referenced consumer group by setting its Konnect ID")
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			if !assert.NoError(ct, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(consumer), consumer)) {
+			if !assert.NoError(ct, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(consumerGroup), consumerGroup)) {
 				return
 			}
-			consumer.SetKonnectID(consumerKonnectID)
-			assert.NoError(ct, clientNamespaced.Status().Update(ctx, consumer))
+			consumerGroup.SetKonnectID(consumerGroupKonnectID)
+			assert.NoError(ct, clientNamespaced.Status().Update(ctx, consumerGroup))
 		}, consts.WaitTime, consts.TickTime)
 
 		t.Log("Waiting for the watch to re-enqueue the agent and flip KonnectReferencesResolved to True")
@@ -246,7 +245,7 @@ func TestAIGatewayAgent(t *testing.T) {
 					cond.Status == metav1.ConditionTrue &&
 					cond.Reason == konnectv1alpha1.KonnectReferencesResolvedReasonResolved
 			},
-			"AIGatewayAgent KonnectReferencesResolved didn't flip to True after the consumer was programmed",
+			"AIGatewayAgent KonnectReferencesResolved didn't flip to True after the consumer group was programmed",
 		)
 
 		envtest.EventuallyAssertSDKExpectations(t, sdk.AIGatewayAgentsSDK, consts.WaitTime, consts.TickTime)

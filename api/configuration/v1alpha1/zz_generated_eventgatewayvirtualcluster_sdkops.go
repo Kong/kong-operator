@@ -9,6 +9,17 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
+// EventGatewayVirtualClusterSDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var EventGatewayVirtualClusterSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"labels",
+		},
+	},
+}
+
 func (s *EventGatewayVirtualClusterAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -21,7 +32,7 @@ func (s *EventGatewayVirtualClusterAPISpec) marshalSDKOpsPayload() ([]byte, erro
 	payload = flattenSDKUnions(payload)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	payload = renameKeysToSDK(payload)
+	payload = renameKeysToSDKExcept(payload, EventGatewayVirtualClusterSDKOpsFreeformKeyFields)
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal normalized EventGatewayVirtualClusterAPISpec: %w", err)

@@ -37,6 +37,7 @@ const (
 const (
 	kindHTTPRoute = "HTTPRoute"
 	kindTLSRoute  = "TLSRoute"
+	kindTCPRoute  = "TCPRoute"
 )
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
@@ -250,6 +251,8 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 		annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
 	case *gwtypes.TLSRoute:
 		annotations[consts.GatewayOperatorHybridRoutesTLSRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
+	case *gwtypes.TCPRoute:
+		annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
 	}
 
 	return annotations
@@ -558,6 +561,8 @@ func (am *AnnotationManager) RouteAnnotationKeyForKind(routeKind string) string 
 		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
 	case kindTLSRoute:
 		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation
+	case kindTCPRoute:
+		return consts.GatewayOperatorHybridRoutesTCPRouteAnnotation
 	}
 	// Not supported route kind. Should be unreachable.
 	return ""

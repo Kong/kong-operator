@@ -207,6 +207,48 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 }
 
 // -----------------------------------------------------------------
+// generateBaseDeployment
+// -----------------------------------------------------------------
+
+func Test_generateBaseDeployment_hardening(t *testing.T) {
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-aigw", Namespace: "test-ns"},
+	}
+	aigwcp := testKonnectAIGateway("cp.example.com", "tp.example.com")
+
+	d, err := generateBaseDeployment(aigwdp, aigwcp, "kong/aigw:test", "cert-secret")
+	require.NoError(t, err)
+	require.Len(t, d.Spec.Template.Spec.Containers, 1)
+	container := d.Spec.Template.Spec.Containers[0]
+
+	require.Equal(t, &corev1.SecurityContext{
+		AllowPrivilegeEscalation: new(false),
+		ReadOnlyRootFilesystem:   new(true),
+		RunAsNonRoot:             new(true),
+		RunAsUser:                new(int64(65532)),
+		RunAsGroup:               new(int64(65532)),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+			Add:  []corev1.Capability{"NET_BIND_SERVICE"},
+		},
+	}, container.SecurityContext)
+
+	assert.Equal(t, []corev1.VolumeMount{
+		{Name: KonnectCertVolumeName, MountPath: KonnectCertMountPath, ReadOnly: true},
+		{Name: "tmp", MountPath: "/tmp"},
+		{Name: "var-kong", MountPath: "/var/kong"},
+	}, container.VolumeMounts)
+
+	assert.Equal(t, "/var/kong", mustEnv(t, container.Env, "KONG_PREFIX"))
+
+	volumeNames := make([]string, 0, len(d.Spec.Template.Spec.Volumes))
+	for _, v := range d.Spec.Template.Spec.Volumes {
+		volumeNames = append(volumeNames, v.Name)
+	}
+	assert.ElementsMatch(t, []string{"tmp", "var-kong", KonnectCertVolumeName}, volumeNames)
+}
+
+// -----------------------------------------------------------------
 // buildDeployment
 // -----------------------------------------------------------------
 

@@ -86,7 +86,7 @@ func TestAIGatewayAgent(t *testing.T) {
 	t.Run("apiSpec.access.acls validation", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.AIGatewayAgent]{
 			{
-				Name: "ACL ref without kind is invalid (multi-kind requires kind)",
+				Name: "ACL ref without kind defaults to AIGatewayConsumerGroup",
 				TestObject: func() *konnectv1alpha1.AIGatewayAgent {
 					obj := validAIGatewayAgent(ns.Name)
 					obj.Spec.APISpec.Access = konnectv1alpha1.AIGatewayAgentAccess{
@@ -101,7 +101,12 @@ func TestAIGatewayAgent(t *testing.T) {
 					}
 					return obj
 				}(),
-				ExpectedErrorMessage: new(`spec.apiSpec.access.acls.allow.allow[0].kind: Unsupported value: ""`),
+				Assert: func(t *testing.T, obj *konnectv1alpha1.AIGatewayAgent) {
+					require.NotNil(t, obj.Spec.APISpec.Access.Acls)
+					require.NotNil(t, obj.Spec.APISpec.Access.Acls.Allow)
+					require.Len(t, obj.Spec.APISpec.Access.Acls.Allow.Allow, 1)
+					assert.Equal(t, "AIGatewayConsumerGroup", obj.Spec.APISpec.Access.Acls.Allow.Allow[0].Kind)
+				},
 			},
 			{
 				Name: "ACL ref with kind outside enum is invalid",
@@ -130,7 +135,6 @@ func TestAIGatewayAgent(t *testing.T) {
 							Type: konnectv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
 							Allow: &konnectv1alpha1.AIGatewayAllowACL{
 								Allow: []konnectv1alpha1.AIGatewayACLRef{
-									{Kind: "AIGatewayConsumer", Name: "consumer-a"},
 									{Kind: "AIGatewayConsumerGroup", Name: "group-a"},
 								},
 							},
@@ -141,9 +145,8 @@ func TestAIGatewayAgent(t *testing.T) {
 				Assert: func(t *testing.T, obj *konnectv1alpha1.AIGatewayAgent) {
 					require.NotNil(t, obj.Spec.APISpec.Access.Acls)
 					require.NotNil(t, obj.Spec.APISpec.Access.Acls.Allow)
-					require.Len(t, obj.Spec.APISpec.Access.Acls.Allow.Allow, 2)
-					assert.Equal(t, "AIGatewayConsumer", obj.Spec.APISpec.Access.Acls.Allow.Allow[0].Kind)
-					assert.Equal(t, "AIGatewayConsumerGroup", obj.Spec.APISpec.Access.Acls.Allow.Allow[1].Kind)
+					require.Len(t, obj.Spec.APISpec.Access.Acls.Allow.Allow, 1)
+					assert.Equal(t, "AIGatewayConsumerGroup", obj.Spec.APISpec.Access.Acls.Allow.Allow[0].Kind)
 				},
 			},
 		}.RunWithConfig(t, cfg, scheme)

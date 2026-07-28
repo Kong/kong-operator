@@ -68,5 +68,11 @@ func RequiredHardcodedEnvVars() []corev1.EnvVar {
 		{Name: "KONG_KONNECT_MODE", Value: "on"},
 		{Name: "KONG_LUA_SSL_TRUSTED_CERTIFICATE", Value: "system"},
 		{Name: "KONG_STATUS_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", consts.DataPlaneStatusPort)},
+		{Name: "KONG_PROXY_ACCESS_LOG", Value: "/dev/stdout"},
+		{Name: "KONG_PROXY_ERROR_LOG", Value: "/dev/stderr"},
+		{Name: "KONG_ADMIN_ACCESS_LOG", Value: "/dev/stdout"},
+		{Name: "KONG_ADMIN_ERROR_LOG", Value: "/dev/stderr"},
+		{Name: "KONG_ADMIN_GUI_ACCESS_LOG", Value: "/dev/stdout"},
+		{Name: "KONG_ADMIN_GUI_ERROR_LOG", Value: "/dev/stderr"},
 	}
 }

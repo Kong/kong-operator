@@ -10,9 +10,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestCreateEventGatewayVirtualClusterConsumePolicy(t *testing.T) {
@@ -20,9 +22,10 @@ func TestCreateEventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := sdkmocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	policy := testEventGatewayVirtualClusterConsumePolicy()
 
-	expectedRequest, err := policy.Spec.APISpec.ToCreateEventGatewayVirtualClusterConsumePolicyRequest()
+	expectedRequest, err := policy.ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = "gateway-1"
 	expectedRequest.VirtualClusterID = "virtual-cluster-1"
@@ -36,7 +39,7 @@ func TestCreateEventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createEventGatewayVirtualClusterConsumePolicy(ctx, sdk, policy))
+	require.NoError(t, createEventGatewayVirtualClusterConsumePolicy(ctx, cl, sdk, policy))
 	assert.Equal(t, "consume-policy-1", policy.GetKonnectID())
 }
 
@@ -45,10 +48,11 @@ func TestUpdateEventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := sdkmocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	policy := testEventGatewayVirtualClusterConsumePolicy()
 	policy.SetKonnectID("consume-policy-1")
 
-	expectedRequest, err := policy.Spec.APISpec.ToUpdateEventGatewayVirtualClusterConsumePolicyRequest()
+	expectedRequest, err := policy.ToUpdateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedRequest.GatewayID = "gateway-1"
 	expectedRequest.VirtualClusterID = "virtual-cluster-1"
@@ -59,7 +63,7 @@ func TestUpdateEventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 		Return(&sdkkonnectops.UpdateEventGatewayVirtualClusterConsumePolicyResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateEventGatewayVirtualClusterConsumePolicy(ctx, sdk, policy))
+	require.NoError(t, updateEventGatewayVirtualClusterConsumePolicy(ctx, cl, sdk, policy))
 }
 
 func TestDeleteEventGatewayVirtualClusterConsumePolicy(t *testing.T) {

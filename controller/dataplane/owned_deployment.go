@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -127,7 +128,9 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	}
 
 	// generate the initial Deployment struct
-	desiredDeployment, err := generateDataPlaneDeployment(validateDataPlaneImage, dataplane, d.defaultImage, d.additionalLabels, d.opts...)
+	desiredDeployment, err := generateDataPlaneDeployment(
+		d.logger, validateDataPlaneImage, dataplane, d.defaultImage, d.additionalLabels, d.opts...,
+	)
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("could not generate Deployment: %w", err)
 	}
@@ -152,7 +155,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	// apply default envvars and restore the hacked-out ones
 	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, config.KongDefaults)
 
-	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), dataplane.Spec); err != nil {
+	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), deploymentRelevantDataPlaneSpec(dataplane)); err != nil {
 		return nil, op.Noop, err
 	}
 
@@ -168,6 +171,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 // generateDataPlaneDeployment generates the base Deployment for a DataPlane. It determines the image to use and
 // generates an opt transform function to add additional labels before invoking the generator utility.
 func generateDataPlaneDeployment(
+	logger logr.Logger,
 	validateDataPlaneImage bool,
 	dataplane *operatorv1beta1.DataPlane,
 	defaultImage string,
@@ -191,6 +195,8 @@ func generateDataPlaneDeployment(
 	if err != nil {
 		return nil, err
 	}
+	addAnnotationsForDataPlaneDeployment(logger, generatedDeployment.Unwrap(), *dataplane)
+	addLabelsForDataPlaneDeployment(logger, generatedDeployment.Unwrap(), *dataplane)
 	return generatedDeployment, nil
 }
 
@@ -362,6 +368,17 @@ func isRecentDeploymentRestart(template *corev1.PodTemplateSpec, logger logr.Log
 	return restartTimeStr, false
 }
 
+// deploymentRelevantDataPlaneSpec returns a copy of the DataPlane's spec with fields
+// that have no bearing on the generated Deployment zeroed out. It's used as the input
+// for the Deployment's spec-hash annotation, so that changes to fields the Deployment
+// doesn't care about (e.g. Scaling, which only affects the HPA) don't cause a spurious
+// Deployment update that would pre-empt reconciliation of those other resources.
+func deploymentRelevantDataPlaneSpec(dataplane *operatorv1beta1.DataPlane) operatorv1beta1.DataPlaneSpec {
+	spec := *dataplane.Spec.DeepCopy()
+	spec.Deployment.Scaling = nil
+	return spec
+}
+
 // reconcileDataPlaneDeployment takes any existing DataPlane Deployment and a desired DataPlane Deployment and
 // reconciles the existing state to the desired state by either updating an existing Deployment, creating a new one,
 // or doing nothing.
@@ -380,7 +397,7 @@ func reconcileDataPlaneDeployment(
 		// existing Deployment with the spec hash of the desired Deployment. If
 		// the hashes match, we skip the update.
 		if !enforceConfig {
-			match, err := k8sresources.SpecHashMatchesAnnotation(dataplane.Spec, existing)
+			match, err := k8sresources.SpecHashMatchesAnnotation(deploymentRelevantDataPlaneSpec(dataplane), existing)
 			if err != nil {
 				return op.Noop, nil, err
 			}
@@ -400,8 +417,37 @@ func reconcileDataPlaneDeployment(
 		// Keep track of this for logging purposes
 		originalReplicaCount := existing.Spec.Replicas
 
+		// Save the original last-applied-annotations before EnsureObjectMetaIsUpdated
+		// merges generated annotations into existing ones. EnsureObjectMetaIsUpdated
+		// overwrites AnnotationLastAppliedAnnotations with the new value before the
+		// option function runs, which prevents detecting removed annotations.
+		originalLastApplied := existing.Annotations[consts.AnnotationLastAppliedAnnotations]
+
 		// ensure that object metadata is up to date
-		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, desired.ObjectMeta)
+		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, desired.ObjectMeta,
+			// enforce all the annotations provided through the dataplane API, removing
+			// any that were previously set by the operator but are no longer present
+			// in the DataPlane spec.
+			func(existingMeta metav1.ObjectMeta, generatedMeta metav1.ObjectMeta) (bool, metav1.ObjectMeta) {
+				// Restore the original last-applied-annotations so that
+				// ensureDataPlaneDeploymentAnnotationsUpdated can correctly
+				// determine which annotations were removed from the DataPlane spec.
+				if existingMeta.Annotations != nil && originalLastApplied != "" {
+					existingMeta.Annotations[consts.AnnotationLastAppliedAnnotations] = originalLastApplied
+				}
+				metaToUpdate, updatedAnnotations, err := ensureDataPlaneDeploymentAnnotationsUpdated(
+					dataplane, existingMeta.Annotations, generatedMeta.Annotations,
+				)
+				if err != nil {
+					log.Error(logger, err, "failed to update annotations of existing Deployment for DataPlane",
+						"dataplane", fmt.Sprintf("%s/%s", dataplane.Namespace, dataplane.Name),
+						"deployment", fmt.Sprintf("%s/%s", existing.Namespace, existing.Name))
+					return true, existingMeta
+				}
+				existingMeta.Annotations = updatedAnnotations
+				return metaToUpdate, existingMeta
+			},
+		)
 
 		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes
 		opts := []cmp.Option{

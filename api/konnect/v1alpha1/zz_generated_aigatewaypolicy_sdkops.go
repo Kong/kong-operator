@@ -114,6 +114,27 @@ func normalizeAIGatewayPolicySDKOpsBoolField(value any, path []string) (any, err
 	}
 }
 
+// AIGatewayPolicySDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var AIGatewayPolicySDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"config",
+		},
+	},
+	{
+		Path: []string{
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"managed_by",
+		},
+	},
+}
+
 func (s *AIGatewayPolicyAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -127,7 +148,7 @@ func (s *AIGatewayPolicyAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	payload = flattenSensitiveData(payload)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	payload = renameKeysToSDK(payload)
+	payload = renameKeysToSDKExcept(payload, AIGatewayPolicySDKOpsFreeformKeyFields)
 	if pm, ok := payload.(map[string]any); ok {
 		if err := normalizeAIGatewayPolicySDKOpsBoolFields(pm); err != nil {
 			return nil, fmt.Errorf("failed to normalize AIGatewayPolicyAPISpec SDK payload: %w", err)

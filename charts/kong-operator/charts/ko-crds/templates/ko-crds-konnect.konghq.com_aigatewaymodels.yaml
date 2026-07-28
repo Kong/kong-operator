@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.2.1
+    kubernetes-configuration.konghq.com/version: v2.3.0-rc.2
   name: aigatewaymodels.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -127,29 +127,36 @@ spec:
                     description: API configuration.
                     properties:
                       access:
-                        description: Access control configuration for a model.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Access control configuration for a model.
                         properties:
                           acls:
-                            description: Access control rules. Configure exactly one
-                              of `allow` or `deny`.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Access control rules. Configure exactly one of `allow` or `deny`.
                             properties:
                               allow:
                                 description: Allow configuration.
                                 properties:
                                   allow:
                                     description: |-
-                                      List of Consumers, Consumer Groups, or Authenticated Groups that are
+                                      List of Consumer Groups Names, or Authenticated Groups Names that are
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
+                                          default: AIGatewayConsumerGroup
                                           description: Kind is the kind of the referenced
                                             object.
                                           enum:
-                                          - AIGatewayConsumer
                                           - AIGatewayConsumerGroup
                                           type: string
                                         name:
@@ -162,7 +169,6 @@ spec:
                                             cross-namespace support.
                                           type: string
                                       required:
-                                      - kind
                                       - name
                                       type: object
                                     type: array
@@ -174,18 +180,18 @@ spec:
                                 properties:
                                   deny:
                                     description: |-
-                                      List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+                                      List of Consumer Groups Names, or Authenticated Groups Names that are denied
                                       access.
                                     items:
                                       description: |-
-                                        AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
+                                          default: AIGatewayConsumerGroup
                                           description: Kind is the kind of the referenced
                                             object.
                                           enum:
-                                          - AIGatewayConsumer
                                           - AIGatewayConsumerGroup
                                           type: string
                                         name:
@@ -198,7 +204,6 @@ spec:
                                             cross-namespace support.
                                           type: string
                                       required:
-                                      - kind
                                       - name
                                       type: object
                                     type: array
@@ -222,8 +227,8 @@ spec:
                               referenced.
                             items:
                               description: |-
-                                AIGatewayIdentityProviderReference Reference to a provider instance.
-                                This is either the identity provider ID or the identity provider name.
+                                AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                by name.
                               type: string
                             type: array
                         type: object
@@ -239,6 +244,9 @@ spec:
                         properties:
                           balancer:
                             description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
                               Configuration for a model's load balancer when multiple target models are
                               configured.
                             properties:
@@ -652,8 +660,11 @@ spec:
                                         - Disabled
                                         type: string
                                       config:
-                                        description: Configuration for an embeddings
-                                          model.
+                                        description: |-
+                                          **Pre-release Feature**
+                                          This feature is currently in beta and is subject to change.
+
+                                          Configuration for an embeddings model.
                                         properties:
                                           azure:
                                             description: Azure configuration.
@@ -673,11 +684,9 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                             required:
                                             - deploymentID
-                                            - upstreamURL
                                             type: object
                                           bedrock:
                                             description: Bedrock configuration.
@@ -709,41 +718,22 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                               videoOutputS3URI:
                                                 description: S3 URI for storing video
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
-                                            required:
-                                            - upstreamURL
-                                            type: object
-                                          databricks:
-                                            description: Databricks configuration.
-                                            properties:
-                                              upstreamURL:
-                                                description: The URL of the embeddings
-                                                  model.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                              workspaceInstanceID:
-                                                description: The Databricks workspace
-                                                  instance ID.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - upstreamURL
-                                            - workspaceInstanceID
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: Configuration for a model
-                                                  hosted on Google Cloud Project.
+                                                description: |-
+                                                  **Pre-release Feature**
+                                                  This feature is currently in beta and is subject to change.
+
+                                                  Configuration for a model hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -772,10 +762,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           huggingface:
                                             description: Huggingface configuration.
@@ -784,7 +771,6 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                               useCache:
                                                 description: Whether to use the Hugging
@@ -800,8 +786,33 @@ spec:
                                                 - Enabled
                                                 - Disabled
                                                 type: string
-                                            required:
-                                            - upstreamURL
+                                            type: object
+                                          mistral:
+                                            description: Mistral configuration.
+                                            properties:
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                type: string
+                                            type: object
+                                          ollama:
+                                            description: Ollama configuration.
+                                            properties:
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                type: string
+                                            type: object
+                                          openai:
+                                            description: Openai configuration.
+                                            properties:
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           type:
                                             description: Type designates the type
@@ -809,31 +820,23 @@ spec:
                                             enum:
                                             - azure
                                             - bedrock
-                                            - databricks
                                             - gemini
                                             - huggingface
-                                            - vercel
+                                            - mistral
+                                            - ollama
+                                            - openai
                                             - vertex
                                             minLength: 1
                                             type: string
-                                          vercel:
-                                            description: Vercel configuration.
-                                            properties:
-                                              upstreamURL:
-                                                description: The URL of the embeddings
-                                                  model.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - upstreamURL
-                                            type: object
                                           vertex:
                                             description: Vertex configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: Configuration for a model
-                                                  hosted on Google Cloud Project.
+                                                description: |-
+                                                  **Pre-release Feature**
+                                                  This feature is currently in beta and is subject to change.
+
+                                                  Configuration for a model hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -862,10 +865,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                         required:
                                         - type
@@ -876,9 +876,8 @@ spec:
                                         minLength: 1
                                         type: string
                                       provider:
-                                        description: |-
-                                          Reference to a model provider instance.
-                                          This is either the model provider ID or the model provider name.
+                                        description: Reference to a model provider
+                                          instance by name.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -934,8 +933,11 @@ spec:
                                     minimum: 10
                                     type: integer
                                   vectordb:
-                                    description: Configuration for the vector database
-                                      used by the model.
+                                    description: |-
+                                      **Pre-release Feature**
+                                      This feature is currently in beta and is subject to change.
+
+                                      Configuration for the vector database used by the model.
                                     properties:
                                       pgvector:
                                         description: PgVector configuration.
@@ -1433,14 +1435,13 @@ spec:
                             - algorithm
                             type: object
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for AI Gateway logging.
                             properties:
                               payloads:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              statistics:
                                 enum:
                                 - Enabled
                                 - Disabled
@@ -1450,17 +1451,6 @@ spec:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
                             type: integer
-                          model:
-                            description: AIGatewayModelAPIConfigModel is a type alias.
-                            properties:
-                              alias:
-                                description: |-
-                                  An alias for the model, used to select the target virtual model when passed
-                                  in the "model" parameter of the request body.
-                                  When not set, this defaults to the AI Gateway model's name.
-                                maxLength: 253
-                                type: string
-                            type: object
                           proxy:
                             description: |-
                               HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
@@ -1538,7 +1528,11 @@ spec:
                             maxLength: 253
                             type: string
                           route:
-                            description: Configuration for an AI Gateway route.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -1572,6 +1566,56 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              model:
+                                description: Configuration for routing to this model
+                                  using an alias.
+                                properties:
+                                  body:
+                                    description: Body configuration.
+                                    properties:
+                                      body:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request body.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - body
+                                    type: object
+                                  headers:
+                                    description: Headers configuration.
+                                    properties:
+                                      headers:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request headers.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - headers
+                                    type: object
+                                  path:
+                                    description: Path configuration.
+                                    properties:
+                                      pathAliases:
+                                        description: Value that will cause this route
+                                          to match if present in the request path.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - pathAliases
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - body
+                                    - headers
+                                    - path
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
                               paths:
                                 description: A list of paths that match this route.
                                 items:
@@ -1641,7 +1685,6 @@ spec:
                                 type: array
                             type: object
                         required:
-                        - model
                         - route
                         type: object
                       displayName:
@@ -1671,6 +1714,7 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - vertex
                               maxLength: 253
                               type: string
                           type: object
@@ -1708,6 +1752,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -1718,7 +1765,27 @@ spec:
                       policies:
                         description: List of policy references.
                         items:
-                          type: string
+                          description: |-
+                            AIGatewayPolicyRef references an AIGatewayPolicy in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayPolicy
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayPolicy
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace is reserved for future cross-namespace
+                                support.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                       targets:
                         description: One or more backend models that this model entry
@@ -1736,7 +1803,11 @@ spec:
                               - Disabled
                               type: string
                             config:
-                              description: Configuration for a target model.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
+                                Configuration for a target model.
                               properties:
                                 anthropic:
                                   description: Anthropic configuration.
@@ -2153,8 +2224,11 @@ spec:
                                         outputs.
                                       type: integer
                                     gcpEnvironment:
-                                      description: Configuration for a model hosted
-                                        on Google Cloud Project.
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+
+                                        Configuration for a model hosted on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
@@ -2571,8 +2645,11 @@ spec:
                                         outputs.
                                       type: integer
                                     gcpEnvironment:
-                                      description: Configuration for a model hosted
-                                        on Google Cloud Project.
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+
+                                        Configuration for a model hosted on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
@@ -2586,7 +2663,6 @@ spec:
                                             This must be set when running a target model on Gemini on Vertex Model
                                             Garden.
                                           maxLength: 253
-                                          minLength: 1
                                           type: string
                                         locationID:
                                           description: The Google Cloud location ID
@@ -2602,7 +2678,6 @@ spec:
                                           type: string
                                       required:
                                       - apiEndpoint
-                                      - endpointID
                                       - locationID
                                       - projectID
                                       type: object
@@ -2733,12 +2808,28 @@ spec:
                               minLength: 1
                               type: string
                             provider:
-                              description: |-
-                                Reference to a model provider instance.
-                                This is either the model provider ID or the model provider name.
-                              maxLength: 253
-                              minLength: 1
-                              type: string
+                              description: Reference to a model provider instance
+                                by name.
+                              properties:
+                                kind:
+                                  default: AIGatewayModelProvider
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayModelProvider
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: Namespace is reserved for future cross-namespace
+                                    support.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             semanticDescription:
                               description: |-
                                 The semantic description of the target, required if using semantic load
@@ -2771,29 +2862,36 @@ spec:
                     description: Model configuration.
                     properties:
                       access:
-                        description: Access control configuration for a model.
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Access control configuration for a model.
                         properties:
                           acls:
-                            description: Access control rules. Configure exactly one
-                              of `allow` or `deny`.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Access control rules. Configure exactly one of `allow` or `deny`.
                             properties:
                               allow:
                                 description: Allow configuration.
                                 properties:
                                   allow:
                                     description: |-
-                                      List of Consumers, Consumer Groups, or Authenticated Groups that are
+                                      List of Consumer Groups Names, or Authenticated Groups Names that are
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
+                                          default: AIGatewayConsumerGroup
                                           description: Kind is the kind of the referenced
                                             object.
                                           enum:
-                                          - AIGatewayConsumer
                                           - AIGatewayConsumerGroup
                                           type: string
                                         name:
@@ -2806,7 +2904,6 @@ spec:
                                             cross-namespace support.
                                           type: string
                                       required:
-                                      - kind
                                       - name
                                       type: object
                                     type: array
@@ -2818,18 +2915,18 @@ spec:
                                 properties:
                                   deny:
                                     description: |-
-                                      List of Consumers, Consumer Groups, or Authenticated Groups that are denied
+                                      List of Consumer Groups Names, or Authenticated Groups Names that are denied
                                       access.
                                     items:
                                       description: |-
-                                        AIGatewayACLRef references an AIGatewayConsumer or AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
+                                          default: AIGatewayConsumerGroup
                                           description: Kind is the kind of the referenced
                                             object.
                                           enum:
-                                          - AIGatewayConsumer
                                           - AIGatewayConsumerGroup
                                           type: string
                                         name:
@@ -2842,7 +2939,6 @@ spec:
                                             cross-namespace support.
                                           type: string
                                       required:
-                                      - kind
                                       - name
                                       type: object
                                     type: array
@@ -2866,8 +2962,8 @@ spec:
                               referenced.
                             items:
                               description: |-
-                                AIGatewayIdentityProviderReference Reference to a provider instance.
-                                This is either the identity provider ID or the identity provider name.
+                                AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                by name.
                               type: string
                             type: array
                         type: object
@@ -2882,6 +2978,9 @@ spec:
                         properties:
                           balancer:
                             description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
                               Configuration for a model's load balancer when multiple target models are
                               configured.
                             properties:
@@ -3295,8 +3394,11 @@ spec:
                                         - Disabled
                                         type: string
                                       config:
-                                        description: Configuration for an embeddings
-                                          model.
+                                        description: |-
+                                          **Pre-release Feature**
+                                          This feature is currently in beta and is subject to change.
+
+                                          Configuration for an embeddings model.
                                         properties:
                                           azure:
                                             description: Azure configuration.
@@ -3316,11 +3418,9 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                             required:
                                             - deploymentID
-                                            - upstreamURL
                                             type: object
                                           bedrock:
                                             description: Bedrock configuration.
@@ -3352,41 +3452,22 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                               videoOutputS3URI:
                                                 description: S3 URI for storing video
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
-                                            required:
-                                            - upstreamURL
-                                            type: object
-                                          databricks:
-                                            description: Databricks configuration.
-                                            properties:
-                                              upstreamURL:
-                                                description: The URL of the embeddings
-                                                  model.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                              workspaceInstanceID:
-                                                description: The Databricks workspace
-                                                  instance ID.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - upstreamURL
-                                            - workspaceInstanceID
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: Configuration for a model
-                                                  hosted on Google Cloud Project.
+                                                description: |-
+                                                  **Pre-release Feature**
+                                                  This feature is currently in beta and is subject to change.
+
+                                                  Configuration for a model hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -3415,10 +3496,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                           huggingface:
                                             description: Huggingface configuration.
@@ -3427,7 +3505,6 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
                                               useCache:
                                                 description: Whether to use the Hugging
@@ -3443,8 +3520,33 @@ spec:
                                                 - Enabled
                                                 - Disabled
                                                 type: string
-                                            required:
-                                            - upstreamURL
+                                            type: object
+                                          mistral:
+                                            description: Mistral configuration.
+                                            properties:
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                type: string
+                                            type: object
+                                          ollama:
+                                            description: Ollama configuration.
+                                            properties:
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                type: string
+                                            type: object
+                                          openai:
+                                            description: Openai configuration.
+                                            properties:
+                                              upstreamURL:
+                                                description: The URL of the embeddings
+                                                  model.
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           type:
                                             description: Type designates the type
@@ -3452,31 +3554,23 @@ spec:
                                             enum:
                                             - azure
                                             - bedrock
-                                            - databricks
                                             - gemini
                                             - huggingface
-                                            - vercel
+                                            - mistral
+                                            - ollama
+                                            - openai
                                             - vertex
                                             minLength: 1
                                             type: string
-                                          vercel:
-                                            description: Vercel configuration.
-                                            properties:
-                                              upstreamURL:
-                                                description: The URL of the embeddings
-                                                  model.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - upstreamURL
-                                            type: object
                                           vertex:
                                             description: Vertex configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: Configuration for a model
-                                                  hosted on Google Cloud Project.
+                                                description: |-
+                                                  **Pre-release Feature**
+                                                  This feature is currently in beta and is subject to change.
+
+                                                  Configuration for a model hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -3505,10 +3599,7 @@ spec:
                                                 description: The URL of the embeddings
                                                   model.
                                                 maxLength: 253
-                                                minLength: 1
                                                 type: string
-                                            required:
-                                            - upstreamURL
                                             type: object
                                         required:
                                         - type
@@ -3519,9 +3610,8 @@ spec:
                                         minLength: 1
                                         type: string
                                       provider:
-                                        description: |-
-                                          Reference to a model provider instance.
-                                          This is either the model provider ID or the model provider name.
+                                        description: Reference to a model provider
+                                          instance by name.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -3577,8 +3667,11 @@ spec:
                                     minimum: 10
                                     type: integer
                                   vectordb:
-                                    description: Configuration for the vector database
-                                      used by the model.
+                                    description: |-
+                                      **Pre-release Feature**
+                                      This feature is currently in beta and is subject to change.
+
+                                      Configuration for the vector database used by the model.
                                     properties:
                                       pgvector:
                                         description: PgVector configuration.
@@ -4076,14 +4169,13 @@ spec:
                             - algorithm
                             type: object
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for AI Gateway logging.
                             properties:
                               payloads:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              statistics:
                                 enum:
                                 - Enabled
                                 - Disabled
@@ -4094,19 +4186,16 @@ spec:
                               to 0 for unlimited.
                             type: integer
                           model:
-                            description: AIGatewayModelModelConfigModel is a type
-                              alias.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
                             properties:
-                              alias:
-                                description: |-
-                                  An alias for the model, used to select the target virtual model when passed
-                                  in the "model" parameter of the request body.
-                                  When not set, this defaults to the AI Gateway model's name.
-                                maxLength: 253
-                                type: string
                               nameHeader:
-                                description: Display the model name selected in the
-                                  X-Kong-LLM-Model response header
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Display the model name selected in the X-Kong-LLM-Model response header
                                 enum:
                                 - Enabled
                                 - Disabled
@@ -4189,7 +4278,11 @@ spec:
                             maxLength: 253
                             type: string
                           route:
-                            description: Configuration for an AI Gateway route.
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -4223,6 +4316,56 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              model:
+                                description: Configuration for routing to this model
+                                  using an alias.
+                                properties:
+                                  body:
+                                    description: Body configuration.
+                                    properties:
+                                      body:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request body.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - body
+                                    type: object
+                                  headers:
+                                    description: Headers configuration.
+                                    properties:
+                                      headers:
+                                        description: |-
+                                          Value indexed by property name that will cause this route to match if
+                                          present in the request headers.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - headers
+                                    type: object
+                                  path:
+                                    description: Path configuration.
+                                    properties:
+                                      pathAliases:
+                                        description: Value that will cause this route
+                                          to match if present in the request path.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - pathAliases
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - body
+                                    - headers
+                                    - path
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
                               paths:
                                 description: A list of paths that match this route.
                                 items:
@@ -4292,7 +4435,6 @@ spec:
                                 type: array
                             type: object
                         required:
-                        - model
                         - route
                         type: object
                       displayName:
@@ -4322,6 +4464,7 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - vertex
                               maxLength: 253
                               type: string
                           type: object
@@ -4359,6 +4502,9 @@ spec:
                         type: object
                       name:
                         description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
                           A user-defined unique identifier for this model, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -4369,7 +4515,27 @@ spec:
                       policies:
                         description: List of policy references.
                         items:
-                          type: string
+                          description: |-
+                            AIGatewayPolicyRef references an AIGatewayPolicy in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayPolicy
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayPolicy
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace is reserved for future cross-namespace
+                                support.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                       targets:
                         description: One or more backend models that this model entry
@@ -4387,7 +4553,11 @@ spec:
                               - Disabled
                               type: string
                             config:
-                              description: Configuration for a target model.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
+                                Configuration for a target model.
                               properties:
                                 anthropic:
                                   description: Anthropic configuration.
@@ -4804,8 +4974,11 @@ spec:
                                         outputs.
                                       type: integer
                                     gcpEnvironment:
-                                      description: Configuration for a model hosted
-                                        on Google Cloud Project.
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+
+                                        Configuration for a model hosted on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
@@ -5222,8 +5395,11 @@ spec:
                                         outputs.
                                       type: integer
                                     gcpEnvironment:
-                                      description: Configuration for a model hosted
-                                        on Google Cloud Project.
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+
+                                        Configuration for a model hosted on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
@@ -5237,7 +5413,6 @@ spec:
                                             This must be set when running a target model on Gemini on Vertex Model
                                             Garden.
                                           maxLength: 253
-                                          minLength: 1
                                           type: string
                                         locationID:
                                           description: The Google Cloud location ID
@@ -5253,7 +5428,6 @@ spec:
                                           type: string
                                       required:
                                       - apiEndpoint
-                                      - endpointID
                                       - locationID
                                       - projectID
                                       type: object
@@ -5384,12 +5558,28 @@ spec:
                               minLength: 1
                               type: string
                             provider:
-                              description: |-
-                                Reference to a model provider instance.
-                                This is either the model provider ID or the model provider name.
-                              maxLength: 253
-                              minLength: 1
-                              type: string
+                              description: Reference to a model provider instance
+                                by name.
+                              properties:
+                                kind:
+                                  default: AIGatewayModelProvider
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayModelProvider
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: Namespace is reserved for future cross-namespace
+                                    support.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             semanticDescription:
                               description: |-
                                 The semantic description of the target, required if using semantic load

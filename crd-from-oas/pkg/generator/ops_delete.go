@@ -67,6 +67,9 @@ type opsDeleteFuncData struct {
 	// DeletePutReqBodyPointer indicates whether the update/PUT SDK method expects
 	// the request body by pointer.
 	DeletePutReqBodyPointer bool
+	// SupportsMirror is true when the entity opted into Origin+Mirror. The
+	// generated delete function then early-returns a no-op for Mirror entities.
+	SupportsMirror bool
 }
 
 // generateOpsDeleteFuncBody renders the delete<Entity> function body (no file header).
@@ -103,6 +106,7 @@ func (g *Generator) generateOpsDeleteFuncBody(
 			DeletePutEntityIDField:    callShape.EntityIDField,
 			DeletePutBodyField:        callShape.BodyField,
 			DeletePutReqBodyPointer:   callShape.ReqBodyPointer,
+			SupportsMirror:            g.entitySupportsMirror(entityName),
 		}, nil
 	}
 	if schema.DeleteOperationID == "" {
@@ -155,6 +159,7 @@ func (g *Generator) generateOpsDeleteFuncBody(
 		DeleteEntityIDField: deleteEntityIDField,
 		DeleteNilArgs:       nilArgs,
 		DeleteOmitsEntityID: deleteOmitsEntityID,
+		SupportsMirror:      g.entitySupportsMirror(entityName),
 	}, nil
 }
 
