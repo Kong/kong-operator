@@ -17,6 +17,13 @@ var skippedTestsShared = []string{
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 
+var skippedTestsForStandard = []string{
+	// TODO: https://github.com/Kong/kong-operator/issues/5079
+	// TCPRouteMultipleRoutesAttachment fails because TCPRouteMustHaveCondition
+	// times out after 60s, unlike the loosened 180s HTTPRoute timeout.
+	tests.TCPRouteMultipleRoutesAttachment.ShortName,
+}
+
 var skippedTestsForExpressionsRouter = []string{}
 
 var skippedTestsForStandardTraditionalCompatibleRouter = []string{
@@ -50,6 +57,9 @@ var skippedTestsForHybrid = []string{
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.
 func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType) []string {
 	skipped := append([]string{}, skippedTestsShared...)
+	if gwType == standardGateway {
+		skipped = append(skipped, skippedTestsForStandard...)
+	}
 
 	switch routerFlavor {
 	case consts.RouterFlavorTraditionalCompatible:
