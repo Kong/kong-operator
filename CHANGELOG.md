@@ -80,14 +80,16 @@
   [#5066](https://github.com/Kong/kong-operator/pull/5066)
 
 ### Added
-
-- `GatewayConfiguration` supports `spec.deployment.labels` and
-  `spec.deployment.annotations` for `Deployment` metadata, with safe managed-key
-  removal so operator-managed keys are removed without clobbering external
-  labels or annotations. This change causes a rolling restart of the underlying `Pod`s
-  when updating operator to this version, no matter whether the user has set any
-  labels or annotations.
-  [#5037](https://github.com/Kong/kong-operator/pull/5037)
+  
+- Support `spec.deployment.labels` and `spec.deployment.annotations` for metadata
+  of underlying dataplane `Deployment` for:
+  - `DataPlane` [#5037](https://github.com/Kong/kong-operator/pull/5037)
+  - `AIGatewayDataPlane` [5081](https://github.com/Kong/kong-operator/pull/5081)
+  with safe managed-key removal so operator-managed keys are removed without
+  clobbering external labels or annotations. This change causes a rolling
+  restart of the underlying `Pod`s when updating operator to this version,
+  no matter whether the user has set any labels or annotations.
+  
 - EventGateway CRDs: added `EventGatewaySchemaRegistry` CRD and reconciliation logic.
   [#5017](https://github.com/Kong/kong-operator/pull/5017)
 - Gateway: Support `TCPRoute` for on-prem gateways.
