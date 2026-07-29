@@ -10,6 +10,7 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 const (
@@ -237,7 +238,7 @@ func TestApplyTimeoutToServiceFromHTTPRouteRuleMapsZeroToMaxKongTimeout(t *testi
 		},
 	})
 
-	require.Equal(t, maxKongServiceTimeout, *service.ConnectTimeout)
-	require.Equal(t, maxKongServiceTimeout, *service.ReadTimeout)
-	require.Equal(t, maxKongServiceTimeout, *service.WriteTimeout)
+	require.Equal(t, consts.MaxKongServiceTimeout, *service.ConnectTimeout)
+	require.Equal(t, consts.MaxKongServiceTimeout, *service.ReadTimeout)
+	require.Equal(t, consts.MaxKongServiceTimeout, *service.WriteTimeout)
 }

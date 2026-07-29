@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
@@ -319,7 +320,7 @@ func translateHTTPRouteRulesMetaToKongstateService(
 
 // effectiveBackendRequestTimeout returns the Kong service timeout (in milliseconds) that a
 // rule's backendRequest timeout maps to, and whether that timeout differs from the default
-// service timeout. A zero duration maps to maxKongServiceTimeout (Kong's largest accepted
+// service timeout. A zero duration maps to consts.MaxKongServiceTimeout (Kong's largest accepted
 // timeout). Rules with no timeout, an unparsable timeout, or a timeout equal to the default
 // report differsFromDefault=false so that they neither alter the service nor force a split.
 // Grouping (getBackendRequestTimeoutKey) and application (applyTimeoutToServiceFromHTTPRouteRule)
@@ -335,7 +336,7 @@ func effectiveBackendRequestTimeout(rule gatewayapi.HTTPRouteRule) (timeoutMS in
 		return DefaultServiceTimeout, false
 	}
 	if duration == 0 {
-		timeoutMS = maxKongServiceTimeout
+		timeoutMS = consts.MaxKongServiceTimeout
 	} else {
 		timeoutMS = int(duration.Milliseconds())
 	}

@@ -10,12 +10,13 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // MaxKongServiceTimeout is the largest timeout Kong accepts for Service connect, read, and
 // write timeouts. Kong has no "disable" value, so a zero-duration backendRequest timeout
 // (which the Gateway API defines as "no timeout") is mapped to this as the closest emulation.
-const MaxKongServiceTimeout int64 = 2147483646
+const MaxKongServiceTimeout int64 = consts.MaxKongServiceTimeout
 
 // BackendRequestTimeoutMilliseconds returns the Kong service timeout (in milliseconds) derived
 // from an HTTPRoute rule's spec.timeouts.backendRequest, or nil when the rule sets no
