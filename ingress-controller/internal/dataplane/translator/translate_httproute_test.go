@@ -2188,8 +2188,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
-									Name:          new("httproute.default.basic-httproute.0.0"),
-									RegexPriority: new(8657043456),
+									Name: new("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
 										new("~/httpbin$"),
 									},

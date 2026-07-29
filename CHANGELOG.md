@@ -324,13 +324,14 @@
   Gateway API matching semantics.
   [#4597](https://github.com/Kong/kong-operator/pull/4597)
 - Traditional router: Kong routes translated from `HTTPRoute` matches are now
-  assigned a stable `regex_priority` derived from the match's Gateway API
+  assigned a compact `regex_priority` derived from the match's Gateway API
   precedence traits (hostname specificity, path type and length, method,
   header and query parameter counts) plus, within a single `HTTPRoute`, the
   rule and match order. This ensures overlapping matches of different
   specificity, and overlapping matches within one `HTTPRoute`, are evaluated
-  in the order required by the Gateway API specification without renumbering
-  unrelated routes when other `HTTPRoute`s are added or removed. Equally
+  in the order required by the Gateway API specification. Adding or removing
+  `HTTPRoute`s whose match shapes already exist does not renumber unrelated
+  routes; introducing a new precedence class may. Equally
   specific matches from different `HTTPRoute`s share the same priority and
   their relative order remains unspecified, as before. `HTTPRoute` matches
   with multiple header matches using equivalent, case-insensitive names no

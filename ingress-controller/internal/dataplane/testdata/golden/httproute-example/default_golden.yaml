@@ -17,7 +17,7 @@ services:
     - ~/nginx$
     - /nginx/
     preserve_host: true
-    regex_priority: 41943040
+    regex_priority: 1024
     strip_path: true
     tags:
     - k8s-name:httproute-testing
@@ -50,7 +50,7 @@ services:
     - ~/content$
     - /content/
     preserve_host: true
-    regex_priority: 58720256
+    regex_priority: 2048
     strip_path: true
     tags:
     - k8s-name:httproute-testing
@@ -83,7 +83,7 @@ services:
     - ~/httproute-testing$
     - /httproute-testing/
     preserve_host: true
-    regex_priority: 142606336
+    regex_priority: 3072
     strip_path: true
     tags:
     - k8s-name:httproute-testing

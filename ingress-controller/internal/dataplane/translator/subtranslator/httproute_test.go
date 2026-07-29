@@ -858,7 +858,7 @@ func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatch
 				Rules: []gatewayapi.HTTPRouteRule{
 					{
 						Matches: []gatewayapi.HTTPRouteMatch{
-							builder.NewHTTPRouteMatch().WithHeader("version", "two").Build(),
+							builder.NewHTTPRouteMatch().WithPathPrefix("/").WithHeader("version", "two").Build(),
 						},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							builder.NewHTTPBackendRef("infra-backend-v2").WithPort(80).Build(),
@@ -867,6 +867,7 @@ func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatch
 					{
 						Matches: []gatewayapi.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().
+								WithPathPrefix("/").
 								WithHeader("Version", "two").
 								WithHeader("Color", "orange").
 								Build(),
@@ -877,7 +878,7 @@ func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatch
 					},
 					{
 						Matches: []gatewayapi.HTTPRouteMatch{
-							builder.NewHTTPRouteMatch().WithHeader("Color", "blue").Build(),
+							builder.NewHTTPRouteMatch().WithPathPrefix("/").WithHeader("Color", "blue").Build(),
 						},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							builder.NewHTTPBackendRef("infra-backend-v1").WithPort(80).Build(),
@@ -931,15 +932,18 @@ func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatch
 	}
 	require.NotNil(t, twoHeaderRoute.RegexPriority)
 	require.NotNil(t, oneHeaderRoute.RegexPriority)
+	require.Equal(t, traditionalMatchPriorityClassSize, regexPriority(twoHeaderRoute))
+	require.Equal(t, 1, regexPriority(oneHeaderRoute))
+	require.Nil(t, colorBlueRoute.RegexPriority)
 	require.Greater(t, regexPriority(twoHeaderRoute), regexPriority(oneHeaderRoute))
 	require.Greater(t, regexPriority(oneHeaderRoute), regexPriority(colorBlueRoute))
 	require.Equal(t, map[string][]string{"version": {"two"}}, oneHeaderRoute.Headers)
-	require.Equal(t, kong.StringSlice(kongHTTPRouteHeaderOnlyRegexPath), oneHeaderRoute.Paths)
-	require.Equal(t, kong.StringSlice(kongHTTPRouteHeaderOnlyRegexPath), twoHeaderRoute.Paths)
-	require.Equal(t, kong.StringSlice(kongHTTPRouteHeaderOnlyRegexPath), colorBlueRoute.Paths)
+	require.Equal(t, kong.StringSlice("~/$", "/"), oneHeaderRoute.Paths)
+	require.Equal(t, kong.StringSlice("~/$", "/"), twoHeaderRoute.Paths)
+	require.Equal(t, kong.StringSlice("~/$", "/"), colorBlueRoute.Paths)
 }
 
-func TestAssignTraditionalRoutePriorityToSplitHTTPRouteMatchesStableAcrossUnrelatedClasses(t *testing.T) {
+func TestAssignTraditionalRoutePriorityToSplitHTTPRouteMatchesStableAcrossUnrelatedRoutesWithExistingClasses(t *testing.T) {
 	stableHTTPRoute := &gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
@@ -967,19 +971,19 @@ func TestAssignTraditionalRoutePriorityToSplitHTTPRouteMatchesStableAcrossUnrela
 			Match:      builder.NewHTTPRouteMatch().WithPathExact("/very-long").Build(),
 		},
 	}
-	matchesWithUnrelatedLowerClass := append([]SplitHTTPRouteMatch{}, stableMatches...)
-	matchesWithUnrelatedLowerClass = append(matchesWithUnrelatedLowerClass, SplitHTTPRouteMatch{
+	matchesWithUnrelatedExistingClass := append([]SplitHTTPRouteMatch{}, stableMatches...)
+	matchesWithUnrelatedExistingClass = append(matchesWithUnrelatedExistingClass, SplitHTTPRouteMatch{
 		Source:     unrelatedHTTPRoute,
 		RuleIndex:  0,
 		MatchIndex: 0,
-		Match:      builder.NewHTTPRouteMatch().WithHeader("version", "two").Build(),
+		Match:      builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 	})
 
 	originalPriorities := httpRouteMatchPrioritiesByRuleMatch(
 		assignTraditionalRoutePriorityToSplitHTTPRouteMatches(stableMatches),
 	)
 	prioritiesWithUnrelatedRoute := httpRouteMatchPrioritiesByRuleMatch(
-		assignTraditionalRoutePriorityToSplitHTTPRouteMatches(matchesWithUnrelatedLowerClass),
+		assignTraditionalRoutePriorityToSplitHTTPRouteMatches(matchesWithUnrelatedExistingClass),
 	)
 
 	for _, key := range []httpRouteMatchPriorityKey{

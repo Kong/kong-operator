@@ -17,7 +17,6 @@ services:
     - ~/httpbin$
     - /httpbin/
     preserve_host: true
-    regex_priority: 58720256
     strip_path: true
     tags:
     - k8s-name:httpbin
