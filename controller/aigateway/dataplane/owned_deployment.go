@@ -259,8 +259,7 @@ func addAnnotationsForAIGatewayDataPlaneDeployment(logger logr.Logger, deploymen
 	if aigwdp.Spec.Deployment == nil || len(aigwdp.Spec.Deployment.Annotations) == 0 {
 		return
 	}
-	obj := &metav1.ObjectMeta{Namespace: aigwdp.Namespace, Name: aigwdp.Name, Annotations: aigwdp.Spec.Deployment.Annotations}
-	specAnnotations := reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, obj, aiGatewayDataPlaneDeploymentReservedKeys)
+	specAnnotations := reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, aigwdp.Spec.Deployment.Annotations, aiGatewayDataPlaneDeploymentReservedKeys)
 	deployment.Annotations = reservedkeys.Merge(deployment.Annotations, specAnnotations)
 }
 
@@ -272,8 +271,7 @@ func addLabelsForAIGatewayDataPlaneDeployment(logger logr.Logger, deployment *ap
 	if aigwdp.Spec.Deployment == nil || len(aigwdp.Spec.Deployment.Labels) == 0 {
 		return
 	}
-	obj := &metav1.ObjectMeta{Namespace: aigwdp.Namespace, Name: aigwdp.Name, Labels: aigwdp.Spec.Deployment.Labels}
-	specLabels := reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, obj, aiGatewayDataPlaneDeploymentReservedKeys)
+	specLabels := reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, aigwdp.Spec.Deployment.Labels, aiGatewayDataPlaneDeploymentReservedKeys)
 	deployment.Labels = reservedkeys.Merge(deployment.Labels, specLabels)
 }
 
