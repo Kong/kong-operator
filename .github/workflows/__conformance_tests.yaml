@@ -47,6 +47,11 @@ jobs:
       with:
         install: false
 
+    - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+      id: license
+      with:
+        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
     - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
     - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV
 
@@ -89,6 +94,7 @@ jobs:
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ matrix.gateway-type == 'hybrid' && secrets.KONG_TEST_KONNECT_ACCESS_TOKEN || '' }}
         KONG_TEST_KONNECT_SERVER_URL: ${{ matrix.gateway-type == 'hybrid' && 'us.api.konghq.tech' || '' }}
         KONG_TEST_FORCE_CLEANUP: "true"
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
 
     - name: upload diagnostics
       if: ${{ always() }}

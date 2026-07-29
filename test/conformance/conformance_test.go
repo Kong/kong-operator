@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -96,6 +97,7 @@ func runConformance(
 ) {
 	t.Helper()
 	ensureConformanceNamespace(ctx, t)
+	createKongLicense(ctx, t)
 
 	if cleanupResources {
 		t.Cleanup(func() {
@@ -313,6 +315,39 @@ func ensureConformanceNamespace(ctx context.Context, t *testing.T) {
 			require.NoError(t, err)
 		}
 	}
+}
+
+// createKongLicense creates a KongLicense resource for the gateway conformance
+// tests, mirroring how other kong-operator test suites present a license to
+// the deployed Kong Gateway (e.g. test/integration/kic/isolated/license_test.go).
+// It reads the license from the KONG_LICENSE_DATA environment variable and
+// is a no-op if that variable is not set.
+func createKongLicense(ctx context.Context, t *testing.T) {
+	t.Helper()
+
+	licenseData := test.KongLicenseData()
+	if licenseData == "" {
+		t.Log("KONG_LICENSE_DATA not set, skipping KongLicense creation for gateway conformance tests")
+		return
+	}
+
+	t.Log("creating KongLicense for gateway conformance tests")
+	kongLicense := configurationv1alpha1.KongLicense{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "ko-conformance-license-",
+		},
+		RawLicenseString: licenseData,
+		Enabled:          true,
+	}
+	require.NoError(t, clients.MgrClient.Create(ctx, &kongLicense))
+	t.Cleanup(func() {
+		// NOTE: t.Context() is canceled before cleanup functions run (Go 1.24+),
+		// so we use context.Background() here instead.
+		err := clients.MgrClient.Delete(context.Background(), &kongLicense)
+		if err != nil && !apierrors.IsNotFound(err) {
+			require.NoError(t, err)
+		}
+	})
 }
 
 func createGatewayConfiguration(

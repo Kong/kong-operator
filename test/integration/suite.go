@@ -13,7 +13,11 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -65,9 +69,31 @@ func GetClients() testutils.K8sClients {
 	return clients
 }
 
+// SuiteOption configures optional behavior of Suite.
+type SuiteOption func(*suiteOptions)
+
+type suiteOptions struct {
+	createKongLicense bool
+}
+
+// WithKongLicense makes Suite present a Kong Enterprise license (read from
+// the KONG_LICENSE_DATA environment variable) to the test cluster by creating
+// a KongLicense resource, the same way test/conformance and
+// test/integration/kic/isolated do. It's a no-op if KONG_LICENSE_DATA is not set.
+func WithKongLicense() SuiteOption {
+	return func(o *suiteOptions) {
+		o.createKongLicense = true
+	}
+}
+
 // Suite sets up the testing environment for the integration test suite.
 // It is intended to be called from TestMain in the respective test package.
-func Suite(m *testing.M) {
+func Suite(m *testing.M, opts ...SuiteOption) {
+	var so suiteOptions
+	for _, opt := range opts {
+		opt(&so)
+	}
+
 	var code int
 	defer func() {
 		if r := recover(); r != nil {
@@ -121,6 +147,12 @@ func Suite(m *testing.M) {
 	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
 	exitOnErr(kcfg.DeployKubernetesConfiguration(GetCtx(), env.Cluster()))
 
+	if so.createKongLicense {
+		cleanupKongLicense, err := createKongLicense(GetCtx(), clients.MgrClient)
+		exitOnErr(err)
+		defer cleanupKongLicense()
+	}
+
 	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
 	exitOnErr(err)
 	defer cleanupTelepresence()
@@ -170,6 +202,36 @@ func Suite(m *testing.M) {
 // -----------------------------------------------------------------------------
 // Testing Main - Helper Functions
 // -----------------------------------------------------------------------------
+
+// createKongLicense creates a KongLicense resource read from the
+// KONG_LICENSE_DATA environment variable, so that any ControlPlane started
+// during the suite's tests can pick it up. Returns a no-op cleanup and no
+// error if KONG_LICENSE_DATA is not set.
+func createKongLicense(ctx context.Context, cl ctrlruntimeclient.Client) (func(), error) {
+	licenseData := test.KongLicenseData()
+	if licenseData == "" {
+		fmt.Println("INFO: KONG_LICENSE_DATA not set, skipping KongLicense creation")
+		return func() {}, nil
+	}
+
+	fmt.Println("INFO: creating KongLicense for tests")
+	kongLicense := &configurationv1alpha1.KongLicense{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "ko-integration-license-",
+		},
+		RawLicenseString: licenseData,
+		Enabled:          true,
+	}
+	if err := cl.Create(ctx, kongLicense); err != nil {
+		return nil, fmt.Errorf("failed to create KongLicense: %w", err)
+	}
+
+	return func() {
+		if err := cl.Delete(context.Background(), kongLicense); err != nil && !apierrors.IsNotFound(err) {
+			fmt.Printf("WARN: failed to delete KongLicense %s: %s\n", kongLicense.Name, err)
+		}
+	}, nil
+}
 
 func exitOnErr(err error) {
 	if err != nil {

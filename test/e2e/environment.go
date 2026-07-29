@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	configurationclient "github.com/kong/kong-operator/v2/pkg/clientset"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
@@ -186,6 +188,36 @@ func CreateEnvironment(t *testing.T, ctx context.Context) TestEnvironment {
 		Cleaner:     cleaner,
 		Environment: env,
 	}
+}
+
+// createKongLicense creates a KongLicense resource for the test environment,
+// mirroring how test/conformance and test/integration present a license to
+// the deployed Kong Gateway. It reads the license from the KONG_LICENSE_DATA
+// environment variable and is a no-op if that variable is not set.
+func createKongLicense(ctx context.Context, t *testing.T, cl client.Client) {
+	t.Helper()
+
+	licenseData := test.KongLicenseData()
+	if licenseData == "" {
+		t.Log("KONG_LICENSE_DATA not set, skipping KongLicense creation")
+		return
+	}
+
+	t.Log("creating KongLicense for e2e tests")
+	kongLicense := &configurationv1alpha1.KongLicense{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "ko-e2e-license-",
+		},
+		RawLicenseString: licenseData,
+		Enabled:          true,
+	}
+	require.NoError(t, cl.Create(ctx, kongLicense))
+	t.Cleanup(func() {
+		err := cl.Delete(context.Background(), kongLicense)
+		if err != nil && !apierrors.IsNotFound(err) {
+			require.NoError(t, err)
+		}
+	})
 }
 
 // -----------------------------------------------------------------------------

@@ -55,6 +55,11 @@ jobs:
       with:
         install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind
 
+    - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+      id: license
+      with:
+        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
     - uses: ./.github/actions/bump-inotify
 
     - name: Create k8s KinD Cluster with ktf
@@ -89,7 +94,13 @@ jobs:
     - name: DNS lookup for us.control-plane.konghq.tech
       run: dig us.control-plane.konghq.tech
 
+    # The KongLicense CRD is only installed by the Helm chart above, so this must
+    # run after it. KONG_LICENSE_DATA is only ever passed as an env var here (a
+    # secret-derived action output), never inlined into the workflow or a
+    # command line argument; run-prereq.sh no-ops the KongLicense step if unset.
     - name: Apply chainsaw suite prerequisites
+      env:
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
       run: make test.e2e.chainsaw.prereq DIRNAME=${{ matrix.suite }}
 
     - name: run chainsaw e2e tests

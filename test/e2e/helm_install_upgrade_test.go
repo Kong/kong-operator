@@ -294,6 +294,10 @@ func TestHelmUpgrade(t *testing.T) {
 			})
 			ensureBasicReadiness(t, ctx, e, releaseName)
 
+			// The KongLicense CRD is only installed by the Helm chart, so it can only
+			// be created once the initial install above has completed.
+			createKongLicense(ctx, t, e.Clients.MgrClient)
+
 			// Deploy the objects that should be present before the upgrade.
 			cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
 			for _, suite := range suitesToRun {
