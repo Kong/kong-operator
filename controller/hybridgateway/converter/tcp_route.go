@@ -178,7 +178,7 @@ func (c *tcpRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 		pRef := pRefData.parentRef
 		cp := pRefData.cpRef
 		hostnames := pRefData.hostnames
-		winningPorts := winningPortsByParentRef[tcpParentRefKeyForRoute(c.route, &pRef)]
+		winningPorts := winningPortsByParentRef[l4ParentRefKeyForRoute(c.route, &pRef)]
 		if len(winningPorts) == 0 {
 			log.Debug(logger, "TCPRoute did not win any matching listener ports, skipping dataplane translation",
 				"parentRef", pRef)
