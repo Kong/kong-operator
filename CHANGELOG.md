@@ -127,6 +127,9 @@
   diff/apply implementation, removing the now unused
   `controller/hybridgateway/managedfields` package.
   [#5052](https://github.com/Kong/kong-operator/pull/5052)
+- AIGateway: update the default AI Gateway DataPlane image to
+  `kong/kong-ai-gateway-dev:2.0.1-rc.4`.
+  [#5094](https://github.com/Kong/kong-operator/pull/5094)
 
 ## [v2.3.0-rc.2]
 
