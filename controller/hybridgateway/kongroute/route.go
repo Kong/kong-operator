@@ -64,6 +64,12 @@ func RoutesForRule[
 			return nil, fmt.Errorf("failed to build KongRoute: unmatched route type and rule type: %T and %T", route, rule)
 		}
 		return RoutesForHTTPRouteRule(ctx, logger, cl, r, httpRule, ruleIndex, pRef, cp, namingParentRef, serviceName, hostnames)
+	case *gwtypes.GRPCRoute:
+		grpcRule, ok := any(rule).(gwtypes.GRPCRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongRoute: unmatched route type and rule type: %T and %T", route, rule)
+		}
+		return RoutesForGRPCRouteRule(ctx, logger, cl, r, grpcRule, ruleIndex, pRef, cp, namingParentRef, serviceName, hostnames)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {
@@ -176,6 +182,185 @@ func RoutesForHTTPRouteRule(
 	}
 
 	return kongRoutes, nil
+}
+
+// RoutesForGRPCRouteRule creates or updates KongRoutes for the given GRPCRoute rule.
+// It generates one KongRoute per match in the rule, mirroring RoutesForHTTPRouteRule's
+// one-KongRoute-per-match approach for preserving Gateway API's OR-across-matches semantics.
+//
+// Unlike HTTPRoute, GRPCRouteMatch has no path field, so every match's regex_priority is set
+// explicitly from grpcRouteMatchPriorities rather than only for a header-only subset: Kong's own
+// path-based prioritization has no path-length/path-type signal to key off for gRPC, since the
+// path Kong sees is always synthesized from the method matcher (see
+// builder.GenerateKongRoutePathFromGRPCMethodMatch).
+func RoutesForGRPCRouteRule(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	grpcRoute *gwtypes.GRPCRoute,
+	rule gwtypes.GRPCRouteRule,
+	ruleIndex int,
+	pRef *gwtypes.ParentReference,
+	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
+	serviceName string,
+	hostnames []string,
+) ([]*configurationv1alpha1.KongRoute, error) {
+	var kongRoutes []*configurationv1alpha1.KongRoute
+
+	// If the rule has no matches, create a single catch-all route.
+	// Kong requires at least one matcher; a matcher with no Method matches every
+	// service/method per Gateway API semantics.
+	if len(rule.Matches) == 0 {
+		rule.Matches = append(rule.Matches, gatewayv1.GRPCRouteMatch{})
+	}
+
+	protocols, err := grpcProtocolsFromGatewayListener(ctx, cl, grpcRoute, pRef)
+	if err != nil {
+		return nil, err
+	}
+
+	priorities := grpcRouteMatchPriorities(grpcRoute)
+	tags := pkgmetadata.ExtractTags(grpcRoute)
+
+	for i, match := range rule.Matches {
+		routeName := namegen.NewKongRouteNameForGRPCRouteMatch(grpcRoute, cp, namingParentRef, match, i)
+		mLog := logger.WithValues("kongroute", routeName, "matchIndex", i)
+		log.Debug(mLog, "Creating KongRoute for GRPCRoute match")
+
+		priority := priorityForGRPCRouteMatch(priorities, ruleIndex, i)
+
+		routeBuilder := builder.NewKongRoute().
+			WithName(routeName).
+			WithNamespace(metadata.NamespaceFromParentRef(grpcRoute, pRef)).
+			WithLabels(grpcRoute, pRef).
+			WithAnnotations(grpcRoute, pRef).
+			WithSpecName(routeName).
+			WithProtocols(protocols...).
+			WithHosts(hostnames).
+			WithSpecTags(tags).
+			WithKongService(serviceName).
+			WithGRPCRouteMatch(match).
+			WithRegexPriority(&priority)
+
+		newRoute, buildErr := routeBuilder.Build()
+		if buildErr != nil {
+			log.Error(mLog, buildErr, "Failed to build KongRoute resource")
+			return nil, fmt.Errorf("failed to build KongRoute %s: %w", routeName, buildErr)
+		}
+
+		if _, updErr := translator.VerifyAndUpdate(ctx, mLog, cl, &newRoute, grpcRoute, true); updErr != nil {
+			return nil, updErr
+		}
+
+		kongRoutes = append(kongRoutes, newRoute.DeepCopy())
+	}
+
+	return kongRoutes, nil
+}
+
+type grpcRouteMatchPriorityKey struct {
+	ruleIndex  int
+	matchIndex int
+}
+
+// grpcRoutePriorityClass mirrors httpRoutePriorityClass but keys on GRPCRoute's own precedence
+// criteria (Gateway API grpcroute_types.go): characters in a matching service, characters in a
+// matching method, then header count. GRPCRouteMatch has no path, so there's no path-type/length
+// dimension to carry over from the HTTP variant.
+type grpcRoutePriorityClass struct {
+	serviceLength int
+	methodLength  int
+	headerCount   int
+}
+
+// grpcRouteMatchPriorities computes a regex_priority for every match across the whole GRPCRoute,
+// ranking classes least-to-most specific and breaking ties within a class in favor of the
+// earlier-declared rule/match, per Gateway API's "first matching rule" tie-break rule.
+func grpcRouteMatchPriorities(grpcRoute *gwtypes.GRPCRoute) map[grpcRouteMatchPriorityKey]int64 {
+	classes := make([]grpcRoutePriorityClass, 0)
+	classSet := make(map[grpcRoutePriorityClass]struct{})
+	matchCountByClass := make(map[grpcRoutePriorityClass]int)
+	for _, rule := range grpcRoute.Spec.Rules {
+		for _, match := range rule.Matches {
+			class := calculateGRPCRoutePriorityClass(match)
+			if _, ok := classSet[class]; !ok {
+				classSet[class] = struct{}{}
+				classes = append(classes, class)
+			}
+			matchCountByClass[class]++
+		}
+	}
+
+	slices.SortFunc(classes, compareGRPCRoutePriorityClass)
+	rankByClass := make(map[grpcRoutePriorityClass]int64, len(classes))
+	for rank, class := range classes {
+		rankByClass[class] = int64(rank)
+	}
+
+	// See httpRouteMatchPriorities: bounds the number of matches sharing a class so their
+	// offsets don't overflow into the adjacent class' range.
+	const priorityClassSize = int64(1 << 10)
+	seenByClass := make(map[grpcRoutePriorityClass]int)
+	priorities := make(map[grpcRouteMatchPriorityKey]int64)
+	for ruleIndex, rule := range grpcRoute.Spec.Rules {
+		for matchIndex, match := range rule.Matches {
+			class := calculateGRPCRoutePriorityClass(match)
+			offset := matchCountByClass[class] - 1 - seenByClass[class]
+			seenByClass[class]++
+			priorities[grpcRouteMatchPriorityKey{
+				ruleIndex:  ruleIndex,
+				matchIndex: matchIndex,
+			}] = rankByClass[class]*priorityClassSize + int64(offset)
+		}
+	}
+	return priorities
+}
+
+func priorityForGRPCRouteMatch(priorities map[grpcRouteMatchPriorityKey]int64, ruleIndex, matchIndex int) int64 {
+	return priorities[grpcRouteMatchPriorityKey{
+		ruleIndex:  ruleIndex,
+		matchIndex: matchIndex,
+	}]
+}
+
+func calculateGRPCRoutePriorityClass(match gatewayv1.GRPCRouteMatch) grpcRoutePriorityClass {
+	class := grpcRoutePriorityClass{}
+	if match.Method != nil {
+		if match.Method.Service != nil {
+			class.serviceLength = len(*match.Method.Service)
+		}
+		if match.Method.Method != nil {
+			class.methodLength = len(*match.Method.Method)
+		}
+	}
+	class.headerCount = countEffectiveGRPCHeaderMatches(match.Headers)
+	return class
+}
+
+func compareGRPCRoutePriorityClass(a, b grpcRoutePriorityClass) int {
+	if c := a.serviceLength - b.serviceLength; c != 0 {
+		return c
+	}
+	if c := a.methodLength - b.methodLength; c != 0 {
+		return c
+	}
+	if c := a.headerCount - b.headerCount; c != 0 {
+		return c
+	}
+	return 0
+}
+
+func countEffectiveGRPCHeaderMatches(headers []gatewayv1.GRPCHeaderMatch) int {
+	seenHeaders := make(map[string]struct{}, len(headers))
+	for _, header := range headers {
+		name := strings.ToLower(string(header.Name))
+		if _, ok := seenHeaders[name]; ok {
+			continue
+		}
+		seenHeaders[name] = struct{}{}
+	}
+	return len(seenHeaders)
 }
 
 type httpRouteMatchPriorityKey struct {
@@ -511,23 +696,25 @@ func tcpDestinationPorts(
 }
 
 // protocolsFromGatewayListener derives Kong route protocols from the Gateway listener
-// referenced by the HTTPRoute's parentRef. It inspects the listener protocol and maps:
+// referenced by the route's parentRef. GRPCRoute attaches to the same HTTP/HTTPS listeners as
+// HTTPRoute (gRPC runs over HTTP/2), so both route kinds share this resolver. It inspects the
+// listener protocol and maps:
 //   - HTTP  → "http"
 //   - HTTPS → "https"
 //
 // Returns nil when no matching listeners are found (relies on Kong Gateway defaults).
 func protocolsFromGatewayListener(
-	ctx context.Context, cl client.Client, httpRoute *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference,
+	ctx context.Context, cl client.Client, route client.Object, parentRef *gwtypes.ParentReference,
 ) ([]sdkkonnectcomp.Protocols, error) {
-	ns := httpRoute.Namespace
+	ns := route.GetNamespace()
 	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
 		ns = string(*parentRef.Namespace)
 	}
 
 	gw := &gwtypes.Gateway{}
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: string(parentRef.Name)}, gw); err != nil {
-		return nil, fmt.Errorf("failed to get parent Gateway %s/%s for HTTPRoute %s/%s: %w",
-			ns, parentRef.Name, httpRoute.Namespace, httpRoute.Name, err)
+		return nil, fmt.Errorf("failed to get parent Gateway %s/%s for %s %s/%s: %w",
+			ns, parentRef.Name, route.GetObjectKind().GroupVersionKind().Kind, route.GetNamespace(), route.GetName(), err)
 	}
 
 	protos := gatewayutils.ProtocolsFromListeners(gw, parentRef.SectionName)
@@ -540,6 +727,28 @@ func protocolsFromGatewayListener(
 		protocols = append(protocols, sdkkonnectcomp.Protocols(p))
 	}
 	return protocols, nil
+}
+
+func grpcProtocolsFromGatewayListener(
+	ctx context.Context, cl client.Client, route client.Object, parentRef *gwtypes.ParentReference,
+) ([]sdkkonnectcomp.Protocols, error) {
+	protocols, err := protocolsFromGatewayListener(ctx, cl, route, parentRef)
+	if err != nil {
+		return nil, err
+	}
+
+	grpcProtocols := make([]sdkkonnectcomp.Protocols, 0, len(protocols))
+	for _, p := range protocols {
+		switch p {
+		case sdkkonnectcomp.ProtocolsHTTP:
+			grpcProtocols = append(grpcProtocols, sdkkonnectcomp.ProtocolsGrpc)
+		case sdkkonnectcomp.ProtocolsHTTPS:
+			grpcProtocols = append(grpcProtocols, sdkkonnectcomp.ProtocolsGrpcs)
+		default:
+			grpcProtocols = append(grpcProtocols, p)
+		}
+	}
+	return grpcProtocols, nil
 }
 
 // isTLSRoutePassthrough checks if the TLSRoute's parent Gateway listener uses TLS passthrough mode

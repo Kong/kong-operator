@@ -67,6 +67,14 @@ func UpstreamForRule[
 		upstreamName = namegen.NewKongUpstreamNameForHTTPRouteRule(r, cp, httpRule)
 		namespace = r.Namespace
 		backendRefs = utils.HTTPBackendRefsToBackendRefs(httpRule.BackendRefs)
+	case *gwtypes.GRPCRoute:
+		grpcRule, ok := any(rule).(gwtypes.GRPCRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		upstreamName = namegen.NewKongUpstreamNameForGRPCRouteRule(r, cp, grpcRule)
+		namespace = r.Namespace
+		backendRefs = utils.GRPCBackendRefsToBackendRefs(grpcRule.BackendRefs)
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {

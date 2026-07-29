@@ -102582,7 +102582,6 @@ rules:
   resources:
   - backendtlspolicies
   - gatewayclasses
-  - grpcroutes
   - referencegrants
   - udproutes
   verbs:
@@ -102628,6 +102627,17 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - grpcroutes
+  - tcproutes
+  - tlsroutes
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
   - httproutes/status
   - tcproutes/status
   - tlsroutes/status
@@ -102641,16 +102651,6 @@ rules:
   - referencegrants/status
   verbs:
   - get
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - tcproutes
-  - tlsroutes
-  verbs:
-  - get
-  - list
-  - patch
-  - watch
 - apiGroups:
   - incubator.ingress-controller.konghq.com
   resources:

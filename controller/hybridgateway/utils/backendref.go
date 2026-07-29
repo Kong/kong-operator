@@ -15,6 +15,15 @@ func HTTPBackendRefsToBackendRefs(refs []gwtypes.HTTPBackendRef) []gwtypes.Backe
 	return out
 }
 
+// GRPCBackendRefsToBackendRefs unwraps []GRPCBackendRef to []BackendRef.
+func GRPCBackendRefsToBackendRefs(refs []gwtypes.GRPCBackendRef) []gwtypes.BackendRef {
+	out := make([]gwtypes.BackendRef, len(refs))
+	for i, r := range refs {
+		out[i] = r.BackendRef
+	}
+	return out
+}
+
 // BackendRefGroupKind returns the effective group and kind for a BackendRef,
 // applying Gateway API defaults: kind defaults to "Service" and group defaults
 // to "" (core) when nil or empty.

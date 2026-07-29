@@ -50,6 +50,134 @@ func TestGetNamespacedRefs(t *testing.T) {
 			description: "should return empty map for HTTPRoute without references",
 		},
 		{
+			name: "GRPCRoute with no references",
+			setup: func() (client.Client, runtime.Object) {
+				cl := fake.NewClientBuilder().Build()
+				grpcRoute := &gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "test-namespace",
+					},
+				}
+				return cl, grpcRoute
+			},
+			expected:    map[string]GatewaysByNamespacedRef{},
+			wantErr:     false,
+			description: "should return empty map for GRPCRoute without references",
+		},
+		{
+			name: "GRPCRoute with valid konnect control plane",
+			setup: func() (client.Client, runtime.Object) {
+				gatewayGroup := gwtypes.Group(gwtypes.GroupName)
+				gatewayKind := gwtypes.Kind("Gateway")
+
+				gateway := &gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "test-namespace",
+						UID:       "gateway-uid-grpc",
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "test-gateway-class",
+					},
+				}
+
+				gatewayClass := &gwtypes.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-gateway-class",
+					},
+					Spec: gwtypes.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+
+				konnectExtension := &konnectv1alpha2.KonnectExtension{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-konnect-extension",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "gateway.networking.k8s.io/v1",
+								Kind:       "Gateway",
+								Name:       "test-gateway",
+								UID:        "gateway-uid-grpc",
+							},
+						},
+					},
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-cp",
+									},
+								},
+							},
+						},
+					},
+				}
+
+				controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cp",
+						Namespace: "test-namespace",
+					},
+				}
+
+				cl := fake.NewClientBuilder().
+					WithScheme(newTestScheme()).
+					WithObjects(gateway, gatewayClass, konnectExtension, controlPlane).
+					Build()
+
+				grpcRoute := &gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "test-namespace",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gatewayv1.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Group: &gatewayGroup,
+									Kind:  &gatewayKind,
+									Name:  "test-gateway",
+								},
+							},
+						},
+					},
+				}
+				return cl, grpcRoute
+			},
+			expected: map[string]GatewaysByNamespacedRef{
+				"test-namespace/test-cp": {
+					Ref: commonv1alpha1.KonnectNamespacedRef{
+						Name:      "test-cp",
+						Namespace: "test-namespace",
+					},
+					Gateways: []gwtypes.Gateway{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-gateway",
+								Namespace: "test-namespace",
+								UID:       "gateway-uid-grpc",
+								// ResourceVersion is set by the fake client when the Gateway is fetched.
+								ResourceVersion: "999",
+							},
+							Spec: gwtypes.GatewaySpec{
+								GatewayClassName: "test-gateway-class",
+							},
+						},
+					},
+				},
+			},
+			wantErr:     false,
+			description: "should return the KonnectNamespacedRef and Gateway for a GRPCRoute referencing a Konnect-backed Gateway (regression test: GetNamespacedRefs previously had no *gwtypes.GRPCRoute case and silently fell through to the default nil,nil branch)",
+		},
+		{
 			name: "TLSRoute with no references",
 			setup: func() (client.Client, runtime.Object) {
 				cl := fake.NewClientBuilder().Build()

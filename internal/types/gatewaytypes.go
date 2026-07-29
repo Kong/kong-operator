@@ -61,6 +61,8 @@ type (
 	GRPCRoute              = gatewayv1.GRPCRoute
 	GRPCRouteList          = gatewayv1.GRPCRouteList
 	GRPCRouteSpec          = gatewayv1.GRPCRouteSpec
+	GRPCRouteRule          = gatewayv1.GRPCRouteRule
+	GRPCBackendRef         = gatewayv1.GRPCBackendRef
 	UDPRoute               = gatewayv1.UDPRoute
 	UDPRouteList           = gatewayv1.UDPRouteList
 	UDPRouteSpec           = gatewayv1.UDPRouteSpec
@@ -78,6 +80,7 @@ const (
 	UDPProtocolType                       = gatewayv1.UDPProtocolType
 	TCPProtocolType                       = gatewayv1.TCPProtocolType
 	HTTPRouteFilterExtensionRef           = gatewayv1.HTTPRouteFilterExtensionRef
+	GRPCRouteFilterExtensionRef           = gatewayv1.GRPCRouteFilterExtensionRef
 	HTTPRouteFilterRequestHeaderModifier  = gatewayv1.HTTPRouteFilterRequestHeaderModifier
 	ListenerConditionProgrammed           = gatewayv1.ListenerConditionProgrammed
 	NamespacesFromAll                     = gatewayv1.NamespacesFromAll

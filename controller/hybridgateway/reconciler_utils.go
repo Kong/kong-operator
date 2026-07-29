@@ -356,6 +356,8 @@ func hybridRouteAnnotationInfo[t converter.RootObject](obj t) (annotationKey, ro
 	switch o := any(obj).(type) {
 	case gwtypes.HTTPRoute:
 		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation, o.Namespace + "/" + o.Name
+	case gwtypes.GRPCRoute:
+		return consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation, o.Namespace + "/" + o.Name
 	case gwtypes.TLSRoute:
 		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation, o.Namespace + "/" + o.Name
 	}
@@ -704,6 +706,22 @@ func referencesSupportedGateway(ctx context.Context, cl client.Client, obj clien
 	switch o := obj.(type) {
 	case *gwtypes.HTTPRoute:
 		// Check if any of the ParentRefs reference a supported Gateway.
+		for _, pRef := range o.Spec.ParentRefs {
+			gw, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
+			if err != nil {
+				// Log the error but continue checking other ParentRefs.
+				log.Trace(logger, "Error checking ParentRef", "parentRef", pRef, "error", err)
+				continue
+			}
+			if found {
+				// Found at least one supported Gateway reference.
+				log.Trace(logger, "Found supported Gateway reference", "gateway", client.ObjectKeyFromObject(gw))
+				return true
+			}
+		}
+		return false
+
+	case *gwtypes.GRPCRoute:
 		for _, pRef := range o.Spec.ParentRefs {
 			gw, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
 			if err != nil {

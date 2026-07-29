@@ -22,6 +22,10 @@ var (
 		Kind:       kindHTTPRoute,
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
+	grpcRouteTypeMeta = metav1.TypeMeta{
+		Kind:       kindGRPCRoute,
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
 	tlsRouteTypeMeta = metav1.TypeMeta{
 		Kind:       "TLSRoute",
 		APIVersion: "gateway.networking.k8s.io/v1",
@@ -266,6 +270,30 @@ func TestBuildAnnotations(t *testing.T) {
 			assert.Equal(t, tt.expected, result, tt.description)
 		})
 	}
+}
+
+func TestBuildAnnotationsGRPCRoute(t *testing.T) {
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta: grpcRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	result := BuildAnnotations(grpcRoute, parentRef)
+	assert.Equal(t, "test-namespace/test-route", result[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation])
+
+	am := NewAnnotationManager(logr.Discard())
+	assert.Equal(t, consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation, am.RouteAnnotationKeyForKind(kindGRPCRoute))
+
+	obj := &configurationv1alpha1.KongRoute{}
+	assert.True(t, am.AppendRouteToAnnotation(obj, grpcRoute), "AppendRouteToAnnotation must not no-op for GRPCRoute")
+	assert.True(t, am.ContainsRoute(obj, grpcRoute))
+	assert.True(t, am.RemoveRouteFromAnnotation(obj, grpcRoute))
 }
 
 func TestBuildAnnotationsObjectKeyCreation(t *testing.T) {

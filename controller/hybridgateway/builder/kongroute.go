@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"regexp"
 	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -30,6 +31,12 @@ const (
 	// KongHTTPRoutePathRegexPriorityOffset reserves lower regex_priority values for synthetic
 	// catch-all regex routes used by default path header-only matches.
 	KongHTTPRoutePathRegexPriorityOffset int64 = 1 << 20
+
+	// KongGRPCRouteCatchAllPath is the synthetic regex path used for GRPCRoute matches that
+	// specify no method matcher at all (Method == nil), which per Gateway API must match every
+	// service and method. GRPCRouteMatch has no path field, so regex_priority (not path
+	// specificity) is what Kong uses to order these against more specific matches.
+	KongGRPCRouteCatchAllPath = KongPathRegexPrefix + "/(.*)"
 )
 
 // KongRouteBuilder is a builder for configurationv1alpha1.KongRoute resources.
@@ -86,6 +93,29 @@ func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch, setC
 		}
 	}
 	// Note: QueryParams are not natively supported by KongRoute
+
+	return b
+}
+
+// WithGRPCRouteMatch sets the match criteria (method/service path, headers) for the KongRoute.
+// Unlike HTTPRoute, GRPCRouteMatch has no path field: the gRPC path is derived from the method
+// matcher, and precedence (service/method character length, header count) is expressed
+// entirely through regex_priority by the caller rather than through path specificity.
+func (b *KongRouteBuilder) WithGRPCRouteMatch(match gatewayv1.GRPCRouteMatch) *KongRouteBuilder {
+	b.route.Spec.Paths = append(b.route.Spec.Paths, GenerateKongRoutePathFromGRPCMethodMatch(match.Method)...)
+
+	if len(match.Headers) > 0 {
+		if b.route.Spec.Headers == nil {
+			b.route.Spec.Headers = make(map[string][]string)
+		}
+		for _, hdr := range match.Headers {
+			value := hdr.Value
+			if hdr.Type != nil && *hdr.Type == gatewayv1.GRPCHeaderMatchRegularExpression {
+				value = KongHeaderRegexPrefix + value
+			}
+			b.route.Spec.Headers[string(hdr.Name)] = append(b.route.Spec.Headers[string(hdr.Name)], value)
+		}
+	}
 
 	return b
 }
@@ -312,4 +342,48 @@ func regexPriorityForHTTPPathMatch(matchType gatewayv1.PathMatchType, value stri
 		priority++
 	}
 	return &priority
+}
+
+// GenerateKongRoutePathFromGRPCMethodMatch translates a GRPCRouteMatch's method matcher into the
+// path used by KongRoute. A gRPC request's wire path is always "/service/method", so the method
+// matcher is folded into an equivalent Kong regex path:
+//   - No matcher at all: match every service and method (KongGRPCRouteCatchAllPath).
+//   - Service only: match any method of that service.
+//   - Method only: match that method on any service.
+//   - Both: match that exact service/method pair.
+//
+// For Type: RegularExpression, Service/Method are regex fragments themselves (validated only for
+// Exact), so they're spliced in as-is without additional anchoring, mirroring how HTTPRoute
+// RegularExpression path matches are passed through untouched. For Type: Exact (the default),
+// Service/Method are literal strings that happen to contain "." (gRPC service names are always
+// "package.path.Service"), so they're [regexp.QuoteMeta]-escaped before being spliced into the
+// regex path — otherwise an unescaped "." matches any character, letting an Exact match for
+// "foo.bar.Service" also match an unrelated "fooXbarXService".
+func GenerateKongRoutePathFromGRPCMethodMatch(method *gatewayv1.GRPCMethodMatch) []string {
+	if method == nil {
+		return []string{KongGRPCRouteCatchAllPath}
+	}
+
+	isRegex := method.Type != nil && *method.Type == gatewayv1.GRPCMethodMatchRegularExpression
+
+	service := "[^/]+"
+	if method.Service != nil && *method.Service != "" {
+		service = *method.Service
+		if !isRegex {
+			service = regexp.QuoteMeta(service)
+		}
+	}
+	grpcMethod := "[^/]+"
+	if method.Method != nil && *method.Method != "" {
+		grpcMethod = *method.Method
+		if !isRegex {
+			grpcMethod = regexp.QuoteMeta(grpcMethod)
+		}
+	}
+
+	path := fmt.Sprintf("%s/%s/%s", KongPathRegexPrefix, service, grpcMethod)
+	if !isRegex {
+		path += "$"
+	}
+	return []string{path}
 }

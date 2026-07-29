@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -41,7 +42,7 @@ func (b *KongPluginBuilder) WithNamespace(namespace string) *KongPluginBuilder {
 }
 
 // WithLabels sets the labels for the KongPlugin resource based on the given HTTPRoute.
-func (b *KongPluginBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongPluginBuilder {
+func (b *KongPluginBuilder) WithLabels(route client.Object, parentRef *gwtypes.ParentReference) *KongPluginBuilder {
 	labels := metadata.BuildLabels(route, parentRef)
 	if b.plugin.Labels == nil {
 		b.plugin.Labels = make(map[string]string)
@@ -51,7 +52,7 @@ func (b *KongPluginBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwty
 }
 
 // WithAnnotations sets the annotations for the KongPlugin resource based on the given HTTPRoute and parent reference.
-func (b *KongPluginBuilder) WithAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongPluginBuilder {
+func (b *KongPluginBuilder) WithAnnotations(route client.Object, parentRef *gwtypes.ParentReference) *KongPluginBuilder {
 	if route == nil {
 		b.errors = append(b.errors, errors.New("route cannot be nil"))
 		return b

@@ -9,9 +9,9 @@ import (
 
 var skippedTestsShared = []string{
 	// skip it until FTI-7663 released
-	tests.GRPCExactMethodMatching.ShortName,
-	tests.GRPCRouteHeaderMatching.ShortName,
-	tests.GRPCRouteListenerHostnameMatching.ShortName,
+	// tests.GRPCExactMethodMatching.ShortName,
+	// tests.GRPCRouteHeaderMatching.ShortName,
+	// tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 
 var skippedTestsForStandard = []string{
@@ -36,8 +36,6 @@ var skippedTestsForHybrid = []string{
 	// Extended profile.
 	tests.HTTPRouteRewriteHost.ShortName,
 	tests.HTTPRouteRewritePath.ShortName,
-
-	tests.GRPCRouteWeight.ShortName,
 
 	// UDPRoute
 	tests.UDPRouteInvalidBackendRefNonexistent.ShortName,

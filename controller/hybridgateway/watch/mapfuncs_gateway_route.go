@@ -23,6 +23,7 @@ import (
 const (
 	// REVIEW: define the kinds in some common packages?
 	kindHTTPRoute = "HTTPRoute"
+	kindGRPCRoute = "GRPCRoute"
 	kindTLSRoute  = "TLSRoute"
 	kindTCPRoute  = "TCPRoute"
 )
@@ -80,6 +81,8 @@ func MapRouteForGateway[T gwtypes.SupportedRoute](cl client.Client, route T) han
 		switch any(route).(type) {
 		case gwtypes.HTTPRoute:
 			requests, err = listHTTPRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
+		case gwtypes.GRPCRoute:
+			requests, err = listGRPCRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 		case gwtypes.TLSRoute:
 			requests, err = listTLSRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 		case gwtypes.TCPRoute:
@@ -122,6 +125,8 @@ func MapRouteForGatewayClass[T gwtypes.SupportedRoute](cl client.Client, route T
 			switch any(route).(type) {
 			case gwtypes.HTTPRoute:
 				gwRequests, err = listHTTPRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
+			case gwtypes.GRPCRoute:
+				gwRequests, err = listGRPCRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 			case gwtypes.TLSRoute:
 				gwRequests, err = listTLSRoutesForGateway(ctx, cl, gateway.Namespace, gateway.Name)
 			case gwtypes.TCPRoute:
@@ -154,6 +159,8 @@ func MapRouteForService[T gwtypes.SupportedRoute](cl client.Client, route T) han
 		switch any(route).(type) {
 		case gwtypes.HTTPRoute:
 			requests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		case gwtypes.GRPCRoute:
+			requests, err = listGRPCRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case gwtypes.TLSRoute:
 			requests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case gwtypes.TCPRoute:
@@ -195,6 +202,8 @@ func MapRouteForEndpointSlice[T gwtypes.SupportedRoute](cl client.Client, route 
 		switch any(route).(type) {
 		case gwtypes.HTTPRoute:
 			requests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		case gwtypes.GRPCRoute:
+			requests, err = listGRPCRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case gwtypes.TLSRoute:
 			requests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case gwtypes.TCPRoute:
@@ -226,6 +235,8 @@ func MapRouteForReferenceGrant[TList gwtypes.SupportedRouteList,
 		switch any(list).(type) {
 		case gwtypes.HTTPRouteList:
 			kind = "HTTPRoute"
+		case gwtypes.GRPCRouteList:
+			kind = "GRPCRoute"
 		case gwtypes.TLSRouteList:
 			kind = "TLSRoute"
 		case gwtypes.TCPRouteList:
@@ -247,6 +258,8 @@ func MapRouteForReferenceGrant[TList gwtypes.SupportedRouteList,
 			switch l := any(listPtr).(type) {
 			case *gwtypes.HTTPRouteList:
 				requests = append(requests, mapRouteInListForReferenceGrant(l.Items, rg)...)
+			case *gwtypes.GRPCRouteList:
+				requests = append(requests, mapRouteInListForReferenceGrant(l.Items, rg)...)
 			case *gwtypes.TLSRouteList:
 				requests = append(requests, mapRouteInListForReferenceGrant(l.Items, rg)...)
 			case *gwtypes.TCPRouteList:
@@ -265,6 +278,12 @@ func mapRouteInListForReferenceGrant[T gwtypes.SupportedRoute, TPtr gwtypes.Supp
 
 		switch r := any(route).(type) {
 		case gwtypes.HTTPRoute:
+			for _, rule := range r.Spec.Rules {
+				for _, backendRef := range rule.BackendRefs {
+					backendRefs = append(backendRefs, backendRef.BackendRef)
+				}
+			}
+		case gwtypes.GRPCRoute:
 			for _, rule := range r.Spec.Rules {
 				for _, backendRef := range rule.BackendRefs {
 					backendRefs = append(backendRefs, backendRef.BackendRef)

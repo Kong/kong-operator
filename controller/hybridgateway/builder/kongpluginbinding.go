@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -41,7 +42,7 @@ func (b *KongPluginBindingBuilder) WithNamespace(namespace string) *KongPluginBi
 }
 
 // WithLabels sets the labels for the KongPluginBinding resource based on the given HTTPRoute.
-func (b *KongPluginBindingBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongPluginBindingBuilder {
+func (b *KongPluginBindingBuilder) WithLabels(route client.Object, parentRef *gwtypes.ParentReference) *KongPluginBindingBuilder {
 	labels := metadata.BuildLabels(route, parentRef)
 	if b.binding.Labels == nil {
 		b.binding.Labels = make(map[string]string)
@@ -51,7 +52,7 @@ func (b *KongPluginBindingBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRe
 }
 
 // WithAnnotations sets the annotations for the KongPluginBinding resource based on the given HTTPRoute and parent reference.
-func (b *KongPluginBindingBuilder) WithAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongPluginBindingBuilder {
+func (b *KongPluginBindingBuilder) WithAnnotations(route client.Object, parentRef *gwtypes.ParentReference) *KongPluginBindingBuilder {
 	annotations := metadata.BuildAnnotations(route, parentRef)
 	if b.binding.Annotations == nil {
 		b.binding.Annotations = make(map[string]string)
