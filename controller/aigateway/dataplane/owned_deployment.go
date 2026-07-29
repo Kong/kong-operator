@@ -33,6 +33,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/controller/pkg/reservedkeys"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -48,7 +49,7 @@ func (r *Reconciler) ensureDeployment(
 	certSecretName string,
 ) error {
 	image := resolveImage(aigwdp, consts.DefaultAIGatewayDataPlaneImage)
-	desired, err := buildDeployment(r.TypeConverter, aigwdp, aigatewaycp, image, certSecretName)
+	desired, err := buildDeployment(logger, r.TypeConverter, aigwdp, aigatewaycp, image, certSecretName)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for AIGatewayDataPlane %s/%s: %w",
 			aigwdp.Namespace, aigwdp.Name, err)
@@ -97,13 +98,14 @@ func resolveImage(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, defaultImage str
 // removed so that SSA does not claim ownership of it, leaving the API server
 // (or admission webhooks) free to apply their own default.
 func buildDeployment(
+	logger logr.Logger,
 	tc managedfields.TypeConverter,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
 	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	image string,
 	certSecretName string,
 ) (*unstructured.Unstructured, error) {
-	base, err := generateBaseDeployment(aigwdp, aigatewaycp, image, certSecretName)
+	base, err := generateBaseDeployment(logger, aigwdp, aigatewaycp, image, certSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +154,7 @@ func buildDeployment(
 
 // generateBaseDeployment creates the operator-managed AI Gateway Deployment without user overlays.
 func generateBaseDeployment(
+	logger logr.Logger,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
 	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	image string,
@@ -235,7 +238,43 @@ func generateBaseDeployment(
 	k8sutils.SetOwnerForObject(d, aigwdp)
 	k8sresources.LabelObjectAsAIGatewayDataPlaneManaged(d)
 	k8sresources.LabelObjectAsAIGatewayDataPlaneManaged(&d.Spec.Template)
+
+	addAnnotationsForAIGatewayDataPlaneDeployment(logger, d, aigwdp)
+	addLabelsForAIGatewayDataPlaneDeployment(logger, d, aigwdp)
+
 	return d, nil
+}
+
+// aiGatewayDataPlaneDeploymentReservedKeys reports whether a label/annotation key is
+// reserved for internal operator or Kubernetes use and must be dropped from any
+// spec.deployment.labels/annotations provided by the user.
+var aiGatewayDataPlaneDeploymentReservedKeys = reservedkeys.NewChecker("app.kubernetes.io/name", "deployment.kubernetes.io/revision")
+
+// addAnnotationsForAIGatewayDataPlaneDeployment merges the user-provided
+// spec.deployment.annotations (with reserved keys filtered out) into the
+// Deployment's own metadata. It does not mutate the base annotations map so it
+// is safe to call even when the Deployment shares maps with other objects
+// (e.g. the Pod template).
+func addAnnotationsForAIGatewayDataPlaneDeployment(logger logr.Logger, deployment *appsv1.Deployment, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) {
+	if aigwdp.Spec.Deployment == nil || len(aigwdp.Spec.Deployment.Annotations) == 0 {
+		return
+	}
+	obj := &metav1.ObjectMeta{Namespace: aigwdp.Namespace, Name: aigwdp.Name, Annotations: aigwdp.Spec.Deployment.Annotations}
+	specAnnotations := reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, obj, aiGatewayDataPlaneDeploymentReservedKeys)
+	deployment.Annotations = reservedkeys.Merge(deployment.Annotations, specAnnotations)
+}
+
+// addLabelsForAIGatewayDataPlaneDeployment merges the user-provided
+// spec.deployment.labels (with reserved keys filtered out) into the
+// Deployment's own metadata. It does not mutate the base labels map, which is
+// shared with the Pod template, so the Pod template's labels are unaffected.
+func addLabelsForAIGatewayDataPlaneDeployment(logger logr.Logger, deployment *appsv1.Deployment, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) {
+	if aigwdp.Spec.Deployment == nil || len(aigwdp.Spec.Deployment.Labels) == 0 {
+		return
+	}
+	obj := &metav1.ObjectMeta{Namespace: aigwdp.Namespace, Name: aigwdp.Name, Labels: aigwdp.Spec.Deployment.Labels}
+	specLabels := reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, obj, aiGatewayDataPlaneDeploymentReservedKeys)
+	deployment.Labels = reservedkeys.Merge(deployment.Labels, specLabels)
 }
 
 // buildAIGatewayEnvVars builds the AI Gateway environment variables

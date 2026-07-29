@@ -24,6 +24,7 @@ var commonSupportedFeatures = []features.FeatureName{
 	features.SupportGateway,
 	features.SupportHTTPRoute,
 	features.SupportTLSRoute,
+	features.SupportTCPRoute,
 	features.SupportGRPCRoute,
 	features.SupportUDPRoute,
 	features.SupportReferenceGrant,

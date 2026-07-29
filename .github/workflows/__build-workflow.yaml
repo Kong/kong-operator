@@ -181,7 +181,7 @@ jobs:
 
       - name: Log in to the Container registry
         if: ${{ inputs.push }}
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
@@ -376,7 +376,7 @@ jobs:
 
       - name: Log in to the Container registry
         if: ${{ inputs.push }}
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
@@ -390,7 +390,7 @@ jobs:
       # When building with `inputs.tag` set, `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # `needs.semver.outputs.fullversion`.
-      - uses: int128/docker-manifest-create-action@b0b692440e7278c3e5108fb656df325a9ddf5288 # v2.24.0
+      - uses: int128/docker-manifest-create-action@a0bcb6430fe0047c0558deab102a6c66c373dae2 # v2.25.0
         if: ${{ inputs.tag != '' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -402,7 +402,7 @@ jobs:
       # `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # the current date.
-      - uses: int128/docker-manifest-create-action@b0b692440e7278c3e5108fb656df325a9ddf5288 # v2.24.0
+      - uses: int128/docker-manifest-create-action@a0bcb6430fe0047c0558deab102a6c66c373dae2 # v2.25.0
         if: ${{ inputs.tag == '' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly-tags)) }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -412,7 +412,7 @@ jobs:
 
       # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
       # directly in sources.
-      - uses: int128/docker-manifest-create-action@b0b692440e7278c3e5108fb656df325a9ddf5288 # v2.24.0
+      - uses: int128/docker-manifest-create-action@a0bcb6430fe0047c0558deab102a6c66c373dae2 # v2.25.0
         if: ${{ inputs.tag == '' && github.event_name == 'push' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}

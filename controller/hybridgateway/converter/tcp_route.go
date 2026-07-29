@@ -169,10 +169,22 @@ func (c *tcpRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 		return nil
 	}
 
+	winningPortsByParentRef, err := c.winningTCPRoutePortsByParentRef(ctx, logger, supportedParentRefs)
+	if err != nil {
+		return err
+	}
+
 	for _, pRefData := range supportedParentRefs {
 		pRef := pRefData.parentRef
 		cp := pRefData.cpRef
 		hostnames := pRefData.hostnames
+		winningPorts := winningPortsByParentRef[tcpParentRefKeyForRoute(c.route, &pRef)]
+		if len(winningPorts) == 0 {
+			log.Debug(logger, "TCPRoute did not win any matching listener ports, skipping dataplane translation",
+				"parentRef", pRef)
+			continue
+		}
+
 		var namingParentRef *gwtypes.ParentReference
 		if len(supportedParentRefs) > 1 {
 			namingParentRef = &pRef
@@ -224,7 +236,9 @@ func (c *tcpRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 			c.outputStore = append(c.outputStore, servicePtr)
 			log.Debug(logger, "Successfully translated KongService resource", "service", serviceName)
 
-			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, ruleIndex, &pRef, cp, namingParentRef, serviceName, hostnames)
+			routes, err := kongroute.RoutesForTCPRouteRuleWithPorts(
+				ctx, logger, c.Client, c.route, rule, &pRef, cp, namingParentRef, serviceName, winningPorts,
+			)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongRoute resource, skipping rule",
 					"service", serviceName,
