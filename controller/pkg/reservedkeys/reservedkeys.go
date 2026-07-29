@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -54,9 +53,8 @@ const (
 
 // Filter drops any key from keys for which isReserved returns true, logging
 // an Info message for each one dropped so it's clear why a user-provided
-// label/annotation didn't take effect. extraLogFields are appended verbatim
-// to the log call (e.g. "dataplane", "ns/name") to identify the owning
-// resource.
+// label/annotation didn't take effect. metadataType is only used to label
+// the log line ("label" vs "annotation").
 //
 // This is logged at Info rather than Error level: it's an expected, routine
 // situation (not a bug), and controller-runtime's zap logger attaches a full
@@ -64,17 +62,8 @@ const (
 // otherwise spam the logs on every reconcile of an object whose spec sets
 // a reserved key.
 func Filter(
-	logger logr.Logger, metadataType MetadataType, obj metav1.Object, isReserved IsReservedFunc,
+	logger logr.Logger, metadataType MetadataType, keys map[string]string, isReserved IsReservedFunc,
 ) map[string]string {
-	var keys map[string]string
-	switch metadataType {
-	case MetadataTypeLabel:
-		keys = obj.GetLabels()
-	case MetadataTypeAnnotation:
-		keys = obj.GetAnnotations()
-	default:
-		panic(fmt.Sprintf("unknown metadataType %q", metadataType))
-	}
 	if len(keys) == 0 {
 		return nil
 	}

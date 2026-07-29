@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
@@ -69,26 +68,12 @@ func TestFilter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var infoCount int
 			logger := logr.New(infoCountSink{count: &infoCount})
-			obj := &metav1.ObjectMeta{Namespace: "ns", Name: "name", Annotations: tc.keys}
 
-			filtered := Filter(logger, MetadataTypeAnnotation, obj, isReserved)
+			filtered := Filter(logger, MetadataTypeAnnotation, tc.keys, isReserved)
 			require.Equal(t, tc.expectedKept, filtered)
 			assert.Equal(t, tc.expectedIgnore, infoCount, "expected a log line per reserved key dropped")
 		})
 	}
-}
-
-func TestFilter_PicksMapByMetadataType(t *testing.T) {
-	isReserved := NewChecker("app")
-	obj := &metav1.ObjectMeta{
-		Namespace:   "ns",
-		Name:        "name",
-		Labels:      map[string]string{"label-key": "val"},
-		Annotations: map[string]string{"annotation-key": "val"},
-	}
-
-	assert.Equal(t, map[string]string{"label-key": "val"}, Filter(logr.Discard(), MetadataTypeLabel, obj, isReserved))
-	assert.Equal(t, map[string]string{"annotation-key": "val"}, Filter(logr.Discard(), MetadataTypeAnnotation, obj, isReserved))
 }
 
 func TestMerge(t *testing.T) {

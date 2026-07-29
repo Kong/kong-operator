@@ -14,6 +14,13 @@ var skippedTestsShared = []string{
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 
+var skippedTestsForStandard = []string{
+	// TODO: https://github.com/kubernetes-sigs/gateway-api/issues/5121
+	// The readiness probe can establish a TCP connection before the TCPRoute
+	// configuration reaches the data plane, causing the test to fail with EOF.
+	tests.TCPRouteWeightedRouting.ShortName,
+}
+
 var skippedTestsForExpressionsRouter = []string{}
 
 var skippedTestsForStandardTraditionalCompatibleRouter = []string{
@@ -47,6 +54,9 @@ var skippedTestsForHybrid = []string{
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.
 func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType) []string {
 	skipped := append([]string{}, skippedTestsShared...)
+	if gwType == standardGateway {
+		skipped = append(skipped, skippedTestsForStandard...)
+	}
 
 	switch routerFlavor {
 	case consts.RouterFlavorTraditionalCompatible:

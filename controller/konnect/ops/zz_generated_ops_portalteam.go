@@ -30,11 +30,11 @@ func createPortalTeam(
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
 		return errWrap
 	}
-	if resp == nil || resp.PortalTeamResponse == nil || resp.PortalTeamResponse.ID == nil || *resp.PortalTeamResponse.ID == "" {
+	if resp == nil || resp.PortalTeamResponse == nil || resp.PortalTeamResponse.ID == "" {
 		return fmt.Errorf("failed creating %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	obj.SetKonnectID(*resp.PortalTeamResponse.ID)
+	obj.SetKonnectID(resp.PortalTeamResponse.ID)
 	return nil
 }
 
