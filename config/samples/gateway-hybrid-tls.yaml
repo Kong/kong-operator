@@ -32,7 +32,7 @@ spec:
         spec:
           containers:
             # renovate: datasource=docker versioning=docker
-            - image: kong/kong-gateway:3.14
+            - image: kong/kong-gateway:3.15
               name: proxy
   konnect:
     authRef:
