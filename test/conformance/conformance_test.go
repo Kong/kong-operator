@@ -3,7 +3,6 @@ package conformance
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -147,7 +146,7 @@ func runConformance(
 	}
 	opts.Mode = mode
 	opts.ConformanceProfiles = conformanceProfiles(gwType)
-	opts.SupportedFeatures = conformanceSupportedFeatures(gwType, supportedFeatures)
+	opts.SupportedFeatures = supportedFeatures
 	opts.SkipTests = skipped
 	opts.CleanupBaseResources = cleanupResources
 	opts.GatewayClassName = gwc.Name
@@ -173,27 +172,14 @@ func runConformance(
 	conformance.RunConformanceWithOptions(t, opts)
 }
 
-func conformanceProfiles(gwType gatewayType) []suite.ConformanceProfileName {
-	profiles := []suite.ConformanceProfileName{
+func conformanceProfiles(_ gatewayType) []suite.ConformanceProfileName {
+	return []suite.ConformanceProfileName{
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
+		suite.GatewayTCPConformanceProfileName,
 		suite.GatewayUDPConformanceProfileName,
 	}
-	if gwType == hybridGateway {
-		profiles = append(profiles, suite.GatewayTCPConformanceProfileName)
-	}
-	return profiles
-}
-
-func conformanceSupportedFeatures(gwType gatewayType, supportedFeatures []features.FeatureName) []features.FeatureName {
-	if gwType == hybridGateway {
-		return supportedFeatures
-	}
-
-	return slices.DeleteFunc(slices.Clone(supportedFeatures), func(feature features.FeatureName) bool {
-		return feature == features.SupportTCPRoute
-	})
 }
 
 // conformanceCleanupTimeout bounds how long the post-test Hook waits for
@@ -201,20 +187,20 @@ func conformanceSupportedFeatures(gwType gatewayType, supportedFeatures []featur
 // proceed anyway (so a stuck finalizer can't hang the whole suite).
 const conformanceCleanupTimeout = 90 * time.Second
 
-// waitForConformanceResourcesCleanup blocks until no HTTPRoute, TLSRoute or
-// ReferenceGrant in any conformance namespace still has a deletion timestamp,
+// waitForConformanceResourcesCleanup blocks until no HTTPRoute, TLSRoute,
+// TCPRoute or ReferenceGrant in any conformance namespace still has a deletion
+// timestamp,
 // i.e. the previous test's resources have been fully finalized and removed.
 // These are per-test resources (the base manifests only contribute
 // Gateways/Services), and several tests reuse the same names (for example the
 // "reference-grant" HTTPRoute, the "gateway-conformance-infra-test" TLSRoute,
-// and the "reference-grant-wrong-*" ReferenceGrants shared by the
-// *InvalidReferenceGrant tests), so letting them fully drain prevents the next
-// test from racing a still-finalizing object. HTTPRoutes and TLSRoutes carry
-// the operator's (hybrid/Konnect) finalizers and are the slow case;
-// ReferenceGrants are not finalized and usually clear instantly, but are
-// checked too for robustness. HTTPRoute and TLSRoute are the only route kinds
-// the operator supports. In the common case nothing is terminating and this
-// returns right away. On timeout it logs and returns without failing.
+// the TCPRoute conformance resources, and the "reference-grant-wrong-*"
+// ReferenceGrants shared by the *InvalidReferenceGrant tests), so letting them
+// fully drain prevents the next test from racing a still-finalizing object.
+// Routes can carry the operator's finalizers and are the slow case;
+// ReferenceGrants are not finalized and usually clear instantly, but are checked
+// too for robustness. In the common case nothing is terminating and this returns
+// right away. On timeout it logs and returns without failing.
 func waitForConformanceResourcesCleanup(ctx context.Context, cl client.Client, logf func(string, ...any)) {
 	waitCtx, cancel := context.WithTimeout(ctx, conformanceCleanupTimeout)
 	defer cancel()
@@ -246,6 +232,17 @@ func waitForConformanceResourcesCleanup(ctx context.Context, cl client.Client, l
 			}
 		}
 
+		var tcpRoutes gatewayv1.TCPRouteList
+		if err := cl.List(ctx, &tcpRoutes); err != nil {
+			return false, nil //nolint:nilerr
+		}
+		for i := range tcpRoutes.Items {
+			if r := &tcpRoutes.Items[i]; isConformanceNS(r.Namespace) && r.DeletionTimestamp != nil {
+				logf("waiting for TCPRoute %s/%s to finish terminating before next test", r.Namespace, r.Name)
+				return false, nil
+			}
+		}
+
 		var grants gatewayv1beta1.ReferenceGrantList
 		if err := cl.List(ctx, &grants); err != nil {
 			return false, nil //nolint:nilerr
@@ -259,7 +256,7 @@ func waitForConformanceResourcesCleanup(ctx context.Context, cl client.Client, l
 		return true, nil
 	})
 	if err != nil {
-		logf("timed out after %s waiting for conformance HTTPRoutes/ReferenceGrants to be cleaned up; proceeding anyway", conformanceCleanupTimeout)
+		logf("timed out after %s waiting for conformance routes/ReferenceGrants to be cleaned up; proceeding anyway", conformanceCleanupTimeout)
 	}
 }
 

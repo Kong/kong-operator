@@ -12,7 +12,10 @@ import (
 // -----------------------------------------------------------------------------
 
 // ingressRulesFromTCPRoutes processes a list of TCPRoute objects and translates
-// then into Kong configuration objects.
+// them into Kong configuration objects.
+// Per GEP-2645, when multiple TCPRoutes attached to the same listener, only the
+// winner is rendered into the dataplane.
+// Winner selection: oldest CreationTimestamp; namespace/name (alphabetical).
 func (t *Translator) ingressRulesFromTCPRoutes() ingressRules {
 	result := newIngressRules()
 
@@ -23,14 +26,62 @@ func (t *Translator) ingressRulesFromTCPRoutes() ingressRules {
 	}
 
 	var errs []error
-	for _, tcproute := range tcpRouteList {
-		if err := t.ingressRulesFromTCPRoute(&result, tcproute); err != nil {
-			err = fmt.Errorf("TCPRoute %s/%s can't be routed: %w", tcproute.Namespace, tcproute.Name, err)
+
+	// Validate first; keep only structurally-valid routes for arbitration.
+	valid := make([]*gatewayapi.TCPRoute, 0, len(tcpRouteList))
+	for _, r := range tcpRouteList {
+		if err := validateTCPRoute(r); err != nil {
 			errs = append(errs, err)
-		} else {
-			// at this point the object has been configured and can be
-			// reported as successfully translated.
-			t.registerSuccessfullyTranslatedObject(tcproute)
+			t.registerTranslationFailure(err.Error(), r)
+			continue
+		}
+		valid = append(valid, r)
+	}
+
+	// Build gateway -> TCP listeners index for the gateways referenced anywhere.
+	listenersByGateway := collectL4ListenersByGateway(t.storer, valid, gatewayapi.TCPProtocolType)
+
+	// Group routes by l4ListenerKey.
+	attachments := make(map[l4ListenerKey][]*gatewayapi.TCPRoute)
+	attachedRoutes := make(map[*gatewayapi.TCPRoute]struct{})
+	for _, r := range valid {
+		listenerKeys := l4RouteListenerAttachments(r, t.logger, t.storer, listenersByGateway)
+		for _, k := range listenerKeys {
+			attachments[k] = append(attachments[k], r)
+			attachedRoutes[r] = struct{}{}
+		}
+	}
+
+	// Pick a winner per listener, then aggregate the listener ports each
+	// winning route owns.
+	winningPorts := make(map[*gatewayapi.TCPRoute][]gatewayapi.PortNumber)
+	for key, candidates := range attachments {
+		winner := pickWinningL4Route(candidates)
+		if winner == nil {
+			continue
+		}
+		winningPorts[winner] = append(winningPorts[winner], key.port)
+	}
+
+	for _, r := range valid {
+		ports, ok := winningPorts[r]
+		if !ok {
+			continue
+		}
+		ports = dedupPorts(ports)
+		if err := t.translateTCPRouteWithPorts(&result, r, ports); err != nil {
+			errs = append(errs, fmt.Errorf("TCPRoute %s/%s can't be routed: %w",
+				r.Namespace, r.Name, err))
+		}
+	}
+
+	// Every TCPRoute that successfully attached to at least one listener (even
+	// if it lost arbitration on all of them) is reported as successfully
+	// translated — the route is "attached" per spec; arbitration is a
+	// translation-layer detail.
+	for _, r := range valid {
+		if _, ok := attachedRoutes[r]; ok {
+			t.registerSuccessfullyTranslatedObject(r)
 		}
 	}
 
@@ -39,41 +90,56 @@ func (t *Translator) ingressRulesFromTCPRoutes() ingressRules {
 	}
 
 	for _, err := range errs {
-		t.logger.Error(err, "could not generate route from TCPRoute")
+		t.logger.Error(err, "Could not generate route from TCPRoute")
 	}
 
 	return result
 }
 
-func (t *Translator) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayapi.TCPRoute) error {
-	spec := tcproute.Spec
+// translateTCPRouteWithPorts emits kong.Route(s) + kong.Service(s) for every
+// rule on `route`, with Destinations covering the supplied listener ports.
+// Callers must pass only ports for listeners where `route` won arbitration.
+func (t *Translator) translateTCPRouteWithPorts(
+	result *ingressRules,
+	route *gatewayapi.TCPRoute,
+	gwPorts []gatewayapi.PortNumber,
+) error {
+	spec := route.Spec
 	if len(spec.Rules) == 0 {
 		return subtranslator.ErrRouteValidationNoRules
 	}
 
-	gwPorts := t.getGatewayListeningPorts(tcproute.Namespace, gatewayapi.TCPProtocolType, spec.ParentRefs)
-
-	// Each rule may represent a different set of backend services that will be accepting
-	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
-
-		// Determine the routes needed to route traffic to services for this rule.
-		routes, err := generateKongRoutesFromRouteRule(tcproute, gwPorts, ruleNumber, rule)
+		routes, err := generateKongRoutesFromRouteRule(route, gwPorts, ruleNumber, rule)
 		if err != nil {
 			return err
 		}
-
-		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithRuleNumber(t.logger, t.storer, result, tcproute, ruleNumber, "tcp", rule.BackendRefs...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(
+			t.logger, t.storer, result, route, ruleNumber, "tcp", rule.BackendRefs...)
 		if err != nil {
 			return err
 		}
 		service.Routes = append(service.Routes, routes...)
 
-		// cache the service to avoid duplicates in further loop iterations
 		result.ServiceNameToServices[*service.Name] = service
-		result.ServiceNameToParent[*service.Name] = tcproute
+		result.ServiceNameToParent[*service.Name] = route
 	}
+	return nil
+}
 
+// validateTCPRoute validates TCPRoute, and return a translation error if the spec is invalid.
+// Validation for TCPRoutes will happen at a higher layer, but in spite of that we run
+// validation at this level as well as a fallback so that if routes are posted which
+// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
+// at least try to provide a helpful message about the situation in the manager logs.
+func validateTCPRoute(tcproute *gatewayapi.TCPRoute) error {
+	if len(tcproute.Spec.Rules) == 0 {
+		return subtranslator.ErrRouteValidationNoRules
+	}
+	for _, rule := range tcproute.Spec.Rules {
+		if len(rule.BackendRefs) == 0 {
+			return subtranslator.ErrRotueValidationRuleNoBackendRef
+		}
+	}
 	return nil
 }

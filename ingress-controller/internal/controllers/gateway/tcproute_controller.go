@@ -413,15 +413,6 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			debug(log, tcproute, "Failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
-		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-			// if the dataplane client has reporting enabled (this is the default and is
-			// tied in with status updates being enabled in the controller manager) then
-			// we will wait until the object is reported as successfully configured before
-			// moving on to status updates.
-			if !r.DataplaneClient.KubernetesObjectIsConfigured(tcproute) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-		}
 	} else {
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(tcproute); err != nil {
@@ -445,6 +436,16 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if updated {
 		// if the status was updated it will trigger a follow-up reconciliation
 		return ctrl.Result{}, nil
+	}
+
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		// if the dataplane client has reporting enabled (this is the default and is
+		// tied in with status updates being enabled in the controller manager) then
+		// we will wait until the object is reported as successfully configured before
+		// moving on to the remaining status updates.
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(tcproute) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	// update "Programmed" condition if the TCPRoute is translated to Kong configuration.
