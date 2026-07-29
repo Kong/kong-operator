@@ -84,7 +84,8 @@
 - Support `spec.deployment.labels` and `spec.deployment.annotations` for metadata
   of underlying dataplane `Deployment` for:
   - `DataPlane` [#5037](https://github.com/Kong/kong-operator/pull/5037)
-  - `AIGatewayDataPlane` [5081](https://github.com/Kong/kong-operator/pull/5081)
+  - `AIGatewayDataPlane` [#5081](https://github.com/Kong/kong-operator/pull/5081)
+  - `KegDataPlane` [#5088](https://github.com/Kong/kong-operator/pull/5088)
   with safe managed-key removal so operator-managed keys are removed without
   clobbering external labels or annotations. This change causes a rolling
   restart of the underlying `Pod`s when updating operator to this version,
@@ -126,6 +127,9 @@
   diff/apply implementation, removing the now unused
   `controller/hybridgateway/managedfields` package.
   [#5052](https://github.com/Kong/kong-operator/pull/5052)
+- AIGateway: update the default AI Gateway DataPlane image to
+  `kong/kong-ai-gateway-dev:2.0.1-rc.4`.
+  [#5094](https://github.com/Kong/kong-operator/pull/5094)
 
 ## [v2.3.0-rc.2]
 
@@ -249,6 +253,8 @@
   [#4713](https://github.com/Kong/kong-operator/pull/4713)
 - Hybridgateway: treat malformed annotations as errors
   [#4530](https://github.com/Kong/kong-operator/pull/4530)
+- Conformance: enable HTTPRouteBackendTimeout
+  [#4714](https://github.com/Kong/kong-operator/pull/4714)
 - Conformance: enable GRPCRoute conformance tests for on-prem.
   [#4673](https://github.com/Kong/kong-operator/pull/4673)
 - Kong Event Gateway v1.2.0 is the default KEG DataPlane image.

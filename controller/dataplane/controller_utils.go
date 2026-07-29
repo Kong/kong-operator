@@ -152,8 +152,7 @@ func addAnnotationsForDataPlaneDeployment(logger logr.Logger, deployment *appsv1
 		return
 	}
 
-	obj := &metav1.ObjectMeta{Namespace: dataplane.Namespace, Name: dataplane.Name, Annotations: specAnnotations}
-	specAnnotations = reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, obj, dataPlaneDeploymentReservedKeys)
+	specAnnotations = reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, specAnnotations, dataPlaneDeploymentReservedKeys)
 	deployment.Annotations = reservedkeys.MergeAnnotationsTracked(deployment.Annotations, specAnnotations)
 }
 
@@ -166,8 +165,7 @@ func addLabelsForDataPlaneDeployment(logger logr.Logger, deployment *appsv1.Depl
 	if specLabels == nil {
 		return
 	}
-	obj := &metav1.ObjectMeta{Namespace: dataplane.Namespace, Name: dataplane.Name, Labels: specLabels}
-	specLabels = reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, obj, dataPlaneDeploymentReservedKeys)
+	specLabels = reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, specLabels, dataPlaneDeploymentReservedKeys)
 	deployment.Labels = reservedkeys.Merge(deployment.Labels, specLabels)
 }
 

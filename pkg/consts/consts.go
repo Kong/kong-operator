@@ -207,3 +207,8 @@ const (
 	// KongPluginNamePrometheus is the name of the KongPlugin for the Prometheus plugin.
 	KongPluginNamePrometheus = "prometheus"
 )
+
+// MaxKongServiceTimeout is the largest timeout Kong accepts for Service connect, read, and
+// write timeouts. Kong has no "disable" value, so a zero-duration backendRequest timeout
+// (which the Gateway API defines as "no timeout") is mapped to this as the closest emulation.
+const MaxKongServiceTimeout = 2147483646

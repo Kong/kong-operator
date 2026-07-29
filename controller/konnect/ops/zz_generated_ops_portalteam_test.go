@@ -57,7 +57,7 @@ func TestCreatePortalTeam_UsesSDKOpsConversion(t *testing.T) {
 		).
 		Return(&sdkkonnectops.CreatePortalTeamResponse{
 			PortalTeamResponse: &sdkkonnectcomp.PortalTeamResponse{
-				ID: &expectedID,
+				ID: expectedID,
 			},
 		}, nil).
 		Once()

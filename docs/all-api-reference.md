@@ -6082,6 +6082,8 @@ DeploymentOptions specifies options for the Deployment managed by the KegDataPla
 | --- | --- |
 | `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#eventgateway-konghq-com-v1alpha1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the keg Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the keg Deployment metadata by the operator. |
 | `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).<br /><br />Note: environment variables set here take precedence over strongly-typed fields in Spec.Config. Using raw env vars is discouraged and intended for advanced use cases only. |
 
 _Appears in:_
@@ -11508,38 +11510,6 @@ Allowed values:
 
 
 
-#### AIGatewayModelAliasConfigBody
-
-
-AIGatewayModelAliasConfigBody Configuration for routing requests to a
-specific model using a request body property.
-
-
-
-| Field | Description |
-| --- | --- |
-| `body` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request body. |
-
-_Appears in:_
-
-- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
-
-#### AIGatewayModelAliasConfigHeaders
-
-
-AIGatewayModelAliasConfigHeaders Configuration for routing requests to a
-specific model using a header.
-
-
-
-| Field | Description |
-| --- | --- |
-| `headers` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request headers. |
-
-_Appears in:_
-
-- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
-
 #### AIGatewayModelAliasConfigPath
 
 
@@ -13187,9 +13157,7 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[AIGatewayModelRouteConfigModelType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodeltype)_ | Type designates the type of configuration. |
-| `body` _[AIGatewayModelAliasConfigBody](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigbody)_ | Body configuration. |
-| `headers` _[AIGatewayModelAliasConfigHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigheaders)_ | Headers configuration. |
-| `path` _[AIGatewayModelAliasConfigPath](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigpath)_ | Path configuration. |
+| `aIGatewayModelAliasConfigPath` _[AIGatewayModelAliasConfigPath](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigpath)_ | AIGatewayModelAliasConfigPath configuration. |
 
 _Appears in:_
 
@@ -13212,9 +13180,7 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `body` |  |
-| `headers` |  |
-| `path` |  |
+| `aIGatewayModelAliasConfigPath` |  |
 
 
 
@@ -16004,9 +15970,9 @@ PortalAPISpec defines the API spec fields for Portal.
 | `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
 | `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
 | `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
-| `defaultAPIVisibility` _[PortalDefaultAPIVisibility](#konnect-konghq-com-v1alpha1-types-portaldefaultapivisibility)_ | The default visibility of APIs in the portal. |
+| `defaultAPIVisibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
 | `defaultApplicationAuthStrategyIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
-| `defaultPageVisibility` _[PortalDefaultPageVisibility](#konnect-konghq-com-v1alpha1-types-portaldefaultpagevisibility)_ | The default visibility of pages in the portal. |
+| `defaultPageVisibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
 | `description` _*string_ | A description of the portal. |
 | `displayName` _string_ | The display name of the portal. This value will be the portal's `name` in Portal API. |
 | `labels` _[LabelsUpdate](#konnect-konghq-com-v1alpha1-types-labelsupdate)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Labels are intended to store **INTERNAL** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
@@ -16163,32 +16129,6 @@ PortalCustomizationStatus defines the observed state of PortalCustomization.
 _Appears in:_
 
 - [PortalCustomization](#konnect-konghq-com-v1alpha1-portalcustomization)
-
-#### PortalDefaultAPIVisibility
-
-_Underlying type:_ `string`
-
-PortalDefaultAPIVisibility The default visibility of APIs in the portal.
-
-
-
-
-_Appears in:_
-
-- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
-
-#### PortalDefaultPageVisibility
-
-_Underlying type:_ `string`
-
-PortalDefaultPageVisibility The default visibility of pages in the portal.
-
-
-
-
-_Appears in:_
-
-- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
 
 #### PortalEmailConfigAPISpec
 
