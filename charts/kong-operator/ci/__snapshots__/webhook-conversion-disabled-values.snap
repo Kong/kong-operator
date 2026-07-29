@@ -55388,30 +55388,8 @@ spec:
                               model:
                                 description: Configuration for routing to this model using an alias.
                                 properties:
-                                  body:
-                                    description: Body configuration.
-                                    properties:
-                                      body:
-                                        description: |-
-                                          Value indexed by property name that will cause this route to match if
-                                          present in the request body.
-                                        x-kubernetes-preserve-unknown-fields: true
-                                    required:
-                                    - body
-                                    type: object
-                                  headers:
-                                    description: Headers configuration.
-                                    properties:
-                                      headers:
-                                        description: |-
-                                          Value indexed by property name that will cause this route to match if
-                                          present in the request headers.
-                                        x-kubernetes-preserve-unknown-fields: true
-                                    required:
-                                    - headers
-                                    type: object
-                                  path:
-                                    description: Path configuration.
+                                  aIGatewayModelAliasConfigPath:
+                                    description: AIGatewayModelAliasConfigPath configuration.
                                     properties:
                                       pathAliases:
                                         description: Value that will cause this route to match if present in the request path.
@@ -55425,9 +55403,7 @@ spec:
                                   type:
                                     description: Type designates the type of configuration.
                                     enum:
-                                    - body
-                                    - headers
-                                    - path
+                                    - aIGatewayModelAliasConfigPath
                                     minLength: 1
                                     type: string
                                 required:
@@ -57923,30 +57899,8 @@ spec:
                               model:
                                 description: Configuration for routing to this model using an alias.
                                 properties:
-                                  body:
-                                    description: Body configuration.
-                                    properties:
-                                      body:
-                                        description: |-
-                                          Value indexed by property name that will cause this route to match if
-                                          present in the request body.
-                                        x-kubernetes-preserve-unknown-fields: true
-                                    required:
-                                    - body
-                                    type: object
-                                  headers:
-                                    description: Headers configuration.
-                                    properties:
-                                      headers:
-                                        description: |-
-                                          Value indexed by property name that will cause this route to match if
-                                          present in the request headers.
-                                        x-kubernetes-preserve-unknown-fields: true
-                                    required:
-                                    - headers
-                                    type: object
-                                  path:
-                                    description: Path configuration.
+                                  aIGatewayModelAliasConfigPath:
+                                    description: AIGatewayModelAliasConfigPath configuration.
                                     properties:
                                       pathAliases:
                                         description: Value that will cause this route to match if present in the request path.
@@ -57960,9 +57914,7 @@ spec:
                                   type:
                                     description: Type designates the type of configuration.
                                     enum:
-                                    - body
-                                    - headers
-                                    - path
+                                    - aIGatewayModelAliasConfigPath
                                     minLength: 1
                                     type: string
                                 required:
@@ -63699,7 +63651,12 @@ spec:
                     - Disabled
                     type: string
                   defaultAPIVisibility:
-                    description: The default visibility of APIs in the portal.
+                    description: |-
+                      The default visibility of APIs in the portal.
+                      If set to `public`, newly published APIs are visible to unauthenticated
+                      developers.
+                      If set to `private`, newly published APIs are hidden from unauthenticated
+                      developers.
                     enum:
                     - public
                     - private
@@ -63765,7 +63722,12 @@ spec:
                     - message: when type is konnectID, namespacedRef must not be set
                       rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
                   defaultPageVisibility:
-                    description: The default visibility of pages in the portal.
+                    description: |-
+                      The default visibility of pages in the portal.
+                      If set to `public`, newly created pages are visible to unauthenticated
+                      developers.
+                      If set to `private`, newly created pages are hidden from unauthenticated
+                      developers.
                     enum:
                     - public
                     - private

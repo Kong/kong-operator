@@ -37,8 +37,8 @@ func TestAIGatewayModel_RouteModel_WireShape(t *testing.T) {
 							Route: AIGatewayModelRouteConfig{
 								Paths: []string{"/v1/chat/completions"},
 								Model: &AIGatewayModelRouteConfigModel{
-									Type: AIGatewayModelRouteConfigModelTypePath,
-									Path: &AIGatewayModelAliasConfigPath{
+									Type: AIGatewayModelRouteConfigModelTypeAIGatewayModelAliasConfigPath,
+									AIGatewayModelAliasConfigPath: &AIGatewayModelAliasConfigPath{
 										PathAliases: []string{
 											"gpt-4o-mini",
 										},
@@ -112,8 +112,8 @@ func TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved(t *testing.T) {
 							Route: AIGatewayModelRouteConfig{
 								Paths: []string{"/v1/chat/completions"},
 								Model: &AIGatewayModelRouteConfigModel{
-									Type: AIGatewayModelRouteConfigModelTypePath,
-									Path: &AIGatewayModelAliasConfigPath{
+									Type: AIGatewayModelRouteConfigModelTypeAIGatewayModelAliasConfigPath,
+									AIGatewayModelAliasConfigPath: &AIGatewayModelAliasConfigPath{
 										PathAliases: []string{"gpt-4o-mini"},
 									},
 								},
