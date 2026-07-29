@@ -3526,30 +3526,6 @@ func (s *AIGatewayModelAccess) UnmarshalJSON(data []byte) error {
 // alias.
 type AIGatewayModelAliasConfig map[string]string
 
-// AIGatewayModelAliasConfigBody Configuration for routing requests to a
-// specific model using a request body property.
-type AIGatewayModelAliasConfigBody struct {
-	// Value indexed by property name that will cause this route to match if
-	// present in the request body.
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MaxProperties=1
-	Body apiextensionsv1.JSON `json:"body,omitzero"`
-}
-
-// AIGatewayModelAliasConfigHeaders Configuration for routing requests to a
-// specific model using a header.
-type AIGatewayModelAliasConfigHeaders struct {
-	// Value indexed by property name that will cause this route to match if
-	// present in the request headers.
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MaxProperties=1
-	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
-}
-
 // AIGatewayModelAliasConfigPath Configuration for routing requests to a
 // specific model using a path alias.
 type AIGatewayModelAliasConfigPath struct {
@@ -6959,21 +6935,13 @@ type AIGatewayModelRouteConfigModel struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=body;headers;path
+	// +kubebuilder:validation:Enum=aIGatewayModelAliasConfigPath
 	Type AIGatewayModelRouteConfigModelType `json:"type,omitempty"`
 
-	// Body configuration.
+	// AIGatewayModelAliasConfigPath configuration.
 	//
 	// +optional
-	Body *AIGatewayModelAliasConfigBody `json:"body,omitempty"`
-	// Headers configuration.
-	//
-	// +optional
-	Headers *AIGatewayModelAliasConfigHeaders `json:"headers,omitempty"`
-	// Path configuration.
-	//
-	// +optional
-	Path *AIGatewayModelAliasConfigPath `json:"path,omitempty"`
+	AIGatewayModelAliasConfigPath *AIGatewayModelAliasConfigPath `json:"aIGatewayModelAliasConfigPath,omitempty"`
 }
 
 // AIGatewayModelRouteConfigModelType represents the type of model.
@@ -6981,9 +6949,7 @@ type AIGatewayModelRouteConfigModelType string
 
 // AIGatewayModelRouteConfigModelType values.
 const (
-	AIGatewayModelRouteConfigModelTypeBody    AIGatewayModelRouteConfigModelType = "body"
-	AIGatewayModelRouteConfigModelTypeHeaders AIGatewayModelRouteConfigModelType = "headers"
-	AIGatewayModelRouteConfigModelTypePath    AIGatewayModelRouteConfigModelType = "path"
+	AIGatewayModelRouteConfigModelTypeAIGatewayModelAliasConfigPath AIGatewayModelRouteConfigModelType = "aIGatewayModelAliasConfigPath"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -6995,29 +6961,13 @@ func (u AIGatewayModelRouteConfigModel) MarshalJSON() ([]byte, error) {
 	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case AIGatewayModelRouteConfigModelTypeBody:
-		if u.Body != nil {
-			raw, err := json.Marshal(u.Body)
+	case AIGatewayModelRouteConfigModelTypeAIGatewayModelAliasConfigPath:
+		if u.AIGatewayModelAliasConfigPath != nil {
+			raw, err := json.Marshal(u.AIGatewayModelAliasConfigPath)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Body: %w", err)
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel AIGatewayModelAliasConfigPath: %w", err)
 			}
-			m["body"] = raw
-		}
-	case AIGatewayModelRouteConfigModelTypeHeaders:
-		if u.Headers != nil {
-			raw, err := json.Marshal(u.Headers)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Headers: %w", err)
-			}
-			m["headers"] = raw
-		}
-	case AIGatewayModelRouteConfigModelTypePath:
-		if u.Path != nil {
-			raw, err := json.Marshal(u.Path)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Path: %w", err)
-			}
-			m["path"] = raw
+			m["aIGatewayModelAliasConfigPath"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -7040,36 +6990,16 @@ func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
 	}
 	u.Type = AIGatewayModelRouteConfigModelType(probe.Type)
 	switch probe.Type {
-	case "body":
-		payload, ok := raw["body"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayModelAliasConfigBody
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Body: %w", err)
-		}
-		u.Body = &val
-	case "headers":
-		payload, ok := raw["headers"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayModelAliasConfigHeaders
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Headers: %w", err)
-		}
-		u.Headers = &val
-	case "path":
-		payload, ok := raw["path"]
+	case "aIGatewayModelAliasConfigPath":
+		payload, ok := raw["aIGatewayModelAliasConfigPath"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
 		var val AIGatewayModelAliasConfigPath
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Path: %w", err)
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel AIGatewayModelAliasConfigPath: %w", err)
 		}
-		u.Path = &val
+		u.AIGatewayModelAliasConfigPath = &val
 	}
 	return nil
 }
@@ -7085,7 +7015,7 @@ func (s *AIGatewayModelRouteConfig) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfig: %w", err)
 	}
-	if aux.Model != nil && aux.Model.Type == "" && aux.Model.Body == nil && aux.Model.Headers == nil && aux.Model.Path == nil {
+	if aux.Model != nil && aux.Model.Type == "" && aux.Model.AIGatewayModelAliasConfigPath == nil {
 		aux.Model = nil
 	}
 	*s = AIGatewayModelRouteConfig(aux)
@@ -10363,12 +10293,6 @@ type PageTitle string
 // If not provided, the default_page_visibility value of the portal will be
 // used.
 type PageVisibilityStatus string
-
-// PortalDefaultAPIVisibility The default visibility of APIs in the portal.
-type PortalDefaultAPIVisibility string
-
-// PortalDefaultPageVisibility The default visibility of pages in the portal.
-type PortalDefaultPageVisibility string
 
 // PortalFooterMenuSection is a type alias.
 type PortalFooterMenuSection struct {

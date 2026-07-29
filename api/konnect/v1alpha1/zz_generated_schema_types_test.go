@@ -475,32 +475,6 @@ func TestAIGatewayModelAccess_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayModelAliasConfigBody_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayModelAliasConfigBody
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayModelAliasConfigHeaders_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayModelAliasConfigHeaders
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
 func TestAIGatewayModelAliasConfigPath_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1909,9 +1883,7 @@ func TestAIGatewayModelRouteConfigModelUnmarshalJSON_NilReceiver(t *testing.T) {
 		name    string
 		payload []byte
 	}{
-		{name: "Body", payload: []byte("{\"type\":\"body\",\"body\":{}}")},
-		{name: "Headers", payload: []byte("{\"type\":\"headers\",\"headers\":{}}")},
-		{name: "Path", payload: []byte("{\"type\":\"path\",\"path\":{}}")},
+		{name: "AIGatewayModelAliasConfigPath", payload: []byte("{\"type\":\"aIGatewayModelAliasConfigPath\",\"aIGatewayModelAliasConfigPath\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -2847,50 +2819,18 @@ func TestAIGatewayModelRouteConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 		assert  func(*testing.T, AIGatewayModelRouteConfig)
 	}{
 		{
-			name:    "Model/Body",
-			payload: []byte("{\"model\":{\"type\":\"body\",\"body\":{}}}"),
+			name:    "Model/AIGatewayModelAliasConfigPath",
+			payload: []byte("{\"model\":{\"type\":\"aIGatewayModelAliasConfigPath\",\"aIGatewayModelAliasConfigPath\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelRouteConfig) {
 				t.Helper()
 				if target.Model == nil {
 					t.Fatalf("Model should be allocated")
 				}
-				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypeBody; got != want {
+				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypeAIGatewayModelAliasConfigPath; got != want {
 					t.Fatalf("unexpected type: got %q want %q", got, want)
 				}
-				if target.Model.Body == nil {
-					t.Fatalf("Model.Body should be allocated")
-				}
-			},
-		},
-		{
-			name:    "Model/Headers",
-			payload: []byte("{\"model\":{\"type\":\"headers\",\"headers\":{}}}"),
-			assert: func(t *testing.T, target AIGatewayModelRouteConfig) {
-				t.Helper()
-				if target.Model == nil {
-					t.Fatalf("Model should be allocated")
-				}
-				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypeHeaders; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.Model.Headers == nil {
-					t.Fatalf("Model.Headers should be allocated")
-				}
-			},
-		},
-		{
-			name:    "Model/Path",
-			payload: []byte("{\"model\":{\"type\":\"path\",\"path\":{}}}"),
-			assert: func(t *testing.T, target AIGatewayModelRouteConfig) {
-				t.Helper()
-				if target.Model == nil {
-					t.Fatalf("Model should be allocated")
-				}
-				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypePath; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.Model.Path == nil {
-					t.Fatalf("Model.Path should be allocated")
+				if target.Model.AIGatewayModelAliasConfigPath == nil {
+					t.Fatalf("Model.AIGatewayModelAliasConfigPath should be allocated")
 				}
 			},
 		},
