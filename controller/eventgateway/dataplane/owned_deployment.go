@@ -36,6 +36,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/controller/pkg/reservedkeys"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -51,7 +52,7 @@ func (r *Reconciler) ensureDeployment(
 	certSecretName string,
 ) error {
 	image := resolveImage(egdp, consts.DefaultKEGImage)
-	desired, err := buildDeployment(r.TypeConverter, egdp, keg, image, certSecretName)
+	desired, err := buildDeployment(logger, r.TypeConverter, egdp, keg, image, certSecretName)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for DataPlane %s/%s: %w",
 			egdp.Namespace, egdp.Name, err)
@@ -100,13 +101,14 @@ func resolveImage(egdp *eventgatewayv1alpha1.KegDataPlane, defaultImage string) 
 // removed so that SSA does not claim ownership of it, leaving the API server
 // (or admission webhooks) free to apply their own default.
 func buildDeployment(
+	logger logr.Logger,
 	tc managedfields.TypeConverter,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	keg *konnectv1alpha1.KonnectEventGateway,
 	image string,
 	certSecretName string,
 ) (*unstructured.Unstructured, error) {
-	base, err := generateBaseDeployment(egdp, keg, image, certSecretName)
+	base, err := generateBaseDeployment(logger, egdp, keg, image, certSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +157,7 @@ func buildDeployment(
 
 // generateBaseDeployment creates the operator-managed keg Deployment without user overlays.
 func generateBaseDeployment(
+	logger logr.Logger,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	keg *konnectv1alpha1.KonnectEventGateway,
 	image string,
@@ -253,7 +256,41 @@ func generateBaseDeployment(
 	}
 
 	k8sutils.SetOwnerForObject(d, egdp)
+
+	addAnnotationsForKegDataPlaneDeployment(logger, d, egdp)
+	addLabelsForKegDataPlaneDeployment(logger, d, egdp)
+
 	return d, nil
+}
+
+// kegDataPlaneDeploymentReservedKeys reports whether a label/annotation key is
+// reserved for internal operator or Kubernetes use and must be dropped from any
+// spec.deployment.labels/annotations provided by the user.
+var kegDataPlaneDeploymentReservedKeys = reservedkeys.NewChecker("app.kubernetes.io/name", "deployment.kubernetes.io/revision")
+
+// addAnnotationsForKegDataPlaneDeployment merges the user-provided
+// spec.deployment.annotations (with reserved keys filtered out) into the
+// Deployment's own metadata. It does not mutate the base annotations map so it
+// is safe to call even when the Deployment shares maps with other objects
+// (e.g. the Pod template).
+func addAnnotationsForKegDataPlaneDeployment(logger logr.Logger, deployment *appsv1.Deployment, egdp *eventgatewayv1alpha1.KegDataPlane) {
+	if egdp.Spec.Deployment == nil || len(egdp.Spec.Deployment.Annotations) == 0 {
+		return
+	}
+	specAnnotations := reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, egdp.Spec.Deployment.Annotations, kegDataPlaneDeploymentReservedKeys)
+	deployment.Annotations = reservedkeys.Merge(deployment.Annotations, specAnnotations)
+}
+
+// addLabelsForKegDataPlaneDeployment merges the user-provided
+// spec.deployment.labels (with reserved keys filtered out) into the
+// Deployment's own metadata. It does not mutate the base labels map, which is
+// shared with the Pod template, so the Pod template's labels are unaffected.
+func addLabelsForKegDataPlaneDeployment(logger logr.Logger, deployment *appsv1.Deployment, egdp *eventgatewayv1alpha1.KegDataPlane) {
+	if egdp.Spec.Deployment == nil || len(egdp.Spec.Deployment.Labels) == 0 {
+		return
+	}
+	specLabels := reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, egdp.Spec.Deployment.Labels, kegDataPlaneDeploymentReservedKeys)
+	deployment.Labels = reservedkeys.Merge(deployment.Labels, specLabels)
 }
 
 // buildKEGEnvVars builds the full list of keg environment variables from
