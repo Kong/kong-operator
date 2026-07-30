@@ -475,6 +475,32 @@ func TestAIGatewayModelAccess_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayModelAliasConfigBody_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelAliasConfigBody
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelAliasConfigHeaders_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelAliasConfigHeaders
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayModelAliasConfigPath_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -735,6 +761,19 @@ func TestAIGatewayModelProviderConfigAuthGCP_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayModelProviderConfigAuthSagemaker_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelProviderConfigAuthSagemaker
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayModelProviderConfigAuthVertex_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -869,6 +908,19 @@ func TestAIGatewayModelProviderOpenai_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayModelProviderOpenai
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelProviderSagemaker_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelProviderSagemaker
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1285,6 +1337,19 @@ func TestAIGatewayTargetOpenaiConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayTargetOpenaiConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayTargetSagemakerConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTargetSagemakerConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1883,7 +1948,9 @@ func TestAIGatewayModelRouteConfigModelUnmarshalJSON_NilReceiver(t *testing.T) {
 		name    string
 		payload []byte
 	}{
-		{name: "AIGatewayModelAliasConfigPath", payload: []byte("{\"type\":\"aIGatewayModelAliasConfigPath\",\"aIGatewayModelAliasConfigPath\":{}}")},
+		{name: "Body", payload: []byte("{\"type\":\"body\",\"body\":{}}")},
+		{name: "Headers", payload: []byte("{\"type\":\"headers\",\"headers\":{}}")},
+		{name: "Path", payload: []byte("{\"type\":\"path\",\"path\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -2067,6 +2134,7 @@ func TestAIGatewayTargetConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 		{name: "mistral", payload: []byte("{\"type\":\"mistral\",\"mistral\":{}}")},
 		{name: "ollama", payload: []byte("{\"type\":\"ollama\",\"ollama\":{}}")},
 		{name: "openai", payload: []byte("{\"type\":\"openai\",\"openai\":{}}")},
+		{name: "sagemaker", payload: []byte("{\"type\":\"sagemaker\",\"sagemaker\":{}}")},
 		{name: "vercel", payload: []byte("{\"type\":\"vercel\",\"vercel\":{}}")},
 		{name: "vertex", payload: []byte("{\"type\":\"vertex\",\"vertex\":{}}")},
 		{name: "vllm", payload: []byte("{\"type\":\"vllm\",\"vllm\":{}}")},
@@ -2819,18 +2887,50 @@ func TestAIGatewayModelRouteConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 		assert  func(*testing.T, AIGatewayModelRouteConfig)
 	}{
 		{
-			name:    "Model/AIGatewayModelAliasConfigPath",
-			payload: []byte("{\"model\":{\"type\":\"aIGatewayModelAliasConfigPath\",\"aIGatewayModelAliasConfigPath\":{}}}"),
+			name:    "Model/Body",
+			payload: []byte("{\"model\":{\"type\":\"body\",\"body\":{}}}"),
 			assert: func(t *testing.T, target AIGatewayModelRouteConfig) {
 				t.Helper()
 				if target.Model == nil {
 					t.Fatalf("Model should be allocated")
 				}
-				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypeAIGatewayModelAliasConfigPath; got != want {
+				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypeBody; got != want {
 					t.Fatalf("unexpected type: got %q want %q", got, want)
 				}
-				if target.Model.AIGatewayModelAliasConfigPath == nil {
-					t.Fatalf("Model.AIGatewayModelAliasConfigPath should be allocated")
+				if target.Model.Body == nil {
+					t.Fatalf("Model.Body should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Model/Headers",
+			payload: []byte("{\"model\":{\"type\":\"headers\",\"headers\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayModelRouteConfig) {
+				t.Helper()
+				if target.Model == nil {
+					t.Fatalf("Model should be allocated")
+				}
+				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypeHeaders; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Model.Headers == nil {
+					t.Fatalf("Model.Headers should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Model/Path",
+			payload: []byte("{\"model\":{\"type\":\"path\",\"path\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayModelRouteConfig) {
+				t.Helper()
+				if target.Model == nil {
+					t.Fatalf("Model should be allocated")
+				}
+				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypePath; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Model.Path == nil {
+					t.Fatalf("Model.Path should be allocated")
 				}
 			},
 		},
@@ -3303,6 +3403,22 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 				}
 				if target.Config.Openai == nil {
 					t.Fatalf("Config.Openai should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/sagemaker",
+			payload: []byte("{\"config\":{\"type\":\"sagemaker\",\"sagemaker\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayTarget) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.Type, AIGatewayTargetConfigTypeSagemaker; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Sagemaker == nil {
+					t.Fatalf("Config.Sagemaker should be allocated")
 				}
 			},
 		},
