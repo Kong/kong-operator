@@ -9951,6 +9951,7 @@ _Appears in:_
 - [AIGatewayModelProviderMistral](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)
 - [AIGatewayModelProviderOllama](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)
 - [AIGatewayModelProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
+- [AIGatewayModelProviderSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
 - [AIGatewayModelProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
 - [AIGatewayModelProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertex)
 - [AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
@@ -11510,6 +11511,38 @@ Allowed values:
 
 
 
+#### AIGatewayModelAliasConfigBody
+
+
+AIGatewayModelAliasConfigBody Configuration for routing requests to a
+specific model using a request body property.
+
+
+
+| Field | Description |
+| --- | --- |
+| `body` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request body. |
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
+
+#### AIGatewayModelAliasConfigHeaders
+
+
+AIGatewayModelAliasConfigHeaders Configuration for routing requests to a
+specific model using a header.
+
+
+
+| Field | Description |
+| --- | --- |
+| `headers` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request headers. |
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
+
 #### AIGatewayModelAliasConfigPath
 
 
@@ -12296,6 +12329,7 @@ Only one of the fields should be set based on the Type.
 | `mistral` _[AIGatewayModelProviderMistral](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)_ | Mistral configuration. |
 | `ollama` _[AIGatewayModelProviderOllama](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)_ | Ollama configuration. |
 | `openai` _[AIGatewayModelProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)_ | Openai configuration. |
+| `sagemaker` _[AIGatewayModelProviderSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)_ | Sagemaker configuration. |
 | `vercel` _[AIGatewayModelProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)_ | Vercel configuration. |
 | `vertex` _[AIGatewayModelProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertex)_ | Vertex configuration. |
 | `vllm` _[AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)_ | Vllm configuration. |
@@ -12375,6 +12409,7 @@ _Appears in:_
 - [AIGatewayModelProviderMistralConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidermistralconfig)
 - [AIGatewayModelProviderOllamaConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderollamaconfig)
 - [AIGatewayModelProviderOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenaiconfig)
+- [AIGatewayModelProviderSagemakerConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfigauth)
 - [AIGatewayModelProviderVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercelconfig)
 - [AIGatewayModelProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfigauth)
 - [AIGatewayModelProviderVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllmconfig)
@@ -12432,6 +12467,39 @@ _Appears in:_
 
 - [AIGatewayModelProviderGeminiConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidergeminiconfigauth)
 
+#### AIGatewayModelProviderConfigAuthSagemaker
+
+
+AIGatewayModelProviderConfigAuthSagemaker **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Auth configuration for Sagemaker model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aws` _[AIGatewayModelProviderConfigAuthSagemakerAws](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthsagemakeraws)_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelProviderSagemakerConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfigauth)
+
+#### AIGatewayModelProviderConfigAuthSagemakerAws
+
+
+AIGatewayModelProviderConfigAuthSagemakerAws is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `accessKeyID` _string_ | static IAM user credential; overrides AWS_ACCESS_KEY_ID env var |
+| `secretAccessKey` _string_ | static IAM user credential; overrides AWS_SECRET_ACCESS_KEY env var |
+| `sessionToken` _string_ | static IAM user credential; overrides AWS_SESSION_TOKEN env var |
+
+_Appears in:_
+
+- [AIGatewayModelProviderConfigAuthSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthsagemaker)
+
 #### AIGatewayModelProviderConfigAuthVertex
 
 
@@ -12481,6 +12549,7 @@ Allowed values:
 | `mistral` |  |
 | `ollama` |  |
 | `openai` |  |
+| `sagemaker` |  |
 | `vercel` |  |
 | `vertex` |  |
 | `vllm` |  |
@@ -12906,6 +12975,80 @@ _Appears in:_
 
 - [AIGatewayModelBalancerSemanticConfigEmbeddings](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddings)
 
+#### AIGatewayModelProviderSagemaker
+
+
+AIGatewayModelProviderSagemaker **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Config for Sagemaker model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayModelProviderSagemakerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
+| `displayName` _string_ | The display name for this model provider instance. |
+| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfig)
+
+#### AIGatewayModelProviderSagemakerConfig
+
+
+AIGatewayModelProviderSagemakerConfig **Pre-release Feature**
+This feature is currently in beta and is subject to change.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayModelProviderSagemakerConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfigauth)_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelProviderSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
+
+#### AIGatewayModelProviderSagemakerConfigAuth
+
+
+AIGatewayModelProviderSagemakerConfigAuth represents a union type for auth.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayModelProviderSagemakerConfigAuthType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfigauthtype)_ | Type designates the type of configuration. |
+| `basic` _[AIGatewayModelProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic configuration. |
+| `sagemaker` _[AIGatewayModelProviderConfigAuthSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthsagemaker)_ | Sagemaker configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderSagemakerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfig)
+
+#### AIGatewayModelProviderSagemakerConfigAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayModelProviderSagemakerConfigAuthType represents the type of auth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelProviderSagemakerConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfigauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `basic` |  |
+| `sagemaker` |  |
+
 #### AIGatewayModelProviderSpec
 
 
@@ -13157,7 +13300,9 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[AIGatewayModelRouteConfigModelType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodeltype)_ | Type designates the type of configuration. |
-| `aIGatewayModelAliasConfigPath` _[AIGatewayModelAliasConfigPath](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigpath)_ | AIGatewayModelAliasConfigPath configuration. |
+| `body` _[AIGatewayModelAliasConfigBody](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigbody)_ | Body configuration. |
+| `headers` _[AIGatewayModelAliasConfigHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigheaders)_ | Headers configuration. |
+| `path` _[AIGatewayModelAliasConfigPath](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigpath)_ | Path configuration. |
 
 _Appears in:_
 
@@ -13180,7 +13325,9 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `aIGatewayModelAliasConfigPath` |  |
+| `body` |  |
+| `headers` |  |
+| `path` |  |
 
 
 
@@ -14233,6 +14380,7 @@ Only one of the fields should be set based on the Type.
 | `mistral` _[AIGatewayTargetMistralConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetmistralconfig)_ | Mistral configuration. |
 | `ollama` _[AIGatewayTargetOllamaConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetollamaconfig)_ | Ollama configuration. |
 | `openai` _[AIGatewayTargetOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)_ | Openai configuration. |
+| `sagemaker` _[AIGatewayTargetSagemakerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)_ | Sagemaker configuration. |
 | `vercel` _[AIGatewayTargetVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)_ | Vercel configuration. |
 | `vertex` _[AIGatewayTargetVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvertexconfig)_ | Vertex configuration. |
 | `vllm` _[AIGatewayTargetVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)_ | Vllm configuration. |
@@ -14274,6 +14422,7 @@ Allowed values:
 | `mistral` |  |
 | `ollama` |  |
 | `openai` |  |
+| `sagemaker` |  |
 | `vercel` |  |
 | `vertex` |  |
 | `vllm` |  |
@@ -14516,6 +14665,67 @@ This feature is currently in beta and is subject to change.<br /><br />Openai-sp
 _Appears in:_
 
 - [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetSagemakerConfig
+
+
+AIGatewayTargetSagemakerConfig **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />AWS SageMaker-specific configuration for a model.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aws` _[AIGatewayTargetSagemakerConfigAws](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfigaws)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `target` _[AIGatewayTargetSagemakerConfigTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfigtarget)_ |  |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetSagemakerConfigAws
+
+
+AIGatewayTargetSagemakerConfigAws **Pre-release Feature**
+This feature is currently in beta and is subject to change.
+
+
+
+| Field | Description |
+| --- | --- |
+| `assumeRoleArn` _string_ | Assume a different IAM role after authenticating; mutually required with role_session_name. |
+| `region` _string_ | Overrides the AWS_REGION environment variable for SageMaker requests. |
+| `roleSessionName` _string_ | Session identifier for the assumed role; mutually required with assume_role_arn. |
+| `stsEndpointURL` _string_ | Overrides the STS endpoint when assuming a role. |
+
+_Appears in:_
+
+- [AIGatewayTargetSagemakerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)
+
+#### AIGatewayTargetSagemakerConfigTarget
+
+
+AIGatewayTargetSagemakerConfigTarget is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `containerHostname` _string_ | Sets the X-Amzn-SageMaker-Target-Container-Hostname header (multi-container). |
+| `model` _string_ | Sets the X-Amzn-SageMaker-Target-Model header (multi-model endpoints). |
+| `variant` _string_ | Sets the X-Amzn-SageMaker-Target-Variant header (A/B variant testing). |
+
+_Appears in:_
+
+- [AIGatewayTargetSagemakerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)
 
 #### AIGatewayTargetVercelConfig
 
@@ -15731,6 +15941,7 @@ _Appears in:_
 - [AIGatewayModelProviderMistral](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)
 - [AIGatewayModelProviderOllama](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)
 - [AIGatewayModelProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
+- [AIGatewayModelProviderSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
 - [AIGatewayModelProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
 - [AIGatewayModelProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertex)
 - [AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
@@ -16546,6 +16757,7 @@ _Appears in:_
 - [AIGatewayModelProviderMistral](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)
 - [AIGatewayModelProviderOllama](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)
 - [AIGatewayModelProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
+- [AIGatewayModelProviderSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
 - [AIGatewayModelProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
 - [AIGatewayModelProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertex)
 - [AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)

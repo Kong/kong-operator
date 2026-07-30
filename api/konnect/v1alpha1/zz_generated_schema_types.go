@@ -3526,6 +3526,30 @@ func (s *AIGatewayModelAccess) UnmarshalJSON(data []byte) error {
 // alias.
 type AIGatewayModelAliasConfig map[string]string
 
+// AIGatewayModelAliasConfigBody Configuration for routing requests to a
+// specific model using a request body property.
+type AIGatewayModelAliasConfigBody struct {
+	// Value indexed by property name that will cause this route to match if
+	// present in the request body.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxProperties=1
+	Body apiextensionsv1.JSON `json:"body,omitzero"`
+}
+
+// AIGatewayModelAliasConfigHeaders Configuration for routing requests to a
+// specific model using a header.
+type AIGatewayModelAliasConfigHeaders struct {
+	// Value indexed by property name that will cause this route to match if
+	// present in the request headers.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxProperties=1
+	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
+}
+
 // AIGatewayModelAliasConfigPath Configuration for routing requests to a
 // specific model using a path alias.
 type AIGatewayModelAliasConfigPath struct {
@@ -5737,6 +5761,36 @@ type AIGatewayModelProviderConfigAuthGCP struct {
 	UseGcpServiceAccount string `json:"useGcpServiceAccount,omitzero"`
 }
 
+// AIGatewayModelProviderConfigAuthSagemaker **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Auth configuration for Sagemaker model provider.
+type AIGatewayModelProviderConfigAuthSagemaker struct {
+	//
+	//
+	// +optional
+	Aws AIGatewayModelProviderConfigAuthSagemakerAws `json:"aws,omitzero"`
+}
+
+// AIGatewayModelProviderConfigAuthSagemakerAws is a type alias.
+type AIGatewayModelProviderConfigAuthSagemakerAws struct {
+	// static IAM user credential; overrides AWS_ACCESS_KEY_ID env var
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AccessKeyID string `json:"accessKeyID,omitzero"`
+	// static IAM user credential; overrides AWS_SECRET_ACCESS_KEY env var
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SecretAccessKey string `json:"secretAccessKey,omitzero"`
+	// static IAM user credential; overrides AWS_SESSION_TOKEN env var
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionToken string `json:"sessionToken,omitzero"`
+}
+
 // AIGatewayModelProviderConfigAuthVertex **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 //
@@ -6479,6 +6533,184 @@ type AIGatewayModelProviderOpenaiConfig struct {
 // name.
 type AIGatewayModelProviderReference string
 
+// AIGatewayModelProviderSagemaker **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Config for Sagemaker model provider.
+type AIGatewayModelProviderSagemaker struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// +required
+	Config AIGatewayModelProviderSagemakerConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderSagemakerConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+type AIGatewayModelProviderSagemakerConfig struct {
+	//
+	//
+	// +required
+	Auth *AIGatewayModelProviderSagemakerConfigAuth `json:"auth,omitempty"`
+}
+
+// AIGatewayModelProviderSagemakerConfigAuth represents a union type for auth.
+// Only one of the fields should be set based on the Type.
+type AIGatewayModelProviderSagemakerConfigAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=basic;sagemaker
+	Type AIGatewayModelProviderSagemakerConfigAuthType `json:"type,omitempty"`
+
+	// Basic configuration.
+	//
+	// +optional
+	Basic *AIGatewayModelProviderConfigAuthBasic `json:"basic,omitempty"`
+	// Sagemaker configuration.
+	//
+	// +optional
+	Sagemaker *AIGatewayModelProviderConfigAuthSagemaker `json:"sagemaker,omitempty"`
+}
+
+// AIGatewayModelProviderSagemakerConfigAuthType represents the type of auth.
+type AIGatewayModelProviderSagemakerConfigAuthType string
+
+// AIGatewayModelProviderSagemakerConfigAuthType values.
+const (
+	AIGatewayModelProviderSagemakerConfigAuthTypeBasic     AIGatewayModelProviderSagemakerConfigAuthType = "basic"
+	AIGatewayModelProviderSagemakerConfigAuthTypeSagemaker AIGatewayModelProviderSagemakerConfigAuthType = "sagemaker"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelProviderSagemakerConfigAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayModelProviderSagemakerConfigAuth type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayModelProviderSagemakerConfigAuthTypeBasic:
+		if u.Basic != nil {
+			raw, err := json.Marshal(u.Basic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderSagemakerConfigAuth basic: %w", err)
+			}
+			m["basic"] = raw
+		}
+	case AIGatewayModelProviderSagemakerConfigAuthTypeSagemaker:
+		if u.Sagemaker != nil {
+			raw, err := json.Marshal(u.Sagemaker)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderSagemakerConfigAuth sagemaker: %w", err)
+			}
+			m["sagemaker"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelProviderSagemakerConfigAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderSagemakerConfigAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelProviderSagemakerConfigAuthType(probe.Type)
+	switch probe.Type {
+	case "basic":
+		payload, ok := raw["basic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthBasic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderSagemakerConfigAuth basic: %w", err)
+		}
+		u.Basic = &val
+	case "sagemaker":
+		payload, ok := raw["sagemaker"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderConfigAuthSagemaker
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderSagemakerConfigAuth sagemaker: %w", err)
+		}
+		u.Sagemaker = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelProviderSagemakerConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderSagemakerConfig: nil receiver")
+	}
+	type alias AIGatewayModelProviderSagemakerConfig
+	aux := alias{}
+	aux.Auth = &AIGatewayModelProviderSagemakerConfigAuth{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelProviderSagemakerConfig: %w", err)
+	}
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.Sagemaker == nil {
+		aux.Auth = nil
+	}
+	*s = AIGatewayModelProviderSagemakerConfig(aux)
+	return nil
+}
+
 // AIGatewayModelProviderVercel **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderVercel struct {
@@ -6935,13 +7167,21 @@ type AIGatewayModelRouteConfigModel struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=aIGatewayModelAliasConfigPath
+	// +kubebuilder:validation:Enum=body;headers;path
 	Type AIGatewayModelRouteConfigModelType `json:"type,omitempty"`
 
-	// AIGatewayModelAliasConfigPath configuration.
+	// Body configuration.
 	//
 	// +optional
-	AIGatewayModelAliasConfigPath *AIGatewayModelAliasConfigPath `json:"aIGatewayModelAliasConfigPath,omitempty"`
+	Body *AIGatewayModelAliasConfigBody `json:"body,omitempty"`
+	// Headers configuration.
+	//
+	// +optional
+	Headers *AIGatewayModelAliasConfigHeaders `json:"headers,omitempty"`
+	// Path configuration.
+	//
+	// +optional
+	Path *AIGatewayModelAliasConfigPath `json:"path,omitempty"`
 }
 
 // AIGatewayModelRouteConfigModelType represents the type of model.
@@ -6949,7 +7189,9 @@ type AIGatewayModelRouteConfigModelType string
 
 // AIGatewayModelRouteConfigModelType values.
 const (
-	AIGatewayModelRouteConfigModelTypeAIGatewayModelAliasConfigPath AIGatewayModelRouteConfigModelType = "aIGatewayModelAliasConfigPath"
+	AIGatewayModelRouteConfigModelTypeBody    AIGatewayModelRouteConfigModelType = "body"
+	AIGatewayModelRouteConfigModelTypeHeaders AIGatewayModelRouteConfigModelType = "headers"
+	AIGatewayModelRouteConfigModelTypePath    AIGatewayModelRouteConfigModelType = "path"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -6961,13 +7203,29 @@ func (u AIGatewayModelRouteConfigModel) MarshalJSON() ([]byte, error) {
 	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case AIGatewayModelRouteConfigModelTypeAIGatewayModelAliasConfigPath:
-		if u.AIGatewayModelAliasConfigPath != nil {
-			raw, err := json.Marshal(u.AIGatewayModelAliasConfigPath)
+	case AIGatewayModelRouteConfigModelTypeBody:
+		if u.Body != nil {
+			raw, err := json.Marshal(u.Body)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel AIGatewayModelAliasConfigPath: %w", err)
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Body: %w", err)
 			}
-			m["aIGatewayModelAliasConfigPath"] = raw
+			m["body"] = raw
+		}
+	case AIGatewayModelRouteConfigModelTypeHeaders:
+		if u.Headers != nil {
+			raw, err := json.Marshal(u.Headers)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Headers: %w", err)
+			}
+			m["headers"] = raw
+		}
+	case AIGatewayModelRouteConfigModelTypePath:
+		if u.Path != nil {
+			raw, err := json.Marshal(u.Path)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Path: %w", err)
+			}
+			m["path"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -6990,16 +7248,36 @@ func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
 	}
 	u.Type = AIGatewayModelRouteConfigModelType(probe.Type)
 	switch probe.Type {
-	case "aIGatewayModelAliasConfigPath":
-		payload, ok := raw["aIGatewayModelAliasConfigPath"]
+	case "body":
+		payload, ok := raw["body"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelAliasConfigBody
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Body: %w", err)
+		}
+		u.Body = &val
+	case "headers":
+		payload, ok := raw["headers"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelAliasConfigHeaders
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Headers: %w", err)
+		}
+		u.Headers = &val
+	case "path":
+		payload, ok := raw["path"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
 		var val AIGatewayModelAliasConfigPath
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel AIGatewayModelAliasConfigPath: %w", err)
+			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Path: %w", err)
 		}
-		u.AIGatewayModelAliasConfigPath = &val
+		u.Path = &val
 	}
 	return nil
 }
@@ -7015,7 +7293,7 @@ func (s *AIGatewayModelRouteConfig) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfig: %w", err)
 	}
-	if aux.Model != nil && aux.Model.Type == "" && aux.Model.AIGatewayModelAliasConfigPath == nil {
+	if aux.Model != nil && aux.Model.Type == "" && aux.Model.Body == nil && aux.Model.Headers == nil && aux.Model.Path == nil {
 		aux.Model = nil
 	}
 	*s = AIGatewayModelRouteConfig(aux)
@@ -8586,7 +8864,7 @@ func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayTarget: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Vercel == nil && aux.Config.Vertex == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Sagemaker == nil && aux.Config.Vercel == nil && aux.Config.Vertex == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
 		aux.Config = nil
 	}
 	*s = AIGatewayTarget(aux)
@@ -8877,7 +9155,7 @@ type AIGatewayTargetConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;vercel;vertex;vllm;xai
+	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;vercel;vertex;vllm;xai
 	Type AIGatewayTargetConfigType `json:"type,omitempty"`
 
 	// Anthropic configuration.
@@ -8940,6 +9218,10 @@ type AIGatewayTargetConfig struct {
 	//
 	// +optional
 	Openai *AIGatewayTargetOpenaiConfig `json:"openai,omitempty"`
+	// Sagemaker configuration.
+	//
+	// +optional
+	Sagemaker *AIGatewayTargetSagemakerConfig `json:"sagemaker,omitempty"`
 	// Vercel configuration.
 	//
 	// +optional
@@ -8978,6 +9260,7 @@ const (
 	AIGatewayTargetConfigTypeMistral     AIGatewayTargetConfigType = "mistral"
 	AIGatewayTargetConfigTypeOllama      AIGatewayTargetConfigType = "ollama"
 	AIGatewayTargetConfigTypeOpenai      AIGatewayTargetConfigType = "openai"
+	AIGatewayTargetConfigTypeSagemaker   AIGatewayTargetConfigType = "sagemaker"
 	AIGatewayTargetConfigTypeVercel      AIGatewayTargetConfigType = "vercel"
 	AIGatewayTargetConfigTypeVertex      AIGatewayTargetConfigType = "vertex"
 	AIGatewayTargetConfigTypeVllm        AIGatewayTargetConfigType = "vllm"
@@ -9112,6 +9395,14 @@ func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig openai: %w", err)
 			}
 			m["openai"] = raw
+		}
+	case AIGatewayTargetConfigTypeSagemaker:
+		if u.Sagemaker != nil {
+			raw, err := json.Marshal(u.Sagemaker)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig sagemaker: %w", err)
+			}
+			m["sagemaker"] = raw
 		}
 	case AIGatewayTargetConfigTypeVercel:
 		if u.Vercel != nil {
@@ -9316,6 +9607,16 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayTargetConfig openai: %w", err)
 		}
 		u.Openai = &val
+	case "sagemaker":
+		payload, ok := raw["sagemaker"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetSagemakerConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig sagemaker: %w", err)
+		}
+		u.Sagemaker = &val
 	case "vercel":
 		payload, ok := raw["vercel"]
 		if !ok || len(payload) == 0 {
@@ -9838,6 +10139,105 @@ type AIGatewayTargetOpenaiConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetSagemakerConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// AWS SageMaker-specific configuration for a model.
+type AIGatewayTargetSagemakerConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// +optional
+	Aws AIGatewayTargetSagemakerConfigAws `json:"aws,omitzero"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per input token for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per output token for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	//
+	//
+	// +optional
+	Target AIGatewayTargetSagemakerConfigTarget `json:"target,omitzero"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetSagemakerConfigAws **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+type AIGatewayTargetSagemakerConfigAws struct {
+	// Assume a different IAM role after authenticating; mutually required with
+	// role_session_name.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AssumeRoleArn string `json:"assumeRoleArn,omitzero"`
+	// Overrides the AWS_REGION environment variable for SageMaker requests.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Region string `json:"region,omitzero"`
+	// Session identifier for the assumed role; mutually required with
+	// assume_role_arn.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RoleSessionName string `json:"roleSessionName,omitzero"`
+	// Overrides the STS endpoint when assuming a role.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	StsEndpointURL string `json:"stsEndpointURL,omitzero"`
+}
+
+// AIGatewayTargetSagemakerConfigTarget is a type alias.
+type AIGatewayTargetSagemakerConfigTarget struct {
+	// Sets the X-Amzn-SageMaker-Target-Container-Hostname header
+	// (multi-container).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ContainerHostname string `json:"containerHostname,omitzero"`
+	// Sets the X-Amzn-SageMaker-Target-Model header (multi-model endpoints).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Model string `json:"model,omitzero"`
+	// Sets the X-Amzn-SageMaker-Target-Variant header (A/B variant testing).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Variant string `json:"variant,omitzero"`
 }
 
 // AIGatewayTargetVercelConfig **Pre-release Feature**

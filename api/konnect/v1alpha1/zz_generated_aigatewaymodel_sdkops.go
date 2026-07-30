@@ -250,6 +250,24 @@ var AIGatewayModelSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 	{
 		Path: []string{
 			"api",
+			"config",
+			"route",
+			"model",
+			"body",
+		},
+	},
+	{
+		Path: []string{
+			"api",
+			"config",
+			"route",
+			"model",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"api",
 			"labels",
 		},
 	},
@@ -264,6 +282,24 @@ var AIGatewayModelSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"model",
 			"config",
 			"route",
+			"headers",
+		},
+	},
+	{
+		Path: []string{
+			"model",
+			"config",
+			"route",
+			"model",
+			"body",
+		},
+	},
+	{
+		Path: []string{
+			"model",
+			"config",
+			"route",
+			"model",
 			"headers",
 		},
 	},
