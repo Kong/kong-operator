@@ -5,8 +5,11 @@
 - [Unreleased](#unreleased)
 - [v2.3.0-rc.2](#v230-rc2)
 - [v2.3.0-rc.1](#v230-rc1)
+- [v2.2.3](#v223)
+- [v2.2.2](#v222)
 - [v2.2.1](#v221)
 - [v2.2.0](#v220)
+- [v2.1.9](#v219)
 - [v2.1.8](#v218)
 - [v2.1.7](#v217)
 - [v2.1.6](#v216)
@@ -16,6 +19,7 @@
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
+- [v2.0.11](#v2011)
 - [v2.0.10](#v2010)
 - [v2.0.9](#v209)
 - [v2.0.8](#v208)
@@ -384,6 +388,34 @@
   whenever a relevant CRD changes at runtime.
   [#4795](https://github.com/Kong/kong-operator/pull/4795)
 
+## [v2.2.3]
+
+> Relaese date: 2026-07-14
+
+### Fixes
+
+- Hybridgateway: Wait for cleanup of all child resources before removing the
+  finalizers of the parent resource
+  [#4785](https://github.com/Kong/kong-operator/pull/4785) [#4892](https://github.com/Kong/kong-operator/pull/4892)
+- Preserve only one CA certificate from secrets if there are multiple ones with
+  the duplicte IDs.
+  [#4877](https://github.com/Kong/kong-operator/pull/4877)
+
+## [v2.2.2]
+
+> Release date: 2026-07-06
+
+### Fixes
+
+- Gateway: stop overwriting the user-configured `KONG_STREAM_LISTEN` for TLS
+  listeners. The operator now enforces only the listen port and the `ssl` token,
+  preserving the bind address (e.g. `[::]` for IPv6) and any listen options
+  (`reuseport`, `backlog=...`) set on the `GatewayConfiguration` DataPlane pod
+  template. Multiple bind addresses (dual-stack, e.g.
+  `0.0.0.0:<port> ssl reuseport, [::]:<port> ssl reuseport`) are preserved for each
+  listener port. Defaults to `0.0.0.0` and `reuseport` when unset.
+  [#4755](https://github.com/Kong/kong-operator/pull/4755) [#4767](https://github.com/Kong/kong-operator/pull/4767)
+
 ## [v2.2.1]
 
 > Release date: 2026-07-01
@@ -736,6 +768,16 @@
   the transition, both old and new entries may be present in Konnect
   simultaneously as creation and orphan cleanup are not synchronized.
   [#4509](https://github.com/Kong/kong-operator/pull/4509)
+
+## [v2.1.9]
+
+> Release date: 2026-07-14
+
+### Fixes
+
+- Preserve only one CA certificate from secrets if there are multiple ones with
+  the duplicte IDs.
+  [#4876](https://github.com/Kong/kong-operator/pull/4876)
 
 ## [v2.1.8]
 
