@@ -66,6 +66,9 @@ type GatewayReconciler struct {
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
 	// It's resolved on SetupWithManager call.
 	enableReferenceGrant bool
+	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved on SetupWithManager call.
+	referenceGrantVersion schema.GroupVersion
 
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
@@ -84,11 +87,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// when reconciling Gateways.
 	// Once the GatewayReconciler is set up without ReferenceGrant, there's no possibility to enable
 	// ReferenceGrant handling again in this reconciler at runtime.
-	r.enableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
-		Group:    gatewayv1beta1.GroupVersion.Group,
-		Version:  gatewayv1beta1.GroupVersion.Version,
-		Resource: "referencegrants",
-	})
+	r.referenceGrantVersion, r.enableReferenceGrant = ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	if !r.enableReferenceGrant {
+		r.Log.Error(nil, "Neither v1 nor v1beta1 ReferenceGrant CRD found; cross-namespace references will be rejected")
+	}
 
 	blder := ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
@@ -126,7 +128,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
 	if r.enableReferenceGrant {
-		blder.Watches(&gatewayapi.ReferenceGrant{},
+		blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
 		)
@@ -237,7 +239,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gat
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
 // ReferenceGrant.
 func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	grant, ok := gatewayapi.AsReferenceGrant(obj)
 	if !ok {
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
@@ -381,7 +383,7 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 }
 
 func referenceGrantHasGatewayFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	grant, ok := gatewayapi.AsReferenceGrant(obj)
 	if !ok {
 		return false
 	}
@@ -648,14 +650,14 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
 	// TLS secrets they are granted for
-	referenceGrantList := &gatewayapi.ReferenceGrantList{}
+	referenceGrantList := gatewayapi.NewReferenceGrantList(r.referenceGrantVersion)
 	if r.enableReferenceGrant {
 		if err := r.List(ctx, referenceGrantList); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	listenerStatuses, err := getListenerStatus(ctx, gateway, combinedListeners, referenceGrantList.Items, r.Client)
+	listenerStatuses, err := getListenerStatus(ctx, gateway, combinedListeners, gatewayapi.ReferenceGrantItems(referenceGrantList), r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

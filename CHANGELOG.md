@@ -82,6 +82,9 @@
   This fixes the `HTTPRouteNoBackendRefs` Gateway API conformance test for the
   hybrid gateway.
   [#5066](https://github.com/Kong/kong-operator/pull/5066)
+- Gateway: Support watching both `v1` and `v1beta1` versions of `ReferenceGrant`
+  to ensure compatability with gateway API 1.3 and 1.4.
+  [#5091](https://github.com/Kong/kong-operator/pull/5091)
 
 ### Added
   
