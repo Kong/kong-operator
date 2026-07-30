@@ -33,6 +33,7 @@ If the troubleshooting section does not contain the answer to the problem you en
   - [ ] If the release is not a patch or prerelease, check the `release/N.M.x` release branch exists.
 - [ ] Update the official documentation at [https://github.com/Kong/developer.konghq.com/][docs_repo]
   - [ ] **Changelog, CLI configuration options, and CRD reference**: Automatically synced by the release workflow (when `latest=true`). A docs PR will be created in the [docs repo][docs_repo] and a comment will be posted in this issue. Review and merge the PR when ready.
+  - [ ] When the release is performed from a release branch (e.g. `release/2.2.x`), backport the changelog entry of the release to the `main` branch.
   - [ ] Update supported releases table at <https://github.com/Kong/developer.konghq.com/blob/main/app/_data/products/operator.yml>
 - [ ] Major/Minor only:
   - [ ] Update `renovate.json` config which targets the latest release branch (e.g. `release/2.1.x`) to update the `matchBaseBranches` field to the new release branch (e.g. `release/2.2.x`).
