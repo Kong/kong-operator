@@ -1307,6 +1307,16 @@
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
 
+## [v2.0.11]
+
+> Release date: 2026-07-21
+
+### Fixes
+
+- Preserve only one CA certificate from secrets if there are multiple ones with
+  the duplicte IDs.
+  [#4875](https://github.com/Kong/kong-operator/pull/4875)
+
 ## [v2.0.10]
 
 > Release date: 2026-06-04
@@ -2735,8 +2745,11 @@ re-installing the operator through the bundle.
 
 [v2.3.0-rc.2]: https://github.com/Kong/kong-operator/compare/v2.3.0-rc.1..v2.3.0-rc.2
 [v2.3.0-rc.1]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.3.0-rc.1
+[v2.2.3]: https://github.com/Kong/kong-operator/compare/v2.2.2..v2.2.3
+[v2.2.2]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.2.2
 [v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
 [v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
+[v2.1.9]: https://github.com/Kong/kong-operator/compare/v2.1.8..v2.1.9
 [v2.1.8]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.1.8
 [v2.1.7]: https://github.com/Kong/kong-operator/compare/v2.1.6..v2.1.7
 [v2.1.6]: https://github.com/Kong/kong-operator/compare/v2.1.5..v2.1.6
@@ -2746,6 +2759,7 @@ re-installing the operator through the bundle.
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
+[v2.0.11]: https://github.com/Kong/kong-operator/compare/v2.0.10..v2.0.11
 [v2.0.10]: https://github.com/Kong/kong-operator/compare/v2.0.9..v2.0.10
 [v2.0.9]: https://github.com/Kong/kong-operator/compare/v2.0.8..v2.0.9
 [v2.0.8]: https://github.com/Kong/kong-operator/compare/v2.0.7..v2.0.8
