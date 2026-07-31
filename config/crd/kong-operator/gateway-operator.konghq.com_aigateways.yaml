@@ -26,8 +26,8 @@ spec:
       type: date
     deprecated: true
     deprecationWarning: gateway-operator/v1alpha1 AIGateway (AI gateway v1) is deprecated
-      and will be removed in a future release. Please use konnect.konghq.com/v1alpha1
-      AIGateway* (AI gateway v2) instead.
+      and will be removed in a future release. For Konnect enabled alternative please
+      use konnect.konghq.com/v1alpha1 AIGateway* (AI gateway v2) instead.
     name: v1alpha1
     schema:
       openAPIV3Schema:
