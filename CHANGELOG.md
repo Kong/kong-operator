@@ -110,6 +110,8 @@
 - Hybridgateway: add controller and translator support for Gateway API `TCPRoute` resources.
   [#4727](https://github.com/Kong/kong-operator/pull/4727)
   [#5018](https://github.com/Kong/kong-operator/pull/5018)
+- Added option to disable `DataPlane`'s probes by specifying it as `{}`.
+  [#5117](https://github.com/Kong/kong-operator/pull/5117)
 
 ### Changed
 

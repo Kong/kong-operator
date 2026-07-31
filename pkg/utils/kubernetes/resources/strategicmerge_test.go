@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -777,6 +778,71 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					},
 				}
 
+				return d.Spec.Template
+			},
+		},
+		{
+			// NOTE: `readinessProbe: nil` is indistinguishable from not providing the
+			// field at all once marshaled to JSON, so it can't be used to remove the
+			// generated probe - it's a no-op. An explicitly empty probe is the only
+			// in-band signal that survives the DataPlane's structural CRD schema
+			// (`readinessProbe: {$patch: delete}` is rejected by the API server as an
+			// unknown field), so it's used as the delete sentinel instead.
+			Name: "allow removing the readiness probe via an empty probe",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:           consts.DataPlaneProxyContainerName,
+							ReadinessProbe: &corev1.Probe{},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeDataPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
+				return d.Spec.Template
+			},
+		},
+		{
+			Name: "allow removing the readiness probe while adding a liveness probe",
+			Patch: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:           consts.DataPlaneProxyContainerName,
+							ReadinessProbe: &corev1.Probe{},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/healthz",
+										Port: intstr.FromInt(8080),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Expected: func() corev1.PodTemplateSpec {
+				d, err := makeDataPlaneDeployment()
+				require.NoError(t, err)
+				d.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
+				d.Spec.Template.Spec.Containers[0].LivenessProbe = &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:   "/healthz",
+							Port:   intstr.FromInt(8080),
+							Scheme: corev1.URISchemeHTTP,
+						},
+					},
+					TimeoutSeconds:   1,
+					PeriodSeconds:    10,
+					SuccessThreshold: 1,
+					FailureThreshold: 3,
+				}
 				return d.Spec.Template
 			},
 		},
