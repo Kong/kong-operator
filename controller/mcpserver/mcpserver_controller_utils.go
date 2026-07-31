@@ -11,6 +11,7 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	konnectcontroller "github.com/kong/kong-operator/v2/controller/konnect"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
@@ -51,11 +52,15 @@ func ownerControlPlaneName(mcpServer *konnectv1alpha1.MCPServer) string {
 }
 
 // resolveAuth resolves the KonnectAPIAuthConfiguration for the given MCPServer.
-func (r *MCPServerReconciler) resolveAuth(
+func (r *MCPServerDataPlaneReconciler) resolveAuth(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 ) (*konnectv1alpha1.KonnectAPIAuthConfiguration, error) {
-	apiAuthRef, err := konnectcontroller.GetAPIAuthRefNN(ctx, r.Client, mcpServer)
+	// TODO(pmalek): resolve Auth
+	// apiAuthRef, err := konnectcontroller.GetAPIAuthRefNN(ctx, r.Client, mcpDataPlane)
+
+	var apiAuthRef types.NamespacedName
+	var err error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get APIAuth ref: %w", err)
 	}
@@ -70,11 +75,12 @@ func (r *MCPServerReconciler) resolveAuth(
 
 // buildSDK resolves the KonnectAPIAuthConfiguration for the given MCPServer
 // and returns an authenticated SDK wrapper.
-func (r *MCPServerReconciler) buildSDK(
+func (r *MCPServerDataPlaneReconciler) buildSDK(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 ) (sdkops.SDKWrapper, error) {
-	apiAuth, err := r.resolveAuth(ctx, mcpServer)
+	// TODO(pmalek): resolve Auth
+	apiAuth, err := r.resolveAuth(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

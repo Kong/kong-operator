@@ -11,7 +11,7 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -34,48 +34,48 @@ var builtinPlugins = []builtinPlugin{
 
 // kongPluginName returns the deterministic name for the KongPlugin CR
 // corresponding to the given builtin plugin and MCPServer.
-func kongPluginName(mcpServer *konnectv1alpha1.MCPServer, plg builtinPlugin) string {
-	return fmt.Sprintf("%s-%s", generateWorkloadNN(mcpServer).Name, plg.name)
+func kongPluginName(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane, plg builtinPlugin) string {
+	return fmt.Sprintf("%s-%s", generateWorkloadNN(mcpDataPlane).Name, plg.name)
 }
 
 // ensureKongPlugins creates KongPlugin CRs for every builtinPlugin and deletes
 // any stale KongPlugins owned by the MCPServer that are no longer expected.
 // It returns the set of plugin names that were ensured.
-func (r *MCPServerReconciler) ensureKongPlugins(
+func (r *MCPServerDataPlaneReconciler) ensureKongPlugins(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 ) (map[string]struct{}, error) {
 	logger := log.GetLogger(ctx, "mcpserver", r.LoggingMode)
 
 	desiredPluginNames := make(map[string]struct{}, len(builtinPlugins))
 	for _, plg := range builtinPlugins {
-		res, nn, err := r.ensureKongPlugin(ctx, mcpServer, plg)
+		res, nn, err := r.ensureKongPlugin(ctx, mcpDataPlane, plg)
 		if err != nil {
 			return nil, err
 		}
 		if res != op.Noop {
 			log.Info(logger, fmt.Sprintf("%s KongPlugin for MCPServer", res),
-				"namespace", mcpServer.Namespace, "name", mcpServer.Name, "plugin", nn.Name)
+				"namespace", mcpDataPlane.Namespace, "name", mcpDataPlane.Name, "plugin", nn.Name)
 		}
 		desiredPluginNames[nn.Name] = struct{}{}
 	}
 
-	if err := r.deleteStaleResources(ctx, mcpServer, &configurationv1.KongPluginList{}, desiredPluginNames); err != nil {
+	if err := r.deleteStaleResources(ctx, mcpDataPlane, &configurationv1.KongPluginList{}, desiredPluginNames); err != nil {
 		return nil, err
 	}
 
 	return desiredPluginNames, nil
 }
 
-func (r *MCPServerReconciler) ensureKongPlugin(
+func (r *MCPServerDataPlaneReconciler) ensureKongPlugin(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	plg builtinPlugin,
 ) (op.Result, client.ObjectKey, error) {
-	desired := generateKongPlugin(mcpServer, plg)
+	desired := generateKongPlugin(mcpDataPlane, plg)
 	nn := client.ObjectKeyFromObject(desired)
 
-	k8sutils.SetOwnerForObject(desired, mcpServer)
+	k8sutils.SetOwnerForObject(desired, mcpDataPlane)
 	k8sresources.LabelObjectAsMCPServerManaged(desired)
 
 	existing := &configurationv1.KongPlugin{}
@@ -96,11 +96,11 @@ func (r *MCPServerReconciler) ensureKongPlugin(
 	return op.Noop, nn, nil
 }
 
-func generateKongPlugin(mcpServer *konnectv1alpha1.MCPServer, plg builtinPlugin) *configurationv1.KongPlugin {
+func generateKongPlugin(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane, plg builtinPlugin) *configurationv1.KongPlugin {
 	return &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kongPluginName(mcpServer, plg),
-			Namespace: mcpServer.Namespace,
+			Name:      kongPluginName(mcpDataPlane, plg),
+			Namespace: mcpDataPlane.Namespace,
 		},
 		PluginName: plg.name,
 		Config: apiextensionsv1.JSON{
@@ -112,42 +112,42 @@ func generateKongPlugin(mcpServer *konnectv1alpha1.MCPServer, plg builtinPlugin)
 // ensureKongPluginBindings creates a KongPluginBinding CR for every
 // (KongService, KongPlugin) pair, binding the plugin to the service. Stale
 // bindings owned by the MCPServer are deleted.
-func (r *MCPServerReconciler) ensureKongPluginBindings(
+func (r *MCPServerDataPlaneReconciler) ensureKongPluginBindings(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	serviceNames map[string]struct{},
 ) error {
 	logger := log.GetLogger(ctx, "mcpserver", r.LoggingMode)
 
 	desiredBindingNames := make(map[string]struct{}, len(builtinPlugins)*len(serviceNames))
 	for _, plg := range builtinPlugins {
-		pluginName := kongPluginName(mcpServer, plg)
+		pluginName := kongPluginName(mcpDataPlane, plg)
 		for svcName := range serviceNames {
-			res, nn, err := r.ensureKongPluginBinding(ctx, mcpServer, pluginName, svcName)
+			res, nn, err := r.ensureKongPluginBinding(ctx, mcpDataPlane, pluginName, svcName)
 			if err != nil {
 				return err
 			}
 			if res != op.Noop {
 				log.Info(logger, fmt.Sprintf("%s KongPluginBinding for MCPServer", res),
-					"namespace", mcpServer.Namespace, "name", mcpServer.Name,
+					"namespace", mcpDataPlane.Namespace, "name", mcpDataPlane.Name,
 					"binding", nn.Name, "plugin", pluginName, "service", svcName)
 			}
 			desiredBindingNames[nn.Name] = struct{}{}
 		}
 	}
 
-	return r.deleteStaleResources(ctx, mcpServer, &configurationv1alpha1.KongPluginBindingList{}, desiredBindingNames)
+	return r.deleteStaleResources(ctx, mcpDataPlane, &configurationv1alpha1.KongPluginBindingList{}, desiredBindingNames)
 }
 
-func (r *MCPServerReconciler) ensureKongPluginBinding(
+func (r *MCPServerDataPlaneReconciler) ensureKongPluginBinding(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	pluginName, serviceName string,
 ) (op.Result, client.ObjectKey, error) {
-	desired := generateKongPluginBinding(mcpServer, pluginName, serviceName)
+	desired := generateKongPluginBinding(mcpDataPlane, pluginName, serviceName)
 	nn := client.ObjectKeyFromObject(desired)
 
-	k8sutils.SetOwnerForObject(desired, mcpServer)
+	k8sutils.SetOwnerForObject(desired, mcpDataPlane)
 	k8sresources.LabelObjectAsMCPServerManaged(desired)
 
 	existing := &configurationv1alpha1.KongPluginBinding{}
@@ -169,13 +169,13 @@ func (r *MCPServerReconciler) ensureKongPluginBinding(
 }
 
 func generateKongPluginBinding(
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	pluginName, serviceName string,
 ) *configurationv1alpha1.KongPluginBinding {
 	return &configurationv1alpha1.KongPluginBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pluginName,
-			Namespace: mcpServer.Namespace,
+			Namespace: mcpDataPlane.Namespace,
 		},
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
@@ -188,7 +188,8 @@ func generateKongPluginBinding(
 					Kind:  "KongService",
 				},
 			},
-			ControlPlaneRef: mcpServer.Spec.ControlPlaneRef,
+			// TODO(pmalek)
+			// ControlPlaneRef: mcpServer.Spec.ControlPlaneRef,
 		},
 	}
 }
