@@ -48,6 +48,7 @@ import (
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:deprecatedversion:warning="gateway-operator/v1alpha1 AIGateway (AI gateway v1) is deprecated and will be removed in a future release. Please use konnect.konghq.com/v1alpha1 AIGateway* (AI gateway v2) instead."
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".status.endpoint",description="The URL endpoint for the AIGateway"

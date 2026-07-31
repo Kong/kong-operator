@@ -741,15 +741,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				CertExpirationMargin: c.CertExpirationMargin,
 			},
 		},
-		// AIGateway Controller
-		{
-			Enabled: c.AIGatewayControllerEnabled,
-			Controller: &specialized.AIGatewayReconciler{
-				ControllerOptions: ctrlOpts,
-				Client:            mgr.GetClient(),
-				LoggingMode:       c.LoggingMode,
-			},
-		},
 		// KongPluginInstallation controller
 		{
 			Enabled: c.KongPluginInstallationControllerEnabled,
@@ -808,6 +799,19 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Provider:    ssaProvider,
 			},
 		},
+	}
+
+	// AIGateway v1 Controller (deprecated, but still supported for backward compatibility)
+	if c.AIGatewayControllerEnabled {
+		mgr.GetLogger().Info("AIGateway controller for AI gateway v1 is deprecated and will be removed in a future release. Please migrate to the AIGatewayDataPlane controller for Konnect AI gateway.")
+		controllers = append(controllers, ControllerDef{
+			Enabled: c.AIGatewayControllerEnabled,
+			Controller: &specialized.AIGatewayReconciler{
+				ControllerOptions: ctrlOpts,
+				Client:            mgr.GetClient(),
+				LoggingMode:       c.LoggingMode,
+			},
+		})
 	}
 
 	// MCPServer controllers
