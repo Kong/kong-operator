@@ -1053,7 +1053,7 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 	return []ControllerDef{
 		{
 			Enabled: true,
-			Controller: &mcpserver.MCPServerReconciler{
+			Controller: &mcpserver.MCPServerDataPlaneReconciler{
 				Client:            mgr.GetClient(),
 				Scheme:            mgr.GetScheme(),
 				ControllerOptions: ctrlOpts,

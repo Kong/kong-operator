@@ -62,7 +62,7 @@ func Test_ensureDeployment(t *testing.T) {
 		name            string
 		remoteMCPServer *sdkkonnectcomp.MCPServerCPInfo
 		buildClient     func(base client.WithWatch) client.Client
-		prepareRecorder func(t *testing.T, r *MCPServerReconciler, rec *events.FakeRecorder)
+		prepareRecorder func(t *testing.T, r *MCPServerDataPlaneReconciler, rec *events.FakeRecorder)
 		wantErr         bool
 		wantEvent       string
 	}{
@@ -88,7 +88,7 @@ func Test_ensureDeployment(t *testing.T) {
 			name:            "second call after content change records DeploymentUpdated event",
 			remoteMCPServer: remoteMCPServerWithContainers(),
 			buildClient:     func(base client.WithWatch) client.Client { return base },
-			prepareRecorder: func(t *testing.T, r *MCPServerReconciler, rec *events.FakeRecorder) {
+			prepareRecorder: func(t *testing.T, r *MCPServerDataPlaneReconciler, rec *events.FakeRecorder) {
 				_, _ = r.ensureDeployment(t.Context(), logr.Discard(), mcpServer, remoteMCPServerWithContainers(), apiAuth)
 				<-rec.Events
 			},
@@ -113,7 +113,7 @@ func Test_ensureDeployment(t *testing.T) {
 		t.Run(testcase.name, func(t *testing.T) {
 			recorder := events.NewFakeRecorder(10)
 			base := fake.NewClientBuilder().WithScheme(scheme).Build()
-			r := &MCPServerReconciler{
+			r := &MCPServerDataPlaneReconciler{
 				Client:        testcase.buildClient(base),
 				TypeConverter: tc,
 				eventRecorder: recorder,
@@ -155,7 +155,7 @@ func Test_ensureService(t *testing.T) {
 	tests := []struct {
 		name            string
 		buildClient     func(base client.WithWatch) client.Client
-		prepareRecorder func(t *testing.T, r *MCPServerReconciler, rec *events.FakeRecorder)
+		prepareRecorder func(t *testing.T, r *MCPServerDataPlaneReconciler, rec *events.FakeRecorder)
 		wantErr         bool
 		wantEvent       string
 	}{
@@ -167,7 +167,7 @@ func Test_ensureService(t *testing.T) {
 		{
 			name:        "second call after content change records ServiceUpdated event",
 			buildClient: func(base client.WithWatch) client.Client { return base },
-			prepareRecorder: func(t *testing.T, r *MCPServerReconciler, rec *events.FakeRecorder) {
+			prepareRecorder: func(t *testing.T, r *MCPServerDataPlaneReconciler, rec *events.FakeRecorder) {
 				_ = r.ensureService(t.Context(), logr.Discard(), mcpServer)
 				<-rec.Events
 			},
@@ -191,7 +191,7 @@ func Test_ensureService(t *testing.T) {
 		t.Run(testcase.name, func(t *testing.T) {
 			recorder := events.NewFakeRecorder(10)
 			base := fake.NewClientBuilder().WithScheme(scheme).Build()
-			r := &MCPServerReconciler{
+			r := &MCPServerDataPlaneReconciler{
 				Client:        testcase.buildClient(base),
 				TypeConverter: tc,
 				eventRecorder: recorder,
