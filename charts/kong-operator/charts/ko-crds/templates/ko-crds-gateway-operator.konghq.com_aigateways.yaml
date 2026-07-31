@@ -19,6 +19,7 @@ spec:
     singular: aigateway
   scope: Namespaced
   versions:
+{{ if .Values.global.webhooks.conversion.enabled }}
   - additionalPrinterColumns:
     - description: The URL endpoint for the AIGateway
       jsonPath: .status.endpoint
@@ -28,6 +29,10 @@ spec:
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
+    deprecated: true
+    deprecationWarning: gateway-operator/v1alpha1 AIGateway (AI gateway v1) is deprecated
+      and will be removed in a future release. Please use konnect.konghq.com/v1alpha1
+      AIGateway* (AI gateway v2) instead.
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -537,4 +542,5 @@ spec:
     storage: true
     subresources:
       status: {}
+{{ end }}
 {{- end }}
