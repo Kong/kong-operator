@@ -20,6 +20,7 @@ import (
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 )
 
 // Get returns a scheme aware of all types the manager can interact with.
@@ -45,6 +46,7 @@ func Get() *runtime.Scheme {
 
 	utilruntime.Must(eventgatewayv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(aigatewayv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(mcpv1alpha1.AddToScheme(scheme))
 
 	utilruntime.Must(certmanagerv1.AddToScheme(scheme))
 
