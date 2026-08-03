@@ -8,12 +8,41 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
+	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
+
+// ensureDataPlaneStatus populates the MCPServerDataPlane status from the live
+// Deployment (replicas, readyReplicas, selector, version) and sets the Ready
+// condition based on whether the Deployment has any ready replicas.
+func ensureDataPlaneStatus(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane, deployment *appsv1.Deployment, version string) {
+	mcpDataPlane.Status.Replicas = deployment.Status.Replicas
+	mcpDataPlane.Status.ReadyReplicas = deployment.Status.ReadyReplicas
+	mcpDataPlane.Status.Version = version
+	if selector, err := metav1.LabelSelectorAsSelector(deployment.Spec.Selector); err == nil {
+		mcpDataPlane.Status.Selector = selector.String()
+	}
+
+	ready := metav1.Condition{
+		Type:               string(kcfgdataplane.ReadyType),
+		ObservedGeneration: mcpDataPlane.Generation,
+	}
+	if deployment.Status.ReadyReplicas > 0 {
+		ready.Status = metav1.ConditionTrue
+		ready.Reason = string(kcfgdataplane.ResourceReadyReason)
+	} else {
+		ready.Status = metav1.ConditionFalse
+		ready.Reason = string(kcfgdataplane.DependenciesNotReadyReason)
+		ready.Message = kcfgdataplane.DependenciesNotReadyMessage
+	}
+	apimeta.SetStatusCondition(&mcpDataPlane.Status.Conditions, ready)
+}
 
 // buildVersionStatuses constructs one MCPServerVersionStatus per version found
 // across the Deployment's ReplicaSets. During a rolling update there may be

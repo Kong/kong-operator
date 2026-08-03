@@ -6,6 +6,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/tools/events"
@@ -91,10 +92,23 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 	// the finalizer to allow Kubernetes to garbage-collect the object.
 	if !mcpDataPlane.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(mcpDataPlane, mcpServerFinalizer) {
-			// TODO(pmalek)
-			// if cpName := ownerControlPlaneName(mcpServer); cpName != "" {
-			// 	r.SignalManager.NotifyMCPServerDeleted(mcpServer.Namespace, cpName)
-			// }
+			if ref := mcpDataPlane.Spec.MCPServerRef.KonnectNamespacedRef; ref != nil {
+				var mcpServer konnectv1alpha1.MCPServer
+				err := r.Get(ctx, client.ObjectKey{
+					Namespace: mcpDataPlane.Namespace,
+					Name:      ref.Name,
+				}, &mcpServer)
+				switch {
+				case err == nil:
+					if cpName := ownerControlPlaneName(&mcpServer); cpName != "" {
+						r.SignalManager.NotifyMCPServerDeleted(mcpServer.Namespace, cpName)
+					}
+				case apierrors.IsNotFound(err):
+					// The referenced MCPServer is already gone; nothing to notify.
+				default:
+					return ctrl.Result{}, fmt.Errorf("failed to get MCPServer %s/%s: %w", mcpDataPlane.Namespace, ref.Name, err)
+				}
+			}
 			controllerutil.RemoveFinalizer(mcpDataPlane, mcpServerFinalizer)
 			if err := r.Update(ctx, mcpDataPlane); err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer from MCPServer %s/%s: %w", mcpDataPlane.Namespace, mcpDataPlane.Name, err)
@@ -113,50 +127,64 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 		return ctrl.Result{}, nil
 	}
 
-	// Fetch the remote MCPServer from Konnect by its ID.
-
-	// mcpServerID := mcpDataPlane.GetKonnectID()
-	// if mcpServerID == "" {
-	// 	log.Debug(logger, "Waiting for the MCPServer to get the ID assigned", "namespace", mcpDataPlane.Namespace, "name", mcpDataPlane.Name)
-	// 	return ctrl.Result{}, nil
-	// }
-	// cpID := mcpDataPlane.GetControlPlaneID()
-	// if cpID == "" {
-	// 	log.Debug(logger, "Waiting for the MCPServer to get the ControlPlane ID assigned", "namespace", mcpDataPlane.Namespace, "name", mcpDataPlane.Name)
-	// 	return ctrl.Result{}, nil
-	// }
-	//
-	// TODO(pmalek):
-	var mcpServer konnectv1alpha1.MCPServer
-	err := r.Get(ctx, client.ObjectKey{Namespace: mcpDataPlane.Namespace, Name: mcpDataPlane.Name}, &mcpServer)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get MCPServer %s: %w", client.ObjectKeyFromObject(mcpDataPlane), err)
+	// Resolve the referenced MCPServer mirror entity to get the Konnect and
+	// ControlPlane IDs assigned to it.
+	ref := mcpDataPlane.Spec.MCPServerRef.KonnectNamespacedRef
+	if ref == nil {
+		return ctrl.Result{}, fmt.Errorf("MCPServerDataPlane %s/%s has no konnectNamespacedRef set",
+			mcpDataPlane.Namespace, mcpDataPlane.Name)
 	}
+
+	var mcpServer konnectv1alpha1.MCPServer
+	if err := r.Get(ctx, client.ObjectKey{
+		Namespace: mcpDataPlane.Namespace,
+		Name:      ref.Name,
+	}, &mcpServer); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get MCPServer %s/%s: %w", mcpDataPlane.Namespace, ref.Name, err)
+	}
+
 	mcpServerID := mcpServer.GetKonnectID()
 	if mcpServerID == "" {
 		log.Debug(logger, "Waiting for the MCPServer to get the ID assigned", "namespace", mcpDataPlane.Namespace, "name", mcpDataPlane.Name)
 		return ctrl.Result{}, nil
 	}
-	cpID := mcpServer.Status.ControlPlaneID
+	cpID := mcpServer.GetControlPlaneID()
+	if cpID == "" {
+		log.Debug(logger, "Waiting for the MCPServer to get the ControlPlane ID assigned", "namespace", mcpDataPlane.Namespace, "name", mcpDataPlane.Name)
+		return ctrl.Result{}, nil
+	}
 
 	// Resolve the reference chain to KonnectAPIAuthConfiguration and build the SDK.
-	apiAuth, err := r.resolveAuth(ctx, mcpDataPlane)
+	apiAuth, err := r.resolveAuth(ctx, &mcpServer)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to resolve auth for MCPServer %s/%s: %w",
 			mcpDataPlane.Namespace, mcpDataPlane.Name, err)
 	}
 
-	sdk, err := r.buildSDK(ctx, mcpDataPlane)
+	sdk, err := r.buildSDK(ctx, apiAuth)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to build SDK for MCPServer %s/%s: %w",
 			mcpDataPlane.Namespace, mcpDataPlane.Name, err)
 	}
 
+	// Fetch the remote MCPServer from Konnect by its ID.
+	resp, err := sdk.GetMCPServersSDK().GetMcpServerByControlPlane(ctx, cpID, mcpServerID)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get MCPServer %s/%s from Konnect: %w",
+			mcpDataPlane.Namespace, mcpDataPlane.Name, err)
+	}
+	if resp == nil || resp.MCPServerCPInfo == nil {
+		return ctrl.Result{}, fmt.Errorf("got nil response for MCPServer %s/%s from Konnect",
+			mcpDataPlane.Namespace, mcpDataPlane.Name)
+	}
+	remoteMCPServer := resp.MCPServerCPInfo
+
 	mcpServerMetadata := mcpServerMetadata{
-		// TODO(pmalek)
-		ContainerImage:     "",
-		InitContainerImage: "",
-		Version:            "",
+		ContainerImage:     derefImage(remoteMCPServer.Container),
+		InitContainerImage: derefImage(remoteMCPServer.InitContainer),
+		Version:            remoteMCPServer.Version,
+		ControlPlaneID:     cpID,
+		MCPServerID:        mcpServerID,
 	}
 
 	// Ensure a Deployment exists for this MCPServer.
@@ -172,7 +200,7 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 
 	// Ensure Kong entities (KongService, KongRoute) are created in the cluster
 	// from the remote MCP server's entity definitions.
-	if err := r.ensureKongEntities(ctx, mcpDataPlane, sdk); err != nil {
+	if err := r.ensureKongEntities(ctx, mcpDataPlane, sdk, cpID, mcpServerID, mcpServer.Spec.ControlPlaneRef); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -191,9 +219,9 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 			mcpDataPlane.Namespace, mcpDataPlane.Name, err)
 	}
 
-	// Patch the MCPServer status with the remote version.
+	// Patch the MCPServerDataPlane status from the live Deployment.
 	old := mcpDataPlane.DeepCopy()
-	mcpDataPlane.Status.Version = mcpServerMetadata.Version
+	ensureDataPlaneStatus(mcpDataPlane, deployment, mcpServerMetadata.Version)
 	statusRes, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, mcpDataPlane, old)
 	if err != nil {
 		return ctrl.Result{}, err

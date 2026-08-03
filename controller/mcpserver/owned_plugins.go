@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
@@ -116,6 +117,7 @@ func (r *MCPServerDataPlaneReconciler) ensureKongPluginBindings(
 	ctx context.Context,
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	serviceNames map[string]struct{},
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) error {
 	logger := log.GetLogger(ctx, "mcpserver", r.LoggingMode)
 
@@ -123,7 +125,7 @@ func (r *MCPServerDataPlaneReconciler) ensureKongPluginBindings(
 	for _, plg := range builtinPlugins {
 		pluginName := kongPluginName(mcpDataPlane, plg)
 		for svcName := range serviceNames {
-			res, nn, err := r.ensureKongPluginBinding(ctx, mcpDataPlane, pluginName, svcName)
+			res, nn, err := r.ensureKongPluginBinding(ctx, mcpDataPlane, pluginName, svcName, cpRef)
 			if err != nil {
 				return err
 			}
@@ -143,8 +145,9 @@ func (r *MCPServerDataPlaneReconciler) ensureKongPluginBinding(
 	ctx context.Context,
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	pluginName, serviceName string,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) (op.Result, client.ObjectKey, error) {
-	desired := generateKongPluginBinding(mcpDataPlane, pluginName, serviceName)
+	desired := generateKongPluginBinding(mcpDataPlane, pluginName, serviceName, cpRef)
 	nn := client.ObjectKeyFromObject(desired)
 
 	k8sutils.SetOwnerForObject(desired, mcpDataPlane)
@@ -171,6 +174,7 @@ func (r *MCPServerDataPlaneReconciler) ensureKongPluginBinding(
 func generateKongPluginBinding(
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	pluginName, serviceName string,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) *configurationv1alpha1.KongPluginBinding {
 	return &configurationv1alpha1.KongPluginBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -188,8 +192,7 @@ func generateKongPluginBinding(
 					Kind:  "KongService",
 				},
 			},
-			// TODO(pmalek)
-			// ControlPlaneRef: mcpServer.Spec.ControlPlaneRef,
+			ControlPlaneRef: cpRef,
 		},
 	}
 }

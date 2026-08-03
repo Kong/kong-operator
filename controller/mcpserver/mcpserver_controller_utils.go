@@ -11,7 +11,6 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	konnectcontroller "github.com/kong/kong-operator/v2/controller/konnect"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
@@ -51,16 +50,13 @@ func ownerControlPlaneName(mcpServer *konnectv1alpha1.MCPServer) string {
 	return ""
 }
 
-// resolveAuth resolves the KonnectAPIAuthConfiguration for the given MCPServer.
+// resolveAuth resolves the KonnectAPIAuthConfiguration for the given MCPServer,
+// via the auth chain rooted at the MCPServer's ControlPlaneRef.
 func (r *MCPServerDataPlaneReconciler) resolveAuth(
 	ctx context.Context,
-	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
+	mcpServer *konnectv1alpha1.MCPServer,
 ) (*konnectv1alpha1.KonnectAPIAuthConfiguration, error) {
-	// TODO(pmalek): resolve Auth
-	// apiAuthRef, err := konnectcontroller.GetAPIAuthRefNN(ctx, r.Client, mcpDataPlane)
-
-	var apiAuthRef types.NamespacedName
-	var err error
+	apiAuthRef, err := konnectcontroller.GetAPIAuthRefNN(ctx, r.Client, mcpServer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get APIAuth ref: %w", err)
 	}
@@ -73,18 +69,12 @@ func (r *MCPServerDataPlaneReconciler) resolveAuth(
 	return &apiAuth, nil
 }
 
-// buildSDK resolves the KonnectAPIAuthConfiguration for the given MCPServer
-// and returns an authenticated SDK wrapper.
+// buildSDK returns an authenticated SDK wrapper for the given, already-resolved
+// KonnectAPIAuthConfiguration.
 func (r *MCPServerDataPlaneReconciler) buildSDK(
 	ctx context.Context,
-	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 ) (sdkops.SDKWrapper, error) {
-	// TODO(pmalek): resolve Auth
-	apiAuth, err := r.resolveAuth(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	token, err := konnectcontroller.GetTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, apiAuth)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token from KonnectAPIAuthConfiguration %s/%s: %w",
