@@ -9451,6 +9451,15 @@ spec:
                   the MCPServerDataPlane.
                 format: int32
                 type: integer
+              selector:
+                description: |-
+                  Selector is the label selector used by the scale subresource to match
+                  the Pods managed by the owned Deployment.
+                type: string
+              version:
+                description: Version indicates the version of the referenced, remote
+                  MCPServer.
+                type: string
             type: object
         required:
         - spec

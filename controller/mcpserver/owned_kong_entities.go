@@ -29,14 +29,11 @@ func (r *MCPServerDataPlaneReconciler) ensureKongEntities(
 	ctx context.Context,
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	sdk sdkops.SDKWrapper,
+	cpID string,
+	mcpServerID string,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) error {
 	logger := log.GetLogger(ctx, "mcpserver", r.LoggingMode)
-
-	// TODO(pmalek)
-	// cpID := mcpDataPlane.GetControlPlaneID()
-	// mcpServerID := mcpDataPlane.GetKonnectID()
-	cpID := "TODO"
-	mcpServerID := "TODO"
 
 	resp, err := sdk.GetMCPServersSDK().GetMcpServerKongEntities(ctx, sdkkonnectops.GetMcpServerKongEntitiesRequest{
 		ControlPlaneID: cpID,
@@ -62,7 +59,7 @@ func (r *MCPServerDataPlaneReconciler) ensureKongEntities(
 	// ------------------------------------------------------------------
 	desiredServiceNames := make(map[string]struct{}, len(entities.Services))
 	for _, svc := range entities.Services {
-		res, svcNN, err := r.ensureKongService(ctx, mcpDataPlane, svc)
+		res, svcNN, err := r.ensureKongService(ctx, mcpDataPlane, svc, cpRef)
 		if err != nil {
 			return err
 		}
@@ -87,7 +84,7 @@ func (r *MCPServerDataPlaneReconciler) ensureKongEntities(
 	// ------------------------------------------------------------------
 	desiredRouteNames := make(map[string]struct{}, len(entities.Routes))
 	for _, route := range entities.Routes {
-		res, routeNN, err := r.ensureKongRoute(ctx, mcpDataPlane, route, svcIDToName)
+		res, routeNN, err := r.ensureKongRoute(ctx, mcpDataPlane, route, svcIDToName, cpRef)
 		if err != nil {
 			return err
 		}
@@ -110,7 +107,7 @@ func (r *MCPServerDataPlaneReconciler) ensureKongEntities(
 		return err
 	}
 
-	if err := r.ensureKongPluginBindings(ctx, mcpDataPlane, desiredServiceNames); err != nil {
+	if err := r.ensureKongPluginBindings(ctx, mcpDataPlane, desiredServiceNames, cpRef); err != nil {
 		return err
 	}
 
@@ -125,8 +122,9 @@ func (r *MCPServerDataPlaneReconciler) ensureKongService(
 	ctx context.Context,
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	svc sdkkonnectcomp.KongService,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) (op.Result, client.ObjectKey, error) {
-	desired := generateKongService(mcpDataPlane, svc, r.ClusterDomain)
+	desired := generateKongService(mcpDataPlane, svc, r.ClusterDomain, cpRef)
 	nn := client.ObjectKeyFromObject(desired)
 
 	k8sutils.SetOwnerForObject(desired, mcpDataPlane)
@@ -150,7 +148,12 @@ func (r *MCPServerDataPlaneReconciler) ensureKongService(
 	return op.Noop, nn, nil
 }
 
-func generateKongService(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane, svc sdkkonnectcomp.KongService, clusterDomain string) *configurationv1alpha1.KongService {
+func generateKongService(
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
+	svc sdkkonnectcomp.KongService,
+	clusterDomain string,
+	cpRef commonv1alpha1.ControlPlaneRef,
+) *configurationv1alpha1.KongService {
 	nn := generateWorkloadNN(mcpDataPlane)
 
 	// Use the Kubernetes Service DNS name so that Kong routes traffic to the
@@ -172,8 +175,7 @@ func generateKongService(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane, svc sdkko
 				Protocol: sdkkonnectcomp.Protocol(svc.Protocol),
 				Path:     &svc.Path,
 			},
-			// TODO(pmalek)
-			// ControlPlaneRef:
+			ControlPlaneRef: &cpRef,
 		},
 	}
 }
@@ -187,8 +189,9 @@ func (r *MCPServerDataPlaneReconciler) ensureKongRoute(
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	route sdkkonnectcomp.KongRoute,
 	svcIDToName map[string]string,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) (op.Result, client.ObjectKey, error) {
-	desired := generateKongRoute(mcpDataPlane, route, svcIDToName)
+	desired := generateKongRoute(mcpDataPlane, route, svcIDToName, cpRef)
 	nn := client.ObjectKeyFromObject(desired)
 
 	k8sutils.SetOwnerForObject(desired, mcpDataPlane)
@@ -216,6 +219,7 @@ func generateKongRoute(
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	route sdkkonnectcomp.KongRoute,
 	svcIDToName map[string]string,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) *configurationv1alpha1.KongRoute {
 	nn := generateWorkloadNN(mcpDataPlane)
 
@@ -246,10 +250,9 @@ func generateKongRoute(
 			}
 		}
 	}
-	// TODO(pmalek)
-	// if kr.Spec.ServiceRef == nil {
-	// 	kr.Spec.ControlPlaneRef = &mcpDataPlane.Spec.MCPServerRef
-	// }
+	if kr.Spec.ServiceRef == nil {
+		kr.Spec.ControlPlaneRef = &cpRef
+	}
 
 	return kr
 }

@@ -192,6 +192,12 @@ type MCPServerDataPlaneStatus struct {
 	// +optional
 	Replicas int32 `json:"replicas"`
 
+	// Selector is the label selector used by the scale subresource to match
+	// the Pods managed by the owned Deployment.
+	//
+	// +optional
+	Selector string `json:"selector,omitempty"`
+
 	// Version indicates the version of the referenced, remote MCPServer.
 	//
 	// +optional

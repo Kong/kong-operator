@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +43,17 @@ type mcpServerMetadata struct {
 	ContainerImage     string
 	InitContainerImage string
 	Version            string
+	ControlPlaneID     string
+	MCPServerID        string
+}
+
+// derefImage returns the container's image, or "" if the container spec or
+// its image is nil.
+func derefImage(c *sdkkonnectcomp.ContainerSpec) string {
+	if c == nil || c.Image == nil {
+		return ""
+	}
+	return *c.Image
 }
 
 // ----------------------------------------------------------------------------
@@ -164,11 +176,8 @@ func generateDeployment(
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								"-cp-url", apiAuth.Spec.ServerURL,
-								// TODO(pmalek)
-								//
-								//
-								// "-cp-id", mcpDataPlane.GetControlPlaneID(),
-								// "-mcp-server-id", mcpDataPlane.GetKonnectID(),
+								"-cp-id", mcpMetadata.ControlPlaneID,
+								"-mcp-server-id", mcpMetadata.MCPServerID,
 								"-output-path", mcpServerVolumeMountPath + "/app.py",
 								"-pat", "$(PAT)",
 							},

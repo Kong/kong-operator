@@ -580,6 +580,29 @@ rules:
     verbs:
       - update
   - apiGroups:
+      - mcp.konghq.com
+    resources:
+      - mcpserverdataplanes
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - mcp.konghq.com
+    resources:
+      - mcpserverdataplanes/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - mcp.konghq.com
+    resources:
+      - mcpserverdataplanes/status
+    verbs:
+      - patch
+      - update
+  - apiGroups:
       - networking.k8s.io
     resources:
       - ingressclasses
