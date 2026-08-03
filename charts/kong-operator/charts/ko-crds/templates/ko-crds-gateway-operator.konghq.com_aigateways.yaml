@@ -19,7 +19,6 @@ spec:
     singular: aigateway
   scope: Namespaced
   versions:
-{{ if .Values.global.webhooks.conversion.enabled }}
   - additionalPrinterColumns:
     - description: The URL endpoint for the AIGateway
       jsonPath: .status.endpoint
@@ -542,5 +541,4 @@ spec:
     storage: true
     subresources:
       status: {}
-{{ end }}
 {{- end }}

@@ -411,6 +411,15 @@ const (
 func wrapDeprecatedVersions(content string) string {
 	var result []string
 	lines := strings.Split(content, "\n")
+	// Count how many version entries are present in the CRD.
+	containVersions := lo.CountBy(lines, func(line string) bool {
+		return strings.HasPrefix(line, listVersionPatternToStartWith)
+	})
+	if containVersions <= 1 {
+		// If there is only one version entry, no need to wrap anything.
+		return content
+	}
+	// Only wrap deprecated versions with Helm template conditionals when there are multiple versions.
 	for i := 0; i < len(lines); {
 		line := lines[i]
 		// Check if this is the start of a version entry.
