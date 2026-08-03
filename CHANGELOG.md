@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [v2.3.0](#v230)
 - [v2.2.4](#v224)
 - [v2.2.3](#v223)
@@ -69,6 +70,11 @@
   ** This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521)
+- Hybridgateway: translate method-only `HTTPRoute` matches with the default root
+  path and avoid promoting method-less header-only matches above them, enabling
+  the `HTTPRouteMethodMatching` Gateway API conformance test for the hybrid
+  gateway.
+  [#4715](https://github.com/Kong/kong-operator/pull/4715)
 
 ## [v2.3.0]
 
@@ -482,11 +488,6 @@
   or above that boundary depending on whether they should sort before or after
   generated path-based routes.
   [#4640](https://github.com/Kong/kong-operator/pull/4640)
-- Hybridgateway: translate method-only `HTTPRoute` matches with the default root
-  path and avoid promoting method-less header-only matches above them, enabling
-  the `HTTPRouteMethodMatching` Gateway API conformance test for the hybrid
-  gateway.
-  [#4715](https://github.com/Kong/kong-operator/pull/4715)
 - Fix routes become unaccepted and removed from `DataPlane` unexpectedly
   [#4521](https://github.com/Kong/kong-operator/pull/4521)
 - `EventGateway` and `MCPServer`: fix Server-Side Apply (SSA) permanently failing with
