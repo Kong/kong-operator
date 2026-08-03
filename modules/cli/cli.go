@@ -75,7 +75,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.StringVar(&cfg.ControlPlaneConfigurationDumpAddr, "controlplane-config-dump-bind-address", manager.DefaultControlPlaneConfigurationDumpAddr, "The address where server dumps ControlPlane configuration. Only enabled when 'enable-controlplane-config-dump' is true.")
 
 	// controllers for specialized APIs and features
-	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller. (Experimental).")
+	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway (v1) controller. (Deprecated: Use Konnect AI Gateway instead: Set enable-controller-konnect and enable-controller-aigatewaydataplane to true).")
 	flagSet.BoolVar(&cfg.KongPluginInstallationControllerEnabled, "enable-controller-kongplugininstallation", false, "Enable the KongPluginInstallation controller.")
 	flagSet.BoolVar(&cfg.GatewayAPIExperimentalEnabled, "enable-gateway-api-experimental", false, "Enable the Gateway API experimental features.")
 
