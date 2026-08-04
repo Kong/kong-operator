@@ -225,6 +225,13 @@ func (s *ConfigSynchronizer) handleConfigSynchronizationTick(ctx context.Context
 
 	logger.V(logging.DebugLevel).Info("Start uploading configuration to Konnect")
 
+	// The context may have been cancelled while this tick was being handled (or the tick may have been
+	// buffered before cancellation). Don't push configuration after shutdown has been requested.
+	if ctx.Err() != nil {
+		logger.V(logging.DebugLevel).Info("Context done, skipping Konnect configuration upload")
+		return
+	}
+
 	// Get the latest configuration copy to upload to Konnect. We don't want to hold the lock for a long time to prevent
 	// blocking the update of the configuration.
 	targetCfg, ok := s.currentContent(ctx)
