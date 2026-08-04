@@ -892,7 +892,7 @@ func TestStrategicMergePatchPodTemplateSpec_MultipleProbeDeletes(t *testing.T) {
 				{Name: "init", ReadinessProbe: probe(), LivenessProbe: probe()},
 			},
 			Containers: []corev1.Container{
-				{Name: "proxy", ReadinessProbe: probe(), LivenessProbe: probe()},
+				{Name: "proxy", ReadinessProbe: probe(), LivenessProbe: probe(), StartupProbe: probe()},
 				{Name: "sidecar", ReadinessProbe: probe(), LivenessProbe: probe()},
 			},
 		},
@@ -903,7 +903,7 @@ func TestStrategicMergePatchPodTemplateSpec_MultipleProbeDeletes(t *testing.T) {
 				{Name: "init", ReadinessProbe: &corev1.Probe{}, LivenessProbe: &corev1.Probe{}},
 			},
 			Containers: []corev1.Container{
-				{Name: "proxy", ReadinessProbe: &corev1.Probe{}, LivenessProbe: &corev1.Probe{}},
+				{Name: "proxy", ReadinessProbe: &corev1.Probe{}, LivenessProbe: &corev1.Probe{}, StartupProbe: &corev1.Probe{}},
 				{Name: "sidecar", ReadinessProbe: &corev1.Probe{}, LivenessProbe: &corev1.Probe{}},
 			},
 		},
@@ -919,6 +919,7 @@ func TestStrategicMergePatchPodTemplateSpec_MultipleProbeDeletes(t *testing.T) {
 		assert.Nil(t, c.ReadinessProbe, "container %s: readinessProbe should be deleted", c.Name)
 		assert.Nil(t, c.LivenessProbe, "container %s: livenessProbe should be deleted", c.Name)
 	}
+	assert.Nil(t, result.Spec.Containers[0].StartupProbe, "container proxy: startupProbe should be deleted")
 
 	require.Len(t, result.Spec.InitContainers, 1)
 	assert.Equal(t, "init", result.Spec.InitContainers[0].Name)
