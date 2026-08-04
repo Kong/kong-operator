@@ -835,7 +835,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 	// MCPServer controllers
 	if c.FeatureGates.Enabled(FeatureGateMCPServer) {
-		controllers = append(controllers, newMCPServerControllers(mgr, c, ctrlOpts, ssaProvider)...)
+		controllers = append(controllers, newMCPServerControllers(mgr, c, ctrlOpts, ssaProvider, metricRecorder)...)
 	}
 
 	// Konnect controllers
@@ -1043,7 +1043,13 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 	}
 }
 
-func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options, ssaProvider *controllerpkgssa.TypeConverterProvider) []ControllerDef {
+func newMCPServerControllers(
+	mgr manager.Manager,
+	c *Config,
+	ctrlOpts controller.Options,
+	ssaProvider *controllerpkgssa.TypeConverterProvider,
+	metricsRecorder metrics.Recorder,
+) []ControllerDef {
 	var (
 		reconcileEventCh     = make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
 		sm                   = mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
@@ -1051,6 +1057,7 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 		sdkFactoryForPolling = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnectLongPolling()))
 		controllerFactory    = konnectControllerFactory{
 			sdkFactory:        sdkFactory,
+			metricRecorder:    metricsRecorder,
 			loggingMode:       c.LoggingMode,
 			client:            mgr.GetClient(),
 			syncPeriod:        c.KonnectSyncPeriod,
