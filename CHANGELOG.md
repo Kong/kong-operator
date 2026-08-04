@@ -111,6 +111,9 @@
   [#4727](https://github.com/Kong/kong-operator/pull/4727)
   [#5018](https://github.com/Kong/kong-operator/pull/5018)
 - Added option to disable `DataPlane`'s probes by specifying it as `{}`.
+  Using `{}` previously caused the operator to use default values for the probes
+  (no effect), which was not the intended behavior.
+  Now, the operator will not set any probes on the `DataPlane` whenever `{}` is specified.
   [#5117](https://github.com/Kong/kong-operator/pull/5117)
 
 ### Changed
