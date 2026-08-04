@@ -107,6 +107,14 @@ func listMCPServerDataPlanesForMCPServer(ctx context.Context, cl client.Client, 
 	return l.Items, nil
 }
 
+// reconcileEventHandler maps MCPServer events -- both real watch events and the
+// synthetic ones pushed on ReconcileEventCh -- to the MCPServerDataPlanes that
+// reference them. Requests must be keyed by the MCPServerDataPlane, not by the
+// MCPServer, since this controller reconciles MCPServerDataPlane objects.
+func (r *MCPServerDataPlaneReconciler) reconcileEventHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(enqueueMCPServerForMCPServerDataPlane(r.Client))
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *MCPServerDataPlaneReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorder(ControllerName)
@@ -119,18 +127,8 @@ func (r *MCPServerDataPlaneReconciler) SetupWithManager(ctx context.Context, mgr
 		Owns(&configurationv1alpha1.KongRoute{}).
 		Owns(&configurationv1.KongPlugin{}).
 		Owns(&configurationv1alpha1.KongPluginBinding{}).
-		Watches(
-			&konnectv1alpha1.MCPServer{},
-			handler.EnqueueRequestsFromMapFunc(
-				enqueueMCPServerForMCPServerDataPlane(r.Client),
-			),
-		).
-		WatchesRawSource(
-			source.Channel(
-				r.ReconcileEventCh,
-				&handler.EnqueueRequestForObject{},
-			),
-		).
+		Watches(&konnectv1alpha1.MCPServer{}, r.reconcileEventHandler()).
+		WatchesRawSource(source.Channel(r.ReconcileEventCh, r.reconcileEventHandler())).
 		Complete(reconcile.AsReconciler(r.Client, r))
 }
 

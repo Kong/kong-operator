@@ -24,7 +24,7 @@ import (
 
 const (
 	// IndexFieldMCPServerOnMCPServerDataPlane is the index field for
-	// MCPServerDataPlane -> MCPServer (via spec.controlPlaneRef.konnectNamespacedRef.name).
+	// MCPServerDataPlane -> MCPServer (via spec.mcpServerRef.konnectNamespacedRef.name).
 	IndexFieldMCPServerOnMCPServerDataPlane = "mcpServerDataPlaneMCPServerRef"
 )
 
