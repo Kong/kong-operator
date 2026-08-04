@@ -19,6 +19,13 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 	if patch == nil {
 		return base, nil
 	}
+	// NOTE: the caller may pass a pointer into a live object (e.g. the DataPlane's
+	// spec.deployment.podTemplateSpec), and both extractProbeDeletes and
+	// SetDefaultsPodTemplateSpec below mutate the patch in place. Copy so the caller's
+	// object is left untouched - otherwise the `{}` probe delete sentinel is erased
+	// before the DataPlane spec hash is computed and the delete is silently skipped
+	// when running with --enforce-config=false.
+	patch = patch.DeepCopy()
 
 	baseBytes, err := json.Marshal(base)
 	if err != nil {
@@ -123,29 +130,22 @@ func injectProbeDeletes(mergePatch []byte, listField string, deletes map[string]
 	}
 
 	spec, _ := patch["spec"].(map[string]any)
-	if spec == nil {
-		spec = map[string]any{}
-		patch["spec"] = spec
-	}
 	containers, _ := spec[listField].([]any)
-
-	for name, fields := range deletes {
-		var entry map[string]any
-		for _, c := range containers {
-			if m, ok := c.(map[string]any); ok && m["name"] == name {
-				entry = m
-				break
-			}
+	// NOTE: iterate the patch's containers rather than the deletes map so the output
+	// order is deterministic (Go map iteration order is randomized) and so a name that
+	// isn't in the patch can't inject a bogus image-less container. deletes is derived
+	// from the same container list the merge patch is computed from, so every name is
+	// present.
+	for _, c := range containers {
+		entry, ok := c.(map[string]any)
+		if !ok {
+			continue
 		}
-		if entry == nil {
-			entry = map[string]any{"name": name}
-			containers = append(containers, entry)
-		}
-		for _, field := range fields {
+		name, _ := entry["name"].(string)
+		for _, field := range deletes[name] {
 			entry[field] = nil
 		}
 	}
-	spec[listField] = containers
 
 	result, err := json.Marshal(patch)
 	if err != nil {

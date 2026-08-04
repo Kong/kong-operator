@@ -18,6 +18,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
@@ -394,6 +395,88 @@ func TestDeploymentBuilder_BuildAndDeploy_ScalingOnlyChangeIsNoop(t *testing.T) 
 	require.NoError(t, err)
 	assert.Equal(t, op.Noop, res, "a scaling-only change must not report the Deployment as updated, "+
 		"or it pre-empts the DataPlane controller's HPA reconciliation for a reconcile pass")
+}
+
+// TestDeploymentBuilder_BuildAndDeploy_ProbeDeleteWithoutEnforceConfig is a regression
+// test for the readinessProbe/livenessProbe/startupProbe: {} delete sentinel (see
+// StrategicMergePatchPodTemplateSpec) silently no-oping under --enforce-config=false.
+// StrategicMergePatchPodTemplateSpec used to mutate the caller's PodTemplateSpec in
+// place, which for this call chain is a pointer into the live DataPlane's
+// spec.deployment.podTemplateSpec: the `{}` sentinel would be erased to nil before the
+// spec hash used by the enforceConfig=false skip-update check was computed, so the
+// hash never changed and the probe was never actually removed from the Deployment.
+func TestDeploymentBuilder_BuildAndDeploy_ProbeDeleteWithoutEnforceConfig(t *testing.T) {
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-dataplane",
+			Namespace: "default",
+			UID:       "test-uid",
+		},
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: "kong/kong-gateway:3.11",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.
+		NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(dataplane).
+		Build()
+
+	builder := NewDeploymentBuilder(logr.Discard(), fakeClient).
+		WithDefaultImage("kong:3.0").
+		WithClusterCertificate("test-cert").
+		WithOpts(
+			labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
+		)
+
+	created, res, err := builder.BuildAndDeploy(t.Context(), dataplane, true, false)
+	require.NoError(t, err)
+	require.Equal(t, op.Created, res)
+	deploymentKey := client.ObjectKeyFromObject(created)
+
+	// A second call with no spec changes lets the Deployment's PodTemplateSpec settle
+	// to its fully-defaulted form (the fake client, unlike a real API server, doesn't
+	// apply defaulting on Create), so the next call's diff is solely attributable to
+	// the probe deletion below.
+	_, _, err = builder.BuildAndDeploy(t.Context(), dataplane, true, false)
+	require.NoError(t, err)
+
+	var deployment appsv1.Deployment
+	require.NoError(t, fakeClient.Get(t.Context(), deploymentKey, &deployment))
+	require.NotNil(t, deployment.Spec.Template.Spec.Containers[0].ReadinessProbe,
+		"sanity check: the generated Deployment must have a default readiness probe to delete")
+
+	// Delete the readiness probe via the empty-probe sentinel.
+	dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].ReadinessProbe = &corev1.Probe{}
+
+	_, res, err = builder.BuildAndDeploy(t.Context(), dataplane, false, false)
+	require.NoError(t, err)
+	assert.NotEqual(t, op.Noop, res, "the probe delete must not be skipped by the enforceConfig=false spec-hash check")
+
+	require.NoError(t, fakeClient.Get(t.Context(), deploymentKey, &deployment))
+	assert.Nil(t, deployment.Spec.Template.Spec.Containers[0].ReadinessProbe,
+		"the readiness probe must actually be removed from the Deployment")
+
+	assert.Equal(t, &corev1.Probe{},
+		dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].ReadinessProbe,
+		"the DataPlane object itself must not have been mutated by the reconcile",
+	)
 }
 
 func TestGenerateDataPlaneDeployment(t *testing.T) {

@@ -852,8 +852,12 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			d, err := makeDataPlaneDeployment()
 			require.NoError(t, err)
+			// The caller may own the patch (the DataPlane controller passes a pointer
+			// into the live DataPlane spec), so the patch must come back unmodified.
+			patchBefore := tc.Patch.DeepCopy()
 			result, err := StrategicMergePatchPodTemplateSpec(&d.Spec.Template, tc.Patch)
 			require.NoError(t, err)
+			assert.Empty(t, cmp.Diff(patchBefore, tc.Patch), "the patch must not be mutated")
 
 			// NOTE: We're using cmp.Diff here because assert.Equal has issues
 			// comparing resource.Quantity. We could write custom logic for this
@@ -866,6 +870,60 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestStrategicMergePatchPodTemplateSpec_MultipleProbeDeletes is a regression test
+// for a non-deterministic-order bug in injectProbeDeletes: it used to iterate a Go
+// map (randomized order) to inject probe deletes into the merge patch, which could
+// reorder the resulting container list across reconciles. It also covers the
+// initContainers delete path and multi-container deletes in one call, neither of
+// which the table above exercises (it only ever patches a single "proxy" container).
+func TestStrategicMergePatchPodTemplateSpec_MultipleProbeDeletes(t *testing.T) {
+	probe := func() *corev1.Probe {
+		return &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{Path: "/healthz", Port: intstr.FromInt(8080)},
+			},
+		}
+	}
+	base := &corev1.PodTemplateSpec{
+		Spec: corev1.PodSpec{
+			InitContainers: []corev1.Container{
+				{Name: "init", ReadinessProbe: probe(), LivenessProbe: probe()},
+			},
+			Containers: []corev1.Container{
+				{Name: "proxy", ReadinessProbe: probe(), LivenessProbe: probe()},
+				{Name: "sidecar", ReadinessProbe: probe(), LivenessProbe: probe()},
+			},
+		},
+	}
+	patch := &corev1.PodTemplateSpec{
+		Spec: corev1.PodSpec{
+			InitContainers: []corev1.Container{
+				{Name: "init", ReadinessProbe: &corev1.Probe{}, LivenessProbe: &corev1.Probe{}},
+			},
+			Containers: []corev1.Container{
+				{Name: "proxy", ReadinessProbe: &corev1.Probe{}, LivenessProbe: &corev1.Probe{}},
+				{Name: "sidecar", ReadinessProbe: &corev1.Probe{}, LivenessProbe: &corev1.Probe{}},
+			},
+		},
+	}
+
+	result, err := StrategicMergePatchPodTemplateSpec(base, patch)
+	require.NoError(t, err)
+
+	require.Len(t, result.Spec.Containers, 2)
+	assert.Equal(t, "proxy", result.Spec.Containers[0].Name)
+	assert.Equal(t, "sidecar", result.Spec.Containers[1].Name)
+	for _, c := range result.Spec.Containers {
+		assert.Nil(t, c.ReadinessProbe, "container %s: readinessProbe should be deleted", c.Name)
+		assert.Nil(t, c.LivenessProbe, "container %s: livenessProbe should be deleted", c.Name)
+	}
+
+	require.Len(t, result.Spec.InitContainers, 1)
+	assert.Equal(t, "init", result.Spec.InitContainers[0].Name)
+	assert.Nil(t, result.Spec.InitContainers[0].ReadinessProbe)
+	assert.Nil(t, result.Spec.InitContainers[0].LivenessProbe)
 }
 
 func TestSetDefaultsPodTemplateSpec(t *testing.T) {
