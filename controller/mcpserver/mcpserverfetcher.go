@@ -23,6 +23,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 )
@@ -110,13 +111,6 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 	}()
 }
 
-const (
-	// mcpServerFinalizer is added to every mirrored MCPServer so that the
-	// MCPServerReconciler can reset the signal-polling offset before the object
-	// is garbage-collected.
-	mcpServerFinalizer = "kong-operator.konghq.com/mcp-server-signal-cleanup"
-)
-
 // syncMCPServers creates a mirrored MCPServer Kubernetes object for each server
 // returned by Konnect. Already-existing objects are skipped silently.
 // Objects that exist in Kubernetes but are no longer present in Konnect are deleted.
@@ -167,8 +161,9 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 
 		mcpServer := &konnectv1alpha1.MCPServer{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      nn.Name,
-				Namespace: nn.Namespace,
+				Name:       nn.Name,
+				Namespace:  nn.Namespace,
+				Finalizers: []string{mcpServerFinalizer},
 			},
 			Spec: konnectv1alpha1.MCPServerSpec{
 				Source: new(commonv1alpha1.EntitySourceMirror),
@@ -215,9 +210,20 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 			continue
 		}
 
-		// Delete MCPServers whose Konnect counterpart no longer exists or
-		// whose MCPServerCPInfo has no ResourceID (the server is not fully
-		// provisioned on the Konnect side).
+		// Konnect is authoritative here: it already told us the server is gone,
+		// so drop our signal-reset finalizer before deleting to skip the reset.
+		// Deletions triggered by anyone else (user, owner GC) keep the finalizer
+		// and do reset the polling offset, via MCPServerSignalReconciler.
+		if _, res, err := patch.WithoutFinalizer(ctx, f.client, mcpServer, mcpServerFinalizer); err != nil {
+			errs = append(errs, fmt.Errorf("failed to remove finalizer from stale MCPServer %s/%s: %w", cpNamespace, mcpServer.Name, err))
+			continue
+		} else if !res.IsZero() {
+			// Conflict: the object changed under us, retry on the next sync.
+			continue
+		}
+
+		// Delete the stale MCPServer: its Konnect counterpart is no longer
+		// present in the servers Konnect reported for this control plane.
 		err := f.client.Delete(ctx, mcpServer)
 		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, fmt.Errorf("failed to delete stale MCPServer %s/%s: %w", cpNamespace, mcpServer.Name, err))

@@ -1083,6 +1083,15 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 				SdkFactoryForPolling: sdkFactoryForPolling,
 			},
 		},
+		{
+			Enabled: true,
+			Controller: &mcpserver.MCPServerSignalReconciler{
+				Client:            mgr.GetClient(),
+				ControllerOptions: ctrlOpts,
+				LoggingMode:       c.LoggingMode,
+				SignalManager:     sm,
+			},
+		},
 		// Generic KonnectEntityReconciler for MCPServer: resolves ControlPlaneRef,
 		// verifies the entity exists in Konnect, and sets Programmed/Mirrored conditions.
 		newKonnectEntityController[konnectv1alpha1.MCPServer](controllerFactory),

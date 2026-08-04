@@ -6,7 +6,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -14,7 +13,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -136,45 +134,15 @@ func (r *MCPServerDataPlaneReconciler) SetupWithManager(ctx context.Context, mgr
 func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "mcpserver", r.LoggingMode)
 
-	// Handle pre-deletion: notify the signal manager to reset the polling offset
-	// so the next poll picks up any changes caused by the deletion, then remove
-	// the finalizer to allow Kubernetes to garbage-collect the object.
+	// Nothing to do on deletion: owned Deployment/Service/Kong entities are
+	// cleaned up by ownerReference garbage collection. The signal-polling
+	// offset reset lives on the mirrored MCPServer's own lifecycle, handled by
+	// MCPServerSignalReconciler, not here.
 	if !mcpDataPlane.DeletionTimestamp.IsZero() {
-		if controllerutil.ContainsFinalizer(mcpDataPlane, mcpServerFinalizer) {
-			if ref := mcpDataPlane.Spec.MCPServerRef.KonnectNamespacedRef; ref != nil {
-				var mcpServer konnectv1alpha1.MCPServer
-				err := r.Get(ctx, client.ObjectKey{
-					Namespace: mcpDataPlane.Namespace,
-					Name:      ref.Name,
-				}, &mcpServer)
-				switch {
-				case err == nil:
-					if cpName := ownerControlPlaneName(&mcpServer); cpName != "" {
-						r.SignalManager.NotifyMCPServerDeleted(mcpServer.Namespace, cpName)
-					}
-				case apierrors.IsNotFound(err):
-					// The referenced MCPServer is already gone; nothing to notify.
-				default:
-					return ctrl.Result{}, fmt.Errorf("failed to get MCPServer %s/%s: %w", mcpDataPlane.Namespace, ref.Name, err)
-				}
-			}
-			controllerutil.RemoveFinalizer(mcpDataPlane, mcpServerFinalizer)
-			if err := r.Update(ctx, mcpDataPlane); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer from MCPServer %s/%s: %w", mcpDataPlane.Namespace, mcpDataPlane.Name, err)
-			}
-		}
 		return ctrl.Result{}, nil
 	}
 
 	log.Info(logger, "reconciling MCPServer", "namespace", mcpDataPlane.Namespace, "name", mcpDataPlane.Name)
-
-	if !controllerutil.ContainsFinalizer(mcpDataPlane, mcpServerFinalizer) {
-		controllerutil.AddFinalizer(mcpDataPlane, mcpServerFinalizer)
-		if err := r.Update(ctx, mcpDataPlane); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to add finalizer to MCPServer %s/%s: %w", mcpDataPlane.Namespace, mcpDataPlane.Name, err)
-		}
-		return ctrl.Result{}, nil
-	}
 
 	// Resolve the referenced MCPServer mirror entity to get the Konnect and
 	// ControlPlane IDs assigned to it.
