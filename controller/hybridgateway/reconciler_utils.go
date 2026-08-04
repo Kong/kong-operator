@@ -211,11 +211,25 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 					stopAtKind = "KongService"
 					continue
 				}
+				if !svc.GetDeletionTimestamp().IsZero() {
+					log.Debug(logger, "Service is being deleted for route, waiting", "service", svcName)
+					objectsSkipped++
+					stopAtKind = "KongService"
+					continue
+				}
 				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &svc) {
 					log.Debug(logger, "Service not Programmed yet for route, waiting", "service", svcName)
 					objectsSkipped++
 					stopAtKind = "KongService"
 					continue
+				}
+				if routeAnnotationKey != "" && !hybridRouteAnnotationContains(svc.GetAnnotations(), routeAnnotationKey, routeRef) {
+					if err := ensureHybridRouteAnnotationOnKongService(ctx, cl, &svc, routeAnnotationKey, routeRef); err != nil {
+						return false, false, fmt.Errorf("failed to update referenced KongService %s/%s hybrid-routes annotation before applying KongRoute %s: %w",
+							svc.GetNamespace(), svc.GetName(), desired.GetName(), err)
+					}
+					log.Debug(logger, "Updated referenced KongService hybrid-routes annotation before applying KongRoute",
+						"service", svcName, "route", desired.GetName())
 				}
 			}
 		case "KongPluginBinding":
@@ -385,6 +399,39 @@ func mergeHybridRouteAnnotation(desired, existing *unstructured.Unstructured, an
 	}
 	anns[annotationKey] = merged
 	desired.SetAnnotations(anns)
+}
+
+func ensureHybridRouteAnnotationOnKongService(
+	ctx context.Context,
+	cl client.Client,
+	svc *configurationv1alpha1.KongService,
+	annotationKey, routeRef string,
+) error {
+	base := svc.DeepCopy()
+	anns := svc.GetAnnotations()
+	if anns == nil {
+		anns = map[string]string{}
+	}
+
+	current := anns[annotationKey]
+	if hybridRouteAnnotationContains(anns, annotationKey, routeRef) {
+		return nil
+	}
+	if current != "" {
+		anns[annotationKey] = current + "," + routeRef
+	} else {
+		anns[annotationKey] = routeRef
+	}
+	svc.SetAnnotations(anns)
+
+	return cl.Patch(ctx, svc, client.MergeFromWithOptions(base, client.MergeFromWithOptimisticLock{}))
+}
+
+func hybridRouteAnnotationContains(anns map[string]string, annotationKey, routeRef string) bool {
+	if len(anns) == 0 {
+		return false
+	}
+	return strings.Contains(","+anns[annotationKey]+",", ","+routeRef+",")
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.
