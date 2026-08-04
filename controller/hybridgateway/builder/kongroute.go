@@ -106,7 +106,12 @@ func (b *KongRouteBuilder) WithRegexPriority(priority *int64) *KongRouteBuilder 
 // WithDefaultPathRegexPath replaces the default root path with a catch-all regex
 // path so regex_priority can order default-path HTTPRoute matches.
 func (b *KongRouteBuilder) WithDefaultPathRegexPath() *KongRouteBuilder {
-	if len(b.route.Spec.Paths) == 0 || (len(b.route.Spec.Paths) == 1 && b.route.Spec.Paths[0] == "/") {
+	isDefaultRootPath := len(b.route.Spec.Paths) == 0 ||
+		(len(b.route.Spec.Paths) == 1 && b.route.Spec.Paths[0] == "/")
+	isRootCaptureGroupPath := len(b.route.Spec.Paths) == 2 &&
+		b.route.Spec.Paths[0] == KongPathRegexPrefix+"/$" &&
+		b.route.Spec.Paths[1] == KongHTTPRouteDefaultPathRegexPath
+	if isDefaultRootPath || isRootCaptureGroupPath {
 		b.route.Spec.Paths = []string{KongHTTPRouteDefaultPathRegexPath}
 	}
 	return b

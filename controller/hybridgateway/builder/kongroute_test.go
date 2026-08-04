@@ -280,6 +280,28 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 	}
 }
 
+func TestKongRouteBuilder_WithDefaultPathRegexPathNormalizesRootCaptureGroup(t *testing.T) {
+	match := gwtypes.HTTPRouteMatch{
+		Path: &gatewayv1.HTTPPathMatch{
+			Type:  new(gatewayv1.PathMatchPathPrefix),
+			Value: new("/"),
+		},
+		Method: new(gatewayv1.HTTPMethodGet),
+	}
+	priority := int64(1)
+
+	route, err := NewKongRoute().
+		WithHTTPRouteMatch(match, true).
+		WithRegexPriority(&priority).
+		WithDefaultPathRegexPath().
+		Build()
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{KongHTTPRouteDefaultPathRegexPath}, route.Spec.Paths)
+	assert.Equal(t, []string{"GET"}, route.Spec.Methods)
+	assert.Equal(t, &priority, route.Spec.RegexPriority)
+}
+
 func TestGenerateKongRoutePathFromHTTPRouteMatch_RegexPriorityFollowsSpecificity(t *testing.T) {
 	shortPrefixPaths, shortPrefixPriority := GenerateKongRoutePathFromHTTPRouteMatch(
 		&gatewayv1.HTTPPathMatch{
