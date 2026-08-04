@@ -57,7 +57,7 @@ ScaleTargetRef which is being controlled by the Operator.
 | Field | Description |
 | --- | --- |
 | `type` _[MCPHorizontalScalingType](#mcp-konghq-com-v1alpha1-types-mcphorizontalscalingtype)_ | Type indicates the type of horizontal scaling to use. Currently only "static" is supported, which means the deployment will be scaled by setting the number of replicas directly. |
-| `static` _[MCPHorizontalScalingStatic](#mcp-konghq-com-v1alpha1-types-mcphorizontalscalingstatic)_ | Replicas defines the static horizontal scaling options for the deployment. |
+| `static` _[MCPHorizontalScalingStatic](#mcp-konghq-com-v1alpha1-types-mcphorizontalscalingstatic)_ | Static defines the static horizontal scaling options for the deployment. |
 
 _Appears in:_
 
