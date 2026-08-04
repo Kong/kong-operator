@@ -430,6 +430,31 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 	}
 }
 
+// Test_deploymentOptionsDeepEqual_Scaling is a regression test for the DataPlane's
+// spec.deployment.scaling never being updated by provisionDataPlane: the comparator
+// used to gate whether the owned DataPlane needs a patch only compared Replicas and
+// PodTemplateSpec, silently ignoring Scaling, so a scaling-only change from the
+// GatewayConfiguration was never detected and the patch was skipped forever.
+func Test_deploymentOptionsDeepEqual_Scaling(t *testing.T) {
+	original := &operatorv1beta1.DeploymentOptions{
+		Scaling: &operatorv1beta1.Scaling{
+			HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+				MinReplicas: lo.ToPtr(int32(2)),
+				MaxReplicas: 3,
+			},
+		},
+	}
+	changed := original.DeepCopy()
+	changed.Scaling.HorizontalScaling.MinReplicas = lo.ToPtr(int32(1))
+	changed.Scaling.HorizontalScaling.MaxReplicas = 2
+
+	assert.True(t, deploymentOptionsDeepEqual(original, original.DeepCopy()),
+		"identical DeploymentOptions must be reported as equal")
+	assert.False(t, deploymentOptionsDeepEqual(original, changed),
+		"a scaling-only change must not be reported as equal, or the DataPlane's "+
+			"scaling never gets patched by provisionDataPlane")
+}
+
 func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 	testcases := []struct {
 		name     string
