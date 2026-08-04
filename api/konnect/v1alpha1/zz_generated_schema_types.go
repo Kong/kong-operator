@@ -26,6 +26,14 @@ type AIGatewayAgentAccess struct {
 	//
 	// +optional
 	Acls *AIGatewayAgentAccessAcls `json:"acls,omitempty"`
+	// List of identity providers for granting access to the agent.
+	// At most 1 identity provider of each identity provider type can be
+	// referenced.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
 }
 
 // AIGatewayAgentAccessAcls represents a union type for acls.
@@ -3520,45 +3528,6 @@ func (s *AIGatewayModelAccess) UnmarshalJSON(data []byte) error {
 	}
 	*s = AIGatewayModelAccess(aux)
 	return nil
-}
-
-// AIGatewayModelAliasConfig Configuration for routing to this model using an
-// alias.
-type AIGatewayModelAliasConfig map[string]string
-
-// AIGatewayModelAliasConfigBody Configuration for routing requests to a
-// specific model using a request body property.
-type AIGatewayModelAliasConfigBody struct {
-	// Value indexed by property name that will cause this route to match if
-	// present in the request body.
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MaxProperties=1
-	Body apiextensionsv1.JSON `json:"body,omitzero"`
-}
-
-// AIGatewayModelAliasConfigHeaders Configuration for routing requests to a
-// specific model using a header.
-type AIGatewayModelAliasConfigHeaders struct {
-	// Value indexed by property name that will cause this route to match if
-	// present in the request headers.
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MaxProperties=1
-	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
-}
-
-// AIGatewayModelAliasConfigPath Configuration for routing requests to a
-// specific model using a path alias.
-type AIGatewayModelAliasConfigPath struct {
-	// Value that will cause this route to match if present in the request path.
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MaxItems=1
-	PathAliases []string `json:"pathAliases,omitempty"`
 }
 
 // AIGatewayModelBalancerConfig represents a union type for AIGatewayModelBalancerConfig.
@@ -7100,7 +7069,10 @@ type AIGatewayModelRouteConfig struct {
 	//
 	// +optional
 	Methods []string `json:"methods,omitempty"`
-	// Configuration for routing to this model using an alias.
+	// Configuration for overriding routing to this model using a selector.
+	// When not set, a default model selector will be created using the model's
+	// name and format.
+	//
 	//
 	// +optional
 	Model *AIGatewayModelRouteConfigModel `json:"model,omitempty"`
@@ -7173,15 +7145,15 @@ type AIGatewayModelRouteConfigModel struct {
 	// Body configuration.
 	//
 	// +optional
-	Body *AIGatewayModelAliasConfigBody `json:"body,omitempty"`
+	Body *AIGatewayModelSelectorConfigBody `json:"body,omitempty"`
 	// Headers configuration.
 	//
 	// +optional
-	Headers *AIGatewayModelAliasConfigHeaders `json:"headers,omitempty"`
+	Headers *AIGatewayModelSelectorConfigHeaders `json:"headers,omitempty"`
 	// Path configuration.
 	//
 	// +optional
-	Path *AIGatewayModelAliasConfigPath `json:"path,omitempty"`
+	Path *AIGatewayModelSelectorConfigPath `json:"path,omitempty"`
 }
 
 // AIGatewayModelRouteConfigModelType represents the type of model.
@@ -7253,7 +7225,7 @@ func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayModelAliasConfigBody
+		var val AIGatewayModelSelectorConfigBody
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Body: %w", err)
 		}
@@ -7263,7 +7235,7 @@ func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayModelAliasConfigHeaders
+		var val AIGatewayModelSelectorConfigHeaders
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Headers: %w", err)
 		}
@@ -7273,7 +7245,7 @@ func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayModelAliasConfigPath
+		var val AIGatewayModelSelectorConfigPath
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Path: %w", err)
 		}
@@ -7298,6 +7270,69 @@ func (s *AIGatewayModelRouteConfig) UnmarshalJSON(data []byte) error {
 	}
 	*s = AIGatewayModelRouteConfig(aux)
 	return nil
+}
+
+// AIGatewayModelSelectorConfig Configuration for overriding routing to this
+// model using a selector.
+// When not set, a default model selector will be created using the model's name
+// and format.
+type AIGatewayModelSelectorConfig map[string]string
+
+// AIGatewayModelSelectorConfigBody Configuration for routing requests to a
+// specific model using a request body property.
+type AIGatewayModelSelectorConfigBody struct {
+	// The body property name to match for routing.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	BodyParam string `json:"bodyParam,omitzero"`
+	// The list of values that are matched against the body property value.
+	// If the body property value matches any of the specified values, the request
+	// will be routed to the corresponding model.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxItems=1
+	Values []string `json:"values,omitempty"`
+}
+
+// AIGatewayModelSelectorConfigHeaders Configuration for routing requests to a
+// specific model using a header.
+type AIGatewayModelSelectorConfigHeaders struct {
+	// The header property name to match for routing.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	HeaderParam string `json:"headerParam,omitzero"`
+	// The list of values that are matched against the header property value.
+	// If the header property value matches any of the specified values, the
+	// request will be routed to the corresponding model.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxItems=1
+	Values []string `json:"values,omitempty"`
+}
+
+// AIGatewayModelSelectorConfigPath Configuration for routing requests to a
+// specific model using a path selector.
+type AIGatewayModelSelectorConfigPath struct {
+	// The path param name to match for routing.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	PathParam string `json:"pathParam,omitzero"`
+	// The list of values that are matched against the path param value.
+	// If the path param value matches any of the specified values, the request
+	// will be routed to the corresponding model.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxItems=1
+	Values []string `json:"values,omitempty"`
 }
 
 // AIGatewayModelVectorDBConfig represents a union type for AIGatewayModelVectorDBConfig.

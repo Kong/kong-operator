@@ -42533,6 +42533,18 @@ spec:
                         required:
                         - type
                         type: object
+                      identityProviders:
+                        description: |-
+                          List of identity providers for granting access to the agent.
+                          At most 1 identity provider of each identity provider type can be
+                          referenced.
+                        items:
+                          description: |-
+                            AIGatewayIdentityProviderReference Reference to a identity provider instance
+                            by name.
+                          type: string
+                        maxItems: 1
+                        type: array
                     type: object
                   config:
                     description: |-
@@ -55657,41 +55669,73 @@ spec:
                                   type: string
                                 type: array
                               model:
-                                description: Configuration for routing to this model using an alias.
+                                description: |-
+                                  Configuration for overriding routing to this model using a selector.
+                                  When not set, a default model selector will be created using the model's
+                                  name and format.
                                 properties:
                                   body:
                                     description: Body configuration.
                                     properties:
-                                      body:
+                                      bodyParam:
+                                        description: The body property name to match for routing.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      values:
                                         description: |-
-                                          Value indexed by property name that will cause this route to match if
-                                          present in the request body.
-                                        x-kubernetes-preserve-unknown-fields: true
-                                    required:
-                                    - body
-                                    type: object
-                                  headers:
-                                    description: Headers configuration.
-                                    properties:
-                                      headers:
-                                        description: |-
-                                          Value indexed by property name that will cause this route to match if
-                                          present in the request headers.
-                                        x-kubernetes-preserve-unknown-fields: true
-                                    required:
-                                    - headers
-                                    type: object
-                                  path:
-                                    description: Path configuration.
-                                    properties:
-                                      pathAliases:
-                                        description: Value that will cause this route to match if present in the request path.
+                                          The list of values that are matched against the body property value.
+                                          If the body property value matches any of the specified values, the request
+                                          will be routed to the corresponding model.
                                         items:
                                           type: string
                                         maxItems: 1
                                         type: array
                                     required:
-                                    - pathAliases
+                                    - bodyParam
+                                    - values
+                                    type: object
+                                  headers:
+                                    description: Headers configuration.
+                                    properties:
+                                      headerParam:
+                                        description: The header property name to match for routing.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      values:
+                                        description: |-
+                                          The list of values that are matched against the header property value.
+                                          If the header property value matches any of the specified values, the
+                                          request will be routed to the corresponding model.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - headerParam
+                                    - values
+                                    type: object
+                                  path:
+                                    description: Path configuration.
+                                    properties:
+                                      pathParam:
+                                        description: The path param name to match for routing.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      values:
+                                        description: |-
+                                          The list of values that are matched against the path param value.
+                                          If the path param value matches any of the specified values, the request
+                                          will be routed to the corresponding model.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - pathParam
+                                    - values
                                     type: object
                                   type:
                                     description: Type designates the type of configuration.
@@ -58272,41 +58316,73 @@ spec:
                                   type: string
                                 type: array
                               model:
-                                description: Configuration for routing to this model using an alias.
+                                description: |-
+                                  Configuration for overriding routing to this model using a selector.
+                                  When not set, a default model selector will be created using the model's
+                                  name and format.
                                 properties:
                                   body:
                                     description: Body configuration.
                                     properties:
-                                      body:
+                                      bodyParam:
+                                        description: The body property name to match for routing.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      values:
                                         description: |-
-                                          Value indexed by property name that will cause this route to match if
-                                          present in the request body.
-                                        x-kubernetes-preserve-unknown-fields: true
-                                    required:
-                                    - body
-                                    type: object
-                                  headers:
-                                    description: Headers configuration.
-                                    properties:
-                                      headers:
-                                        description: |-
-                                          Value indexed by property name that will cause this route to match if
-                                          present in the request headers.
-                                        x-kubernetes-preserve-unknown-fields: true
-                                    required:
-                                    - headers
-                                    type: object
-                                  path:
-                                    description: Path configuration.
-                                    properties:
-                                      pathAliases:
-                                        description: Value that will cause this route to match if present in the request path.
+                                          The list of values that are matched against the body property value.
+                                          If the body property value matches any of the specified values, the request
+                                          will be routed to the corresponding model.
                                         items:
                                           type: string
                                         maxItems: 1
                                         type: array
                                     required:
-                                    - pathAliases
+                                    - bodyParam
+                                    - values
+                                    type: object
+                                  headers:
+                                    description: Headers configuration.
+                                    properties:
+                                      headerParam:
+                                        description: The header property name to match for routing.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      values:
+                                        description: |-
+                                          The list of values that are matched against the header property value.
+                                          If the header property value matches any of the specified values, the
+                                          request will be routed to the corresponding model.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - headerParam
+                                    - values
+                                    type: object
+                                  path:
+                                    description: Path configuration.
+                                    properties:
+                                      pathParam:
+                                        description: The path param name to match for routing.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      values:
+                                        description: |-
+                                          The list of values that are matched against the path param value.
+                                          If the path param value matches any of the specified values, the request
+                                          will be routed to the corresponding model.
+                                        items:
+                                          type: string
+                                        maxItems: 1
+                                        type: array
+                                    required:
+                                    - pathParam
+                                    - values
                                     type: object
                                   type:
                                     description: Type designates the type of configuration.

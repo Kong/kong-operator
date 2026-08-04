@@ -217,6 +217,18 @@ spec:
                         required:
                         - type
                         type: object
+                      identityProviders:
+                        description: |-
+                          List of identity providers for granting access to the agent.
+                          At most 1 identity provider of each identity provider type can be
+                          referenced.
+                        items:
+                          description: |-
+                            AIGatewayIdentityProviderReference Reference to a identity provider instance
+                            by name.
+                          type: string
+                        maxItems: 1
+                        type: array
                     type: object
                   config:
                     description: |-
