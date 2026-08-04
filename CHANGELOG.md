@@ -345,6 +345,21 @@
   case-insensitively and ignores later equivalent duplicates, aligning with
   Gateway API matching semantics.
   [#4597](https://github.com/Kong/kong-operator/pull/4597)
+- Traditional router: Kong routes translated from `HTTPRoute` matches are now
+  assigned a compact `regex_priority` derived from the match's Gateway API
+  precedence traits (hostname specificity, path type and length, method,
+  header and query parameter counts) plus, within a single `HTTPRoute`, the
+  rule and match order. This ensures overlapping matches of different
+  specificity, and overlapping matches within one `HTTPRoute`, are evaluated
+  in the order required by the Gateway API specification. Adding or removing
+  `HTTPRoute`s whose match shapes already exist does not renumber unrelated
+  routes; introducing a new precedence class may. Equally
+  specific matches from different `HTTPRoute`s share the same priority and
+  their relative order remains unspecified, as before. `HTTPRoute` matches
+  with multiple header matches using equivalent, case-insensitive names no
+  longer fail translation: only the first entry is used and the subsequent
+  ones are ignored, as required by the Gateway API specification.
+  [#4563](https://github.com/Kong/kong-operator/pull/4563)
 - Hybridgateway: release Gateway API route finalizers once generated Kong
   resource delete requests have been issued, so immediate same-name route
   re-creates are not blocked by child resource finalizers.
