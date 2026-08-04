@@ -17716,11 +17716,7 @@ DeploymentOptions specifies options for the Deployment managed by the MCPServerD
 
 | Field | Description |
 | --- | --- |
-| `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
 | `scaling` _[Scaling](#mcp-konghq-com-v1alpha1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
-| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the keg Deployment metadata by the operator. |
-| `labels` _map[string]string_ | Labels are custom labels that are propagated to the keg Deployment metadata by the operator. |
-| `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).<br /><br />Note: environment variables set here take precedence over strongly-typed fields in Spec.Config. Using raw env vars is discouraged and intended for advanced use cases only. |
 
 _Appears in:_
 
@@ -17737,10 +17733,8 @@ ScaleTargetRef which is being controlled by the Operator.
 
 | Field | Description |
 | --- | --- |
-| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
-| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less than minReplicas. |
-| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
-| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
+| `type` _[MCPHorizontalScalingType](#mcp-konghq-com-v1alpha1-types-mcphorizontalscalingtype)_ | Type indicates the type of horizontal scaling to use. Currently only "static" is supported, which means the deployment will be scaled by setting the number of replicas directly. |
+| `static` _[MCPHorizontalScalingStatic](#mcp-konghq-com-v1alpha1-types-mcphorizontalscalingstatic)_ | Replicas defines the static horizontal scaling options for the deployment. |
 
 _Appears in:_
 
@@ -17760,6 +17754,42 @@ KonnectNamespacedRef is a reference to a MCPServer resource in the same namespac
 _Appears in:_
 
 - [MCPServerRef](#mcp-konghq-com-v1alpha1-types-mcpserverref)
+
+#### MCPHorizontalScalingStatic
+
+
+MCPHorizontalScalingStatic defines the static horizontal scaling options for
+the MCP deployment.
+
+
+
+| Field | Description |
+| --- | --- |
+| `replicas` _*int32_ | Replicas describes the number of desired replicas. This is a pointer to distinguish between explicit zero and not specified. |
+
+_Appears in:_
+
+- [HorizontalScaling](#mcp-konghq-com-v1alpha1-types-horizontalscaling)
+
+#### MCPHorizontalScalingType
+
+_Underlying type:_ `string`
+
+MCPHorizontalScalingType defines the type of horizontal scaling to use for
+the MCP deployment.
+
+
+
+
+_Appears in:_
+
+- [HorizontalScaling](#mcp-konghq-com-v1alpha1-types-horizontalscaling)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `static` | MCPHorizontalScalingTypeStatic indicates that the deployment should be<br />scaled by setting the number of replicas directly.<br /> |
 
 #### MCPServerDataPlaneSpec
 
