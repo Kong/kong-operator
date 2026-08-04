@@ -202,6 +202,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		cl := mgr.GetClient()
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForMCPServer(cl),
+			index.OptionsForMCPServerDataPlane(),
 		)
 	}
 
