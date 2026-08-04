@@ -132,7 +132,7 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 	for _, server := range servers {
 
 		// Skip servers that are not in "basic" mode. Currently, the only other
-		// mode is advanced and we do not sync/deply MCPServers for advanced mode.
+		// mode is advanced and we do not sync/deploy MCPServers for advanced mode.
 		// Users are expected to deploy their own MCPServer for advanced mode
 		// and configure it as they see fit.
 		// NOTE: This does not take into account migrating between modes.

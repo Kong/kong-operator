@@ -94,6 +94,8 @@ spec:
                             type: string
                         type: object
                         x-kubernetes-validations:
+                        - message: Only static horizontal scaling is currently supported
+                          rule: self.type == 'static'
                         - message: 'When type is static: replicas must be set and
                             must be non-negative'
                           rule: self.type != 'static' || (has(self.static.replicas)

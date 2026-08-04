@@ -39,7 +39,7 @@ func ensureDataPlaneStatus(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane, deploym
 		desired = *deployment.Spec.Replicas
 	}
 
-	if deployment.Status.ReadyReplicas > desired {
+	if deployment.Status.ReadyReplicas >= desired {
 		ready.Status = metav1.ConditionTrue
 		ready.Reason = string(kcfgdataplane.ResourceReadyReason)
 	} else {
