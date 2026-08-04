@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,7 +28,7 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status
-// +kubebuilder:subresource:scale:specpath=.spec.deployment.replicas,statuspath=.status.replicas,selectorpath=.status.selector
+// +kubebuilder:subresource:scale:specpath=.spec.deployment.scaling.horizontal.static.replicas,statuspath=.status.replicas,selectorpath=.status.selector
 // +kubebuilder:resource:shortName=mcpdp,categories=kong
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -78,47 +76,11 @@ type MCPServerDataPlaneSpec struct {
 }
 
 // DeploymentOptions specifies options for the Deployment managed by the MCPServerDataPlane controller.
-//
-// +kubebuilder:validation:XValidation:message="Using both replicas and scaling fields is not allowed.",rule="!(has(self.scaling) && has(self.replicas))"
 type DeploymentOptions struct {
-	// Replicas describes the number of desired pods.
-	// This is a pointer to distinguish between explicit zero and not specified.
-	// This is effectively shorthand for setting a scaling minimum and maximum
-	// to the same value. This field and the scaling field are mutually exclusive:
-	// You can only configure one or the other.
-	//
-	// +optional
-	Replicas *int32 `json:"replicas,omitempty"`
-
 	// Scaling defines the scaling options for the deployment.
 	//
 	// +optional
 	Scaling *Scaling `json:"scaling,omitempty"`
-
-	// Annotations are custom annotations that are propagated to the keg
-	// Deployment metadata by the operator.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=64
-	Annotations map[string]string `json:"annotations,omitempty"`
-
-	// Labels are custom labels that are propagated to the keg Deployment
-	// metadata by the operator.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=64
-	Labels map[string]string `json:"labels,omitempty"`
-
-	// PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
-	// It's being applied on top of the generated Deployments using
-	// [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch).
-	//
-	// Note: environment variables set here take precedence over strongly-typed
-	// fields in Spec.Config. Using raw env vars is discouraged and intended for
-	// advanced use cases only.
-	//
-	// +optional
-	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
 }
 
 // Scaling defines the scaling options for the deployment.
@@ -129,42 +91,39 @@ type Scaling struct {
 	HorizontalScaling *HorizontalScaling `json:"horizontal,omitempty"`
 }
 
+// MCPHorizontalScalingType defines the type of horizontal scaling to use for
+// the MCP deployment.
+type MCPHorizontalScalingType string
+
+const (
+	// MCPHorizontalScalingTypeStatic indicates that the deployment should be
+	// scaled by setting the number of replicas directly.
+	MCPHorizontalScalingTypeStatic MCPHorizontalScalingType = "static"
+)
+
 // HorizontalScaling defines horizontal scaling options for the deployment.
 // It holds all the options from the HorizontalPodAutoscalerSpec besides the
 // ScaleTargetRef which is being controlled by the Operator.
 type HorizontalScaling struct {
-	// minReplicas is the lower limit for the number of replicas to which the autoscaler
-	// can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the
-	// alpha feature gate HPAScaleToZero is enabled and at least one Object or External
-	// metric is configured.  Scaling is active as long as at least one metric value is
-	// available.
-	// +optional
-	MinReplicas *int32 `json:"minReplicas,omitempty" protobuf:"varint,2,opt,name=minReplicas"`
-
-	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
-	// It cannot be less than minReplicas.
+	// Type indicates the type of horizontal scaling to use.
+	// Currently only "static" is supported, which means the deployment will be
+	// scaled by setting the number of replicas directly.
 	//
-	// +required
-	MaxReplicas int32 `json:"maxReplicas" protobuf:"varint,3,opt,name=maxReplicas"`
-
-	// metrics contains the specifications for which to use to calculate the
-	// desired replica count (the maximum replica count across all metrics will
-	// be used).  The desired replica count is calculated multiplying the
-	// ratio between the target value and the current value by the current
-	// number of pods.  Ergo, metrics used must decrease as the pod count is
-	// increased, and vice-versa.  See the individual metric source types for
-	// more information about how each type of metric must respond.
-	// If not set, the default metric will be set to 80% average CPU utilization.
-	// +listType=atomic
-	// +kubebuilder:validation:MaxItems=32
 	// +optional
-	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty" protobuf:"bytes,4,rep,name=metrics"`
+	// +kubebuilder:validation:Enum=static
+	Type MCPHorizontalScalingType `json:"type,omitempty"`
 
-	// behavior configures the scaling behavior of the target
-	// in both Up and Down directions (scaleUp and scaleDown fields respectively).
-	// If not set, the default HPAScalingRules for scale up and scale down are used.
+	Replicas MCPHorizontalScalingStatic `json:"static,omitempty"`
+}
+
+// MCPHorizontalScalingStatic defines the static horizontal scaling options for
+// the MCP deployment.
+type MCPHorizontalScalingStatic struct {
+	// Replicas describes the number of desired replicas.
+	// This is a pointer to distinguish between explicit zero and not specified.
+	//
 	// +optional
-	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty" protobuf:"bytes,5,opt,name=behavior"`
+	Replicas *int32 `json:"replicas,omitempty"`
 }
 
 // MCPServerDataPlaneStatus defines the observed state of MCPServerDataPlane.
