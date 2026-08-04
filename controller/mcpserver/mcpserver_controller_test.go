@@ -19,6 +19,7 @@ package mcpserver
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -190,4 +191,64 @@ func Test_MCPServerDataPlaneReconciler_reconcileEventHandler(t *testing.T) {
 
 	assert.Equal(t, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: ns, Name: mcpDataPlane.Name}}, got)
 	assert.NotEqual(t, mcpServer.Name, got.Name, "request must be keyed by the MCPServerDataPlane, not the MCPServer")
+}
+
+// Test_MCPServerDataPlaneReconciler_DeletionDoesNotResetSignalOffset is the
+// regression test for the other half of the misplaced-finalizer bug: deleting
+// an MCPServerDataPlane must not reset the referenced MCPServer's
+// signal-polling offset. That reset belongs solely to MCPServerSignalReconciler,
+// triggered by the mirrored MCPServer's own deletion (see
+// mcpserver_signal_controller_test.go). Before the fix, this reconciler ran the
+// finalizer/notify dance on the MCPServerDataPlane itself, so tearing down a
+// workload for an otherwise-untouched MCPServer wrongly reset the whole
+// control plane's offset.
+func Test_MCPServerDataPlaneReconciler_DeletionDoesNotResetSignalOffset(t *testing.T) {
+	const (
+		ns     = "default"
+		cpName = "my-cp"
+	)
+
+	mcpServer := &konnectv1alpha1.MCPServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      "mcp-1",
+			OwnerReferences: []metav1.OwnerReference{
+				cpOwnerRef(cpName),
+			},
+		},
+	}
+	now := metav1.NewTime(time.Now())
+	mcpDataPlane := &mcpv1alpha1.MCPServerDataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      "mcpserver1",
+			// Kept alive by an unrelated finalizer so the fake client accepts a
+			// DeletionTimestamp on an object this reconciler no longer finalizes.
+			Finalizers:        []string{"test.example.com/hold"},
+			DeletionTimestamp: &now,
+		},
+		Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
+			MCPServerRef: mcpv1alpha1.MCPServerRef{
+				Type:                 mcpv1alpha1.MCPServerRefTypeKonnectNamespacedRef,
+				KonnectNamespacedRef: &mcpv1alpha1.KonnectNamespacedRef{Name: mcpServer.Name},
+			},
+		},
+	}
+
+	cl := newIndexedFakeClient(mcpServer, mcpDataPlane)
+	sm := newTestSignalManager(t)
+	resetCh := registerResetCh(sm, ns, cpName)
+
+	r := &MCPServerDataPlaneReconciler{Client: cl, SignalManager: sm}
+
+	// SdkFactory is intentionally left nil: if the reconciler tried to reach
+	// Konnect from the deletion path, this would panic.
+	_, err := r.Reconcile(t.Context(), mcpDataPlane)
+	require.NoError(t, err)
+
+	select {
+	case <-resetCh:
+		t.Fatal("MCPServerDataPlane deletion must not reset the MCPServer's signal offset")
+	default:
+	}
 }
