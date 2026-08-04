@@ -126,8 +126,7 @@ func generateDeployment(
 	var replicas int32 = 1
 	if deploy := mcpDataPlane.Spec.Deployment; deploy != nil && deploy.Scaling != nil {
 		if horizontal := deploy.Scaling.HorizontalScaling; horizontal != nil {
-			if horizontal.Type == mcpv1alpha1.MCPHorizontalScalingTypeStatic &&
-				horizontal.Static.Replicas != nil {
+			if horizontal.Type == mcpv1alpha1.MCPHorizontalScalingTypeStatic {
 				if horizontal.Static.Replicas != nil {
 					replicas = *horizontal.Static.Replicas
 				}
