@@ -1,9 +1,11 @@
 package converter
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -143,8 +145,9 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 	var conversionErrors []error
 
 	// c.outputStore is already deduplicated in translate(); no need to deduplicate again here.
+	outputStore := orderKongRoutesByRegexPriority(c.outputStore)
 	objects := make([]unstructured.Unstructured, 0, len(c.outputStore))
-	for _, obj := range c.outputStore {
+	for _, obj := range outputStore {
 		unstr, err := utils.ToUnstructured(obj, c.Scheme())
 		if err != nil {
 			conversionErr := fmt.Errorf("failed to convert %T %s to unstructured: %w", obj, obj.GetName(), err)
@@ -172,6 +175,39 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 
 	log.Debug(logger, "Finished output store conversion", "totalObjectsConverted", len(objects))
 	return objects, nil
+}
+
+// orderKongRoutesByRegexPriority places more specific KongRoutes in earlier KongRoute slots while
+// preserving the dependency order of all other resources. Hybrid routes are programmed in Konnect
+// individually, so creating a catch-all route before a more specific route can temporarily expose
+// the catch-all route to the data plane. If a request arrives in that window, Kong can cache the
+// less-specific match. Creating higher-priority routes first avoids that inconsistent intermediate
+// state.
+func orderKongRoutesByRegexPriority(outputStore []client.Object) []client.Object {
+	ordered := slices.Clone(outputStore)
+	routeIndexes := make([]int, 0)
+	routes := make([]*configurationv1alpha1.KongRoute, 0)
+	for i, obj := range ordered {
+		if route, ok := obj.(*configurationv1alpha1.KongRoute); ok {
+			routeIndexes = append(routeIndexes, i)
+			routes = append(routes, route)
+		}
+	}
+
+	slices.SortStableFunc(routes, func(a, b *configurationv1alpha1.KongRoute) int {
+		return cmp.Compare(kongRouteRegexPriority(b), kongRouteRegexPriority(a))
+	})
+	for i, routeIndex := range routeIndexes {
+		ordered[routeIndex] = routes[i]
+	}
+	return ordered
+}
+
+func kongRouteRegexPriority(route *configurationv1alpha1.KongRoute) int64 {
+	if route.Spec.RegexPriority == nil {
+		return -1
+	}
+	return *route.Spec.RegexPriority
 }
 
 // GetOutputStoreLen returns the number of objects in the output store.

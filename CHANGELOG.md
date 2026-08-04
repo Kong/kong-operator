@@ -86,9 +86,10 @@
   to ensure compatability with gateway API 1.3 and 1.4.
   [#5091](https://github.com/Kong/kong-operator/pull/5091)
 - Hybridgateway: translate method-only `HTTPRoute` matches with the default root
-  path and avoid promoting method-less header-only matches above them, enabling
-  the `HTTPRouteMethodMatching` Gateway API conformance test for the hybrid
-  gateway.
+  path, assign path and default-path matches from the same compact
+  `regex_priority` range, and keep PathPrefix matchers in that regex priority
+  class, enabling the `HTTPRouteMethodMatching` Gateway API conformance test for
+  the hybrid gateway.
   [#4715](https://github.com/Kong/kong-operator/pull/4715)
 
 ### Added
@@ -402,10 +403,9 @@
   derived from method and header specificity keeps more specific header matches
   ahead of less specific ones. This enables the `HTTPRouteHeaderMatching` Gateway API
   conformance test for the hybrid gateway.
-  Generated header-only priorities stay below `1 << 20` (`1048576`), while generated
-  path-based priorities start at that value. Use custom `KongRoute` priorities below
-  or above that boundary depending on whether they should sort before or after
-  generated path-based routes.
+  Generated priorities stay below `1 << 20` (`1048576`) because Kong's
+  traditional-compatible router only retains the low 20 bits when calculating
+  route precedence.
   [#4640](https://github.com/Kong/kong-operator/pull/4640)
 - Fix routes become unaccepted and removed from DataPlane unexpectedly
   [#4521](https://github.com/Kong/kong-operator/pull/4521)

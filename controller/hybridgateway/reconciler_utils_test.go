@@ -246,6 +246,62 @@ func TestEnforceState_DependencyGating(t *testing.T) {
 	})
 }
 
+func TestEnforceState_ProgramsKongRoutesInDesiredOrder(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+	s := scheme.Get()
+
+	routeGVK := schema.GroupVersionKind{
+		Group:   "configuration.konghq.com",
+		Version: "v1alpha1",
+		Kind:    "KongRoute",
+	}
+	desired := []unstructured.Unstructured{
+		newUnstructured("ns", "route-high", routeGVK, nil),
+		newUnstructured("ns", "route-medium", routeGVK, nil),
+		newUnstructured("ns", "route-low", routeGVK, nil),
+	}
+	fakeConv := &fakeHTTPRouteConverter{desired: desired}
+	cl := fake.NewClientBuilder().
+		WithScheme(s).
+		WithStatusSubresource(&configurationv1alpha1.KongRoute{}).
+		Build()
+
+	// Only the first route may be created before it is Programmed in Konnect.
+	applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
+	require.NoError(t, err)
+	assert.True(t, applied)
+	assert.True(t, waiting)
+
+	var high configurationv1alpha1.KongRoute
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "route-high"}, &high))
+	assert.True(t, apierrors.IsNotFound(
+		cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "route-medium"}, &configurationv1alpha1.KongRoute{}),
+	))
+
+	// Once the first route is current-generation Programmed, the next route may be
+	// created, but the third must still wait for that second route.
+	high.Status.Conditions = []metav1.Condition{{
+		Type:               "Programmed",
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: high.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "Programmed",
+	}}
+	require.NoError(t, cl.Status().Update(ctx, &high))
+
+	applied, waiting, err = enforceState(ctx, cl, newTestTypeConverter(), logger, fakeConv)
+	require.NoError(t, err)
+	assert.True(t, applied)
+	assert.True(t, waiting)
+	require.NoError(t,
+		cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "route-medium"}, &configurationv1alpha1.KongRoute{}),
+	)
+	assert.True(t, apierrors.IsNotFound(
+		cl.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "route-low"}, &configurationv1alpha1.KongRoute{}),
+	))
+}
+
 func TestTranslate(t *testing.T) {
 	tests := []struct {
 		name               string

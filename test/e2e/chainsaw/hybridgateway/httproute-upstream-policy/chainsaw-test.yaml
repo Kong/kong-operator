@@ -205,7 +205,7 @@ spec:
         - name: route_paths
           value:
             - "~/echo$"
-            - "/echo/"
+            - "~/echo/"
         - name: strip_path
           value: false
         - name: preserve_host

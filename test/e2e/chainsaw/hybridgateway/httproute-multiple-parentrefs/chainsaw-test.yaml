@@ -265,7 +265,7 @@ spec:
         - name: route_paths
           value:
             - "~/get$"
-            - "/get/"
+            - "~/get/"
         - name: strip_path
           value: false
         - name: preserve_host
@@ -297,7 +297,7 @@ spec:
         - name: route_paths
           value:
             - "~/get$"
-            - "/get/"
+            - "~/get/"
         - name: strip_path
           value: false
         - name: preserve_host
@@ -536,7 +536,7 @@ spec:
         - name: route_paths
           value:
             - "~/status/200$"
-            - "/status/200/"
+            - "~/status/200/"
         - name: strip_path
           value: true
         - name: preserve_host

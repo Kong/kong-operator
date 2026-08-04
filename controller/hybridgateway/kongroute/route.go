@@ -155,8 +155,11 @@ func RoutesForHTTPRouteRule(
 			WithSpecTags(tags).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
-		if priority := priorityForDefaultPathHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
-			routeBuilder.WithRegexPriority(priority).WithDefaultPathRegexPath()
+		if priority := priorityForTraditionalHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
+			routeBuilder.WithRegexPriority(priority)
+			if isDefaultPathHTTPRouteMatch(match) {
+				routeBuilder.WithDefaultPathRegexPath()
+			}
 		}
 
 		newRoute, buildErr := routeBuilder.Build()
@@ -232,13 +235,27 @@ func httpRouteMatchPriorities(httpRoute *gwtypes.HTTPRoute) map[httpRouteMatchPr
 	return priorities
 }
 
-func priorityForDefaultPathHTTPRouteMatch(
+func priorityForTraditionalHTTPRouteMatch(
 	match gatewayv1.HTTPRouteMatch,
 	priorities map[httpRouteMatchPriorityKey]int64,
 	ruleIndex, matchIndex int,
 ) *int64 {
-	if !isDefaultPathHTTPRouteMatch(match) || (match.Method == nil && len(match.Headers) == 0) {
-		return nil
+	if isDefaultPathHTTPRouteMatch(match) {
+		if match.Method == nil && len(match.Headers) == 0 {
+			return nil
+		}
+	} else {
+		if match.Path == nil || match.Path.Value == nil {
+			return nil
+		}
+		pathType := gatewayv1.PathMatchPathPrefix
+		if match.Path.Type != nil {
+			pathType = *match.Path.Type
+		}
+		// Gateway API leaves RegularExpression precedence implementation-specific.
+		if pathType == gatewayv1.PathMatchRegularExpression {
+			return nil
+		}
 	}
 	priority := priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex)
 	return &priority

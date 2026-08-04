@@ -50,6 +50,23 @@ func TestHTTPRouteConverter_GetOutputStore(t *testing.T) {
 			Namespace: "default",
 		},
 	}
+	lowPriority := int64(1)
+	highPriority := int64(2)
+	lowPriorityRoute := &configurationv1alpha1.KongRoute{
+		ObjectMeta: metav1.ObjectMeta{Name: "low-priority-route", Namespace: "default"},
+		Spec: configurationv1alpha1.KongRouteSpec{
+			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{RegexPriority: &lowPriority},
+		},
+	}
+	highPriorityRoute := &configurationv1alpha1.KongRoute{
+		ObjectMeta: metav1.ObjectMeta{Name: "high-priority-route", Namespace: "default"},
+		Spec: configurationv1alpha1.KongRouteSpec{
+			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{RegexPriority: &highPriority},
+		},
+	}
+	defaultPriorityRoute := &configurationv1alpha1.KongRoute{
+		ObjectMeta: metav1.ObjectMeta{Name: "default-priority-route", Namespace: "default"},
+	}
 
 	tests := []struct {
 		name          string
@@ -64,6 +81,18 @@ func TestHTTPRouteConverter_GetOutputStore(t *testing.T) {
 			outputStore: []client.Object{validUpstream, validService},
 			wantLen:     2,
 			wantNames:   []string{"upstream-1", "service-1"},
+		},
+		{
+			name: "higher priority routes occupy earlier route slots",
+			outputStore: []client.Object{
+				lowPriorityRoute,
+				validService,
+				defaultPriorityRoute,
+				validUpstream,
+				highPriorityRoute,
+			},
+			wantLen:   5,
+			wantNames: []string{"high-priority-route", "service-1", "low-priority-route", "upstream-1", "default-priority-route"},
 		},
 		{
 			name:          "one object fails conversion",
@@ -147,6 +176,68 @@ func TestHTTPRouteConverter_TranslateDeduplicatesSharedBackendResources(t *testi
 	assert.Equal(t, 1, kindCounts["KongService"])
 	assert.Equal(t, 2, kindCounts["KongRoute"])
 	assert.Equal(t, 2, kindCounts["KongTarget"])
+}
+
+func TestHTTPRouteConverter_OrdersSpecificMethodRouteBeforeDefaultMethodRoute(t *testing.T) {
+	backendRef := newBackendRef("")
+	route := newHTTPRouteWithRules(nil, []gwtypes.HTTPRouteRule{
+		{
+			Matches: []gwtypes.HTTPRouteMatch{{
+				Method: new(gatewayv1.HTTPMethodGet),
+			}},
+			BackendRefs: []gwtypes.HTTPBackendRef{backendRef},
+		},
+		{
+			Matches: []gwtypes.HTTPRouteMatch{{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  new(gatewayv1.PathMatchPathPrefix),
+					Value: new("/path1"),
+				},
+				Method: new(gatewayv1.HTTPMethodGet),
+			}},
+			BackendRefs: []gwtypes.HTTPBackendRef{backendRef},
+		},
+	})
+
+	gateway := newGatewayWithListenerHostnames()
+	gateway.UID = types.UID("gateway-uid")
+	objects := append(
+		newKonnectGatewayStandardObjects(gateway),
+		newService("default"),
+		newEndpointSlice("backend-service", "default", []string{"10.0.1.1"}),
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+
+	converter := newHTTPRouteConverter(route, fakeClient, false, "")
+	_, err := converter.Translate(t.Context(), logr.Discard())
+	require.NoError(t, err)
+
+	output, err := converter.GetOutputStore(t.Context(), logr.Discard())
+	require.NoError(t, err)
+
+	var (
+		routePaths      [][]string
+		routePriorities []int64
+	)
+	for _, obj := range output {
+		if obj.GetKind() != "KongRoute" {
+			continue
+		}
+		paths, found, err := unstructured.NestedStringSlice(obj.Object, "spec", "paths")
+		require.NoError(t, err)
+		require.True(t, found)
+		routePaths = append(routePaths, paths)
+		priority, found, err := unstructured.NestedInt64(obj.Object, "spec", "regex_priority")
+		require.NoError(t, err)
+		require.True(t, found)
+		routePriorities = append(routePriorities, priority)
+	}
+
+	require.Len(t, routePaths, 2)
+	assert.Equal(t, []string{"~/path1$", "~/path1/"}, routePaths[0])
+	assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, routePaths[1])
+	assert.Equal(t, []int64{1 << 10, 0}, routePriorities)
+	assert.Less(t, routePriorities[0], int64(1<<20))
 }
 
 func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
