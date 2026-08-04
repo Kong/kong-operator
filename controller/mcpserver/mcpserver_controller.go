@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 )
 
@@ -62,6 +64,48 @@ type MCPServerDataPlaneReconciler struct {
 	eventRecorder events.EventRecorder
 }
 
+func enqueueMCPServerForMCPServerDataPlane(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		mcp, ok := obj.(*konnectv1alpha1.MCPServer)
+		if !ok {
+			return nil
+		}
+		mcpServerDataPlanes, err := listMCPServerDataPlanesForMCPServer(ctx, cl, mcp)
+		if err != nil {
+			return nil
+		}
+
+		reqs := make([]reconcile.Request, 0, len(mcpServerDataPlanes))
+		for _, mcpdp := range mcpServerDataPlanes {
+			reqs = append(reqs,
+				reconcile.Request{
+					NamespacedName: k8stypes.NamespacedName{
+						Namespace: mcpdp.Namespace,
+						Name:      mcpdp.Name,
+					},
+				},
+			)
+		}
+		return reqs
+	}
+}
+
+func listMCPServerDataPlanesForMCPServer(ctx context.Context, cl client.Client, mcp *konnectv1alpha1.MCPServer) ([]mcpv1alpha1.MCPServerDataPlane, error) {
+	var l mcpv1alpha1.MCPServerDataPlaneList
+	err := cl.List(
+		ctx, &l,
+		client.InNamespace(mcp.Namespace),
+		client.MatchingFields{
+			index.IndexFieldMCPServerOnMCPServerDataPlane: mcp.Name,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return l.Items, nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *MCPServerDataPlaneReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorder(ControllerName)
@@ -74,6 +118,12 @@ func (r *MCPServerDataPlaneReconciler) SetupWithManager(ctx context.Context, mgr
 		Owns(&configurationv1alpha1.KongRoute{}).
 		Owns(&configurationv1.KongPlugin{}).
 		Owns(&configurationv1alpha1.KongPluginBinding{}).
+		Watches(
+			&konnectv1alpha1.MCPServer{},
+			handler.EnqueueRequestsFromMapFunc(
+				enqueueMCPServerForMCPServerDataPlane(r.Client),
+			),
+		).
 		WatchesRawSource(
 			source.Channel(
 				r.ReconcileEventCh,
