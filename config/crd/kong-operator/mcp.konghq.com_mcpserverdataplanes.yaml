@@ -68,9 +68,8 @@ spec:
                           options for the deployment.
                         properties:
                           static:
-                            description: |-
-                              MCPHorizontalScalingStatic defines the static horizontal scaling options for
-                              the MCP deployment.
+                            description: Replicas defines the static horizontal scaling
+                              options for the deployment.
                             properties:
                               replicas:
                                 description: |-
@@ -213,10 +212,12 @@ spec:
                 description: |-
                   Selector is the label selector used by the scale subresource to match
                   the Pods managed by the owned Deployment.
+                maxLength: 256
                 type: string
               version:
                 description: Version indicates the version of the referenced, remote
                   MCPServer.
+                maxLength: 256
                 type: string
             type: object
         required:

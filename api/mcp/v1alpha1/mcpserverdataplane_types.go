@@ -113,6 +113,9 @@ type HorizontalScaling struct {
 	// +kubebuilder:validation:Enum=static
 	Type MCPHorizontalScalingType `json:"type,omitempty"`
 
+	// Replicas defines the static horizontal scaling options for the deployment.
+	//
+	// +optional
 	Replicas MCPHorizontalScalingStatic `json:"static,omitempty"`
 }
 
@@ -155,11 +158,13 @@ type MCPServerDataPlaneStatus struct {
 	// the Pods managed by the owned Deployment.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=256
 	Selector string `json:"selector,omitempty"`
 
 	// Version indicates the version of the referenced, remote MCPServer.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=256
 	Version string `json:"version,omitempty"`
 }
 
