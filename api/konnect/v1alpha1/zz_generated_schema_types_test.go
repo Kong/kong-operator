@@ -475,45 +475,6 @@ func TestAIGatewayModelAccess_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayModelAliasConfigBody_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayModelAliasConfigBody
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayModelAliasConfigHeaders_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayModelAliasConfigHeaders
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayModelAliasConfigPath_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayModelAliasConfigPath
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
 func TestAIGatewayModelBalancerConsistentHashingConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -986,6 +947,45 @@ func TestAIGatewayModelRouteConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayModelRouteConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelSelectorConfigBody_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelSelectorConfigBody
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelSelectorConfigHeaders_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelSelectorConfigHeaders
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelSelectorConfigPath_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelSelectorConfigPath
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)

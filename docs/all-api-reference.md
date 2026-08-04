@@ -9517,6 +9517,7 @@ This feature is currently in beta and is subject to change.<br /><br />Access co
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayAgentAccessAcls](#konnect-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules. Configure exactly one of `allow` or `deny`. |
+| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced. |
 
 _Appears in:_
 
@@ -10152,6 +10153,7 @@ by name.
 
 _Appears in:_
 
+- [AIGatewayAgentAccess](#konnect-konghq-com-v1alpha1-types-aigatewayagentaccess)
 - [AIGatewayModelAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccess)
 
 
@@ -11508,56 +11510,6 @@ Allowed values:
 | --- | --- |
 | `allow` |  |
 | `deny` |  |
-
-
-
-#### AIGatewayModelAliasConfigBody
-
-
-AIGatewayModelAliasConfigBody Configuration for routing requests to a
-specific model using a request body property.
-
-
-
-| Field | Description |
-| --- | --- |
-| `body` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request body. |
-
-_Appears in:_
-
-- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
-
-#### AIGatewayModelAliasConfigHeaders
-
-
-AIGatewayModelAliasConfigHeaders Configuration for routing requests to a
-specific model using a header.
-
-
-
-| Field | Description |
-| --- | --- |
-| `headers` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Value indexed by property name that will cause this route to match if present in the request headers. |
-
-_Appears in:_
-
-- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
-
-#### AIGatewayModelAliasConfigPath
-
-
-AIGatewayModelAliasConfigPath Configuration for routing requests to a
-specific model using a path alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `pathAliases` _[]string_ | Value that will cause this route to match if present in the request path. |
-
-_Appears in:_
-
-- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
 
 
 
@@ -13274,7 +13226,7 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | `hosts` _[]string_ | A list of domain names that match this route. Note that the hosts value is case sensitive. |
 | `httpsRedirectStatusCode` _int_ | The status code Kong responds with when all properties of a route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the route is configured to only accept the `https` protocol. |
 | `methods` _[]string_ | A list of HTTP methods that match this route. |
-| `model` _[AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)_ | Configuration for routing to this model using an alias. |
+| `model` _[AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)_ | Configuration for overriding routing to this model using a selector. When not set, a default model selector will be created using the model's name and format. |
 | `paths` _[]string_ | A list of paths that match this route. |
 | `preserveHost` _string_ | When matching a route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the service's `host`. |
 | `protocols` _[]string_ | An array of the protocols this route should allow. See the [route Object](#route-object) section for a list of accepted protocols. When set to only `https`, HTTP requests are answered with an upgrade error. When set to only `http`, HTTPS requests are answered with an error. |
@@ -13300,9 +13252,9 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[AIGatewayModelRouteConfigModelType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodeltype)_ | Type designates the type of configuration. |
-| `body` _[AIGatewayModelAliasConfigBody](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigbody)_ | Body configuration. |
-| `headers` _[AIGatewayModelAliasConfigHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigheaders)_ | Headers configuration. |
-| `path` _[AIGatewayModelAliasConfigPath](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaliasconfigpath)_ | Path configuration. |
+| `body` _[AIGatewayModelSelectorConfigBody](#konnect-konghq-com-v1alpha1-types-aigatewaymodelselectorconfigbody)_ | Body configuration. |
+| `headers` _[AIGatewayModelSelectorConfigHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelselectorconfigheaders)_ | Headers configuration. |
+| `path` _[AIGatewayModelSelectorConfigPath](#konnect-konghq-com-v1alpha1-types-aigatewaymodelselectorconfigpath)_ | Path configuration. |
 
 _Appears in:_
 
@@ -13330,6 +13282,59 @@ Allowed values:
 | `path` |  |
 
 
+
+
+
+#### AIGatewayModelSelectorConfigBody
+
+
+AIGatewayModelSelectorConfigBody Configuration for routing requests to a
+specific model using a request body property.
+
+
+
+| Field | Description |
+| --- | --- |
+| `bodyParam` _string_ | The body property name to match for routing. |
+| `values` _[]string_ | The list of values that are matched against the body property value. If the body property value matches any of the specified values, the request will be routed to the corresponding model. |
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
+
+#### AIGatewayModelSelectorConfigHeaders
+
+
+AIGatewayModelSelectorConfigHeaders Configuration for routing requests to a
+specific model using a header.
+
+
+
+| Field | Description |
+| --- | --- |
+| `headerParam` _string_ | The header property name to match for routing. |
+| `values` _[]string_ | The list of values that are matched against the header property value. If the header property value matches any of the specified values, the request will be routed to the corresponding model. |
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
+
+#### AIGatewayModelSelectorConfigPath
+
+
+AIGatewayModelSelectorConfigPath Configuration for routing requests to a
+specific model using a path selector.
+
+
+
+| Field | Description |
+| --- | --- |
+| `pathParam` _string_ | The path param name to match for routing. |
+| `values` _[]string_ | The list of values that are matched against the path param value. If the path param value matches any of the specified values, the request will be routed to the corresponding model. |
+
+_Appears in:_
+
+- [AIGatewayModelRouteConfigModel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelrouteconfigmodel)
 
 #### AIGatewayModelSpec
 
