@@ -40,6 +40,7 @@ func generateWorkloadNN(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) types.Name
 }
 
 type mcpServerMetadata struct {
+	ID                 string
 	ContainerImage     string
 	InitContainerImage string
 	Version            string
@@ -71,10 +72,10 @@ func (r *MCPServerDataPlaneReconciler) ensureDeployment(
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 ) (*appsv1.Deployment, error) {
 	if mcpMetadata.InitContainerImage == "" {
-		return nil, fmt.Errorf("remote MCPServer %s is missing init container info", mcpMetadata.Version)
+		return nil, fmt.Errorf("remote MCPServer %s is missing init container info", mcpMetadata.ID)
 	}
 	if mcpMetadata.ContainerImage == "" {
-		return nil, fmt.Errorf("remote MCPServer %s is missing container info", mcpMetadata.Version)
+		return nil, fmt.Errorf("remote MCPServer %s is missing container info", mcpMetadata.ID)
 	}
 
 	desired := generateDeployment(mcpDataPlane, mcpMetadata, apiAuth)

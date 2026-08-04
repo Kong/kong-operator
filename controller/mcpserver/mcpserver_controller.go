@@ -231,6 +231,7 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 	remoteMCPServer := resp.MCPServerCPInfo
 
 	mcpServerMetadata := mcpServerMetadata{
+		ID:                 remoteMCPServer.ID,
 		ContainerImage:     derefImage(remoteMCPServer.Container),
 		InitContainerImage: derefImage(remoteMCPServer.InitContainer),
 		Version:            remoteMCPServer.Version,

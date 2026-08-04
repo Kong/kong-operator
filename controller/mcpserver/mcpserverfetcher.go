@@ -130,7 +130,6 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 
 	konnectIDs := make(map[string]struct{}, len(servers))
 	for _, server := range servers {
-		konnectIDs[server.ID] = struct{}{}
 
 		// Skip servers that are not in "basic" mode. Currently, the only other
 		// mode is advanced and we do not sync/deply MCPServers for advanced mode.
@@ -138,12 +137,16 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 		// and configure it as they see fit.
 		// NOTE: This does not take into account migrating between modes.
 		// If a server is migrated from basic to advanced, the mirrored MCPServer will
-		// be deleted. If a server is migrated from advanced to basic, the mirrored
+		// be deleted.
+		// If a server is migrated from advanced to basic, the mirrored
 		// MCPServer will be created.
+		// TODO: https://github.com/Kong/kong-operator/issues/5135
 		if server.Mode != nil &&
 			*server.Mode != sdkkonnectcomp.MCPServerCPInfoModeBasic {
 			continue
 		}
+
+		konnectIDs[server.ID] = struct{}{}
 
 		nn := generateMCPServerNN(cpNamespace, cpName, server.ID)
 		var existing konnectv1alpha1.MCPServer
