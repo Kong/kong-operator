@@ -138,7 +138,7 @@ func TestTCPRouteConverter_TranslateSkipsNewerRouteForSameListener(t *testing.T)
 	assert.Empty(t, output)
 }
 
-func TestPickWinningTCPRouteTieBreaksByNamespaceAndName(t *testing.T) {
+func TestPickWinningL4RouteTieBreaksByNamespaceAndName(t *testing.T) {
 	route := newTCPRouteForTranslation()
 	route.Namespace = "b"
 	route.Name = "a"
@@ -152,8 +152,13 @@ func TestPickWinningTCPRouteTieBreaksByNamespaceAndName(t *testing.T) {
 	winnerByName.Name = "0"
 	winnerByName.CreationTimestamp = route.CreationTimestamp
 
-	require.Same(t, winnerByNamespace, pickWinningTCPRoute([]*gwtypes.TCPRoute{route, winnerByNamespace}))
-	require.Same(t, winnerByName, pickWinningTCPRoute([]*gwtypes.TCPRoute{route, winnerByName}))
+	winner, ok := pickWinningL4Route([]*gwtypes.TCPRoute{route, winnerByNamespace})
+	require.True(t, ok)
+	require.Same(t, winnerByNamespace, winner)
+
+	winner, ok = pickWinningL4Route([]*gwtypes.TCPRoute{route, winnerByName})
+	require.True(t, ok)
+	require.Same(t, winnerByName, winner)
 }
 
 func TestTCPRouteConverter_TranslateBackendClientCertificate(t *testing.T) {

@@ -130,10 +130,7 @@ func buildDeployment(
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						consts.GatewayOperatorManagedByLabel:     consts.AIGatewayDataPlaneManagedByLabelValue,
-						consts.GatewayOperatorManagedByNameLabel: aigwdp.Name,
-					},
+					MatchLabels: selectorLabelsForAIGatewayDataPlane(aigwdp),
 				},
 				Template: *aigwdp.Spec.Deployment.PodTemplateSpec,
 			},
@@ -152,6 +149,14 @@ func buildDeployment(
 	return u, nil
 }
 
+func selectorLabelsForAIGatewayDataPlane(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) map[string]string {
+	return map[string]string{
+		consts.GatewayOperatorManagedByLabel:          consts.AIGatewayDataPlaneManagedByLabelValue,
+		consts.GatewayOperatorManagedByNameLabel:      aigwdp.Name,
+		consts.GatewayOperatorManagedByNamespaceLabel: aigwdp.Namespace,
+	}
+}
+
 // generateBaseDeployment creates the operator-managed AI Gateway Deployment without user overlays.
 func generateBaseDeployment(
 	logger logr.Logger,
@@ -160,17 +165,10 @@ func generateBaseDeployment(
 	image string,
 	certSecretName string,
 ) (*appsv1.Deployment, error) {
-	labels := map[string]string{
-		"app.kubernetes.io/name":                      consts.AIGatewayDataPlaneContainerName,
-		consts.GatewayOperatorManagedByLabel:          consts.AIGatewayDataPlaneManagedByLabelValue,
-		consts.GatewayOperatorManagedByNameLabel:      aigwdp.Name,
-		consts.GatewayOperatorManagedByNamespaceLabel: aigwdp.Namespace,
-	}
-	selector := map[string]string{
-		consts.GatewayOperatorManagedByLabel:          consts.AIGatewayDataPlaneManagedByLabelValue,
-		consts.GatewayOperatorManagedByNameLabel:      aigwdp.Name,
-		consts.GatewayOperatorManagedByNamespaceLabel: aigwdp.Namespace,
-	}
+	labels := selectorLabelsForAIGatewayDataPlane(aigwdp)
+	labels["app.kubernetes.io/name"] = consts.AIGatewayDataPlaneContainerName
+
+	selector := selectorLabelsForAIGatewayDataPlane(aigwdp)
 
 	envVars, err := buildAIGatewayEnvVars(aigatewaycp)
 	if err != nil {
@@ -259,8 +257,7 @@ func addAnnotationsForAIGatewayDataPlaneDeployment(logger logr.Logger, deploymen
 	if aigwdp.Spec.Deployment == nil || len(aigwdp.Spec.Deployment.Annotations) == 0 {
 		return
 	}
-	obj := &metav1.ObjectMeta{Namespace: aigwdp.Namespace, Name: aigwdp.Name, Annotations: aigwdp.Spec.Deployment.Annotations}
-	specAnnotations := reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, obj, aiGatewayDataPlaneDeploymentReservedKeys)
+	specAnnotations := reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, aigwdp.Spec.Deployment.Annotations, aiGatewayDataPlaneDeploymentReservedKeys)
 	deployment.Annotations = reservedkeys.Merge(deployment.Annotations, specAnnotations)
 }
 
@@ -272,8 +269,7 @@ func addLabelsForAIGatewayDataPlaneDeployment(logger logr.Logger, deployment *ap
 	if aigwdp.Spec.Deployment == nil || len(aigwdp.Spec.Deployment.Labels) == 0 {
 		return
 	}
-	obj := &metav1.ObjectMeta{Namespace: aigwdp.Namespace, Name: aigwdp.Name, Labels: aigwdp.Spec.Deployment.Labels}
-	specLabels := reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, obj, aiGatewayDataPlaneDeploymentReservedKeys)
+	specLabels := reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, aigwdp.Spec.Deployment.Labels, aiGatewayDataPlaneDeploymentReservedKeys)
 	deployment.Labels = reservedkeys.Merge(deployment.Labels, specLabels)
 }
 

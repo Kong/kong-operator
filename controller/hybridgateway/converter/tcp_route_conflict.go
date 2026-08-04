@@ -22,61 +22,29 @@ import (
 
 const tcpRouteKind = "TCPRoute"
 
-type tcpListenerKey struct {
-	gatewayNamespace string
-	gatewayName      string
-	listenerName     string
-	port             gatewayv1.PortNumber
-}
-
-type tcpParentRefKey struct {
-	namespace   string
-	name        string
-	sectionName string
-	port        int32
-}
-
 func (c *tcpRouteConverter) winningTCPRoutePortsByParentRef(
 	ctx context.Context,
 	logger logr.Logger,
 	supportedParentRefs []hybridGatewayParent,
-) (map[tcpParentRefKey][]int32, error) {
+) (map[l4ParentRefKey][]int32, error) {
 	tcpRoutes, err := c.listTCPRouteCandidates(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	listenerAttachments := make(map[tcpListenerKey][]*gwtypes.TCPRoute)
-	for _, tcpRoute := range tcpRoutes {
-		keys, err := c.tcpRouteListenerAttachments(ctx, logger, tcpRoute)
-		if err != nil {
-			return nil, err
-		}
-		for _, key := range keys {
-			listenerAttachments[key] = append(listenerAttachments[key], tcpRoute)
-		}
-	}
-
-	portsByParentRef := make(map[tcpParentRefKey][]int32, len(supportedParentRefs))
+	parentRefs := make([]gwtypes.ParentReference, 0, len(supportedParentRefs))
 	for _, parent := range supportedParentRefs {
-		keys, err := c.tcpRouteListenerAttachmentsForParentRef(ctx, logger, c.route, &parent.parentRef)
-		if err != nil {
-			return nil, err
-		}
-
-		parentRefKey := tcpParentRefKeyForRoute(c.route, &parent.parentRef)
-		ports := make([]int32, 0, len(keys))
-		for _, key := range keys {
-			winner := pickWinningTCPRoute(listenerAttachments[key])
-			if winner == nil || !sameTCPRoute(winner, c.route) {
-				continue
-			}
-			ports = append(ports, key.port)
-		}
-		portsByParentRef[parentRefKey] = deduplicateTCPPorts(ports)
+		parentRefs = append(parentRefs, parent.parentRef)
 	}
 
-	return portsByParentRef, nil
+	return winningL4RoutePortsByParentRef(
+		c.route,
+		tcpRoutes,
+		parentRefs,
+		func(tcpRoute *gwtypes.TCPRoute) ([]l4RouteAttachment, error) {
+			return c.tcpRouteListenerAttachments(ctx, logger, tcpRoute)
+		},
+	)
 }
 
 func (c *tcpRouteConverter) listTCPRouteCandidates(ctx context.Context) ([]*gwtypes.TCPRoute, error) {
@@ -106,17 +74,17 @@ func (c *tcpRouteConverter) tcpRouteListenerAttachments(
 	ctx context.Context,
 	logger logr.Logger,
 	tcpRoute *gwtypes.TCPRoute,
-) ([]tcpListenerKey, error) {
-	keys := make([]tcpListenerKey, 0)
+) ([]l4RouteAttachment, error) {
+	attachments := make([]l4RouteAttachment, 0)
 	for i := range tcpRoute.Spec.ParentRefs {
 		parentRef := &tcpRoute.Spec.ParentRefs[i]
-		parentRefKeys, err := c.tcpRouteListenerAttachmentsForParentRef(ctx, logger, tcpRoute, parentRef)
+		parentRefAttachments, err := c.tcpRouteListenerAttachmentsForParentRef(ctx, logger, tcpRoute, parentRef)
 		if err != nil {
 			return nil, err
 		}
-		keys = append(keys, parentRefKeys...)
+		attachments = append(attachments, parentRefAttachments...)
 	}
-	return keys, nil
+	return attachments, nil
 }
 
 func (c *tcpRouteConverter) tcpRouteListenerAttachmentsForParentRef(
@@ -124,7 +92,7 @@ func (c *tcpRouteConverter) tcpRouteListenerAttachmentsForParentRef(
 	logger logr.Logger,
 	tcpRoute *gwtypes.TCPRoute,
 	parentRef *gwtypes.ParentReference,
-) ([]tcpListenerKey, error) {
+) ([]l4RouteAttachment, error) {
 	gateway, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, c.Client, *parentRef, tcpRoute.Namespace)
 	if err != nil {
 		if isExpectedParentRefError(err) {
@@ -147,7 +115,8 @@ func (c *tcpRouteConverter) tcpRouteListenerAttachmentsForParentRef(
 		return nil, nil
 	}
 
-	keys := make([]tcpListenerKey, 0, len(listeners))
+	attachments := make([]l4RouteAttachment, 0, len(listeners))
+	parentRefKey := l4ParentRefKeyForRoute(tcpRoute, parentRef)
 	for _, listener := range listeners {
 		if listener.Protocol != gwtypes.TCPProtocolType {
 			continue
@@ -160,15 +129,18 @@ func (c *tcpRouteConverter) tcpRouteListenerAttachmentsForParentRef(
 			continue
 		}
 
-		keys = append(keys, tcpListenerKey{
-			gatewayNamespace: gateway.Namespace,
-			gatewayName:      gateway.Name,
-			listenerName:     string(listener.Name),
-			port:             listener.Port,
+		attachments = append(attachments, l4RouteAttachment{
+			listenerKey: l4ListenerKey{
+				gatewayNamespace: gateway.Namespace,
+				gatewayName:      gateway.Name,
+				listenerName:     string(listener.Name),
+				port:             listener.Port,
+			},
+			parentRefKey: parentRefKey,
 		})
 	}
 
-	return keys, nil
+	return attachments, nil
 }
 
 func (c *tcpRouteConverter) tcpListenerAllowsRoute(
@@ -228,72 +200,11 @@ func routeGroupKindMatchesTCPRoute(kind gatewayv1.RouteGroupKind) bool {
 	return kind.Group == nil || *kind.Group == gatewayv1.GroupName
 }
 
-func pickWinningTCPRoute(tcpRoutes []*gwtypes.TCPRoute) *gwtypes.TCPRoute {
-	if len(tcpRoutes) == 0 {
-		return nil
-	}
-
-	winner := tcpRoutes[0]
-	for _, tcpRoute := range tcpRoutes[1:] {
-		if tcpRouteLess(tcpRoute, winner) {
-			winner = tcpRoute
-		}
-	}
-	return winner
-}
-
-func tcpRouteLess(lhs, rhs *gwtypes.TCPRoute) bool {
-	if lhs.CreationTimestamp.Before(&rhs.CreationTimestamp) {
-		return true
-	}
-	if rhs.CreationTimestamp.Before(&lhs.CreationTimestamp) {
-		return false
-	}
-	if lhs.Namespace != rhs.Namespace {
-		return lhs.Namespace < rhs.Namespace
-	}
-	return lhs.Name < rhs.Name
-}
-
 func sameTCPRoute(lhs, rhs *gwtypes.TCPRoute) bool {
 	return lhs != nil &&
 		rhs != nil &&
 		lhs.Namespace == rhs.Namespace &&
 		lhs.Name == rhs.Name
-}
-
-func tcpParentRefKeyForRoute(tcpRoute *gwtypes.TCPRoute, parentRef *gwtypes.ParentReference) tcpParentRefKey {
-	namespace := tcpRoute.Namespace
-	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
-		namespace = string(*parentRef.Namespace)
-	}
-
-	sectionName := ""
-	if parentRef.SectionName != nil {
-		sectionName = string(*parentRef.SectionName)
-	}
-
-	var port int32
-	if parentRef.Port != nil {
-		port = *parentRef.Port
-	}
-
-	return tcpParentRefKey{
-		namespace:   namespace,
-		name:        string(parentRef.Name),
-		sectionName: sectionName,
-		port:        port,
-	}
-}
-
-func deduplicateTCPPorts(ports []int32) []int32 {
-	if len(ports) == 0 {
-		return nil
-	}
-
-	slices.Sort(ports)
-	ports = slices.Compact(ports)
-	return ports
 }
 
 func isExpectedParentRefError(err error) bool {

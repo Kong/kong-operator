@@ -78,11 +78,15 @@ type PortalAPISpec struct {
 	AutoApproveDevelopers string `json:"autoApproveDevelopers,omitzero"`
 
 	// The default visibility of APIs in the portal.
+	// If set to `public`, newly published APIs are visible to unauthenticated
+	// developers.
+	// If set to `private`, newly published APIs are hidden from unauthenticated
+	// developers.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
-	DefaultAPIVisibility PortalDefaultAPIVisibility `json:"defaultAPIVisibility,omitzero"`
+	DefaultAPIVisibility string `json:"defaultAPIVisibility,omitzero"`
 
 	// The default authentication strategy for APIs published to the portal.
 	// Newly published APIs will use this authentication strategy unless overridden
@@ -94,11 +98,15 @@ type PortalAPISpec struct {
 	DefaultApplicationAuthStrategyIDRef *commonv1alpha1.ObjectRef `json:"defaultApplicationAuthStrategyIDRef,omitempty"`
 
 	// The default visibility of pages in the portal.
+	// If set to `public`, newly created pages are visible to unauthenticated
+	// developers.
+	// If set to `private`, newly created pages are hidden from unauthenticated
+	// developers.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
-	DefaultPageVisibility PortalDefaultPageVisibility `json:"defaultPageVisibility,omitzero"`
+	DefaultPageVisibility string `json:"defaultPageVisibility,omitzero"`
 
 	// A description of the portal.
 	//

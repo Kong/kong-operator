@@ -27,7 +27,7 @@ func TestCreatePortalTeam(t *testing.T) {
 		CreatePortalTeam(mock.Anything, "portal-1", expectedRequest).
 		Return(&sdkkonnectops.CreatePortalTeamResponse{
 			PortalTeamResponse: &sdkkonnectcomp.PortalTeamResponse{
-				ID: new("portal-team-1"),
+				ID: "portal-team-1",
 			},
 		}, nil).
 		Once()
@@ -85,9 +85,9 @@ func TestGetPortalTeamForUID(t *testing.T) {
 				ListPortalTeamsResponse: &sdkkonnectcomp.ListPortalTeamsResponse{
 					Data: []sdkkonnectcomp.PortalTeamResponse{
 						{
-							ID:          new("portal-team-1"),
-							Name:        new("Developers"),
-							Description: new("Portal developers"),
+							ID:          "portal-team-1",
+							Name:        "Developers",
+							Description: "Portal developers",
 						},
 					},
 				},
@@ -112,8 +112,8 @@ func TestGetPortalTeamForUID(t *testing.T) {
 				ListPortalTeamsResponse: &sdkkonnectcomp.ListPortalTeamsResponse{
 					Data: []sdkkonnectcomp.PortalTeamResponse{
 						{
-							ID:   new("portal-team-1"),
-							Name: new("Other team"),
+							ID:   "portal-team-1",
+							Name: "Other team",
 						},
 					},
 				},
@@ -140,9 +140,9 @@ func TestGetPortalTeamForUID(t *testing.T) {
 				ListPortalTeamsResponse: &sdkkonnectcomp.ListPortalTeamsResponse{
 					Data: []sdkkonnectcomp.PortalTeamResponse{
 						{
-							ID:          new("portal-team-1"),
-							Name:        new("Developers"),
-							Description: new("Drifted description"),
+							ID:          "portal-team-1",
+							Name:        "Developers",
+							Description: "Drifted description",
 						},
 					},
 				},

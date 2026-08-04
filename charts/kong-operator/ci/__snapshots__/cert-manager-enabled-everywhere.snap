@@ -22821,6 +22821,22 @@ spec:
                   Deployment configures the keg Deployment: image, replicas, resources,
                   extra env vars, volume mounts, etc.
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Annotations are custom annotations that are propagated to the keg
+                      Deployment metadata by the operator.
+                    maxProperties: 64
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Labels are custom labels that are propagated to the keg Deployment
+                      metadata by the operator.
+                    maxProperties: 64
+                    type: object
                   podTemplateSpec:
                     description: |-
                       PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
@@ -31814,6 +31830,8 @@ spec:
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
+    deprecated: true
+    deprecationWarning: gateway-operator/v1alpha1 AIGateway (AI gateway v1) is deprecated and will be removed in a future release. For Konnect enabled alternative please use konnect.konghq.com/v1alpha1 AIGateway* (AI gateway v2) instead.
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -52785,6 +52803,258 @@ spec:
                     - displayName
                     - name
                     type: object
+                  sagemaker:
+                    description: Sagemaker configuration.
+                    properties:
+                      config:
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+                        properties:
+                          auth:
+                            description: |-
+                              AIGatewayModelProviderSagemakerConfigAuth represents a union type for auth.
+                              Only one of the fields should be set based on the Type.
+                            properties:
+                              basic:
+                                description: Basic configuration.
+                                properties:
+                                  headers:
+                                    items:
+                                      description: AIGatewayModelProviderConfigAuthBasicHeaders is a type alias.
+                                      properties:
+                                        name:
+                                          description: |-
+                                            The name of the header used for authentication.
+                                            This field is
+                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        value:
+                                          description: |-
+                                            The auth header value for ‘header_name’, for example ‘Bearer
+                                            key...’.
+                                            This field is
+                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                          properties:
+                                            secretRef:
+                                              description: |-
+                                                SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                                Required when type is 'secretRef'.
+                                              properties:
+                                                key:
+                                                  description: Key is the data key within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
+                                                name:
+                                                  description: Name is the name of the referred resource.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
+                                                namespace:
+                                                  description: |-
+                                                    Namespace is the namespace of the referred resource.
+
+                                                    For namespace-scoped resources if no Namespace is provided then the
+                                                    namespace of the parent object MUST be used.
+
+                                                    This field MUST not be set when referring to cluster-scoped resources.
+                                                  maxLength: 253
+                                                  type: string
+                                              required:
+                                              - key
+                                              - name
+                                              type: object
+                                            type:
+                                              default: inline
+                                              description: 'Type indicates the source of the sensitive data: ''inline'' or ''secretRef''.'
+                                              enum:
+                                              - inline
+                                              - secretRef
+                                              type: string
+                                            value:
+                                              description: |-
+                                                Value contains the sensitive data provided inline.
+                                                Required when type is 'inline'.
+                                              maxLength: 4096
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: value required when type=inline; secretRef required when type=secretRef
+                                            rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 1
+                                    type: array
+                                  params:
+                                    items:
+                                      description: AIGatewayModelProviderConfigAuthBasicParams is a type alias.
+                                      properties:
+                                        location:
+                                          description: |-
+                                            Specify whether the param name and value options go in a query string, or
+                                            the POST form/JSON body.
+                                          enum:
+                                          - body
+                                          - query
+                                          maxLength: 253
+                                          type: string
+                                        name:
+                                          description: |-
+                                            This field is
+                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        value:
+                                          description: |-
+                                            This field is
+                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                          properties:
+                                            secretRef:
+                                              description: |-
+                                                SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                                Required when type is 'secretRef'.
+                                              properties:
+                                                key:
+                                                  description: Key is the data key within the Secret.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
+                                                name:
+                                                  description: Name is the name of the referred resource.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  type: string
+                                                namespace:
+                                                  description: |-
+                                                    Namespace is the namespace of the referred resource.
+
+                                                    For namespace-scoped resources if no Namespace is provided then the
+                                                    namespace of the parent object MUST be used.
+
+                                                    This field MUST not be set when referring to cluster-scoped resources.
+                                                  maxLength: 253
+                                                  type: string
+                                              required:
+                                              - key
+                                              - name
+                                              type: object
+                                            type:
+                                              default: inline
+                                              description: 'Type indicates the source of the sensitive data: ''inline'' or ''secretRef''.'
+                                              enum:
+                                              - inline
+                                              - secretRef
+                                              type: string
+                                            value:
+                                              description: |-
+                                                Value contains the sensitive data provided inline.
+                                                Required when type is 'inline'.
+                                              maxLength: 4096
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: value required when type=inline; secretRef required when type=secretRef
+                                            rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 1
+                                    type: array
+                                type: object
+                              sagemaker:
+                                description: Sagemaker configuration.
+                                properties:
+                                  aws:
+                                    description: AIGatewayModelProviderConfigAuthSagemakerAws is a type alias.
+                                    properties:
+                                      accessKeyID:
+                                        description: static IAM user credential; overrides AWS_ACCESS_KEY_ID env var
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        description: static IAM user credential; overrides AWS_SECRET_ACCESS_KEY env var
+                                        maxLength: 253
+                                        type: string
+                                      sessionToken:
+                                        description: static IAM user credential; overrides AWS_SESSION_TOKEN env var
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                type: object
+                              type:
+                                description: Type designates the type of configuration.
+                                enum:
+                                - basic
+                                - sagemaker
+                                minLength: 1
+                                type: string
+                            required:
+                            - type
+                            type: object
+                        required:
+                        - auth
+                        type: object
+                      displayName:
+                        description: The display name for this model provider instance.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        type: object
+                      name:
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          A user-defined unique identifier for this model provider instance, used as a
+                          stable human-readable reference.
+                          This value is immutable after creation.
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        type: string
+                    required:
+                    - config
+                    - displayName
+                    - name
+                    type: object
                   type:
                     description: Type designates the type of configuration.
                     enum:
@@ -52803,6 +53073,7 @@ spec:
                     - mistral
                     - ollama
                     - openai
+                    - sagemaker
                     - vercel
                     - vertex
                     - vllm
@@ -56253,6 +56524,85 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                sagemaker:
+                                  description: Sagemaker configuration.
+                                  properties:
+                                    aws:
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+                                      properties:
+                                        assumeRoleArn:
+                                          description: |-
+                                            Assume a different IAM role after authenticating; mutually required with
+                                            role_session_name.
+                                          maxLength: 253
+                                          type: string
+                                        region:
+                                          description: Overrides the AWS_REGION environment variable for SageMaker requests.
+                                          maxLength: 253
+                                          type: string
+                                        roleSessionName:
+                                          description: |-
+                                            Session identifier for the assumed role; mutually required with
+                                            assume_role_arn.
+                                          maxLength: 253
+                                          type: string
+                                        stsEndpointURL:
+                                          description: Overrides the STS endpoint when assuming a role.
+                                          maxLength: 253
+                                          type: string
+                                      type: object
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding outputs.
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per input token for billing and cost tracking.
+                                      type: number
+                                    maxTokens:
+                                      description: The maximum number of tokens to generate in the response.
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per output token for billing and cost tracking.
+                                      type: number
+                                    target:
+                                      description: AIGatewayTargetSagemakerConfigTarget is a type alias.
+                                      properties:
+                                        containerHostname:
+                                          description: |-
+                                            Sets the X-Amzn-SageMaker-Target-Container-Hostname header
+                                            (multi-container).
+                                          maxLength: 253
+                                          type: string
+                                        model:
+                                          description: Sets the X-Amzn-SageMaker-Target-Model header (multi-model endpoints).
+                                          maxLength: 253
+                                          type: string
+                                        variant:
+                                          description: Sets the X-Amzn-SageMaker-Target-Variant header (A/B variant testing).
+                                          maxLength: 253
+                                          type: string
+                                      type: object
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      type: number
+                                    upstreamURL:
+                                      description: The upstream URL for the model endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
@@ -56271,6 +56621,7 @@ spec:
                                   - mistral
                                   - ollama
                                   - openai
+                                  - sagemaker
                                   - vercel
                                   - vertex
                                   - vllm
@@ -58788,6 +59139,85 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                sagemaker:
+                                  description: Sagemaker configuration.
+                                  properties:
+                                    aws:
+                                      description: |-
+                                        **Pre-release Feature**
+                                        This feature is currently in beta and is subject to change.
+                                      properties:
+                                        assumeRoleArn:
+                                          description: |-
+                                            Assume a different IAM role after authenticating; mutually required with
+                                            role_session_name.
+                                          maxLength: 253
+                                          type: string
+                                        region:
+                                          description: Overrides the AWS_REGION environment variable for SageMaker requests.
+                                          maxLength: 253
+                                          type: string
+                                        roleSessionName:
+                                          description: |-
+                                            Session identifier for the assumed role; mutually required with
+                                            assume_role_arn.
+                                          maxLength: 253
+                                          type: string
+                                        stsEndpointURL:
+                                          description: Overrides the STS endpoint when assuming a role.
+                                          maxLength: 253
+                                          type: string
+                                      type: object
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding outputs.
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per input token for billing and cost tracking.
+                                      type: number
+                                    maxTokens:
+                                      description: The maximum number of tokens to generate in the response.
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per output token for billing and cost tracking.
+                                      type: number
+                                    target:
+                                      description: AIGatewayTargetSagemakerConfigTarget is a type alias.
+                                      properties:
+                                        containerHostname:
+                                          description: |-
+                                            Sets the X-Amzn-SageMaker-Target-Container-Hostname header
+                                            (multi-container).
+                                          maxLength: 253
+                                          type: string
+                                        model:
+                                          description: Sets the X-Amzn-SageMaker-Target-Model header (multi-model endpoints).
+                                          maxLength: 253
+                                          type: string
+                                        variant:
+                                          description: Sets the X-Amzn-SageMaker-Target-Variant header (A/B variant testing).
+                                          maxLength: 253
+                                          type: string
+                                      type: object
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      type: number
+                                    upstreamURL:
+                                      description: The upstream URL for the model endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
@@ -58806,6 +59236,7 @@ spec:
                                   - mistral
                                   - ollama
                                   - openai
+                                  - sagemaker
                                   - vercel
                                   - vertex
                                   - vllm
@@ -63659,7 +64090,12 @@ spec:
                     - Disabled
                     type: string
                   defaultAPIVisibility:
-                    description: The default visibility of APIs in the portal.
+                    description: |-
+                      The default visibility of APIs in the portal.
+                      If set to `public`, newly published APIs are visible to unauthenticated
+                      developers.
+                      If set to `private`, newly published APIs are hidden from unauthenticated
+                      developers.
                     enum:
                     - public
                     - private
@@ -63725,7 +64161,12 @@ spec:
                     - message: when type is konnectID, namespacedRef must not be set
                       rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
                   defaultPageVisibility:
-                    description: The default visibility of pages in the portal.
+                    description: |-
+                      The default visibility of pages in the portal.
+                      If set to `public`, newly created pages are visible to unauthenticated
+                      developers.
+                      If set to `private`, newly created pages are hidden from unauthenticated
+                      developers.
                     enum:
                     - public
                     - private

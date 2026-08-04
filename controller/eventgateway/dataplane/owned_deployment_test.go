@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -353,6 +354,119 @@ func Test_buildKEGEnvVars(t *testing.T) {
 	}
 }
 
+// infoCountSink is a minimal logr.LogSink that counts Info() calls.
+type infoCountSink struct{ count *int }
+
+func (s infoCountSink) Init(logr.RuntimeInfo)             {}
+func (s infoCountSink) Enabled(int) bool                  { return true }
+func (s infoCountSink) Info(_ int, _ string, _ ...any)    { *s.count++ }
+func (s infoCountSink) Error(_ error, _ string, _ ...any) {}
+func (s infoCountSink) WithValues(_ ...any) logr.LogSink  { return s }
+func (s infoCountSink) WithName(_ string) logr.LogSink    { return s }
+
+// -----------------------------------------------------------------
+// addAnnotationsForKegDataPlaneDeployment / addLabelsForKegDataPlaneDeployment
+// -----------------------------------------------------------------
+
+func Test_addAnnotationsForKegDataPlaneDeployment(t *testing.T) {
+	testCases := []struct {
+		name                string
+		existingAnnotations map[string]string
+		specAnnotations     map[string]string
+		expectedAnnotations map[string]string
+		expectedInfoCount   int
+	}{
+		{
+			name:                "no-op when KegDataPlane has no deployment annotations",
+			existingAnnotations: map[string]string{"existing": "val"},
+			expectedAnnotations: map[string]string{"existing": "val"},
+		},
+		{
+			name:                "new keys merged, conflicting keys overridden",
+			existingAnnotations: map[string]string{"existing": "val", "conflict": "old"},
+			specAnnotations:     map[string]string{"new": "val", "conflict": "new"},
+			expectedAnnotations: map[string]string{"existing": "val", "new": "val", "conflict": "new"},
+		},
+		{
+			name:                "nil existing annotations initialized correctly",
+			specAnnotations:     map[string]string{"k": "v"},
+			expectedAnnotations: map[string]string{"k": "v"},
+		},
+		{
+			name: "reserved keys are dropped and a warning is logged",
+			specAnnotations: map[string]string{
+				"safe":                           "val",
+				consts.OperatorLabelPrefix + "x": "val",
+			},
+			expectedAnnotations: map[string]string{"safe": "val"},
+			expectedInfoCount:   1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			egdp := &eventgatewayv1alpha1.KegDataPlane{
+				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+					Deployment: &eventgatewayv1alpha1.DeploymentOptions{Annotations: tc.specAnnotations},
+				},
+			}
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Annotations: tc.existingAnnotations}}
+			var infoCount int
+			addAnnotationsForKegDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, egdp)
+			require.Equal(t, tc.expectedAnnotations, deployment.Annotations)
+			assert.Equal(t, tc.expectedInfoCount, infoCount)
+		})
+	}
+}
+
+func Test_addLabelsForKegDataPlaneDeployment(t *testing.T) {
+	testCases := []struct {
+		name              string
+		existingLabels    map[string]string
+		specLabels        map[string]string
+		expectedLabels    map[string]string
+		expectedInfoCount int
+	}{
+		{
+			name:           "no-op when KegDataPlane has no deployment labels",
+			existingLabels: map[string]string{"existing": "val"},
+			expectedLabels: map[string]string{"existing": "val"},
+		},
+		{
+			name:           "new keys merged, conflicting keys overridden",
+			existingLabels: map[string]string{"existing": "val", "conflict": "old"},
+			specLabels:     map[string]string{"new": "val", "conflict": "new"},
+			expectedLabels: map[string]string{"existing": "val", "new": "val", "conflict": "new"},
+		},
+		{
+			name:           "nil existing labels initialized correctly",
+			specLabels:     map[string]string{"k": "v"},
+			expectedLabels: map[string]string{"k": "v"},
+		},
+		{
+			name:              "reserved keys are dropped and a warning is logged",
+			specLabels:        map[string]string{"safe": "val", "app.kubernetes.io/name": "should-not-override-base-label"},
+			expectedLabels:    map[string]string{"safe": "val"},
+			expectedInfoCount: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			egdp := &eventgatewayv1alpha1.KegDataPlane{
+				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+					Deployment: &eventgatewayv1alpha1.DeploymentOptions{Labels: tc.specLabels},
+				},
+			}
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Labels: tc.existingLabels}}
+			var infoCount int
+			addLabelsForKegDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, egdp)
+			require.Equal(t, tc.expectedLabels, deployment.Labels)
+			assert.Equal(t, tc.expectedInfoCount, infoCount)
+		})
+	}
+}
+
 // -----------------------------------------------------------------
 // generateBaseDeployment
 // -----------------------------------------------------------------
@@ -367,7 +481,7 @@ func Test_generateBaseDeployment_hardening(t *testing.T) {
 		ID:        "gw-id",
 	}
 
-	d, err := generateBaseDeployment(egdp, keg, "kong/keg:test", "cert-secret")
+	d, err := generateBaseDeployment(logr.Discard(), egdp, keg, "kong/keg:test", "cert-secret")
 	require.NoError(t, err)
 	require.Len(t, d.Spec.Template.Spec.Containers, 1)
 	container := d.Spec.Template.Spec.Containers[0]
@@ -400,6 +514,47 @@ func Test_generateBaseDeployment_hardening(t *testing.T) {
 		volumeNames = append(volumeNames, v.Name)
 	}
 	assert.ElementsMatch(t, []string{"tmp", KonnectCertVolumeName}, volumeNames)
+}
+
+// Test_generateBaseDeployment_LabelsAndAnnotations verifies that
+// spec.deployment.labels/annotations are propagated onto the generated
+// Deployment's own metadata, that reserved keys are dropped, and that the
+// Pod template's labels (which share the base labels map) are unaffected.
+func Test_generateBaseDeployment_LabelsAndAnnotations(t *testing.T) {
+	egdp := &eventgatewayv1alpha1.KegDataPlane{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-keg", Namespace: "test-ns"},
+		Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+			Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+				Annotations: map[string]string{
+					"deployment-annotation":          "value",
+					consts.OperatorLabelPrefix + "x": "should-be-dropped",
+				},
+				Labels: map[string]string{
+					"deployment-label":       "value",
+					"app.kubernetes.io/name": "should-be-dropped",
+				},
+			},
+		},
+	}
+	keg := &konnectv1alpha1.KonnectEventGateway{}
+	keg.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
+		ServerURL: "https://us.api.konghq.com",
+		ID:        "gw-id",
+	}
+
+	d, err := generateBaseDeployment(logr.Discard(), egdp, keg, "kong/keg:test", "cert-secret")
+	require.NoError(t, err)
+
+	assert.Equal(t, "value", d.Labels["deployment-label"])
+	assert.Equal(t, "value", d.Annotations["deployment-annotation"])
+	assert.NotContains(t, d.Annotations, consts.OperatorLabelPrefix+"x")
+
+	// The base "app.kubernetes.io/name" label set by the generator must survive the merge.
+	assert.Equal(t, consts.KEGContainerName, d.Labels["app.kubernetes.io/name"])
+
+	// The Pod template shares the base labels map with the Deployment; the
+	// custom Deployment-level label must not leak into it.
+	assert.NotContains(t, d.Spec.Template.Labels, "deployment-label")
 }
 
 // -----------------------------------------------------------------
@@ -512,7 +667,7 @@ func Test_buildDeployment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u, err := buildDeployment(tc, tt.egdp, tt.keg, tt.image, tt.certSecretName)
+			u, err := buildDeployment(logr.Discard(), tc, tt.egdp, tt.keg, tt.image, tt.certSecretName)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

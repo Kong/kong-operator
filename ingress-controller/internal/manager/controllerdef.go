@@ -9,7 +9,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/configuration"
@@ -67,6 +66,15 @@ func setupControllers(
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
 ) []ControllerDef {
+	// Resolve which ReferenceGrant API version (v1 or v1beta1) is served by the
+	// cluster, so the ReferenceGrant DynamicCRDController waits on the version
+	// that's actually installed. Default to v1 (the GA version) as the
+	// wait-target if the CRD isn't installed yet at all.
+	referenceGrantGV, referenceGrantFound := utils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	if !referenceGrantFound {
+		referenceGrantGV = schema.GroupVersion(gatewayv1.GroupVersion)
+	}
+
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Kong Gateway Admin API Service discovery
@@ -348,8 +356,8 @@ func setupControllers(
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/ReferenceGrant"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
+					Group:    referenceGrantGV.Group,
+					Version:  referenceGrantGV.Version,
 					Resource: "referencegrants",
 				}),
 				Controller: &gateway.ReferenceGrantReconciler{

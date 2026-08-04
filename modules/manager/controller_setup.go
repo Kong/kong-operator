@@ -213,7 +213,27 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 
 type requiredCRDCheck struct {
 	condition bool
-	gvrs      []schema.GroupVersionResource
+	// gvrs must all exist (AND semantics).
+	gvrs []schema.GroupVersionResource
+	// anyOfGVRs: for each inner slice, at least one GVR must exist (OR semantics),
+	// e.g. to accept either the v1 or v1beta1 version of a resource.
+	anyOfGVRs [][]schema.GroupVersionResource
+}
+
+// referenceGrantAnyOfGVRs accepts either the v1 (GA since gateway-api v1.5.0)
+// or v1beta1 version of the ReferenceGrant CRD - older clusters may only
+// serve v1beta1.
+var referenceGrantAnyOfGVRs = []schema.GroupVersionResource{
+	{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "referencegrants",
+	},
+	{
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
+		Resource: "referencegrants",
+	},
 }
 
 // requiredCRDChecks prevents controller-runtime spamming in logs about failing
@@ -265,11 +285,6 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 				{
 					Group:    gatewayv1beta1.GroupVersion.Group,
 					Version:  gatewayv1beta1.GroupVersion.Version,
-					Resource: "referencegrants",
-				},
-				{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
 					Resource: "httproutes",
 				},
 				gwtypes.GatewayConfigurationGVR(),
@@ -279,17 +294,14 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Resource: "kongreferencegrants",
 				},
 			},
+			anyOfGVRs: [][]schema.GroupVersionResource{referenceGrantAnyOfGVRs},
 		},
 		{
 			condition: c.AIGatewayControllerEnabled,
 			gvrs: []schema.GroupVersionResource{
 				operatorv1alpha1.AIGatewayGVR(),
-				{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
-					Resource: "referencegrants",
-				},
 			},
+			anyOfGVRs: [][]schema.GroupVersionResource{referenceGrantAnyOfGVRs},
 		},
 		{
 			condition: c.FeatureGates.Enabled(FeatureGateMCPServer),
@@ -305,12 +317,8 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 			condition: c.KongPluginInstallationControllerEnabled,
 			gvrs: []schema.GroupVersionResource{
 				operatorv1alpha1.KongPluginInstallationGVR(),
-				{
-					Group:    gatewayv1beta1.GroupVersion.Group,
-					Version:  gatewayv1beta1.GroupVersion.Version,
-					Resource: "referencegrants",
-				},
 			},
+			anyOfGVRs: [][]schema.GroupVersionResource{referenceGrantAnyOfGVRs},
 		},
 		{
 			condition: c.ControlPlaneExtensionsControllerEnabled,
@@ -534,6 +542,23 @@ func ensureRequiredCRDs(c *Config, checker crdExistenceChecker) error {
 				return fmt.Errorf("missing a required CRD: %v", gvr)
 			}
 		}
+
+		for _, gvrGroup := range check.anyOfGVRs {
+			found := false
+			for _, gvr := range gvrGroup {
+				ok, err := checker.CRDExists(gvr)
+				if err != nil {
+					return err
+				}
+				if ok {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("missing a required CRD: one of %v", gvrGroup)
+			}
+		}
 	}
 
 	return nil
@@ -716,15 +741,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				CertExpirationMargin: c.CertExpirationMargin,
 			},
 		},
-		// AIGateway Controller
-		{
-			Enabled: c.AIGatewayControllerEnabled,
-			Controller: &specialized.AIGatewayReconciler{
-				ControllerOptions: ctrlOpts,
-				Client:            mgr.GetClient(),
-				LoggingMode:       c.LoggingMode,
-			},
-		},
 		// KongPluginInstallation controller
 		{
 			Enabled: c.KongPluginInstallationControllerEnabled,
@@ -783,6 +799,19 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Provider:    ssaProvider,
 			},
 		},
+	}
+
+	// AIGateway v1 Controller (deprecated, but still supported for backward compatibility)
+	if c.AIGatewayControllerEnabled {
+		mgr.GetLogger().Info("AIGateway controller for AI gateway v1 is deprecated and will be removed in a future release. Please migrate to the AIGatewayDataPlane controller for Konnect AI gateway.")
+		controllers = append(controllers, ControllerDef{
+			Enabled: c.AIGatewayControllerEnabled,
+			Controller: &specialized.AIGatewayReconciler{
+				ControllerOptions: ctrlOpts,
+				Client:            mgr.GetClient(),
+				LoggingMode:       c.LoggingMode,
+			},
+		})
 	}
 
 	// MCPServer controllers

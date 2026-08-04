@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/goccy/go-json"
 	corev1 "k8s.io/api/core/v1"
@@ -18,11 +19,28 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 	if patch == nil {
 		return base, nil
 	}
+	// NOTE: the caller may pass a pointer into a live object (e.g. the DataPlane's
+	// spec.deployment.podTemplateSpec), and both extractProbeDeletes and
+	// SetDefaultsPodTemplateSpec below mutate the patch in place. Copy so the caller's
+	// object is left untouched - otherwise the `{}` probe delete sentinel is erased
+	// before the DataPlane spec hash is computed and the delete is silently skipped
+	// when running with --enforce-config=false.
+	patch = patch.DeepCopy()
 
 	baseBytes, err := json.Marshal(base)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON for base %s: %w", base.Name, err)
 	}
+
+	// NOTE: an explicitly empty probe (e.g. `readinessProbe: {}`) signals that the
+	// corresponding probe should be removed from the base. A nil probe can't be used
+	// for this because it's indistinguishable from an unset one once marshaled to JSON
+	// (both are omitted), so CreateTwoWayMergePatch would never emit a delete directive
+	// for it. We detect the empty-probe sentinel before defaulting/diffing, strip it so
+	// it doesn't get defaulted into a bogus non-empty probe, and re-inject it as an
+	// explicit `null` into the computed merge patch below.
+	containerProbeDeletes := extractProbeDeletes(patch.Spec.Containers)
+	initContainerProbeDeletes := extractProbeDeletes(patch.Spec.InitContainers)
 
 	SetDefaultsPodTemplateSpec(patch)
 	patchBytes, err := json.Marshal(patch)
@@ -39,6 +57,14 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 	if err != nil {
 		return nil, fmt.Errorf("failed to create merge patch for %s: %w", patch.Name, err)
 	}
+	mergePatchBytes, err = injectProbeDeletes(mergePatchBytes, "containers", containerProbeDeletes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inject probe deletes for %s: %w", patch.Name, err)
+	}
+	mergePatchBytes, err = injectProbeDeletes(mergePatchBytes, "initContainers", initContainerProbeDeletes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inject probe deletes for %s: %w", patch.Name, err)
+	}
 
 	// Calculate the patch result.
 	jsonResultBytes, err := strategicpatch.StrategicMergePatch(baseBytes, mergePatchBytes, &corev1.PodTemplateSpec{})
@@ -52,6 +78,80 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 	}
 
 	return patchResult, nil
+}
+
+// extractProbeDeletes scans containers for probes explicitly set to an empty
+// struct (e.g. `readinessProbe: {}`), which signals that the probe should be
+// removed from the base rather than merged. Matching probes are nilled out in
+// place (so SetDefaultsPodTemplateSpec doesn't turn them into a bogus non-empty
+// probe) and returned as a map of container name to the JSON field names of
+// the probes to delete, for use with injectProbeDeletes.
+func extractProbeDeletes(containers []corev1.Container) map[string][]string {
+	var deletes map[string][]string
+	for i := range containers {
+		c := &containers[i]
+		var fields []string
+		if c.ReadinessProbe != nil && reflect.DeepEqual(*c.ReadinessProbe, corev1.Probe{}) {
+			fields = append(fields, "readinessProbe")
+			c.ReadinessProbe = nil
+		}
+		if c.LivenessProbe != nil && reflect.DeepEqual(*c.LivenessProbe, corev1.Probe{}) {
+			fields = append(fields, "livenessProbe")
+			c.LivenessProbe = nil
+		}
+		if c.StartupProbe != nil && reflect.DeepEqual(*c.StartupProbe, corev1.Probe{}) {
+			fields = append(fields, "startupProbe")
+			c.StartupProbe = nil
+		}
+		if len(fields) > 0 {
+			if deletes == nil {
+				deletes = map[string][]string{}
+			}
+			deletes[c.Name] = fields
+		}
+	}
+	return deletes
+}
+
+// injectProbeDeletes adds explicit `null` entries for the probes recorded by
+// extractProbeDeletes into a computed strategic merge patch, keyed by container
+// name under the given container list field ("containers" or "initContainers").
+// This is necessary because the merge patch computed by CreateTwoWayMergePatch
+// never contains a delete directive for a probe that was nilled out beforehand -
+// omitting a field from a patch means "leave it alone", not "remove it".
+func injectProbeDeletes(mergePatch []byte, listField string, deletes map[string][]string) ([]byte, error) {
+	if len(deletes) == 0 {
+		return mergePatch, nil
+	}
+
+	var patch map[string]any
+	if err := json.Unmarshal(mergePatch, &patch); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal merge patch: %w", err)
+	}
+
+	spec, _ := patch["spec"].(map[string]any)
+	containers, _ := spec[listField].([]any)
+	// NOTE: iterate the patch's containers rather than the deletes map so the output
+	// order is deterministic (Go map iteration order is randomized) and so a name that
+	// isn't in the patch can't inject a bogus image-less container. deletes is derived
+	// from the same container list the merge patch is computed from, so every name is
+	// present.
+	for _, c := range containers {
+		entry, ok := c.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, _ := entry["name"].(string)
+		for _, field := range deletes[name] {
+			entry[field] = nil
+		}
+	}
+
+	result, err := json.Marshal(patch)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal merge patch: %w", err)
+	}
+	return result, nil
 }
 
 // SetDefaultsPodTemplateSpec sets defaults in the provided PodTemplateSpec.

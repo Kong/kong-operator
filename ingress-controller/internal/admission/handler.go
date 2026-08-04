@@ -159,6 +159,11 @@ func (h *RequestHandler) UnregisterValidator(id mgrID) {
 	delete(h.validators, id.String())
 }
 
+// maxAdmissionRequestBodyBytes caps the size of an AdmissionReview request body.
+// Legitimate review requests are well under a few MiB; anything larger is
+// rejected before decoding to prevent unbounded heap allocation.
+const maxAdmissionRequestBodyBytes = 10 << 20 // 10 MiB
+
 // ServeHTTP parses AdmissionReview requests and responds back
 // with the validation result of the entity.
 func (h *RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +173,11 @@ func (h *RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.StatusBadRequest)
 		return
 	}
+
+	// Bound the body so a malicious/oversized payload cannot drive unbounded
+	// memory allocation. MaxBytesReader also caps slow/streaming bodies and, on
+	// servers that support it, signals the connection to stop reading.
+	r.Body = http.MaxBytesReader(w, r.Body, maxAdmissionRequestBodyBytes)
 
 	review := admissionv1.AdmissionReview{}
 	if err := json.NewDecoder(r.Body).Decode(&review); err != nil {

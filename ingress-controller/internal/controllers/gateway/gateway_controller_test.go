@@ -386,7 +386,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 		name             string
 		gatewayNamespace string
 		certRef          gatewayapi.SecretObjectReference
-		referenceGrants  []gatewayapi.ReferenceGrant
+		referenceGrants  []*gatewayapi.ReferenceGrant
 		expectedReason   string
 	}{
 		{
@@ -411,7 +411,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
-			referenceGrants: []gatewayapi.ReferenceGrant{
+			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "otherNamespace",
@@ -454,7 +454,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
-			referenceGrants: []gatewayapi.ReferenceGrant{
+			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "otherNamespace",
@@ -493,7 +493,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
-			referenceGrants: []gatewayapi.ReferenceGrant{
+			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "otherNamespace",

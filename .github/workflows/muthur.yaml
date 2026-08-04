@@ -17,6 +17,9 @@ on:
   issue_comment:
     types: [created]
 
+env:
+  KSAI_REF: 7b4d040488a77b59f2f0c36df0ec71b6961a7a23
+
 jobs:
   # Authorization runs in its own job, before the review job's concurrency group, so an
   # unauthorized commenter cannot trigger a run that cancels an in-progress review and is
@@ -49,7 +52,7 @@ jobs:
           token: ${{ steps.token.outputs.token }}
           path: _ksai-authz
           repository: Kong/ksai
-          ref: 79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
+          ref: ${{ env.KSAI_REF }}
           sparse-checkout: |
             .github/actions/codeowners-authz
           persist-credentials: false
@@ -99,7 +102,7 @@ jobs:
           token: ${{ steps.kong-token.outputs.token }}
           path: _ksai-review
           repository: Kong/ksai
-          ref: 79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
+          ref: ${{ env.KSAI_REF }}
           sparse-checkout: |
             .github/actions/ai-reviewer-federated
           persist-credentials: false
@@ -108,7 +111,7 @@ jobs:
       # kreview plugin checkout to its own ref: ksai_ref pins the plugin explicitly instead.
       - uses: ./_ksai-review/.github/actions/ai-reviewer-federated
         with:
-          ksai_ref: 79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
+          ksai_ref: ${{ env.KSAI_REF }}
           trigger_phrase: "/muthur"
           # GITHUB_TOKEN checks out the PR head, reacts, and posts the review comment.
           source_org_github_token: ${{ github.token }}
@@ -135,7 +138,7 @@ jobs:
           token: ${{ steps.kong-token.outputs.token }}
           path: _ksai-review
           repository: Kong/ksai
-          ref: 79bd6bec9875f35d646193e3e0a1ee88ba7ab1ff
+          ref: ${{ env.KSAI_REF }}
           sparse-checkout: |
             .github/actions/ai-reviewer-federated
           persist-credentials: false

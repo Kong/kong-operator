@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
@@ -53,6 +52,9 @@ type UDPRouteReconciler struct {
 	// If it is false, referencing backend in different namespace will be rejected.
 	// It's resolved on SetupWithManager call.
 	enableReferenceGrant bool
+	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved on SetupWithManager call.
+	referenceGrantVersion schema.GroupVersion
 
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
@@ -66,11 +68,10 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// when reconciling UDPRoutes.
 	// Once the UDPRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
 	// ReferenceGrant handling again in this reconciler at runtime.
-	r.enableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
-		Group:    gatewayv1beta1.GroupVersion.Group,
-		Version:  gatewayv1beta1.GroupVersion.Version,
-		Resource: "referencegrants",
-	})
+	r.referenceGrantVersion, r.enableReferenceGrant = ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	if !r.enableReferenceGrant {
+		r.Log.Error(nil, "Neither v1 nor v1beta1 ReferenceGrant CRD found; cross-namespace references will be rejected")
+	}
 
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("udproute-controller").
@@ -102,7 +103,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	if r.enableReferenceGrant {
-		blder.Watches(&gatewayapi.ReferenceGrant{},
+		blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
 			handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForReferenceGrant),
 			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasUDPRouteFrom)),
 		)
@@ -282,7 +283,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(ctx context.Context, obj cl
 // listUDPRoutesForReferenceGrant is a watch predicate which finds all UDPRoutes
 // mentioned in a From clause for a ReferenceGrant.
 func (r *UDPRouteReconciler) listUDPRoutesForReferenceGrant(ctx context.Context, obj client.Object) []reconcile.Request {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	grant, ok := gatewayapi.AsReferenceGrant(obj)
 	if !ok {
 		r.Log.Error(
 			errInvalidType,
@@ -315,7 +316,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForReferenceGrant(ctx context.Context,
 }
 
 func referenceGrantHasUDPRouteFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	grant, ok := gatewayapi.AsReferenceGrant(obj)
 	if !ok {
 		return false
 	}
@@ -632,16 +633,17 @@ func (r *UDPRouteReconciler) getUDPRouteRuleReason(ctx context.Context, udpRoute
 						nil
 				}
 
-				referenceGrantList := &gatewayapi.ReferenceGrantList{}
+				referenceGrantList := gatewayapi.NewReferenceGrantList(r.referenceGrantVersion)
 				if err := r.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
 					return "", "", err
 				}
+				referenceGrants := gatewayapi.ReferenceGrantItems(referenceGrantList)
 				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"
-				if len(referenceGrantList.Items) == 0 {
+				if len(referenceGrants) == 0 {
 					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
 				}
 				var isGranted bool
-				for _, grant := range referenceGrantList.Items {
+				for _, grant := range referenceGrants {
 					if isUDPReferenceGranted(grant.Spec, backendRef, udpRoute.Namespace) {
 						isGranted = true
 						break
