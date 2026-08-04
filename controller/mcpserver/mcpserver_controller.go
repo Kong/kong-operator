@@ -94,9 +94,10 @@ func listMCPServerDataPlanesForMCPServer(ctx context.Context, cl client.Client, 
 	var l mcpv1alpha1.MCPServerDataPlaneList
 	err := cl.List(
 		ctx, &l,
+		// NOTE: Currently only the same namespace references are supported.
 		client.InNamespace(mcp.Namespace),
 		client.MatchingFields{
-			index.IndexFieldMCPServerOnMCPServerDataPlane: mcp.Name,
+			index.IndexFieldMCPServerOnMCPServerDataPlane: mcp.Namespace + "/" + mcp.Name,
 		},
 	)
 	if err != nil {
