@@ -16,7 +16,6 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	routebuilder "github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -74,6 +73,7 @@ func TestRoutesForRule(t *testing.T) {
 			},
 		},
 	}
+	httpRoute.Spec.Rules = []gwtypes.HTTPRouteRule{rule}
 
 	// Create test parent reference
 	pRef := &gwtypes.ParentReference{
@@ -122,7 +122,7 @@ func TestRoutesForRule(t *testing.T) {
 			parentRef:    pRef,
 			serviceName:  "test-service",
 			hostnames:    []string{"example.com"},
-			expectRoutes: 2,
+			expectRoutes: 3,
 			expectProtocols: []sdkkonnectcomp.Protocols{
 				sdkkonnectcomp.Protocols("http"),
 				sdkkonnectcomp.Protocols("https"),
@@ -137,7 +137,7 @@ func TestRoutesForRule(t *testing.T) {
 			},
 			serviceName:  "test-service",
 			hostnames:    []string{"example.com"},
-			expectRoutes: 2,
+			expectRoutes: 3,
 			expectProtocols: []sdkkonnectcomp.Protocols{
 				sdkkonnectcomp.Protocols("http"),
 			},
@@ -151,7 +151,7 @@ func TestRoutesForRule(t *testing.T) {
 			},
 			serviceName:  "test-service",
 			hostnames:    []string{"example.com"},
-			expectRoutes: 2,
+			expectRoutes: 3,
 			expectProtocols: []sdkkonnectcomp.Protocols{
 				sdkkonnectcomp.Protocols("https"),
 			},
@@ -198,17 +198,15 @@ func TestRoutesForRule(t *testing.T) {
 				expectedAnnotation := httpRoute.Namespace + "/" + httpRoute.Name
 				assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation], expectedAnnotation)
 
-				if len(result.Spec.Headers) > 0 {
-					assert.Contains(t, result.Spec.Headers, "X-Foo")
-					assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, result.Spec.Paths)
-					require.NotNil(t, result.Spec.RegexPriority)
-					assert.GreaterOrEqual(t, *result.Spec.RegexPriority, int64(0))
+				if result.Spec.Paths[0] == "/" {
+					assert.Equal(t, map[string][]string{"X-Foo": {"bar"}}, result.Spec.Headers)
+					assert.Nil(t, result.Spec.RegexPriority)
 					continue
 				}
 
-				// Verify path-only route.
+				assert.Equal(t, []string{"~/test$", "/test/"}, result.Spec.Paths)
 				require.NotNil(t, result.Spec.RegexPriority)
-				assert.Equal(t, routebuilder.KongHTTPRoutePathRegexPriorityOffset+10, *result.Spec.RegexPriority)
+				assert.Equal(t, int64(1<<10), *result.Spec.RegexPriority)
 			}
 		})
 	}
@@ -420,18 +418,15 @@ func TestRoutesForRule_PrioritizesHeaderOnlyHTTPRouteMatches(t *testing.T) {
 	versionTwoRoute := versionTwoRoutes[0]
 	twoHeaderRoute := twoHeaderRoutes[0]
 	colorBlueRoute := colorBlueRoutes[0]
-	require.NotNil(t, versionTwoRoute.Spec.RegexPriority)
-	require.NotNil(t, twoHeaderRoute.Spec.RegexPriority)
-	require.NotNil(t, colorBlueRoute.Spec.RegexPriority)
-	assert.Greater(t, *twoHeaderRoute.Spec.RegexPriority, *versionTwoRoute.Spec.RegexPriority)
-	assert.Greater(t, *versionTwoRoute.Spec.RegexPriority, *colorBlueRoute.Spec.RegexPriority)
-	assert.GreaterOrEqual(t, *twoHeaderRoute.Spec.RegexPriority, int64(0))
-	assert.GreaterOrEqual(t, *versionTwoRoute.Spec.RegexPriority, int64(0))
-	assert.GreaterOrEqual(t, *colorBlueRoute.Spec.RegexPriority, int64(0))
-	assert.Less(t, *twoHeaderRoute.Spec.RegexPriority, routebuilder.KongHTTPRoutePathRegexPriorityOffset)
-	assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, versionTwoRoute.Spec.Paths)
-	assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, twoHeaderRoute.Spec.Paths)
-	assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, colorBlueRoute.Spec.Paths)
+	assert.Equal(t, map[string][]string{"version": {"two"}}, versionTwoRoute.Spec.Headers)
+	assert.Equal(t, map[string][]string{"version": {"two"}, "color": {"orange"}}, twoHeaderRoute.Spec.Headers)
+	assert.Equal(t, map[string][]string{"color": {"blue"}}, colorBlueRoute.Spec.Headers)
+	assert.Equal(t, []string{"/"}, versionTwoRoute.Spec.Paths)
+	assert.Equal(t, []string{"/"}, twoHeaderRoute.Spec.Paths)
+	assert.Equal(t, []string{"/"}, colorBlueRoute.Spec.Paths)
+	assert.Nil(t, versionTwoRoute.Spec.RegexPriority)
+	assert.Nil(t, twoHeaderRoute.Spec.RegexPriority)
+	assert.Nil(t, colorBlueRoute.Spec.RegexPriority)
 }
 
 func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(t *testing.T) {
@@ -498,26 +493,40 @@ func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(
 	}
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
 
+	pathRoutes, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, httpRoute.Spec.Rules[0], 0, pRef, cpRef, nil, "path-service", nil)
+	require.NoError(t, err)
+	require.Len(t, pathRoutes, 2)
 	methodOnlyRoutes, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, httpRoute.Spec.Rules[1], 1, pRef, cpRef, nil, "method-only-service", nil)
 	require.NoError(t, err)
-	require.Len(t, methodOnlyRoutes, 1)
+	require.Len(t, methodOnlyRoutes, 2)
 	headerOnlyRoutes, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, httpRoute.Spec.Rules[2], 2, pRef, cpRef, nil, "header-only-service", nil)
 	require.NoError(t, err)
 	require.Len(t, headerOnlyRoutes, 1)
 
 	methodOnlyRoute := methodOnlyRoutes[0]
+	methodWithHeaderRoute := methodOnlyRoutes[1]
 	assert.Equal(t, []string{"PATCH"}, methodOnlyRoute.Spec.Methods)
-	assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, methodOnlyRoute.Spec.Paths)
-	require.NotNil(t, methodOnlyRoute.Spec.RegexPriority)
+	assert.Empty(t, methodOnlyRoute.Spec.Paths)
+	assert.Nil(t, methodOnlyRoute.Spec.RegexPriority)
 	assert.Nil(t, methodOnlyRoute.Spec.Headers)
+	assert.Equal(t, []string{"PATCH"}, methodWithHeaderRoute.Spec.Methods)
+	assert.Equal(t, map[string][]string{"version": {"four"}}, methodWithHeaderRoute.Spec.Headers)
+	assert.Empty(t, methodWithHeaderRoute.Spec.Paths)
 
 	headerOnlyRoute := headerOnlyRoutes[0]
-	assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, headerOnlyRoute.Spec.Paths)
+	assert.Empty(t, headerOnlyRoute.Spec.Paths)
 	assert.Empty(t, headerOnlyRoute.Spec.Methods)
-	require.NotNil(t, headerOnlyRoute.Spec.RegexPriority)
+	assert.Nil(t, headerOnlyRoute.Spec.RegexPriority)
 	require.NotNil(t, headerOnlyRoute.Spec.Headers)
 	assert.Equal(t, map[string][]string{"version": {"four"}}, headerOnlyRoute.Spec.Headers)
-	assert.Greater(t, *methodOnlyRoute.Spec.RegexPriority, *headerOnlyRoute.Spec.RegexPriority)
+
+	pathOnlyRoute := pathRoutes[0]
+	pathWithHeaderRoute := pathRoutes[1]
+	assert.Equal(t, []string{"~/path5$", "/path5/"}, pathOnlyRoute.Spec.Paths)
+	assert.Empty(t, pathOnlyRoute.Spec.Headers)
+	assert.Equal(t, pathOnlyRoute.Spec.Paths, pathWithHeaderRoute.Spec.Paths)
+	assert.Equal(t, map[string][]string{"version": {"four"}}, pathWithHeaderRoute.Spec.Headers)
+	assert.Equal(t, pathOnlyRoute.Spec.RegexPriority, pathWithHeaderRoute.Spec.RegexPriority)
 }
 
 func TestHTTPRouteMatchPrioritiesIgnoreUnsupportedQueryParams(t *testing.T) {
@@ -550,6 +559,55 @@ func TestHTTPRouteMatchPrioritiesIgnoreUnsupportedQueryParams(t *testing.T) {
 	priorities := httpRouteMatchPriorities(httpRoute)
 
 	assert.Greater(t, priorityForHTTPRouteMatch(priorities, 0, 0), priorityForHTTPRouteMatch(priorities, 1, 0))
+}
+
+func TestPrecedenceVariantsForHTTPRouteMatch(t *testing.T) {
+	prefix := gatewayv1.PathMatchPathPrefix
+	path := func(value string) *gatewayv1.HTTPPathMatch {
+		return &gatewayv1.HTTPPathMatch{Type: &prefix, Value: &value}
+	}
+
+	t.Run("augments a more specific path with a lower path and method match", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{Spec: gatewayv1.HTTPRouteSpec{Rules: []gatewayv1.HTTPRouteRule{
+			{Matches: []gatewayv1.HTTPRouteMatch{{Path: path("/specific")}}},
+			{Matches: []gatewayv1.HTTPRouteMatch{{Path: path("/"), Method: new(gatewayv1.HTTPMethodPatch)}}},
+		}}}
+		priorities := httpRouteMatchPriorities(route)
+
+		variants := precedenceVariantsForHTTPRouteMatch(route, route.Spec.Rules[0].Matches[0], priorities, 0, 0)
+
+		require.Len(t, variants, 2)
+		assert.Nil(t, variants[0].Method)
+		require.NotNil(t, variants[1].Method)
+		assert.Equal(t, gatewayv1.HTTPMethodPatch, *variants[1].Method)
+		assert.Equal(t, "/specific", *variants[1].Path.Value)
+	})
+
+	t.Run("augments a method match with a lower header match", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{Spec: gatewayv1.HTTPRouteSpec{Rules: []gatewayv1.HTTPRouteRule{
+			{Matches: []gatewayv1.HTTPRouteMatch{{Method: new(gatewayv1.HTTPMethodPatch)}}},
+			{Matches: []gatewayv1.HTTPRouteMatch{{Headers: []gatewayv1.HTTPHeaderMatch{{Name: "version", Value: "four"}}}}},
+		}}}
+		priorities := httpRouteMatchPriorities(route)
+
+		variants := precedenceVariantsForHTTPRouteMatch(route, route.Spec.Rules[0].Matches[0], priorities, 0, 0)
+
+		require.Len(t, variants, 2)
+		assert.Empty(t, variants[0].Headers)
+		assert.Equal(t, route.Spec.Rules[1].Matches[0].Headers, variants[1].Headers)
+	})
+
+	t.Run("does not augment matches with disjoint paths", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{Spec: gatewayv1.HTTPRouteSpec{Rules: []gatewayv1.HTTPRouteRule{
+			{Matches: []gatewayv1.HTTPRouteMatch{{Path: path("/one")}}},
+			{Matches: []gatewayv1.HTTPRouteMatch{{Path: path("/two"), Method: new(gatewayv1.HTTPMethodPatch)}}},
+		}}}
+		priorities := httpRouteMatchPriorities(route)
+
+		variants := precedenceVariantsForHTTPRouteMatch(route, route.Spec.Rules[0].Matches[0], priorities, 0, 0)
+
+		require.Len(t, variants, 1)
+	})
 }
 
 func TestHTTPRouteMatchPrioritiesForDefaultPathMethodMatching(t *testing.T) {
@@ -637,6 +695,7 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 			},
 		}},
 	}
+	httpRoute.Spec.Rules = []gwtypes.HTTPRouteRule{rule}
 
 	pRef := &gwtypes.ParentReference{
 		Name:      "test-gateway",
@@ -672,7 +731,7 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 
 	assert.Equal(t, []string{"~/one$"}, results[0].Spec.Paths)
 	require.NotNil(t, results[0].Spec.RegexPriority)
-	assert.Equal(t, routebuilder.KongHTTPRoutePathRegexPriorityOffset+9, *results[0].Spec.RegexPriority)
+	assert.Equal(t, int64(0), *results[0].Spec.RegexPriority)
 	assert.ElementsMatch(t,
 		[]sdkkonnectcomp.Protocols{
 			sdkkonnectcomp.Protocols("http"),
@@ -739,9 +798,9 @@ func TestRoutesForRule_MethodOnlyMatch(t *testing.T) {
 	require.Len(t, results, 1)
 
 	assert.Equal(t, []string{"GET"}, results[0].Spec.Methods)
-	assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, results[0].Spec.Paths)
+	assert.Empty(t, results[0].Spec.Paths)
 	assert.Nil(t, results[0].Spec.Headers)
-	require.NotNil(t, results[0].Spec.RegexPriority)
+	assert.Nil(t, results[0].Spec.RegexPriority)
 	assert.Equal(t, []string{"example.com"}, results[0].Spec.Hosts)
 }
 

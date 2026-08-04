@@ -25,7 +25,6 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	routebuilder "github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -1046,7 +1045,6 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				routeNames := map[string]struct{}{}
 				serviceNames := map[string]struct{}{}
 				headersByRoute := map[string]int{}
-				priorityByHeaders := map[string]int64{}
 
 				for _, obj := range store {
 					route, ok := obj.(*configurationv1alpha1.KongRoute)
@@ -1055,9 +1053,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					}
 
 					routeNames[route.Name] = struct{}{}
-					assert.Equal(t, []string{routebuilder.KongHTTPRouteDefaultPathRegexPath}, route.Spec.Paths)
+					assert.Empty(t, route.Spec.Paths)
 					assert.Empty(t, route.Spec.Methods)
-					require.NotNil(t, route.Spec.RegexPriority)
+					assert.Nil(t, route.Spec.RegexPriority)
 					require.NotNil(t, route.Spec.ServiceRef)
 					require.NotNil(t, route.Spec.ServiceRef.NamespacedRef)
 
@@ -1066,7 +1064,6 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 
 					headersKey := canonicalHeaderMatchSet(route.Spec.Headers)
 					headersByRoute[headersKey]++
-					priorityByHeaders[headersKey] = *route.Spec.RegexPriority
 				}
 
 				expectedHeaders := map[string]int{
@@ -1082,8 +1079,6 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				assert.Len(t, routeNames, 7)
 				assert.Len(t, serviceNames, 1)
 				assert.Equal(t, expectedHeaders, headersByRoute)
-				assert.Greater(t, priorityByHeaders["color=orange&version=two"], priorityByHeaders["version=two"])
-				assert.Greater(t, priorityByHeaders["version=two"], priorityByHeaders["color=blue"])
 			},
 		},
 		{
