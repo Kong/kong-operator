@@ -1,7 +1,11 @@
 package sdk
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -223,12 +227,90 @@ func (f sdkFactory) NewKonnectSDK(server server.Server, token SDKToken) SDKWrapp
 		sdkkonnectgo.WithServerURL(server.URL()),
 	}
 
-	if f.httpClient != nil {
-		opts = append(opts, sdkkonnectgo.WithClient(f.httpClient))
-	}
+	opts = append(opts, sdkkonnectgo.WithClient(sanitizeGRPCRouteHTTPClient(f.httpClient)))
 
 	return sdkWrapper{
 		server: server,
 		sdk:    sdkkonnectgo.New(opts...),
 	}
+}
+
+func sanitizeGRPCRouteHTTPClient(client *http.Client) *http.Client {
+	if client == nil {
+		client = http.DefaultClient
+	}
+
+	sanitized := *client
+	transport := sanitized.Transport
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+	sanitized.Transport = grpcRouteRequestSanitizer{base: transport}
+	return &sanitized
+}
+
+// grpcRouteRequestSanitizer removes generated SDK defaults that Kong rejects for gRPC routes.
+type grpcRouteRequestSanitizer struct {
+	base http.RoundTripper
+}
+
+// RoundTrip executes a single HTTP transaction, returning
+// a Response for the provided Request.
+func (s grpcRouteRequestSanitizer) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Body == nil || req.Body == http.NoBody || req.URL == nil || !strings.Contains(req.URL.Path, "/routes") {
+		return s.base.RoundTrip(req)
+	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	_ = req.Body.Close()
+
+	if sanitized, changed, err := sanitizeGRPCRouteRequestBody(body); err == nil && changed {
+		body = sanitized
+	}
+
+	req.Body = io.NopCloser(bytes.NewReader(body))
+	req.ContentLength = int64(len(body))
+	req.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(body)), nil
+	}
+
+	return s.base.RoundTrip(req)
+}
+
+func sanitizeGRPCRouteRequestBody(body []byte) ([]byte, bool, error) {
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, false, err
+	}
+
+	if !hasGRPCProtocol(payload["protocols"]) {
+		return body, false, nil
+	}
+	if _, ok := payload["strip_path"]; !ok {
+		return body, false, nil
+	}
+
+	delete(payload, "strip_path")
+	sanitized, err := json.Marshal(payload)
+	if err != nil {
+		return nil, false, err
+	}
+	return sanitized, true, nil
+}
+
+func hasGRPCProtocol(protocols any) bool {
+	items, ok := protocols.([]any)
+	if !ok {
+		return false
+	}
+	for _, item := range items {
+		switch item {
+		case "grpc", "grpcs":
+			return true
+		}
+	}
+	return false
 }
