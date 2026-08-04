@@ -33,9 +33,10 @@ const (
 // generateWorkloadNN returns the NamespacedName for resources owned by the
 // given MCPServer. All owned resources share the MCPServer's own name.
 func generateWorkloadNN(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) types.NamespacedName {
+	nn := generateHashedName(mcpDataPlane.Namespace, "mcpserver", mcpDataPlane.Name)
 	return types.NamespacedName{
-		Namespace: mcpDataPlane.Namespace,
-		Name:      fmt.Sprintf("mcpserver-%s", mcpDataPlane.Name),
+		Namespace: nn.Namespace,
+		Name:      nn.Name, // bounded to <=63 chars
 	}
 }
 

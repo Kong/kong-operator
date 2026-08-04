@@ -17,6 +17,7 @@ import (
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
@@ -269,7 +270,13 @@ func (r *MCPServerDataPlaneReconciler) deleteStaleResources(
 	list client.ObjectList,
 	desiredNames map[string]struct{},
 ) error {
-	if err := r.List(ctx, list, client.InNamespace(mcpDataPlane.Namespace)); err != nil {
+	err := r.List(ctx, list,
+		client.InNamespace(mcpDataPlane.Namespace),
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.MCPServerManagedByLabelValue,
+		},
+	)
+	if err != nil {
 		return fmt.Errorf("failed to list resources for stale cleanup: %w", err)
 	}
 
