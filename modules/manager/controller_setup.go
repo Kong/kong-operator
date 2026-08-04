@@ -29,6 +29,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	aigwdataplane "github.com/kong/kong-operator/v2/controller/aigateway/dataplane"
 	"github.com/kong/kong-operator/v2/controller/controlplane"
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
@@ -323,6 +324,11 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 					Resource: "mcpservers",
+				},
+				{
+					Group:    mcpv1alpha1.SchemeGroupVersion.Group,
+					Version:  mcpv1alpha1.SchemeGroupVersion.Version,
+					Resource: "mcpserverdataplanes",
 				},
 			},
 		},

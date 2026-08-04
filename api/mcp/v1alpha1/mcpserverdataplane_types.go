@@ -105,6 +105,7 @@ const (
 // It holds all the options from the HorizontalPodAutoscalerSpec besides the
 // ScaleTargetRef which is being controlled by the Operator.
 //
+// +kubebuilder:validation:XValidation:rule="self.type == 'static'",message="Only static horizontal scaling is currently supported"
 // +kubebuilder:validation:XValidation:rule="self.type != 'static' || (has(self.static.replicas) && self.static.replicas >= 0)",message="When type is static: replicas must be set and must be non-negative"
 type HorizontalScaling struct {
 	// Type indicates the type of horizontal scaling to use.
