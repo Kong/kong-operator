@@ -3,6 +3,7 @@ package kongroute
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -150,41 +151,42 @@ func RoutesForHTTPRouteRule(
 	tags := pkgmetadata.ExtractTags(httpRoute)
 
 	for i, match := range rule.Matches {
-		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, namingParentRef, match, i)
-		mLog := logger.WithValues("kongroute", routeName, "matchIndex", i)
-		log.Debug(mLog, "Creating KongRoute for HTTPRoute match")
+		variants := precedenceVariantsForHTTPRouteMatch(httpRoute, match, priorities, ruleIndex, i)
+		for variantIndex, variant := range variants {
+			nameIndex := i + variantIndex*len(rule.Matches)
+			routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, namingParentRef, variant, nameIndex)
+			mLog := logger.WithValues("kongroute", routeName, "matchIndex", i, "precedenceVariant", variantIndex)
+			log.Debug(mLog, "Creating KongRoute for HTTPRoute match")
 
-		routeBuilder := builder.NewKongRoute().
-			WithName(routeName).
-			WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-			WithLabels(httpRoute, pRef).
-			WithAnnotations(httpRoute, pRef).
-			WithSpecName(routeName).
-			WithProtocols(protocols...).
-			WithHosts(hostnames).
-			WithStripPath(stripPath).
-			WithPreserveHost(preserveHost).
-			WithSpecTags(tags).
-			WithKongService(serviceName).
-			WithHTTPRouteMatch(match, setCaptureGroup)
-		if priority := priorityForDefaultPathHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
-			routeBuilder.WithRegexPriority(priority).WithDefaultPathRegexPath()
+			routeBuilder := builder.NewKongRoute().
+				WithName(routeName).
+				WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
+				WithLabels(httpRoute, pRef).
+				WithAnnotations(httpRoute, pRef).
+				WithSpecName(routeName).
+				WithProtocols(protocols...).
+				WithHosts(hostnames).
+				WithStripPath(stripPath).
+				WithPreserveHost(preserveHost).
+				WithSpecTags(tags).
+				WithKongService(serviceName).
+				WithHTTPRouteMatch(variant, setCaptureGroup)
+			if priority := priorityForTraditionalHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
+				routeBuilder.WithRegexPriority(priority)
+			}
+
+			newRoute, buildErr := routeBuilder.Build()
+			if buildErr != nil {
+				log.Error(mLog, buildErr, "Failed to build KongRoute resource")
+				return nil, fmt.Errorf("failed to build KongRoute %s: %w", routeName, buildErr)
+			}
+
+			if _, updErr := translator.VerifyAndUpdate(ctx, mLog, cl, &newRoute, httpRoute, true); updErr != nil {
+				return nil, updErr
+			}
+
+			kongRoutes = append(kongRoutes, newRoute.DeepCopy())
 		}
-
-		newRoute, buildErr := routeBuilder.Build()
-		if buildErr != nil {
-			log.Error(mLog, buildErr, "Failed to build KongRoute resource")
-			return nil, fmt.Errorf("failed to build KongRoute %s: %w", routeName, buildErr)
-		}
-
-		if _, updErr := translator.VerifyAndUpdate(ctx, mLog, cl, &newRoute, httpRoute, true); updErr != nil {
-			return nil, updErr
-		}
-
-		// Add to result slice as an explicit copy for clarity.
-		// Using DeepCopy expresses the intent that each match yields an
-		// independent KongRoute object.
-		kongRoutes = append(kongRoutes, newRoute.DeepCopy())
 	}
 
 	return kongRoutes, nil
@@ -425,16 +427,174 @@ func httpRouteMatchPriorities(httpRoute *gwtypes.HTTPRoute) map[httpRouteMatchPr
 	return priorities
 }
 
-func priorityForDefaultPathHTTPRouteMatch(
+func priorityForTraditionalHTTPRouteMatch(
 	match gatewayv1.HTTPRouteMatch,
 	priorities map[httpRouteMatchPriorityKey]int64,
 	ruleIndex, matchIndex int,
 ) *int64 {
-	if !isDefaultPathHTTPRouteMatch(match) || (match.Method == nil && len(match.Headers) == 0) {
+	if isDefaultPathHTTPRouteMatch(match) || match.Path == nil || match.Path.Value == nil {
+		return nil
+	}
+	pathType := gatewayv1.PathMatchPathPrefix
+	if match.Path.Type != nil {
+		pathType = *match.Path.Type
+	}
+	// Gateway API leaves RegularExpression precedence implementation-specific.
+	if pathType == gatewayv1.PathMatchRegularExpression {
 		return nil
 	}
 	priority := priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex)
 	return &priority
+}
+
+// precedenceVariantsForHTTPRouteMatch returns the original match plus specialized copies that
+// include the non-path constraints of lower-priority matches it can overlap. Kong's traditional
+// router considers the number of populated match fields before regex_priority. Without these
+// copies a less-specific method or header match can beat a more-specific path match regardless of
+// regex_priority. The specialized copy has at least the same native Kong specificity as the lower
+// match, after which path length/type and regex_priority preserve Gateway API precedence. The
+// original copy remains necessary for requests that do not satisfy any lower match's constraints.
+func precedenceVariantsForHTTPRouteMatch(
+	httpRoute *gwtypes.HTTPRoute,
+	match gatewayv1.HTTPRouteMatch,
+	priorities map[httpRouteMatchPriorityKey]int64,
+	ruleIndex, matchIndex int,
+) []gatewayv1.HTTPRouteMatch {
+	variants := []gatewayv1.HTTPRouteMatch{*match.DeepCopy()}
+	priority := priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex)
+
+	for lowerRuleIndex, rule := range httpRoute.Spec.Rules {
+		for lowerMatchIndex, lower := range rule.Matches {
+			if priorityForHTTPRouteMatch(priorities, lowerRuleIndex, lowerMatchIndex) >= priority {
+				continue
+			}
+			if !needsPrecedenceVariant(match, lower) {
+				continue
+			}
+			variant, changed, overlaps := augmentHTTPRouteMatch(match, lower)
+			if !changed || !overlaps || slices.ContainsFunc(variants, func(existing gatewayv1.HTTPRouteMatch) bool {
+				return reflect.DeepEqual(existing, variant)
+			}) {
+				continue
+			}
+			variants = append(variants, variant)
+		}
+	}
+
+	return variants
+}
+
+func needsPrecedenceVariant(higher, lower gatewayv1.HTTPRouteMatch) bool {
+	higherWeight := traditionalKongMatchWeight(higher)
+	lowerWeight := traditionalKongMatchWeight(lower)
+	if lowerWeight != higherWeight {
+		return lowerWeight > higherWeight
+	}
+	return countEffectiveHTTPHeaderMatches(lower.Headers) > countEffectiveHTTPHeaderMatches(higher.Headers)
+}
+
+// traditionalKongMatchWeight returns the portion of Kong's traditional-compatible priority that
+// is determined before regex_priority for the fields produced from an HTTPRouteMatch. Hostnames
+// and protocols are omitted because they are identical for every match of the parent HTTPRoute.
+func traditionalKongMatchWeight(match gatewayv1.HTTPRouteMatch) int {
+	weight := 0
+	if match.Path != nil && match.Path.Value != nil {
+		weight++
+	}
+	if match.Method != nil {
+		weight++
+	}
+	if len(match.Headers) > 0 {
+		weight++
+	}
+	return weight
+}
+
+func augmentHTTPRouteMatch(
+	higher gatewayv1.HTTPRouteMatch,
+	lower gatewayv1.HTTPRouteMatch,
+) (gatewayv1.HTTPRouteMatch, bool, bool) {
+	if !httpRoutePathsCanOverlap(higher.Path, lower.Path) {
+		return gatewayv1.HTTPRouteMatch{}, false, false
+	}
+
+	variant := *higher.DeepCopy()
+	changed := false
+	if variant.Method != nil && lower.Method != nil && *variant.Method != *lower.Method {
+		return gatewayv1.HTTPRouteMatch{}, false, false
+	}
+	if variant.Method == nil && lower.Method != nil {
+		variant.Method = new(*lower.Method)
+		changed = true
+	}
+
+	for _, lowerHeader := range lower.Headers {
+		matchingHeader := slices.IndexFunc(variant.Headers, func(h gatewayv1.HTTPHeaderMatch) bool {
+			return strings.EqualFold(string(h.Name), string(lowerHeader.Name))
+		})
+		if matchingHeader < 0 {
+			variant.Headers = append(variant.Headers, *lowerHeader.DeepCopy())
+			changed = true
+			continue
+		}
+		if !httpHeaderMatchesEqual(variant.Headers[matchingHeader], lowerHeader) {
+			// Exact matches with different values cannot overlap. Intersections involving
+			// regular-expression header matches cannot be represented by a KongRoute header
+			// value list (which is ORed), so leave those implementation-specific cases alone.
+			return gatewayv1.HTTPRouteMatch{}, false, false
+		}
+	}
+
+	return variant, changed, true
+}
+
+func httpHeaderMatchesEqual(a, b gatewayv1.HTTPHeaderMatch) bool {
+	aType := gatewayv1.HeaderMatchExact
+	if a.Type != nil {
+		aType = *a.Type
+	}
+	bType := gatewayv1.HeaderMatchExact
+	if b.Type != nil {
+		bType = *b.Type
+	}
+	return strings.EqualFold(string(a.Name), string(b.Name)) && aType == bType && a.Value == b.Value
+}
+
+func httpRoutePathsCanOverlap(a, b *gatewayv1.HTTPPathMatch) bool {
+	aType, aValue := normalizedHTTPPathMatch(a)
+	bType, bValue := normalizedHTTPPathMatch(b)
+	if aType == gatewayv1.PathMatchRegularExpression || bType == gatewayv1.PathMatchRegularExpression {
+		return true
+	}
+	if aType == gatewayv1.PathMatchExact && bType == gatewayv1.PathMatchExact {
+		return aValue == bValue
+	}
+	if aType == gatewayv1.PathMatchExact {
+		return httpPathPrefixMatches(bValue, aValue)
+	}
+	if bType == gatewayv1.PathMatchExact {
+		return httpPathPrefixMatches(aValue, bValue)
+	}
+	return httpPathPrefixMatches(aValue, bValue) || httpPathPrefixMatches(bValue, aValue)
+}
+
+func normalizedHTTPPathMatch(path *gatewayv1.HTTPPathMatch) (gatewayv1.PathMatchType, string) {
+	if path == nil || path.Value == nil {
+		return gatewayv1.PathMatchPathPrefix, "/"
+	}
+	pathType := gatewayv1.PathMatchPathPrefix
+	if path.Type != nil {
+		pathType = *path.Type
+	}
+	return pathType, *path.Value
+}
+
+func httpPathPrefixMatches(prefix, path string) bool {
+	if prefix == "/" || prefix == path {
+		return true
+	}
+	prefix = strings.TrimSuffix(prefix, "/")
+	return strings.HasPrefix(path, prefix+"/")
 }
 
 func isDefaultPathHTTPRouteMatch(match gatewayv1.HTTPRouteMatch) bool {
