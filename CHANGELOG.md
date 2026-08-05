@@ -169,6 +169,8 @@
   vault reference format at admission time, valid references are passed to
   Konnect unchanged.
   [#5159](https://github.com/Kong/kong-operator/pull/5159)
+- Added `MCPServerDataPlane` CRD to handle MCPServer's data plane reconciliation.
+  [#5134](https://github.com/Kong/kong-operator/pull/5134)
 
 ### Changed
 
@@ -202,6 +204,9 @@
   [#5114](https://github.com/Kong/kong-operator/pull/5114)
 - Gateway: update the default DataPlane image to `kong/kong-gateway:3.15`.
   [#5095](https://github.com/Kong/kong-operator/pull/5095)
+- `MCPServer` CRD is split into `MCPServer` and `MCPServerDataPlane` CRD.
+  The latter handles MCPServer's data plane reconciliation.
+  [#5134](https://github.com/Kong/kong-operator/pull/5134)
 
 ## [v2.3.0-rc.2]
 
