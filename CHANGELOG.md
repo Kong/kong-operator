@@ -85,6 +85,8 @@
 - Gateway: Support watching both `v1` and `v1beta1` versions of `ReferenceGrant`
   to ensure compatability with gateway API 1.3 and 1.4.
   [#5091](https://github.com/Kong/kong-operator/pull/5091)
+- HybridGateway: fix KongRoute created without updating KongService's hybrid-route annotation
+  [#5136](https://github.com/Kong/kong-operator/pull/5136)
 
 ### Added
   
