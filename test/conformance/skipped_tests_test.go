@@ -29,8 +29,6 @@ var skippedTestsForHybrid = []string{
 	// Extended profile.
 	tests.HTTPRouteRewriteHost.ShortName,
 	tests.HTTPRouteRewritePath.ShortName,
-
-	tests.GRPCRouteWeight.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given gateway type.

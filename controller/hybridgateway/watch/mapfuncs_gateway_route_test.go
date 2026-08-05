@@ -592,3 +592,192 @@ func TestMapRouteForKongResource_TLSRoute(t *testing.T) {
 		})
 	}
 }
+
+func TestMapRouteForKongResource_GRPCRoute(t *testing.T) {
+
+	testCases := []struct {
+		name             string
+		obj              client.Object
+		expectedRequests []reconcile.Request
+	}{
+		{
+			name: "no annotation",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+				},
+			},
+			expectedRequests: []reconcile.Request{},
+		},
+		{
+			name: "unmatched source object type",
+			obj: &configurationv1alpha1.KongTarget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+				},
+			},
+			expectedRequests: []reconcile.Request{},
+		},
+		{
+			name: "single route without kind",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation: "test-ns/test-grpcroute",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "test-ns", Name: "test-grpcroute"}},
+			},
+		},
+		{
+			name: "multiple routes",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation: "ns1/route-1,ns2/route-2",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
+				{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "route-2"}},
+			},
+		},
+		{
+			name: "multiple routes with unmatched kind",
+			obj: &configurationv1alpha1.KongUpstream{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-obj",
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation: "ns1/route-1",
+						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route-2",
+					},
+				},
+			},
+			expectedRequests: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			requests := MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindGRPCRoute)(context.Background(), tc.obj)
+			require.ElementsMatch(t, tc.expectedRequests, requests)
+		})
+	}
+}
+
+// Test_GenericRouteMapFuncs_GRPCRoute smoke-tests MapRouteForGateway, MapRouteForGatewayClass,
+// MapRouteForService, and MapRouteForEndpointSlice instantiated with GRPCRoute. These are pure
+// generics over T gwtypes.SupportedRoute with no per-kind branching, so their exhaustive edge-case
+// behavior is already covered once, deeply, via the HTTPRoute instantiations above
+// (Test_MapRouteForGateway, Test_MapRouteForGatewayClass, Test_MapRouteForService,
+// Test_MapRouteForEndpointSlice); this just proves the GRPCRoute instantiation compiles and wires
+// through the GRPCRoute-specific index constants correctly.
+func Test_GenericRouteMapFuncs_GRPCRoute(t *testing.T) {
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(
+		schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+		&gwtypes.GRPCRoute{}, &gwtypes.Gateway{}, &gwtypes.GatewayClass{}, &corev1.Service{}, &discoveryv1.EndpointSlice{},
+	)
+	_ = gatewayv1.Install(scheme)
+
+	gatewayClass := &gwtypes.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-class",
+		},
+	}
+
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "test-gw",
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "test-class",
+		},
+	}
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "test-svc",
+		},
+	}
+
+	epSlice := &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "slice-1",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "test-svc",
+			},
+		},
+	}
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "route-1",
+		},
+		Spec: gwtypes.GRPCRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{
+					Name: gwtypes.ObjectName("test-gw"),
+				}},
+			},
+			Rules: []gwtypes.GRPCRouteRule{{
+				BackendRefs: []gwtypes.GRPCBackendRef{{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name: gatewayv1.ObjectName("test-svc"),
+							Port: new(gatewayv1.PortNumber(80)),
+						},
+					},
+				}},
+			}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gatewayClass, gateway, svc, epSlice, grpcRoute).
+		WithIndex(&gwtypes.Gateway{}, index.GatewayClassOnGatewayIndex, index.GatewayClassOnGateway).
+		WithIndex(&gwtypes.GRPCRoute{}, index.GatewayOnGRPCRouteIndex, index.GatewaysOnRoute[gwtypes.GRPCRoute]).
+		WithIndex(&gwtypes.GRPCRoute{}, index.BackendServicesOnGRPCRouteIndex, index.BackendServicesOnGRPCRoute).
+		Build()
+
+	t.Run("MapRouteForGateway", func(t *testing.T) {
+		requests := MapRouteForGateway(cl, gwtypes.GRPCRoute{})(context.Background(), gateway)
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+	})
+
+	t.Run("MapRouteForGatewayClass", func(t *testing.T) {
+		requests := MapRouteForGatewayClass(cl, gwtypes.GRPCRoute{})(context.Background(), gatewayClass)
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+	})
+
+	t.Run("MapRouteForService", func(t *testing.T) {
+		requests := MapRouteForService(cl, gwtypes.GRPCRoute{})(context.Background(), svc)
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+	})
+
+	t.Run("MapRouteForEndpointSlice", func(t *testing.T) {
+		requests := MapRouteForEndpointSlice(cl, gwtypes.GRPCRoute{})(context.Background(), epSlice)
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+	})
+}

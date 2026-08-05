@@ -112,6 +112,11 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "udproutes",
 	}
+	grpcRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "grpcroutes",
+	}
 
 	if cfg.ControlPlaneControllerEnabled || cfg.GatewayControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
@@ -150,6 +155,13 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		}
 		if hasUDPRoute {
 			indexOptions = slices.Concat(indexOptions, index.OptionsForUDPRoute())
+		}
+		hasGRPCRoute, err := crdChecker.CRDExists(grpcRouteGVR)
+		if err != nil {
+			return fmt.Errorf("failed to check existence of CRD %s: %w", grpcRouteGVR.String(), err)
+		}
+		if hasGRPCRoute {
+			indexOptions = slices.Concat(indexOptions, index.OptionsForGRPCRoute())
 		}
 	}
 
@@ -963,6 +975,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "udproutes",
 		}
+		grpcRouteGVR := schema.GroupVersionResource{
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
+			Resource: "grpcroutes",
+		}
 		hasTLSRoute, err := checker.CRDExists(tlsRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
@@ -976,6 +993,13 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		}
 		if hasTCPRoute {
 			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+		}
+		hasGRPCRoute, err := checker.CRDExists(grpcRouteGVR)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", grpcRouteGVR.String(), err)
+		}
+		if hasGRPCRoute {
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.GRPCRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
 		}
 		hasUDPRoute, err := checker.CRDExists(udpRouteGVR)
 		if err != nil {

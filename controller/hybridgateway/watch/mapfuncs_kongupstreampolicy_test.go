@@ -280,6 +280,188 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 	}
 }
 
+func TestMapGRPCRouteForKongUpstreamPolicy(t *testing.T) {
+	ctx := context.Background()
+
+	grpcRouteRuleForService := func(svcName string) []gwtypes.GRPCRouteRule {
+		return []gwtypes.GRPCRouteRule{
+			{
+				BackendRefs: []gwtypes.GRPCBackendRef{
+					{
+						BackendRef: gwtypes.BackendRef{
+							BackendObjectReference: gwtypes.BackendObjectReference{
+								Name: gwtypes.ObjectName(svcName),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name      string
+		setup     []client.Object
+		input     client.Object
+		wantNil   bool
+		wantLen   int
+		wantNames []string
+	}{
+		{
+			name:    "nil object returns nil",
+			input:   nil,
+			wantNil: true,
+		},
+		{
+			name:    "wrong type returns nil",
+			input:   &corev1.Service{},
+			wantNil: true,
+		},
+		{
+			name: "policy with no referencing services returns nil",
+			input: &configurationv1beta1.KongUpstreamPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+			},
+			setup: []client.Object{
+				&configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				},
+			},
+			wantNil: true,
+		},
+		{
+			name: "policy with service referencing it but no GRPCRoute returns nil",
+			input: &configurationv1beta1.KongUpstreamPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+			},
+			setup: []client.Object{
+				&configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "svc1", Namespace: "ns1",
+						Annotations: map[string]string{
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
+						},
+					},
+				},
+			},
+			wantNil: true,
+		},
+		{
+			name: "policy with service referencing it with GRPCRoute returns requests",
+			input: &configurationv1beta1.KongUpstreamPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+			},
+			setup: []client.Object{
+				&configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "svc1", Namespace: "ns1",
+						Annotations: map[string]string{
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
+						},
+					},
+				},
+				&gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "route1", Namespace: "ns1",
+						Annotations: map[string]string{
+							"gateway-operator.konghq.com/hybrid-routes-GRPCRoute": "ns1/route1",
+						},
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: gwtypes.ObjectName("gw1")},
+							},
+						},
+						Rules: grpcRouteRuleForService("svc1"),
+					},
+				},
+				&configurationv1alpha1.KongUpstream{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "upstream1", Namespace: "ns1",
+						Annotations: map[string]string{
+							"gateway-operator.konghq.com/hybrid-gateways":         "ns1/gw1",
+							"gateway-operator.konghq.com/hybrid-routes-GRPCRoute": "ns1/route1",
+						},
+					},
+				},
+			},
+			wantLen:   1,
+			wantNames: []string{"route1"},
+		},
+		{
+			name: "policy in different namespace than service",
+			input: &configurationv1beta1.KongUpstreamPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+			},
+			setup: []client.Object{
+				&configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "svc1", Namespace: "ns2",
+						Annotations: map[string]string{
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
+						},
+					},
+				},
+			},
+			wantNil: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			scheme := schemeWithAll()
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tc.setup...).
+				WithIndex(&gwtypes.GRPCRoute{}, index.BackendServicesOnGRPCRouteIndex, func(obj client.Object) []string {
+					grpcRoute, ok := obj.(*gwtypes.GRPCRoute)
+					if !ok {
+						return nil
+					}
+					var keys []string
+					for _, rule := range grpcRoute.Spec.Rules {
+						for _, ref := range rule.BackendRefs {
+							keys = append(keys, grpcRoute.Namespace+"/"+string(ref.BackendRef.Name))
+						}
+					}
+					return keys
+				}).
+				Build()
+			mapFn := MapGRPCRouteForKongUpstreamPolicy(cl)
+
+			result := mapFn(ctx, tc.input)
+
+			if tc.wantNil {
+				require.Nil(t, result)
+				return
+			}
+			require.NotNil(t, result)
+			if tc.wantLen >= 0 {
+				require.Len(t, result, tc.wantLen)
+			}
+			if len(tc.wantNames) > 0 {
+				names := make([]string, 0, len(result))
+				for _, r := range result {
+					names = append(names, r.Name)
+				}
+				for _, want := range tc.wantNames {
+					require.Contains(t, names, want)
+				}
+			}
+		})
+	}
+}
+
 // schemeWithAll builds a scheme with all required types.
 func schemeWithAll() *runtime.Scheme {
 	s := runtime.NewScheme()

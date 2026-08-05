@@ -23,6 +23,19 @@ func MapHTTPRouteForClientCertSecret(cl client.Client) func(ctx context.Context,
 	}
 }
 
+// MapGRPCRouteForClientCertSecret returns a handler.MapFunc that, given a Secret, lists all
+// Services in the same namespace that reference it via the konghq.com/client-cert annotation,
+// then returns reconcile.Requests for all GRPCRoutes backed by those Services.
+func MapGRPCRouteForClientCertSecret(cl client.Client) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		secret, ok := obj.(*corev1.Secret)
+		if !ok {
+			return nil
+		}
+		return routesForClientCertSecret(ctx, cl, secret.Namespace, secret.Name, kindGRPCRoute)
+	}
+}
+
 // MapTLSRouteForClientCertSecret returns a handler.MapFunc that, given a Secret, lists all
 // Services in the same namespace that reference it via the konghq.com/client-cert annotation,
 // then returns reconcile.Requests for all TLSRoutes backed by those Services.
@@ -80,6 +93,8 @@ func routesForClientCertSecret(ctx context.Context, cl client.Client, secretName
 		switch routeKind {
 		case kindHTTPRoute:
 			routeRequests, err = listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		case kindGRPCRoute:
+			routeRequests, err = listGRPCRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case kindTLSRoute:
 			routeRequests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case kindTCPRoute:
