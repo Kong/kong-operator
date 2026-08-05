@@ -54,8 +54,14 @@ jobs:
       with:
         install: false
 
-    - run: echo "GO_CACHE_KEY=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-crdsvalidationtests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    - name: Compute Go build cache key
+      env:
+        RUNNER_OS: ${{ runner.os }}
+        RUNNER_ARCH: ${{ runner.arch }}
+        GO_MOD_HASH: ${{ hashFiles('**/go.mod') }}
+      run: |
+        echo "GO_CACHE_KEY=go-crdsvalidationtests-$RUNNER_OS-$RUNNER_ARCH-go-$GO_MOD_HASH" >> $GITHUB_ENV
+        echo "GO_CACHE_KEY_2=go-crdsvalidationtests-$RUNNER_OS-$RUNNER_ARCH-go-" >> $GITHUB_ENV
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
@@ -84,16 +90,18 @@ jobs:
     - name: Run the crds validation tests
       env:
         GO_TEST_PARALLEL: 2
+        CLUSTER_VERSION: ${{ matrix.cluster_version }}
+        CRDS_VALIDATION_TEST_PATHS: ${{ join(matrix.crd_validation_test.paths, ' ') }}
       run: |
-        VERSION="${{ matrix.cluster_version }}"
+        VERSION="$CLUSTER_VERSION"
         # Remove leading 'v'
         VERSION="${VERSION#v}"
         # Remove patch number as envtest releases are not provided for every patch version
         VERSION="${VERSION%.*}"
         echo "Cluster version: $VERSION"
         make test.crds-validation \
-          CLUSTER_VERSION=${VERSION} \
-          CRDS_VALIDATION_TEST_PATHS="${{ join(matrix.crd_validation_test.paths, ' ') }}"
+          CLUSTER_VERSION="${VERSION}" \
+          CRDS_VALIDATION_TEST_PATHS="${CRDS_VALIDATION_TEST_PATHS}"
 
     - name: Run the API tests
       if: ${{ matrix.crd_validation_test.name == 'rest' }}

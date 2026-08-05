@@ -153,7 +153,9 @@ jobs:
           fetch-depth: 0
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
+        env:
+          GH_PAT: ${{ secrets.gh-pat }}
+        run: git config --global url."https://${GH_PAT}@github.com".insteadOf "https://github.com"
 
       - name: Setup golang
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -169,9 +171,11 @@ jobs:
       # See: https://github.com/actions/runner/issues/520
       - name: Check OP Service Account Token available
         id: check-op-service-account-token
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.op-service-account-token }}
         run: |
-          # If secrets.op-service-account-token is set, return true.
-          if [ -n "${{ secrets.op-service-account-token }}" ]; then
+          # If OP_SERVICE_ACCOUNT_TOKEN is set, return true.
+          if [ -n "$OP_SERVICE_ACCOUNT_TOKEN" ]; then
               echo "provided=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -227,15 +231,21 @@ jobs:
           egress-policy: audit
       - name: Check if we're not trying to trigger a major/minor release from non main
         if: ${{ inputs.base != 'main' && needs.semver.outputs.patch == '0' }}
+        env:
+          FULLVERSION: ${{ needs.semver.outputs.fullversion }}
+          BASE: ${{ inputs.base }}
         run: |
-          echo "Trying to release: ${{ needs.semver.outputs.fullversion }} from ${{ inputs.base }}"
+          echo "Trying to release: $FULLVERSION from $BASE"
           echo "Major/minor releases can only be triggered from main branch"
           exit 1
 
       - name: Check if we're not trying to trigger a patch release from main
         if: ${{ inputs.base == 'main' && needs.semver.outputs.patch != '0' }}
+        env:
+          FULLVERSION: ${{ needs.semver.outputs.fullversion }}
+          BASE: ${{ inputs.base }}
         run: |
-          echo "Trying to release: ${{ needs.semver.outputs.fullversion }} from ${{ inputs.base }}"
+          echo "Trying to release: $FULLVERSION from $BASE"
           echo "Patch releases can only be triggered from non main, release branch"
           exit 1
 
@@ -248,7 +258,9 @@ jobs:
           ref: ${{ inputs.base }}
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
+        env:
+          GH_PAT: ${{ secrets.gh-pat }}
+        run: git config --global url."https://${GH_PAT}@github.com".insteadOf "https://github.com"
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -356,22 +368,22 @@ jobs:
 
       - name: update cli argument docs
         run: |
-          cp ./docs/cli-arguments-for-developer-konghq-com.md ${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CLI_ARGS_DOC }}
+          cp ./docs/cli-arguments-for-developer-konghq-com.md "$DOCS_REPO/$DOCS_REPO_PATH_CLI_ARGS_DOC"
 
       - name: update CRD reference docs
         run: |
-          mkdir -p "$(dirname "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CRD_DOC }}")"
+          mkdir -p "$(dirname "$DOCS_REPO/$DOCS_REPO_PATH_CRD_DOC")"
           ./scripts/apidocs-gen/post-process-for-konghq.sh \
             ./docs/all-api-reference.md \
-            "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CRD_DOC }}" \
-            "${{ env.DOCS_REPO }}"
+            "$DOCS_REPO/$DOCS_REPO_PATH_CRD_DOC" \
+            "$DOCS_REPO"
 
       - name: update changelog
         run: |
-          mkdir -p "$(dirname "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CHANGELOG }}")"
+          mkdir -p "$(dirname "$DOCS_REPO/$DOCS_REPO_PATH_CHANGELOG")"
           ./scripts/post-process-changelog-for-konghq.sh \
             ./CHANGELOG.md \
-            "${{ env.DOCS_REPO }}/${{ env.DOCS_REPO_PATH_CHANGELOG }}"
+            "$DOCS_REPO/$DOCS_REPO_PATH_CHANGELOG"
 
       - name: Detect changes
         id: detect-changes
@@ -409,9 +421,12 @@ jobs:
         if: steps.create-docs-pr.outputs.pull-request-url && inputs.release-issue-number
         env:
           GH_TOKEN: ${{ secrets.gh-pat }}
+          ISSUE_NUMBER: ${{ inputs.release-issue-number }}
+          REPOSITORY: ${{ github.repository }}
+          PR_URL: ${{ steps.create-docs-pr.outputs.pull-request-url }}
         run: |
-          gh issue comment "${{ inputs.release-issue-number }}" \
-            --repo "${{ github.repository }}" \
-            --body "🤖 Docs PR created: ${{ steps.create-docs-pr.outputs.pull-request-url }}
-          
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "🤖 Docs PR created: $PR_URL
+
           Please review and merge it to update the official documentation (CLI args, CRD reference, changelog)."

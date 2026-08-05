@@ -32,8 +32,14 @@ jobs:
       with:
         install: false
 
-    - run: echo "GO_CACHE_KEY=go-unittests-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-unittests-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    - name: Compute Go build cache key
+      env:
+        RUNNER_OS: ${{ runner.os }}
+        RUNNER_ARCH: ${{ runner.arch }}
+        GO_MOD_HASH: ${{ hashFiles('**/go.mod') }}
+      run: |
+        echo "GO_CACHE_KEY=go-unittests-$RUNNER_OS-$RUNNER_ARCH-go-$GO_MOD_HASH" >> $GITHUB_ENV
+        echo "GO_CACHE_KEY_2=go-unittests-$RUNNER_OS-$RUNNER_ARCH-go-" >> $GITHUB_ENV
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}

@@ -50,8 +50,14 @@ jobs:
       with:
         op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
-    - run: echo "GO_CACHE_KEY=go-envtest-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-envtest-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
+    - name: Compute Go build cache key
+      env:
+        RUNNER_OS: ${{ runner.os }}
+        RUNNER_ARCH: ${{ runner.arch }}
+        GO_MOD_HASH: ${{ hashFiles('**/go.mod') }}
+      run: |
+        echo "GO_CACHE_KEY=go-envtest-$RUNNER_OS-$RUNNER_ARCH-go-$GO_MOD_HASH" >> $GITHUB_ENV
+        echo "GO_CACHE_KEY_2=go-envtest-$RUNNER_OS-$RUNNER_ARCH-go-" >> $GITHUB_ENV
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
@@ -81,16 +87,18 @@ jobs:
       env:
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         GOTESTSUM_JUNITFILE: envtest-tests.xml
+        CLUSTER_VERSION: ${{ inputs.cluster_version }}
+        TESTCASE: ${{ matrix.testcase }}
       run: |
-        VERSION="${{ inputs.cluster_version }}"
+        VERSION="$CLUSTER_VERSION"
         # Remove leading 'v'
         VERSION="${VERSION#v}"
         # Remove patch number as envtest releases are not provided for every patch version
         VERSION="${VERSION%.*}"
         echo "Cluster version: $VERSION"
         make test.envtest \
-          CLUSTER_VERSION=${VERSION} \
-          ENVTEST_TEST_PATHS=./test/envtest/${{ matrix.testcase }}
+          CLUSTER_VERSION="${VERSION}" \
+          ENVTEST_TEST_PATHS="./test/envtest/${TESTCASE}"
 
     - name: collect test coverage
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

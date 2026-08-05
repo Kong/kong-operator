@@ -157,9 +157,9 @@ jobs:
         run: |
           git config --global user.name "Kong's Team k8s bot"
           git config --global user.email "team-k8s+github-bot@konghq.com"
-          yq eval '.on.push.branches = [ "${{ env.RELEASE_BRANCH }}" ]' -i ${{ env.CHARTS_SYNC_WORKFLOW_PATH }}
-          git add ${{ env.CHARTS_SYNC_WORKFLOW_PATH }}
-          git commit -m "chore: update charts sync workflow to trigger on ${{ env.RELEASE_BRANCH }} branch"
+          yq eval '.on.push.branches = [ strenv(RELEASE_BRANCH) ]' -i "$CHARTS_SYNC_WORKFLOW_PATH"
+          git add "$CHARTS_SYNC_WORKFLOW_PATH"
+          git commit -m "chore: update charts sync workflow to trigger on $RELEASE_BRANCH branch"
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v7.0.6
         with:
@@ -201,12 +201,15 @@ jobs:
           git config --global user.email "team-k8s+github-bot@konghq.com"
 
       - name: Cherry-pick commit
+        env:
+          SHA: ${{ github.sha }}
+          VERSION: ${{ needs.semver.outputs.version }}
         run: |
           git fetch --all
-          git checkout -b ${{ env.CHERRYPICK_BRANCH }} origin/main
-          git cherry-pick ${{ github.sha }}
+          git checkout -b "$CHERRYPICK_BRANCH" origin/main
+          git cherry-pick "$SHA"
           # Amend the commit message to avoid infinite loop of this workflow (it's triggered by the commit message).
-          git commit --amend -m "chore: cherry-pick ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto main"
+          git commit --amend -m "chore: cherry-pick $VERSION commit ($SHA) onto main"
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v7.0.6
         with:

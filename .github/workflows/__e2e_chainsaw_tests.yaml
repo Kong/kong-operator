@@ -64,23 +64,24 @@ jobs:
         # This token is being used e.g. in here:
         # https://github.com/Kong/kubernetes-testing-framework/blob/f233236e89ebcaf79575c5084053e4196c037165/pkg/utils/github/release.go#L46
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NODE_IMAGE_VERSION: ${{ inputs.node_image_version }}
       run: |
         ktf environments create \
-          --name ${{ env.CLUSTER_NAME }} \
+          --name "$CLUSTER_NAME" \
           --addon metallb \
           --addon cert-manager \
-          --kubernetes-version ${{ inputs.node_image_version }}
+          --kubernetes-version "$NODE_IMAGE_VERSION"
 
     - name: Load image to kind cluster
-      run: kind load docker-image ${{ env.IMG }}:${{ env.TAG }} --name ${{ env.CLUSTER_NAME }}
+      run: kind load docker-image "$IMG:$TAG" --name "$CLUSTER_NAME"
 
     - name: Deploy operator with Helm
       run: |
         helm install kong-operator charts/kong-operator \
           --namespace kong-system \
           --create-namespace \
-          --set image.repository=${{ env.IMG }} \
-          --set image.tag=${{ env.TAG }} \
+          --set image.repository="$IMG" \
+          --set image.tag="$TAG" \
           --set env.enable_controller_konnect=true \
           --set env.enable_controller_kegdataplane=true \
           --set env.enable_controller_aigatewaydataplane=true \
@@ -90,7 +91,9 @@ jobs:
       run: dig us.control-plane.konghq.tech
 
     - name: Apply chainsaw suite prerequisites
-      run: make test.e2e.chainsaw.prereq DIRNAME=${{ matrix.suite }}
+      env:
+        SUITE: ${{ matrix.suite }}
+      run: make test.e2e.chainsaw.prereq DIRNAME="$SUITE"
 
     - name: run chainsaw e2e tests
       id: chainsaw-tests
@@ -115,4 +118,6 @@ jobs:
 
     - name: Clean up debug snapshots
       if: always() && steps.chainsaw-tests.outcome == 'failure'
-      run: rm -rf /tmp/chainsaw/${{ matrix.suite }}
+      env:
+        SUITE: ${{ matrix.suite }}
+      run: rm -rf "/tmp/chainsaw/$SUITE"

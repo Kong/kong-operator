@@ -38,7 +38,10 @@ jobs:
           fetch-depth: 50
       - id: check-files
         name: Check if only documentation files changed
-        run: ./scripts/check-docs-only-changes.sh ${{ github.event.pull_request.base.sha || 'HEAD~1' }} ${{ github.sha }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || 'HEAD~1' }}
+          HEAD_SHA: ${{ github.sha }}
+        run: ./scripts/check-docs-only-changes.sh "$BASE_SHA" "$HEAD_SHA"
 
   build:
     needs: [check-docs-only]
@@ -69,16 +72,20 @@ jobs:
         with:
           egress-policy: audit
       - name: Check if docs-only changes
+        env:
+          DOCS_ONLY: ${{ needs.check-docs-only.outputs.docs_only }}
         run: |
-          if [[ "${{ needs.check-docs-only.outputs.docs_only }}" == "true" ]]; then
+          if [[ "$DOCS_ONLY" == "true" ]]; then
             echo "Only documentation files were changed, skipping build"
             exit 0
           fi
 
       - name: Check build result
         if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
+        env:
+          JOBS_FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
         run: |
-          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+          if [[ "$JOBS_FAILED" == "true" ]]; then
             echo "Build job failed or was cancelled."
             exit 1
           fi

@@ -120,4 +120,6 @@ jobs:
     # label, so it can only run in a pull_request context. There is no way to acknowledge a
     # breaking change on a bare commit (push/merge_group), so skip it outside of PRs.
     - if: ${{ matrix.name != 'crd-breaking-changes' || github.event_name == 'pull_request' }}
-      run: make ${{ matrix.make-target }}
+      env:
+        MAKE_TARGET: ${{ matrix.make-target }}
+      run: make "$MAKE_TARGET"
