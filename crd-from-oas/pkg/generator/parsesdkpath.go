@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"os"
 	"os/exec"
@@ -11,10 +12,10 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"unicode"
 
 	"golang.org/x/mod/semver"
-	"golang.org/x/tools/go/packages"
 )
 
 type sdkRequestBodyInfo struct {
@@ -23,8 +24,19 @@ type sdkRequestBodyInfo struct {
 	Pointer   bool
 }
 
-var sdkRequestBodyInfoCache = map[string]sdkRequestBodyInfo{}
+// sdkCacheMu guards the caches below. Generation itself is single-goroutine,
+// but generator tests call t.Parallel(), so these package-level caches need
+// protection against concurrent access.
+var sdkCacheMu sync.Mutex
+
 var sdkPackageDirCache = map[string]string{}
+
+// sdkTypeIndexCache maps an SDK import path to a type-name → declared-type
+// index, built once per package the first time any type in it is looked up.
+// The SDK's models/components package alone is ~1260 files; re-parsing it on
+// every lookup (as go/packages.Load previously did) dominated generation
+// runtime.
+var sdkTypeIndexCache = map[string]map[string]ast.Expr{}
 
 // ParseSDKTypePath splits a fully qualified SDK type path like
 // "github.com/Kong/sdk-konnect-go/models/components.CreatePortal"
@@ -40,121 +52,138 @@ func ParseSDKTypePath(path string) (importPath, typeName string, err error) {
 // ParseSDKRequestBodyInfo inspects an SDK request struct type and returns the
 // JSON request body field metadata identified by the `request:"..."` tag.
 func ParseSDKRequestBodyInfo(importPath, typeName string) (sdkRequestBodyInfo, error) {
-	cacheKey := importPath + "." + typeName
-	if info, ok := sdkRequestBodyInfoCache[cacheKey]; ok {
-		return info, nil
-	}
-
-	dir, err := resolveGoPackageDir(importPath)
+	structType, ok, err := sdkStructType(importPath, typeName)
 	if err != nil {
 		return sdkRequestBodyInfo{}, err
 	}
+	if !ok {
+		return sdkRequestBodyInfo{}, fmt.Errorf("type %q not found in %q", typeName, importPath)
+	}
 
-	pkgs, err := loadSDKPackages(importPath, dir)
+	info, err := extractSDKRequestBodyInfo(structType)
 	if err != nil {
-		return sdkRequestBodyInfo{}, err
+		return sdkRequestBodyInfo{}, fmt.Errorf("type %q in %q: %w", typeName, importPath, err)
 	}
-
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Syntax {
-			for _, decl := range file.Decls {
-				genDecl, ok := decl.(*ast.GenDecl)
-				if !ok || genDecl.Tok != token.TYPE {
-					continue
-				}
-				for _, spec := range genDecl.Specs {
-					typeSpec, ok := spec.(*ast.TypeSpec)
-					if !ok || typeSpec.Name.Name != typeName {
-						continue
-					}
-					structType, ok := typeSpec.Type.(*ast.StructType)
-					if !ok {
-						return sdkRequestBodyInfo{}, fmt.Errorf("type %q in %q is not a struct", typeName, importPath)
-					}
-					info, err := extractSDKRequestBodyInfo(structType)
-					if err != nil {
-						return sdkRequestBodyInfo{}, fmt.Errorf("type %q in %q: %w", typeName, importPath, err)
-					}
-					sdkRequestBodyInfoCache[cacheKey] = info
-					return info, nil
-				}
-			}
-		}
-	}
-
-	return sdkRequestBodyInfo{}, fmt.Errorf("type %q not found in %q", typeName, importPath)
+	return info, nil
 }
 
 // ParseSDKUnionMemberFieldNames returns the struct field names tagged as union
 // members on an SDK type. It returns an empty slice when the type is not a
 // union wrapper.
 func ParseSDKUnionMemberFieldNames(importPath, typeName string) ([]string, error) {
-	dir, err := resolveGoPackageDir(importPath)
+	structType, ok, err := sdkStructType(importPath, typeName)
 	if err != nil {
 		return nil, err
 	}
-
-	pkgs, err := loadSDKPackages(importPath, dir)
-	if err != nil {
-		return nil, err
+	if !ok {
+		return nil, nil
 	}
-
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Syntax {
-			for _, decl := range file.Decls {
-				genDecl, ok := decl.(*ast.GenDecl)
-				if !ok || genDecl.Tok != token.TYPE {
-					continue
-				}
-				for _, spec := range genDecl.Specs {
-					typeSpec, ok := spec.(*ast.TypeSpec)
-					if !ok || typeSpec.Name.Name != typeName {
-						continue
-					}
-					structType, ok := typeSpec.Type.(*ast.StructType)
-					if !ok {
-						return nil, fmt.Errorf("type %q in %q is not a struct", typeName, importPath)
-					}
-					return extractSDKUnionMemberFieldNames(structType), nil
-				}
-			}
-		}
-	}
-
-	return nil, nil
+	return extractSDKUnionMemberFieldNames(structType), nil
 }
 
-func loadSDKPackages(importPath, dir string) ([]*packages.Package, error) {
-	config := &packages.Config{
-		Mode: packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedSyntax,
-		Dir:  dir,
+// sdkStructType resolves typeName within importPath to its declared struct
+// type, using a per-package AST index built once and cached across calls
+// (see sdkTypeIndexCache). ok is false when the type is not declared in the
+// package; err reports a type declared but not a struct, or a failure to
+// resolve/parse the package.
+func sdkStructType(importPath, typeName string) (*ast.StructType, bool, error) {
+	dir, err := resolveGoPackageDir(importPath)
+	if err != nil {
+		return nil, false, err
 	}
 
-	pkgs, err := packages.Load(config, ".")
+	index, err := sdkPackageTypeIndex(importPath, dir)
+	if err != nil {
+		return nil, false, err
+	}
+
+	expr, ok := index[typeName]
+	if !ok {
+		return nil, false, nil
+	}
+	structType, ok := expr.(*ast.StructType)
+	if !ok {
+		return nil, false, fmt.Errorf("type %q in %q is not a struct", typeName, importPath)
+	}
+	return structType, true, nil
+}
+
+// sdkPackageTypeIndex returns the cached type-name → declared-type index for
+// the package at dir, building it on first use.
+func sdkPackageTypeIndex(importPath, dir string) (map[string]ast.Expr, error) {
+	sdkCacheMu.Lock()
+	if index, ok := sdkTypeIndexCache[importPath]; ok {
+		sdkCacheMu.Unlock()
+		return index, nil
+	}
+	sdkCacheMu.Unlock()
+
+	index, err := buildSDKTypeIndex(dir)
 	if err != nil {
 		return nil, fmt.Errorf("load package %q from %q: %w", importPath, dir, err)
 	}
-	if len(pkgs) == 0 {
-		return nil, fmt.Errorf("load package %q from %q: no packages returned", importPath, dir)
+
+	sdkCacheMu.Lock()
+	sdkTypeIndexCache[importPath] = index
+	sdkCacheMu.Unlock()
+	return index, nil
+}
+
+// buildSDKTypeIndex parses every top-level .go file (excluding tests) in dir
+// with go/parser and indexes each declared type by name. This avoids the
+// go/packages.Load + go-list-subprocess round trip, which is unnecessary here
+// since only struct tags are read — no type checking or cross-file resolution
+// is needed.
+func buildSDKTypeIndex(dir string) (map[string]ast.Expr, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read dir %q: %w", dir, err)
 	}
 
-	for _, pkg := range pkgs {
-		if len(pkg.Errors) == 0 {
+	index := make(map[string]ast.Expr)
+	fset := token.NewFileSet()
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		return nil, fmt.Errorf("load package %q from %q: %w", importPath, dir, pkg.Errors[0])
+		filePath := filepath.Join(dir, name)
+		f, err := parser.ParseFile(fset, filePath, nil, parser.SkipObjectResolution)
+		if err != nil {
+			return nil, fmt.Errorf("parse %q: %w", filePath, err)
+		}
+		for _, decl := range f.Decls {
+			genDecl, ok := decl.(*ast.GenDecl)
+			if !ok || genDecl.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range genDecl.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					continue
+				}
+				if _, exists := index[typeSpec.Name.Name]; exists {
+					continue
+				}
+				index[typeSpec.Name.Name] = typeSpec.Type
+			}
+		}
 	}
-
-	return pkgs, nil
+	return index, nil
 }
 
 func resolveGoPackageDir(importPath string) (string, error) {
-	if dir, ok := sdkPackageDirCache[importPath]; ok {
+	sdkCacheMu.Lock()
+	dir, ok := sdkPackageDirCache[importPath]
+	sdkCacheMu.Unlock()
+	if ok {
 		return dir, nil
 	}
 
 	if dir, err := resolveGoPackageDirFromModuleCache(importPath); err == nil {
+		sdkCacheMu.Lock()
 		sdkPackageDirCache[importPath] = dir
+		sdkCacheMu.Unlock()
 		return dir, nil
 	}
 
@@ -163,11 +192,13 @@ func resolveGoPackageDir(importPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("go list %q: %w", importPath, err)
 	}
-	dir := strings.TrimSpace(string(out))
+	dir = strings.TrimSpace(string(out))
 	if dir == "" {
 		return "", fmt.Errorf("go list %q returned empty directory", importPath)
 	}
+	sdkCacheMu.Lock()
 	sdkPackageDirCache[importPath] = dir
+	sdkCacheMu.Unlock()
 	return dir, nil
 }
 
