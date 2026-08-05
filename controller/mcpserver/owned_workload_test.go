@@ -246,6 +246,58 @@ func Test_generateDeployment(t *testing.T) {
 	assert.Equal(t, mcpDataPlane.Name, deploy.OwnerReferences[0].Name)
 }
 
+func Test_generateDeployment_Replicas(t *testing.T) {
+	apiAuth := minimalAPIAuth()
+	metadata := mcpServerMetadataWithContainers()
+
+	tests := []struct {
+		name       string
+		deployment *mcpv1alpha1.DeploymentOptions
+		want       int32
+	}{
+		{
+			name:       "no deployment options defaults to 1 replica",
+			deployment: nil,
+			want:       1,
+		},
+		{
+			name: "static scaling with explicit replicas",
+			deployment: &mcpv1alpha1.DeploymentOptions{
+				Scaling: &mcpv1alpha1.Scaling{
+					HorizontalScaling: &mcpv1alpha1.HorizontalScaling{
+						Type:   mcpv1alpha1.MCPHorizontalScalingTypeStatic,
+						Static: mcpv1alpha1.MCPHorizontalScalingStatic{Replicas: new(int32(3))},
+					},
+				},
+			},
+			want: 3,
+		},
+		{
+			name: "static scaling with nil replicas defaults to 1",
+			deployment: &mcpv1alpha1.DeploymentOptions{
+				Scaling: &mcpv1alpha1.Scaling{
+					HorizontalScaling: &mcpv1alpha1.HorizontalScaling{
+						Type: mcpv1alpha1.MCPHorizontalScalingTypeStatic,
+					},
+				},
+			},
+			want: 1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mcpDataPlane := minimalMCPServerDataPlane()
+			mcpDataPlane.Spec.Deployment = tc.deployment
+
+			deploy := generateDeployment(mcpDataPlane, metadata, apiAuth)
+
+			require.NotNil(t, deploy.Spec.Replicas)
+			assert.Equal(t, tc.want, *deploy.Spec.Replicas)
+		})
+	}
+}
+
 func Test_generateService(t *testing.T) {
 	mcpDataPlane := minimalMCPServerDataPlane()
 	svc := generateService(mcpDataPlane)
