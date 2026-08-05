@@ -3,7 +3,6 @@ package conformance
 import (
 	"sigs.k8s.io/gateway-api/conformance/tests"
 
-	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test"
 )
 
@@ -20,10 +19,6 @@ var skippedTestsForStandard = []string{
 	// configuration reaches the data plane, causing the test to fail with EOF.
 	tests.TCPRouteWeightedRouting.ShortName,
 }
-
-var skippedTestsForExpressionsRouter = []string{}
-
-var skippedTestsForStandardTraditionalCompatibleRouter = []string{}
 
 var skippedTestsForHybrid = []string{
 
@@ -49,21 +44,11 @@ var skippedTestsForHybrid = []string{
 	tests.UDPRouteWeightedRouting.ShortName,
 }
 
-// skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.
-func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType) []string {
+// skippedTestsForConfig returns the list of skipped tests for the given gateway type.
+func skippedTestsForConfig(gwType gatewayType) []string {
 	skipped := append([]string{}, skippedTestsShared...)
 	if gwType == standardGateway {
 		skipped = append(skipped, skippedTestsForStandard...)
-	}
-
-	switch routerFlavor {
-	case consts.RouterFlavorTraditionalCompatible:
-		if gwType == standardGateway {
-			skipped = append(skipped, skippedTestsForStandardTraditionalCompatibleRouter...)
-			skipped = append(skipped, tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName)
-		}
-	case consts.RouterFlavorExpressions:
-		skipped = append(skipped, skippedTestsForExpressionsRouter...)
 	}
 
 	if gwType == hybridGateway {
