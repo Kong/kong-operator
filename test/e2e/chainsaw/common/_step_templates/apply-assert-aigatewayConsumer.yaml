@@ -1,0 +1,44 @@
+# Template for creating and asserting an AIGatewayConsumer.
+#
+# Required bindings:
+#   - consumer_name: Name of the AIGatewayConsumer to create (also used as apiSpec name).
+#   - namespace: Namespace where the AIGatewayConsumer will be created.
+#   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
+#   - consumer_groups: List of {name: <AIGatewayConsumerGroup name>} entries to enroll the
+#     consumer into (spec.consumerGroups). Pass an empty list ([]) for no group membership.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-consumer
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: AIGatewayConsumer
+          metadata:
+            name: ($consumer_name)
+            namespace: ($namespace)
+          spec:
+            aiGatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($aigw_cp_name)
+            apiSpec:
+              name: ($consumer_name)
+              displayName: ($consumer_name)
+              type: api-key
+            consumerGroups: ($consumer_groups)
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: AIGatewayConsumer
+          metadata:
+            name: ($consumer_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (conditions[?type == 'ConsumerGroupRefsValid']):
+              - status: 'True'
+            (id != null): true

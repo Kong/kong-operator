@@ -1,0 +1,460 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-consumers-and-credentials-keyauth
+spec:
+  description: |
+    Exhaustive coverage of AIGatewayConsumer / AIGatewayConsumerCredential / ACL-by-group
+    enforcement for a key-auth-protected AIGatewayAgent route. Builds on
+    identity-provider-keyauth (bare key-auth, no ACL) by adding an AIGatewayConsumerGroup
+    and `access.acls` gating, and exercises the full consumer lifecycle end-to-end against
+    a real in-cluster AIGatewayDataPlane. See consumers-and-credentials-openid-connect for
+    the same exhaustive coverage against an OAuth-mapped (openid-connect) identity provider
+    instead. The AIGatewayAgent here is a plain `type: http` route
+    to the shared go-echo backend, NOT an `ai-proxy`-type agent with a real/mock LLM model
+    provider behind it (see ai-proxy/ai-proxy-mirror/aigateway-policy for that). Consumer/
+    credential/ACL enforcement happens in front of the route regardless of what backs it, so
+    this suite intentionally skips model-routing entirely to stay fast and focused. Requests
+    with no credential, or with one key-auth can't validate (missing/garbage/
+    deleted), fall through key-auth as an anonymous consumer, which the ACL then denies
+    with 403 (rather than key-auth itself rejecting with 401). Scenarios covered:
+      1. No credential, a garbage credential, or a deleted credential are all rejected (403).
+      2. A valid credential for a consumer in the allowed group succeeds (200).
+      3. Removing/restoring a consumer's group membership at runtime immediately flips it
+         between denied (403) and allowed (200).
+      4. A consumer outside the allowed group is denied (403) even with a valid credential
+         of its own, proving the ACL checks group membership, not just authentication.
+      5. A `deny`-type ACL on a second route blocks the group it lists while a consumer
+         outside that group passes through.
+      6. A consumer with two credentials keeps working on whichever key is still valid
+         (rotation), and only loses access once both are revoked.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: keyauth_idp_name
+      value: (join('-', [($test_name), 'key-auth-idp']))
+    - name: consumer_group_name
+      value: (join('-', [($test_name), 'consumer-group']))
+    - name: consumer_name
+      value: (join('-', [($test_name), 'consumer']))
+    - name: credential_name
+      value: (join('-', [($test_name), 'credential']))
+    - name: credential_secret_name
+      value: (join('-', [($test_name), 'credential-secret']))
+    - name: api_key_value
+      value: e2e-test-api-key-value
+    - name: invalid_api_key_value
+      value: never-registered-api-key-value
+    - name: credential_name_2
+      value: (join('-', [($test_name), 'credential-2']))
+    - name: credential_secret_name_2
+      value: (join('-', [($test_name), 'credential-2-secret']))
+    - name: api_key_value_2
+      value: e2e-test-api-key-value-2
+    - name: outsider_consumer_name
+      value: (join('-', [($test_name), 'outsider-consumer']))
+    - name: outsider_credential_name
+      value: (join('-', [($test_name), 'outsider-credential']))
+    - name: outsider_credential_secret_name
+      value: (join('-', [($test_name), 'outsider-credential-secret']))
+    - name: outsider_api_key_value
+      value: e2e-test-outsider-api-key-value
+    - name: http_agent_name
+      value: (join('-', [($test_name), 'http-agent']))
+    - name: http_agent_route_path
+      value: /http-agent
+    - name: http_agent_deny_name
+      value: (join('-', [($test_name), 'http-agent-deny']))
+    - name: http_agent_deny_route_path
+      value: /http-agent-deny
+    # Defaults for verify-aigw-agent-request-from-{cluster,host} optional bindings.
+    # Steps below only need to override what differs from these.
+    - name: request_headers
+      value: ''
+    - name: request_body
+      value: ''
+    - name: content_type
+      value: application/json
+    - name: expected_status
+      value: "200"
+    - name: expected_status_not
+      value: ''
+    - name: expected_body
+      value: ''
+    - name: unexpected_body
+      value: ''
+    - name: expected_jsonrpc
+      value: ''
+    - name: expected_json_id
+      value: ''
+    - name: expected_json_result_text
+      value: ''
+    - name: oidc_token_url
+      value: ''
+    - name: oidc_client_id
+      value: ''
+    - name: oidc_client_secret
+      value: ''
+    - name: oidc_scope
+      value: ''
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: 4-Create-keyauth-identity-provider
+      bindings:
+        - name: idp_name
+          value: ($keyauth_idp_name)
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayIdentityProvider-keyauth.yaml
+    - name: 5-Create-consumer-group
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerGroup.yaml
+      bindings:
+        - name: policies
+          value: []
+    - name: 6-Create-consumer
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_groups
+          value:
+            - name: ($consumer_group_name)
+    - name: 7-Create-consumer-credential
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerCredential-apikey.yaml
+      bindings:
+        - name: secret_name
+          value: ($credential_secret_name)
+    - name: 8-Start-echo-agent-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: 9-Create-aigateway-agent
+      bindings:
+        - name: agent_access
+          value:
+            identityProviders:
+              - ($keyauth_idp_name)
+            acls:
+              type: allow
+              allow:
+                allow:
+                  - kind: AIGatewayConsumerGroup
+                    name: ($consumer_group_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayAgent-http.yaml
+    - name: 10-Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+    - name: 11-Reject-request-without-credential-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_status
+          value: "403"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 12-Reject-request-without-credential-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_status
+          value: "403"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    - name: 13-Reject-request-with-invalid-credential-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($invalid_api_key_value)]))
+        - name: expected_status
+          value: "403"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 14-Accept-request-with-valid-credential-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 15-Accept-request-with-valid-credential-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    # --- Dynamic group membership: revoking/restoring group membership flips access
+    # even though the credential itself never changes.
+    - name: 16-Remove-consumer-from-group
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_groups
+          value: []
+    - name: 17-Reject-request-after-group-membership-removed-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_status
+          value: "403"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 18-Restore-consumer-group-membership
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_groups
+          value:
+            - name: ($consumer_group_name)
+    - name: 19-Accept-request-after-group-membership-restored-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    # --- Outsider consumer: valid credential, but never enrolled in the allowed group.
+    - name: 20-Create-outsider-consumer
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_name
+          value: ($outsider_consumer_name)
+        - name: consumer_groups
+          value: []
+    - name: 21-Create-outsider-consumer-credential
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerCredential-apikey.yaml
+      bindings:
+        - name: consumer_name
+          value: ($outsider_consumer_name)
+        - name: credential_name
+          value: ($outsider_credential_name)
+        - name: secret_name
+          value: ($outsider_credential_secret_name)
+        - name: api_key_value
+          value: ($outsider_api_key_value)
+    - name: 22-Reject-request-outsider-consumer-not-in-allowed-group-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($outsider_api_key_value)]))
+        - name: expected_status
+          value: "403"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    # --- deny-type ACL on a second route: blocks the listed group, lets others through.
+    - name: 23-Create-aigateway-agent-deny
+      bindings:
+        - name: http_agent_name
+          value: ($http_agent_deny_name)
+        - name: http_agent_route_path
+          value: ($http_agent_deny_route_path)
+        - name: agent_access
+          value:
+            identityProviders:
+              - ($keyauth_idp_name)
+            acls:
+              type: deny
+              deny:
+                deny:
+                  - kind: AIGatewayConsumerGroup
+                    name: ($consumer_group_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayAgent-http.yaml
+    - name: 24-Reject-request-consumer-in-denied-group-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_deny_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_status
+          value: "403"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 25-Accept-request-consumer-not-in-denied-group-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_deny_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($outsider_api_key_value)]))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    # --- Credential rotation: a second credential keeps working after the first is revoked.
+    - name: 26-Create-second-credential-for-consumer
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerCredential-apikey.yaml
+      bindings:
+        - name: credential_name
+          value: ($credential_name_2)
+        - name: secret_name
+          value: ($credential_secret_name_2)
+        - name: api_key_value
+          value: ($api_key_value_2)
+    - name: 27-Accept-request-with-second-credential-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value_2)]))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 28-Delete-first-credential-and-revoke-access
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              name: ($credential_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($credential_name)
+                namespace: ($namespace)
+    - name: 29-Accept-request-with-second-credential-after-first-revoked-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value_2)]))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 30-Delete-second-credential-and-revoke-all-access
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              name: ($credential_name_2)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($credential_name_2)
+                namespace: ($namespace)
+    - name: 31-Reject-request-after-credential-revoked-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_status
+          value: "403"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 32-Reject-request-after-credential-revoked-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_status
+          value: "403"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-consumers-and-credentials-keyauth
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
