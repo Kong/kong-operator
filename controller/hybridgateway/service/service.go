@@ -103,6 +103,16 @@ func ServiceForRuleWithName[
 		defaultProtocol = "http"
 		backendRequestTimeout = namegen.BackendRequestTimeoutMilliseconds(httpRule)
 
+	case *gwtypes.GRPCRoute:
+		grpcRule, ok := any(rule).(gwtypes.GRPCRouteRule)
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		serviceName = namegen.NewKongServiceNameForGRPCRouteRule(r, cp, grpcRule)
+		namespace = r.Namespace
+		backendRefs = utils.GRPCBackendRefsToBackendRefs(grpcRule.BackendRefs)
+		defaultProtocol = "grpc"
+
 	case *gwtypes.TLSRoute:
 		tlsRule, ok := any(rule).(gwtypes.TLSRouteRule)
 		if !ok {

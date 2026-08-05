@@ -214,6 +214,295 @@ func TestRoutesForRule(t *testing.T) {
 	}
 }
 
+func TestRoutesForGRPCRouteRule(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.GRPCRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{
+					{Name: "test-gateway"},
+				},
+			},
+		},
+	}
+
+	exact := gatewayv1.GRPCMethodMatchExact
+	rule := gwtypes.GRPCRouteRule{
+		Matches: []gatewayv1.GRPCRouteMatch{
+			{
+				Method: &gatewayv1.GRPCMethodMatch{
+					Type:    &exact,
+					Service: new("foo.bar.v1.Service"),
+					Method:  new("DoThing"),
+				},
+			},
+			{
+				Headers: []gatewayv1.GRPCHeaderMatch{{Name: "version", Value: "v1"}},
+			},
+		},
+	}
+	// grpcRouteMatchPriorities reads priorities from the route's own Spec.Rules, so it must
+	// match the rule passed to RoutesForRule below.
+	grpcRoute.Spec.Rules = []gatewayv1.GRPCRouteRule{rule}
+
+	pRef := &gwtypes.ParentReference{
+		Name:      "test-gateway",
+		Namespace: (*gatewayv1.Namespace)(new("test-namespace")),
+	}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+				{Name: "https", Protocol: gatewayv1.HTTPSProtocolType, Port: 443},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	results, err := RoutesForRule(ctx, logger, fakeClient, grpcRoute, rule, 0, pRef, cpRef, nil, "test-service", []string{"example.com"})
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+
+	methodRoute := results[0]
+	assert.Equal(t, "test-namespace", methodRoute.Namespace)
+	assert.Equal(t, []string{"example.com"}, methodRoute.Spec.Hosts)
+	assert.Equal(t, []string{`~/foo\.bar\.v1\.Service/DoThing$`}, methodRoute.Spec.Paths)
+	require.NotNil(t, methodRoute.Spec.ServiceRef)
+	require.NotNil(t, methodRoute.Spec.ServiceRef.NamespacedRef)
+	assert.Equal(t, "test-service", methodRoute.Spec.ServiceRef.NamespacedRef.Name)
+	assert.ElementsMatch(t, []sdkkonnectcomp.Protocols{sdkkonnectcomp.ProtocolsGrpc, sdkkonnectcomp.ProtocolsGrpcs}, methodRoute.Spec.Protocols)
+	require.NotNil(t, methodRoute.Spec.RegexPriority)
+
+	headerRoute := results[1]
+	assert.Equal(t, []string{routebuilder.KongGRPCRouteCatchAllPath}, headerRoute.Spec.Paths)
+	assert.Contains(t, headerRoute.Spec.Headers, "version")
+	require.NotNil(t, headerRoute.Spec.RegexPriority)
+
+	// The exact service+method match is strictly more specific (longer service/method
+	// character count) than the headers-only, method-less match, so it must win.
+	assert.Greater(t, *methodRoute.Spec.RegexPriority, *headerRoute.Spec.RegexPriority)
+}
+
+func TestRoutesForGRPCRouteRule_NoMatches(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+		Spec: gatewayv1.GRPCRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}},
+			},
+		},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway", Namespace: (*gatewayv1.Namespace)(new("test-namespace"))}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	results, err := RoutesForGRPCRouteRule(ctx, logger, fakeClient, grpcRoute, gwtypes.GRPCRouteRule{}, 0, pRef, cpRef, nil, "test-service", nil)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, []string{routebuilder.KongGRPCRouteCatchAllPath}, results[0].Spec.Paths)
+}
+
+func TestRoutesForGRPCRouteRule_NoMatchesHasLowerPriorityThanSpecificMatch(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+		Spec: gatewayv1.GRPCRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}},
+			},
+			Rules: []gatewayv1.GRPCRouteRule{
+				{},
+				{
+					Matches: []gatewayv1.GRPCRouteMatch{{
+						Method: &gatewayv1.GRPCMethodMatch{Service: new("foo.bar.v1.Service")},
+					}},
+				},
+			},
+		},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway", Namespace: (*gatewayv1.Namespace)(new("test-namespace"))}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	catchAllRoutes, err := RoutesForGRPCRouteRule(ctx, logger, fakeClient, grpcRoute, grpcRoute.Spec.Rules[0], 0, pRef, cpRef, nil, "catch-all-service", nil)
+	require.NoError(t, err)
+	require.Len(t, catchAllRoutes, 1)
+	specificRoutes, err := RoutesForGRPCRouteRule(ctx, logger, fakeClient, grpcRoute, grpcRoute.Spec.Rules[1], 1, pRef, cpRef, nil, "specific-service", nil)
+	require.NoError(t, err)
+	require.Len(t, specificRoutes, 1)
+
+	require.NotNil(t, catchAllRoutes[0].Spec.RegexPriority)
+	require.NotNil(t, specificRoutes[0].Spec.RegexPriority)
+	assert.Equal(t, []string{routebuilder.KongGRPCRouteCatchAllPath}, catchAllRoutes[0].Spec.Paths)
+	assert.Greater(t, *specificRoutes[0].Spec.RegexPriority, *catchAllRoutes[0].Spec.RegexPriority)
+}
+
+func TestRoutesForGRPCRouteRule_NoMatchesRulesHaveDistinctNames(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+		Spec: gatewayv1.GRPCRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}},
+			},
+			Rules: []gatewayv1.GRPCRouteRule{{}, {}},
+		},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway", Namespace: (*gatewayv1.Namespace)(new("test-namespace"))}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	rule0Routes, err := RoutesForGRPCRouteRule(ctx, logger, fakeClient, grpcRoute, grpcRoute.Spec.Rules[0], 0, pRef, cpRef, nil, "backend-a-service", nil)
+	require.NoError(t, err)
+	require.Len(t, rule0Routes, 1)
+	rule1Routes, err := RoutesForGRPCRouteRule(ctx, logger, fakeClient, grpcRoute, grpcRoute.Spec.Rules[1], 1, pRef, cpRef, nil, "backend-b-service", nil)
+	require.NoError(t, err)
+	require.Len(t, rule1Routes, 1)
+
+	assert.NotEqual(t, rule0Routes[0].Name, rule1Routes[0].Name)
+}
+
+func TestGRPCRouteMatchPriorities(t *testing.T) {
+	grpcRoute := &gwtypes.GRPCRoute{
+		Spec: gatewayv1.GRPCRouteSpec{
+			Rules: []gatewayv1.GRPCRouteRule{
+				{
+					// Rule 0: no method matcher, headers only -> least specific class.
+					Matches: []gatewayv1.GRPCRouteMatch{{
+						Headers: []gatewayv1.GRPCHeaderMatch{{Name: "version", Value: "v1"}},
+					}},
+				},
+				{
+					// Rule 1: service only.
+					Matches: []gatewayv1.GRPCRouteMatch{{
+						Method: &gatewayv1.GRPCMethodMatch{Service: new("foo.bar.v1.Service")},
+					}},
+				},
+				{
+					// Rule 2: service + method, most specific.
+					Matches: []gatewayv1.GRPCRouteMatch{{
+						Method: &gatewayv1.GRPCMethodMatch{
+							Service: new("foo.bar.v1.Service"),
+							Method:  new("DoThing"),
+						},
+					}},
+				},
+			},
+		},
+	}
+
+	priorities := grpcRouteMatchPriorities(grpcRoute)
+
+	headersOnly := priorityForGRPCRouteMatch(priorities, 0, 0)
+	serviceOnly := priorityForGRPCRouteMatch(priorities, 1, 0)
+	serviceAndMethod := priorityForGRPCRouteMatch(priorities, 2, 0)
+
+	assert.Less(t, headersOnly, serviceOnly)
+	assert.Less(t, serviceOnly, serviceAndMethod)
+}
+
+func TestGRPCRouteMatchPriorities_TieBreaksOnFirstDeclaredMatch(t *testing.T) {
+	// Two matches in the same specificity class (identical service, no method, no headers):
+	// the earlier-declared one must win per Gateway API's "first matching rule" tie-break.
+	grpcRoute := &gwtypes.GRPCRoute{
+		Spec: gatewayv1.GRPCRouteSpec{
+			Rules: []gatewayv1.GRPCRouteRule{
+				{Matches: []gatewayv1.GRPCRouteMatch{{
+					Method: &gatewayv1.GRPCMethodMatch{Service: new("foo.bar.v1.Service")},
+				}}},
+				{Matches: []gatewayv1.GRPCRouteMatch{{
+					Method: &gatewayv1.GRPCMethodMatch{Service: new("other.v1.Service")},
+				}}},
+			},
+		},
+	}
+
+	priorities := grpcRouteMatchPriorities(grpcRoute)
+	assert.Greater(t, priorityForGRPCRouteMatch(priorities, 0, 0), priorityForGRPCRouteMatch(priorities, 1, 0))
+}
+
 func TestRoutesForTCPRouteRule(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
@@ -724,6 +1013,85 @@ func TestRoutesForTLSRouteRule_TagsAnnotation(t *testing.T) {
 			}
 
 			results, err := RoutesForRule(ctx, logger, fakeClient, tlsRoute, rule, 0, pRef, cpRef, nil, "test-service", []string{"example.com"})
+			require.NoError(t, err)
+			require.Len(t, results, 1)
+			assert.Equal(t, tt.expected, results[0].Spec.Tags)
+		})
+	}
+}
+
+func TestRoutesForGRPCRouteRule_TagsAnnotation(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	pRef := &gwtypes.ParentReference{
+		Name:      "test-gateway",
+		Namespace: (*gatewayv1.Namespace)(new("test-namespace")),
+	}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	rule := gwtypes.GRPCRouteRule{
+		Matches: []gatewayv1.GRPCRouteMatch{
+			{Method: &gatewayv1.GRPCMethodMatch{Service: new("foo.bar.v1.Service")}},
+		},
+	}
+	gateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    commonv1alpha1.Tags
+	}{
+		{
+			name:        "tags annotation present",
+			annotations: map[string]string{"konghq.com/tags": "r1,r2"},
+			expected:    commonv1alpha1.Tags{"r1", "r2"},
+		},
+		{
+			name:        "tags annotation absent",
+			annotations: nil,
+			expected:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			grpcRoute := &gwtypes.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-route",
+					Namespace:   "test-namespace",
+					Annotations: tt.annotations,
+				},
+				Spec: gatewayv1.GRPCRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{Name: "test-gateway"},
+						},
+					},
+				},
+			}
+
+			results, err := RoutesForRule(ctx, logger, fakeClient, grpcRoute, rule, 0, pRef, cpRef, nil, "test-service", []string{"example.com"})
 			require.NoError(t, err)
 			require.Len(t, results, 1)
 			assert.Equal(t, tt.expected, results[0].Spec.Tags)

@@ -65,6 +65,10 @@ func TargetsForBackendRefs[
 		if _, ok := any(backendRefs).([]gwtypes.HTTPBackendRef); !ok {
 			return nil, fmt.Errorf("failed to build KongTarget: unmatched route and backendRefs type: %T and  %T", parentRoute, backendRefs)
 		}
+	case *gwtypes.GRPCRoute:
+		if _, ok := any(backendRefs).([]gwtypes.GRPCBackendRef); !ok {
+			return nil, fmt.Errorf("failed to build KongTarget: unmatched route and backendRefs type: %T and  %T", parentRoute, backendRefs)
+		}
 	case *gwtypes.TLSRoute:
 		if _, ok := any(backendRefs).([]gwtypes.BackendRef); !ok {
 			return nil, fmt.Errorf("failed to build KongTarget: unmatched route and backendRefs type: %T and  %T", parentRoute, backendRefs)

@@ -30,6 +30,10 @@ const (
 	// indicating which HTTPRoute is associated with the resource.
 	HybridRouteHTTPRouteAnnotation = "hybrid-routes"
 
+	// HybridRouteGRPCRouteAnnotation is used to annotate resources created for hybrid gateways,
+	// indicating which GRPCRoutes are associated with the resource.
+	HybridRouteGRPCRouteAnnotation = "hybrid-routes-GRPCRoute"
+
 	// HybridRouteTLSRouteAnnotation is used to annotate resources created for hybrid gateways,
 	// indicating which TLSRoutes are associated with the resource.
 	HybridRouteTLSRouteAnnotation = "hybrid-routes-TLSRoute"
@@ -42,6 +46,11 @@ const (
 	// used to annotate resources created for hybrid gateways, indicating which HTTPRoute
 	// is associated with the resource.
 	GatewayOperatorHybridRoutesHTTPRouteAnnotation = OperatorAnnotationPrefix + HybridRouteHTTPRouteAnnotation
+
+	// GatewayOperatorHybridRoutesGRPCRouteAnnotation is the fully qualified annotation key
+	// used to annotate resources created for hybrid gateways, indicating which GRPCRoute
+	// is associated with the resource.
+	GatewayOperatorHybridRoutesGRPCRouteAnnotation = OperatorAnnotationPrefix + HybridRouteGRPCRouteAnnotation
 
 	// GatewayOperatorHybridRoutesTLSRouteAnnotation is the fully qualified annotation key
 	// used to annotate resources created for hybrid gateways, indicating which TLSRoute
