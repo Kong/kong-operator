@@ -130,7 +130,7 @@ type MCPHorizontalScalingStatic struct {
 	//
 	// +optional
 	// +kubebuilder:default=1
-	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=1
 	Replicas *int32 `json:"replicas,omitempty"`
 }
 

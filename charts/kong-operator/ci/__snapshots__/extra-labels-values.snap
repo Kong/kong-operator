@@ -65392,7 +65392,7 @@ spec:
                                   Replicas describes the number of desired replicas.
                                   This is a pointer to distinguish between explicit zero and not specified.
                                 format: int32
-                                minimum: 0
+                                minimum: 1
                                 type: integer
                             type: object
                           type:
