@@ -80,7 +80,7 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
 	}
 
-	skippedTests := skippedTestsForConfig(kongRouterFlavor, gwType)
+	skippedTests := skippedTestsForConfig(gwType)
 	runConformance(t, gwType, kongRouterFlavor, supportedFeatures, cleanupResources, skippedTests)
 }
 
