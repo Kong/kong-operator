@@ -155,6 +155,8 @@ func generateKongService(
 	clusterDomain string,
 	cpRef commonv1alpha1.ControlPlaneRef,
 ) *configurationv1alpha1.KongService {
+	// TODO: this currently assumes there is only one service per MCPServer returned.
+	// If this changes this has to be updated to generate a unique name for each service.
 	nn := generateWorkloadNN(mcpDataPlane)
 
 	// Use the Kubernetes Service DNS name so that Kong routes traffic to the
@@ -222,6 +224,8 @@ func generateKongRoute(
 	svcIDToName map[string]string,
 	cpRef commonv1alpha1.ControlPlaneRef,
 ) *configurationv1alpha1.KongRoute {
+	// TODO: this currently assumes there is only one route per MCPServer returned.
+	// If this changes this has to be updated to generate a unique name for each route.
 	nn := generateWorkloadNN(mcpDataPlane)
 
 	kr := &configurationv1alpha1.KongRoute{
