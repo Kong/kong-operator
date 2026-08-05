@@ -1521,6 +1521,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 	}
 	listenerAccepted := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	listenerRejected := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.HTTPProtocolType}
+	listenerAcceptedHTTPS := gwtypes.Listener{Name: "listener1", Port: 443, Protocol: gwtypes.HTTPSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: new(gwtypes.TLSModeTerminate)}}
 	tlsModePassthrough := gatewayv1.TLSModePassthrough
 	tlsModeTerminate := gatewayv1.TLSModeTerminate
 	listenerRejectedTLS := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModeTerminate}}
@@ -1589,6 +1590,22 @@ func Test_FilterMatchingListeners(t *testing.T) {
 			wantCond:  false,
 		},
 		{
+			name:      "GRPCRoute - HTTP listener matches",
+			pRef:      pRef,
+			routeKind: "GRPCRoute",
+			listeners: []gwtypes.Listener{listenerAccepted},
+			wantLen:   1,
+			wantCond:  false,
+		},
+		{
+			name:      "GRPCRoute - HTTPS listener with terminate TLS matches",
+			pRef:      pRef,
+			routeKind: "GRPCRoute",
+			listeners: []gwtypes.Listener{listenerAcceptedHTTPS},
+			wantLen:   1,
+			wantCond:  false,
+		},
+		{
 			name:      "TLSRoute - no accepted listeners",
 			pRef:      pRef,
 			routeKind: "TLSRoute",
@@ -1632,6 +1649,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	pRef := gwtypes.ParentReference{Name: "listener1"}
 	listener := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	kind := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "HTTPRoute"}
+	kindGRPCRoute := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "GRPCRoute"}
 	kindTLSRoute := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "TLSRoute"}
 	routeNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
 
@@ -1704,6 +1722,23 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 			wantLen:   1,
 			wantCond:  false,
 			wantErr:   false,
+		},
+		{
+			name:      "GRPCRoute - AllowedRoutes nil (all allowed)",
+			listeners: []gwtypes.Listener{listener},
+			kind:      kindGRPCRoute,
+			routeNS:   routeNS,
+			wantLen:   1,
+			wantCond:  false,
+			wantErr:   false,
+		},
+		{
+			name:      "GRPCRoute - TLS mode mismatch",
+			listeners: []gwtypes.Listener{listenerTLSPassthrough},
+			kind:      kindGRPCRoute,
+			routeNS:   routeNS,
+			wantLen:   0,
+			wantCond:  true,
 		},
 		{
 			name:      "Kind mismatch",
@@ -2987,6 +3022,228 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestBuildResolvedRefsConditionForGRPCRoute covers the GRPCRoute-specific wiring in
+// BuildResolvedRefsConditionForGRPCRoute (extracting BackendRefs from GRPCRouteRule and
+// ExtensionRef filters keyed on gwtypes.GRPCRouteFilterExtensionRef, not HTTPRoute's constant).
+// The shared resolution logic itself (unsupported kind, cross-namespace ReferenceGrant, etc.) is
+// already exhaustively covered by TestBuildResolvedRefsCondition against buildResolvedRefsCondition,
+// so this only needs to prove the GRPCRoute wrapper feeds that logic correctly.
+func TestBuildResolvedRefsConditionForGRPCRoute(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "svc",
+		},
+	}
+	kongPlugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-plugin",
+		},
+		PluginName: "rate-limiting",
+	}
+
+	grpcRouteTypeMeta := metav1.TypeMeta{
+		Kind:       "GRPCRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+	}
+
+	tests := []struct {
+		name        string
+		clientObjs  []client.Object
+		route       *gwtypes.GRPCRoute
+		wantStatus  metav1.ConditionStatus
+		wantReason  string
+		wantMsgPart string
+	}{
+		{
+			name:       "all references resolved - BackendRef and ExtensionRef filter",
+			clientObjs: []client.Object{service, kongPlugin},
+			route: &gwtypes.GRPCRoute{
+				TypeMeta:   grpcRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.GRPCRouteSpec{
+					Rules: []gwtypes.GRPCRouteRule{{
+						BackendRefs: []gwtypes.GRPCBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  gwtypes.ObjectName("svc"),
+									Kind:  kindPtr("Service"),
+									Group: groupPtr("core"),
+								},
+							},
+						}},
+						Filters: []gatewayv1.GRPCRouteFilter{{
+							Type: gwtypes.GRPCRouteFilterExtensionRef,
+							ExtensionRef: &gwtypes.LocalObjectReference{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+								Name:  "test-plugin",
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart: "All references resolved",
+		},
+		{
+			name:       "unsupported group/kind",
+			clientObjs: []client.Object{service},
+			route: &gwtypes.GRPCRoute{
+				TypeMeta:   grpcRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.GRPCRouteSpec{
+					Rules: []gwtypes.GRPCRouteRule{{
+						BackendRefs: []gwtypes.GRPCBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  gwtypes.ObjectName("svc"),
+									Kind:  kindPtr("Unsupported"),
+									Group: groupPtr("core"),
+								},
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonInvalidKind),
+			wantMsgPart: "Unsupported BackendRef",
+		},
+		{
+			name:       "service not found",
+			clientObjs: []client.Object{},
+			route: &gwtypes.GRPCRoute{
+				TypeMeta:   grpcRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.GRPCRouteSpec{
+					Rules: []gwtypes.GRPCRouteRule{{
+						BackendRefs: []gwtypes.GRPCBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  gwtypes.ObjectName("svc"),
+									Kind:  kindPtr("Service"),
+									Group: groupPtr("core"),
+								},
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonBackendNotFound),
+			wantMsgPart: "not found",
+		},
+		{
+			name:       "ExtensionRef KongPlugin not found",
+			clientObjs: []client.Object{service},
+			route: &gwtypes.GRPCRoute{
+				TypeMeta:   grpcRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.GRPCRouteSpec{
+					Rules: []gwtypes.GRPCRouteRule{{
+						Filters: []gatewayv1.GRPCRouteFilter{{
+							Type: gwtypes.GRPCRouteFilterExtensionRef,
+							ExtensionRef: &gwtypes.LocalObjectReference{
+								Group: "configuration.konghq.com",
+								Kind:  "KongPlugin",
+								Name:  "missing-plugin",
+							},
+						}},
+					}},
+				},
+			},
+			wantStatus: metav1.ConditionFalse,
+			wantReason: string(gwtypes.RouteReasonBackendNotFound),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := runtime.NewScheme()
+			require.NoError(t, corev1.AddToScheme(s))
+			require.NoError(t, configurationv1.AddToScheme(s))
+			require.NoError(t, gatewayv1.Install(s))
+
+			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...).Build()
+
+			cond, err := BuildResolvedRefsConditionForGRPCRoute(ctx, logger, cl, tt.route)
+			require.NoError(t, err)
+			require.NotNil(t, cond)
+			require.Equal(t, tt.wantStatus, cond.Status)
+			require.Equal(t, tt.wantReason, cond.Reason)
+			if tt.wantMsgPart != "" {
+				require.Contains(t, cond.Message, tt.wantMsgPart)
+			}
+		})
+	}
+}
+
+func TestValidateAnnotationsForGRPCRoute(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	s := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(s))
+	require.NoError(t, gatewayv1.Install(s))
+
+	port := gatewayv1.PortNumber(50051)
+	route := &gwtypes.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+		Spec: gwtypes.GRPCRouteSpec{
+			Rules: []gwtypes.GRPCRouteRule{{
+				BackendRefs: []gwtypes.GRPCBackendRef{{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name: "svc",
+							Port: &port,
+						},
+					},
+				}},
+			}},
+		},
+	}
+
+	t.Run("valid backend service annotations", func(t *testing.T) {
+		cl := fake.NewClientBuilder().
+			WithScheme(s).
+			WithObjects(&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "svc",
+					Annotations: map[string]string{
+						"konghq.com/connect-timeout": "5000",
+					},
+				},
+			}).
+			Build()
+
+		require.NoError(t, validateAnnotations(ctx, logger, cl, route))
+	})
+
+	t.Run("malformed backend service annotations", func(t *testing.T) {
+		cl := fake.NewClientBuilder().
+			WithScheme(s).
+			WithObjects(&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "svc",
+					Annotations: map[string]string{
+						"konghq.com/connect-timeout": "invalid",
+					},
+				},
+			}).
+			Build()
+
+		require.ErrorContains(t, validateAnnotations(ctx, logger, cl, route), "konghq.com/connect-timeout")
+	})
 }
 
 func TestBuildResolvedRefsConditionForTCPRoute(t *testing.T) {

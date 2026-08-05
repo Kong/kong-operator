@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -628,4 +629,127 @@ func TestKongRouteBuilder_WithSpecTags(t *testing.T) {
 		route := NewKongRoute().WithSpecTags([]string{"foo", "bar"}).MustBuild()
 		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, route.Spec.Tags)
 	})
+}
+
+func TestGenerateKongRoutePathFromGRPCMethodMatch(t *testing.T) {
+	exact := gatewayv1.GRPCMethodMatchExact
+	regex := gatewayv1.GRPCMethodMatchRegularExpression
+
+	tests := []struct {
+		name     string
+		method   *gatewayv1.GRPCMethodMatch
+		expected []string
+	}{
+		{
+			name:     "nil method matches every service and method",
+			method:   nil,
+			expected: []string{KongGRPCRouteCatchAllPath},
+		},
+		{
+			name: "exact service and method",
+			method: &gatewayv1.GRPCMethodMatch{
+				Type:    &exact,
+				Service: new("foo.bar.v1.Service"),
+				Method:  new("DoThing"),
+			},
+			// "." in the service name is regexp.QuoteMeta-escaped so it matches a literal dot,
+			// not "any character" — see GenerateKongRoutePathFromGRPCMethodMatch's doc comment.
+			expected: []string{`~/foo\.bar\.v1\.Service/DoThing$`},
+		},
+		{
+			name: "service only matches any method of that service",
+			method: &gatewayv1.GRPCMethodMatch{
+				Type:    &exact,
+				Service: new("foo.bar.v1.Service"),
+			},
+			expected: []string{`~/foo\.bar\.v1\.Service/[^/]+$`},
+		},
+		{
+			name: "method only matches that method on any service",
+			method: &gatewayv1.GRPCMethodMatch{
+				Type:   &exact,
+				Method: new("DoThing"),
+			},
+			expected: []string{"~/[^/]+/DoThing$"},
+		},
+		{
+			name: "regular expression is not anchored",
+			method: &gatewayv1.GRPCMethodMatch{
+				Type:    &regex,
+				Service: new("foo.*"),
+				Method:  new("Do.*"),
+			},
+			expected: []string{"~/foo.*/Do.*"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, GenerateKongRoutePathFromGRPCMethodMatch(tt.method))
+		})
+	}
+}
+
+// TestGenerateKongRoutePathFromGRPCMethodMatch_ExactDotsAreLiteral is a regression test for an
+// unescaped-regex-metacharacter bug: an Exact GRPCMethodMatch's Service/Method are literal
+// strings, but gRPC service names always contain "." (e.g. "foo.bar.Service"). Without
+// [regexp.QuoteMeta] escaping, "." compiles as "any character" in the generated Kong regex path,
+// so an Exact match for "foo.bar.Service" would incorrectly also match an unrelated
+// "fooXbarXService". This proves the compiled path matches only the literal service/method.
+func TestGenerateKongRoutePathFromGRPCMethodMatch_ExactDotsAreLiteral(t *testing.T) {
+	exact := gatewayv1.GRPCMethodMatchExact
+	paths := GenerateKongRoutePathFromGRPCMethodMatch(&gatewayv1.GRPCMethodMatch{
+		Type:    &exact,
+		Service: new("foo.bar.v1.Service"),
+		Method:  new("DoThing"),
+	})
+	require.Len(t, paths, 1)
+
+	// Strip the Kong regex-path prefix ("~") before compiling as a Go regexp.
+	re, err := regexp.Compile(paths[0][1:])
+	require.NoError(t, err)
+
+	assert.True(t, re.MatchString("/foo.bar.v1.Service/DoThing"), "must match the literal service/method")
+	assert.False(t, re.MatchString("/fooXbarXv1XService/DoThing"), "dots must not act as regex wildcards")
+}
+
+func TestKongRouteBuilder_WithGRPCRouteMatch(t *testing.T) {
+	exact := gatewayv1.GRPCMethodMatchExact
+	regexHeader := gatewayv1.GRPCHeaderMatchRegularExpression
+
+	route := NewKongRoute().WithGRPCRouteMatch(gatewayv1.GRPCRouteMatch{
+		Method: &gatewayv1.GRPCMethodMatch{
+			Type:    &exact,
+			Service: new("foo.bar.v1.Service"),
+			Method:  new("DoThing"),
+		},
+		Headers: []gatewayv1.GRPCHeaderMatch{
+			{Name: "version", Value: "v1"},
+			{Name: "color", Type: &regexHeader, Value: "^blue$"},
+		},
+	}).MustBuild()
+
+	assert.Equal(t, []string{`~/foo\.bar\.v1\.Service/DoThing$`}, route.Spec.Paths)
+	assert.Equal(t, map[string][]string{
+		"version": {"v1"},
+		"color":   {KongHeaderRegexPrefix + "^blue$"},
+	}, route.Spec.Headers)
+}
+
+// TestKongRouteBuilder_WithGRPCRouteMatch_NoMethod covers a GRPCRouteMatch with no Method matcher
+// at all (headers-only), which per Gateway API must match every service/method: WithGRPCRouteMatch
+// falls back to KongGRPCRouteCatchAllPath in that case (see GenerateKongRoutePathFromGRPCMethodMatch's
+// nil-method behavior, exercised at this builder layer rather than only indirectly via
+// kongroute.RoutesForGRPCRouteRule's tests).
+func TestKongRouteBuilder_WithGRPCRouteMatch_NoMethod(t *testing.T) {
+	route := NewKongRoute().WithGRPCRouteMatch(gatewayv1.GRPCRouteMatch{
+		Headers: []gatewayv1.GRPCHeaderMatch{
+			{Name: "version", Value: "v1"},
+		},
+	}).MustBuild()
+
+	assert.Equal(t, []string{KongGRPCRouteCatchAllPath}, route.Spec.Paths)
+	assert.Equal(t, map[string][]string{
+		"version": {"v1"},
+	}, route.Spec.Headers)
 }

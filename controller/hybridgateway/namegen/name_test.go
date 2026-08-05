@@ -23,6 +23,15 @@ func testRoute(namespace, name string) *gwtypes.HTTPRoute {
 	}
 }
 
+func testGRPCRoute(namespace, name string) *gwtypes.GRPCRoute {
+	return &gwtypes.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
 func testControlPlaneRef(name string) *commonv1alpha1.ControlPlaneRef {
 	return &commonv1alpha1.ControlPlaneRef{
 		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -56,6 +65,20 @@ func testBackendRef(
 	name string, namespace *gatewayv1.Namespace, port *gatewayv1.PortNumber,
 ) gatewayv1.HTTPBackendRef {
 	return gatewayv1.HTTPBackendRef{
+		BackendRef: gatewayv1.BackendRef{
+			BackendObjectReference: gatewayv1.BackendObjectReference{
+				Name:      gatewayv1.ObjectName(name),
+				Namespace: namespace,
+				Port:      port,
+			},
+		},
+	}
+}
+
+func testGRPCBackendRef(
+	name string, namespace *gatewayv1.Namespace, port *gatewayv1.PortNumber,
+) gatewayv1.GRPCBackendRef {
+	return gatewayv1.GRPCBackendRef{
 		BackendRef: gatewayv1.BackendRef{
 			BackendObjectReference: gatewayv1.BackendObjectReference{
 				Name:      gatewayv1.ObjectName(name),
@@ -256,6 +279,76 @@ func TestNewKongUpstreamName_Equality(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewKongUpstreamNameForGRPCRoute(t *testing.T) {
+	tests := []struct {
+		name             string
+		route            *gwtypes.GRPCRoute
+		cp               *commonv1alpha1.ControlPlaneRef
+		rule             gatewayv1.GRPCRouteRule
+		expectedReadable string
+	}{
+		{
+			name:  "basic upstream name generation",
+			route: testGRPCRoute("default", "test-route"),
+			cp:    testControlPlaneRef("test-cp"),
+			rule: gatewayv1.GRPCRouteRule{
+				BackendRefs: []gatewayv1.GRPCBackendRef{
+					testGRPCBackendRef("service1", nil, new(gatewayv1.PortNumber(8080))),
+				},
+			},
+			expectedReadable: "grpc.default-service1-8080.1",
+		},
+		{
+			name:  "cross namespace backend is reflected in readable prefix",
+			route: testGRPCRoute("default", "test-route"),
+			cp:    testControlPlaneRef("namespaced-cp"),
+			rule: gatewayv1.GRPCRouteRule{
+				BackendRefs: []gatewayv1.GRPCBackendRef{
+					testGRPCBackendRef("backend-service", new(gatewayv1.Namespace("backend-ns")), nil),
+				},
+			},
+			expectedReadable: "grpc.backend-ns-backend-service.1",
+		},
+		{
+			name:  "backendless rule produces readable prefix with just grpc and cp hash",
+			route: testGRPCRoute("default", "test-route"),
+			cp:    testControlPlaneRef("namespaced-cp"),
+			rule: gatewayv1.GRPCRouteRule{
+				BackendRefs: []gatewayv1.GRPCBackendRef{},
+				Matches: []gatewayv1.GRPCRouteMatch{
+					{Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.Echo")}},
+				},
+			},
+			expectedReadable: "grpc",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewKongUpstreamNameForGRPCRouteRule(tt.route, tt.cp, tt.rule)
+			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + hashForGRPCRouteRuleServiceLikeName(tt.route, tt.rule)
+			assert.Equal(t, expected, result)
+		})
+	}
+}
+
+func TestNewKongUpstreamNameForGRPCRoute_Equality(t *testing.T) {
+	route := testGRPCRoute("gateway-conformance-infra", "test-route")
+	cp := testControlPlaneRef("same-namespace")
+	ruleA := gatewayv1.GRPCRouteRule{
+		Matches: []gatewayv1.GRPCRouteMatch{{Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.A")}}},
+	}
+	ruleB := gatewayv1.GRPCRouteRule{
+		Matches: []gatewayv1.GRPCRouteMatch{{Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.B")}}},
+	}
+
+	nameA := NewKongUpstreamNameForGRPCRouteRule(route, cp, ruleA)
+	nameB := NewKongUpstreamNameForGRPCRouteRule(route, cp, ruleB)
+
+	assert.NotEqual(t, nameA, nameB)
+	assert.Equal(t, nameA, NewKongUpstreamNameForGRPCRouteRule(route, cp, ruleA), "identical inputs must be deterministic")
 }
 
 func TestNewKongServiceName(t *testing.T) {
@@ -519,6 +612,90 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 	}
 }
 
+func TestNewKongServiceNameForGRPCRoute(t *testing.T) {
+	tests := []struct {
+		name             string
+		route            *gwtypes.GRPCRoute
+		cp               *commonv1alpha1.ControlPlaneRef
+		rule             gatewayv1.GRPCRouteRule
+		expectedReadable string
+	}{
+		{
+			name:  "basic service name generation",
+			route: testGRPCRoute("default", "test-route"),
+			cp:    testControlPlaneRef("test-cp"),
+			rule: gatewayv1.GRPCRouteRule{
+				BackendRefs: []gatewayv1.GRPCBackendRef{
+					testGRPCBackendRef("service1", nil, new(gatewayv1.PortNumber(8080))),
+				},
+			},
+			expectedReadable: "grpc.default-service1-8080.1",
+		},
+		{
+			name:  "service with namespace",
+			route: testGRPCRoute("default", "test-route"),
+			cp: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name:      "namespaced-cp",
+					Namespace: "konnect-system",
+				},
+			},
+			rule: gatewayv1.GRPCRouteRule{
+				BackendRefs: []gatewayv1.GRPCBackendRef{
+					testGRPCBackendRef("backend-service", new(gatewayv1.Namespace("backend-ns")), nil),
+				},
+			},
+			expectedReadable: "grpc.backend-ns-backend-service.1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewKongServiceNameForGRPCRouteRule(tt.route, tt.cp, tt.rule)
+			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + utils.Hash32(tt.rule.BackendRefs)
+			assert.Equal(t, expected, result)
+		})
+	}
+}
+
+func TestNewKongServiceNameForGRPCRoute_Equality(t *testing.T) {
+	route := testGRPCRoute("gateway-conformance-infra", "test-route")
+	cp := testControlPlaneRef("same-namespace")
+	ruleA := gatewayv1.GRPCRouteRule{
+		Matches: []gatewayv1.GRPCRouteMatch{{Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.A")}}},
+	}
+	ruleB := gatewayv1.GRPCRouteRule{
+		Matches: []gatewayv1.GRPCRouteMatch{{Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.B")}}},
+	}
+
+	nameA := NewKongServiceNameForGRPCRouteRule(route, cp, ruleA)
+	nameB := NewKongServiceNameForGRPCRouteRule(route, cp, ruleB)
+
+	assert.NotEqual(t, nameA, nameB)
+}
+
+func TestNewKongServiceNameForGRPCRouteRuleBackendNotFound(t *testing.T) {
+	backendNS := gatewayv1.Namespace("gateway-conformance-web-backend")
+	port := gatewayv1.PortNumber(8080)
+	rule := gatewayv1.GRPCRouteRule{
+		BackendRefs: []gatewayv1.GRPCBackendRef{
+			testGRPCBackendRef("web-backend", &backendNS, &port),
+		},
+	}
+	routeA := testGRPCRoute("gateway-conformance-infra", "invalid-cross-namespace-backend-ref")
+	routeB := testGRPCRoute("gateway-conformance-infra", "reference-grant")
+	cp := testControlPlaneRef("same-namespace")
+
+	normalName := NewKongServiceNameForGRPCRouteRule(routeA, cp, rule)
+	fallbackNameA := NewKongServiceNameForGRPCRouteRuleBackendNotFound(routeA, cp, rule)
+	fallbackNameB := NewKongServiceNameForGRPCRouteRuleBackendNotFound(routeB, cp, rule)
+
+	assert.NotEqual(t, normalName, fallbackNameA)
+	assert.NotEqual(t, fallbackNameA, fallbackNameB)
+	assert.Contains(t, fallbackNameA, backendNotFoundPrefix)
+}
+
 func TestNewKongRouteNameForMatch_DiffersByParentRef(t *testing.T) {
 	route := testRoute("default", "test-route")
 	cp := testControlPlaneRef("test-cp")
@@ -553,6 +730,47 @@ func TestNewKongRouteNameForMatch_WithoutParentRefKeepsLegacyFormat(t *testing.T
 	result := NewKongRouteNameForMatch(route, cp, nil, match, 0)
 	expected := "http.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(match) + ".m00"
 	assert.Equal(t, expected, result)
+}
+
+func TestNewKongRouteNameForGRPCRouteMatch_DiffersByParentRef(t *testing.T) {
+	route := testGRPCRoute("default", "test-route")
+	cp := testControlPlaneRef("test-cp")
+	match := gatewayv1.GRPCRouteMatch{
+		Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.Echo")},
+	}
+	listener1 := gatewayv1.SectionName("listener-1")
+	listener2 := gatewayv1.SectionName("listener-2")
+
+	name1 := NewKongRouteNameForGRPCRouteMatch(route, cp, testParentRef(&listener1), match, 0)
+	name2 := NewKongRouteNameForGRPCRouteMatch(route, cp, testParentRef(&listener2), match, 0)
+
+	assert.NotEqual(t, name1, name2)
+	assert.Equal(t, name1, NewKongRouteNameForGRPCRouteMatch(route, cp, testParentRef(&listener1), match, 0))
+}
+
+func TestNewKongRouteNameForGRPCRouteMatch_WithoutParentRefKeepsLegacyFormat(t *testing.T) {
+	route := testGRPCRoute("default", "test-route")
+	cp := testControlPlaneRef("test-cp")
+	match := gatewayv1.GRPCRouteMatch{
+		Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.Echo")},
+	}
+
+	result := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 0)
+	expected := "grpc.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(match) + ".m00"
+	assert.Equal(t, expected, result)
+}
+
+func TestNewKongRouteNameForGRPCRouteMatch_DiffersByIndex(t *testing.T) {
+	route := testGRPCRoute("default", "test-route")
+	cp := testControlPlaneRef("test-cp")
+	match := gatewayv1.GRPCRouteMatch{
+		Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.Echo")},
+	}
+
+	name0 := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 0)
+	name1 := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 1)
+
+	assert.NotEqual(t, name0, name1)
 }
 
 func TestNewKongRouteNameForTLSRouteRule_DiffersByParentRef(t *testing.T) {
@@ -724,6 +942,51 @@ func TestNewKongPluginNameForFilters(t *testing.T) {
 	}
 }
 
+func TestNewKongPluginNameForGRPCRouteFilter(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter gatewayv1.GRPCRouteFilter
+	}{
+		{
+			name: "request header modifier filter",
+			filter: gatewayv1.GRPCRouteFilter{
+				Type: gatewayv1.GRPCRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Set: []gatewayv1.HTTPHeader{
+						{Name: "X-Test", Value: "test-value"},
+					},
+				},
+			},
+		},
+		{
+			name: "response header modifier filter",
+			filter: gatewayv1.GRPCRouteFilter{
+				Type: gatewayv1.GRPCRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Add: []gatewayv1.HTTPHeader{
+						{Name: "X-Response", Value: "response-value"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewKongPluginNameForGRPCRouteFilter(tt.filter, "default", "request-transformer")
+			assert.NotEmpty(t, result)
+			assert.True(t, strings.HasPrefix(result, "default.request-transformer."), "should start with plugin namespace.name prefix")
+			assert.Equal(t, result, NewKongPluginNameForGRPCRouteFilter(tt.filter, "default", "request-transformer"), "must be deterministic")
+		})
+	}
+
+	assert.NotEqual(t,
+		NewKongPluginNameForGRPCRouteFilter(tests[0].filter, "default", "request-transformer"),
+		NewKongPluginNameForGRPCRouteFilter(tests[1].filter, "default", "request-transformer"),
+		"different filter content must produce different names",
+	)
+}
+
 func TestNewKongPluginBindingName(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -765,6 +1028,16 @@ func TestNewKongPluginBindingName(t *testing.T) {
 func TestNewKongTargetName(t *testing.T) {
 	httpBR := func(name string) *gwtypes.HTTPBackendRef {
 		return &gwtypes.HTTPBackendRef{
+			BackendRef: gatewayv1.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name: gatewayv1.ObjectName(name),
+					Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
+				},
+			},
+		}
+	}
+	grpcBR := func(name string) *gwtypes.GRPCBackendRef {
+		return &gwtypes.GRPCBackendRef{
 			BackendRef: gatewayv1.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{
 					Name: gatewayv1.ObjectName(name),
@@ -832,6 +1105,22 @@ func TestNewKongTargetName(t *testing.T) {
 		longUpstream := strings.Repeat("very-long-upstream-segment-", 10)
 		result := NewKongTargetName(longUpstream, "10.0.0.1", 8080, httpBR("svc"))
 		assert.LessOrEqual(t, len(result), maxLen)
+	})
+
+	t.Run("GRPCRoute BackendRef variant is idempotent and non-empty", func(t *testing.T) {
+		br := grpcBR("grpc-backend")
+		first := NewKongTargetName("upstream", "10.0.0.1", 8080, br)
+		second := NewKongTargetName("upstream", "10.0.0.1", 8080, br)
+		assert.NotEmpty(t, first)
+		assert.Equal(t, first, second)
+	})
+
+	t.Run("GRPCRoute BackendRef different service produces different name than HTTPBackendRef", func(t *testing.T) {
+		// The GRPC and HTTP variants hash different struct types, so names must not collide.
+		assert.NotEqual(t,
+			NewKongTargetName("upstream", "10.0.0.1", 8080, httpBR("svc-a")),
+			NewKongTargetName("upstream", "10.0.0.1", 8080, grpcBR("svc-a")),
+		)
 	})
 
 	t.Run("TLSRoute BackendRef variant is idempotent", func(t *testing.T) {

@@ -16,7 +16,7 @@ type SupportedRoutePtr[T SupportedRoute] interface {
 
 // SupportedRouteList defines a list of supported route.
 type SupportedRouteList interface {
-	HTTPRouteList | TLSRouteList | TCPRouteList | UDPRouteList
+	HTTPRouteList | TLSRouteList | GRPCRouteList | TCPRouteList | UDPRouteList
 }
 
 // SupportedRouteListPtr defines a pointer of a supported route list.
@@ -28,12 +28,12 @@ type SupportedRouteListPtr[T SupportedRouteList] interface {
 
 // SupportedRouteRule defines a rule in a supported route.
 type SupportedRouteRule interface {
-	HTTPRouteRule | TLSRouteRule | TCPRouteRule | UDPRouteRule
+	HTTPRouteRule | GRPCRouteRule | TLSRouteRule | TCPRouteRule | UDPRouteRule
 }
 
 // SupportedBackendRef defines a supported backendRef type.
 type SupportedBackendRef interface {
-	BackendRef | HTTPBackendRef
+	BackendRef | HTTPBackendRef | GRPCBackendRef
 }
 
 // GetSpecParentRefs returns the parent references of a supported route.
@@ -59,6 +59,8 @@ func GetSpecHostnames[T SupportedRoute](route T) []Hostname {
 	switch r := any(route).(type) {
 	case HTTPRoute:
 		return r.Spec.Hostnames
+	case GRPCRoute:
+		return r.Spec.Hostnames
 	case TLSRoute:
 		return r.Spec.Hostnames
 	case TCPRoute:
@@ -71,6 +73,8 @@ func GetSpecHostnames[T SupportedRoute](route T) []Hostname {
 func GetBackendRef[T SupportedBackendRef](bRef T) BackendRef {
 	switch b := any(bRef).(type) {
 	case HTTPBackendRef:
+		return b.BackendRef
+	case GRPCBackendRef:
 		return b.BackendRef
 	case BackendRef:
 		return b

@@ -36,6 +36,7 @@ const (
 
 const (
 	kindHTTPRoute = "HTTPRoute"
+	kindGRPCRoute = "GRPCRoute"
 	kindTLSRoute  = "TLSRoute"
 	kindTCPRoute  = "TCPRoute"
 )
@@ -249,6 +250,8 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 	switch obj.(type) {
 	case *gwtypes.HTTPRoute:
 		annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
+	case *gwtypes.GRPCRoute:
+		annotations[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
 	case *gwtypes.TLSRoute:
 		annotations[consts.GatewayOperatorHybridRoutesTLSRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
 	case *gwtypes.TCPRoute:
@@ -559,6 +562,8 @@ func (am *AnnotationManager) RouteAnnotationKeyForKind(routeKind string) string 
 	switch routeKind {
 	case kindHTTPRoute:
 		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	case kindGRPCRoute:
+		return consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation
 	case kindTLSRoute:
 		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation
 	case kindTCPRoute:
