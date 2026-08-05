@@ -24,12 +24,9 @@ const (
 	// KongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
 	// as a regex.
 	KongHeaderRegexPrefix = "~*"
-	// KongHTTPRouteHeaderOnlyRegexPath is a catch-all regex path used to make regex_priority effective
-	// for HTTPRoute matches that only match on headers.
-	KongHTTPRouteHeaderOnlyRegexPath = KongPathRegexPrefix + "/(.*)"
-	// KongHTTPRoutePathRegexPriorityOffset reserves lower regex_priority values for synthetic
-	// catch-all regex routes used by default path header-only matches.
-	KongHTTPRoutePathRegexPriorityOffset int64 = 1 << 20
+	// KongHTTPRouteDefaultPathRegexPath is a catch-all regex path used to make regex_priority effective
+	// for HTTPRoute matches that otherwise use the default root path.
+	KongHTTPRouteDefaultPathRegexPath = KongPathRegexPrefix + "/(.*)"
 )
 
 // KongRouteBuilder is a builder for configurationv1alpha1.KongRoute resources.
@@ -62,14 +59,18 @@ func (b *KongRouteBuilder) WithProtocols(protocols ...sdkkonnectcomp.Protocols) 
 func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch, setCaptureGroup bool) *KongRouteBuilder {
 	// Path.
 	if match.Path != nil && match.Path.Value != nil {
-		paths, regexPriority := GenerateKongRoutePathFromHTTPRouteMatch(match.Path, setCaptureGroup)
+		paths := GenerateKongRoutePathFromHTTPRouteMatch(match.Path, setCaptureGroup)
 		b.route.Spec.Paths = append(b.route.Spec.Paths, paths...)
-		b.route.Spec.RegexPriority = regexPriority
 	}
 
 	// Method
 	if match.Method != nil {
 		b.route.Spec.Methods = append(b.route.Spec.Methods, string(*match.Method))
+		if len(b.route.Spec.Paths) == 0 {
+			// Gateway API treats an omitted path as PathPrefix "/". Materialize it so
+			// Kong's traditional router prioritizes method-only matches over header-only matches.
+			b.route.Spec.Paths = append(b.route.Spec.Paths, "/")
+		}
 	}
 
 	// Headers
@@ -98,16 +99,16 @@ func (b *KongRouteBuilder) WithRegexPriority(priority *int64) *KongRouteBuilder 
 	return b
 }
 
-// WithHeaderOnlyRegexPath adds a catch-all regex path when needed so Kong can use
-// regex_priority to order overlapping HTTPRoute matches that only specify headers
-// and otherwise use the default root path.
-func (b *KongRouteBuilder) WithHeaderOnlyRegexPath() *KongRouteBuilder {
-	if len(b.route.Spec.Headers) == 0 {
-		return b
-	}
-
-	if len(b.route.Spec.Paths) == 0 || (len(b.route.Spec.Paths) == 1 && b.route.Spec.Paths[0] == "/") {
-		b.route.Spec.Paths = []string{KongHTTPRouteHeaderOnlyRegexPath}
+// WithDefaultPathRegexPath replaces the default root path with a catch-all regex
+// path so regex_priority can order default-path HTTPRoute matches.
+func (b *KongRouteBuilder) WithDefaultPathRegexPath() *KongRouteBuilder {
+	isDefaultRootPath := len(b.route.Spec.Paths) == 0 ||
+		(len(b.route.Spec.Paths) == 1 && b.route.Spec.Paths[0] == "/")
+	isRootCaptureGroupPath := len(b.route.Spec.Paths) == 2 &&
+		b.route.Spec.Paths[0] == KongPathRegexPrefix+"/$" &&
+		b.route.Spec.Paths[1] == KongHTTPRouteDefaultPathRegexPath
+	if isDefaultRootPath || isRootCaptureGroupPath {
+		b.route.Spec.Paths = []string{KongHTTPRouteDefaultPathRegexPath}
 	}
 	return b
 }
@@ -239,12 +240,9 @@ func (b *KongRouteBuilder) MustBuild() configurationv1alpha1.KongRoute {
 }
 
 // GenerateKongRoutePathFromHTTPRouteMatch translates the value in HTTPRoute's path match
-// to the path used in KongRoute and returns any RegexPriority needed for the KongRoute.
-// RegexPriority is set for Exact and non-root PathPrefix translations whose generated regex
-// paths must preserve Gateway API path precedence in Kong's traditional-compatible router.
-// Root capture-group translations and user-supplied RegularExpression matches keep Kong's
-// default priority because they remain catch-all or implementation-specific cases.
-func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch, setCaptureGroup bool) (paths []string, regexPriority *int64) {
+// to the path used in KongRoute. The caller assigns regex_priority using the complete
+// HTTPRoute so that path, method, and header precedence share one compact priority space.
+func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch, setCaptureGroup bool) []string {
 	// The default match type is PathMatchPathPrefix.
 	matchType := gatewayv1.PathMatchPathPrefix
 	if pathMatch.Type != nil {
@@ -263,17 +261,19 @@ func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch,
 	switch matchType {
 	// Since the path matches request in prefix way, we need to use a regex with the '$' suffix to do the exact match.
 	case gatewayv1.PathMatchExact:
-		return []string{KongPathRegexPrefix + value + "$"}, regexPriorityForHTTPPathMatch(matchType, value)
+		return []string{KongPathRegexPrefix + value + "$"}
 
 	// In HTTPRoute, the prefix match is specified in the "directory" manner but not simple string prefix.
 	// For example, '/abc' should match '/abc', '/abc/', '/abc/123' but not '/abcd'.
 	// So we split it into 2 items:
 	// - One using regex to match the exact path without the trailing '/', e.g: '~/abc$'
-	// - The other to match the prefix with the trailing '/', e.g: '/abc/'.
+	// - The other regex to match the prefix with the trailing '/', e.g: '~/abc/'.
+	// Both paths must be regexes so regex_priority applies when this route overlaps a
+	// synthetic default-path regex route.
 	case gatewayv1.PathMatchPathPrefix:
 		// For the '/' path to match all, we just return the item in KongRoute to do the same catch-all match.
 		if value == "/" && !setCaptureGroup {
-			return []string{"/"}, nil
+			return []string{"/"}
 		}
 
 		paths := make([]string, 0, 2)
@@ -286,30 +286,21 @@ func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch,
 		if setCaptureGroup {
 			// If the path is "/", we have to skip capturing the slash as Kong Route's path must begin with a slash.
 			if value == "/" {
-				// Keep the default priority for the root capture-group form: it remains the catch-all route.
-				return append(paths, fmt.Sprintf("%s/(.*)", KongPathRegexPrefix)), nil
+				return append(paths, fmt.Sprintf("%s/(.*)", KongPathRegexPrefix))
 			}
 			// When there is a prefix in the route path, we capture the slash and the rest of the path after the prefix.
-			return append(paths, fmt.Sprintf("%s%s%s", KongPathRegexPrefix, path, "(/.*)")), regexPriorityForHTTPPathMatch(matchType, value)
+			return append(paths, fmt.Sprintf("%s%s%s", KongPathRegexPrefix, path, "(/.*)"))
 		}
 
 		if !strings.HasSuffix(path, "/") {
 			path = fmt.Sprintf("%s/", path)
 		}
-		return append(paths, path), regexPriorityForHTTPPathMatch(matchType, value)
+		return append(paths, KongPathRegexPrefix+path)
 
 	// For RegularExpression path match, we simply use the same regex in the paths of KongRoute.
 	case gatewayv1.PathMatchRegularExpression:
 		// Gateway API leaves the precedence of regular-expression path matches implementation-specific.
-		return []string{KongPathRegexPrefix + value}, nil
+		return []string{KongPathRegexPrefix + value}
 	}
-	return nil, nil // Should never be reached.
-}
-
-func regexPriorityForHTTPPathMatch(matchType gatewayv1.PathMatchType, value string) *int64 {
-	priority := KongHTTPRoutePathRegexPriorityOffset + int64(len(value)*2)
-	if matchType == gatewayv1.PathMatchExact {
-		priority++
-	}
-	return &priority
+	return nil // Should never be reached.
 }

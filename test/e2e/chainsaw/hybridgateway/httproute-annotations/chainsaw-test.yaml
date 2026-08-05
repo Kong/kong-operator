@@ -164,7 +164,7 @@ spec:
         - name: route_paths
           value:
             - "~/echo$"
-            - "/echo/"
+            - "~/echo/"
         - name: strip_path
           value: false
         - name: preserve_host
@@ -208,7 +208,7 @@ spec:
         - name: route_paths
           value:
             - "~/echo$"
-            - "/echo/"
+            - "~/echo/"
         - name: strip_path
           value: true
         - name: preserve_host
@@ -251,7 +251,7 @@ spec:
         - name: route_paths
           value:
             - "~/echo$"
-            - "/echo/"
+            - "~/echo/"
         - name: strip_path
           value: false
         - name: preserve_host
@@ -296,7 +296,7 @@ spec:
         - name: route_paths
           value:
             - "~/echo$"
-            - "/echo/"
+            - "~/echo/"
         - name: strip_path
           value: false
         - name: preserve_host
@@ -380,7 +380,7 @@ spec:
         - name: route_paths
           value:
             - "~/echo$"
-            - "/echo/"
+            - "~/echo/"
         - name: strip_path
           value: true
         - name: preserve_host

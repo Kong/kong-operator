@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -91,6 +92,8 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	// Build lookup maps once so that per-object gating checks are O(1) instead of O(n).
 	desiredUpstreamNames := make(map[string]struct{}, len(desiredObjects))
 	desiredTargetsByUpstream := make(map[string][]unstructured.Unstructured, len(desiredObjects))
+	desiredRoutePredecessors := make(map[client.ObjectKey]client.ObjectKey)
+	var previousDesiredRoute *client.ObjectKey
 	for _, obj := range desiredObjects {
 		switch obj.GetKind() {
 		case "KongUpstream":
@@ -99,6 +102,12 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			if upName, _, _ := unstructured.NestedString(obj.Object, "spec", "upstreamRef", "name"); upName != "" {
 				desiredTargetsByUpstream[upName] = append(desiredTargetsByUpstream[upName], obj)
 			}
+		case "KongRoute":
+			key := client.ObjectKeyFromObject(&obj)
+			if previousDesiredRoute != nil {
+				desiredRoutePredecessors[key] = *previousDesiredRoute
+			}
+			previousDesiredRoute = &key
 		}
 	}
 
@@ -215,6 +224,37 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 					log.Debug(logger, "Service not Programmed yet for route, waiting", "service", svcName)
 					objectsSkipped++
 					stopAtKind = "KongService"
+					continue
+				}
+			}
+
+			// Preserve the desired KongRoute order all the way through Konnect. The HTTPRoute
+			// converter orders more specific routes before catch-all routes, but creating the
+			// Kubernetes resources in that order is insufficient: their independent Konnect
+			// reconcilers can otherwise program them in a different order. In the traditional
+			// router that can leave a less-specific match cached for requests that should use a
+			// route created later.
+			if predecessorKey, ok := desiredRoutePredecessors[client.ObjectKeyFromObject(&desired)]; ok {
+				var predecessor configurationv1alpha1.KongRoute
+				if err := cl.Get(ctx, predecessorKey, &predecessor); err != nil {
+					if !apierrors.IsNotFound(err) {
+						return false, false, fmt.Errorf("failed to get preceding route %s for route %s: %w",
+							predecessorKey, client.ObjectKeyFromObject(&desired), err,
+						)
+					}
+					log.Debug(logger, "Preceding route not found yet, waiting",
+						"route", client.ObjectKeyFromObject(&desired), "precedingRoute", predecessorKey,
+					)
+					objectsSkipped++
+					continue
+				}
+
+				programmed, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &predecessor)
+				if !ok || programmed.Status != metav1.ConditionTrue || programmed.ObservedGeneration != predecessor.GetGeneration() {
+					log.Debug(logger, "Preceding route not Programmed for its current generation yet, waiting",
+						"route", client.ObjectKeyFromObject(&desired), "precedingRoute", predecessorKey,
+					)
+					objectsSkipped++
 					continue
 				}
 			}
