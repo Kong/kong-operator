@@ -63,6 +63,17 @@ func TestFilterBy(t *testing.T) {
 			expectNil:   false,
 		},
 		{
+			name: "UDPRoute returns predicate funcs",
+			obj: &gwtypes.UDPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+			},
+			expectError: false,
+			expectNil:   false,
+		},
+		{
 			name: "unsupported type returns error",
 			obj: &gatewayv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
