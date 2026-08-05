@@ -3339,6 +3339,99 @@ func TestBuildAcceptedConditionForTCPRoute(t *testing.T) {
 	require.Equal(t, string(gwtypes.RouteReasonAccepted), cond.Reason)
 }
 
+func TestBuildResolvedRefsConditionForUDPRoute(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "svc",
+		},
+	}
+	port := gwtypes.PortNumber(80)
+	route := &gwtypes.UDPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "UDPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "route",
+		},
+		Spec: gwtypes.UDPRouteSpec{
+			Rules: []gwtypes.UDPRouteRule{{
+				BackendRefs: []gwtypes.BackendRef{{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name: "svc",
+						Port: &port,
+					},
+				}},
+			}},
+		},
+	}
+
+	s := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(s))
+	require.NoError(t, gatewayv1.Install(s))
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(service).Build()
+
+	cond, err := BuildResolvedRefsConditionForUDPRoute(ctx, logger, cl, route)
+	require.NoError(t, err)
+	require.NotNil(t, cond)
+	require.Equal(t, metav1.ConditionTrue, cond.Status)
+	require.Equal(t, string(gwtypes.RouteReasonResolvedRefs), cond.Reason)
+}
+
+func TestBuildAcceptedConditionForUDPRoute(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	route := &gwtypes.UDPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "UDPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "route",
+		},
+	}
+	pRef := gwtypes.ParentReference{Name: "gateway"}
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "gateway",
+		},
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{{
+				Name:     "udp",
+				Protocol: gwtypes.UDPProtocolType,
+				Port:     9000,
+			}},
+		},
+		Status: gatewayv1.GatewayStatus{
+			Listeners: []gatewayv1.ListenerStatus{{
+				Name: "udp",
+				Conditions: []metav1.Condition{{
+					Type:   string(gatewayv1.ListenerConditionAccepted),
+					Status: metav1.ConditionTrue,
+				}},
+			}},
+		},
+	}
+
+	s := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(s))
+	require.NoError(t, gatewayv1.Install(s))
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}).Build()
+
+	cond, err := BuildAcceptedCondition(ctx, logger, cl, gateway, route, pRef)
+	require.NoError(t, err)
+	require.NotNil(t, cond)
+	require.Equal(t, metav1.ConditionTrue, cond.Status)
+	require.Equal(t, string(gwtypes.RouteReasonAccepted), cond.Reason)
+}
+
 func TestCheckReferenceGrant(t *testing.T) {
 	ctx := context.Background()
 

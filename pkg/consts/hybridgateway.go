@@ -62,6 +62,15 @@ const (
 	// is associated with the resource.
 	GatewayOperatorHybridRoutesTCPRouteAnnotation = OperatorAnnotationPrefix + HybridRouteTCPRouteAnnotation
 
+	// HybridRouteUDPRouteAnnotation is used to annotate resources created for hybrid gateways,
+	// indicating which UDPRoutes are associated with the resource.
+	HybridRouteUDPRouteAnnotation = "hybrid-routes-UDPRoute"
+
+	// GatewayOperatorHybridRoutesUDPRouteAnnotation is the fully qualified annotation key
+	// used to annotate resources created for hybrid gateways, indicating which UDPRoute
+	// is associated with the resource.
+	GatewayOperatorHybridRoutesUDPRouteAnnotation = OperatorAnnotationPrefix + HybridRouteUDPRouteAnnotation
+
 	// GatewayOperatorHybridListenerPortLabel is the fully qualified label key
 	// used to label resources created for hybrid gateways, indicating the listener port
 	// associated with the resource.

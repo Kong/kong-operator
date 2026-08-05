@@ -165,6 +165,8 @@ func routeKindForStatusPhase[T gwtypes.SupportedRoute](routeObject T) string {
 		return "TLSRoute"
 	case gwtypes.TCPRoute:
 		return "TCPRoute"
+	case gwtypes.UDPRoute:
+		return "UDPRoute"
 	}
 	return "Route"
 }
@@ -381,6 +383,8 @@ func getParentStatus[T gwtypes.SupportedRoute](route T) []gwtypes.RouteParentSta
 		return r.Status.Parents
 	case gwtypes.TCPRoute:
 		return r.Status.Parents
+	case gwtypes.UDPRoute:
+		return r.Status.Parents
 	}
 	return nil
 }
@@ -394,6 +398,8 @@ func setParentRefStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr
 	case *gwtypes.TLSRoute:
 		r.Status.Parents = parentStatus
 	case *gwtypes.TCPRoute:
+		r.Status.Parents = parentStatus
+	case *gwtypes.UDPRoute:
 		r.Status.Parents = parentStatus
 	// Should be unreachable.
 	default:
@@ -738,6 +744,16 @@ func BuildResolvedRefsConditionForTCPRoute(ctx context.Context, logger logr.Logg
 	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, nil)
 }
 
+// BuildResolvedRefsConditionForUDPRoute evaluates all BackendRefs in a UDPRoute to determine if their
+// references are valid and permitted.
+func BuildResolvedRefsConditionForUDPRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.UDPRoute) (*metav1.Condition, error) {
+	backendRefs := make([]gwtypes.BackendRef, 0)
+	for _, rule := range route.Spec.Rules {
+		backendRefs = append(backendRefs, rule.BackendRefs...)
+	}
+	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, nil)
+}
+
 func buildResolvedRefsCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
 	ctx context.Context, logger logr.Logger, cl client.Client, route TPtr,
 	backendRefs []gwtypes.BackendRef, extensionRefs []*gwtypes.LocalObjectReference,
@@ -831,6 +847,12 @@ func validateAnnotations[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePt
 			}
 		}
 	case *gwtypes.TCPRoute:
+		for _, rule := range r.Spec.Rules {
+			if err := service.ValidateBackendRefAnnotations(ctx, cl, route.GetNamespace(), rule.BackendRefs, logger); err != nil {
+				return err
+			}
+		}
+	case *gwtypes.UDPRoute:
 		for _, rule := range r.Spec.Rules {
 			if err := service.ValidateBackendRefAnnotations(ctx, cl, route.GetNamespace(), rule.BackendRefs, logger); err != nil {
 				return err
@@ -1071,6 +1093,8 @@ func isListenerValidForKind(routeKind string, listener gwtypes.Listener) bool {
 		return listener.Protocol == gwtypes.TLSProtocolType && listener.TLS != nil
 	case "TCPRoute":
 		return listener.Protocol == gwtypes.TCPProtocolType
+	case "UDPRoute":
+		return listener.Protocol == gwtypes.UDPProtocolType
 	}
 	// Not supported kinds. Should be unreachable.
 	return false

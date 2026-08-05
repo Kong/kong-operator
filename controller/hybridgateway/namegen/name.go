@@ -51,6 +51,9 @@ const (
 	// tcpProtocolPrefix is the prefix for TCP-related resources.
 	tcpProtocolPrefix = "tcp"
 
+	// udpProtocolPrefix is the prefix for UDP-related resources.
+	udpProtocolPrefix = "udp"
+
 	// defaultCPPrefix is the prefix used when including a control-plane identifier.
 	defaultCPPrefix = "cp"
 
@@ -156,6 +159,16 @@ func NewKongUpstreamNameForTCPRouteRule(route *gwtypes.TCPRoute, cp *commonv1alp
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
+// NewKongUpstreamNameForUDPRouteRule generates a KongUpstream name based on the ControlPlaneRef and UDPRouteRule passed as arguments.
+func NewKongUpstreamNameForUDPRouteRule(route *gwtypes.UDPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gwtypes.UDPRouteRule) string {
+	readableElements := append(
+		[]string{udpProtocolPrefix},
+		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
+	)
+	hashElements := hashElementsForServiceLikeNameUDPRouteRule(cp, rule)
+	return newNameWithHashSuffix(readableElements, hashElements)
+}
+
 // NewKongServiceNameForHTTPRouteRule generates a KongService name based on the ControlPlaneRef and HTTPRouteRule passed as arguments.
 func NewKongServiceNameForHTTPRouteRule(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
 	readableElements := append(
@@ -246,6 +259,16 @@ func NewKongServiceNameForTCPRouteRule(route *gwtypes.TCPRoute, cp *commonv1alph
 		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
 	)
 	hashElements := hashElementsForServiceLikeNameTCPRouteRule(cp, rule)
+	return newNameWithHashSuffix(readableElements, hashElements)
+}
+
+// NewKongServiceNameForUDPRouteRule generates a KongService name based on the ControlPlaneRef and UDPRouteRule passed as arguments.
+func NewKongServiceNameForUDPRouteRule(route *gwtypes.UDPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gwtypes.UDPRouteRule) string {
+	readableElements := append(
+		[]string{udpProtocolPrefix},
+		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
+	)
+	hashElements := hashElementsForServiceLikeNameUDPRouteRule(cp, rule)
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
@@ -357,6 +380,17 @@ func hashElementsForServiceLikeNameTCPRouteRule(
 	}
 }
 
+func hashElementsForServiceLikeNameUDPRouteRule(
+	cp *commonv1alpha1.ControlPlaneRef,
+	rule gwtypes.UDPRouteRule,
+) []string {
+	hash := utils.Hash32(rule.BackendRefs)
+	return []string{
+		defaultCPPrefix + utils.Hash32(cp),
+		hash,
+	}
+}
+
 // NewKongRouteNameForMatch generates a KongRoute name based on HTTPRoute, ControlPlaneRef,
 // ParentRef, and a single HTTPRouteMatch. The optional index is included to avoid collisions
 // when multiple matches are identical.
@@ -432,6 +466,26 @@ func NewKongRouteNameForTCPRouteRule(
 ) string {
 	readableElements := []string{
 		tcpProtocolPrefix,
+		route.Namespace + "-" + route.Name,
+	}
+	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
+	if parentRef != nil {
+		hashElements = append(hashElements, parentRefHashElement(parentRef))
+	}
+	hashElements = append(hashElements, utils.Hash32(rule))
+	return newNameWithHashSuffix(readableElements, hashElements)
+}
+
+// NewKongRouteNameForUDPRouteRule generates a KongRoute name based on the UDPRoute rule,
+// ControlPlaneRef, ParentRef, and its parent UDPRoute.
+func NewKongRouteNameForUDPRouteRule(
+	route *gwtypes.UDPRoute,
+	cp *commonv1alpha1.ControlPlaneRef,
+	parentRef *gwtypes.ParentReference,
+	rule gwtypes.UDPRouteRule,
+) string {
+	readableElements := []string{
+		udpProtocolPrefix,
 		route.Namespace + "-" + route.Name,
 	}
 	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}

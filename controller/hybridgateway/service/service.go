@@ -133,6 +133,16 @@ func ServiceForRuleWithName[
 		backendRefs = tcpRule.BackendRefs
 		defaultProtocol = "tcp"
 
+	case *gwtypes.UDPRoute:
+		udpRule, ok := any(rule).(gwtypes.UDPRouteRule)
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("failed to build KongService : unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		serviceName = namegen.NewKongServiceNameForUDPRouteRule(r, cp, udpRule)
+		namespace = r.Namespace
+		backendRefs = udpRule.BackendRefs
+		defaultProtocol = "udp"
+
 	// TODO: add other types of routes and rules when we support them.
 
 	// Should be unreachable.

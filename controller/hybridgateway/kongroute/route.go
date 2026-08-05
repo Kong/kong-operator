@@ -82,6 +82,12 @@ func RoutesForRule[
 			return nil, fmt.Errorf("failed to build KongRoute: unmatched route type and rule type: %T and %T", route, rule)
 		}
 		return routesForTCPRouteRule(ctx, logger, cl, r, tcpRule, pRef, cp, namingParentRef, serviceName)
+	case *gwtypes.UDPRoute:
+		udpRule, ok := any(rule).(gwtypes.UDPRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongRoute: unmatched route type and rule type: %T and %T", route, rule)
+		}
+		return routesForUDPRouteRule(ctx, logger, cl, r, udpRule, pRef, cp, namingParentRef, serviceName)
 	}
 	return nil, fmt.Errorf("failed to build KongRoute: unsupported route type: %T", route)
 }
@@ -695,6 +701,102 @@ func tcpDestinationPorts(
 	}
 
 	return gatewayutils.TCPPortsFromListeners(gw, parentRef.SectionName, parentRef.Port), nil
+}
+
+// routesForUDPRouteRule generates an L4 Kong route for the given UDPRoute rule.
+func routesForUDPRouteRule(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	udpRoute *gwtypes.UDPRoute,
+	rule gwtypes.UDPRouteRule,
+	pRef *gwtypes.ParentReference,
+	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
+	serviceName string,
+) ([]*configurationv1alpha1.KongRoute, error) {
+	routeName := namegen.NewKongRouteNameForUDPRouteRule(udpRoute, cp, namingParentRef, rule)
+	logger = logger.WithValues("kongroute", routeName)
+
+	// Kong requires at least one of sources, destinations or snis on a route whose
+	// protocols include udp. Derive the destination ports from the parent Gateway's
+	// UDP listeners so Kong can match incoming UDP traffic by the port it arrives on.
+	ports, err := udpDestinationPorts(ctx, cl, udpRoute, pRef)
+	if err != nil {
+		return nil, err
+	}
+	// A udp route requires at least one destination. If the parent Gateway has no UDP
+	// listener matching parentRef, we cannot build a valid route, so fail here rather
+	// than emitting an inert, destination-less KongRoute that Kong would reject.
+	if len(ports) == 0 {
+		return nil, fmt.Errorf("no UDP listener found on Gateway %s for UDPRoute %s/%s",
+			pRef.Name, udpRoute.Namespace, udpRoute.Name)
+	}
+
+	return RoutesForUDPRouteRuleWithPorts(ctx, logger, cl, udpRoute, rule, pRef, cp, namingParentRef, serviceName, ports)
+}
+
+// RoutesForUDPRouteRuleWithPorts generates an L4 Kong route for the given UDPRoute rule
+// using the already-arbitrated Gateway listener ports supplied by the caller.
+func RoutesForUDPRouteRuleWithPorts(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	udpRoute *gwtypes.UDPRoute,
+	rule gwtypes.UDPRouteRule,
+	pRef *gwtypes.ParentReference,
+	cp *commonv1alpha1.ControlPlaneRef,
+	namingParentRef *gwtypes.ParentReference,
+	serviceName string,
+	ports []int32,
+) ([]*configurationv1alpha1.KongRoute, error) {
+	if len(ports) == 0 {
+		return nil, fmt.Errorf("no UDP listener ports selected for UDPRoute %s/%s", udpRoute.Namespace, udpRoute.Name)
+	}
+
+	tags := pkgmetadata.ExtractTags(udpRoute)
+	routeName := namegen.NewKongRouteNameForUDPRouteRule(udpRoute, cp, namingParentRef, rule)
+	logger = logger.WithValues("kongroute", routeName)
+
+	routeBuilder := builder.NewKongRoute().WithName(routeName).
+		WithNamespace(metadata.NamespaceFromParentRef(udpRoute, pRef)).
+		WithLabels(udpRoute, pRef).
+		WithAnnotations(udpRoute, pRef).
+		WithSpecName(routeName).
+		WithKongService(serviceName).
+		WithProtocols(sdkkonnectcomp.ProtocolsUDP).
+		WithDestinations(ports).
+		WithSpecTags(tags)
+
+	kongRoute, err := routeBuilder.Build()
+	if err != nil {
+		logger.Error(err, "Failed to build KongRoute resource")
+		return nil, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err)
+	}
+	if _, updErr := translator.VerifyAndUpdate(ctx, logger, cl, &kongRoute, udpRoute, true); updErr != nil {
+		return nil, updErr
+	}
+
+	return []*configurationv1alpha1.KongRoute{kongRoute.DeepCopy()}, nil
+}
+
+// udpDestinationPorts resolves the destination ports for a UDPRoute rule from the
+// UDP listeners of the parent Gateway referenced by parentRef.
+func udpDestinationPorts(
+	ctx context.Context, cl client.Client, udpRoute *gwtypes.UDPRoute, parentRef *gwtypes.ParentReference,
+) ([]int32, error) {
+	ns := udpRoute.Namespace
+	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
+		ns = string(*parentRef.Namespace)
+	}
+
+	gw := &gwtypes.Gateway{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: string(parentRef.Name)}, gw); err != nil {
+		return nil, fmt.Errorf("failed to get parent Gateway %s/%s for UDPRoute %s/%s: %w",
+			ns, parentRef.Name, udpRoute.Namespace, udpRoute.Name, err)
+	}
+
+	return gatewayutils.UDPPortsFromListeners(gw, parentRef.SectionName, parentRef.Port), nil
 }
 
 // protocolsFromGatewayListener derives Kong route protocols from the Gateway listener

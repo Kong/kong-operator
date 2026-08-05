@@ -91,6 +91,14 @@ func UpstreamForRule[
 		upstreamName = namegen.NewKongUpstreamNameForTCPRouteRule(r, cp, tcpRule)
 		namespace = r.Namespace
 		backendRefs = tcpRule.BackendRefs
+	case *gwtypes.UDPRoute:
+		udpRule, ok := any(rule).(gwtypes.UDPRouteRule)
+		if !ok {
+			return nil, fmt.Errorf("failed to build KongUpstream: unmatched route type and rule type: %T and %T", parentRoute, rule)
+		}
+		upstreamName = namegen.NewKongUpstreamNameForUDPRouteRule(r, cp, udpRule)
+		namespace = r.Namespace
+		backendRefs = udpRule.BackendRefs
 	// TODO: add other types of rules when we support them.
 
 	// Should be unreachable.

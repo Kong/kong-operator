@@ -623,6 +623,126 @@ func TestRoutesForTCPRouteRule_NoTCPListener(t *testing.T) {
 	assert.Nil(t, routes)
 }
 
+func TestRoutesForUDPRouteRule(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{{
+				Name:     "udp",
+				Protocol: gatewayv1.UDPProtocolType,
+				Port:     gwtypes.PortNumber(8898),
+			}},
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+	udpRoute := &gwtypes.UDPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "UDPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+	port := gwtypes.PortNumber(80)
+	rule := gwtypes.UDPRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "test-service",
+				Port: &port,
+			},
+		}},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+
+	routes, err := RoutesForRule(ctx, logger, cl, udpRoute, rule, 0, pRef, cp, nil, "test-service", nil)
+	require.NoError(t, err)
+	require.Len(t, routes, 1)
+	kongRoute := routes[0]
+	assert.ElementsMatch(t, []sdkkonnectcomp.Protocols{sdkkonnectcomp.ProtocolsUDP}, kongRoute.Spec.Protocols)
+	assert.Empty(t, kongRoute.Spec.Hosts)
+	assert.Empty(t, kongRoute.Spec.Paths)
+	assert.Empty(t, kongRoute.Spec.Snis)
+	require.Len(t, kongRoute.Spec.Destinations, 1)
+	require.NotNil(t, kongRoute.Spec.Destinations[0].Port)
+	assert.Equal(t, int64(8898), *kongRoute.Spec.Destinations[0].Port)
+	assert.Equal(t, "test-namespace/test-route", kongRoute.Annotations[consts.GatewayOperatorHybridRoutesUDPRouteAnnotation])
+}
+
+func TestRoutesForUDPRouteRule_NoUDPListener(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	// The parent Gateway only exposes a non-UDP listener, so no destination ports
+	// can be derived for the UDPRoute.
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{{
+				Name:     "http",
+				Protocol: gatewayv1.HTTPProtocolType,
+				Port:     gwtypes.PortNumber(80),
+			}},
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+	udpRoute := &gwtypes.UDPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "UDPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+	port := gwtypes.PortNumber(80)
+	rule := gwtypes.UDPRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "test-service",
+				Port: &port,
+			},
+		}},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+
+	routes, err := RoutesForRule(ctx, logger, cl, udpRoute, rule, 0, pRef, cp, nil, "test-service", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no UDP listener found")
+	assert.Nil(t, routes)
+}
+
 func TestRoutesForRule_PrioritizesHeaderOnlyHTTPRouteMatches(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
@@ -1167,6 +1287,81 @@ func TestRoutesForTCPRouteRule_TagsAnnotation(t *testing.T) {
 			}
 
 			results, err := RoutesForRule(ctx, logger, cl, tcpRoute, rule, 0, pRef, cp, nil, "test-service", nil)
+			require.NoError(t, err)
+			require.Len(t, results, 1)
+			assert.Equal(t, tt.expected, results[0].Spec.Tags)
+		})
+	}
+}
+
+func TestRoutesForUDPRouteRule_TagsAnnotation(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	gateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "test-namespace",
+		},
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{{
+				Name:     "udp",
+				Protocol: gatewayv1.UDPProtocolType,
+				Port:     gwtypes.PortNumber(8898),
+			}},
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+	port := gwtypes.PortNumber(80)
+	rule := gwtypes.UDPRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "test-service",
+				Port: &port,
+			},
+		}},
+	}
+
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    commonv1alpha1.Tags
+	}{
+		{
+			name:        "tags annotation present",
+			annotations: map[string]string{"konghq.com/tags": "r1,r2"},
+			expected:    commonv1alpha1.Tags{"r1", "r2"},
+		},
+		{
+			name:        "tags annotation absent",
+			annotations: nil,
+			expected:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			udpRoute := &gwtypes.UDPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-route",
+					Namespace:   "test-namespace",
+					Annotations: tt.annotations,
+				},
+			}
+
+			results, err := RoutesForRule(ctx, logger, cl, udpRoute, rule, 0, pRef, cp, nil, "test-service", nil)
 			require.NoError(t, err)
 			require.Len(t, results, 1)
 			assert.Equal(t, tt.expected, results[0].Spec.Tags)
