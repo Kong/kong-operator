@@ -197,7 +197,7 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 		}
 		// Add admin token and workspace args to controller args when running against Kong Enterprise with DB backed.
 		var extraControllerArgs []string
-		if testenv.KongEnterpriseEnabled() && testenv.DBMode() != testenv.DBModeOff {
+		if testenv.KongEnterpriseImageUsed() && testenv.DBMode() != testenv.DBModeOff {
 			extraControllerArgs = []string{
 				fmt.Sprintf("--kong-admin-token=%s", consts.KongTestPassword),
 				fmt.Sprintf("--kong-workspace=%s", consts.KongTestWorkspace),

@@ -4,7 +4,7 @@
 #   - dataplane_name: Name of the DataPlane to create.
 #   - dataplane_namespace: Namespace where the DataPlane will be created.
 #   - extension_name: Name of the KonnectExtension to reference.
-#   - dataplane_image: (optional) Container image for the proxy. Default: "kong/kong-gateway:3.13".
+#   - dataplane_image: (optional) Container image for the proxy.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:

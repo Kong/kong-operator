@@ -65,9 +65,30 @@ func GetClients() testutils.K8sClients {
 	return clients
 }
 
+// SuiteOption configures optional behavior of Suite.
+type SuiteOption func(*suiteOptions)
+
+type suiteOptions struct {
+	createKongLicense bool
+}
+
+// WithKongLicense loads license data from the KONG_LICENSE_DATA
+// environment variable into the test cluster by creating a KongLicense
+// resource. If not set, the test suite will exit with an error.
+func WithKongLicense() SuiteOption {
+	return func(o *suiteOptions) {
+		o.createKongLicense = true
+	}
+}
+
 // Suite sets up the testing environment for the integration test suite.
 // It is intended to be called from TestMain in the respective test package.
-func Suite(m *testing.M) {
+func Suite(m *testing.M, opts ...SuiteOption) {
+	var so suiteOptions
+	for _, opt := range opts {
+		opt(&so)
+	}
+
 	var code int
 	defer func() {
 		if r := recover(); r != nil {
@@ -120,6 +141,16 @@ func Suite(m *testing.M) {
 
 	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
 	exitOnErr(kcfg.DeployKubernetesConfiguration(GetCtx(), env.Cluster()))
+
+	if so.createKongLicense {
+		cleanupKongLicense, err := helpers.CreateKongLicense(GetCtx(), clients.MgrClient, "ko-integration-license-")
+		exitOnErr(err)
+		defer func() {
+			if err := cleanupKongLicense(); err != nil {
+				fmt.Printf("WARN: %s\n", err)
+			}
+		}()
+	}
 
 	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
 	exitOnErr(err)

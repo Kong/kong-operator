@@ -45,6 +45,7 @@ func TestCustomVault(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service.Namespace = ns.Name
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
@@ -53,6 +54,7 @@ func TestCustomVault(t *testing.T) {
 	ingress := generators.NewIngressForService("/test_custom_vault", map[string]string{
 		"konghq.com/strip-path": "true",
 	}, service)
+	ingress.Namespace = ns.Name
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 	cleaner.Add(ingress)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
+	testhelpers "github.com/kong/kong-operator/v2/test"
 )
 
 const (
@@ -68,7 +68,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 			"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongAdminPort),
 			"KONG_PROXY_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongProxyPort),
 			"KONG_ROUTER_FLAVOR": defaultRouterFlavor,
-			"KONG_LICENSE_DATA":  os.Getenv("KONG_LICENSE_DATA"),
+			"KONG_LICENSE_DATA":  testhelpers.KongLicenseData(),
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(kongAdminPort),
@@ -179,7 +179,7 @@ func (c Kong) Terminate(ctx context.Context) error {
 
 // kongImageUnderTest returns the Kong image to be used for integration tests. If both TEST_KONG_IMAGE and
 // TEST_KONG_TAG are set, it will return the image and tag specified by them. Otherwise, it will return
-// the default image (kong:latest or kong/kong-gateway if EE tests enabled).
+// the default Enterprise image.
 func kongImageUnderTest(t *testing.T) string {
 	t.Helper()
 
@@ -187,12 +187,7 @@ func kongImageUnderTest(t *testing.T) string {
 		return fmt.Sprintf("%s:%s", testenv.KongImage(), testenv.KongTag())
 	}
 
-	if testenv.KongEnterpriseEnabled() {
-		gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-ee")
-		require.NoError(t, err)
-		return "kong/kong-gateway:" + gatewayTag
-	}
-	gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-oss")
+	gatewayTag, err := testenv.GetDependencyVersion("kongintegration.kong-ee")
 	require.NoError(t, err)
-	return "kong:" + gatewayTag
+	return "kong/kong-gateway:" + gatewayTag
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission/validation"
@@ -44,9 +45,10 @@ func ValidateIngress(
 		// Validate by using feature of Kong Gateway.
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
-			return false, fmt.Sprintf("Unable to validate Ingress schema: %s", err.Error()), nil
-		}
-		if !ok {
+			// Validation against the Kong Gateway Admin API is best-effort: a failure here
+			// (e.g. DataPlane with license not yet provisioned) shouldn't block the Ingress.
+			ctrllog.FromContext(ctx).Info(fmt.Sprintf("Unable to validate Ingress schema due to: %s, allowing", err))
+		} else if !ok {
 			errMsgs = append(errMsgs, msg)
 		}
 	}

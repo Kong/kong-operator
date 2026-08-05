@@ -11,6 +11,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission/validation"
 	gatewaycontroller "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
@@ -260,9 +261,11 @@ func validateWithKongGateway(
 			route.Override(logr.Discard(), kongVersion)
 			ok, msg, err := routesValidator.Validate(ctx, &route.Route)
 			if err != nil {
-				return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error())
-			}
-			if !ok {
+				// Validation against the Kong Gateway Admin API is best-effort: a failure here
+				// (e.g. DataPlane with license not yet provisioned) shouldn't block the HTTPRoute.
+				ctrllog.FromContext(ctx).Info(fmt.Sprintf("Unable to validate HTTPRoute schema due to: %s, allowing", err))
+				continue
+			} else if !ok {
 				errMsgs = append(errMsgs, msg)
 			}
 		}

@@ -21,7 +21,7 @@ func SkipIfRouterNotExpressions(ctx context.Context, t *testing.T, _ *envconf.Co
 
 // SkipIfEnterpriseNotEnabled skips the test when Kong Enterprise is not enabled.
 func SkipIfEnterpriseNotEnabled(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-	if !testenv.KongEnterpriseEnabled() {
+	if !testenv.KongEnterpriseImageUsed() {
 		t.Skip("skipping, Kong enterprise is required")
 	}
 	return ctx

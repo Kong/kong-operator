@@ -7,5 +7,5 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	integration.Suite(m)
+	integration.Suite(m, integration.WithKongLicense())
 }

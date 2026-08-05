@@ -85,6 +85,10 @@
 - Gateway: Support watching both `v1` and `v1beta1` versions of `ReferenceGrant`
   to ensure compatability with gateway API 1.3 and 1.4.
   [#5091](https://github.com/Kong/kong-operator/pull/5091)
+- Admission webhook maintains its semantic to provide best effort validation
+  to not block potentially valid `Ingress` or `HTTPRoute` resources when the
+  webhook is not able to reach Kong Gateway.
+  [#5095](https://github.com/Kong/kong-operator/pull/5095)
 
 ### Added
   
@@ -146,6 +150,8 @@
   and its controller. Use `AIGateway*` CRDs in `konnect.konghq.com/v1alpha1`
   instead.
   [#5114](https://github.com/Kong/kong-operator/pull/5114)
+- Gateway: update the default DataPlane image to `kong/kong-gateway:3.15`.
+  [#5095](https://github.com/Kong/kong-operator/pull/5095)
 
 ## [v2.3.0-rc.2]
 

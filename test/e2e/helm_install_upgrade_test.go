@@ -294,6 +294,9 @@ func TestHelmUpgrade(t *testing.T) {
 			})
 			ensureBasicReadiness(t, ctx, e, releaseName)
 
+			t.Log("Applying KongLicense")
+			helpers.CreateKongLicenseForTest(t, ctx, e.Clients.MgrClient, "ko-e2e-license-")
+
 			// Deploy the objects that should be present before the upgrade.
 			cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
 			for _, suite := range suitesToRun {
