@@ -119,6 +119,14 @@
   (no effect), which was not the intended behavior.
   Now, the operator will not set any probes on the `DataPlane` whenever `{}` is specified.
   [#5117](https://github.com/Kong/kong-operator/pull/5117)
+- `KongCertificate`: `spec.cert`, `spec.key`, `spec.cert_alt` and `spec.key_alt`
+  now explicitly support Kong vault references (e.g.
+  `{vault://certvault/my-service-key}`) in addition to inline PEM material, so
+  certificate material can be kept out of Kubernetes and resolved by Kong
+  Gateway at runtime. Values that start with `{vault:` are validated against the
+  vault reference format at admission time, valid references are passed to
+  Konnect unchanged.
+  [#5159](https://github.com/Kong/kong-operator/pull/5159)
 
 ### Changed
 
