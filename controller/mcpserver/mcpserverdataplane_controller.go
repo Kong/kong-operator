@@ -22,7 +22,9 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
+	konnectcontroller "github.com/kong/kong-operator/v2/controller/konnect"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/v2/controller/konnect/server"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
@@ -249,4 +251,44 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// resolveAuth resolves the KonnectAPIAuthConfiguration for the given MCPServer,
+// via the auth chain rooted at the MCPServer's ControlPlaneRef.
+func (r *MCPServerDataPlaneReconciler) resolveAuth(
+	ctx context.Context,
+	mcpServer *konnectv1alpha1.MCPServer,
+) (*konnectv1alpha1.KonnectAPIAuthConfiguration, error) {
+	apiAuthRef, err := konnectcontroller.GetAPIAuthRefNN(ctx, r.Client, mcpServer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get APIAuth ref: %w", err)
+	}
+
+	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
+	if err := r.Get(ctx, apiAuthRef, &apiAuth); err != nil {
+		return nil, fmt.Errorf("failed to get KonnectAPIAuthConfiguration %s: %w", apiAuthRef, err)
+	}
+
+	return &apiAuth, nil
+}
+
+// buildSDK returns an authenticated SDK wrapper for the given, already-resolved
+// KonnectAPIAuthConfiguration.
+func (r *MCPServerDataPlaneReconciler) buildSDK(
+	ctx context.Context,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+) (sdkops.SDKWrapper, error) {
+	token, err := konnectcontroller.GetTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, apiAuth)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token from KonnectAPIAuthConfiguration %s/%s: %w",
+			apiAuth.Namespace, apiAuth.Name, err)
+	}
+
+	srv, err := server.NewServer[konnectv1alpha1.MCPServer](apiAuth.Spec.ServerURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse server URL from KonnectAPIAuthConfiguration %s/%s: %w",
+			apiAuth.Namespace, apiAuth.Name, err)
+	}
+
+	return r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token)), nil
 }

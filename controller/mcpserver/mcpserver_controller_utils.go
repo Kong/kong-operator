@@ -1,19 +1,14 @@
 package mcpserver
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	konnectcontroller "github.com/kong/kong-operator/v2/controller/konnect"
-	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
-	"github.com/kong/kong-operator/v2/controller/konnect/server"
 )
 
 // generateHashedName builds a Kubernetes-safe NamespacedName from a namespace,
@@ -48,44 +43,4 @@ func ownerControlPlaneName(mcpServer *konnectv1alpha1.MCPServer) string {
 		}
 	}
 	return ""
-}
-
-// resolveAuth resolves the KonnectAPIAuthConfiguration for the given MCPServer,
-// via the auth chain rooted at the MCPServer's ControlPlaneRef.
-func (r *MCPServerDataPlaneReconciler) resolveAuth(
-	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
-) (*konnectv1alpha1.KonnectAPIAuthConfiguration, error) {
-	apiAuthRef, err := konnectcontroller.GetAPIAuthRefNN(ctx, r.Client, mcpServer)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get APIAuth ref: %w", err)
-	}
-
-	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
-	if err := r.Get(ctx, apiAuthRef, &apiAuth); err != nil {
-		return nil, fmt.Errorf("failed to get KonnectAPIAuthConfiguration %s: %w", apiAuthRef, err)
-	}
-
-	return &apiAuth, nil
-}
-
-// buildSDK returns an authenticated SDK wrapper for the given, already-resolved
-// KonnectAPIAuthConfiguration.
-func (r *MCPServerDataPlaneReconciler) buildSDK(
-	ctx context.Context,
-	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
-) (sdkops.SDKWrapper, error) {
-	token, err := konnectcontroller.GetTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, apiAuth)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get token from KonnectAPIAuthConfiguration %s/%s: %w",
-			apiAuth.Namespace, apiAuth.Name, err)
-	}
-
-	srv, err := server.NewServer[konnectv1alpha1.MCPServer](apiAuth.Spec.ServerURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse server URL from KonnectAPIAuthConfiguration %s/%s: %w",
-			apiAuth.Namespace, apiAuth.Name, err)
-	}
-
-	return r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token)), nil
 }
