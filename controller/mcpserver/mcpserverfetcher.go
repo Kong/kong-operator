@@ -142,7 +142,9 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 		}
 	}
 
-	f.cleanupMCPServersForControlPlane(ctx, logger, nnCP, konnectIDs)
+	if err := f.cleanupMCPServersForControlPlane(ctx, logger, nnCP, konnectIDs); err != nil {
+		errs = append(errs, err)
+	}
 
 	return errors.Join(errs...)
 }
