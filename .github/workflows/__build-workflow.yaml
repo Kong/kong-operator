@@ -169,7 +169,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
+        env:
+          GH_PAT: ${{ secrets.gh-pat }}
+        run: git config --global url."https://${GH_PAT}@github.com".insteadOf "https://github.com"
 
       - name: Cache Docker layers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v4
@@ -192,20 +194,25 @@ jobs:
 
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
+        env:
+          FULLVERSION: ${{ needs.semver.outputs.fullversion }}
         run: |
           (
             echo 'TAGS_STANDARD<<EOF'
-            echo 'type=raw,value=${{ needs.semver.outputs.fullversion }}'
+            echo "type=raw,value=$FULLVERSION"
             echo 'EOF'
           ) >> $GITHUB_ENV
 
       - name: Add major.minor tag
         if: ${{ inputs.tag != '' && needs.semver.outputs.prerelease == '' }}
+        env:
+          MAJOR: ${{ needs.semver.outputs.major }}
+          MINOR: ${{ needs.semver.outputs.minor }}
         run: |
           (
             echo 'TAGS_SUPPLEMENTAL<<EOF'
             echo ""
-            echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}'
+            echo "type=raw,value=$MAJOR.$MINOR"
             echo 'EOF'
           ) >> $GITHUB_ENV
 
@@ -283,13 +290,20 @@ jobs:
         # NOTE: we can't use steps.build.outputs.tags here because it's there's more than one tag
         # and we need to run the image with the same os/arch combination as it was downloaded.
         # Below 'docker images ...' relies on the fact that there will only be 1 image with
-        # reference ${{ inputs.image-name }}.
+        # reference matching the image name.
+        env:
+          VERIFY_IMAGE_SCRIPT: ${{ inputs.verify-image-script }}
+          PLATFORM_OS: ${{ matrix.os }}
+          PLATFORM_ARCH: ${{ matrix.arch }}
+          IMAGE_NAME: ${{ inputs.image-name }}
+          IMAGE_VERSION: ${{ steps.meta.outputs.version }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          chmod +x ${{ inputs.verify-image-script }}
+          chmod +x "$VERIFY_IMAGE_SCRIPT"
           docker images
           docker run --rm \
-              --platform ${{ matrix.os }}/${{ matrix.arch }} \
-              ${{ inputs.image-name }}:${{ steps.meta.outputs.version }} -version | ${{ inputs.verify-image-script }} ${{ github.repository }}
+              --platform "$PLATFORM_OS/$PLATFORM_ARCH" \
+              "$IMAGE_NAME:$IMAGE_VERSION" -version | "$VERIFY_IMAGE_SCRIPT" "$REPOSITORY"
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -332,26 +346,33 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
+        env:
+          GH_PAT: ${{ secrets.gh-pat }}
+        run: git config --global url."https://${GH_PAT}@github.com".insteadOf "https://github.com"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       - name: Add standard tags
         if: ${{ inputs.tag != '' }}
+        env:
+          FULLVERSION: ${{ needs.semver.outputs.fullversion }}
         run: |
           (
             echo 'TAGS_STANDARD<<EOF'
-            echo 'type=raw,value=${{ needs.semver.outputs.fullversion }}'
+            echo "type=raw,value=$FULLVERSION"
             echo 'EOF'
           ) >> $GITHUB_ENV
 
       - name: Add major.minor tag
         if: ${{ inputs.tag != '' && needs.semver.outputs.prerelease == '' }}
+        env:
+          MAJOR: ${{ needs.semver.outputs.major }}
+          MINOR: ${{ needs.semver.outputs.minor }}
         run: |
           (
             echo 'TAGS_SUPPLEMENTAL<<EOF'
             echo ""
-            echo 'type=raw,value=${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}'
+            echo "type=raw,value=$MAJOR.$MINOR"
             echo 'EOF'
           ) >> $GITHUB_ENV
 
@@ -423,8 +444,12 @@ jobs:
       - name: Set output tag
         if: ${{ inputs.tag != '' }}
         id: tag
+        env:
+          REGISTRY: ${{ inputs.registry }}
+          IMAGE_NAME: ${{ inputs.image-name }}
+          FULLVERSION: ${{ needs.semver.outputs.fullversion }}
         run: |
-          echo "tag=${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}" >> $GITHUB_OUTPUT
+          echo "tag=$REGISTRY/$IMAGE_NAME:$FULLVERSION" >> $GITHUB_OUTPUT
 
       - name: Send slack notification if job fails.
         if: ${{ failure() && inputs.slack-send }}

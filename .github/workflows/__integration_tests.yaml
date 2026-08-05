@@ -69,9 +69,18 @@ jobs:
     # cache storage and increase hit rate by not including the router flavor in the key.
     #
     # Separate cache keys only for kic and ko to minimize cache eviction.
-    - run: echo "GO_CACHE_KEY=go-integrationtests-${{ matrix.suite == 'kic' && 'kic' || 'ko' }}-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_2=go-integrationtests-${{ matrix.suite == 'kic' && 'kic' || 'ko' }}-${{ runner.os }}-${{ runner.arch }}-go-" >> $GITHUB_ENV
-    - run: echo "GO_CACHE_KEY_3=go-integrationtests-" >> $GITHUB_ENV
+    - name: Compute Go build cache key
+      env:
+        RUNNER_OS: ${{ runner.os }}
+        RUNNER_ARCH: ${{ runner.arch }}
+        GO_MOD_HASH: ${{ hashFiles('**/go.mod') }}
+        CACHE_SUFFIX: ${{ matrix.suite == 'kic' && 'kic' || 'ko' }}
+      run: |
+        {
+          echo "GO_CACHE_KEY=go-integrationtests-$CACHE_SUFFIX-$RUNNER_OS-$RUNNER_ARCH-go-$GO_MOD_HASH"
+          echo "GO_CACHE_KEY_2=go-integrationtests-$CACHE_SUFFIX-$RUNNER_OS-$RUNNER_ARCH-go-"
+          echo "GO_CACHE_KEY_3=go-integrationtests-"
+        } >> $GITHUB_ENV
 
     - name: Go cache main branch
       if: ${{ github.ref == 'refs/heads/main' }}
@@ -100,15 +109,19 @@ jobs:
           ${{ env.GO_CACHE_KEY_3 }}
 
     - name: start tcpdump capture
+      env:
+        SUITE: ${{ matrix.suite }}
+        ROUTER_FLAVOR: ${{ matrix.router_flavor }}
       run: |
-        sudo tcpdump -i any 'dst port 443' -w /tmp/capture-${{ matrix.suite }}-${{ matrix.router_flavor }}.pcap &
+        sudo tcpdump -i any 'dst port 443' -w "/tmp/capture-$SUITE-$ROUTER_FLAVOR.pcap" &
         echo $! > /tmp/tcpdump.pid
 
     - uses: ./.github/actions/bump-inotify
 
     - name: run integration tests
-      run: make test.integration-${{ matrix.suite }}
+      run: make "test.integration-$SUITE"
       env:
+        SUITE: ${{ matrix.suite }}
         KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: "integration-tests-${{ matrix.suite }}-${{ matrix.router_flavor }}.xml"

@@ -41,6 +41,7 @@ jobs:
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
         github.run_id }}
       ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
+      INPUTS_JSON: ${{ toJSON(github.event.inputs) }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -49,9 +50,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: |
           gh issue comment ${ISSUE_NUMBER} --body \
-            'Kong Gateway validation tests were started at ${{ env.URL }} with the following parameters:
+            'Kong Gateway validation tests were started at '"$URL"' with the following parameters:
             ```json
-            ${{ toJSON(github.event.inputs) }}
+            '"$INPUTS_JSON"'
             ```
             '
 
@@ -105,6 +106,7 @@ jobs:
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
         github.run_id }}
       ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
+      INPUTS_JSON: ${{ toJSON(github.event.inputs) }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -115,17 +117,17 @@ jobs:
           'cancelled') }}
         run: |
           gh issue close ${ISSUE_NUMBER} --comment \
-            'Kong Gateway validation tests **PASSED** ✅ at ${{ env.URL }} with the following parameters:
+            'Kong Gateway validation tests **PASSED** ✅ at '"$URL"' with the following parameters:
             ```json
-            ${{ toJSON(github.event.inputs) }}
+            '"$INPUTS_JSON"'
             ```
             '
       - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result,
           'cancelled') }}
         run: |
           gh issue comment ${ISSUE_NUMBER} --body \
-            'Kong Gateway validation tests **FAILED** ❌ at ${{ env.URL }} with the following parameters:
+            'Kong Gateway validation tests **FAILED** ❌ at '"$URL"' with the following parameters:
             ```json
-            ${{ toJSON(github.event.inputs) }}
+            '"$INPUTS_JSON"'
             ```
             '

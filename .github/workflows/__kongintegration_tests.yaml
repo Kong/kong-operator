@@ -68,26 +68,37 @@ jobs:
 
       - name: set kong image override
         if: ${{ inputs.kong-image-repo != '' }}
+        env:
+          KONG_IMAGE_REPO: ${{ inputs.kong-image-repo }}
+          KONG_IMAGE_TAG: ${{ inputs.kong-image-tag }}
         run: |
-          echo "TEST_KONG_IMAGE=${{ inputs.kong-image-repo }}" >> $GITHUB_ENV
-          echo "TEST_KONG_TAG=${{ inputs.kong-image-tag }}" >> $GITHUB_ENV
+          echo "TEST_KONG_IMAGE=$KONG_IMAGE_REPO" >> $GITHUB_ENV
+          echo "TEST_KONG_TAG=$KONG_IMAGE_TAG" >> $GITHUB_ENV
 
       - name: set kong effective version
         if: ${{ inputs.kong-effective-version != '' }}
+        env:
+          KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
         run: |
-          echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-effective-version }}" >> $GITHUB_ENV
+          echo "TEST_KONG_EFFECTIVE_VERSION=$KONG_EFFECTIVE_VERSION" >> $GITHUB_ENV
 
       - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
         with:
           install: false
 
-      - run: echo "GOTESTSUM_JUNITFILE=kongintegration-${{ matrix.name }}-tests.xml" >>
-          $GITHUB_ENV
-      # Share the cache key across all kongintegration tests since they all use the same dependencies.
-      - run: echo "GO_CACHE_KEY=go-kongintegration-${{ runner.os }}-${{ runner.arch
-          }}-go-${{ hashFiles('**/go.mod') }}" >> $GITHUB_ENV
-      - run: echo "GO_CACHE_KEY_2=go-kongintegration-${{ runner.os }}-${{ runner.arch
-          }}-go-" >> $GITHUB_ENV
+      - name: Compute cache keys
+        env:
+          MATRIX_NAME: ${{ matrix.name }}
+          RUNNER_OS: ${{ runner.os }}
+          RUNNER_ARCH: ${{ runner.arch }}
+          GO_MOD_HASH: ${{ hashFiles('**/go.mod') }}
+        run: |
+          {
+            echo "GOTESTSUM_JUNITFILE=kongintegration-$MATRIX_NAME-tests.xml"
+            # Share the cache key across all kongintegration tests since they all use the same dependencies.
+            echo "GO_CACHE_KEY=go-kongintegration-$RUNNER_OS-$RUNNER_ARCH-go-$GO_MOD_HASH"
+            echo "GO_CACHE_KEY_2=go-kongintegration-$RUNNER_OS-$RUNNER_ARCH-go-"
+          } >> $GITHUB_ENV
 
       - name: Go cache main branch
         if: ${{ github.ref == 'refs/heads/main' }}
