@@ -190,8 +190,8 @@ func conformanceProfiles(_ gatewayType) []suite.ConformanceProfileName {
 const conformanceCleanupTimeout = 90 * time.Second
 
 // waitForConformanceResourcesCleanup blocks until no HTTPRoute, TLSRoute,
-// TCPRoute or ReferenceGrant in any conformance namespace still has a deletion
-// timestamp,
+// TCPRoute, UDPRoute or ReferenceGrant in any conformance namespace still has
+// a deletion timestamp,
 // i.e. the previous test's resources have been fully finalized and removed.
 // These are per-test resources (the base manifests only contribute
 // Gateways/Services), and several tests reuse the same names (for example the
@@ -241,6 +241,17 @@ func waitForConformanceResourcesCleanup(ctx context.Context, cl client.Client, l
 		for i := range tcpRoutes.Items {
 			if r := &tcpRoutes.Items[i]; isConformanceNS(r.Namespace) && r.DeletionTimestamp != nil {
 				logf("waiting for TCPRoute %s/%s to finish terminating before next test", r.Namespace, r.Name)
+				return false, nil
+			}
+		}
+
+		var udpRoutes gatewayv1.UDPRouteList
+		if err := cl.List(ctx, &udpRoutes); err != nil {
+			return false, nil //nolint:nilerr
+		}
+		for i := range udpRoutes.Items {
+			if r := &udpRoutes.Items[i]; isConformanceNS(r.Namespace) && r.DeletionTimestamp != nil {
+				logf("waiting for UDPRoute %s/%s to finish terminating before next test", r.Namespace, r.Name)
 				return false, nil
 			}
 		}

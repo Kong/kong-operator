@@ -1,0 +1,70 @@
+---
+# GEP-2645: the listener counts both same-listener UDPRoutes regardless of
+# arbitration outcome.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($gateway_namespace)
+status:
+  (listeners[?name == 'udp']):
+    - attachedRoutes: 2
+---
+# Winner UDPRoute (older creationTimestamp) keeps its Kong resources programmed.
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: ($udp_route_name)
+  namespace: ($udp_route_namespace)
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
+---
+# Loser UDPRoute (newer creationTimestamp on the same listener) is still
+# Accepted/ResolvedRefs=True per Gateway API status semantics, but loses
+# GEP-2645 arbitration: no Kong resources are created for it, so it carries
+# no Kong*Programmed conditions at all.
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: ($second_udp_route_name)
+  namespace: ($udp_route_namespace)
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (length(conditions[?type == 'KongRouteProgrammed'])): 0
+      (length(conditions[?type == 'KongServiceProgrammed'])): 0
+      (length(conditions[?type == 'KongUpstreamProgrammed'])): 0
+      (length(conditions[?type == 'KongTargetProgrammed'])): 0
