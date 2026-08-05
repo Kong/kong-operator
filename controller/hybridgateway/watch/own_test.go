@@ -32,6 +32,19 @@ func TestOwns(t *testing.T) {
 			},
 		},
 		{
+			name:    "GRPCRoute",
+			obj:     &gwtypes.GRPCRoute{},
+			wantLen: 6,
+			want: []any{
+				&configurationv1alpha1.KongRoute{},
+				&configurationv1alpha1.KongService{},
+				&configurationv1alpha1.KongUpstream{},
+				&configurationv1alpha1.KongTarget{},
+				&configurationv1alpha1.KongPluginBinding{},
+				&configurationv1.KongPlugin{},
+			},
+		},
+		{
 			name:    "Gateway",
 			obj:     &gwtypes.Gateway{},
 			wantLen: 2,

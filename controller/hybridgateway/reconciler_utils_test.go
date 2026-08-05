@@ -1472,6 +1472,187 @@ func TestShouldProcessObject_TCPRoute(t *testing.T) {
 	}
 }
 
+// TestShouldProcessObject_GRPCRoute guards against regressions of the *gwtypes.GRPCRoute
+// case in referencesSupportedGateway.
+func TestShouldProcessObject_GRPCRoute(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+
+	ourGateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-gateway",
+			Namespace: "default",
+			UID:       "our-gateway-uid",
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "kong",
+		},
+	}
+
+	ourKonnectExtension := &konnectv1alpha2.KonnectExtension{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-gateway",
+			Namespace: "default",
+			Labels: map[string]string{
+				"gateway-operator.konghq.com/managed-by": "gateway",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "Gateway",
+					Name:       "our-gateway",
+					UID:        "our-gateway-uid",
+				},
+			},
+		},
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "our-cp",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ourControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-cp",
+			Namespace: "default",
+		},
+	}
+
+	otherGateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "other-gateway",
+			Namespace: "default",
+			UID:       "other-gateway-uid",
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "other-class",
+		},
+	}
+
+	testCases := []struct {
+		name           string
+		setupRoute     func() *gwtypes.GRPCRoute
+		clientObjects  []client.Object
+		expectedResult bool
+		description    string
+	}{
+		{
+			name: "object with finalizer should be processed",
+			setupRoute: func() *gwtypes.GRPCRoute {
+				return &gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{finalizerconst.HybridGRPCRouteFinalizer},
+					},
+				}
+			},
+			clientObjects:  []client.Object{},
+			expectedResult: true,
+			description:    "Objects with our finalizer should be processed regardless of Gateway reference.",
+		},
+		{
+			name: "object without finalizer but referencing our Gateway should be processed",
+			setupRoute: func() *gwtypes.GRPCRoute {
+				gatewayName := gwtypes.ObjectName("our-gateway")
+				return &gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "default",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: gatewayName},
+							},
+						},
+					},
+				}
+			},
+			clientObjects:  []client.Object{ourGateway, ourKonnectExtension, ourControlPlane},
+			expectedResult: true,
+			description:    "Objects without finalizer but referencing our Gateway should be processed.",
+		},
+		{
+			name: "object without finalizer referencing other Gateway should be skipped",
+			setupRoute: func() *gwtypes.GRPCRoute {
+				gatewayName := gwtypes.ObjectName("other-gateway")
+				return &gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "default",
+					},
+					Spec: gwtypes.GRPCRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: gatewayName},
+							},
+						},
+					},
+				}
+			},
+			clientObjects:  []client.Object{otherGateway},
+			expectedResult: false,
+			description:    "Objects without finalizer referencing unsupported Gateway should be skipped.",
+		},
+		{
+			name: "object without finalizer and no Gateway reference should be skipped",
+			setupRoute: func() *gwtypes.GRPCRoute {
+				return &gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-route",
+						Namespace: "default",
+					},
+				}
+			},
+			clientObjects:  []client.Object{},
+			expectedResult: false,
+			description:    "Objects without finalizer and no Gateway reference should be skipped.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			route := tc.setupRoute()
+			route.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   gwtypes.GroupName,
+				Version: "v1",
+				Kind:    "GRPCRoute",
+			})
+
+			scheme := runtime.NewScheme()
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+				&gwtypes.GRPCRoute{}, &gwtypes.Gateway{}, &gwtypes.GatewayClass{},
+			)
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: "konnect.konghq.com", Version: "v1alpha2"},
+				&konnectv1alpha2.KonnectExtension{},
+				&konnectv1alpha2.KonnectExtensionList{},
+				&konnectv1alpha2.KonnectGatewayControlPlane{},
+				&konnectv1alpha2.KonnectGatewayControlPlaneList{},
+			)
+			require.NoError(t, gatewayv1.Install(scheme))
+
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tc.clientObjects...).
+				Build()
+
+			shouldProcess := shouldProcessObject[gwtypes.GRPCRoute](ctx, cl, route, logger)
+			assert.Equal(t, tc.expectedResult, shouldProcess, tc.description)
+		})
+	}
+}
+
 func TestShouldProcessObject_Gateway(t *testing.T) {
 	ctx := t.Context()
 	logger := logr.Discard()
@@ -2329,83 +2510,6 @@ func TestEnforceState_UpstreamGating(t *testing.T) {
 	}
 }
 
-func TestEnforceState_KongRouteRequiresLiveServiceRouteAnnotation(t *testing.T) {
-	ctx := t.Context()
-	logger := logr.Discard()
-	s := scheme.Get()
-	ns := "ns"
-	root := gwtypes.HTTPRoute{
-		TypeMeta:   metav1.TypeMeta{APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute"},
-		ObjectMeta: metav1.ObjectMeta{Name: "httproute-owner", Namespace: ns},
-	}
-	routeRef := ns + "/httproute-owner"
-
-	programmedCondition := metav1.Condition{
-		Type:               "Programmed",
-		Status:             metav1.ConditionTrue,
-		Reason:             "Programmed",
-		LastTransitionTime: metav1.Now(),
-	}
-
-	svcGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
-	routeGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"}
-
-	makeDesiredService := func(name string) unstructured.Unstructured {
-		u := newUnstructured(ns, name, svcGVK, nil)
-		_ = unstructured.SetNestedField(u.Object, "example.com", "spec", "host")
-		_ = unstructured.SetNestedField(u.Object, int64(80), "spec", "port")
-		_ = unstructured.SetNestedField(u.Object, "httproute", "spec", "protocol")
-		u.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/other-route," + routeRef,
-		})
-		return u
-	}
-	makeDesiredRoute := func(name, serviceName string) unstructured.Unstructured {
-		u := newUnstructured(ns, name, routeGVK, nil)
-		_ = unstructured.SetNestedField(u.Object, map[string]any{
-			"namespacedRef": map[string]any{"name": serviceName},
-		}, "spec", "serviceRef")
-		return u
-	}
-	makeProgrammedService := func(name string, annotation string) *configurationv1alpha1.KongService {
-		svc := &configurationv1alpha1.KongService{}
-		svc.SetName(name)
-		svc.SetNamespace(ns)
-		svc.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: annotation,
-		})
-		svc.Status.Conditions = []metav1.Condition{programmedCondition}
-		return svc
-	}
-
-	desired := []unstructured.Unstructured{
-		makeDesiredService("svc1"),
-		makeDesiredRoute("route1", "svc1"),
-		makeDesiredService("svc2"),
-		makeDesiredRoute("route2", "svc2"),
-	}
-	cl := fake.NewClientBuilder().
-		WithScheme(s).
-		WithObjects(
-			makeProgrammedService("svc1", routeRef),
-			makeProgrammedService("svc2", "ns/other-route"),
-		).
-		Build()
-
-	conv := &fakeHTTPRouteConverter{desired: desired, root: root}
-	applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, conv)
-	require.NoError(t, err)
-	assert.True(t, applied)
-	assert.True(t, waiting)
-
-	var svc2 configurationv1alpha1.KongService
-	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: "svc2"}, &svc2))
-	assert.Equal(t, "ns/other-route,"+routeRef, svc2.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
-
-	var route2 configurationv1alpha1.KongRoute
-	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: "route2"}, &route2))
-}
-
 // fakeHTTPRouteConverterWithHandleErr wraps fakeHTTPRouteConverter and returns an error
 // from HandleOrphanedResource so we can test error propagation in cleanOrphanedResources.
 type fakeHTTPRouteConverterWithHandleErr struct {
@@ -2660,6 +2764,16 @@ func TestHybridRouteAnnotationInfo(t *testing.T) {
 			runFn: func() (string, string) {
 				return hybridRouteAnnotationInfo(gwtypes.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: "route-a", Namespace: "ns"},
+				})
+			},
+		},
+		{
+			name:    "GRPCRoute returns GRPCRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation,
+			wantRef: "ns/grpc-route",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.GRPCRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "grpc-route", Namespace: "ns"},
 				})
 			},
 		},

@@ -211,25 +211,11 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 					stopAtKind = "KongService"
 					continue
 				}
-				if !svc.GetDeletionTimestamp().IsZero() {
-					log.Debug(logger, "Service is being deleted for route, waiting", "service", svcName)
-					objectsSkipped++
-					stopAtKind = "KongService"
-					continue
-				}
 				if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, &svc) {
 					log.Debug(logger, "Service not Programmed yet for route, waiting", "service", svcName)
 					objectsSkipped++
 					stopAtKind = "KongService"
 					continue
-				}
-				if routeAnnotationKey != "" && !hybridRouteAnnotationContains(svc.GetAnnotations(), routeAnnotationKey, routeRef) {
-					if err := ensureHybridRouteAnnotationOnKongService(ctx, cl, &svc, routeAnnotationKey, routeRef); err != nil {
-						return false, false, fmt.Errorf("failed to update referenced KongService %s/%s hybrid-routes annotation before applying KongRoute %s: %w",
-							svc.GetNamespace(), svc.GetName(), desired.GetName(), err)
-					}
-					log.Debug(logger, "Updated referenced KongService hybrid-routes annotation before applying KongRoute",
-						"service", svcName, "route", desired.GetName())
 				}
 			}
 		case "KongPluginBinding":
@@ -370,6 +356,8 @@ func hybridRouteAnnotationInfo[t converter.RootObject](obj t) (annotationKey, ro
 	switch o := any(obj).(type) {
 	case gwtypes.HTTPRoute:
 		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation, o.Namespace + "/" + o.Name
+	case gwtypes.GRPCRoute:
+		return consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation, o.Namespace + "/" + o.Name
 	case gwtypes.TLSRoute:
 		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation, o.Namespace + "/" + o.Name
 	}
@@ -397,39 +385,6 @@ func mergeHybridRouteAnnotation(desired, existing *unstructured.Unstructured, an
 	}
 	anns[annotationKey] = merged
 	desired.SetAnnotations(anns)
-}
-
-func ensureHybridRouteAnnotationOnKongService(
-	ctx context.Context,
-	cl client.Client,
-	svc *configurationv1alpha1.KongService,
-	annotationKey, routeRef string,
-) error {
-	base := svc.DeepCopy()
-	anns := svc.GetAnnotations()
-	if anns == nil {
-		anns = map[string]string{}
-	}
-
-	current := anns[annotationKey]
-	if hybridRouteAnnotationContains(anns, annotationKey, routeRef) {
-		return nil
-	}
-	if current != "" {
-		anns[annotationKey] = current + "," + routeRef
-	} else {
-		anns[annotationKey] = routeRef
-	}
-	svc.SetAnnotations(anns)
-
-	return cl.Patch(ctx, svc, client.MergeFromWithOptions(base, client.MergeFromWithOptimisticLock{}))
-}
-
-func hybridRouteAnnotationContains(anns map[string]string, annotationKey, routeRef string) bool {
-	if len(anns) == 0 {
-		return false
-	}
-	return strings.Contains(","+anns[annotationKey]+",", ","+routeRef+",")
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.
@@ -751,6 +706,22 @@ func referencesSupportedGateway(ctx context.Context, cl client.Client, obj clien
 	switch o := obj.(type) {
 	case *gwtypes.HTTPRoute:
 		// Check if any of the ParentRefs reference a supported Gateway.
+		for _, pRef := range o.Spec.ParentRefs {
+			gw, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
+			if err != nil {
+				// Log the error but continue checking other ParentRefs.
+				log.Trace(logger, "Error checking ParentRef", "parentRef", pRef, "error", err)
+				continue
+			}
+			if found {
+				// Found at least one supported Gateway reference.
+				log.Trace(logger, "Found supported Gateway reference", "gateway", client.ObjectKeyFromObject(gw))
+				return true
+			}
+		}
+		return false
+
+	case *gwtypes.GRPCRoute:
 		for _, pRef := range o.Spec.ParentRefs {
 			gw, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
 			if err != nil {

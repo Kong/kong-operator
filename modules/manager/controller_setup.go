@@ -107,6 +107,11 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "tcproutes",
 	}
+	grpcRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "grpcroutes",
+	}
 
 	if cfg.ControlPlaneControllerEnabled || cfg.GatewayControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
@@ -138,6 +143,13 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		}
 		if hasTCPRoute {
 			indexOptions = slices.Concat(indexOptions, index.OptionsForTCPRoute())
+		}
+		hasGRPCRoute, err := crdChecker.CRDExists(grpcRouteGVR)
+		if err != nil {
+			return fmt.Errorf("failed to check existence of CRD %s: %w", grpcRouteGVR.String(), err)
+		}
+		if hasGRPCRoute {
+			indexOptions = slices.Concat(indexOptions, index.OptionsForGRPCRoute())
 		}
 	}
 
@@ -741,6 +753,15 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				CertExpirationMargin: c.CertExpirationMargin,
 			},
 		},
+		// AIGateway Controller
+		{
+			Enabled: c.AIGatewayControllerEnabled,
+			Controller: &specialized.AIGatewayReconciler{
+				ControllerOptions: ctrlOpts,
+				Client:            mgr.GetClient(),
+				LoggingMode:       c.LoggingMode,
+			},
+		},
 		// KongPluginInstallation controller
 		{
 			Enabled: c.KongPluginInstallationControllerEnabled,
@@ -799,19 +820,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Provider:    ssaProvider,
 			},
 		},
-	}
-
-	// AIGateway v1 Controller (deprecated, but still supported for backward compatibility)
-	if c.AIGatewayControllerEnabled {
-		mgr.GetLogger().Info("AIGateway controller for AI gateway v1 is deprecated and will be removed in a future release. Please migrate to the AIGatewayDataPlane controller for Konnect AI gateway.")
-		controllers = append(controllers, ControllerDef{
-			Enabled: c.AIGatewayControllerEnabled,
-			Controller: &specialized.AIGatewayReconciler{
-				ControllerOptions: ctrlOpts,
-				Client:            mgr.GetClient(),
-				LoggingMode:       c.LoggingMode,
-			},
-		})
 	}
 
 	// MCPServer controllers
@@ -946,6 +954,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "tcproutes",
 		}
+		grpcRouteGVR := schema.GroupVersionResource{
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
+			Resource: "grpcroutes",
+		}
 		hasTLSRoute, err := checker.CRDExists(tlsRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
@@ -959,6 +972,13 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		}
 		if hasTCPRoute {
 			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+		}
+		hasGRPCRoute, err := checker.CRDExists(grpcRouteGVR)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", grpcRouteGVR.String(), err)
+		}
+		if hasGRPCRoute {
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.GRPCRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
 		}
 	}
 

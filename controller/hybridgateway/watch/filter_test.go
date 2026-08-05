@@ -41,6 +41,17 @@ func TestFilterBy(t *testing.T) {
 			expectNil:   false,
 		},
 		{
+			name: "GRPCRoute returns predicate funcs",
+			obj: &gwtypes.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+			},
+			expectError: false,
+			expectNil:   false,
+		},
+		{
 			name: "Gateway returns predicate funcs",
 			obj: &gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
@@ -509,6 +520,203 @@ func TestFilterByHTTPRoute(t *testing.T) {
 			cl := builder.Build()
 
 			predicates := filterByRoute[gwtypes.HTTPRoute](context.Background(), cl)
+			require.NotNil(t, predicates)
+
+			var result bool
+			switch tt.eventType {
+			case "create":
+				result = predicates.CreateFunc(event.CreateEvent{Object: tt.object})
+			case "update":
+				result = predicates.UpdateFunc(event.UpdateEvent{
+					ObjectOld: tt.objectOld,
+					ObjectNew: tt.object,
+				})
+			case "delete":
+				result = predicates.DeleteFunc(event.DeleteEvent{Object: tt.object})
+			case "generic":
+				result = predicates.GenericFunc(event.GenericEvent{Object: tt.object})
+			}
+
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
+}
+
+// TestFilterByGRPCRoute exercises filterByRoute[gwtypes.GRPCRoute] specifically. filterByRoute is a
+// generic function whose logic doesn't vary by route kind beyond the initial type assertion, so
+// the exhaustive CP-ref-resolution cases are covered once, deeply, by TestFilterByHTTPRoute; this
+// covers the GRPCRoute-specific type-assertion path plus one CP-ref-filtering case per event type.
+func TestFilterByGRPCRoute(t *testing.T) {
+	s := scheme.Get()
+
+	gatewayGroup := gwtypes.Group(gwtypes.GroupName)
+	gatewayKind := gwtypes.Kind("Gateway")
+
+	tests := []struct {
+		name           string
+		object         client.Object
+		objectOld      client.Object
+		existingObjs   []client.Object
+		eventType      string
+		expectedResult bool
+	}{
+		{
+			name: "CreateFunc allows event when object is not GRPCRoute",
+			object: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+			},
+			eventType:      "create",
+			expectedResult: true,
+		},
+		{
+			name: "CreateFunc filters out GRPCRoute without Konnect control plane reference",
+			object: &gwtypes.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GRPCRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
+							{
+								Group: &gatewayGroup,
+								Kind:  &gatewayKind,
+								Name:  "test-gateway",
+							},
+						},
+					},
+				},
+			},
+			existingObjs: []client.Object{
+				&gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "default",
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "kong",
+					},
+				},
+			},
+			eventType:      "create",
+			expectedResult: false,
+		},
+		{
+			name: "CreateFunc allows GRPCRoute with Konnect control plane reference",
+			object: &gwtypes.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GRPCRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
+							{
+								Group: &gatewayGroup,
+								Kind:  &gatewayKind,
+								Name:  "gateway-with-cp",
+							},
+						},
+					},
+				},
+			},
+			existingObjs: []client.Object{
+				&gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-with-cp",
+						Namespace: "default",
+						UID:       "gw-with-cp-uid",
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "kong",
+					},
+				},
+				&konnectv1alpha2.KonnectExtension{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-konnect-extension",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "gateway.networking.k8s.io/v1",
+								Kind:       "Gateway",
+								Name:       "gateway-with-cp",
+								UID:        "gw-with-cp-uid",
+							},
+						},
+					},
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-cp",
+									},
+								},
+							},
+						},
+					},
+				},
+				&konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cp",
+						Namespace: "default",
+					},
+				},
+			},
+			eventType:      "create",
+			expectedResult: true,
+		},
+		{
+			name: "DeleteFunc filters out GRPCRoute without CP ref",
+			object: &gwtypes.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GRPCRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
+							{
+								Group: &gatewayGroup,
+								Kind:  &gatewayKind,
+								Name:  "test-gateway",
+							},
+						},
+					},
+				},
+			},
+			existingObjs: []client.Object{
+				&gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "default",
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "kong",
+					},
+				},
+			},
+			eventType:      "delete",
+			expectedResult: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(s)
+			if len(tt.existingObjs) > 0 {
+				builder = builder.WithObjects(tt.existingObjs...)
+			}
+			cl := builder.Build()
+
+			predicates := filterByRoute[gwtypes.GRPCRoute](context.Background(), cl)
 			require.NotNil(t, predicates)
 
 			var result bool
