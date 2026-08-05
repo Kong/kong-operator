@@ -60,6 +60,22 @@ spec:
                   Deployment configures the Deployment: image, replicas, resources,
                   extra env vars, volume mounts, etc.
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Annotations are custom annotations that are propagated to the MCP server
+                      Deployment metadata by the operator.
+                    maxProperties: 64
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Labels are custom labels that are propagated to the MCP server Deployment
+                      metadata by the operator.
+                    maxProperties: 64
+                    type: object
                   replicas:
                     default: 1
                     description: Replicas describes the number of desired pods.

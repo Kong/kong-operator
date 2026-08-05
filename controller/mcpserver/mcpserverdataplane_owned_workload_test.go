@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,6 +20,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 const (
@@ -229,7 +231,7 @@ func Test_generateDeployment(t *testing.T) {
 	apiAuth := minimalAPIAuth()
 	metadata := mcpServerMetadataWithContainers()
 
-	deploy := generateDeployment(mcpDataPlane, metadata, apiAuth)
+	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, apiAuth)
 
 	nn := generateWorkloadNN(mcpDataPlane)
 	assert.Equal(t, nn.Name, deploy.Name)
@@ -244,6 +246,145 @@ func Test_generateDeployment(t *testing.T) {
 	assert.Equal(t, "mcp-image:latest", deploy.Spec.Template.Spec.Containers[0].Image)
 	require.Len(t, deploy.OwnerReferences, 1)
 	assert.Equal(t, mcpDataPlane.Name, deploy.OwnerReferences[0].Name)
+}
+
+func Test_generateDeployment_LabelsAndAnnotations(t *testing.T) {
+	mcpDataPlane := minimalMCPServerDataPlane()
+	mcpDataPlane.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+		Labels: map[string]string{
+			"team":                               "platform",
+			consts.GatewayOperatorManagedByLabel: "should-not-override-base-label",
+		},
+		Annotations: map[string]string{
+			"team-contact":                "platform@konghq.com",
+			mcpServerVersionAnnotationKey: "should-not-override-version-annotation",
+		},
+	}
+	apiAuth := minimalAPIAuth()
+	metadata := mcpServerMetadataWithContainers()
+
+	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, apiAuth)
+
+	assert.Equal(t, "platform", deploy.Labels["team"])
+	assert.Equal(t, consts.MCPServerManagedByLabelValue, deploy.Labels[consts.GatewayOperatorManagedByLabel],
+		"reserved label key must remain operator-managed")
+	assert.Equal(t, "platform@konghq.com", deploy.Annotations["team-contact"])
+	assert.Equal(t, metadata.Version, deploy.Annotations[mcpServerVersionAnnotationKey],
+		"reserved annotation key must remain operator-managed")
+
+	// The Pod template must be unaffected by Deployment-level labels/annotations.
+	assert.NotContains(t, deploy.Spec.Template.Labels, "team")
+	assert.NotContains(t, deploy.Spec.Template.Annotations, "team-contact")
+}
+
+// infoCountSink is a minimal logr.LogSink that counts Info() calls.
+type infoCountSink struct{ count *int }
+
+func (s infoCountSink) Init(logr.RuntimeInfo)             {}
+func (s infoCountSink) Enabled(int) bool                  { return true }
+func (s infoCountSink) Info(_ int, _ string, _ ...any)    { *s.count++ }
+func (s infoCountSink) Error(_ error, _ string, _ ...any) {}
+func (s infoCountSink) WithValues(_ ...any) logr.LogSink  { return s }
+func (s infoCountSink) WithName(_ string) logr.LogSink    { return s }
+
+func Test_addAnnotationsForMCPServerDataPlaneDeployment(t *testing.T) {
+	testCases := []struct {
+		name                string
+		existingAnnotations map[string]string
+		specAnnotations     map[string]string
+		expectedAnnotations map[string]string
+		expectedInfoCount   int
+	}{
+		{
+			name:                "no-op when MCPServerDataPlane has no deployment annotations",
+			existingAnnotations: map[string]string{"existing": "val"},
+			expectedAnnotations: map[string]string{"existing": "val"},
+		},
+		{
+			name:                "new keys merged, conflicting keys overridden",
+			existingAnnotations: map[string]string{"existing": "val", "conflict": "old"},
+			specAnnotations:     map[string]string{"new": "val", "conflict": "new"},
+			expectedAnnotations: map[string]string{"existing": "val", "new": "val", "conflict": "new"},
+		},
+		{
+			name:                "nil existing annotations initialized correctly",
+			specAnnotations:     map[string]string{"k": "v"},
+			expectedAnnotations: map[string]string{"k": "v"},
+		},
+		{
+			name: "reserved keys are dropped and a warning is logged",
+			specAnnotations: map[string]string{
+				"safe":                           "val",
+				consts.OperatorLabelPrefix + "x": "val",
+				mcpServerVersionAnnotationKey:    "should-not-be-settable-by-user",
+			},
+			expectedAnnotations: map[string]string{"safe": "val"},
+			expectedInfoCount:   2,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mcpDataPlane := &mcpv1alpha1.MCPServerDataPlane{
+				Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
+					Deployment: &mcpv1alpha1.DeploymentOptions{Annotations: tc.specAnnotations},
+				},
+			}
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Annotations: tc.existingAnnotations}}
+			var infoCount int
+			addAnnotationsForMCPServerDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, mcpDataPlane)
+			require.Equal(t, tc.expectedAnnotations, deployment.Annotations)
+			assert.Equal(t, tc.expectedInfoCount, infoCount)
+		})
+	}
+}
+
+func Test_addLabelsForMCPServerDataPlaneDeployment(t *testing.T) {
+	testCases := []struct {
+		name              string
+		existingLabels    map[string]string
+		specLabels        map[string]string
+		expectedLabels    map[string]string
+		expectedInfoCount int
+	}{
+		{
+			name:           "no-op when MCPServerDataPlane has no deployment labels",
+			existingLabels: map[string]string{"existing": "val"},
+			expectedLabels: map[string]string{"existing": "val"},
+		},
+		{
+			name:           "new keys merged, conflicting keys overridden",
+			existingLabels: map[string]string{"existing": "val", "conflict": "old"},
+			specLabels:     map[string]string{"new": "val", "conflict": "new"},
+			expectedLabels: map[string]string{"existing": "val", "new": "val", "conflict": "new"},
+		},
+		{
+			name:           "nil existing labels initialized correctly",
+			specLabels:     map[string]string{"k": "v"},
+			expectedLabels: map[string]string{"k": "v"},
+		},
+		{
+			name:              "reserved keys are dropped and a warning is logged",
+			specLabels:        map[string]string{"safe": "val", "app": "should-not-override-selector-label"},
+			expectedLabels:    map[string]string{"safe": "val"},
+			expectedInfoCount: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mcpDataPlane := &mcpv1alpha1.MCPServerDataPlane{
+				Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
+					Deployment: &mcpv1alpha1.DeploymentOptions{Labels: tc.specLabels},
+				},
+			}
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Labels: tc.existingLabels}}
+			var infoCount int
+			addLabelsForMCPServerDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, mcpDataPlane)
+			require.Equal(t, tc.expectedLabels, deployment.Labels)
+			assert.Equal(t, tc.expectedInfoCount, infoCount)
+		})
+	}
 }
 
 func Test_generateDeployment_Replicas(t *testing.T) {
@@ -279,7 +420,7 @@ func Test_generateDeployment_Replicas(t *testing.T) {
 			mcpDataPlane := minimalMCPServerDataPlane()
 			mcpDataPlane.Spec.Deployment = tc.deployment
 
-			deploy := generateDeployment(mcpDataPlane, metadata, apiAuth)
+			deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, apiAuth)
 
 			require.NotNil(t, deploy.Spec.Replicas)
 			assert.Equal(t, tc.want, *deploy.Spec.Replicas)
