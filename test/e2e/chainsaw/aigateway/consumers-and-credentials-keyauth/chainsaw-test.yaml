@@ -63,6 +63,10 @@ spec:
       value: (join('-', [($test_name), 'consumer-group']))
     - name: consumer_name
       value: (join('-', [($test_name), 'consumer']))
+    - name: consumer_type
+      value: api-key
+    - name: custom_id
+      value: ''
     - name: credential_name
       value: (join('-', [($test_name), 'credential']))
     - name: credential_secret_name
