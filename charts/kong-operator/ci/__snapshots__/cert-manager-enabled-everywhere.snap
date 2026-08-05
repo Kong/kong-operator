@@ -103610,6 +103610,7 @@ rules:
   resources:
   - mcpserverdataplanes
   verbs:
+  - create
   - get
   - list
   - patch
