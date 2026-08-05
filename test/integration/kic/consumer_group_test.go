@@ -184,6 +184,7 @@ func TestConsumerGroup(t *testing.T) {
 	}, service)
 	multiIngress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	multiIngress.Name = "multi"
+	multiIngress.Namespace = ns.Name
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, multiIngress))
 	cleaner.Add(multiIngress)
 
@@ -271,6 +272,7 @@ func deployMinimalSvcWithKeyAuth(
 
 	t.Logf("exposing deployment %q via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+	service.Namespace = namespace
 	_, err = env.Cluster().Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
@@ -279,6 +281,7 @@ func deployMinimalSvcWithKeyAuth(
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		annotations.AnnotationPrefix + annotations.PluginsKey:   pluginKeyAuthName,
 	}, service)
+	ingress.Namespace = namespace
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), namespace, ingress))
 	return deployment, service, ingress, pluginKeyAuth

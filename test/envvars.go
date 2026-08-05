@@ -67,6 +67,14 @@ func KonnectAccessToken() string {
 	return os.Getenv("KONG_TEST_KONNECT_ACCESS_TOKEN")
 }
 
+// KongLicenseData returns the raw Kong Enterprise license JSON for the test
+// environment, as provided by the KONG_LICENSE_DATA environment variable
+// (e.g. by the Kong/kong-license GitHub Action). Returns an empty string if
+// no license is configured.
+func KongLicenseData() string {
+	return os.Getenv("KONG_LICENSE_DATA")
+}
+
 // KonnectServerURL returns the Konnect server URL for the test environment.
 func KonnectServerURL() string {
 	return os.Getenv("KONG_TEST_KONNECT_SERVER_URL")

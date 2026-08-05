@@ -54,14 +54,8 @@ func RunWhenKongDBMode(t *testing.T, dbmode dpconf.DBMode, msg ...any) {
 func RunWhenKongEnterprise(t *testing.T) {
 	t.Helper()
 
-	if !testenv.KongEnterpriseEnabled() {
+	if !testenv.KongEnterpriseImageUsed() {
 		t.Skipf("skipping because Kong enterprise is not enabled")
-	}
-
-	version := eventuallyGetKongVersion(t, proxyAdminURL)
-
-	if !version.IsKongGatewayEnterprise() {
-		t.Skipf("skipping because Kong is not running as Enterprise, detected version %q", version)
 	}
 }
 

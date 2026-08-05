@@ -32,6 +32,7 @@ import (
 	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test"
+	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
 
@@ -96,6 +97,7 @@ func runConformance(
 ) {
 	t.Helper()
 	ensureConformanceNamespace(ctx, t)
+	helpers.CreateKongLicenseForTest(t, ctx, clients.MgrClient, "ko-conformance-license-")
 
 	if cleanupResources {
 		t.Cleanup(func() {

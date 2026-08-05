@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
@@ -219,6 +220,17 @@ func TestMain(m *testing.M) {
 		})
 		defer cancel()
 		helpers.ExitOnErr(ctx, err)
+
+		fmt.Println("INFO: applying KongLicense")
+		mgrClient, err := client.New(env.Cluster().Config(), client.Options{Scheme: scheme.Get()})
+		helpers.ExitOnErr(ctx, err)
+		cleanupKongLicense, err := helpers.CreateKongLicense(ctx, mgrClient, "kic-integration-license-")
+		helpers.ExitOnErr(ctx, err)
+		defer func() {
+			if err := cleanupKongLicense(); err != nil {
+				fmt.Printf("WARN: %s\n", err)
+			}
+		}()
 	}
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())

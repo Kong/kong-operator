@@ -86,6 +86,12 @@ func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
 }
 
+// KongEnterpriseImageUsed reports whether the Kong Gateway image configured for
+// this test run (via TEST_KONG_IMAGE) is a Kong Enterprise image.
+func KongEnterpriseImageUsed() bool {
+	return KongImage() == "kong/kong-gateway"
+}
+
 // KongImageTag is the combined Kong image and tag if both are set, or empty string if not.
 func KongImageTag() string {
 	if KongImage() != "" && KongTag() != "" {
@@ -138,11 +144,6 @@ func KongPullUsername() string {
 // KongPullPassword is the Docker password to use for the Kong image pull secret.
 func KongPullPassword() string {
 	return os.Getenv("TEST_KONG_PULL_PASSWORD")
-}
-
-// KongEnterpriseEnabled enables Enterprise-specific tests when set to "true".
-func KongEnterpriseEnabled() bool {
-	return os.Getenv("TEST_KONG_ENTERPRISE") == "true"
 }
 
 // ClusterVersion indicates the Kubernetes cluster version to use when
@@ -238,9 +239,4 @@ func IsCI() bool {
 	// It's a common convention that e.g. GitHub, GitLab, and other CI providers
 	// set the CI environment variable.
 	return os.Getenv("CI") == "true"
-}
-
-// KongLicenseData returns the Kong license data to use in tests.
-func KongLicenseData() string {
-	return os.Getenv("KONG_LICENSE_DATA")
 }

@@ -37,7 +37,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 	ns := CreateNamespace(ctx, t, ctrlClient)
 
 	var (
-		kongContainer = runKongEnterprise(ctx, t)
+		kongContainer = runKong(ctx, t)
 	)
 
 	logs := RunManager(ctx, t, envcfg,

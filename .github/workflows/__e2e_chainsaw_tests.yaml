@@ -55,6 +55,11 @@ jobs:
       with:
         install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind
 
+    - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+      id: license
+      with:
+        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
     - uses: ./.github/actions/bump-inotify
 
     - name: Create k8s KinD Cluster with ktf
@@ -93,6 +98,7 @@ jobs:
     - name: Apply chainsaw suite prerequisites
       env:
         SUITE: ${{ matrix.suite }}
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
       run: make test.e2e.chainsaw.prereq DIRNAME="$SUITE"
 
     - name: run chainsaw e2e tests

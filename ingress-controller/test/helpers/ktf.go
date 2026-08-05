@@ -16,7 +16,7 @@ import (
 func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
 	extraControllerArgs := []string{}
-	if testenv.KongEnterpriseEnabled() {
+	if testenv.KongEnterpriseImageUsed() {
 		licenseJSON, err := kong.GetLicenseJSONFromEnv()
 		if err != nil {
 			return nil, nil, err
@@ -71,7 +71,7 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 func GenerateKongBuilderWithController() (*kong.Builder, error) {
 	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
 
-	if testenv.KongEnterpriseEnabled() {
+	if testenv.KongEnterpriseImageUsed() {
 		licenseJSON, err := kong.GetLicenseJSONFromEnv()
 		if err != nil {
 			return nil, err
