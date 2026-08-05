@@ -380,14 +380,15 @@ func NewKongRouteNameForMatch(
 }
 
 // NewKongRouteNameForGRPCRouteMatch generates a KongRoute name based on GRPCRoute, ControlPlaneRef,
-// ParentRef, and a single GRPCRouteMatch. The optional index is included to avoid collisions
-// when multiple matches are identical.
+// ParentRef, and a single GRPCRouteMatch. Rule and match indexes are included to avoid collisions
+// when matches are identical across or within rules.
 func NewKongRouteNameForGRPCRouteMatch(
 	route *gwtypes.GRPCRoute,
 	cp *commonv1alpha1.ControlPlaneRef,
 	parentRef *gwtypes.ParentReference,
 	match gatewayv1.GRPCRouteMatch,
-	index int,
+	ruleIndex int,
+	matchIndex int,
 ) string {
 	readableElements := []string{
 		grpcProtocolPrefix,
@@ -397,7 +398,7 @@ func NewKongRouteNameForGRPCRouteMatch(
 	if parentRef != nil {
 		hashElements = append(hashElements, parentRefHashElement(parentRef))
 	}
-	hashElements = append(hashElements, utils.Hash32(match), fmt.Sprintf("m%02d", index))
+	hashElements = append(hashElements, utils.Hash32(match), fmt.Sprintf("r%02d", ruleIndex), fmt.Sprintf("m%02d", matchIndex))
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 

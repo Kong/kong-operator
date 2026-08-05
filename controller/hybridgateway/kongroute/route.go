@@ -208,12 +208,7 @@ func RoutesForGRPCRouteRule(
 ) ([]*configurationv1alpha1.KongRoute, error) {
 	var kongRoutes []*configurationv1alpha1.KongRoute
 
-	// If the rule has no matches, create a single catch-all route.
-	// Kong requires at least one matcher; a matcher with no Method matches every
-	// service/method per Gateway API semantics.
-	if len(rule.Matches) == 0 {
-		rule.Matches = append(rule.Matches, gatewayv1.GRPCRouteMatch{})
-	}
+	matches := grpcRouteRuleMatches(rule)
 
 	protocols, err := grpcProtocolsFromGatewayListener(ctx, cl, grpcRoute, pRef)
 	if err != nil {
@@ -223,8 +218,8 @@ func RoutesForGRPCRouteRule(
 	priorities := grpcRouteMatchPriorities(grpcRoute)
 	tags := pkgmetadata.ExtractTags(grpcRoute)
 
-	for i, match := range rule.Matches {
-		routeName := namegen.NewKongRouteNameForGRPCRouteMatch(grpcRoute, cp, namingParentRef, match, i)
+	for i, match := range matches {
+		routeName := namegen.NewKongRouteNameForGRPCRouteMatch(grpcRoute, cp, namingParentRef, match, ruleIndex, i)
 		mLog := logger.WithValues("kongroute", routeName, "matchIndex", i)
 		log.Debug(mLog, "Creating KongRoute for GRPCRoute match")
 
@@ -282,7 +277,7 @@ func grpcRouteMatchPriorities(grpcRoute *gwtypes.GRPCRoute) map[grpcRouteMatchPr
 	classSet := make(map[grpcRoutePriorityClass]struct{})
 	matchCountByClass := make(map[grpcRoutePriorityClass]int)
 	for _, rule := range grpcRoute.Spec.Rules {
-		for _, match := range rule.Matches {
+		for _, match := range grpcRouteRuleMatches(rule) {
 			class := calculateGRPCRoutePriorityClass(match)
 			if _, ok := classSet[class]; !ok {
 				classSet[class] = struct{}{}
@@ -304,7 +299,7 @@ func grpcRouteMatchPriorities(grpcRoute *gwtypes.GRPCRoute) map[grpcRouteMatchPr
 	seenByClass := make(map[grpcRoutePriorityClass]int)
 	priorities := make(map[grpcRouteMatchPriorityKey]int64)
 	for ruleIndex, rule := range grpcRoute.Spec.Rules {
-		for matchIndex, match := range rule.Matches {
+		for matchIndex, match := range grpcRouteRuleMatches(rule) {
 			class := calculateGRPCRoutePriorityClass(match)
 			offset := matchCountByClass[class] - 1 - seenByClass[class]
 			seenByClass[class]++
@@ -315,6 +310,13 @@ func grpcRouteMatchPriorities(grpcRoute *gwtypes.GRPCRoute) map[grpcRouteMatchPr
 		}
 	}
 	return priorities
+}
+
+func grpcRouteRuleMatches(rule gwtypes.GRPCRouteRule) []gatewayv1.GRPCRouteMatch {
+	if len(rule.Matches) > 0 {
+		return rule.Matches
+	}
+	return []gatewayv1.GRPCRouteMatch{{}}
 }
 
 func priorityForGRPCRouteMatch(priorities map[grpcRouteMatchPriorityKey]int64, ruleIndex, matchIndex int) int64 {

@@ -1055,7 +1055,7 @@ func isListenerValidForKind(routeKind string, listener gwtypes.Listener) bool {
 		if listener.Protocol != gwtypes.HTTPProtocolType && listener.Protocol != gwtypes.HTTPSProtocolType {
 			return false
 		}
-		if listener.TLS != nil && *listener.TLS.Mode != gwtypes.TLSModeTerminate {
+		if listener.TLS != nil && listener.TLS.Mode != nil && *listener.TLS.Mode != gwtypes.TLSModeTerminate {
 			return false
 		}
 		return true
@@ -1063,7 +1063,7 @@ func isListenerValidForKind(routeKind string, listener gwtypes.Listener) bool {
 		if listener.Protocol != gwtypes.HTTPProtocolType && listener.Protocol != gwtypes.HTTPSProtocolType {
 			return false
 		}
-		if listener.TLS != nil && *listener.TLS.Mode != gwtypes.TLSModeTerminate {
+		if listener.TLS != nil && listener.TLS.Mode != nil && *listener.TLS.Mode != gwtypes.TLSModeTerminate {
 			return false
 		}
 		return true

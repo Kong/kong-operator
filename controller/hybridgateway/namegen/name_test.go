@@ -741,11 +741,11 @@ func TestNewKongRouteNameForGRPCRouteMatch_DiffersByParentRef(t *testing.T) {
 	listener1 := gatewayv1.SectionName("listener-1")
 	listener2 := gatewayv1.SectionName("listener-2")
 
-	name1 := NewKongRouteNameForGRPCRouteMatch(route, cp, testParentRef(&listener1), match, 0)
-	name2 := NewKongRouteNameForGRPCRouteMatch(route, cp, testParentRef(&listener2), match, 0)
+	name1 := NewKongRouteNameForGRPCRouteMatch(route, cp, testParentRef(&listener1), match, 0, 0)
+	name2 := NewKongRouteNameForGRPCRouteMatch(route, cp, testParentRef(&listener2), match, 0, 0)
 
 	assert.NotEqual(t, name1, name2)
-	assert.Equal(t, name1, NewKongRouteNameForGRPCRouteMatch(route, cp, testParentRef(&listener1), match, 0))
+	assert.Equal(t, name1, NewKongRouteNameForGRPCRouteMatch(route, cp, testParentRef(&listener1), match, 0, 0))
 }
 
 func TestNewKongRouteNameForGRPCRouteMatch_WithoutParentRefKeepsLegacyFormat(t *testing.T) {
@@ -755,8 +755,8 @@ func TestNewKongRouteNameForGRPCRouteMatch_WithoutParentRefKeepsLegacyFormat(t *
 		Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.Echo")},
 	}
 
-	result := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 0)
-	expected := "grpc.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(match) + ".m00"
+	result := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 0, 0)
+	expected := "grpc.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(match) + ".r00.m00"
 	assert.Equal(t, expected, result)
 }
 
@@ -767,8 +767,19 @@ func TestNewKongRouteNameForGRPCRouteMatch_DiffersByIndex(t *testing.T) {
 		Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.Echo")},
 	}
 
-	name0 := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 0)
-	name1 := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 1)
+	name0 := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 0, 0)
+	name1 := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 0, 1)
+
+	assert.NotEqual(t, name0, name1)
+}
+
+func TestNewKongRouteNameForGRPCRouteMatch_DiffersByRuleIndex(t *testing.T) {
+	route := testGRPCRoute("default", "test-route")
+	cp := testControlPlaneRef("test-cp")
+	match := gatewayv1.GRPCRouteMatch{}
+
+	name0 := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 0, 0)
+	name1 := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 1, 0)
 
 	assert.NotEqual(t, name0, name1)
 }
