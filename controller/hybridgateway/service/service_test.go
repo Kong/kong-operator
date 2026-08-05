@@ -224,6 +224,57 @@ func TestServiceForTCPRouteRule(t *testing.T) {
 	assert.Equal(t, "test-namespace/test-route", service.Annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation])
 }
 
+// TestServiceForGRPCRouteRule covers ServiceForRuleWithName's *gwtypes.GRPCRoute branch: the
+// default protocol must resolve to "grpc" (unlike TCPRoute/TLSRoute, which default to "tcp"), and
+// backend refs must come through utils.GRPCBackendRefsToBackendRefs.
+func TestServiceForGRPCRouteRule(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "GRPCRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+	port := gwtypes.PortNumber(50051)
+	rule := gwtypes.GRPCRouteRule{
+		BackendRefs: []gwtypes.GRPCBackendRef{{
+			BackendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Name: "test-service",
+					Port: &port,
+				},
+			},
+		}},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+
+	service, cert, grant, err := ServiceForRule(ctx, logger, cl, grpcRoute, rule, pRef, cp, "test-upstream")
+	require.NoError(t, err)
+	require.NotNil(t, service)
+	require.Nil(t, cert)
+	require.Nil(t, grant)
+	assert.Equal(t, sdkkonnectcomp.Protocol(sdkkonnectcomp.ProtocolsGrpc), service.Spec.Protocol)
+	assert.Equal(t, "test-upstream", service.Spec.Host)
+	assert.Equal(t, "test-namespace/test-route", service.Annotations[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation])
+}
+
 func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 	ctx := context.Background()
 	logger := zap.New()

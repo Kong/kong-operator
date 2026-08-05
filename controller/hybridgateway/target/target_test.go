@@ -3289,6 +3289,56 @@ func TestTargetsForTCPRouteBackendRefs(t *testing.T) {
 	assert.Equal(t, "test-namespace/test-route", targets[0].Annotations["gateway-operator.konghq.com/hybrid-routes-TCPRoute"])
 }
 
+// TestTargetsForGRPCRouteBackendRefs covers TargetsForBackendRefs' *gwtypes.GRPCRoute type-check
+// branch: a GRPCRoute paired with []gwtypes.GRPCBackendRef must pass the route/backendRefs type
+// match and produce targets normally.
+func TestTargetsForGRPCRouteBackendRefs(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	port := int32(80)
+	backendPort := gwtypes.PortNumber(80)
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "GRPCRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+	backendRefs := []gwtypes.GRPCBackendRef{{
+		BackendRef: gwtypes.BackendRef{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "test-service",
+				Port: &backendPort,
+			},
+		},
+	}}
+	service := createTestService("test-service", "test-namespace", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{{
+		Name:       "grpc",
+		Port:       port,
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt(8080),
+	}})
+	endpointSlice := createTestEndpointSlice("test-service-slice", []discoveryv1.EndpointPort{
+		createTestEndpointPort("grpc", 8080, corev1.ProtocolTCP),
+	}, []discoveryv1.Endpoint{
+		createTestEndpoint([]string{"10.0.0.2"}, true),
+	})
+	endpointSlice.Namespace = "test-namespace"
+	endpointSlice.Labels = map[string]string{discoveryv1.LabelServiceName: "test-service"}
+
+	cl := createTestFakeClient(service, &endpointSlice)
+	targets, err := TargetsForBackendRefs(ctx, logger, cl, grpcRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
+	require.NoError(t, err)
+	require.Len(t, targets, 1)
+	assert.NotEmpty(t, targets[0].Name)
+	assert.Equal(t, "10.0.0.2:8080", targets[0].Spec.Target)
+	assert.Equal(t, "test-namespace/test-route", targets[0].Annotations["gateway-operator.konghq.com/hybrid-routes-GRPCRoute"])
+}
+
 func findTargetByAddress(targets []configurationv1alpha1.KongTarget, address string) *configurationv1alpha1.KongTarget {
 	for i := range targets {
 		if targets[i].Spec.Target == address {

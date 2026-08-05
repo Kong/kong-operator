@@ -327,6 +327,62 @@ func TestUpstreamForRule_NewUpstream(t *testing.T) {
 	assert.Equal(t, expectedAnnotation, actualAnnotation)
 }
 
+// TestUpstreamForGRPCRouteRule is a regression test: UpstreamForRule previously had no
+// *gwtypes.GRPCRoute case in its route-type switch, so it fell through to the "unsupported route
+// type" default error for every GRPCRoute rule.
+func TestUpstreamForGRPCRouteRule(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "GRPCRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	rule := gwtypes.GRPCRouteRule{
+		BackendRefs: []gwtypes.GRPCBackendRef{
+			{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name: "test-service",
+						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
+					},
+				},
+			},
+		},
+	}
+
+	pRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+
+	upstream, err := UpstreamForRule(ctx, logger, client, grpcRoute, rule, pRef, cp)
+	require.NoError(t, err)
+	require.NotNil(t, upstream)
+
+	expectedAnnotation := "test-namespace/test-route"
+	actualAnnotation := upstream.Annotations[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation]
+	assert.Equal(t, expectedAnnotation, actualAnnotation)
+}
+
 func TestUpstreamForTCPRouteRule(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))

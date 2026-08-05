@@ -159,6 +159,8 @@ func routeKindForStatusPhase[T gwtypes.SupportedRoute](routeObject T) string {
 	switch any(routeObject).(type) {
 	case gwtypes.HTTPRoute:
 		return "HTTPRoute"
+	case gwtypes.GRPCRoute:
+		return "GRPCRoute"
 	case gwtypes.TLSRoute:
 		return "TLSRoute"
 	case gwtypes.TCPRoute:
@@ -373,6 +375,8 @@ func getParentStatus[T gwtypes.SupportedRoute](route T) []gwtypes.RouteParentSta
 	switch r := any(route).(type) {
 	case gwtypes.HTTPRoute:
 		return r.Status.Parents
+	case gwtypes.GRPCRoute:
+		return r.Status.Parents
 	case gwtypes.TLSRoute:
 		return r.Status.Parents
 	case gwtypes.TCPRoute:
@@ -384,6 +388,8 @@ func getParentStatus[T gwtypes.SupportedRoute](route T) []gwtypes.RouteParentSta
 func setParentRefStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](route TPtr, parentStatus []gwtypes.RouteParentStatus) {
 	switch r := any(route).(type) {
 	case *gwtypes.HTTPRoute:
+		r.Status.Parents = parentStatus
+	case *gwtypes.GRPCRoute:
 		r.Status.Parents = parentStatus
 	case *gwtypes.TLSRoute:
 		r.Status.Parents = parentStatus
@@ -655,6 +661,47 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, extensionRefs)
 }
 
+// BuildResolvedRefsConditionForGRPCRoute evaluates all BackendRefs and ExtensionRef filters in a
+// GRPCRoute to determine if their references are valid and permitted. Mirrors
+// BuildResolvedRefsConditionForHTTPRoute, keyed on GRPCRoute's own filter type
+// (gwtypes.GRPCRouteFilterExtensionRef) since GRPCRouteFilter is a distinct Go type from
+// HTTPRouteFilter despite sharing the same ExtensionRef shape.
+// It checks that each BackendRef:
+//   - Has a supported group/kind
+//   - Exists in the target namespace
+//   - Is permitted by ReferenceGrant if referencing a different namespace
+//
+// And that each ExtensionRef filter's referenced KongPlugin exists.
+//
+// Returns a condition indicating whether all references are resolved, or details about the first failure encountered.
+//
+// Parameters:
+//   - ctx: Context for API calls
+//   - logger: Logger for debugging information
+//   - cl: Kubernetes client for resource operations
+//   - route: The GRPCRoute whose BackendRefs and ExtensionRef filters are being checked
+//
+// Returns:
+//   - *metav1.Condition: Condition indicating resolved refs status
+//   - error: Any error encountered during evaluation
+func BuildResolvedRefsConditionForGRPCRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.GRPCRoute) (*metav1.Condition, error) {
+	backendRefs := make([]gwtypes.BackendRef, 0)
+	extensionRefs := make([]*gwtypes.LocalObjectReference, 0)
+	for _, rule := range route.Spec.Rules {
+		for _, bRef := range rule.BackendRefs {
+			backendRefs = append(backendRefs, bRef.BackendRef)
+		}
+
+		for _, filter := range rule.Filters {
+			if filter.Type == gwtypes.GRPCRouteFilterExtensionRef {
+				extensionRefs = append(extensionRefs, filter.ExtensionRef)
+			}
+		}
+	}
+
+	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, extensionRefs)
+}
+
 // BuildResolvedRefsConditionForTLSRoute evaluates all BackendRefs in an TLSRoute to determine if their
 // references are valid and permitted.
 // It checks that each BackendRef:
@@ -766,6 +813,13 @@ func validateAnnotations[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePt
 		}
 		for _, rule := range r.Spec.Rules {
 			backendRefs := utils.HTTPBackendRefsToBackendRefs(rule.BackendRefs)
+			if err := service.ValidateBackendRefAnnotations(ctx, cl, route.GetNamespace(), backendRefs, logger); err != nil {
+				return err
+			}
+		}
+	case *gwtypes.GRPCRoute:
+		for _, rule := range r.Spec.Rules {
+			backendRefs := utils.GRPCBackendRefsToBackendRefs(rule.BackendRefs)
 			if err := service.ValidateBackendRefAnnotations(ctx, cl, route.GetNamespace(), backendRefs, logger); err != nil {
 				return err
 			}
@@ -998,6 +1052,14 @@ func isListenerValidForKind(routeKind string, listener gwtypes.Listener) bool {
 		// HTTPRoutes support Terminate only
 		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
 		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
+		if listener.Protocol != gwtypes.HTTPProtocolType && listener.Protocol != gwtypes.HTTPSProtocolType {
+			return false
+		}
+		if listener.TLS != nil && *listener.TLS.Mode != gwtypes.TLSModeTerminate {
+			return false
+		}
+		return true
+	case "GRPCRoute":
 		if listener.Protocol != gwtypes.HTTPProtocolType && listener.Protocol != gwtypes.HTTPSProtocolType {
 			return false
 		}
