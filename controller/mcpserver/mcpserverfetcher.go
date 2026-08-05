@@ -261,6 +261,8 @@ func (f *MCPServersFetcher) syncMCPServer(
 	nnMCP := client.ObjectKeyFromObject(mcpServer)
 	log.Debug(logger, "created MCPServer", "name", nnMCP.Name, "namespace", nnMCP.Namespace, "id", mcpServerInfo.ID)
 
+	// TODO: No self-healing if the MCPServer mirror is created but the following
+	// MCPServerDataPlane create fails — permanent orphan.
 	mcpServerDataPlane := generateMCPServerDataPlane(nn, mcpServer)
 	if err := controllerutil.SetControllerReference(mcpServer, mcpServerDataPlane, f.scheme); err != nil {
 		return false, fmt.Errorf("failed to set owner reference on MCPServerDataPlane %s: %w", nn, err)
