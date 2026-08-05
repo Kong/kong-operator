@@ -1,0 +1,42 @@
+# Template for creating an AIGatewayConsumerGroup and asserting it becomes Programmed=True.
+#
+# Required bindings:
+#   - consumer_group_name: Name of the AIGatewayConsumerGroup to create (also used as
+#     apiSpec name and displayName).
+#   - namespace: Namespace where the AIGatewayConsumerGroup will be created.
+#   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
+#   - policies: List of {name: <AIGatewayPolicy name>} entries to attach to the group
+#     (spec.apiSpec.policies). Pass an empty list ([]) for no attached policies.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-consumergroup
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: AIGatewayConsumerGroup
+          metadata:
+            name: ($consumer_group_name)
+            namespace: ($namespace)
+          spec:
+            aiGatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($aigw_cp_name)
+            apiSpec:
+              name: ($consumer_group_name)
+              displayName: ($consumer_group_name)
+              policies: ($policies)
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: AIGatewayConsumerGroup
+          metadata:
+            name: ($consumer_group_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true

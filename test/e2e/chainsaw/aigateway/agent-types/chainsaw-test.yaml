@@ -46,6 +46,36 @@ spec:
       value: (join('-', [($test_name), 'a2a-agent']))
     - name: a2a_agent_route_path
       value: /a2a-agent
+    # Defaults for verify-aigw-agent-request-from-{cluster,host} optional bindings.
+    # Steps below only need to override what differs from these.
+    - name: request_headers
+      value: ''
+    - name: request_body
+      value: ''
+    - name: content_type
+      value: application/json
+    - name: expected_status
+      value: "200"
+    - name: expected_status_not
+      value: ''
+    - name: expected_body
+      value: ''
+    - name: unexpected_body
+      value: ''
+    - name: expected_jsonrpc
+      value: ''
+    - name: expected_json_id
+      value: ''
+    - name: expected_json_result_text
+      value: ''
+    - name: oidc_token_url
+      value: ''
+    - name: oidc_client_id
+      value: ''
+    - name: oidc_client_secret
+      value: ''
+    - name: oidc_scope
+      value: ''
   steps:
     - name: Create-auth-secret
       use:
@@ -94,82 +124,110 @@ spec:
           value: ($namespace)
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
-    - name: Drive-matching-http-agent-traffic
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
-              - name: METHOD
-                value: GET
-              - name: ROUTE_PATH
-                value: (join('', [($http_agent_route_path), '?details=true']))
-              - name: EXPECTED_BODY
-                value: Running on Pod
-            content: |
-              bash ../../common/scripts/aigw_agent_request.sh
-    - name: Drive-matching-a2a-agent-traffic
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
-              - name: METHOD
-                value: POST
-              - name: ROUTE_PATH
-                value: ($a2a_agent_route_path)
-              - name: REQUEST_BODY
-                value: '{"jsonrpc":"2.0","id":"e2e-a2a","method":"message/send","params":{"message":{"role":"user","parts":[{"kind":"text","text":"hello"}]}}}'
-              - name: EXPECTED_JSONRPC
-                value: "2.0"
-              - name: EXPECTED_JSON_ID
-                value: e2e-a2a
-              - name: EXPECTED_JSON_RESULT_TEXT
-                value: mock A2A agent response from go-echo
-            content: |
-              bash ../../common/scripts/aigw_agent_request.sh
-    - name: Reject-a2a-request-on-http-agent
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
-              - name: METHOD
-                value: POST
-              - name: ROUTE_PATH
-                value: ($http_agent_route_path)
-              - name: REQUEST_BODY
-                value: '{"jsonrpc":"2.0","id":"e2e-cross","method":"message/send","params":{"message":{"role":"user"}}}'
-              - name: EXPECTED_BODY
-                value: jsonrpc
-              - name: UNEXPECTED_BODY
-                value: mock A2A agent response from go-echo
-            content: |
-              bash ../../common/scripts/aigw_agent_request.sh
-    - name: Reject-http-request-on-a2a-agent
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
-              - name: METHOD
-                value: GET
-              - name: ROUTE_PATH
-                value: ($a2a_agent_route_path)
-              - name: EXPECTED_STATUS
-                value: "405"
-              - name: UNEXPECTED_BODY
-                value: Running on Pod
-            content: |
-              bash ../../common/scripts/aigw_agent_request.sh
+    - name: Drive-matching-http-agent-traffic-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: (join('', [($http_agent_route_path), '?details=true']))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: Drive-matching-http-agent-traffic-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: (join('', [($http_agent_route_path), '?details=true']))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    - name: Drive-matching-a2a-agent-traffic-from-cluster
+      bindings:
+        - name: method
+          value: POST
+        - name: route_path
+          value: ($a2a_agent_route_path)
+        - name: request_body
+          value: '{"jsonrpc":"2.0","id":"e2e-a2a","method":"message/send","params":{"message":{"role":"user","parts":[{"kind":"text","text":"hello"}]}}}'
+        - name: expected_jsonrpc
+          value: "2.0"
+        - name: expected_json_id
+          value: e2e-a2a
+        - name: expected_json_result_text
+          value: mock A2A agent response from go-echo
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: Drive-matching-a2a-agent-traffic-from-host
+      bindings:
+        - name: method
+          value: POST
+        - name: route_path
+          value: ($a2a_agent_route_path)
+        - name: request_body
+          value: '{"jsonrpc":"2.0","id":"e2e-a2a","method":"message/send","params":{"message":{"role":"user","parts":[{"kind":"text","text":"hello"}]}}}'
+        - name: expected_jsonrpc
+          value: "2.0"
+        - name: expected_json_id
+          value: e2e-a2a
+        - name: expected_json_result_text
+          value: mock A2A agent response from go-echo
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    - name: Reject-a2a-request-on-http-agent-from-cluster
+      bindings:
+        - name: method
+          value: POST
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_body
+          value: '{"jsonrpc":"2.0","id":"e2e-cross","method":"message/send","params":{"message":{"role":"user"}}}'
+        - name: expected_body
+          value: jsonrpc
+        - name: unexpected_body
+          value: mock A2A agent response from go-echo
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: Reject-a2a-request-on-http-agent-from-host
+      bindings:
+        - name: method
+          value: POST
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_body
+          value: '{"jsonrpc":"2.0","id":"e2e-cross","method":"message/send","params":{"message":{"role":"user"}}}'
+        - name: expected_body
+          value: jsonrpc
+        - name: unexpected_body
+          value: mock A2A agent response from go-echo
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    - name: Reject-http-request-on-a2a-agent-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($a2a_agent_route_path)
+        - name: expected_status
+          value: "405"
+        - name: unexpected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: Reject-http-request-on-a2a-agent-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($a2a_agent_route_path)
+        - name: expected_status
+          value: "405"
+        - name: unexpected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
   catch:
     - description: Capture debug snapshot on test failure.
       script:

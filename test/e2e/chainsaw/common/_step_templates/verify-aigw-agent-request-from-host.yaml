@@ -1,0 +1,88 @@
+# Template for verifying AI Gateway agent traffic from the host (outside the
+# cluster), via the AIGatewayDataPlane ingress Service's external LoadBalancer
+# address.
+#
+# Required bindings:
+#   - aigw_dp_name: Name of the AIGatewayDataPlane.
+#   - namespace: Namespace of the AIGatewayDataPlane / ingress Service.
+#   - method: HTTP method to use (e.g. GET, POST).
+#   - route_path: Route path to request.
+#   - request_headers: Extra request headers ("Name:value" per line), or ''.
+#   - request_body: Request body to send, or ''.
+#   - content_type: Content-Type header used when request_body is set.
+#   - expected_status: Expected HTTP status code.
+#   - expected_status_not: If set, assert status differs from this, or ''.
+#   - expected_body: Substring that must be present in the response body, or ''.
+#   - unexpected_body: Substring that must NOT be present in the body, or ''.
+#   - expected_jsonrpc: Expected value of the response body's ".jsonrpc", or ''.
+#   - expected_json_id: Expected value of the response body's ".id", or ''.
+#   - expected_json_result_text: Expected ".result.parts[0].text" value, or ''.
+#   - oidc_token_url: OIDC token endpoint URL for client_credentials grant, or ''.
+#     NOTE: must be reachable from the chainsaw test-runner host, not just
+#     in-cluster; skip this template if the token endpoint is cluster-internal.
+#   - oidc_client_id: client_id for the client_credentials grant, or ''.
+#   - oidc_client_secret: client_secret for the client_credentials grant, or ''.
+#   - oidc_scope: Optional scope parameter for the client_credentials grant, or ''.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-aigw-agent-request-from-host
+spec:
+  try:
+    # 1. Dynamically discover the AIGatewayDataPlane ingress Service's
+    #    external LoadBalancer address.
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: AIGW_DP_NAME
+            value: ($aigw_dp_name)
+        content: |
+          bash ../../common/scripts/aigw_dataplane_lb_address.sh
+        outputs:
+          - name: aigw_lb_address
+            value: (json_parse($stdout).address)
+        check:
+          (json_parse($stdout).success == `true`): true
+
+    # 2. Drive the request from the host.
+    - script:
+        env:
+          - name: ADDRESS
+            value: ($aigw_lb_address)
+          - name: METHOD
+            value: ($method)
+          - name: ROUTE_PATH
+            value: ($route_path)
+          - name: REQUEST_HEADERS
+            value: ($request_headers)
+          - name: REQUEST_BODY
+            value: ($request_body)
+          - name: CONTENT_TYPE
+            value: ($content_type)
+          - name: EXPECTED_STATUS
+            value: ($expected_status)
+          - name: EXPECTED_STATUS_NOT
+            value: ($expected_status_not)
+          - name: EXPECTED_BODY
+            value: ($expected_body)
+          - name: UNEXPECTED_BODY
+            value: ($unexpected_body)
+          - name: EXPECTED_JSONRPC
+            value: ($expected_jsonrpc)
+          - name: EXPECTED_JSON_ID
+            value: ($expected_json_id)
+          - name: EXPECTED_JSON_RESULT_TEXT
+            value: ($expected_json_result_text)
+          - name: OIDC_TOKEN_URL
+            value: ($oidc_token_url)
+          - name: OIDC_CLIENT_ID
+            value: ($oidc_client_id)
+          - name: OIDC_CLIENT_SECRET
+            value: ($oidc_client_secret)
+          - name: OIDC_SCOPE
+            value: ($oidc_scope)
+        content: |
+          bash ../../common/scripts/aigw_agent_request.sh
+        check:
+          (json_parse($stdout).success == `true`): true

@@ -1,0 +1,42 @@
+# Template for creating and asserting an AIGatewayIdentityProvider of type key-auth.
+#
+# Required bindings:
+#   - idp_name: Name of the AIGatewayIdentityProvider to create (also used as apiSpec name).
+#   - namespace: Namespace where the AIGatewayIdentityProvider will be created.
+#   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-identityprovider-keyauth
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: AIGatewayIdentityProvider
+          metadata:
+            name: ($idp_name)
+            namespace: ($namespace)
+          spec:
+            aiGatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($aigw_cp_name)
+            apiSpec:
+              type: key-auth
+              key-auth:
+                name: ($idp_name)
+                displayName: ($idp_name)
+                config:
+                  hideCredentials: Enabled
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: AIGatewayIdentityProvider
+          metadata:
+            name: ($idp_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true
