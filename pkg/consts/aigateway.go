@@ -49,7 +49,7 @@ const (
 	// DefaultAIGatewayDataPlaneBaseImage is the base image name for the AI Gateway container.
 	DefaultAIGatewayDataPlaneBaseImage = "kong/kong-ai-gateway"
 	// DefaultAIGatewayDataPlaneTag is the default image tag for the AI Gateway container.
-	DefaultAIGatewayDataPlaneTag = "2.0.1" // renovate: datasource=docker depName=kong/kong-ai-gateway-dev
+	DefaultAIGatewayDataPlaneTag = "2.0.1" // renovate: datasource=docker depName=kong/kong-ai-gateway
 	// DefaultAIGatewayDataPlaneImage is the full default image reference for the AI Gateway container.
 	DefaultAIGatewayDataPlaneImage = DefaultAIGatewayDataPlaneBaseImage + ":" + DefaultAIGatewayDataPlaneTag
 )

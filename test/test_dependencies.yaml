@@ -28,5 +28,5 @@ envtests:
 chainsaw:
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.15.0.2'
-  # renovate: datasource=docker depName=kong/kong-ai-gateway-dev versioning=docker
+  # renovate: datasource=docker depName=kong/kong-ai-gateway versioning=docker
   aigw-dp: '2.0.1'
