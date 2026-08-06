@@ -88,26 +88,50 @@ type KongCertificateSpec struct {
 
 // KongCertificateAPISpec contains the API specification for the KongCertificate.
 type KongCertificateAPISpec struct {
-	// Cert is the PEM-encoded certificate.
+	// Cert is the PEM-encoded certificate or a Kong vault reference resolving to one.
 	// This field is used when type is 'inline'.
+	//
+	// A vault reference has the form '{vault://<vault>/<resource>[/<key>]}', for example
+	// '{vault://certvault/my-service-cert}'. Vault references are passed to Kong as-is
+	// and are resolved by Kong Gateway at runtime, so the certificate material does not
+	// have to be stored in Kubernetes.
+	// +kubebuilder:validation:XValidation:rule="!self.startsWith('{vault:') || self.matches('^[{]vault://[a-zA-Z0-9._-]+/[^{}]+[}][[:space:]]*$')",message="cert must contain certificate material or a valid Kong vault reference, e.g. '{vault://my-vault/my-secret}'"
 	// +optional
 	Cert string `json:"cert,omitempty"`
-	// CertAlt is the PEM-encoded certificate.
+	// CertAlt is the PEM-encoded certificate or a Kong vault reference resolving to one.
 	// This should only be set if you have both RSA and ECDSA types of
 	// certificate available and would like Kong to prefer serving using ECDSA certs
 	// when client advertises support for it.
 	// This field is used when type is 'inline'.
+	//
+	// A vault reference has the form '{vault://<vault>/<resource>[/<key>]}', for example
+	// '{vault://certvault/my-service-cert-alt}'. Vault references are passed to Kong as-is
+	// and are resolved by Kong Gateway at runtime, so the certificate material does not
+	// have to be stored in Kubernetes.
+	// +kubebuilder:validation:XValidation:rule="!self.startsWith('{vault:') || self.matches('^[{]vault://[a-zA-Z0-9._-]+/[^{}]+[}][[:space:]]*$')",message="cert_alt must contain certificate material or a valid Kong vault reference, e.g. '{vault://my-vault/my-secret}'"
 	// +optional
 	CertAlt string `json:"cert_alt,omitempty"`
-	// Key is the PEM-encoded private key.
+	// Key is the PEM-encoded private key or a Kong vault reference resolving to one.
 	// This field is used when type is 'inline'.
+	//
+	// A vault reference has the form '{vault://<vault>/<resource>[/<key>]}', for example
+	// '{vault://certvault/my-service-key}'. Vault references are passed to Kong as-is
+	// and are resolved by Kong Gateway at runtime, so the private key does not have to
+	// be stored in Kubernetes.
+	// +kubebuilder:validation:XValidation:rule="!self.startsWith('{vault:') || self.matches('^[{]vault://[a-zA-Z0-9._-]+/[^{}]+[}][[:space:]]*$')",message="key must contain private key material or a valid Kong vault reference, e.g. '{vault://my-vault/my-secret}'"
 	// +optional
 	Key string `json:"key,omitempty"`
-	// KeyAlt is the PEM-encoded private key.
+	// KeyAlt is the PEM-encoded private key or a Kong vault reference resolving to one.
 	// This should only be set if you have both RSA and ECDSA types of
 	// certificate available and would like Kong to prefer serving using ECDSA certs
 	// when client advertises support for it.
 	// This field is used when type is 'inline'.
+	//
+	// A vault reference has the form '{vault://<vault>/<resource>[/<key>]}', for example
+	// '{vault://certvault/my-service-key-alt}'. Vault references are passed to Kong as-is
+	// and are resolved by Kong Gateway at runtime, so the private key does not have to
+	// be stored in Kubernetes.
+	// +kubebuilder:validation:XValidation:rule="!self.startsWith('{vault:') || self.matches('^[{]vault://[a-zA-Z0-9._-]+/[^{}]+[}][[:space:]]*$')",message="key_alt must contain private key material or a valid Kong vault reference, e.g. '{vault://my-vault/my-secret}'"
 	// +optional
 	KeyAlt string `json:"key_alt,omitempty"`
 

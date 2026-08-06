@@ -502,4 +502,128 @@ func TestKongCertificate(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("vault reference validation", func(t *testing.T) {
+		newKongCertificate := func(apiSpec configurationv1alpha1.KongCertificateAPISpec) *configurationv1alpha1.KongCertificate {
+			return &configurationv1alpha1.KongCertificate{
+				ObjectMeta: common.CommonObjectMeta(ns.Name),
+				Spec: configurationv1alpha1.KongCertificateSpec{
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
+					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "test-konnect-control-plane",
+						},
+					},
+					KongCertificateAPISpec: apiSpec,
+				},
+			}
+		}
+
+		common.TestCasesGroup[*configurationv1alpha1.KongCertificate]{
+			{
+				Name: "valid: inline cert with vault reference key",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "test-cert",
+					Key:  "{vault://certvault/my-service-key}",
+				}),
+			},
+			{
+				Name: "valid: vault references in all certificate material fields",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert:    "{vault://certvault/my-service-cert}",
+					Key:     "{vault://certvault/my-service-key}",
+					CertAlt: "{vault://certvault/my-service-cert-alt}",
+					KeyAlt:  "{vault://certvault/my-service-key-alt}",
+				}),
+			},
+			{
+				Name: "valid: vault reference with a key in the referenced secret",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "test-cert",
+					Key:  "{vault://hcv/my-service/tls.key}",
+				}),
+			},
+			{
+				Name: "valid: vault reference with query arguments",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "test-cert",
+					Key:  "{vault://hcv/my-service-key?prefix=kong}",
+				}),
+			},
+			{
+				Name: "valid: vault reference with a trailing newline",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "test-cert",
+					Key:  "{vault://certvault/my-service-key}\n",
+				}),
+			},
+			{
+				Name: "valid: inline PEM material is not treated as a vault reference",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "-----BEGIN CERTIFICATE-----\ncert\n-----END CERTIFICATE-----\n",
+					Key:  "-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----\n",
+				}),
+			},
+			{
+				Name: "invalid: key vault reference without a closing brace",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "test-cert",
+					Key:  "{vault://certvault/my-service-key",
+				}),
+				ExpectedErrorMessage: new("key must contain private key material or a valid Kong vault reference"),
+			},
+			{
+				Name: "invalid: key vault reference without a resource",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "test-cert",
+					Key:  "{vault://certvault}",
+				}),
+				ExpectedErrorMessage: new("key must contain private key material or a valid Kong vault reference"),
+			},
+			{
+				Name: "invalid: key vault reference with a malformed scheme",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "test-cert",
+					Key:  "{vault:/certvault/my-service-key}",
+				}),
+				ExpectedErrorMessage: new("key must contain private key material or a valid Kong vault reference"),
+			},
+			{
+				Name: "invalid: key vault reference with trailing content",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "test-cert",
+					Key:  "{vault://certvault/my-service-key} and more",
+				}),
+				ExpectedErrorMessage: new("key must contain private key material or a valid Kong vault reference"),
+			},
+			{
+				Name: "invalid: malformed cert vault reference",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert: "{vault://certvault}",
+					Key:  "test-key",
+				}),
+				ExpectedErrorMessage: new("cert must contain certificate material or a valid Kong vault reference"),
+			},
+			{
+				Name: "invalid: malformed cert_alt vault reference",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert:    "test-cert",
+					Key:     "test-key",
+					CertAlt: "{vault://certvault/my-service-cert-alt",
+				}),
+				ExpectedErrorMessage: new("cert_alt must contain certificate material or a valid Kong vault reference"),
+			},
+			{
+				Name: "invalid: malformed key_alt vault reference",
+				TestObject: newKongCertificate(configurationv1alpha1.KongCertificateAPISpec{
+					Cert:   "test-cert",
+					Key:    "test-key",
+					KeyAlt: "{vault://certvault/my-service-key-alt",
+				}),
+				ExpectedErrorMessage: new("key_alt must contain private key material or a valid Kong vault reference"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
 }
