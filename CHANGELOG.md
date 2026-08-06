@@ -61,6 +61,9 @@
   Kong resource no longer overwrite each other's references and continuously
   reapply the resource.
   [#4944](https://github.com/Kong/kong-operator/pull/4944)
+- HybridGateway: fix KongRoute created without updating KongService's
+  `hybrid-routes` annotation.
+  [#5136](https://github.com/Kong/kong-operator/pull/5136)
 - HybridGateway: shared Kong resources now converge when referenced by Routes
   attached to multiple Gateways, and SSA no-op detection correctly handles
   preserve-unknown fields. This prevents repeated apply loops from blocking
