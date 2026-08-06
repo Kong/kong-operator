@@ -8,8 +8,7 @@
 #   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
 #   - namespace: Namespace where the AIGatewayDataPlane will be created.
 #   - aigw_dp_image: AI Gateway data plane container image. Overrides the operator
-#     default (kong/kong-ai-gateway:2.0.0), which is too old to load the config the
-#     .tech Konnect org emits. Must be pre-loaded into the cluster.
+#     default. Must be pre-loaded into the cluster.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:

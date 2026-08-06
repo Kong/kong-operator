@@ -58,7 +58,6 @@ kubectl delete -f test/e2e/chainsaw/fixtures/aigateway --ignore-not-found
 ## Notes
 
 - The `AIGatewayDataPlane` image is overridden (binding `aigw_dp_image`, env `AIGW_DP_IMAGE`)
-  to a `kong-ai-gateway-dev` build. The operator default (`kong-ai-gateway:2.0.0`) cannot load
-  the config the `.tech` org emits today.
+  to a `kong-ai-gateway` build.
 - On clusters that pull images slowly (e.g. colima), pre-load the mock and data plane images
   with `kind load docker-image ... --name <cluster>`.
