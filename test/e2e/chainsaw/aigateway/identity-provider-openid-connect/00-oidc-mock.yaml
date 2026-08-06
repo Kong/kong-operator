@@ -1,0 +1,90 @@
+# A mock OIDC provider (ghcr.io/soluto/oidc-server-mock), scoped to this test's own
+# namespace so the credential-rotation steps below can freely mutate its client-secret
+# configuration without touching any other suite's or test run's state.
+#
+# Required bindings:
+#   - namespace: Namespace to deploy oidc-mock into (this test's own ephemeral namespace).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oidc-mock
+  namespace: ($namespace)
+  labels: { app: oidc-mock }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: oidc-mock }
+  template:
+    metadata:
+      labels: { app: oidc-mock }
+    spec:
+      containers:
+        - name: oidc-mock
+          image: ghcr.io/soluto/oidc-server-mock:0.8.6
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            # Issue real signed JWTs (not reference tokens) and expose the JWKS in the
+            # discovery document, so Kong's openid-connect plugin can validate the
+            # token signature locally via the issuer's .well-known/openid-configuration.
+            - name: SERVER_OPTIONS_INLINE
+              value: |
+                {
+                  "AccessTokenJwtType": "JWT",
+                  "Discovery": { "ShowKeySet": true }
+                }
+            - name: API_SCOPES_INLINE
+              value: |
+                - Name: aigateway-scope
+            - name: API_RESOURCES_INLINE
+              value: |
+                - Name: aigateway-api
+                  Scopes:
+                    - aigateway-scope
+            # Two client_credentials clients used by this suite to obtain real, signed
+            # access tokens:
+            #   - aigateway-oidc-client: the "primary" client, mapped (via its client_id
+            #     claim) to the suite's main AIGatewayConsumer. It has two valid secrets so
+            #     the suite can exercise secret rotation (both work, then one is revoked).
+            #   - aigateway-oidc-client-outsider: a second client mapped to an
+            #     AIGatewayConsumer that's deliberately left out of the allowed
+            #     AIGatewayConsumerGroup, for the "outsider consumer" ACL scenario.
+            - name: CLIENTS_CONFIGURATION_INLINE
+              value: |
+                [
+                  {
+                    "ClientId": "aigateway-oidc-client",
+                    "ClientSecrets": ["aigateway-oidc-client-secret", "aigateway-oidc-client-secret-2"],
+                    "Description": "Client credentials client for AIGatewayIdentityProvider openid-connect e2e coverage",
+                    "AllowedGrantTypes": ["client_credentials"],
+                    "AllowedScopes": ["aigateway-scope"],
+                    "ClientClaimsPrefix": ""
+                  },
+                  {
+                    "ClientId": "aigateway-oidc-client-outsider",
+                    "ClientSecrets": ["aigateway-oidc-client-outsider-secret"],
+                    "Description": "Second client credentials client for the outsider-consumer ACL scenario",
+                    "AllowedGrantTypes": ["client_credentials"],
+                    "AllowedScopes": ["aigateway-scope"],
+                    "ClientClaimsPrefix": ""
+                  }
+                ]
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet: { path: /.well-known/openid-configuration, port: 80 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oidc-mock
+  namespace: ($namespace)
+spec:
+  selector: { app: oidc-mock }
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
