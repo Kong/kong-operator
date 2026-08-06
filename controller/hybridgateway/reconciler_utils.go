@@ -374,6 +374,10 @@ func hybridRouteAnnotationInfo[t converter.RootObject](obj t) (annotationKey, ro
 		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation, o.Namespace + "/" + o.Name
 	case gwtypes.TLSRoute:
 		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation, o.Namespace + "/" + o.Name
+	case gwtypes.TCPRoute:
+		return consts.GatewayOperatorHybridRoutesTCPRouteAnnotation, o.Namespace + "/" + o.Name
+	case gwtypes.UDPRoute:
+		return consts.GatewayOperatorHybridRoutesUDPRouteAnnotation, o.Namespace + "/" + o.Name
 	}
 	return "", ""
 }

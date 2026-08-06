@@ -2899,6 +2899,26 @@ func TestHybridRouteAnnotationInfo(t *testing.T) {
 			},
 		},
 		{
+			name:    "TCPRoute returns TCPRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesTCPRouteAnnotation,
+			wantRef: "ns/tcp-route",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "tcp-route", Namespace: "ns"},
+				})
+			},
+		},
+		{
+			name:    "UDPRoute returns UDPRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesUDPRouteAnnotation,
+			wantRef: "ns/udp-route",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "udp-route", Namespace: "ns"},
+				})
+			},
+		},
+		{
 			name:    "Gateway returns empty strings",
 			wantKey: "",
 			wantRef: "",
