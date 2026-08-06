@@ -29,7 +29,7 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] Wait for the workflow to complete.
 - [ ] The CI should create a PR in the [Kong Operator][ko-prs] repo that bumps KO version in `VERSION` file and manifests. Merge it.
 - [ ] After the PR is merged, [release-bot][release-bot-workflow] workflow will be triggered. It will create a new GH release, as well as a release branch (if not patch or prerelease):
-  - [ ] Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
+  - [ ] Check the [releases][releases] page and confirm the `latest` badge is on the expected release (this now follows the `latest` workflow input automatically, no manual step needed).
   - [ ] If the release is not a patch or prerelease, check the `release/N.M.x` release branch exists.
 - [ ] Update the official documentation at [https://github.com/Kong/developer.konghq.com/][docs_repo]
   - [ ] **Changelog, CLI configuration options, and CRD reference**: Automatically synced by the release workflow (when `latest=true`). A docs PR will be created in the [docs repo][docs_repo] and a comment will be posted in this issue. Review and merge the PR when ready.

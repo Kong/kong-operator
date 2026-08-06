@@ -121,6 +121,12 @@ jobs:
           tag: v${{ needs.semver.outputs.version }}
           commit: ${{ github.sha }}
           prerelease: ${{ needs.look_for_release.outputs.release_type == 'prerelease' }}
+          # Without this, ncipollo/release-action defaults to makeLatest: legacy, which
+          # makes GitHub mark whichever release was *created* most recently as "latest" -
+          # regardless of version order. This breaks patch releases from older release
+          # branches (e.g. 2.0.11 after 2.2.3). Only mark latest when the release commit
+          # was explicitly tagged with [latest].
+          makeLatest: ${{ needs.look_for_release.outputs.release_latest == 'true' && needs.look_for_release.outputs.release_type == 'release' }}
 
   create-release-branch:
     permissions:
