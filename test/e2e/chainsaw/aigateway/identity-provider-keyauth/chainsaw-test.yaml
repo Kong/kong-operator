@@ -1,0 +1,237 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-identity-provider-keyauth
+spec:
+  description: |
+    Dedicated coverage for the key-auth AIGatewayIdentityProvider: stands up a Konnect
+    AIGateway control plane, a key-auth AIGatewayIdentityProvider, an AIGatewayConsumer +
+    AIGatewayConsumerCredential (api-key, no consumer group/ACL involved), and an
+    AIGatewayAgent route (backed by the shared go-echo backend) with unrestricted access.
+    Verifies the identity provider actually enforces authentication end-to-end against a
+    real in-cluster AIGatewayDataPlane:
+      1. Requests without a credential are rejected (401).
+      2. Requests with a valid api-key credential succeed (200).
+      3. After the credential is deleted, the same request is rejected again (401).
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: keyauth_idp_name
+      value: (join('-', [($test_name), 'key-auth-idp']))
+    - name: consumer_name
+      value: (join('-', [($test_name), 'consumer']))
+    - name: consumer_type
+      value: api-key
+    - name: custom_id
+      value: ''
+    - name: credential_name
+      value: (join('-', [($test_name), 'credential']))
+    - name: credential_secret_name
+      value: (join('-', [($test_name), 'credential-secret']))
+    - name: api_key_value
+      value: e2e-test-api-key-value
+    - name: http_agent_name
+      value: (join('-', [($test_name), 'http-agent']))
+    - name: http_agent_route_path
+      value: /http-agent
+    # Defaults for verify-aigw-agent-request-from-{cluster,host} optional bindings.
+    # Steps below only need to override what differs from these.
+    - name: request_headers
+      value: ''
+    - name: request_body
+      value: ''
+    - name: content_type
+      value: application/json
+    - name: expected_status
+      value: "200"
+    - name: expected_status_not
+      value: ''
+    - name: expected_body
+      value: ''
+    - name: unexpected_body
+      value: ''
+    - name: expected_jsonrpc
+      value: ''
+    - name: expected_json_id
+      value: ''
+    - name: expected_json_result_text
+      value: ''
+    - name: oidc_token_url
+      value: ''
+    - name: oidc_client_id
+      value: ''
+    - name: oidc_client_secret
+      value: ''
+    - name: oidc_scope
+      value: ''
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: 4-Create-keyauth-identity-provider
+      bindings:
+        - name: idp_name
+          value: ($keyauth_idp_name)
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayIdentityProvider-keyauth.yaml
+    - name: 5-Create-consumer
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_groups
+          value: []
+    - name: 6-Create-consumer-credential
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerCredential-apikey.yaml
+      bindings:
+        - name: secret_name
+          value: ($credential_secret_name)
+    - name: 7-Start-echo-agent-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: 8-Create-aigateway-agent
+      bindings:
+        - name: agent_access
+          value:
+            identityProviders:
+              - ($keyauth_idp_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayAgent-http.yaml
+    - name: 9-Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+    - name: 10-Reject-request-without-credential-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_status
+          value: "401"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 11-Reject-request-without-credential-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_status
+          value: "401"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    - name: 12-Accept-request-with-valid-credential-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 13-Accept-request-with-valid-credential-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    - name: 14-Delete-credential-and-revoke-access
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              name: ($credential_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($credential_name)
+                namespace: ($namespace)
+    - name: 15-Reject-request-after-credential-revoked-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_status
+          value: "401"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 16-Reject-request-after-credential-revoked-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: (join('', ['apikey:', ($api_key_value)]))
+        - name: expected_status
+          value: "401"
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-identity-provider-keyauth
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
