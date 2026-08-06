@@ -56,7 +56,7 @@ type DesiredStateReadinessChecker interface {
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {
-	gwtypes.HTTPRoute | gwtypes.TLSRoute | gwtypes.GRPCRoute | gwtypes.TCPRoute | gwtypes.Gateway
+	gwtypes.HTTPRoute | gwtypes.TLSRoute | gwtypes.GRPCRoute | gwtypes.TCPRoute | gwtypes.UDPRoute | gwtypes.Gateway
 }
 
 // RootObjectPtr is a generic interface that represents a pointer to a type T,
@@ -81,6 +81,8 @@ func NewConverter[t RootObject](obj t, cl client.Client, fqdnMode bool, clusterD
 		return newTLSRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	case gwtypes.TCPRoute:
 		return newTCPRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
+	case gwtypes.UDPRoute:
+		return newUDPRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	case gwtypes.Gateway:
 		return newGatewayConverter(&o, cl).(APIConverter[t]), nil
 	default:

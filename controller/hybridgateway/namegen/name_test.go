@@ -248,6 +248,35 @@ func TestTCPRouteNames(t *testing.T) {
 	assert.Equal(t, upstreamName, serviceName)
 }
 
+func TestUDPRouteNames(t *testing.T) {
+	udpRoute := &gwtypes.UDPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "udp-route",
+			Namespace: "default",
+		},
+	}
+	cp := testControlPlaneRef("test-cp")
+	port := gwtypes.PortNumber(8080)
+	rule := gwtypes.UDPRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "service1",
+				Port: &port,
+			},
+		}},
+	}
+	parentRef := testParentRef(nil)
+
+	upstreamName := NewKongUpstreamNameForUDPRouteRule(udpRoute, cp, rule)
+	serviceName := NewKongServiceNameForUDPRouteRule(udpRoute, cp, rule)
+	routeName := NewKongRouteNameForUDPRouteRule(udpRoute, cp, parentRef, rule)
+
+	assert.True(t, strings.HasPrefix(upstreamName, "udp.default-service1-8080.1."))
+	assert.True(t, strings.HasPrefix(serviceName, "udp.default-service1-8080.1."))
+	assert.True(t, strings.HasPrefix(routeName, "udp.default-udp-route."))
+	assert.Equal(t, upstreamName, serviceName)
+}
+
 func TestNewKongUpstreamName_Equality(t *testing.T) {
 	tests := []struct {
 		name  string

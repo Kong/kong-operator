@@ -426,6 +426,49 @@ func TestUpstreamForTCPRouteRule(t *testing.T) {
 	assert.Equal(t, "test-namespace/test-route", upstream.Annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation])
 }
 
+func TestUpstreamForUDPRouteRule(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	udpRoute := &gwtypes.UDPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "UDPRoute",
+			APIVersion: "gateway.networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+	port := gwtypes.PortNumber(80)
+	rule := gwtypes.UDPRouteRule{
+		BackendRefs: []gwtypes.BackendRef{{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: "test-service",
+				Port: &port,
+			},
+		}},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name:      "test-cp",
+			Namespace: "test-namespace",
+		},
+	}
+
+	upstream, err := UpstreamForRule(ctx, logger, client, udpRoute, rule, pRef, cp)
+	require.NoError(t, err)
+	require.NotNil(t, upstream)
+	assert.True(t, strings.HasPrefix(upstream.Name, "udp.test-namespace-test-service-80.1."))
+	assert.Equal(t, "test-namespace/test-route", upstream.Annotations[consts.GatewayOperatorHybridRoutesUDPRouteAnnotation])
+}
+
 func TestUpstreamForRule_WithUpstreamPolicy(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))

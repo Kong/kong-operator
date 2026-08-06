@@ -65,6 +65,8 @@ func GetSpecHostnames[T SupportedRoute](route T) []Hostname {
 		return r.Spec.Hostnames
 	case TCPRoute:
 		return []Hostname{}
+	case UDPRoute:
+		return []Hostname{}
 	}
 	return []Hostname{}
 }

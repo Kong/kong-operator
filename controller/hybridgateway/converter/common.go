@@ -152,6 +152,8 @@ func isHostlessRoute[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]
 	switch any(route).(type) {
 	case *gwtypes.TCPRoute:
 		return true
+	case *gwtypes.UDPRoute:
+		return true
 	default:
 		return false
 	}
