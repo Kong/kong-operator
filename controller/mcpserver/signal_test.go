@@ -143,7 +143,9 @@ func TestSignalManager_RegisterControlPlane(t *testing.T) {
 
 		// Pass nil as konnectClient — goroutines will exit immediately due to
 		// the cancelled parent context before making any SDK calls.
-		sm.registerControlPlane(nil, cp)
+		sm.registerControlPlane(CPEvent{
+			ControlPlane: cp,
+		})
 
 		sm.mu.Lock()
 		defer sm.mu.Unlock()
@@ -164,7 +166,9 @@ func TestSignalManager_RegisterControlPlane(t *testing.T) {
 		sm.resetChs[key] = make(chan struct{}, 1)
 		sm.mu.Unlock()
 
-		sm.registerControlPlane(nil, cp)
+		sm.registerControlPlane(CPEvent{
+			ControlPlane: cp,
+		})
 
 		// Sentinel cancel func must not have been replaced or called.
 		sm.mu.Lock()
