@@ -1,0 +1,26 @@
+name: Setup mise
+description: >
+  Install mise and, unless skipped, cache bin/installs so tools pinned in
+  .mise.toml / .tools_versions.yaml aren't re-downloaded on every job. This
+  keeps calls to the GitHub API (used by mise to resolve tool versions) to a
+  minimum and avoids hitting its rate limit.
+inputs:
+  install:
+    description: Forwarded to jdx/mise-action's `install` input.
+    default: "false"
+  install_args:
+    description: Forwarded to jdx/mise-action's `install_args` input.
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+      with:
+        install: ${{ inputs.install }}
+        install_args: ${{ inputs.install_args }}
+
+    - name: Cache mise tools
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v4
+      with:
+        path: bin/installs
+        key: mise-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.mise.toml', '.tools_versions.yaml') }}
