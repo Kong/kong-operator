@@ -23,6 +23,8 @@ func FilterBy(ctx context.Context, cl client.Client, obj client.Object) (*predic
 		return filterByRoute[gwtypes.TLSRoute](ctx, cl), nil
 	case *gwtypes.TCPRoute:
 		return filterByRoute[gwtypes.TCPRoute](ctx, cl), nil
+	case *gwtypes.UDPRoute:
+		return filterByRoute[gwtypes.UDPRoute](ctx, cl), nil
 	default:
 		return nil, fmt.Errorf("unsupported object type during creation of predicates: %T", o)
 	}

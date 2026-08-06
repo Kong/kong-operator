@@ -76098,7 +76098,6 @@ rules:
   - gatewayclasses
   - grpcroutes
   - referencegrants
-  - udproutes
   verbs:
   - get
   - list
@@ -76160,6 +76159,7 @@ rules:
   resources:
   - tcproutes
   - tlsroutes
+  - udproutes
   verbs:
   - get
   - list

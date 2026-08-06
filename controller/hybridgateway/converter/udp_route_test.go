@@ -1,6 +1,8 @@
 package converter
 
 import (
+	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,8 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -235,6 +240,113 @@ func TestUDPRouteConverter_GetHybridGatewayParentsIsHostless(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, parents, 1)
 	assert.Empty(t, parents[0].hostnames)
+}
+
+// TestUDPRouteConverter_HandleOrphanedResource covers two UDPRoutes that collide on the
+// same backend Service+port and therefore share a KongService/KongUpstream: deleting one
+// route must strip only its own reference from the hybrid-routes annotation and keep the
+// shared resource alive while the other route still references it, and must only allow
+// deletion once no UDPRoute reference remains.
+func TestUDPRouteConverter_HandleOrphanedResource(t *testing.T) {
+	route := newUDPRouteForTranslation()
+
+	tests := []struct {
+		name        string
+		setup       func() (*udpRouteConverter, *unstructured.Unstructured)
+		wantErr     bool
+		wantSkip    bool
+		errContains string
+		assertFn    func(t *testing.T, resource *unstructured.Unstructured)
+	}{
+		{
+			name: "skips resource without route annotation",
+			setup: func() (*udpRouteConverter, *unstructured.Unstructured) {
+				resource := newUDPUnstructuredResource("")
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
+				return newUDPRouteConverter(route, fakeClient, false, "").(*udpRouteConverter), resource
+			},
+			wantSkip: true,
+		},
+		{
+			name: "updates annotation and keeps shared resource when colliding route remains",
+			setup: func() (*udpRouteConverter, *unstructured.Unstructured) {
+				routeKey := client.ObjectKeyFromObject(route).String()
+				// Simulates a second UDPRoute in the same namespace colliding on the
+				// same backend Service+port, so both routes' refs are on the shared resource.
+				resource := newUDPUnstructuredResource(routeKey + ",default/other-udproute")
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
+				return newUDPRouteConverter(route, fakeClient, false, "").(*udpRouteConverter), resource
+			},
+			wantSkip: true,
+			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
+				assert.Equal(t, "default/other-udproute", resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesUDPRouteAnnotation])
+			},
+		},
+		{
+			name: "allows deletion when only route remains",
+			setup: func() (*udpRouteConverter, *unstructured.Unstructured) {
+				routeKey := client.ObjectKeyFromObject(route).String()
+				resource := newUDPUnstructuredResource(routeKey)
+				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
+				return newUDPRouteConverter(route, fakeClient, false, "").(*udpRouteConverter), resource
+			},
+			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
+				_, exists := resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesUDPRouteAnnotation]
+				assert.False(t, exists)
+			},
+		},
+		{
+			name: "returns error when patch fails",
+			setup: func() (*udpRouteConverter, *unstructured.Unstructured) {
+				routeKey := client.ObjectKeyFromObject(route).String()
+				resource := newUDPUnstructuredResource(routeKey + ",default/other-udproute")
+				fakeClient := fake.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithObjects(resource).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+							return fmt.Errorf("simulated patch error")
+						},
+					}).
+					Build()
+				return newUDPRouteConverter(route, fakeClient, false, "").(*udpRouteConverter), resource
+			},
+			wantErr:     true,
+			wantSkip:    true,
+			errContains: "failed to update resource",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			converter, resource := tt.setup()
+			skipDelete, err := converter.HandleOrphanedResource(t.Context(), logr.Discard(), resource)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+				assert.Equal(t, tt.wantSkip, skipDelete)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantSkip, skipDelete)
+			if tt.assertFn != nil {
+				tt.assertFn(t, resource)
+			}
+		})
+	}
+}
+
+func newUDPUnstructuredResource(routesAnnotation string) *unstructured.Unstructured {
+	resource := &unstructured.Unstructured{}
+	resource.SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongService"))
+	resource.SetName("orphaned")
+	resource.SetNamespace("default")
+	if routesAnnotation != "" {
+		resource.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridRoutesUDPRouteAnnotation: routesAnnotation,
+		})
+	}
+	return resource
 }
 
 func newUDPRouteForTranslation() *gwtypes.UDPRoute {

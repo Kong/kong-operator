@@ -107,6 +107,11 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "tcproutes",
 	}
+	udpRouteGVR := schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "udproutes",
+	}
 
 	if cfg.ControlPlaneControllerEnabled || cfg.GatewayControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
@@ -138,6 +143,13 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		}
 		if hasTCPRoute {
 			indexOptions = slices.Concat(indexOptions, index.OptionsForTCPRoute())
+		}
+		hasUDPRoute, err := crdChecker.CRDExists(udpRouteGVR)
+		if err != nil {
+			return fmt.Errorf("failed to check existence of CRD %s: %w", udpRouteGVR.String(), err)
+		}
+		if hasUDPRoute {
+			indexOptions = slices.Concat(indexOptions, index.OptionsForUDPRoute())
 		}
 	}
 
@@ -946,6 +958,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "tcproutes",
 		}
+		udpRouteGVR := schema.GroupVersionResource{
+			Group:    gatewayv1.GroupVersion.Group,
+			Version:  gatewayv1.GroupVersion.Version,
+			Resource: "udproutes",
+		}
 		hasTLSRoute, err := checker.CRDExists(tlsRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
@@ -959,6 +976,13 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		}
 		if hasTCPRoute {
 			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+		}
+		hasUDPRoute, err := checker.CRDExists(udpRouteGVR)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", udpRouteGVR.String(), err)
+		}
+		if hasUDPRoute {
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.UDPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
 		}
 	}
 

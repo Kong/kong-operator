@@ -49,6 +49,19 @@ func MapTCPRouteForClientCertSecret(cl client.Client) func(ctx context.Context, 
 	}
 }
 
+// MapUDPRouteForClientCertSecret returns a handler.MapFunc that, given a Secret, lists all
+// Services in the same namespace that reference it via the konghq.com/client-cert annotation,
+// then returns reconcile.Requests for all UDPRoutes backed by those Services.
+func MapUDPRouteForClientCertSecret(cl client.Client) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		secret, ok := obj.(*corev1.Secret)
+		if !ok {
+			return nil
+		}
+		return routesForClientCertSecret(ctx, cl, secret.Namespace, secret.Name, kindUDPRoute)
+	}
+}
+
 // routesForClientCertSecret finds all routes whose backend Services
 // carry konghq.com/client-cert: <secretName>, and returns reconcile.Requests for them.
 func routesForClientCertSecret(ctx context.Context, cl client.Client, secretNamespace, secretName, routeKind string) []reconcile.Request {
@@ -71,6 +84,8 @@ func routesForClientCertSecret(ctx context.Context, cl client.Client, secretName
 			routeRequests, err = listTLSRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		case kindTCPRoute:
 			routeRequests, err = listTCPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		case kindUDPRoute:
+			routeRequests, err = listUDPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
 		}
 		if err != nil {
 			continue

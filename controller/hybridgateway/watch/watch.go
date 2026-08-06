@@ -189,6 +189,57 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		}
+	case *gwtypes.UDPRoute:
+		return []Watcher{
+			{
+				MapRouteForGateway(cl, gwtypes.UDPRoute{}),
+				&gwtypes.Gateway{},
+			},
+			{
+				MapRouteForGatewayClass(cl, gwtypes.UDPRoute{}),
+				&gwtypes.GatewayClass{},
+			},
+			{
+				MapRouteForService(cl, gwtypes.UDPRoute{}),
+				&corev1.Service{},
+			},
+			{
+				MapRouteForEndpointSlice(cl, gwtypes.UDPRoute{}),
+				&discoveryv1.EndpointSlice{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindUDPRoute),
+				&configurationv1alpha1.KongUpstream{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongTarget](kindUDPRoute),
+				&configurationv1alpha1.KongTarget{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongService](kindUDPRoute),
+				&configurationv1alpha1.KongService{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongRoute](kindUDPRoute),
+				&configurationv1alpha1.KongRoute{},
+			},
+			{
+				MapUDPRouteForReferenceGrant(cl),
+				&gwtypes.ReferenceGrant{},
+			},
+			{
+				MapUDPRouteForClientCertSecret(cl),
+				&corev1.Secret{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindUDPRoute),
+				&configurationv1alpha1.KongCertificate{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindUDPRoute),
+				&configurationv1alpha1.KongReferenceGrant{},
+			},
+		}
 	case *gwtypes.Gateway:
 		return []Watcher{
 			{
