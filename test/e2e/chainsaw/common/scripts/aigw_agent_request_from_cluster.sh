@@ -17,8 +17,9 @@ set -o pipefail
 #   METHOD, ROUTE_PATH, PORT, REQUEST_HEADERS, REQUEST_BODY, CONTENT_TYPE,
 #   EXPECTED_STATUS, EXPECTED_STATUS_NOT, EXPECTED_BODY, UNEXPECTED_BODY,
 #   EXPECTED_JSONRPC, EXPECTED_JSON_ID, EXPECTED_JSON_RESULT_TEXT, MAX_RETRIES,
-#   RETRY_DELAY, OIDC_TOKEN_URL, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_SCOPE:
-#     Forwarded through as-is to aigw_agent_request.sh (see its own env docs).
+#   RETRY_DELAY, OIDC_TOKEN_URL, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_SCOPE,
+#   EXPECTED_SUCCESS: Forwarded through as-is to aigw_agent_request.sh (see its
+#     own env docs).
 
 SCRIPT_PATH="${SCRIPT_PATH:-../../common/scripts/aigw_agent_request.sh}"
 NAMESPACE="${NAMESPACE}"
@@ -51,5 +52,6 @@ cat "${SCRIPT_PATH}" | kubectl run "${POD_NAME}" \
   --env="OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}" \
   --env="OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}" \
   --env="OIDC_SCOPE=${OIDC_SCOPE:-}" \
+  --env="EXPECTED_SUCCESS=${EXPECTED_SUCCESS:-true}" \
   -n "${NAMESPACE}" \
   -- sh -s 2>/dev/null | grep -v '^pod "'

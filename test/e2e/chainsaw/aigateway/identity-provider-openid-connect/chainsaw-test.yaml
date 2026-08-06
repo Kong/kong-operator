@@ -100,6 +100,8 @@ spec:
       value: ''
     - name: oidc_client_secret
       value: ''
+    - name: expected_success
+      value: 'true'
   steps:
     - name: 1-Create-auth-secret
       use:
@@ -280,54 +282,18 @@ spec:
                 replicas: 1
                 readyReplicas: 1
                 updatedReplicas: 1
-    # A standard verify-aigw-agent-request-from-cluster.yaml step can't be used here:
-    # the revoked secret makes the token fetch itself fail (invalid_client), so the
-    # script never gets to make the HTTP request and reports success: false directly,
-    # rather than a real HTTP status to compare against expected_status.
     - name: 16-Reject-request-after-secret-revoked-from-cluster
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
-              - name: METHOD
-                value: GET
-              - name: ROUTE_PATH
-                value: ($http_agent_route_path)
-              - name: REQUEST_HEADERS
-                value: ''
-              - name: REQUEST_BODY
-                value: ''
-              - name: CONTENT_TYPE
-                value: application/json
-              - name: EXPECTED_STATUS
-                value: ''
-              - name: EXPECTED_STATUS_NOT
-                value: ''
-              - name: EXPECTED_BODY
-                value: ''
-              - name: UNEXPECTED_BODY
-                value: ''
-              - name: EXPECTED_JSONRPC
-                value: ''
-              - name: EXPECTED_JSON_ID
-                value: ''
-              - name: EXPECTED_JSON_RESULT_TEXT
-                value: ''
-              - name: OIDC_TOKEN_URL
-                value: ($oidc_token_url)
-              - name: OIDC_CLIENT_ID
-                value: ($oidc_client_id)
-              - name: OIDC_CLIENT_SECRET
-                value: ($oidc_client_secret_value)
-              - name: OIDC_SCOPE
-                value: ($oidc_scope)
-            content: |
-              bash ../../common/scripts/aigw_agent_request_from_cluster.sh
-            check:
-              (json_parse($stdout).success == `false`): true
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: oidc_client_secret
+          value: ($oidc_client_secret_value)
+        - name: expected_success
+          value: 'false'
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
   catch:
     - description: Capture debug snapshot on test failure.
       script:

@@ -12,6 +12,15 @@ metadata:
   labels: { app: oidc-mock }
 spec:
   replicas: 1
+  # Recreate (not the default RollingUpdate): with RollingUpdate, the old and new pods
+  # briefly co-exist and both match the Service's label selector, so secret-rotation
+  # steps below (01/02-oidc-mock-secret-*.yaml) can have the revoked-secret pod still
+  # serving requests for a moment even after the Deployment reports ready/updated,
+  # flaking the "reject request with revoked secret" assertion. Recreate guarantees the
+  # old pod is fully gone before the new one starts, so there's never a window where a
+  # revoked secret is still accepted.
+  strategy:
+    type: Recreate
   selector:
     matchLabels: { app: oidc-mock }
   template:

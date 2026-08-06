@@ -127,6 +127,8 @@ spec:
       value: ''
     - name: oidc_scope
       value: ''
+    - name: expected_success
+      value: 'true'
   steps:
     - name: 1-Create-auth-secret
       use:

@@ -23,6 +23,10 @@
 #   - oidc_client_id: client_id for the client_credentials grant, or ''.
 #   - oidc_client_secret: client_secret for the client_credentials grant, or ''.
 #   - oidc_scope: Optional scope parameter for the client_credentials grant, or ''.
+#   - expected_success: (optional) 'true' (default) if the request/credential is
+#     expected to eventually work, 'false' if it's expected to be (or become, e.g.
+#     after revoking a credential) permanently rejected. See aigw_agent_request.sh
+#     for how this flips its retry-until-match loop.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
@@ -67,6 +71,8 @@ spec:
             value: ($oidc_client_secret)
           - name: OIDC_SCOPE
             value: ($oidc_scope)
+          - name: EXPECTED_SUCCESS
+            value: ($expected_success)
         content: |
           bash ../../common/scripts/aigw_agent_request_from_cluster.sh
         check:
