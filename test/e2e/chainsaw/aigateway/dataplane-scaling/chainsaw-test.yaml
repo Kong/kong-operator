@@ -1,0 +1,198 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-dataplane-scaling
+spec:
+  description: |
+    Stands up a Konnect AIGateway control plane, an AIGatewayAgent route to the
+    shared go-echo backend, and a single-replica AIGatewayDataPlane. Verifies traffic
+    succeeds at 1 replica, scales the AIGatewayDataPlane to 2 replicas in place
+    (spec.deployment.replicas), asserts status.readyReplicas reaches 2, and verifies
+    traffic keeps succeeding after the scale-up.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: http_agent_name
+      value: (join('-', [($test_name), 'http-agent']))
+    - name: http_agent_route_path
+      value: /http-agent
+    # Defaults for verify-aigw-agent-request-from-{cluster,host} optional bindings.
+    # Steps below only need to override what differs from these.
+    - name: request_headers
+      value: ''
+    - name: request_body
+      value: ''
+    - name: content_type
+      value: application/json
+    - name: expected_status
+      value: "200"
+    - name: expected_status_not
+      value: ''
+    - name: expected_body
+      value: ''
+    - name: unexpected_body
+      value: ''
+    - name: expected_jsonrpc
+      value: ''
+    - name: expected_json_id
+      value: ''
+    - name: expected_json_result_text
+      value: ''
+    - name: oidc_token_url
+      value: ''
+    - name: oidc_client_id
+      value: ''
+    - name: oidc_client_secret
+      value: ''
+    - name: oidc_scope
+      value: ''
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: 4-Start-echo-agent-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: 5-Create-aigateway-agent
+      bindings:
+        - name: agent_access
+          value: {}
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayAgent-http.yaml
+    - name: 6-Create-aigateway-dataplane-single-replica
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+    - name: 7-Drive-traffic-at-single-replica-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 8-Drive-traffic-at-single-replica-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    - name: 9-Scale-aigateway-dataplane-to-two-replicas
+      try:
+        - patch:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                deployment:
+                  replicas: 2
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                readyReplicas: 2
+    # Repeated 3x from-cluster to help sample traffic across both replicas.
+    - name: 10-Drive-traffic-after-scale-up-from-cluster-1
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 11-Drive-traffic-after-scale-up-from-cluster-2
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 12-Drive-traffic-after-scale-up-from-cluster-3
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 13-Drive-traffic-after-scale-up-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-dataplane-scaling
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
