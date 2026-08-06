@@ -912,20 +912,6 @@ func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 		return cond, nil
 	}
 
-	// Check if the referenced object exists.
-	service := &corev1.Service{}
-	err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, service)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Debug(logger, "BackendRef not found", "namespace", bRefNamespace, "name", bRef.Name)
-			cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
-			cond.Status = metav1.ConditionFalse
-			cond.Message = fmt.Sprintf("BackendRef %s/%s not found", bRefNamespace, bRef.Name)
-			return cond, nil
-		}
-		return nil, fmt.Errorf("failed to get BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
-	}
-
 	// Check if the referenced object is permitted by the reference grant if in a different namespace.
 	if bRefNamespace != route.GetNamespace() {
 		// Use CheckReferenceGrant helper to check if the reference is permitted.
@@ -950,6 +936,21 @@ func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 			return cond, nil
 		}
 	}
+
+	// Check if the referenced object exists.
+	service := &corev1.Service{}
+	err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, service)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Debug(logger, "BackendRef not found", "namespace", bRefNamespace, "name", bRef.Name)
+			cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
+			cond.Status = metav1.ConditionFalse
+			cond.Message = fmt.Sprintf("BackendRef %s/%s not found", bRefNamespace, bRef.Name)
+			return cond, nil
+		}
+		return nil, fmt.Errorf("failed to get BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
+	}
+
 	return cond, nil
 }
 
