@@ -89,6 +89,8 @@
   to not block potentially valid `Ingress` or `HTTPRoute` resources when the
   webhook is not able to reach Kong Gateway.
   [#5095](https://github.com/Kong/kong-operator/pull/5095)
+- HybridGateway: fix KongRoute created without updating KongService's hybrid-route annotation
+  [#5136](https://github.com/Kong/kong-operator/pull/5136)
 
 ### Added
   
@@ -119,6 +121,14 @@
   (no effect), which was not the intended behavior.
   Now, the operator will not set any probes on the `DataPlane` whenever `{}` is specified.
   [#5117](https://github.com/Kong/kong-operator/pull/5117)
+- `KongCertificate`: `spec.cert`, `spec.key`, `spec.cert_alt` and `spec.key_alt`
+  now explicitly support Kong vault references (e.g.
+  `{vault://certvault/my-service-key}`) in addition to inline PEM material, so
+  certificate material can be kept out of Kubernetes and resolved by Kong
+  Gateway at runtime. Values that start with `{vault:` are validated against the
+  vault reference format at admission time, valid references are passed to
+  Konnect unchanged.
+  [#5159](https://github.com/Kong/kong-operator/pull/5159)
 
 ### Changed
 

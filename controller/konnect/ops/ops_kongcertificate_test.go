@@ -312,6 +312,80 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 			},
 			wantErr: "missing key 'tls.key'",
 		},
+		{
+			name: "inline cert with a vault reference key is passed through unchanged",
+			cert: &configurationv1alpha1.KongCertificate{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KongCertificate",
+					APIVersion: "configuration.konghq.com/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "cert-vault",
+					Namespace:  "ns",
+					Generation: 4,
+					UID:        "uid-4",
+				},
+				Spec: configurationv1alpha1.KongCertificateSpec{
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
+					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+						Cert: "direct-cert",
+						Key:  "{vault://certvault/my-service-key}",
+					},
+				},
+			},
+			clientObjs: []client.Object{},
+			wantCert:   "direct-cert",
+			wantKey:    "{vault://certvault/my-service-key}",
+			wantTags: []string{
+				"k8s-generation:4",
+				"k8s-kind:KongCertificate",
+				"k8s-name:cert-vault",
+				"k8s-uid:uid-4",
+				"k8s-version:v1alpha1",
+				"k8s-group:configuration.konghq.com",
+				"k8s-namespace:ns",
+				"managed-by:kong-operator",
+			},
+		},
+		{
+			name: "vault references in all certificate material fields are passed through unchanged",
+			cert: &configurationv1alpha1.KongCertificate{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KongCertificate",
+					APIVersion: "configuration.konghq.com/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "cert-vault-all",
+					Namespace:  "ns",
+					Generation: 5,
+					UID:        "uid-5",
+				},
+				Spec: configurationv1alpha1.KongCertificateSpec{
+					Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
+					KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+						Cert:    "{vault://certvault/my-service-cert}",
+						Key:     "{vault://certvault/my-service-key}",
+						CertAlt: "{vault://certvault/my-service-cert-alt}",
+						KeyAlt:  "{vault://hcv/my-service/key-alt?prefix=kong}",
+					},
+				},
+			},
+			clientObjs:  []client.Object{},
+			wantCert:    "{vault://certvault/my-service-cert}",
+			wantKey:     "{vault://certvault/my-service-key}",
+			wantCertAlt: "{vault://certvault/my-service-cert-alt}",
+			wantKeyAlt:  "{vault://hcv/my-service/key-alt?prefix=kong}",
+			wantTags: []string{
+				"k8s-generation:5",
+				"k8s-kind:KongCertificate",
+				"k8s-name:cert-vault-all",
+				"k8s-uid:uid-5",
+				"k8s-version:v1alpha1",
+				"k8s-group:configuration.konghq.com",
+				"k8s-namespace:ns",
+				"managed-by:kong-operator",
+			},
+		},
 	}
 
 	for _, tt := range tests {

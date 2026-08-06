@@ -1,0 +1,68 @@
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectAPIAuthConfiguration
+metadata:
+  name: konnect-api-auth-dev-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXXXXXXXXXXXXXXX
+  serverURL: us.api.konghq.com
+---
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  name: test1
+  namespace: default
+spec:
+  createControlPlaneRequest:
+    name: test1
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth-dev-1
+---
+# The private key is not stored in Kubernetes: it is a Kong vault reference that
+# is passed to Kong as-is and resolved by Kong Gateway at runtime.
+# The referenced vault (here: 'certvault') has to exist in the Control Plane,
+# e.g. created through a KongVault.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCertificate
+metadata:
+  name: cert-with-vault-ref-key
+  namespace: default
+  annotations:
+    konghq.com/tags: "infra,example"
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: test1
+  type: inline
+  tags:
+    - production
+    - vault-ref
+  cert: |
+    -----BEGIN CERTIFICATE-----
+    MIIDPTCCAiUCFG5IolqRiKPMfzTI8peXlaF6cZODMA0GCSqGSIb3DQEBCwUAMFsx
+    CzAJBgNVBAYTAlVTMQswCQYDVQQIDAJDQTEVMBMGA1UEBwwMRGVmYXVsdCBDaXR5
+    MRIwEAYDVQQKDAlLb25nIEluYy4xFDASBgNVBAMMC2tvbmdocS50ZWNoMB4XDTI0
+    MDkyNTA3MjIzOFoXDTM0MDkyMzA3MjIzOFowWzELMAkGA1UEBhMCVVMxCzAJBgNV
+    BAgMAkNBMRUwEwYDVQQHDAxEZWZhdWx0IENpdHkxEjAQBgNVBAoMCUtvbmcgSW5j
+    LjEUMBIGA1UEAwwLa29uZ2hxLnRlY2gwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+    ggEKAoIBAQDXmNBzpWyJ0YUdfCamZpJiwRQMn5vVY8iKQrd3dD03DWyPHu/fXlrL
+    +QPTRip5d1SrxjzQ4S3fgme442BTlElF9d1w1rhg+DIg6NsW1jd+3IZaICnq7BZH
+    rJGlW+IWJSKHmNQ39nfVQwgL/QdylrYpbB7uwdEDMa78GfXteiXTcuNobCr7VWVz
+    rY6rQXo/dImWE1PtMp/EZEMsEbgbQpK5+fUnKTmFncVlDAZ2Q3s2MPikV5UhMVyQ
+    dKQydU0Ev0LRtpsjW8pQdshMG1ilMq6Yg6YU95gakLVjRXMoDlIJOu08mdped+2Y
+    VIUSXhRyRt1hbkFP0fXG0THfZ3DjH7jRAgMBAAEwDQYJKoZIhvcNAQELBQADggEB
+    ANEXlNaQKLrB+jsnNjybsTRkvRRmwjnXaQV0jHzjseGsTJoKY5ABBsSRDiHtqB+9
+    LPTpHhLYJWsHSLwawIJ3aWDDpF4MNTRsvO12v7wM8Q42OSgkP23O6a5ESkyHRBAb
+    dLVEp+0Z3kjYwPIglIK37PcgDci6Zim73GOfapDEASNbnCu8js2g/ucYPPXkGMxl
+    PSUER7MTNf9wRbXrroCE+tZw4kUyUh+6taNlU4ialAJLO1x6UGVRHvPgEx0fAAxA
+    seBH+A9QMvVl2cKcvrOgZ0CWY01aFRO9ROQ7PrYXqRFvOZu8K3QzLw7xYoK1DTp+
+    kkO/oPy+WIbqEvj7QrhUXpo=
+    -----END CERTIFICATE-----
+  key: "{vault://certvault/my-service-key}"
