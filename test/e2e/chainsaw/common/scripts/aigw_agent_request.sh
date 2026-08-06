@@ -37,9 +37,26 @@
 #                     wherever this script runs) before issuing the request, and adds
 #                     it as an "Authorization: Bearer <token>" header (in addition to
 #                     any REQUEST_HEADERS). Requires OIDC_CLIENT_ID and OIDC_CLIENT_SECRET.
+#                     Re-fetched on every retry attempt (not just once), since a
+#                     credential can flip from valid to rejected (or vice versa)
+#                     between attempts (e.g. right after revoking a client secret).
 #   OIDC_CLIENT_ID    client_id for the client_credentials grant.
 #   OIDC_CLIENT_SECRET  client_secret for the client_credentials grant.
 #   OIDC_SCOPE        Optional scope parameter for the client_credentials grant.
+#   EXPECTED_SUCCESS  'true' (default) if the request/credential is expected to
+#                     eventually succeed, 'false' if it's expected to be (or
+#                     become) rejected. When 'false', the retry loop below inverts:
+#                     it keeps retrying while the token mint/request still succeeds,
+#                     and only reports overall success once a rejection is observed
+#                     (a single stale success, e.g. right after a revoked-secret
+#                     Deployment rollout, isn't enough to conclude the credential
+#                     still works).
+#   REJECT_CONFIRMATIONS  Only used when EXPECTED_SUCCESS='false'. Number of
+#                     *consecutive* rejections required before concluding the
+#                     credential/request is genuinely rejected. Default: 3.
+#                     Symmetric with the stale-success protection above: a lone
+#                     transient blip (e.g. a connection failure mid-rollout, which
+#                     also counts as a non-match) can't prematurely pass the check.
 set -o errexit
 set -o nounset
 set -o pipefail
@@ -53,7 +70,7 @@ EXPECTED_JSONRPC="${EXPECTED_JSONRPC:-}"
 EXPECTED_JSON_ID="${EXPECTED_JSON_ID:-}"
 EXPECTED_JSON_RESULT_TEXT="${EXPECTED_JSON_RESULT_TEXT:-}"
 REQUEST_BODY="${REQUEST_BODY:-}"
-REQUEST_HEADERS="${REQUEST_HEADERS:-}"
+BASE_REQUEST_HEADERS="${REQUEST_HEADERS:-}"
 CONTENT_TYPE="${CONTENT_TYPE:-application/json}"
 EXPECTED_STATUS="${EXPECTED_STATUS:-200}"
 EXPECTED_STATUS_NOT="${EXPECTED_STATUS_NOT:-}"
@@ -64,10 +81,13 @@ OIDC_TOKEN_URL="${OIDC_TOKEN_URL:-}"
 OIDC_CLIENT_ID="${OIDC_CLIENT_ID:-}"
 OIDC_CLIENT_SECRET="${OIDC_CLIENT_SECRET:-}"
 OIDC_SCOPE="${OIDC_SCOPE:-}"
+EXPECTED_SUCCESS="${EXPECTED_SUCCESS:-true}"
+REJECT_CONFIRMATIONS="${REJECT_CONFIRMATIONS:-3}"
 
 URL="https://${ADDRESS}:${PORT}${ROUTE_PATH}"
 BODY_FILE=$(mktemp /tmp/aigw_agent_body.XXXXXX)
-cleanup() { rm -f "${BODY_FILE}"; }
+TOKEN_RESPONSE_FILE=$(mktemp /tmp/aigw_agent_token.XXXXXX)
+cleanup() { rm -f "${BODY_FILE}" "${TOKEN_RESPONSE_FILE}"; }
 trap cleanup EXIT
 # Set before print_result() is usable (curl_command is only known once build_curl_cmd runs).
 CURL_CMD=""
@@ -120,6 +140,7 @@ print_result() {
   "http_status": "${code:-000}",
   "expected_status": "${EXPECTED_STATUS}",
   "expected_status_not": "${EXPECTED_STATUS_NOT}",
+  "expected_success": "${EXPECTED_SUCCESS}",
   "method": "${METHOD}",
   "url": "${URL}",
   "retry_attempt": ${attempt},
@@ -130,57 +151,59 @@ print_result() {
 EOF
 }
 
-if [ -n "${OIDC_TOKEN_URL}" ]; then
-  TOKEN=""
-  # A few retries (distinct from the main request retry loop below) absorb
-  # transient connection blips (e.g. right after an OIDC provider rollout)
-  # so a real invalid_client rejection isn't masked by one. `|| true`: under
-  # `set -e`, a failing curl would otherwise abort the script with no output.
+# Fetches a fresh OIDC access token via client_credentials. Echoes the token
+# (empty on failure) and leaves the raw response in TOKEN_RESPONSE_FILE for
+# error reporting (a plain file, not a variable, since this function runs in
+# a subshell via command substitution and couldn't otherwise propagate a
+# variable back to the caller). A few sub-attempts (distinct from the main
+# request retry loop below) absorb transient connection blips (e.g. right
+# after an OIDC provider rollout) so a real invalid_client rejection isn't
+# masked by one. `|| true`: under `set -e`, a failing curl would otherwise
+# abort the script with no output.
+fetch_oidc_token() {
+  local token=""
+  local response=""
   for TOKEN_ATTEMPT in 1 2 3 4 5; do
-    TOKEN_RESPONSE="$(curl -sk -m 30 \
+    curl -sk -m 30 \
       --data-urlencode "grant_type=client_credentials" \
       --data-urlencode "client_id=${OIDC_CLIENT_ID}" \
       --data-urlencode "client_secret=${OIDC_CLIENT_SECRET}" \
       ${OIDC_SCOPE:+--data-urlencode "scope=${OIDC_SCOPE}"} \
-      "${OIDC_TOKEN_URL}" || true)"
-    # `|| true`: json_field's internal grep returns non-zero when
-    # TOKEN_RESPONSE has no access_token field (e.g. empty, or an error
+      "${OIDC_TOKEN_URL}" > "${TOKEN_RESPONSE_FILE}" 2>/dev/null || true
+    response="$(cat "${TOKEN_RESPONSE_FILE}" 2>/dev/null || echo '')"
+    # `|| true`: json_field's internal grep returns non-zero when the
+    # response has no access_token field (e.g. empty, or an error
     # response). Since this is a standalone `var="$(...)"` assignment, that
     # non-zero status would otherwise trip `errexit` right here, silently
     # killing the script with no output before the invalid_client check
     # below ever runs.
-    TOKEN="$(json_field "${TOKEN_RESPONSE}" access_token || true)"
-    [ -n "${TOKEN}" ] && break
+    token="$(json_field "${response}" access_token || true)"
+    [ -n "${token}" ] && break
     # invalid_client means the credentials were genuinely rejected: no point retrying.
-    printf '%s' "${TOKEN_RESPONSE}" | grep -q '"error"[[:space:]]*:[[:space:]]*"invalid_client"' && break
+    printf '%s' "${response}" | grep -q '"error"[[:space:]]*:[[:space:]]*"invalid_client"' && break
     [ "${TOKEN_ATTEMPT}" -lt 5 ] && sleep 2
   done
-  if [ -z "${TOKEN}" ]; then
-    print_result false "" "" 0 "failed to obtain an OIDC access token from ${OIDC_TOKEN_URL}: ${TOKEN_RESPONSE}"
-    exit 1
-  fi
-  REQUEST_HEADERS="$(printf '%s\nAuthorization:Bearer %s' "${REQUEST_HEADERS}" "${TOKEN}")"
-fi
+  printf '%s' "${token}"
+}
 
 # Build the curl command as a single string, both to execute (via eval, as the
 # other *_connectivity_test.sh scripts do) and to show verbatim in the JSON result.
 build_curl_cmd() {
+  local headers="$1"
   local CMD="curl -sk -m 30 -o ${BODY_FILE} -w '%{http_code}' -X ${METHOD}"
   if [ -n "${REQUEST_BODY}" ]; then
     CMD="${CMD} -H 'Content-Type: ${CONTENT_TYPE}' --data '${REQUEST_BODY}'"
   fi
-  if [ -n "${REQUEST_HEADERS}" ]; then
+  if [ -n "${headers}" ]; then
     while IFS= read -r h; do
       [ -n "${h}" ] && CMD="${CMD} -H '${h}'"
     done <<EOF
-${REQUEST_HEADERS}
+${headers}
 EOF
   fi
   CMD="${CMD} '${URL}'"
   echo "${CMD}"
 }
-
-CURL_CMD="$(build_curl_cmd)"
 
 response_matches() {
   local code="$1"
@@ -193,12 +216,15 @@ response_matches() {
     [ "${code}" = "${EXPECTED_STATUS}" ] || return 1
   fi
 
+  # -F: EXPECTED_BODY/UNEXPECTED_BODY are documented as plain substrings, so match
+  # them literally rather than as regexes (a '.', '[' etc. in an expected value
+  # would otherwise silently change the match semantics).
   if [ -n "${EXPECTED_BODY}" ]; then
-    printf '%s' "${body}" | grep -q "${EXPECTED_BODY}" || return 1
+    printf '%s' "${body}" | grep -qF "${EXPECTED_BODY}" || return 1
   fi
 
   if [ -n "${UNEXPECTED_BODY}" ]; then
-    ! printf '%s' "${body}" | grep -q "${UNEXPECTED_BODY}" || return 1
+    ! printf '%s' "${body}" | grep -qF "${UNEXPECTED_BODY}" || return 1
   fi
 
   if [ -n "${EXPECTED_JSONRPC}" ]; then
@@ -218,19 +244,52 @@ response_matches() {
 
 CODE=""
 BODY=""
+REJECTIONS=0
 for ATTEMPT in $(seq 1 "${MAX_RETRIES}"); do
-  > "${BODY_FILE}"
-  CODE="$(eval "${CURL_CMD}" 2>/dev/null || echo 000)"
-  BODY="$(cat "${BODY_FILE}" 2>/dev/null || echo '')"
-  if response_matches "${CODE}" "${BODY}"; then
-    print_result true "${CODE}" "${BODY}" "${ATTEMPT}"
-    exit 0
+  MATCHED=false
+  if [ -n "${OIDC_TOKEN_URL}" ]; then
+    TOKEN="$(fetch_oidc_token)"
+    if [ -z "${TOKEN}" ]; then
+      CODE=""
+      BODY="failed to obtain an OIDC access token from ${OIDC_TOKEN_URL}: $(cat "${TOKEN_RESPONSE_FILE}" 2>/dev/null || echo '')"
+    else
+      REQUEST_HEADERS="$(printf '%s\nAuthorization:Bearer %s' "${BASE_REQUEST_HEADERS}" "${TOKEN}")"
+      CURL_CMD="$(build_curl_cmd "${REQUEST_HEADERS}")"
+      > "${BODY_FILE}"
+      CODE="$(eval "${CURL_CMD}" 2>/dev/null || echo 000)"
+      BODY="$(cat "${BODY_FILE}" 2>/dev/null || echo '')"
+      response_matches "${CODE}" "${BODY}" && MATCHED=true
+    fi
+  else
+    CURL_CMD="$(build_curl_cmd "${BASE_REQUEST_HEADERS}")"
+    > "${BODY_FILE}"
+    CODE="$(eval "${CURL_CMD}" 2>/dev/null || echo 000)"
+    BODY="$(cat "${BODY_FILE}" 2>/dev/null || echo '')"
+    response_matches "${CODE}" "${BODY}" && MATCHED=true
   fi
-  echo "attempt ${ATTEMPT}/${MAX_RETRIES}: status='${CODE}' body='${BODY}'" >&2
+
+  if [ "${EXPECTED_SUCCESS}" = "false" ]; then
+    if [ "${MATCHED}" = "false" ]; then
+      REJECTIONS=$((REJECTIONS + 1))
+      [ "${REJECTIONS}" -ge "${REJECT_CONFIRMATIONS}" ] && { print_result true "${CODE}" "${BODY}" "${ATTEMPT}"; exit 0; }
+    else
+      # A stale success (e.g. an old pod still serving during a rollout) breaks the
+      # streak: only REJECT_CONFIRMATIONS *consecutive* rejections conclude success.
+      REJECTIONS=0
+    fi
+  else
+    [ "${MATCHED}" = "true" ] && { print_result true "${CODE}" "${BODY}" "${ATTEMPT}"; exit 0; }
+  fi
+
+  echo "attempt ${ATTEMPT}/${MAX_RETRIES}: matched=${MATCHED} status='${CODE}' rejections=${REJECTIONS}/${REJECT_CONFIRMATIONS} body='${BODY}'" >&2
   if [ "${ATTEMPT}" -lt "${MAX_RETRIES}" ]; then
     sleep "${RETRY_DELAY}"
   fi
 done
 
-print_result false "${CODE}" "${BODY}" "${MAX_RETRIES}" "response did not match expectations after ${MAX_RETRIES} attempts"
+if [ "${EXPECTED_SUCCESS}" = "false" ]; then
+  print_result false "${CODE}" "${BODY}" "${MAX_RETRIES}" "expected the request to be rejected ${REJECT_CONFIRMATIONS} consecutive times, but never reached that streak within ${MAX_RETRIES} attempts (last streak: ${REJECTIONS})"
+else
+  print_result false "${CODE}" "${BODY}" "${MAX_RETRIES}" "response did not match expectations after ${MAX_RETRIES} attempts"
+fi
 exit 1
