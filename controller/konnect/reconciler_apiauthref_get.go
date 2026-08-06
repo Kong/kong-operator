@@ -14,6 +14,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 )
 
@@ -35,6 +36,15 @@ type eventGatewayVirtualClusterRefAccessor interface {
 type eventGatewayListenerRefAccessor interface {
 	objectWithParentRef
 	GetEventGatewayListenerRef() commonv1alpha1.ObjectRef
+}
+
+// konnectGatewayControlPlaneRefAccessor is implemented by generated entities whose
+// parent is a KonnectGatewayControlPlane referenced through a generated ObjectRef
+// (e.g. KonnectConfigStore). Hand-written entities reference their Control Plane
+// through commonv1alpha1.ControlPlaneRef instead, so they do not match here.
+type konnectGatewayControlPlaneRefAccessor interface {
+	objectWithParentRef
+	GetControlPlaneRef() commonv1alpha1.ObjectRef
 }
 
 type portalRefAccessor interface {
@@ -95,6 +105,9 @@ func getAPIAuthRef[
 	// Other Konnect entities.
 	if obj, ok := any(ent).(portalRefAccessor); ok {
 		return getAPIAuthConfigurationRefFromParent[konnectv1alpha1.Portal](ctx, cl, obj, obj.GetParentRef())
+	}
+	if obj, ok := any(ent).(konnectGatewayControlPlaneRefAccessor); ok {
+		return getAPIAuthConfigurationRefFromParent[konnectv1alpha2.KonnectGatewayControlPlane](ctx, cl, obj, obj.GetParentRef())
 	}
 
 	return types.NamespacedName{},

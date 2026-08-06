@@ -661,6 +661,43 @@ func EventGatewayBackendCluster(
 	return &obj
 }
 
+// KonnectConfigStore deploys a KonnectConfigStore resource scoped to the given
+// KonnectGatewayControlPlane and returns it.
+func KonnectConfigStore(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectConfigStore {
+	t.Helper()
+	name := "config-store-" + randomSuffix()
+	obj := konnectv1alpha1.KonnectConfigStore{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.KonnectConfigStoreSpec{
+			ControlPlaneRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: cp.Name,
+				},
+			},
+			APISpec: konnectv1alpha1.KonnectConfigStoreAPISpec{
+				Name: name,
+			},
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	logObjectCreate(t, &obj)
+	return &obj
+}
+
 // KonnectCloudGatewayNetwork deploys a KonnectCloudGatewayNetwork resource and returns it.
 func KonnectCloudGatewayNetwork(
 	t *testing.T,

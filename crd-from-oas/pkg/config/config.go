@@ -376,10 +376,33 @@ type OpConfig struct {
 	// Path is the fully qualified Go type path in the form "importpath.TypeName",
 	// e.g. "github.com/Kong/sdk-konnect-go/models/components.CreatePortal".
 	// Required for create/update ops.
+	//
+	// For delete ops Path is optional and must reference a type in the SDK's
+	// models/operations package. Setting it opts the entity into the wrapped
+	// request-struct call shape, which entities with two or more parents get
+	// automatically. Single-parent entities need it whenever the SDK's delete
+	// method takes an operations.DeleteXxxRequest rather than positional
+	// arguments.
 	Path string `yaml:"path,omitempty"`
 	// AsPUT makes generated delete ops call the configured update/PUT SDK method
 	// with an empty request body instead of requiring an OpenAPI DELETE operation.
 	AsPUT bool `yaml:"asPUT,omitempty"`
+	// RequestFields assigns constant values to additional fields on a wrapped
+	// request struct, e.g. an optional query parameter that the generator would
+	// otherwise leave unset. Only supported for delete ops using the wrapped
+	// call shape.
+	RequestFields []RequestFieldConfig `yaml:"requestFields,omitempty"`
+}
+
+// RequestFieldConfig assigns a constant value to a single field of an SDK
+// request struct.
+type RequestFieldConfig struct {
+	// Name is the Go field name on the SDK request struct, e.g. "Force".
+	Name string `yaml:"name"`
+	// Value is the Go expression assigned to the field. It is emitted verbatim,
+	// so it must be valid in the generated ops package, e.g.
+	// "sdkkonnectops.ForceTrue.ToPointer()".
+	Value string `yaml:"value"`
 }
 
 // OpSDKConfig identifies the SDK interface and factory field name used by
@@ -941,10 +964,23 @@ func (tc *TypeConfig) validate() error {
 		}
 		seenSecretPaths[sr.Path] = true
 	}
-	if deleteOp, ok := tc.Ops["delete"]; ok && deleteOp != nil && deleteOp.AsPUT {
-		updateOp, ok := tc.Ops["update"]
-		if !ok || updateOp == nil || updateOp.Path == "" {
-			return fmt.Errorf("ops.delete.asPUT requires ops.update.path")
+	if deleteOp, ok := tc.Ops["delete"]; ok && deleteOp != nil {
+		if deleteOp.AsPUT {
+			updateOp, ok := tc.Ops["update"]
+			if !ok || updateOp == nil || updateOp.Path == "" {
+				return fmt.Errorf("ops.delete.asPUT requires ops.update.path")
+			}
+			if deleteOp.Path != "" {
+				return fmt.Errorf("ops.delete.asPUT and ops.delete.path are mutually exclusive")
+			}
+		}
+		for i, f := range deleteOp.RequestFields {
+			if f.Name == "" {
+				return fmt.Errorf("ops.delete.requestFields[%d].name is required", i)
+			}
+			if f.Value == "" {
+				return fmt.Errorf("ops.delete.requestFields[%d].value is required", i)
+			}
 		}
 	}
 	if tc.OpsSkipGetForUID && tc.OpsGetForUID != nil {

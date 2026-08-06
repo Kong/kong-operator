@@ -64,6 +64,28 @@ func updateKonnectConfigStore(
 	return nil
 }
 
+func deleteKonnectConfigStore(
+	ctx context.Context,
+	sdk sdkkonnectgo.ConfigStoresSDK,
+	obj *konnectv1alpha1.KonnectConfigStore,
+) error {
+	parentID := obj.GetControlPlaneID()
+	if parentID == "" {
+		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectGatewayControlPlane", Op: DeleteOp}
+	}
+	id := obj.GetKonnectStatus().GetKonnectID()
+
+	_, err := sdk.DeleteConfigStore(ctx, sdkkonnectops.DeleteConfigStoreRequest{
+		ControlPlaneID: parentID,
+		ConfigStoreID:  id,
+		Force:          sdkkonnectops.ForceTrue.ToPointer(),
+	})
+	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
+		return handleDeleteError(ctx, errWrap, obj)
+	}
+	return nil
+}
+
 func getKonnectConfigStoreForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.ConfigStoresSDK,
