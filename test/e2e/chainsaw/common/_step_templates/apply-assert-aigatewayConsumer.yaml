@@ -6,6 +6,9 @@
 #   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
 #   - consumer_groups: List of {name: <AIGatewayConsumerGroup name>} entries to enroll the
 #     consumer into (spec.consumerGroups). Pass an empty list ([]) for no group membership.
+#   - consumer_type: apiSpec.type, "api-key" or "oauth".
+#   - custom_id: apiSpec.customID, used to map an OAuth token's client_id claim to this
+#     consumer. Pass '' for api-key consumers, which don't use it.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
@@ -27,7 +30,8 @@ spec:
             apiSpec:
               name: ($consumer_name)
               displayName: ($consumer_name)
-              type: api-key
+              type: ($consumer_type)
+              customID: ($custom_id)
             consumerGroups: ($consumer_groups)
     - assert:
         resource:

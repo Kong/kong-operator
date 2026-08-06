@@ -1,0 +1,528 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-consumers-and-credentials-openid-connect
+spec:
+  description: |
+    Exhaustive coverage of AIGatewayConsumer / AIGatewayConsumerCredential / ACL-by-group
+    enforcement for an openid-connect-protected AIGatewayAgent route, against a mock OIDC
+    provider deployed into this test's own namespace (00-oidc-mock.yaml, not part of the
+    shared aigateway fixtures, since the secret-rotation scenario below needs to mutate it
+    freely). Mirrors consumers-and-credentials-keyauth scenario-for-scenario, but for
+    OAuth-mapped (not key-auth) consumers: config.consumerClaims maps the token's client_id
+    claim to an AIGatewayConsumer's apiSpec.customID. See identity-provider-openid-connect
+    for a minimal, bare (no ACL/consumer group) counterpart. Requests with no bearer token,
+    or an invalid one, fall through openid-connect as an anonymous consumer, which the ACL
+    then denies with 403 (rather than openid-connect itself rejecting with 401). Scenarios
+    covered:
+      1. Requests without an Authorization header are rejected (403).
+      2. Requests with an invalid Bearer token are rejected (403).
+      3. A real access token obtained from the mock OIDC provider's client_credentials
+         grant, for a consumer in the allowed AIGatewayConsumerGroup, succeeds (200).
+      4. Removing/restoring a consumer's group membership at runtime immediately flips it
+         between denied (403) and allowed (200).
+      5. A second OIDC client, mapped to a consumer outside the allowed group, is denied
+         (403) even though its token is otherwise perfectly valid.
+      6. A `deny`-type ACL on a second route blocks the group it lists while a consumer
+         outside that group passes through.
+      7. The primary client has two valid secrets; either one mints a token that
+         authenticates the same consumer. Revoking one secret (so it can no longer mint new
+         tokens) doesn't affect the other, and the mock is restored to its original
+         two-secret configuration afterwards, proving the restored secret works again.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: oidc_idp_name
+      value: (join('-', [($test_name), 'oidc-idp']))
+    - name: oidc_client_secret_name
+      value: (join('-', [($test_name), 'oidc-client-secret']))
+    - name: oidc_issuer
+      value: (join('', ['http://oidc-mock.', ($namespace), '.svc.cluster.local/.well-known/openid-configuration']))
+    - name: oidc_token_url
+      value: (join('', ['http://oidc-mock.', ($namespace), '.svc.cluster.local/connect/token']))
+    - name: oidc_client_id
+      value: aigateway-oidc-client
+    - name: oidc_client_secret_value
+      value: aigateway-oidc-client-secret
+    - name: oidc_client_secret_value_2
+      value: aigateway-oidc-client-secret-2
+    - name: oidc_outsider_client_id
+      value: aigateway-oidc-client-outsider
+    - name: oidc_outsider_client_secret_value
+      value: aigateway-oidc-client-outsider-secret
+    - name: oidc_scope
+      value: aigateway-scope
+    - name: consumer_group_name
+      value: (join('-', [($test_name), 'consumer-group']))
+    - name: consumer_name
+      value: (join('-', [($test_name), 'consumer']))
+    - name: consumer_type
+      value: oauth
+    - name: custom_id
+      value: ($oidc_client_id)
+    - name: outsider_consumer_name
+      value: (join('-', [($test_name), 'outsider-consumer']))
+    - name: http_agent_name
+      value: (join('-', [($test_name), 'http-agent']))
+    - name: http_agent_route_path
+      value: /http-agent
+    - name: http_agent_deny_name
+      value: (join('-', [($test_name), 'http-agent-deny']))
+    - name: http_agent_deny_route_path
+      value: /http-agent-deny
+    # Defaults for verify-aigw-agent-request-from-{cluster,host} optional bindings.
+    # Steps below only need to override what differs from these.
+    # NOTE: oidc_token_url/oidc_client_id/oidc_scope are NOT defaulted here since
+    # they're already bound above (to real values used by the identity provider
+    # setup step) and cascade automatically; the reject-* steps below must
+    # explicitly override them to '' to disable auto bearer-token fetching.
+    - name: request_headers
+      value: ''
+    - name: request_body
+      value: ''
+    - name: content_type
+      value: application/json
+    - name: expected_status
+      value: "200"
+    - name: expected_status_not
+      value: ''
+    - name: expected_body
+      value: ''
+    - name: unexpected_body
+      value: ''
+    - name: expected_jsonrpc
+      value: ''
+    - name: expected_json_id
+      value: ''
+    - name: expected_json_result_text
+      value: ''
+    - name: oidc_client_secret
+      value: ''
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: 4-Create-oidc-mock
+      try:
+        - apply:
+            file: 00-oidc-mock.yaml
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: oidc-mock
+                namespace: ($namespace)
+              status:
+                replicas: 1
+                readyReplicas: 1
+    - name: 5-Create-oidc-identity-provider
+      bindings:
+        - name: idp_name
+          value: ($oidc_idp_name)
+        - name: namespace
+          value: ($namespace)
+        - name: issuer
+          value: ($oidc_issuer)
+        - name: client_id
+          value: ($oidc_client_id)
+        - name: client_secret_name
+          value: ($oidc_client_secret_name)
+        - name: client_secret_value
+          value: ($oidc_client_secret_value)
+        - name: cache_tokens_salt
+          value: (join('-', [($test_name), 'cache-salt']))
+        - name: auth_methods
+          value: []
+        - name: scopes
+          value:
+            - ($oidc_scope)
+        - name: consumer_optional
+          value: Disabled
+        - name: consumer_claims
+          value:
+            - - client_id
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayIdentityProvider-openid-connect.yaml
+    - name: 6-Create-consumer-group
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerGroup.yaml
+      bindings:
+        - name: policies
+          value: []
+    - name: 7-Create-consumer
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_groups
+          value:
+            - name: ($consumer_group_name)
+    - name: 8-Start-echo-agent-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: 9-Create-aigateway-agent
+      bindings:
+        - name: agent_access
+          value:
+            identityProviders:
+              - ($oidc_idp_name)
+            acls:
+              type: allow
+              allow:
+                allow:
+                  - kind: AIGatewayConsumerGroup
+                    name: ($consumer_group_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayAgent-http.yaml
+    - name: 10-Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+    # No bearer token / an invalid one falls through openid-connect as an anonymous
+    # consumer, which the ACL then denies with 403 (not openid-connect's own 401).
+    - name: 11-Reject-request-without-bearer-token-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_status
+          value: "403"
+        - name: oidc_token_url
+          value: ''
+        - name: oidc_client_id
+          value: ''
+        - name: oidc_scope
+          value: ''
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 12-Reject-request-without-bearer-token-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_status
+          value: "403"
+        - name: oidc_token_url
+          value: ''
+        - name: oidc_client_id
+          value: ''
+        - name: oidc_scope
+          value: ''
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    - name: 13-Reject-request-with-invalid-bearer-token-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: "Authorization:Bearer not-a-real-token"
+        - name: expected_status
+          value: "403"
+        - name: oidc_token_url
+          value: ''
+        - name: oidc_client_id
+          value: ''
+        - name: oidc_scope
+          value: ''
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 14-Reject-request-with-invalid-bearer-token-from-host
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_headers
+          value: "Authorization:Bearer not-a-real-token"
+        - name: expected_status
+          value: "403"
+        - name: oidc_token_url
+          value: ''
+        - name: oidc_client_id
+          value: ''
+        - name: oidc_scope
+          value: ''
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
+    # NOTE: no from-host companion for the request below. oidc_token_url points
+    # at oidc-mock's cluster-internal Service DNS name
+    # (*.svc.cluster.local), which isn't reachable from the chainsaw
+    # test-runner host, so this scenario can only be verified from-cluster.
+    - name: 15-Accept-request-with-valid-bearer-token-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+        - name: oidc_client_secret
+          value: ($oidc_client_secret_value)
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    # --- Dynamic group membership: revoking/restoring group membership flips access
+    # even though the token/client credentials never change.
+    - name: 16-Remove-consumer-from-group
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_groups
+          value: []
+    - name: 17-Reject-request-after-group-membership-removed-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_status
+          value: "403"
+        - name: oidc_client_secret
+          value: ($oidc_client_secret_value)
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 18-Restore-consumer-group-membership
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_groups
+          value:
+            - name: ($consumer_group_name)
+    - name: 19-Accept-request-after-group-membership-restored-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+        - name: oidc_client_secret
+          value: ($oidc_client_secret_value)
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    # --- Outsider consumer: a second OIDC client, mapped to a consumer that's never
+    # enrolled in the allowed group. Its token is otherwise perfectly valid.
+    - name: 20-Create-outsider-consumer
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_name
+          value: ($outsider_consumer_name)
+        - name: custom_id
+          value: ($oidc_outsider_client_id)
+        - name: consumer_groups
+          value: []
+    - name: 21-Reject-request-outsider-consumer-not-in-allowed-group-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_status
+          value: "403"
+        - name: oidc_client_id
+          value: ($oidc_outsider_client_id)
+        - name: oidc_client_secret
+          value: ($oidc_outsider_client_secret_value)
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    # --- deny-type ACL on a second route: blocks the listed group, lets others through.
+    - name: 22-Create-aigateway-agent-deny
+      bindings:
+        - name: http_agent_name
+          value: ($http_agent_deny_name)
+        - name: http_agent_route_path
+          value: ($http_agent_deny_route_path)
+        - name: agent_access
+          value:
+            identityProviders:
+              - ($oidc_idp_name)
+            acls:
+              type: deny
+              deny:
+                deny:
+                  - kind: AIGatewayConsumerGroup
+                    name: ($consumer_group_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayAgent-http.yaml
+    - name: 23-Reject-request-consumer-in-denied-group-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_deny_route_path)
+        - name: expected_status
+          value: "403"
+        - name: oidc_client_secret
+          value: ($oidc_client_secret_value)
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 24-Accept-request-consumer-not-in-denied-group-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_deny_route_path)
+        - name: expected_body
+          value: Running on Pod
+        - name: oidc_client_id
+          value: ($oidc_outsider_client_id)
+        - name: oidc_client_secret
+          value: ($oidc_outsider_client_secret_value)
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    # --- Secret rotation: the primary client has two valid secrets. Either mints a
+    # token that authenticates the same consumer; revoking one (so it can no longer
+    # mint new tokens) doesn't affect the other. oidc-mock is deployed into this test's
+    # own namespace (00-oidc-mock.yaml), so mutating it here is safely scoped to this
+    # test run and doesn't affect other suites/reruns.
+    - name: 25-Accept-request-with-second-client-secret-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+        - name: oidc_client_secret
+          value: ($oidc_client_secret_value_2)
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: 26-Revoke-first-client-secret
+      try:
+        - patch:
+            file: 01-oidc-mock-secret-revoked.yaml
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: oidc-mock
+                namespace: ($namespace)
+              status:
+                replicas: 1
+                readyReplicas: 1
+                updatedReplicas: 1
+    - name: 27-Reject-request-with-revoked-first-secret-from-cluster
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: METHOD
+                value: GET
+              - name: ROUTE_PATH
+                value: ($http_agent_route_path)
+              - name: REQUEST_HEADERS
+                value: ''
+              - name: REQUEST_BODY
+                value: ''
+              - name: CONTENT_TYPE
+                value: application/json
+              - name: EXPECTED_STATUS
+                value: ''
+              - name: EXPECTED_STATUS_NOT
+                value: ''
+              - name: EXPECTED_BODY
+                value: ''
+              - name: UNEXPECTED_BODY
+                value: ''
+              - name: EXPECTED_JSONRPC
+                value: ''
+              - name: EXPECTED_JSON_ID
+                value: ''
+              - name: EXPECTED_JSON_RESULT_TEXT
+                value: ''
+              - name: OIDC_TOKEN_URL
+                value: ($oidc_token_url)
+              - name: OIDC_CLIENT_ID
+                value: ($oidc_client_id)
+              - name: OIDC_CLIENT_SECRET
+                value: ($oidc_client_secret_value)
+              - name: OIDC_SCOPE
+                value: ($oidc_scope)
+            content: |
+              bash ../../common/scripts/aigw_agent_request_from_cluster.sh
+            check:
+              (json_parse($stdout).success == `false`): true
+    - name: 28-Restore-first-client-secret
+      try:
+        - patch:
+            file: 02-oidc-mock-secret-restored.yaml
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: oidc-mock
+                namespace: ($namespace)
+              status:
+                replicas: 1
+                readyReplicas: 1
+                updatedReplicas: 1
+    - name: 29-Accept-request-with-first-client-secret-after-restore-from-cluster
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: expected_body
+          value: Running on Pod
+        - name: oidc_client_secret
+          value: ($oidc_client_secret_value)
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-consumers-and-credentials-openid-connect
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

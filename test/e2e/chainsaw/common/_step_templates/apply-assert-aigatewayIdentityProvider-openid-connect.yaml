@@ -1,0 +1,83 @@
+# Template for creating and asserting an AIGatewayIdentityProvider of type openid-connect,
+# including the Secret backing its secretRef'd clientSecret.
+#
+# Required bindings:
+#   - idp_name: Name of the AIGatewayIdentityProvider to create (also used as apiSpec name).
+#   - namespace: Namespace where the AIGatewayIdentityProvider and Secret will be created.
+#   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
+#   - issuer: OpenID Connect discovery endpoint URL (config.issuer).
+#   - client_id: OAuth2 client_id (config.clientID[0]).
+#   - client_secret_name: Name of the Secret to create for the client secret value.
+#   - client_secret_value: The plaintext client secret value to store in the Secret.
+#   - cache_tokens_salt: Salt used for the token endpoint request cache key (config.cacheTokensSalt).
+#
+# Optional bindings:
+#   - auth_methods: Types of credentials/grants to enable (config.authMethods). Defaults
+#     to ["bearer"] (validate a pre-obtained Bearer token) when not set.
+#   - scopes: config.scopes list. Defaults to an empty list when not set.
+#   - consumer_optional: config.consumerOptional ("Enabled"/"Disabled"). Set to "Enabled"
+#     to allow requests through even when no AIGatewayConsumer claim-mapping matches (e.g.
+#     when the test doesn't create any AIGatewayConsumer). Defaults to unset (field omitted).
+#   - consumer_claims: config.consumerClaims, a list of claim paths (e.g. [["client_id"]])
+#     used to map a validated token to an AIGatewayConsumer's apiSpec.customID. Defaults to
+#     an empty list (field omitted) when not set.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-identityprovider-openid-connect
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: ($client_secret_name)
+            namespace: ($namespace)
+            labels:
+              konghq.com/secret: "true"
+          type: Opaque
+          stringData:
+            clientSecret: ($client_secret_value)
+    - apply:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: AIGatewayIdentityProvider
+          metadata:
+            name: ($idp_name)
+            namespace: ($namespace)
+          spec:
+            aiGatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($aigw_cp_name)
+            apiSpec:
+              type: openid-connect
+              openid-connect:
+                name: ($idp_name)
+                displayName: ($idp_name)
+                config:
+                  issuer: ($issuer)
+                  cacheTokensSalt: ($cache_tokens_salt)
+                  authMethods: ($auth_methods || ['bearer'])
+                  scopes: ($scopes || [])
+                  consumerOptional: ($consumer_optional || null)
+                  consumerClaims: ($consumer_claims || [])
+                  clientID:
+                    - ($client_id)
+                  clientSecret:
+                    - type: secretRef
+                      secretRef:
+                        name: ($client_secret_name)
+                        key: clientSecret
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: AIGatewayIdentityProvider
+          metadata:
+            name: ($idp_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true
