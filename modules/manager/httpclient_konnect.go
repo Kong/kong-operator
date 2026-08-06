@@ -27,7 +27,7 @@ func httpClientForKonnect(c *Config) *http.Client {
 	}
 }
 
-// defaultLongPolledTransport returns a new http.Transport with similar default
+// defaultLongPolledTransport returns a new [http.Transport] with similar default
 // values to [http.DefaultTransport] but with idle connections.
 // It is intended for use with long-polling requests.
 func defaultLongPolledTransport() *http.Transport {
@@ -41,7 +41,8 @@ func defaultLongPolledTransport() *http.Transport {
 		ForceAttemptHTTP2:   true,
 		MaxIdleConns:        100,
 		IdleConnTimeout:     24 * time.Hour,
-		MaxIdleConnsPerHost: runtime.GOMAXPROCS(0) + 1,
+		// single Konnect host; avoid a 2-conn cap under low GOMAXPROCS
+		MaxIdleConnsPerHost: max(runtime.GOMAXPROCS(0)+1, 16),
 	}
 	// Configure HTTP/2 health checks to detect stalled long-poll connections.
 	// The long-poll client has no client-level Timeout, so without this a
