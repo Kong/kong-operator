@@ -7,7 +7,10 @@ on:
       konnect-pat:
         description: "Konnect PAT used by tests that hit Konnect"
         required: false
-    
+      op-service-account-token:
+        description: "1Password service account token used to fetch the Kong Enterprise License"
+        required: false
+
     inputs:
       test-image:
         description: "image used for e2e tests, if not set, the image built in the workflow will be used"
@@ -67,12 +70,19 @@ jobs:
       with:
         install: false
 
+    - name: Get Kong Enterprise License
+      id: license
+      uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+      with:
+        op-token: ${{ secrets.op-service-account-token }}
+
     - name: run e2e tests
       run: make test.e2e
       env:
         KONG_TEST_KONG_OPERATOR_IMAGE_LOAD: ${{ env.TEST_IMAGE }}
         GOTESTSUM_JUNITFILE: "e2e-tests.xml"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 

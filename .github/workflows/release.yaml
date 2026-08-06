@@ -39,6 +39,7 @@ jobs:
       gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
       gh-pat: ${{ secrets.PAT_GITHUB }}
       konnect-pat: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
+      op-service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
     with:
       dockerhub-push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME  }}
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
