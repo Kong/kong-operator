@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"net"
 	"net/http"
 	"runtime"
 	"time"
@@ -31,9 +32,14 @@ func httpClientForKonnect(c *Config) *http.Client {
 // It is intended for use with long-polling requests.
 func defaultLongPolledTransport() *http.Transport {
 	transport := &http.Transport{
-		Proxy:               http.ProxyFromEnvironment,
-		MaxIdleConns:        100,
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout: 10 * time.Second,
 		ForceAttemptHTTP2:   true,
+		MaxIdleConns:        100,
 		IdleConnTimeout:     24 * time.Hour,
 		MaxIdleConnsPerHost: runtime.GOMAXPROCS(0) + 1,
 	}
