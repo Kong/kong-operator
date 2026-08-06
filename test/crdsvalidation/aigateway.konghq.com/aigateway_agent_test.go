@@ -19,7 +19,7 @@ func TestAIGatewayAgent(t *testing.T) {
 	scheme := scheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
-	t.Run("cp ref", func(t *testing.T) {
+	t.Run("AI Gateway ref", func(t *testing.T) {
 		obj := &konnectv1alpha1.AIGatewayAgent{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "AIGatewayAgent",
