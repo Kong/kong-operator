@@ -3,6 +3,7 @@ package crdsvalidation_test
 import (
 	"testing"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -12,7 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
-func TestAIGatewayConsumerGroup(t *testing.T) {
+func TestAIGatewayPolicy(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
@@ -20,20 +21,26 @@ func TestAIGatewayConsumerGroup(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("AI Gateway ref", func(t *testing.T) {
-		obj := &konnectv1alpha1.AIGatewayConsumerGroup{
+		obj := &konnectv1alpha1.AIGatewayPolicy{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       "AIGatewayConsumer",
+				Kind:       "AIGatewayPolicy",
 				APIVersion: konnectv1alpha1.GroupVersion.String(),
 			},
 			ObjectMeta: common.CommonObjectMeta(ns.Name),
-			Spec: konnectv1alpha1.AIGatewayConsumerGroupSpec{
-				APISpec: konnectv1alpha1.AIGatewayConsumerGroupAPISpec{
-					Name: "consumer1",
-				},
+			Spec: konnectv1alpha1.AIGatewayPolicySpec{
 				AIGatewayRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
 						Name: "aigateway-1",
+					},
+				},
+				APISpec: konnectv1alpha1.AIGatewayPolicyAPISpec{
+					Name:        "policy1",
+					DisplayName: "Test Policy",
+					Type:        "ai-prompt-decorator",
+					Config: konnectv1alpha1.AIGatewayPolicyConfigDataSource{
+						Type:  "inline",
+						Value: &apiextensionsv1.JSON{Raw: []byte(`{}`)},
 					},
 				},
 			},

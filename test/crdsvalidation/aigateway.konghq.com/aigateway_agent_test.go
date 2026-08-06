@@ -12,7 +12,7 @@ import (
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
-func TestAIGatewayConsumerGroup(t *testing.T) {
+func TestAIGatewayAgent(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
@@ -20,20 +20,25 @@ func TestAIGatewayConsumerGroup(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("AI Gateway ref", func(t *testing.T) {
-		obj := &konnectv1alpha1.AIGatewayConsumerGroup{
+		obj := &konnectv1alpha1.AIGatewayAgent{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       "AIGatewayConsumer",
+				Kind:       "AIGatewayAgent",
 				APIVersion: konnectv1alpha1.GroupVersion.String(),
 			},
 			ObjectMeta: common.CommonObjectMeta(ns.Name),
-			Spec: konnectv1alpha1.AIGatewayConsumerGroupSpec{
-				APISpec: konnectv1alpha1.AIGatewayConsumerGroupAPISpec{
-					Name: "consumer1",
-				},
+			Spec: konnectv1alpha1.AIGatewayAgentSpec{
 				AIGatewayRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
 						Name: "aigateway-1",
+					},
+				},
+				APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
+					Name:        "agent1",
+					DisplayName: "Test Agent",
+					Type:        "http",
+					Config: konnectv1alpha1.AIGatewayAgentConfig{
+						URL: "https://upstream.example.com",
 					},
 				},
 			},

@@ -12,7 +12,7 @@ import (
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
-func TestAIGatewayConsumerGroup(t *testing.T) {
+func TestAIGatewayIdentityProvider(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
@@ -20,20 +20,26 @@ func TestAIGatewayConsumerGroup(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("AI Gateway ref", func(t *testing.T) {
-		obj := &konnectv1alpha1.AIGatewayConsumerGroup{
+		obj := &konnectv1alpha1.AIGatewayIdentityProvider{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       "AIGatewayConsumer",
+				Kind:       "AIGatewayIdentityProvider",
 				APIVersion: konnectv1alpha1.GroupVersion.String(),
 			},
 			ObjectMeta: common.CommonObjectMeta(ns.Name),
-			Spec: konnectv1alpha1.AIGatewayConsumerGroupSpec{
-				APISpec: konnectv1alpha1.AIGatewayConsumerGroupAPISpec{
-					Name: "consumer1",
-				},
+			Spec: konnectv1alpha1.AIGatewayIdentityProviderSpec{
 				AIGatewayRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
 						Name: "aigateway-1",
+					},
+				},
+				APISpec: konnectv1alpha1.AIGatewayIdentityProviderAPISpec{
+					AIGatewayIdentityProviderConfig: &konnectv1alpha1.AIGatewayIdentityProviderConfig{
+						Type: konnectv1alpha1.AIGatewayIdentityProviderConfigTypeKeyAuth,
+						KeyAuth: &konnectv1alpha1.AIGatewayIdentityProviderKeyAuth{
+							Name:        "provider1",
+							DisplayName: "Test Identity Provider",
+						},
 					},
 				},
 			},
