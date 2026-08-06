@@ -1,0 +1,191 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-consumer-groups
+spec:
+  description: |
+    Stands up a Konnect AIGateway control plane with an AIGatewayPolicy, an
+    AIGatewayConsumerGroup attaching that policy, and an AIGatewayConsumer enrolled
+    in the group. Verifies:
+      1. The group and consumer both reach Programmed=True with the group's policy
+         attached.
+      2. A second policy can be added to the group's policies list in place.
+      3. Deleting the group does not affect the consumer resource.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: policy_one_name
+      value: (join('-', [($test_name), 'policy-one']))
+    - name: policy_two_name
+      value: (join('-', [($test_name), 'policy-two']))
+    - name: consumer_group_name
+      value: (join('-', [($test_name), 'consumer-group']))
+    - name: consumer_name
+      value: (join('-', [($test_name), 'consumer']))
+    - name: consumer_type
+      value: api-key
+    - name: custom_id
+      value: ''
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: 4-Create-policy-one
+      try:
+        - apply:
+            file: 01-aigateway-policy-inline-config.yaml
+            bindings:
+              - name: aigw_policy_name
+                value: ($policy_one_name)
+              - name: response_header
+                value: "Policy-One:Applied"
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($policy_one_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+    - name: 5-Create-consumer-group-with-policy-one
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerGroup.yaml
+      bindings:
+        - name: policies
+          value:
+            - name: ($policy_one_name)
+    - name: 6-Create-consumer-enrolled-in-group
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
+      bindings:
+        - name: consumer_groups
+          value:
+            - name: ($consumer_group_name)
+    - name: 7-Create-policy-two
+      try:
+        - apply:
+            file: 01-aigateway-policy-inline-config.yaml
+            bindings:
+              - name: aigw_policy_name
+                value: ($policy_two_name)
+              - name: response_header
+                value: "Policy-Two:Applied"
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($policy_two_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+    - name: 8-Add-policy-two-to-consumer-group
+      description: Patch the group's policies list in place (no delete/recreate) and assert it stays Programmed.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($consumer_group_name)
+                  displayName: ($consumer_group_name)
+                  policies:
+                    - name: ($policy_one_name)
+                    - name: ($policy_two_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+    - name: 9-Delete-consumer-group-and-verify-consumer-unaffected
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              name: ($consumer_group_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+    - name: 10-Delete-consumer
+      bindings:
+        - name: resource_type
+          value: aigatewayconsumer
+        - name: resource_name
+          value: ($consumer_name)
+        - name: resource_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/delete-resource-non-blocking.yaml
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-consumer-groups
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
