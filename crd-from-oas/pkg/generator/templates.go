@@ -442,7 +442,7 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   "{{.ParentGroup}}",
-		Version: GroupVersion.Version,
+		Version: {{if .ParentEntityVersion}}"{{.ParentEntityVersion}}"{{else}}GroupVersion.Version{{end}},
 		Kind:    "{{.ParentKind}}",
 	}
 }

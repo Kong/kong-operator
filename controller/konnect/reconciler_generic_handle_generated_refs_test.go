@@ -14,6 +14,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -113,6 +114,66 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				require.True(t, ok)
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)
 				assert.Equal(t, configurationv1alpha1.EventGatewayListenerRefReasonValid, cond.Reason)
+			},
+		},
+		{
+			name: "continues when config store control plane parent ref is resolved",
+			run: func(t *testing.T) {
+				ent := &konnectv1alpha1.KonnectConfigStore{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "config-store",
+						Namespace:  "default",
+						Generation: 1,
+					},
+					Spec: konnectv1alpha1.KonnectConfigStoreSpec{
+						ControlPlaneRef: gatewayRef("control-plane"),
+					},
+				}
+
+				parent := &konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "control-plane",
+						Namespace: "default",
+					},
+					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+						Conditions: []metav1.Condition{{
+							Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
+							Status:             metav1.ConditionTrue,
+							Reason:             "Programmed",
+							ObservedGeneration: 1,
+							LastTransitionTime: metav1.Now(),
+						}},
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "control-plane-konnect-id"},
+					},
+				}
+
+				cl := fake.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithStatusSubresource(ent).
+					WithObjects(ent, parent).
+					Build()
+
+				r := &KonnectEntityReconciler[
+					konnectv1alpha1.KonnectConfigStore, *konnectv1alpha1.KonnectConfigStore,
+				]{Client: cl}
+
+				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
+
+				require.NoError(t, err)
+				assert.False(t, stop)
+				assert.True(t, res.IsZero())
+
+				updated := &konnectv1alpha1.KonnectConfigStore{}
+				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updated))
+				assert.Equal(t, "control-plane-konnect-id", updated.GetControlPlaneID())
+
+				cond, ok := k8sutils.GetCondition(
+					kcfgconsts.ConditionType(ent.GetStatusConditionTypeParentRefValid()),
+					updated,
+				)
+				require.True(t, ok)
+				assert.Equal(t, metav1.ConditionTrue, cond.Status)
+				assert.Equal(t, konnectv1alpha1.ControlPlaneRefReasonValid, cond.Reason)
 			},
 		},
 		{

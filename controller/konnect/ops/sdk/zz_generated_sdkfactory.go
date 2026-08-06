@@ -27,6 +27,7 @@ type GeneratedSDK interface {
 	GetEventGatewayVirtualClusterPoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterPoliciesSDK
 	GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK
 	GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK
+	GetConfigStoresSDK() sdkkonnectgo.ConfigStoresSDK
 	GetEventGatewaysSDK() sdkkonnectgo.EventGatewaysSDK
 	GetPortalsSDK() sdkkonnectgo.PortalsSDK
 	GetPortalCustomDomainsSDK() sdkkonnectgo.PortalCustomDomainsSDK
@@ -131,6 +132,11 @@ func (w sdkWrapper) GetEventGatewayVirtualClusterProducePoliciesSDK() sdkkonnect
 // GetAIGatewaysSDK returns the SDK to operate KonnectAIGateway.
 func (w sdkWrapper) GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK {
 	return w.sdk.AIGateways
+}
+
+// GetConfigStoresSDK returns the SDK to operate KonnectConfigStore.
+func (w sdkWrapper) GetConfigStoresSDK() sdkkonnectgo.ConfigStoresSDK {
+	return w.sdk.ConfigStores
 }
 
 // GetEventGatewaysSDK returns the SDK to operate KonnectEventGateway.

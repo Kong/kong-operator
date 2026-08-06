@@ -501,6 +501,7 @@ type reconcilerEntityMetadata struct {
 	EntityName                 string
 	EntityNameLowerCamel       string
 	ParentEntityName           string
+	ParentEntityVersion        string
 	ParentRefFieldName         string
 	APIGroupPackagePath        string
 	APIGroupPackageAlias       string
@@ -610,6 +611,12 @@ func (g *Generator) generateReconcilerConditions(parsed *parser.ParsedSpec) (*Ge
 			return nil, fmt.Errorf("non-root entity %s has no parent dependency", entityName)
 		}
 		prefix := refConditionEntityName(parentDep)
+		// ControlPlaneRef conditions are part of the hand-written Konnect API
+		// contract and are shared by generated entities that reference a
+		// KonnectGatewayControlPlane. Do not emit a duplicate declaration.
+		if prefix == "ControlPlane" {
+			continue
+		}
 		// When parentRef overrides the immediate parent, use the configured
 		// parent entity kind as the condition prefix so that condition constants
 		// reflect the actual referenced type (e.g. EventGatewayBackendCluster)
@@ -721,6 +728,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		EntityName                 string
 		EntityNameLowerCamel       string
 		ParentEntityName           string
+		ParentEntityVersion        string
 		ParentRefFieldName         string
 		APIAuthPackageAlias        string
 		NeedsSeparateAPIAuthImport bool
@@ -735,6 +743,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		EntityName:                 metadata.EntityName,
 		EntityNameLowerCamel:       metadata.EntityNameLowerCamel,
 		ParentEntityName:           metadata.ParentEntityName,
+		ParentEntityVersion:        metadata.ParentEntityVersion,
 		ParentRefFieldName:         metadata.ParentRefFieldName,
 		APIAuthPackageAlias:        apiAuthPackageAlias,
 		NeedsSeparateAPIAuthImport: needsSeparateAPIAuthImport,
@@ -859,8 +868,9 @@ func (g *Generator) reconcilerEntityMetadata(
 		metadata.ParentEntityName = rc.ParentEntityKind()
 	}
 	parentGroup := rc.ParentEntityGroup(g.config.APIGroup)
-	if parentGroup != g.config.APIGroup {
-		metadata.ParentAPIGroupPackagePath, metadata.ParentAPIGroupPackageAlias = apiGroupPackagePathAndAlias(parentGroup, g.config.APIVersion)
+	metadata.ParentEntityVersion = rc.ParentEntityVersion(g.config.APIVersion)
+	if parentGroup != g.config.APIGroup || metadata.ParentEntityVersion != g.config.APIVersion {
+		metadata.ParentAPIGroupPackagePath, metadata.ParentAPIGroupPackageAlias = apiGroupPackagePathAndAlias(parentGroup, metadata.ParentEntityVersion)
 	}
 	if rc.ParentRef != nil {
 		metadata.ParentRefFieldName = goFieldName(rc.ParentRef.FieldName)

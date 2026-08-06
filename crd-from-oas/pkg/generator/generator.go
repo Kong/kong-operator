@@ -2978,6 +2978,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectAPIAuthConfigurationRefType string
 		ParentKind                         string
 		ParentGroup                        string
+		ParentEntityVersion                string
 		References                         []TemplateReferenceConfig
 		ObjectRefTypeName                  string
 		ParentRef                          *config.ParentRefConfig
@@ -3013,18 +3014,24 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		KonnectAPIAuthConfigurationRefType: defaultKonnectStatusAlias + ".ControlPlaneKonnectAPIAuthConfigurationRef",
 		ParentKind:                         parentKindForFuncs,
 		ParentGroup:                        parentGroupForFuncs,
-		References:                         g.templateReferences(entityName),
-		ObjectRefTypeName:                  g.objectRefTypeName(),
-		ParentRef:                          funcsParentRef,
-		ParentRefGoFieldName:               funcsParentRefGoFieldName,
-		SetParentIDEntityName:              funcsSetParentIDEntityName,
-		ParentStatusEntityName:             funcsParentStatusEntityName,
-		EmitParentRefStatusField:           emitParentRefStatusField,
-		AncestorDependencies:               ancestorDependencies,
-		AncestorEntityTypes:                ancestorEntityTypes,
-		SingletonNoID:                      isSingletonNoID(schema),
-		SupportsMirror:                     supportsMirror,
-		NameAccessor:                       g.entityNameAccessor(schema),
+		ParentEntityVersion: func() string {
+			if rc == nil || rc.ParentEntityGVK == nil || rc.ParentEntityGVK.Version == "" {
+				return ""
+			}
+			return rc.ParentEntityGVK.Version
+		}(),
+		References:               g.templateReferences(entityName),
+		ObjectRefTypeName:        g.objectRefTypeName(),
+		ParentRef:                funcsParentRef,
+		ParentRefGoFieldName:     funcsParentRefGoFieldName,
+		SetParentIDEntityName:    funcsSetParentIDEntityName,
+		ParentStatusEntityName:   funcsParentStatusEntityName,
+		EmitParentRefStatusField: emitParentRefStatusField,
+		AncestorDependencies:     ancestorDependencies,
+		AncestorEntityTypes:      ancestorEntityTypes,
+		SingletonNoID:            isSingletonNoID(schema),
+		SupportsMirror:           supportsMirror,
+		NameAccessor:             g.entityNameAccessor(schema),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

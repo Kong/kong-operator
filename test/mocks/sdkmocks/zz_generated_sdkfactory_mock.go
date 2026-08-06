@@ -29,6 +29,7 @@ type generatedMockSDKWrapper struct {
 	EventGatewayVirtualClusterPoliciesSDK        *mocks.MockEventGatewayVirtualClusterPoliciesSDK
 	EventGatewayVirtualClusterProducePoliciesSDK *mocks.MockEventGatewayVirtualClusterProducePoliciesSDK
 	AIGatewaysSDK                                *mocks.MockAIGatewaysSDK
+	ConfigStoresSDK                              *mocks.MockConfigStoresSDK
 	EventGatewaysSDK                             *mocks.MockEventGatewaysSDK
 	PortalsSDK                                   *mocks.MockPortalsSDK
 	PortalCustomDomainsSDK                       *mocks.MockPortalCustomDomainsSDK
@@ -61,6 +62,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		EventGatewayVirtualClusterPoliciesSDK:        mocks.NewMockEventGatewayVirtualClusterPoliciesSDK(t),
 		EventGatewayVirtualClusterProducePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t),
 		AIGatewaysSDK:                                mocks.NewMockAIGatewaysSDK(t),
+		ConfigStoresSDK:                              mocks.NewMockConfigStoresSDK(t),
 		EventGatewaysSDK:                             mocks.NewMockEventGatewaysSDK(t),
 		PortalsSDK:                                   mocks.NewMockPortalsSDK(t),
 		PortalCustomDomainsSDK:                       mocks.NewMockPortalCustomDomainsSDK(t),
@@ -166,6 +168,11 @@ func (m generatedMockSDKWrapper) GetEventGatewayVirtualClusterProducePoliciesSDK
 // GetAIGatewaysSDK returns the SDK to operate KonnectAIGateway.
 func (m generatedMockSDKWrapper) GetAIGatewaysSDK() sdkkonnectgo.AIGatewaysSDK {
 	return m.AIGatewaysSDK
+}
+
+// GetConfigStoresSDK returns the SDK to operate KonnectConfigStore.
+func (m generatedMockSDKWrapper) GetConfigStoresSDK() sdkkonnectgo.ConfigStoresSDK {
+	return m.ConfigStoresSDK
 }
 
 // GetEventGatewaysSDK returns the SDK to operate KonnectEventGateway.
