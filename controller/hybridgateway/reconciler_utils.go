@@ -211,6 +211,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 					stopAtKind = "KongService"
 					continue
 				}
+				// if KongService is deleting, regard this dependency is not available
 				if !svc.GetDeletionTimestamp().IsZero() {
 					log.Debug(logger, "Service is being deleted for route, waiting", "service", svcName)
 					objectsSkipped++
@@ -223,6 +224,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 					stopAtKind = "KongService"
 					continue
 				}
+				// ensure routeRef added into KongService's annotation, see https://github.com/Kong/kong-operator/issues/5133 for more.
 				if routeAnnotationKey != "" && !hybridRouteAnnotationContains(svc.GetAnnotations(), routeAnnotationKey, routeRef) {
 					if err := ensureHybridRouteAnnotationOnKongService(ctx, cl, &svc, routeAnnotationKey, routeRef); err != nil {
 						return false, false, fmt.Errorf("failed to update referenced KongService %s/%s hybrid-routes annotation before applying KongRoute %s: %w",
@@ -399,6 +401,8 @@ func mergeHybridRouteAnnotation(desired, existing *unstructured.Unstructured, an
 	desired.SetAnnotations(anns)
 }
 
+// ensureHybridRouteAnnotationOnKongService checks if routeRef existed in KongService's annos with key annotationKey,
+// and adds it if not.
 func ensureHybridRouteAnnotationOnKongService(
 	ctx context.Context,
 	cl client.Client,

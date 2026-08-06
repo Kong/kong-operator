@@ -2406,6 +2406,48 @@ func TestEnforceState_KongRouteRequiresLiveServiceRouteAnnotation(t *testing.T) 
 	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: "route2"}, &route2))
 }
 
+func TestEnsureHybridRouteAnnotationOnKongService_Idempotent(t *testing.T) {
+	ctx := t.Context()
+	s := scheme.Get()
+	ns := "ns"
+	annotationKey := consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	routeRef := ns + "/httproute-owner"
+
+	svc := &configurationv1alpha1.KongService{}
+	svc.SetName("svc1")
+	svc.SetNamespace(ns)
+	svc.SetAnnotations(map[string]string{
+		annotationKey: "ns/other-route",
+	})
+
+	cl := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(svc).
+		Build()
+
+	// First call adds routeRef to the annotation.
+	require.NoError(t, ensureHybridRouteAnnotationOnKongService(ctx, cl, svc, annotationKey, routeRef))
+	assert.Equal(t, "ns/other-route,"+routeRef, svc.GetAnnotations()[annotationKey])
+
+	var got configurationv1alpha1.KongService
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: "svc1"}, &got))
+	assert.Equal(t, "ns/other-route,"+routeRef, got.GetAnnotations()[annotationKey])
+
+	// Second call with the already-annotated object is a no-op: no duplicate
+	// entry, no patch against a stale resourceVersion.
+	require.NoError(t, ensureHybridRouteAnnotationOnKongService(ctx, cl, svc, annotationKey, routeRef))
+	assert.Equal(t, "ns/other-route,"+routeRef, svc.GetAnnotations()[annotationKey])
+
+	// Calling again with a freshly-fetched copy (simulating a re-reconcile)
+	// must also be a no-op and must not error out on the optimistic lock.
+	require.NoError(t, ensureHybridRouteAnnotationOnKongService(ctx, cl, &got, annotationKey, routeRef))
+	assert.Equal(t, "ns/other-route,"+routeRef, got.GetAnnotations()[annotationKey])
+
+	var final configurationv1alpha1.KongService
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: "svc1"}, &final))
+	assert.Equal(t, "ns/other-route,"+routeRef, final.GetAnnotations()[annotationKey])
+}
+
 // fakeHTTPRouteConverterWithHandleErr wraps fakeHTTPRouteConverter and returns an error
 // from HandleOrphanedResource so we can test error propagation in cleanOrphanedResources.
 type fakeHTTPRouteConverterWithHandleErr struct {
