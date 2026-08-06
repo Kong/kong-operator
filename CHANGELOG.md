@@ -89,6 +89,8 @@
   to not block potentially valid `Ingress` or `HTTPRoute` resources when the
   webhook is not able to reach Kong Gateway.
   [#5095](https://github.com/Kong/kong-operator/pull/5095)
+- HybridGateway: fix KongRoute created without updating KongService's hybrid-route annotation
+  [#5136](https://github.com/Kong/kong-operator/pull/5136)
 
 ### Added
   
