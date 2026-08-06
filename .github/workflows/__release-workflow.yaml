@@ -190,7 +190,7 @@ jobs:
       - name: integration tests
         run: make test.integration-ko
         env:
-          KONG_LICENSE_DATA: ${{ steps.get-license.outputs.license || '' }} # The license is optional for OSS tests.
+          KONG_LICENSE_DATA: ${{ steps.get-license.outputs.license || '' }}
           KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.konnect-pat }}
           KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 
@@ -214,6 +214,7 @@ jobs:
       test-image: ${{ needs.build-push-images.outputs.full_tag }}
     secrets:
       konnect-pat: ${{ secrets.konnect-pat }}
+      op-service-account-token: ${{ secrets.op-service-account-token }}
 
   create-release-pr:
     runs-on: ubuntu-latest
