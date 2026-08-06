@@ -52,6 +52,11 @@ func (*KonnectAIGateway) PersistsKonnectID() bool {
 	return true
 }
 
+// PersistsKonnectID reports whether KonnectConfigStore persists a Konnect ID in status.
+func (*KonnectConfigStore) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether KonnectEventGateway persists a Konnect ID in status.
 func (*KonnectEventGateway) PersistsKonnectID() bool {
 	return true

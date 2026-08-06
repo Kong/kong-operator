@@ -32,6 +32,9 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectaigateways/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectconfigstores,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectconfigstores/status,verbs=update;patch
+//+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectconfigstores/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/status,verbs=update;patch
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways/finalizers,verbs=update;patch

@@ -829,3 +829,20 @@ apiGroupVersions:
       # KonnectConfigStore CRD.
       - path: /v2/control-planes/{controlPlaneId}/config-stores
         name: KonnectConfigStore
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.ConfigStoresSDK
+            fieldName: ConfigStores
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Name
+                responseField: GetName()
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateConfigStore
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateConfigStoreRequest
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectGatewayControlPlane
+            group: konnect.konghq.com
+            version: v1alpha2

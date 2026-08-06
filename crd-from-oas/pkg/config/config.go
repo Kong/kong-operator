@@ -66,11 +66,13 @@ type ImportConfig struct {
 	Alias string `yaml:"alias,omitempty"`
 }
 
-// EntityGVKConfig identifies a generated API type by Kind and optional API group.
-// When Group is omitted, the current API group-version being generated is used.
+// EntityGVKConfig identifies an API type by Kind, API group, and optional API
+// version. When Group or Version is omitted, the current group or version is
+// used.
 type EntityGVKConfig struct {
-	Kind  string `yaml:"kind"`
-	Group string `yaml:"group,omitempty"`
+	Kind    string `yaml:"kind"`
+	Group   string `yaml:"group,omitempty"`
+	Version string `yaml:"version,omitempty"`
 }
 
 // ReferenceConfig declares a spec field that holds references to other CRs
@@ -338,6 +340,15 @@ func (rc *ReconcilerConfig) ParentEntityGroup(currentGroup string) string {
 		return currentGroup
 	}
 	return rc.ParentEntityGVK.Group
+}
+
+// ParentEntityVersion returns the configured parent API version, or the
+// current generated API version when no version override is provided.
+func (rc *ReconcilerConfig) ParentEntityVersion(currentVersion string) string {
+	if rc == nil || rc.ParentEntityGVK == nil || rc.ParentEntityGVK.Version == "" {
+		return currentVersion
+	}
+	return rc.ParentEntityGVK.Version
 }
 
 // AncestorEntityKinds returns the configured ancestor Kind values in URL order.

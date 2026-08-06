@@ -57,6 +57,10 @@ func init() {
 
 	_generatedHandlers := []generatedParentRefHandlerEntry{
 		{
+			gvk:     konnectv1alpha2.GroupVersion.WithKind("KonnectGatewayControlPlane"),
+			handler: parentRefHandler[konnectv1alpha2.KonnectGatewayControlPlane, *konnectv1alpha2.KonnectGatewayControlPlane]{},
+		},
+		{
 			gvk:     configurationv1alpha1.GroupVersion.WithKind("EventGatewayVirtualCluster"),
 			handler: parentRefHandler[configurationv1alpha1.EventGatewayVirtualCluster, *configurationv1alpha1.EventGatewayVirtualCluster]{},
 		},

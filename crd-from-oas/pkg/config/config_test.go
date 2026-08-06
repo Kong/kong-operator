@@ -1098,6 +1098,7 @@ apiGroupVersions:
           parentEntityGVK:
             kind: EventGatewayListener
             group: configuration.konghq.com
+            version: v1alpha1
           ancestorEntityGVKs:
             - kind: KonnectEventGateway
               group: konnect.konghq.com
@@ -1117,6 +1118,7 @@ apiGroupVersions:
 	require.NotNil(t, rc.ParentEntityGVK)
 	assert.Equal(t, "EventGatewayListener", rc.ParentEntityKind())
 	assert.Equal(t, "configuration.konghq.com", rc.ParentEntityGroup("ignored.example.com"))
+	assert.Equal(t, "v1alpha1", rc.ParentEntityVersion("v1beta1"))
 	require.Len(t, rc.AncestorEntityGVKs, 1)
 	assert.Equal(t, []string{"KonnectEventGateway"}, rc.AncestorEntityKinds())
 	assert.Equal(t, "konnect.konghq.com", rc.AncestorEntityGVKs[0].Group)

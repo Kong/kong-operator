@@ -103021,6 +103021,7 @@ rules:
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
   - konnectcloudgatewaytransitgateways
+  - konnectconfigstores
   - konnecteventgateways
   - portalcustomdomains
   - portalcustomizations
@@ -103067,6 +103068,8 @@ rules:
   - konnectcloudgatewaynetworks/status
   - konnectcloudgatewaytransitgateways/finalizers
   - konnectcloudgatewaytransitgateways/status
+  - konnectconfigstores/finalizers
+  - konnectconfigstores/status
   - konnecteventgateways/finalizers
   - konnecteventgateways/status
   - konnectextensions/finalizers

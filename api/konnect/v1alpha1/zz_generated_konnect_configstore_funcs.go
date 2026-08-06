@@ -95,8 +95,8 @@ func (obj *KonnectConfigStore) SetParentID(id string) {
 func (obj *KonnectConfigStore) GetParentGVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   "konnect.konghq.com",
-		Version: GroupVersion.Version,
-		Kind:    "ControlPlane",
+		Version: "v1alpha2",
+		Kind:    "KonnectGatewayControlPlane",
 	}
 }
 
@@ -129,9 +129,9 @@ func (obj *KonnectConfigStore) GetStatusConditionReasonParentRefNotProgrammed() 
 func (obj *KonnectConfigStore) GetAncestorIDs() map[string]string {
 	m := make(map[string]string, 1)
 	if obj.Status.ControlPlaneID != nil {
-		m["ControlPlane"] = obj.Status.ControlPlaneID.ID
+		m["KonnectGatewayControlPlane"] = obj.Status.ControlPlaneID.ID
 	} else {
-		m["ControlPlane"] = ""
+		m["KonnectGatewayControlPlane"] = ""
 	}
 	return m
 }

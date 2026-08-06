@@ -67,6 +67,8 @@ func CreateGeneratedOps[
 		return createEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
 	case *konnectv1alpha1.KonnectAIGateway:
 		return createKonnectAIGateway(ctx, sdk.GetAIGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectConfigStore:
+		return createKonnectConfigStore(ctx, sdk.GetConfigStoresSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return createKonnectEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:

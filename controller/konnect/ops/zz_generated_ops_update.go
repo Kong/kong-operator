@@ -67,6 +67,8 @@ func UpdateGeneratedOps[
 		return updateEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
 	case *konnectv1alpha1.KonnectAIGateway:
 		return updateKonnectAIGateway(ctx, sdk.GetAIGatewaysSDK(), ent)
+	case *konnectv1alpha1.KonnectConfigStore:
+		return updateKonnectConfigStore(ctx, sdk.GetConfigStoresSDK(), ent)
 	case *konnectv1alpha1.KonnectEventGateway:
 		return updateKonnectEventGateway(ctx, sdk.GetEventGatewaysSDK(), ent)
 	case *konnectv1alpha1.Portal:
