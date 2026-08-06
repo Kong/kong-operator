@@ -1,0 +1,14 @@
+# This sample follows the current CRD-from-OAS-generated API shape.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectConfigStore
+metadata:
+  name: tls-cert-keys
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: namespacedRef
+    namespacedRef:
+      name: my-cp
+      namespace: default
+  apiSpec:
+    name: tls-cert-keys

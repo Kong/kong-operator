@@ -9069,6 +9069,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
+- [KonnectConfigStore](#konnect-konghq-com-v1alpha1-konnectconfigstore)
 - [KonnectEventGateway](#konnect-konghq-com-v1alpha1-konnecteventgateway)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
@@ -9290,6 +9291,21 @@ KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway 
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)_ | Spec defines the desired state of KonnectCloudGatewayTransitGateway. |
 | `status` _[KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)_ | Status defines the observed state of KonnectCloudGatewayTransitGateway. |
+
+### KonnectConfigStore
+
+
+KonnectConfigStore is the Schema for the konnectconfigstores API.
+
+<!-- konnect_config_store description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectConfigStore`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectConfigStoreSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstorespec)_ |  |
+| `status` _[KonnectConfigStoreStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstorestatus)_ |  |
 
 ### KonnectEventGateway
 
@@ -15478,6 +15494,54 @@ _Appears in:_
 
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
 
+#### KonnectConfigStoreAPISpec
+
+
+KonnectConfigStoreAPISpec defines the API spec fields for KonnectConfigStore.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+
+_Appears in:_
+
+- [KonnectConfigStoreSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstorespec)
+
+#### KonnectConfigStoreSpec
+
+
+KonnectConfigStoreSpec defines the desired state of KonnectConfigStore.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controlPlaneRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | ControlPlaneRef is the reference to the parent ControlPlane object. |
+| `apiSpec` _[KonnectConfigStoreAPISpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoreapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [KonnectConfigStore](#konnect-konghq-com-v1alpha1-konnectconfigstore)
+
+#### KonnectConfigStoreStatus
+
+
+KonnectConfigStoreStatus defines the observed state of KonnectConfigStore.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `controlPlaneID` _[KonnectEntityRef](#konnect-konghq-com-v1alpha1-types-konnectentityref)_ | ControlPlaneID is the Konnect ID of the parent ControlPlane. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [KonnectConfigStore](#konnect-konghq-com-v1alpha1-konnectconfigstore)
+
 #### KonnectConfigurationDataPlaneGroup
 
 
@@ -15536,6 +15600,7 @@ _Appears in:_
 - [AIGatewayModelProviderStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderstatus)
 - [AIGatewayModelStatus](#konnect-konghq-com-v1alpha1-types-aigatewaymodelstatus)
 - [AIGatewayPolicyStatus](#konnect-konghq-com-v1alpha1-types-aigatewaypolicystatus)
+- [KonnectConfigStoreStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstorestatus)
 - [PortalCustomDomainStatus](#konnect-konghq-com-v1alpha1-types-portalcustomdomainstatus)
 - [PortalCustomizationStatus](#konnect-konghq-com-v1alpha1-types-portalcustomizationstatus)
 - [PortalEmailConfigStatus](#konnect-konghq-com-v1alpha1-types-portalemailconfigstatus)

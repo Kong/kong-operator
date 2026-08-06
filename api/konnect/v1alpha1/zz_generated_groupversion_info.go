@@ -29,6 +29,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&AIGatewayPolicyList{},
 		&KonnectAIGateway{},
 		&KonnectAIGatewayList{},
+		&KonnectConfigStore{},
+		&KonnectConfigStoreList{},
 		&KonnectEventGateway{},
 		&KonnectEventGatewayList{},
 		&Portal{},
