@@ -18,7 +18,7 @@ on:
     types: [created]
 
 env:
-  KSAI_REF: 7b4d040488a77b59f2f0c36df0ec71b6961a7a23
+  KSAI_REF: 2de37d965e71c1a3ba5a5c99d5c4716d48b0b8b6
 
 jobs:
   # Authorization runs in its own job, before the review job's concurrency group, so an
