@@ -823,3 +823,9 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+
+      # Konnect Config Store containers. Secret entries are intentionally not
+      # configured here; they are managed out-of-band and are not part of the
+      # KonnectConfigStore CRD.
+      - path: /v2/control-planes/{controlPlaneId}/config-stores
+        name: KonnectConfigStore
