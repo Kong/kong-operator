@@ -329,14 +329,7 @@ func generateMCPServerDataPlane(
 				},
 			},
 			Deployment: &mcpv1alpha1.DeploymentOptions{
-				Scaling: &mcpv1alpha1.Scaling{
-					HorizontalScaling: &mcpv1alpha1.HorizontalScaling{
-						Type: mcpv1alpha1.MCPHorizontalScalingTypeStatic,
-						Static: mcpv1alpha1.MCPHorizontalScalingStatic{
-							Replicas: new(int32(1)),
-						},
-					},
-				},
+				Replicas: new(int32(1)),
 			},
 		},
 	}

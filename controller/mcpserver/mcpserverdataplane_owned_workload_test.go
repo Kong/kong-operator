@@ -261,27 +261,16 @@ func Test_generateDeployment_Replicas(t *testing.T) {
 			want:       1,
 		},
 		{
-			name: "static scaling with explicit replicas",
+			name: "explicit replicas",
 			deployment: &mcpv1alpha1.DeploymentOptions{
-				Scaling: &mcpv1alpha1.Scaling{
-					HorizontalScaling: &mcpv1alpha1.HorizontalScaling{
-						Type:   mcpv1alpha1.MCPHorizontalScalingTypeStatic,
-						Static: mcpv1alpha1.MCPHorizontalScalingStatic{Replicas: new(int32(3))},
-					},
-				},
+				Replicas: new(int32(3)),
 			},
 			want: 3,
 		},
 		{
-			name: "static scaling with nil replicas defaults to 1",
-			deployment: &mcpv1alpha1.DeploymentOptions{
-				Scaling: &mcpv1alpha1.Scaling{
-					HorizontalScaling: &mcpv1alpha1.HorizontalScaling{
-						Type: mcpv1alpha1.MCPHorizontalScalingTypeStatic,
-					},
-				},
-			},
-			want: 1,
+			name:       "nil replicas defaults to 1",
+			deployment: &mcpv1alpha1.DeploymentOptions{},
+			want:       1,
 		},
 	}
 

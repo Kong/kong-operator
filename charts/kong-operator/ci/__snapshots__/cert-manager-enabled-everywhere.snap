@@ -65311,39 +65311,10 @@ spec:
                   Deployment configures the Deployment: image, replicas, resources,
                   extra env vars, volume mounts, etc.
                 properties:
-                  scaling:
-                    description: Scaling defines the scaling options for the deployment.
-                    properties:
-                      horizontal:
-                        description: HorizontalScaling defines horizontal scaling options for the deployment.
-                        properties:
-                          static:
-                            description: Static defines the static horizontal scaling options for the deployment.
-                            properties:
-                              replicas:
-                                default: 1
-                                description: |-
-                                  Replicas describes the number of desired replicas.
-                                  This is a pointer to distinguish between explicit zero and not specified.
-                                format: int32
-                                minimum: 1
-                                type: integer
-                            type: object
-                          type:
-                            description: |-
-                              Type indicates the type of horizontal scaling to use.
-                              Currently only "static" is supported, which means the deployment will be
-                              scaled by setting the number of replicas directly.
-                            enum:
-                            - static
-                            type: string
-                        type: object
-                        x-kubernetes-validations:
-                        - message: Only static horizontal scaling is currently supported
-                          rule: self.type == 'static'
-                        - message: 'When type is static: replicas must be set and must be non-negative'
-                          rule: self.type != 'static' || (has(self.static.replicas) && self.static.replicas >= 0)
-                    type: object
+                  replicas:
+                    description: Replicas describes the number of desired pods.
+                    format: int32
+                    type: integer
                 type: object
               mcpServerRef:
                 description: |-
@@ -65479,7 +65450,7 @@ spec:
     subresources:
       scale:
         labelSelectorPath: .status.selector
-        specReplicasPath: .spec.deployment.scaling.horizontal.static.replicas
+        specReplicasPath: .spec.deployment.replicas
         statusReplicasPath: .status.replicas
       status: {}
 ---

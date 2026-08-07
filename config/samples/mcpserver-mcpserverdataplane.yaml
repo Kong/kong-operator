@@ -40,8 +40,4 @@ spec:
     konnectNamespacedRef:
       name: mcpserver1
   deployment:
-    scaling:
-      horizontal:
-        type: static
-        static:
-          replicas: 2
+    replicas: 2
