@@ -31,17 +31,6 @@ var skippedTestsForHybrid = []string{
 	tests.HTTPRouteRewritePath.ShortName,
 
 	tests.GRPCRouteWeight.ShortName,
-
-	// UDPRoute
-	tests.UDPRouteInvalidBackendRefNonexistent.ShortName,
-	tests.UDPRouteInvalidCrossNamespaceBackendRef.ShortName,
-	tests.UDPRouteMultipleRoutesAttachment.ShortName,
-	tests.UDPRouteNotAllowedByListeners.ShortName,
-	tests.UDPRouteParentRefAttachAllListeners.ShortName,
-	tests.UDPRouteParentRefPortAndSectionName.ShortName,
-	tests.UDPRouteReferenceGrant.ShortName,
-	tests.UDPRouteTest.ShortName,
-	tests.UDPRouteWeightedRouting.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given gateway type.

@@ -1,0 +1,267 @@
+# Basic UDPRoute test scenario.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: basic-udproute
+spec:
+  description: |
+    This test validates that the hybrid gateway controller translates a basic
+    UDPRoute with a single Service backend into Kong resources and routes UDP
+    traffic through the generated Gateway data plane.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: listener_udp_port
+      value: 8899
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: udp_route_name
+      value: (join('-', [($test_name), 'echo-udp-route']))
+    - name: udp_route_namespace
+      value: ($namespace)
+    - name: echo_deployment_name
+      value: (join('-', [($test_name), 'echo']))
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: second_udp_route_name
+      value: (join('-', [($test_name), 'echo-udp-route-second']))
+    - name: second_echo_deployment_name
+      value: (join('-', [($test_name), 'newer-echo']))
+
+  steps:
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-gateway
+      description: Create Gateway with a UDP listener.
+      try:
+        - apply:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+                namespace: ($namespace)
+              spec:
+                gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+                listeners:
+                  - name: udp
+                    protocol: UDP
+                    port: (to_number($listener_udp_port))
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Accepted']):
+                  - status: 'True'
+                    reason: Accepted
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'DataPlaneReady']):
+                  - status: 'True'
+                    reason: Ready
+                (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+                  - status: 'True'
+                    reason: Programmed
+                (conditions[?type == 'KonnectExtensionReady']):
+                  - status: 'True'
+                    reason: Ready
+                (conditions[?type == 'GatewayService']):
+                  - status: 'True'
+                    reason: Ready
+
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlPlane resource is created and synchronized.
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    - name: Create-echo-service
+      description: Create and assert an echo service to route UDP traffic to.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+
+    - name: Create-udproute-echo
+      description: Create UDPRoute to route traffic to the echo service.
+      try:
+        - apply:
+            file: 01-udpRoute-echo.yaml
+        - assert:
+            file: 02-udpRoute-echo-assert.yaml
+
+    - name: Assert-kong-resources
+      description: Assert that UDPRoute-generated Kong resources are programmed.
+      try:
+        - assert:
+            file: 03-assert-kong-resources.yaml
+
+    - name: Verify-UDP-traffic-from-host
+      description: Verify that UDP traffic can be routed through the gateway to the echo service from the host.
+      try:
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              bash ../../common/scripts/proxy_ip_address.sh
+            outputs:
+              - name: proxy_ip
+                value: (json_parse($stdout).proxy_ip_address)
+        - script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: PROXY_PORT
+                value: (to_string($listener_udp_port))
+              - name: EXPECTED_RESPONSE
+                value: ($echo_deployment_name)
+            content: |
+              bash ../../common/scripts/host_connectivity_test_udp.sh
+
+    - name: Create-echo-service-second
+      description: Create and assert a second echo service to back the losing UDPRoute.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+        with:
+          bindings:
+            - name: echo_deployment_name
+              value: ($second_echo_deployment_name)
+
+    - name: Create-udproute-echo-second
+      description: |
+        Attach a second UDPRoute to the same listener as the first. Per GEP-2645
+        the older route (created first) wins arbitration and is the only one
+        pushed to the dataplane; the newer route stays Accepted/ResolvedRefs=True
+        but gets no Kong resources or Programmed conditions.
+      try:
+        - apply:
+            file: 04-udpRoute-echo-second.yaml
+        - assert:
+            file: 05-assert-udproutes-conflict.yaml
+
+    - name: Verify-UDP-traffic-still-reaches-first
+      description: |
+        With both same-listener UDPRoutes attached, UDP traffic must still
+        reach the first (winning) echo backend, proving the second (losing)
+        route is not receiving traffic.
+      try:
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              bash ../../common/scripts/proxy_ip_address.sh
+            outputs:
+              - name: proxy_ip
+                value: (json_parse($stdout).proxy_ip_address)
+        - script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: PROXY_PORT
+                value: (to_string($listener_udp_port))
+              - name: EXPECTED_RESPONSE
+                value: ($echo_deployment_name)
+            content: |
+              bash ../../common/scripts/host_connectivity_test_udp.sh
+
+    - name: Delete-winning-udproute
+      description: |
+        Delete the first (winning) UDPRoute. The second (losing) UDPRoute
+        is now the sole route attached to the listener and gets promoted:
+        its Kong resources are created and its Programmed conditions turn True.
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: UDPRoute
+              namespace: ($udp_route_namespace)
+              name: ($udp_route_name)
+        - assert:
+            file: 06-assert-udproute-promoted.yaml
+
+    - name: Verify-UDP-traffic-reaches-promoted
+      description: |
+        After the winner is deleted, UDP traffic must now reach the second
+        (promoted) echo backend.
+      try:
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              bash ../../common/scripts/proxy_ip_address.sh
+            outputs:
+              - name: proxy_ip
+                value: (json_parse($stdout).proxy_ip_address)
+        - script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: PROXY_PORT
+                value: (to_string($listener_udp_port))
+              - name: EXPECTED_RESPONSE
+                value: ($second_echo_deployment_name)
+            content: |
+              bash ../../common/scripts/host_connectivity_test_udp.sh
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-basic-udproute
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

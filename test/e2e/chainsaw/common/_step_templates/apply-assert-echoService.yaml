@@ -28,7 +28,7 @@ spec:
                 targetPort: 1025
               - port: 1026
                 name: udp
-                protocol: TCP
+                protocol: UDP
                 targetPort: 1026
               - port: 1027
                 name: http
