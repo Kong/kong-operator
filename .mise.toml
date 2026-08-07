@@ -2,7 +2,8 @@
 github_attestations = false
 
 [tools]
-node = "latest"
+# renovate: datasource=node-version depName=node
+node = "26.7.0"
 
 ################################################################################
 # Tools
