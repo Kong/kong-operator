@@ -119,64 +119,45 @@ func newNameWithHashSuffix(readableElements []string, hashElements []string) str
 	return name
 }
 
+// serviceLikeName generates the shared name shape used by both KongUpstream and KongService
+// names: a protocol prefix and backend-ref display names as the readable part, plus a
+// caller-supplied hash suffix.
+func serviceLikeName[T gwtypes.SupportedBackendRef](protocolPrefix, namespace string, backendRefs []T, hashElements []string) string {
+	readableElements := append(
+		[]string{protocolPrefix},
+		backendRefDisplayNames(namespace, backendRefs)...,
+	)
+	return newNameWithHashSuffix(readableElements, hashElements)
+}
+
 // NewKongUpstreamNameForHTTPRouteRule generates a KongUpstream name based on the ControlPlaneRef and HTTPRouteRule passed as arguments.
 func NewKongUpstreamNameForHTTPRouteRule(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
-	readableElements := append(
-		[]string{httpProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeName(route, cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(httpProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeName(route, cp, rule))
 }
 
 // NewKongUpstreamNameForGRPCRouteRule generates a KongUpstream name based on the ControlPlaneRef and GRPCRouteRule passed as arguments.
 func NewKongUpstreamNameForGRPCRouteRule(route *gwtypes.GRPCRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.GRPCRouteRule) string {
-	readableElements := append(
-		[]string{grpcProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeNameGRPCRouteRule(route, cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(grpcProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeNameGRPCRouteRule(route, cp, rule))
 }
 
 // NewKongUpstreamNameForTLSRouteRule generates a KongUpstream name based on the ControlPlaneRef and TLSRouteRule passed as arguments.
 func NewKongUpstreamNameForTLSRouteRule(route *gwtypes.TLSRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.TLSRouteRule) string {
-	readableElements := append(
-		[]string{tlsProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeNameTLSRouteRule(cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(tlsProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeNameSimple(cp, rule.BackendRefs))
 }
 
 // NewKongUpstreamNameForTCPRouteRule generates a KongUpstream name based on the ControlPlaneRef and TCPRouteRule passed as arguments.
 func NewKongUpstreamNameForTCPRouteRule(route *gwtypes.TCPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gwtypes.TCPRouteRule) string {
-	readableElements := append(
-		[]string{tcpProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeNameTCPRouteRule(cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(tcpProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeNameSimple(cp, rule.BackendRefs))
 }
 
 // NewKongUpstreamNameForUDPRouteRule generates a KongUpstream name based on the ControlPlaneRef and UDPRouteRule passed as arguments.
 func NewKongUpstreamNameForUDPRouteRule(route *gwtypes.UDPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gwtypes.UDPRouteRule) string {
-	readableElements := append(
-		[]string{udpProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeNameUDPRouteRule(cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(udpProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeNameSimple(cp, rule.BackendRefs))
 }
 
 // NewKongServiceNameForHTTPRouteRule generates a KongService name based on the ControlPlaneRef and HTTPRouteRule passed as arguments.
 func NewKongServiceNameForHTTPRouteRule(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
-	readableElements := append(
-		[]string{httpProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeName(route, cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(httpProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeName(route, cp, rule))
 }
 
 // NewKongServiceNameForHTTPRouteRuleBackendNotFound generates a route-scoped KongService name
@@ -207,12 +188,7 @@ func NewKongServiceNameForHTTPRouteRuleBackendNotFound(
 
 // NewKongServiceNameForGRPCRouteRule generates a KongService name based on the ControlPlaneRef and GRPCRouteRule passed as arguments.
 func NewKongServiceNameForGRPCRouteRule(route *gwtypes.GRPCRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.GRPCRouteRule) string {
-	readableElements := append(
-		[]string{grpcProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeNameGRPCRouteRule(route, cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(grpcProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeNameGRPCRouteRule(route, cp, rule))
 }
 
 // NewKongServiceNameForGRPCRouteRuleBackendNotFound generates a route-scoped KongService name
@@ -244,32 +220,17 @@ func NewKongServiceNameForGRPCRouteRuleBackendNotFound(
 
 // NewKongServiceNameForTLSRouteRule generates a KongService name based on the ControlPlaneRef and TLSRouteRule passed as arguments.
 func NewKongServiceNameForTLSRouteRule(route *gwtypes.TLSRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.TLSRouteRule) string {
-	readableElements := append(
-		[]string{tlsProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeNameTLSRouteRule(cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(tlsProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeNameSimple(cp, rule.BackendRefs))
 }
 
 // NewKongServiceNameForTCPRouteRule generates a KongService name based on the ControlPlaneRef and TCPRouteRule passed as arguments.
 func NewKongServiceNameForTCPRouteRule(route *gwtypes.TCPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gwtypes.TCPRouteRule) string {
-	readableElements := append(
-		[]string{tcpProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeNameTCPRouteRule(cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(tcpProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeNameSimple(cp, rule.BackendRefs))
 }
 
 // NewKongServiceNameForUDPRouteRule generates a KongService name based on the ControlPlaneRef and UDPRouteRule passed as arguments.
 func NewKongServiceNameForUDPRouteRule(route *gwtypes.UDPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gwtypes.UDPRouteRule) string {
-	readableElements := append(
-		[]string{udpProtocolPrefix},
-		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
-	)
-	hashElements := hashElementsForServiceLikeNameUDPRouteRule(cp, rule)
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return serviceLikeName(udpProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeNameSimple(cp, rule.BackendRefs))
 }
 
 func hashElementsForServiceLikeName(
@@ -356,39 +317,38 @@ func hashForGRPCRouteRuleServiceLikeName(route *gwtypes.GRPCRoute, rule gatewayv
 	return hash
 }
 
-func hashElementsForServiceLikeNameTLSRouteRule(
+// hashElementsForServiceLikeNameSimple builds the hash suffix for route kinds whose rules
+// require at least one BackendRef (TLSRoute, TCPRoute, UDPRoute), so no zero-backend fallback
+// is needed.
+func hashElementsForServiceLikeNameSimple[T gwtypes.SupportedBackendRef](
 	cp *commonv1alpha1.ControlPlaneRef,
-	rule gwtypes.TLSRouteRule,
+	backendRefs []T,
 ) []string {
-	// Since in TLSRoute, `backendRefs` list is required in rules and has at least one backend reference,
-	// We can directly run hash on backendRefs.
-	hash := utils.Hash32(rule.BackendRefs)
 	return []string{
 		defaultCPPrefix + utils.Hash32(cp),
-		hash,
+		utils.Hash32(backendRefs),
 	}
 }
 
-func hashElementsForServiceLikeNameTCPRouteRule(
+// kongRouteName generates the shared name shape for KongRoute names: a protocol prefix and
+// "<namespace>-<name>" as the readable part, plus a ControlPlaneRef hash, an optional ParentRef
+// hash, and caller-supplied extra hash elements (e.g. match/rule identity, match/rule indexes).
+func kongRouteName(
+	protocolPrefix, namespace, name string,
 	cp *commonv1alpha1.ControlPlaneRef,
-	rule gwtypes.TCPRouteRule,
-) []string {
-	hash := utils.Hash32(rule.BackendRefs)
-	return []string{
-		defaultCPPrefix + utils.Hash32(cp),
-		hash,
+	parentRef *gwtypes.ParentReference,
+	extraHashElements ...string,
+) string {
+	readableElements := []string{
+		protocolPrefix,
+		namespace + "-" + name,
 	}
-}
-
-func hashElementsForServiceLikeNameUDPRouteRule(
-	cp *commonv1alpha1.ControlPlaneRef,
-	rule gwtypes.UDPRouteRule,
-) []string {
-	hash := utils.Hash32(rule.BackendRefs)
-	return []string{
-		defaultCPPrefix + utils.Hash32(cp),
-		hash,
+	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
+	if parentRef != nil {
+		hashElements = append(hashElements, parentRefHashElement(parentRef))
 	}
+	hashElements = append(hashElements, extraHashElements...)
+	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
 // NewKongRouteNameForMatch generates a KongRoute name based on HTTPRoute, ControlPlaneRef,
@@ -401,16 +361,8 @@ func NewKongRouteNameForMatch(
 	match gatewayv1.HTTPRouteMatch,
 	index int,
 ) string {
-	readableElements := []string{
-		httpProtocolPrefix,
-		route.Namespace + "-" + route.Name,
-	}
-	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
-	if parentRef != nil {
-		hashElements = append(hashElements, parentRefHashElement(parentRef))
-	}
-	hashElements = append(hashElements, utils.Hash32(match), fmt.Sprintf("m%02d", index))
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return kongRouteName(httpProtocolPrefix, route.Namespace, route.Name, cp, parentRef,
+		utils.Hash32(match), fmt.Sprintf("m%02d", index))
 }
 
 // NewKongRouteNameForGRPCRouteMatch generates a KongRoute name based on GRPCRoute, ControlPlaneRef,
@@ -424,16 +376,8 @@ func NewKongRouteNameForGRPCRouteMatch(
 	ruleIndex int,
 	matchIndex int,
 ) string {
-	readableElements := []string{
-		grpcProtocolPrefix,
-		route.Namespace + "-" + route.Name,
-	}
-	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
-	if parentRef != nil {
-		hashElements = append(hashElements, parentRefHashElement(parentRef))
-	}
-	hashElements = append(hashElements, utils.Hash32(match), fmt.Sprintf("r%02d", ruleIndex), fmt.Sprintf("m%02d", matchIndex))
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return kongRouteName(grpcProtocolPrefix, route.Namespace, route.Name, cp, parentRef,
+		utils.Hash32(match), fmt.Sprintf("r%02d", ruleIndex), fmt.Sprintf("m%02d", matchIndex))
 }
 
 // NewKongRouteNameForTLSRouteRule generates a KongRoute name based on the TLSRoute rule,
@@ -444,16 +388,7 @@ func NewKongRouteNameForTLSRouteRule(
 	parentRef *gwtypes.ParentReference,
 	rule gatewayv1.TLSRouteRule,
 ) string {
-	readableElements := []string{
-		tlsProtocolPrefix,
-		route.Namespace + "-" + route.Name,
-	}
-	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
-	if parentRef != nil {
-		hashElements = append(hashElements, parentRefHashElement(parentRef))
-	}
-	hashElements = append(hashElements, utils.Hash32(rule))
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return kongRouteName(tlsProtocolPrefix, route.Namespace, route.Name, cp, parentRef, utils.Hash32(rule))
 }
 
 // NewKongRouteNameForTCPRouteRule generates a KongRoute name based on the TCPRoute rule,
@@ -464,16 +399,7 @@ func NewKongRouteNameForTCPRouteRule(
 	parentRef *gwtypes.ParentReference,
 	rule gwtypes.TCPRouteRule,
 ) string {
-	readableElements := []string{
-		tcpProtocolPrefix,
-		route.Namespace + "-" + route.Name,
-	}
-	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
-	if parentRef != nil {
-		hashElements = append(hashElements, parentRefHashElement(parentRef))
-	}
-	hashElements = append(hashElements, utils.Hash32(rule))
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return kongRouteName(tcpProtocolPrefix, route.Namespace, route.Name, cp, parentRef, utils.Hash32(rule))
 }
 
 // NewKongRouteNameForUDPRouteRule generates a KongRoute name based on the UDPRoute rule,
@@ -484,16 +410,7 @@ func NewKongRouteNameForUDPRouteRule(
 	parentRef *gwtypes.ParentReference,
 	rule gwtypes.UDPRouteRule,
 ) string {
-	readableElements := []string{
-		udpProtocolPrefix,
-		route.Namespace + "-" + route.Name,
-	}
-	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
-	if parentRef != nil {
-		hashElements = append(hashElements, parentRefHashElement(parentRef))
-	}
-	hashElements = append(hashElements, utils.Hash32(rule))
-	return newNameWithHashSuffix(readableElements, hashElements)
+	return kongRouteName(udpProtocolPrefix, route.Namespace, route.Name, cp, parentRef, utils.Hash32(rule))
 }
 
 func parentRefHashElement(parentRef *gwtypes.ParentReference) string {

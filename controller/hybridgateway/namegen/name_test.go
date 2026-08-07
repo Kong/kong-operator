@@ -1254,6 +1254,91 @@ func TestNameGenerationConsistency(t *testing.T) {
 	})
 }
 
+// TestRefactorGoldenNames locks in name strings captured from the pre-refactor implementation
+// of NewKongUpstreamNameFor{HTTP,TLS,TCP,UDP}RouteRule, NewKongServiceNameFor{HTTP,TLS,TCP,UDP}RouteRule,
+// NewKongRouteNameFor{TLS,TCP,UDP}RouteRule, NewKongRouteNameForMatch, and
+// NewKongRouteNameForGRPCRouteMatch, so that introducing the shared serviceLikeName/
+// kongRouteName helpers cannot silently rename existing Kong objects. The HTTPRoute cases cover
+// basic, multi-backend, zero-backend (fallback identity), and backendRequest-timeout-fold hashing,
+// since those are the paths unique to HTTPRoute's hashElementsForServiceLikeName wiring.
+func TestRefactorGoldenNames(t *testing.T) {
+	cp := testControlPlaneRef("test-cp")
+	port := gwtypes.PortNumber(443)
+	listener1 := gatewayv1.SectionName("listener-1")
+	parentRef := testParentRef(&listener1)
+
+	httpBackendRef := func(name string) gatewayv1.HTTPBackendRef {
+		return gatewayv1.HTTPBackendRef{
+			BackendRef: gatewayv1.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name: gatewayv1.ObjectName(name),
+					Port: new(gatewayv1.PortNumber(8080)),
+				},
+			},
+		}
+	}
+	httpRouteForServiceLike := &gwtypes.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "http-route", Namespace: "default"}}
+
+	basicRule := gatewayv1.HTTPRouteRule{BackendRefs: []gatewayv1.HTTPBackendRef{httpBackendRef("http-backend")}}
+	assert.Equal(t, "http.default-http-backend-8080.1.cp1fbfa93f.29652d0c", NewKongUpstreamNameForHTTPRouteRule(httpRouteForServiceLike, cp, basicRule))
+	assert.Equal(t, "http.default-http-backend-8080.1.cp1fbfa93f.29652d0c", NewKongServiceNameForHTTPRouteRule(httpRouteForServiceLike, cp, basicRule))
+
+	multiRule := gatewayv1.HTTPRouteRule{BackendRefs: []gatewayv1.HTTPBackendRef{httpBackendRef("http-backend-2"), httpBackendRef("http-backend-1")}}
+	assert.Equal(t, "http.default-http-backend-1-8080.2.cp1fbfa93f.6a6f4809", NewKongUpstreamNameForHTTPRouteRule(httpRouteForServiceLike, cp, multiRule))
+	assert.Equal(t, "http.default-http-backend-1-8080.2.cp1fbfa93f.6a6f4809", NewKongServiceNameForHTTPRouteRule(httpRouteForServiceLike, cp, multiRule))
+
+	httpMatchType := gatewayv1.PathMatchPathPrefix
+	zeroRule := gatewayv1.HTTPRouteRule{
+		Matches: []gatewayv1.HTTPRouteMatch{{Path: &gatewayv1.HTTPPathMatch{Type: &httpMatchType, Value: new("/zero")}}},
+	}
+	assert.Equal(t, "http.cp1fbfa93f.49d1cfbf", NewKongUpstreamNameForHTTPRouteRule(httpRouteForServiceLike, cp, zeroRule))
+	assert.Equal(t, "http.cp1fbfa93f.49d1cfbf", NewKongServiceNameForHTTPRouteRule(httpRouteForServiceLike, cp, zeroRule))
+
+	httpTimeout := gatewayv1.Duration("750ms")
+	timeoutRule := gatewayv1.HTTPRouteRule{
+		BackendRefs: []gatewayv1.HTTPBackendRef{httpBackendRef("http-backend")},
+		Timeouts:    &gatewayv1.HTTPRouteTimeouts{BackendRequest: &httpTimeout},
+	}
+	assert.Equal(t, "http.default-http-backend-8080.1.cp1fbfa93f.ea93d3e7", NewKongUpstreamNameForHTTPRouteRule(httpRouteForServiceLike, cp, timeoutRule))
+	assert.Equal(t, "http.default-http-backend-8080.1.cp1fbfa93f.ea93d3e7", NewKongServiceNameForHTTPRouteRule(httpRouteForServiceLike, cp, timeoutRule))
+
+	tlsRoute := &gwtypes.TLSRoute{ObjectMeta: metav1.ObjectMeta{Name: "tls-route", Namespace: "default"}}
+	tlsRule := gwtypes.TLSRouteRule{BackendRefs: []gwtypes.BackendRef{{
+		BackendObjectReference: gwtypes.BackendObjectReference{Name: "tls-backend", Port: &port},
+	}}}
+	assert.Equal(t, "tls.default-tls-backend-443.1.cp1fbfa93f.ea981935", NewKongUpstreamNameForTLSRouteRule(tlsRoute, cp, tlsRule))
+	assert.Equal(t, "tls.default-tls-backend-443.1.cp1fbfa93f.ea981935", NewKongServiceNameForTLSRouteRule(tlsRoute, cp, tlsRule))
+	assert.Equal(t, "tls.default-tls-route.cp1fbfa93f.pr4557fd4c.7d7f1d3d", NewKongRouteNameForTLSRouteRule(tlsRoute, cp, parentRef, tlsRule))
+	assert.Equal(t, "tls.default-tls-route.cp1fbfa93f.7d7f1d3d", NewKongRouteNameForTLSRouteRule(tlsRoute, cp, nil, tlsRule))
+
+	tcpRoute := &gwtypes.TCPRoute{ObjectMeta: metav1.ObjectMeta{Name: "tcp-route", Namespace: "default"}}
+	tcpRule := gwtypes.TCPRouteRule{BackendRefs: []gwtypes.BackendRef{{
+		BackendObjectReference: gwtypes.BackendObjectReference{Name: "tcp-backend", Port: &port},
+	}}}
+	assert.Equal(t, "tcp.default-tcp-backend-443.1.cp1fbfa93f.e8e7532f", NewKongUpstreamNameForTCPRouteRule(tcpRoute, cp, tcpRule))
+	assert.Equal(t, "tcp.default-tcp-backend-443.1.cp1fbfa93f.e8e7532f", NewKongServiceNameForTCPRouteRule(tcpRoute, cp, tcpRule))
+	assert.Equal(t, "tcp.default-tcp-route.cp1fbfa93f.pr4557fd4c.196de16d", NewKongRouteNameForTCPRouteRule(tcpRoute, cp, parentRef, tcpRule))
+	assert.Equal(t, "tcp.default-tcp-route.cp1fbfa93f.196de16d", NewKongRouteNameForTCPRouteRule(tcpRoute, cp, nil, tcpRule))
+
+	udpRoute := &gwtypes.UDPRoute{ObjectMeta: metav1.ObjectMeta{Name: "udp-route", Namespace: "default"}}
+	udpRule := gwtypes.UDPRouteRule{BackendRefs: []gwtypes.BackendRef{{
+		BackendObjectReference: gwtypes.BackendObjectReference{Name: "udp-backend", Port: &port},
+	}}}
+	assert.Equal(t, "udp.default-udp-backend-443.1.cp1fbfa93f.a1dd4f9f", NewKongUpstreamNameForUDPRouteRule(udpRoute, cp, udpRule))
+	assert.Equal(t, "udp.default-udp-backend-443.1.cp1fbfa93f.a1dd4f9f", NewKongServiceNameForUDPRouteRule(udpRoute, cp, udpRule))
+	assert.Equal(t, "udp.default-udp-route.cp1fbfa93f.pr4557fd4c.f6d7e16d", NewKongRouteNameForUDPRouteRule(udpRoute, cp, parentRef, udpRule))
+	assert.Equal(t, "udp.default-udp-route.cp1fbfa93f.f6d7e16d", NewKongRouteNameForUDPRouteRule(udpRoute, cp, nil, udpRule))
+
+	httpRoute := testRoute("default", "http-route")
+	matchType := gatewayv1.PathMatchPathPrefix
+	match := gatewayv1.HTTPRouteMatch{Path: &gatewayv1.HTTPPathMatch{Type: &matchType, Value: new("/foo")}}
+	assert.Equal(t, "http.default-http-route.cp1fbfa93f.pr4557fd4c.5cff32e8.m02", NewKongRouteNameForMatch(httpRoute, cp, parentRef, match, 2))
+
+	grpcRoute := testGRPCRoute("default", "grpc-route")
+	gmatch := gatewayv1.GRPCRouteMatch{Method: &gatewayv1.GRPCMethodMatch{Service: new("svc.Echo")}}
+	assert.Equal(t, "grpc.default-grpc-route.cp1fbfa93f.pr4557fd4c.a7d8418e.r01.m03", NewKongRouteNameForGRPCRouteMatch(grpcRoute, cp, parentRef, gmatch, 1, 3))
+}
+
 func TestNewKongCertificateName_Generated(t *testing.T) {
 	tests := []struct {
 		name         string
