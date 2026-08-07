@@ -39,29 +39,11 @@ DeploymentOptions specifies options for the Deployment managed by the MCPServerD
 
 | Field | Description |
 | --- | --- |
-| `scaling` _[Scaling](#mcp-konghq-com-v1alpha1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
+| `replicas` _*int32_ | Replicas describes the number of desired pods. |
 
 _Appears in:_
 
 - [MCPServerDataPlaneSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanespec)
-
-#### HorizontalScaling
-
-
-HorizontalScaling defines horizontal scaling options for the deployment.
-It holds all the options from the HorizontalPodAutoscalerSpec besides the
-ScaleTargetRef which is being controlled by the Operator.
-
-
-
-| Field | Description |
-| --- | --- |
-| `type` _[MCPHorizontalScalingType](#mcp-konghq-com-v1alpha1-types-mcphorizontalscalingtype)_ | Type indicates the type of horizontal scaling to use. Currently only "static" is supported, which means the deployment will be scaled by setting the number of replicas directly. |
-| `static` _[MCPHorizontalScalingStatic](#mcp-konghq-com-v1alpha1-types-mcphorizontalscalingstatic)_ | Static defines the static horizontal scaling options for the deployment. |
-
-_Appears in:_
-
-- [Scaling](#mcp-konghq-com-v1alpha1-types-scaling)
 
 #### KonnectNamespacedRef
 
@@ -77,42 +59,6 @@ KonnectNamespacedRef is a reference to a MCPServer resource in the same namespac
 _Appears in:_
 
 - [MCPServerRef](#mcp-konghq-com-v1alpha1-types-mcpserverref)
-
-#### MCPHorizontalScalingStatic
-
-
-MCPHorizontalScalingStatic defines the static horizontal scaling options for
-the MCP deployment.
-
-
-
-| Field | Description |
-| --- | --- |
-| `replicas` _*int32_ | Replicas describes the number of desired replicas. This is a pointer to distinguish between explicit zero and not specified. |
-
-_Appears in:_
-
-- [HorizontalScaling](#mcp-konghq-com-v1alpha1-types-horizontalscaling)
-
-#### MCPHorizontalScalingType
-
-_Underlying type:_ `string`
-
-MCPHorizontalScalingType defines the type of horizontal scaling to use for
-the MCP deployment.
-
-
-
-
-_Appears in:_
-
-- [HorizontalScaling](#mcp-konghq-com-v1alpha1-types-horizontalscaling)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `static` | MCPHorizontalScalingTypeStatic indicates that the deployment should be<br />scaled by setting the number of replicas directly.<br /> |
 
 #### MCPServerDataPlaneSpec
 
@@ -184,19 +130,4 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `konnectNamespacedRef` | MCPServerRefTypeKonnectNamespacedRef references a MCPServer<br />resource in the same namespace as the MCPServerDataPlane.<br /> |
-
-#### Scaling
-
-
-Scaling defines the scaling options for the deployment.
-
-
-
-| Field | Description |
-| --- | --- |
-| `horizontal` _[HorizontalScaling](#mcp-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
-
-_Appears in:_
-
-- [DeploymentOptions](#mcp-konghq-com-v1alpha1-types-deploymentoptions)
 

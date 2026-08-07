@@ -125,15 +125,12 @@ func generateDeployment(
 	}
 
 	var replicas int32 = 1
-	if deploy := mcpDataPlane.Spec.Deployment; deploy != nil && deploy.Scaling != nil {
-		if horizontal := deploy.Scaling.HorizontalScaling; horizontal != nil {
-			if horizontal.Type == mcpv1alpha1.MCPHorizontalScalingTypeStatic {
-				if horizontal.Static.Replicas != nil {
-					replicas = *horizontal.Static.Replicas
-				}
-			}
-			// TODO: handle other scaling types (e.g. HPA) in the future when API adds them.
+	if deploy := mcpDataPlane.Spec.Deployment; deploy != nil {
+		if deploy.Replicas != nil {
+			replicas = *deploy.Replicas
 		}
+
+		// TODO: handle other scaling types (e.g. HPA) in the future when API adds them.
 	}
 
 	patEnvVar := patEnvVarFromAuth(apiAuth)

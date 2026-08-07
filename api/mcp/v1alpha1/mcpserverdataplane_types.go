@@ -28,7 +28,7 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status
-// +kubebuilder:subresource:scale:specpath=.spec.deployment.scaling.horizontal.static.replicas,statuspath=.status.replicas,selectorpath=.status.selector
+// +kubebuilder:subresource:scale:specpath=.spec.deployment.replicas,statuspath=.status.replicas,selectorpath=.status.selector
 // +kubebuilder:resource:shortName=mcpdp,categories=kong
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -77,60 +77,9 @@ type MCPServerDataPlaneSpec struct {
 
 // DeploymentOptions specifies options for the Deployment managed by the MCPServerDataPlane controller.
 type DeploymentOptions struct {
-	// Scaling defines the scaling options for the deployment.
+	// Replicas describes the number of desired pods.
 	//
 	// +optional
-	Scaling *Scaling `json:"scaling,omitempty"`
-}
-
-// Scaling defines the scaling options for the deployment.
-type Scaling struct {
-	// HorizontalScaling defines horizontal scaling options for the deployment.
-	//
-	// +optional
-	HorizontalScaling *HorizontalScaling `json:"horizontal,omitempty"`
-}
-
-// MCPHorizontalScalingType defines the type of horizontal scaling to use for
-// the MCP deployment.
-type MCPHorizontalScalingType string
-
-const (
-	// MCPHorizontalScalingTypeStatic indicates that the deployment should be
-	// scaled by setting the number of replicas directly.
-	MCPHorizontalScalingTypeStatic MCPHorizontalScalingType = "static"
-)
-
-// HorizontalScaling defines horizontal scaling options for the deployment.
-// It holds all the options from the HorizontalPodAutoscalerSpec besides the
-// ScaleTargetRef which is being controlled by the Operator.
-//
-// +kubebuilder:validation:XValidation:rule="self.type == 'static'",message="Only static horizontal scaling is currently supported"
-// +kubebuilder:validation:XValidation:rule="self.type != 'static' || (has(self.static.replicas) && self.static.replicas >= 0)",message="When type is static: replicas must be set and must be non-negative"
-type HorizontalScaling struct {
-	// Type indicates the type of horizontal scaling to use.
-	// Currently only "static" is supported, which means the deployment will be
-	// scaled by setting the number of replicas directly.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=static
-	Type MCPHorizontalScalingType `json:"type,omitempty"`
-
-	// Static defines the static horizontal scaling options for the deployment.
-	//
-	// +optional
-	Static MCPHorizontalScalingStatic `json:"static,omitempty"`
-}
-
-// MCPHorizontalScalingStatic defines the static horizontal scaling options for
-// the MCP deployment.
-type MCPHorizontalScalingStatic struct {
-	// Replicas describes the number of desired replicas.
-	// This is a pointer to distinguish between explicit zero and not specified.
-	//
-	// +optional
-	// +kubebuilder:default=1
-	// +kubebuilder:validation:Minimum=1
 	Replicas *int32 `json:"replicas,omitempty"`
 }
 
