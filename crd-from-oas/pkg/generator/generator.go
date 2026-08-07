@@ -2677,9 +2677,14 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		responseStatusFields = oc.ResponseStatusFields
 	}
 
+	// The parent reference must not change once the entity has been programmed in
+	// Konnect: the Konnect ID kept in status belongs to the old parent, so
+	// repointing the reference would orphan the remote entity. This holds both for
+	// the config-driven parentRef override and for the OpenAPI-derived parent
+	// dependency (e.g. KonnectConfigStore's controlPlaneRef), which are mutually
+	// exclusive and emit the same spec field.
 	var typeXValidations []string
-	if parentRef != nil {
-		fn := parentRef.FieldName
+	if fn := parentRefImmutableFieldName(parentRef, immediateParentDep); fn != "" {
 		typeXValidations = []string{
 			fmt.Sprintf(
 				`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.%s == self.spec.%s", message="spec.%s is immutable when an entity is already Programmed"`,
@@ -3051,6 +3056,21 @@ func rootRefDependency(schema *parser.Schema) *parser.Dependency {
 		return nil
 	}
 	return schema.Dependencies[len(schema.Dependencies)-1]
+}
+
+// parentRefImmutableFieldName returns the JSON name of the spec field holding
+// the parent reference, which the generated type marks immutable once the
+// entity is Programmed. It mirrors the template's choice between the
+// config-driven parentRef override and the OpenAPI-derived parent dependency,
+// and returns "" for root entities that have no parent reference at all.
+func parentRefImmutableFieldName(parentRef *config.ParentRefConfig, immediateParentDep *parser.Dependency) string {
+	if parentRef != nil {
+		return parentRef.FieldName
+	}
+	if immediateParentDep != nil {
+		return immediateParentDep.JSONName
+	}
+	return ""
 }
 
 func rootRefAccessorEntityName(dep *parser.Dependency) string {
