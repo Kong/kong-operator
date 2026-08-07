@@ -484,6 +484,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
+	// If a type has a KonnectConfigStore ref (KongVault), handle it.
+	res, stop, err = handleConfigStoreRef(ctx, r.Client, ent)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+	if stop {
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+	}
+
 	programmedFalseCondition := metav1.Condition{
 		Type:    konnectv1alpha1.KonnectEntityProgrammedConditionType,
 		Status:  metav1.ConditionFalse,

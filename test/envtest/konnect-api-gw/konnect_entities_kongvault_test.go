@@ -168,6 +168,106 @@ func TestKongVault(t *testing.T) {
 		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
 	})
 
+	t.Run("configStoreRef resolves to the referenced KonnectConfigStore's Konnect ID", func(t *testing.T) {
+		const (
+			vaultBackend  = "konnect"
+			vaultPrefix   = "certvault-ref"
+			vaultID       = "vault-config-store-ref-id"
+			configStoreID = "config-store-12345"
+		)
+
+		t.Log("Creating a KonnectConfigStore that is not programmed yet")
+		configStore := deploy.KonnectConfigStore(t, ctx, clientNamespaced, cp)
+
+		t.Log("Creating a KongVault referencing it through spec.configStoreRef")
+		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, nil, cp,
+			func(obj client.Object) {
+				obj.(*configurationv1alpha1.KongVault).Spec.ConfigStoreRef = &configurationv1alpha1.KonnectConfigStoreRef{
+					Name:      configStore.GetName(),
+					Namespace: configStore.GetNamespace(),
+				}
+			},
+		)
+
+		t.Log("Waiting for KongVault to report ConfigStoreRefValid=False with reason NotProgrammed")
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+			if kv.GetName() != vault.GetName() {
+				return false
+			}
+			cond, ok := k8sutils.GetCondition(konnectv1alpha1.ConfigStoreRefValidConditionType, kv)
+			return ok &&
+				cond.Status == metav1.ConditionFalse &&
+				cond.Reason == konnectv1alpha1.ConfigStoreRefReasonNotProgrammed
+		}, "KongVault didn't get ConfigStoreRefValid=False with reason NotProgrammed")
+
+		t.Log("Setting up mock SDK expecting config_store_id resolved from the KonnectConfigStore")
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+			mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
+				return input.Name == vaultBackend &&
+					input.Prefix == vaultPrefix &&
+					input.Config["config_store_id"] == configStoreID
+			})).Return(&sdkkonnectops.CreateVaultResponse{
+			Vault: &sdkkonnectcomp.Vault{
+				ID: new(vaultID),
+			},
+		}, nil)
+
+		t.Log("Marking the KonnectConfigStore as programmed with its Konnect ID")
+		deploy.MarkKonnectConfigStoreProgrammed(t, ctx, clientNamespaced, configStore, configStoreID)
+
+		t.Log("Waiting for KongVault to be programmed now that the reference resolves")
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+			if kv.GetName() != vault.GetName() {
+				return false
+			}
+			return kv.GetKonnectID() == vaultID &&
+				k8sutils.IsProgrammed(kv) &&
+				k8sutils.HasConditionTrue(konnectv1alpha1.ConfigStoreRefValidConditionType, kv)
+		}, "KongVault didn't get Programmed and ConfigStoreRefValid=True after the KonnectConfigStore became programmed")
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
+
+		t.Log("Setting up mock SDK for vault deletion")
+		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), vaultID).
+			Return(&sdkkonnectops.DeleteVaultResponse{}, nil)
+
+		require.NoError(t, cl.Delete(ctx, vault))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, vault, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("configStoreRef pointing to a missing KonnectConfigStore yields ConfigStoreRefValid=False", func(t *testing.T) {
+		t.Log("Creating a KongVault referencing a KonnectConfigStore that does not exist")
+		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, "konnect", "certvault-missing", nil, cp,
+			func(obj client.Object) {
+				obj.(*configurationv1alpha1.KongVault).Spec.ConfigStoreRef = &configurationv1alpha1.KonnectConfigStoreRef{
+					Name:      "does-not-exist",
+					Namespace: ns.Name,
+				}
+			},
+		)
+
+		t.Log("Waiting for KongVault to report ConfigStoreRefValid=False with reason Invalid")
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+			if kv.GetName() != vault.GetName() {
+				return false
+			}
+			cond, ok := k8sutils.GetCondition(konnectv1alpha1.ConfigStoreRefValidConditionType, kv)
+			return ok &&
+				cond.Status == metav1.ConditionFalse &&
+				cond.Reason == konnectv1alpha1.ConfigStoreRefReasonInvalid &&
+				strings.Contains(cond.Message, "does-not-exist")
+		}, "KongVault didn't get ConfigStoreRefValid=False with reason Invalid")
+
+		t.Log("The vault must not be pushed to Konnect, so it must not be Programmed")
+		fetched := &configurationv1alpha1.KongVault{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(vault), fetched))
+		require.False(t, k8sutils.IsProgrammed(fetched))
+		require.Empty(t, fetched.GetKonnectID())
+
+		require.NoError(t, cl.Delete(ctx, vault))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, vault, consts.WaitTime, consts.TickTime)
+	})
+
 	t.Run("should correctly handle conflict on create", func(t *testing.T) {
 		const (
 			vaultBackend   = "env-conflict"

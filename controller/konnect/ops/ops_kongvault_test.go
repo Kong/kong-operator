@@ -14,6 +14,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -22,7 +23,7 @@ import (
 
 func mustConvertKongVaultToVaultInput(t *testing.T, vault *configurationv1alpha1.KongVault) sdkkonnectcomp.Vault {
 	t.Helper()
-	input, err := kongVaultToVaultInput(vault)
+	input, err := kongVaultToVaultInput(t.Context(), fake.NewClientBuilder().Build(), vault)
 	require.NoError(t, err)
 	return input
 }
@@ -138,7 +139,7 @@ func TestCreateKongVault(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, vault := tc.mockVaultPair(t)
-			err := createVault(t.Context(), sdk, vault)
+			err := createVault(t.Context(), fake.NewClientBuilder().Build(), sdk, vault)
 			tc.assertions(t, vault)
 
 			if tc.expectedErr {
@@ -250,7 +251,7 @@ func TestUpdateKongVault(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, vault := tc.mockVaultPair(t)
-			err := updateVault(t.Context(), sdk, vault)
+			err := updateVault(t.Context(), fake.NewClientBuilder().Build(), sdk, vault)
 			tc.assertions(t, vault)
 
 			if tc.expectedErr {
@@ -538,7 +539,7 @@ func TestAdoptKongVault(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, vault := tc.mockVaultPair(t)
-			err := adoptVault(ctx, sdk, vault)
+			err := adoptVault(ctx, fake.NewClientBuilder().Build(), sdk, vault)
 			require.ErrorIs(t, err, tc.expectedError)
 
 			if tc.assertions != nil {

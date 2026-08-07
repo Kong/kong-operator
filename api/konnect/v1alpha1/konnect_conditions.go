@@ -321,3 +321,22 @@ const (
 	// condition type indicating that one or more KongCACertificate references are invalid.
 	KongCACertificateRefsReasonInvalid = "Invalid"
 )
+
+const (
+	// ConfigStoreRefValidConditionType is the type of the condition that indicates
+	// whether the KonnectConfigStore reference is valid and points to an existing,
+	// programmed KonnectConfigStore.
+	ConfigStoreRefValidConditionType = "ConfigStoreRefValid"
+
+	// ConfigStoreRefReasonValid is the reason used with the ConfigStoreRefValid
+	// condition type indicating that the KonnectConfigStore reference is valid.
+	ConfigStoreRefReasonValid = "Valid"
+	// ConfigStoreRefReasonInvalid is the reason used with the ConfigStoreRefValid
+	// condition type indicating that the referenced KonnectConfigStore does not
+	// exist, cannot be fetched, or that the reference itself is not allowed.
+	ConfigStoreRefReasonInvalid = "Invalid"
+	// ConfigStoreRefReasonNotProgrammed is the reason used with the ConfigStoreRefValid
+	// condition type indicating that the referenced KonnectConfigStore exists but has
+	// not been programmed in Konnect yet, so its Konnect ID is not known.
+	ConfigStoreRefReasonNotProgrammed = "NotProgrammed"
+)
