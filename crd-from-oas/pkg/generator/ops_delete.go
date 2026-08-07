@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -34,6 +35,10 @@ type opsDeleteFuncData struct {
 	// DeleteEntityIDField is the SDK request field name for the entity's own ID,
 	// e.g. "PolicyID". Used only when DeleteFullyWrapped is true.
 	DeleteEntityIDField string
+	// DeleteRequestFields holds constant assignments applied to the wrapped delete
+	// request struct, e.g. the `force` query parameter on config store deletion.
+	// Used only when DeleteFullyWrapped is true.
+	DeleteRequestFields []config.RequestFieldConfig
 	// DeleteNilArgs holds one entry per optional query parameter on the DELETE
 	// operation. The SDK codegen promotes query params to positional args before
 	// the variadic opts; we pass nil for each since they are all optional.
@@ -128,8 +133,29 @@ func (g *Generator) generateOpsDeleteFuncBody(
 		return nil, err
 	}
 
-	// Multi-parent entities use a fully-wrapped delete request struct.
+	// Multi-parent entities always use a fully-wrapped delete request struct.
+	// Single-parent entities whose SDK delete method takes one too opt in by
+	// configuring ops.delete.path, mirroring how the update op resolves its call
+	// shape from the configured request type.
 	deleteFullyWrapped := len(parents) >= 2
+	var configuredWrappedType string
+	if deleteOp.Path != "" {
+		importPath, typeName, err := ParseSDKTypePath(deleteOp.Path)
+		if err != nil {
+			return nil, fmt.Errorf("entity %q: %w", entityName, err)
+		}
+		if !strings.HasSuffix(importPath, "/operations") {
+			return nil, fmt.Errorf(
+				"entity %q: ops.delete.path must reference a type in the SDK operations package, got %q",
+				entityName, importPath,
+			)
+		}
+		deleteFullyWrapped = true
+		configuredWrappedType = typeName
+	}
+	if len(deleteOp.RequestFields) > 0 && !deleteFullyWrapped {
+		return nil, fmt.Errorf("entity %q: ops.delete.requestFields requires the wrapped call shape (set ops.delete.path)", entityName)
+	}
 	// deleteOmitsEntityID is true for parent-scoped singletons: the DELETE path
 	// contains only parent path params (no entity-specific ID). The SDK method
 	// takes the parent ID positionally; no entity ID is emitted.
@@ -140,6 +166,9 @@ func (g *Generator) generateOpsDeleteFuncBody(
 		// The wrapped request type name follows the SDK convention:
 		// "<PascalCaseDeleteMethod>Request", e.g. "DeleteEventGatewayListenerPolicyRequest".
 		deleteWrappedType = sdkMethod + "Request"
+		if configuredWrappedType != "" {
+			deleteWrappedType = configuredWrappedType
+		}
 		// Entity ID field is derived from the last delete path param.
 		if len(schema.DeletePathParams) > 0 {
 			deleteEntityIDField = pathParamToFieldName(schema.DeletePathParams[len(schema.DeletePathParams)-1])
@@ -157,6 +186,7 @@ func (g *Generator) generateOpsDeleteFuncBody(
 		DeleteFullyWrapped:  deleteFullyWrapped,
 		DeleteWrappedType:   deleteWrappedType,
 		DeleteEntityIDField: deleteEntityIDField,
+		DeleteRequestFields: deleteOp.RequestFields,
 		DeleteNilArgs:       nilArgs,
 		DeleteOmitsEntityID: deleteOmitsEntityID,
 		SupportsMirror:      g.entitySupportsMirror(entityName),

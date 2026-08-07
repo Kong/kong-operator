@@ -140,3 +140,55 @@ func TestUpdateKonnectConfigStore_PropagatesSDKError(t *testing.T) {
 	err = updateKonnectConfigStore(ctx, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
+
+func TestDeleteKonnectConfigStore_UsesGeneratedSDKOps(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockConfigStoresSDK(t)
+	obj := testGeneratedKonnectConfigStoreForSDKOps()
+	parentID := "parentID-1"
+	obj.SetControlPlaneID(parentID)
+	obj.SetKonnectID("konnect_configstore-id")
+
+	sdk.EXPECT().
+		DeleteConfigStore(
+			mock.Anything,
+			sdkkonnectops.DeleteConfigStoreRequest{
+				ControlPlaneID: parentID,
+				ConfigStoreID:  obj.GetKonnectStatus().GetKonnectID(),
+				Force:          sdkkonnectops.ForceTrue.ToPointer(),
+			},
+		).
+		Return(&sdkkonnectops.DeleteConfigStoreResponse{}, nil).
+		Once()
+
+	require.NoError(t, deleteKonnectConfigStore(ctx, sdk, obj))
+}
+
+func TestDeleteKonnectConfigStore_PropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockConfigStoresSDK(t)
+	obj := testGeneratedKonnectConfigStoreForSDKOps()
+	parentID := "parentID-1"
+	obj.SetControlPlaneID(parentID)
+	obj.SetKonnectID("konnect_configstore-id")
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		DeleteConfigStore(
+			mock.Anything,
+			sdkkonnectops.DeleteConfigStoreRequest{
+				ControlPlaneID: parentID,
+				ConfigStoreID:  obj.GetKonnectStatus().GetKonnectID(),
+				Force:          sdkkonnectops.ForceTrue.ToPointer(),
+			},
+		).
+		Return(nil, sdkErr).
+		Once()
+
+	err := deleteKonnectConfigStore(ctx, sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}

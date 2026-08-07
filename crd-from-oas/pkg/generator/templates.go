@@ -2221,6 +2221,9 @@ func TestDelete{{.Entity}}_UsesGeneratedSDKOps(t *testing.T) {
 				{{.SDKFieldName}}: {{.VarName}},
 {{- end}}
 				{{.Delete.DeleteEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+{{- range .Delete.DeleteRequestFields}}
+				{{.Name}}: {{.Value}},
+{{- end}}
 			},
 {{- else if .Delete.DeleteOmitsEntityID}}
 			{{(index .Delete.Parents 0).VarName}}{{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
@@ -2292,6 +2295,9 @@ func TestDelete{{.Entity}}_PropagatesSDKError(t *testing.T) {
 				{{.SDKFieldName}}: {{.VarName}},
 {{- end}}
 				{{.Delete.DeleteEntityIDField}}: obj.GetKonnectStatus().GetKonnectID(),
+{{- range .Delete.DeleteRequestFields}}
+				{{.Name}}: {{.Value}},
+{{- end}}
 			},
 {{- else if .Delete.DeleteOmitsEntityID}}
 			{{(index .Delete.Parents 0).VarName}}{{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
@@ -2740,6 +2746,9 @@ func delete{{.Entity}}(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 		{{.DeleteEntityIDField}}: id,
+		{{- range .DeleteRequestFields}}
+		{{.Name}}: {{.Value}},
+		{{- end}}
 	})
 {{- else if and (not .DeleteAsUpdate) .DeleteOmitsEntityID}}
 

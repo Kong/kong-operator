@@ -164,6 +164,86 @@ apiGroupVersions:
 		assert.Contains(t, err.Error(), "ops.delete.asPUT requires ops.update.path")
 	})
 
+	t.Run("valid config with delete path and requestFields", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v2/control-planes/{controlPlaneId}/config-stores
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateConfigStore
+          delete:
+            path: github.com/Kong/sdk-konnect-go/models/operations.DeleteConfigStoreRequest
+            requestFields:
+              - name: Force
+                value: sdkkonnectops.ForceTrue.ToPointer()
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		deleteOp := konnect.Types[0].Ops["delete"]
+		require.NotNil(t, deleteOp)
+		assert.Equal(t,
+			"github.com/Kong/sdk-konnect-go/models/operations.DeleteConfigStoreRequest",
+			deleteOp.Path,
+		)
+		require.Len(t, deleteOp.RequestFields, 1)
+		assert.Equal(t, "Force", deleteOp.RequestFields[0].Name)
+		assert.Equal(t, "sdkkonnectops.ForceTrue.ToPointer()", deleteOp.RequestFields[0].Value)
+	})
+
+	t.Run("invalid config with delete asPUT and path", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v3/portals/{portalId}/customization
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.PortalCustomization
+          delete:
+            asPUT: true
+            path: github.com/Kong/sdk-konnect-go/models/operations.DeletePortalCustomizationRequest
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.delete.asPUT and ops.delete.path are mutually exclusive")
+	})
+
+	t.Run("invalid config with delete requestFields missing value", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /v2/control-planes/{controlPlaneId}/config-stores
+        ops:
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateConfigStore
+          delete:
+            path: github.com/Kong/sdk-konnect-go/models/operations.DeleteConfigStoreRequest
+            requestFields:
+              - name: Force
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.delete.requestFields[0].value is required")
+	})
+
 	t.Run("valid config with ops uid tag filter", func(t *testing.T) {
 		content := `
 apiGroupVersions:

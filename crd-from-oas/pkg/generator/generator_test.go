@@ -5770,6 +5770,105 @@ func TestGenerateOpsDelete_NonRootEntity(t *testing.T) {
 	assert.NotContains(t, file.Content, "sdkkonnectops.Delete")
 }
 
+// newConfigStoreDeleteFixture returns the generator, schema and ops config for a
+// single-parent entity whose SDK delete method takes a wrapped request struct.
+func newConfigStoreDeleteFixture(deleteOp *config.OpConfig) (*Generator, *parser.Schema, *config.EntityOpsConfig) {
+	g := NewGenerator(Config{
+		APIGroup:             "konnect.konghq.com",
+		APIVersion:           "v1alpha1",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectConfigStore": {
+				IsRoot: new(false),
+				ParentEntityGVK: &config.EntityGVKConfig{
+					Kind:    "KonnectGatewayControlPlane",
+					Group:   "konnect.konghq.com",
+					Version: "v1alpha2",
+				},
+			},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-config-store",
+		Tags:               []string{"Config Stores"},
+		SuccessResponseRef: "ConfigStoreResponse",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "controlPlaneId", EntityName: "ControlPlane"},
+		},
+		// DELETE /v2/control-planes/{controlPlaneId}/config-stores/{configStoreId}
+		// — 2 path params, 1 optional query param (force).
+		DeleteOperationID:     "delete-config-store",
+		DeleteTags:            []string{"Config Stores"},
+		DeletePathParams:      []string{"controlPlaneId", "configStoreId"},
+		DeleteQueryParamCount: 1,
+	}
+	opsConfig := &config.EntityOpsConfig{
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.ConfigStoresSDK",
+			FieldName: "ConfigStores",
+		},
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateConfigStore"},
+			"delete": deleteOp,
+		},
+	}
+	return g, schema, opsConfig
+}
+
+func TestGenerateOpsDelete_SingleParentWrappedRequestFromConfiguredPath(t *testing.T) {
+	g, schema, opsConfig := newConfigStoreDeleteFixture(&config.OpConfig{
+		Path: "github.com/Kong/sdk-konnect-go/models/operations.DeleteConfigStoreRequest",
+		RequestFields: []config.RequestFieldConfig{
+			{Name: "Force", Value: "sdkkonnectops.ForceTrue.ToPointer()"},
+		},
+	})
+
+	file, info, err := g.generateOpsDelete("KonnectConfigStore", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotNil(t, info)
+
+	assert.Equal(t, "GetConfigStoresSDK", info.SDKGetter)
+
+	// A single parent still gets the wrapped call shape because ops.delete.path
+	// names a type in the SDK operations package. The configured type name is
+	// used verbatim rather than the "<Method>Request" convention.
+	assert.Contains(t, file.Content, "sdk.DeleteConfigStore(ctx, sdkkonnectops.DeleteConfigStoreRequest{")
+	assert.Contains(t, file.Content, "ControlPlaneID: parentID,")
+	assert.Contains(t, file.Content, "ConfigStoreID: id,")
+
+	// Configured request fields are emitted verbatim, so the optional force query
+	// param is set instead of being left nil.
+	assert.Contains(t, file.Content, "Force: sdkkonnectops.ForceTrue.ToPointer(),")
+
+	// The positional call shape (and its nil query param) is not emitted.
+	assert.NotContains(t, file.Content, "sdk.DeleteConfigStore(ctx, parentID, id")
+}
+
+func TestGenerateOpsDelete_ConfiguredPathMustBeOperationsType(t *testing.T) {
+	g, schema, opsConfig := newConfigStoreDeleteFixture(&config.OpConfig{
+		Path: "github.com/Kong/sdk-konnect-go/models/components.DeleteConfigStore",
+	})
+
+	_, _, err := g.generateOpsDelete("KonnectConfigStore", schema, opsConfig)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "ops.delete.path must reference a type in the SDK operations package")
+}
+
+func TestGenerateOpsDelete_RequestFieldsRequireWrappedCallShape(t *testing.T) {
+	g, schema, opsConfig := newConfigStoreDeleteFixture(&config.OpConfig{
+		RequestFields: []config.RequestFieldConfig{
+			{Name: "Force", Value: "sdkkonnectops.ForceTrue.ToPointer()"},
+		},
+	})
+
+	_, _, err := g.generateOpsDelete("KonnectConfigStore", schema, opsConfig)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "ops.delete.requestFields requires the wrapped call shape")
+}
+
 func TestGenerateOpsDelete_NonRootEntityWithParentTypeOverride(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
