@@ -33,8 +33,16 @@ import (
 )
 
 const (
-	timeout = 5 * time.Second
-	tick    = 250 * time.Millisecond
+	// timeout is the total budget for a golden output to be accepted by Kong.
+	// It must comfortably exceed requestTimeout so more than one attempt fits -
+	// otherwise a single slow request consumes the whole budget and the retry
+	// loop never runs a second time.
+	timeout = 60 * time.Second
+	// requestTimeout bounds a single POST /config. The Admin API client has no
+	// http.Client.Timeout (see internal/adminapi/kong.go), so without this the
+	// only deadline is the long-lived parent test context.
+	requestTimeout = 15 * time.Second
+	tick           = 250 * time.Millisecond
 )
 
 // TestKongClientGoldenTestsOutputs ensures that the KongClient's golden tests outputs are accepted by Kong.
@@ -58,7 +66,7 @@ func TestKongClientGoldenTestsOutputs(t *testing.T) {
 		return strings.Contains(path, "default_")
 	})
 
-	t.Logf("will test %d expression routes outputs and %d default ones", len(goldenTestsOutputsPaths), len(defaultOutputsPaths))
+	t.Logf("will test %d expression routes outputs and %d default ones", len(expressionRoutesOutputsPaths), len(defaultOutputsPaths))
 
 	t.Run("expressions router", func(t *testing.T) {
 		t.Parallel()
@@ -192,7 +200,10 @@ func ensureGoldenTestOutputIsAccepted(ctx context.Context, t *testing.T, goldenT
 	require.NoError(t, err)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := kongClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(cfgAsJSON), true, true)
+		reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+		defer cancel()
+
+		err := kongClient.ReloadDeclarativeRawConfig(reqCtx, bytes.NewReader(cfgAsJSON), true, true)
 		if !assert.NoErrorf(t, err, "failed to reload declarative config") {
 			if apiErr, ok := errors.AsType[*kong.APIError](err); ok {
 				t.Errorf("Kong Admin API response: %s", apiErr.Raw())
