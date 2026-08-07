@@ -811,6 +811,76 @@ func TestGenerateCRDType_ParentRefWithoutReplacementReusesImmediateParentStatusF
 	assert.NotContains(t, content, "EventGatewayVirtualCluster *KonnectEntityRef")
 }
 
+func TestGenerateCRDType_ParentRefIsImmutableOnceProgrammed(t *testing.T) {
+	newGenerator := func(reconcilers map[string]*config.ReconcilerConfig) *Generator {
+		return NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			CommonTypes: &config.CommonTypesConfig{
+				ObjectRef: &config.ObjectRefConfig{
+					Import: &config.ImportConfig{
+						Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+						Alias: "commonv1alpha1",
+					},
+				},
+			},
+			ReconcilerConfig: reconcilers,
+		})
+	}
+
+	const rulePrefix = `// +kubebuilder:validation:XValidation:rule="!has(self.spec.`
+
+	t.Run("configured parentRef", func(t *testing.T) {
+		g := newGenerator(map[string]*config.ReconcilerConfig{
+			"EventGatewayVirtualClusterConsumePolicy": {
+				ParentEntityType: "EventGatewayVirtualCluster",
+				ParentRef: &config.ParentRefConfig{
+					FieldName: "eventGatewayVirtualClusterRef",
+				},
+			},
+		})
+
+		content, err := g.generateCRDType("CreateEventGatewayVirtualClusterConsumePolicy", &parser.Schema{
+			Name: "CreateEventGatewayVirtualClusterConsumePolicy",
+			Dependencies: []*parser.Dependency{
+				{ParamName: "virtualClusterId", EntityName: "VirtualCluster", AccessorEntityName: "EventGatewayVirtualCluster", FieldName: "VirtualClusterRef", JSONName: "virtualClusterRef"},
+			},
+		})
+		require.NoError(t, err)
+		assert.Contains(t, content, rulePrefix+"eventGatewayVirtualClusterRef)")
+		assert.Contains(t, content, `message="spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed"`)
+		// The suppressed OpenAPI-derived field must not get a rule of its own.
+		assert.NotContains(t, content, rulePrefix+"virtualClusterRef)")
+	})
+
+	// Entities whose parent comes from an OpenAPI path parameter rather than a
+	// parentRef override (e.g. KonnectConfigStore under
+	// /v2/control-planes/{controlPlaneId}/config-stores) need the same rule: the
+	// Konnect ID in status belongs to the old parent.
+	t.Run("OpenAPI-derived parent dependency", func(t *testing.T) {
+		g := newGenerator(nil)
+
+		content, err := g.generateCRDType("CreateConfigStore", &parser.Schema{
+			Name: "CreateConfigStore",
+			Dependencies: []*parser.Dependency{
+				{ParamName: "controlPlaneId", EntityName: "ControlPlane", FieldName: "ControlPlaneRef", JSONName: "controlPlaneRef"},
+			},
+		})
+		require.NoError(t, err)
+		assert.Contains(t, content, "ControlPlaneRef commonv1alpha1.ObjectRef")
+		assert.Contains(t, content, rulePrefix+"controlPlaneRef)")
+		assert.Contains(t, content, `message="spec.controlPlaneRef is immutable when an entity is already Programmed"`)
+	})
+
+	t.Run("root entity without a parent", func(t *testing.T) {
+		g := newGenerator(nil)
+
+		content, err := g.generateCRDType("CreatePortal", &parser.Schema{Name: "CreatePortal"})
+		require.NoError(t, err)
+		assert.NotContains(t, content, "is immutable when an entity is already Programmed")
+	})
+}
+
 func TestGenerateCRDType_EmitsInlineAPISpecTypes(t *testing.T) {
 	schema := &parser.Schema{
 		Name: "CreatePortalCustomization",

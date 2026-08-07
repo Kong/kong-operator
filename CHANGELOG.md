@@ -68,6 +68,13 @@
   [5163](https://github.com/Kong/kong-operator/pull/5163)
   [5164](https://github.com/Kong/kong-operator/pull/5164)
 
+### Changed
+
+- Konnect entities whose parent reference is derived from the Konnect API path
+  now reject changes to that reference once the entity is `Programmed`, matching
+  the behavior that already applied to every other Konnect entity.
+  [#5207](https://github.com/Kong/kong-operator/pull/5207)
+
 ## [v2.3.0-rc.3]
 
 > Release date: 2026-08-06
