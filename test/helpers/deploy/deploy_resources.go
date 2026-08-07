@@ -698,6 +698,47 @@ func KonnectConfigStore(
 	return &obj
 }
 
+// KonnectConfigStoreWithID deploys a KonnectConfigStore resource, marks it Programmed
+// and assigns it a Konnect ID, i.e. a reference target that resolves successfully.
+func KonnectConfigStoreWithID(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectConfigStore {
+	t.Helper()
+
+	cs := KonnectConfigStore(t, ctx, cl, cp, opts...)
+	MarkKonnectConfigStoreProgrammed(t, ctx, cl, cs, randomSuffix())
+	return cs
+}
+
+// MarkKonnectConfigStoreProgrammed marks the given KonnectConfigStore Programmed with
+// the given Konnect ID, simulating what the KonnectConfigStore reconciler does once
+// the Config Store has been created in Konnect.
+func MarkKonnectConfigStoreProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cs *konnectv1alpha1.KonnectConfigStore,
+	konnectID string,
+) {
+	t.Helper()
+
+	cs.Status.ID = konnectID
+	cs.Status.Conditions = []metav1.Condition{
+		{
+			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
+			ObservedGeneration: cs.GetGeneration(),
+			LastTransitionTime: metav1.Now(),
+		},
+	}
+	require.NoError(t, cl.Status().Update(ctx, cs))
+}
+
 // KonnectCloudGatewayNetwork deploys a KonnectCloudGatewayNetwork resource and returns it.
 func KonnectCloudGatewayNetwork(
 	t *testing.T,

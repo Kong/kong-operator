@@ -9,6 +9,8 @@ import (
 const (
 	// IndexFieldKongVaultOnKonnectGatewayControlPlane is the index field for KongVault -> KonnectGatewayControlPlane.
 	IndexFieldKongVaultOnKonnectGatewayControlPlane = "vaultKonnectGatewayControlPlaneRef"
+	// IndexFieldKongVaultOnKonnectConfigStore is the index field for KongVault -> KonnectConfigStore.
+	IndexFieldKongVaultOnKonnectConfigStore = "vaultKonnectConfigStoreRef"
 )
 
 // OptionsForKongVault returns required Index options for KongVault reconciler.
@@ -19,5 +21,24 @@ func OptionsForKongVault(cl client.Client) []Option {
 			Field:          IndexFieldKongVaultOnKonnectGatewayControlPlane,
 			ExtractValueFn: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongVault](cl),
 		},
+		{
+			Object:         &configurationv1alpha1.KongVault{},
+			Field:          IndexFieldKongVaultOnKonnectConfigStore,
+			ExtractValueFn: kongVaultOnKonnectConfigStoreRef,
+		},
 	}
+}
+
+func kongVaultOnKonnectConfigStoreRef(object client.Object) []string {
+	vault, ok := object.(*configurationv1alpha1.KongVault)
+	if !ok {
+		return nil
+	}
+	// KongVault is cluster-scoped, so the reference carries its own namespace and
+	// there is nothing to default it to.
+	nn, ok := vault.GetConfigStoreRefNamespacedName()
+	if !ok {
+		return nil
+	}
+	return []string{nn.String()}
 }
