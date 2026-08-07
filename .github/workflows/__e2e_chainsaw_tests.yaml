@@ -51,7 +51,7 @@ jobs:
     - name: load docker image
       run: docker load -i kong-operator_e2e.tar
 
-    - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+    - uses: ./.github/actions/setup-mise
       with:
         install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind
 

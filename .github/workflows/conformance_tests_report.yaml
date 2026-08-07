@@ -42,6 +42,9 @@ jobs:
           fetch-tags: true
           ref: ${{ github.event.inputs.tag }}
 
+      # NOTE: other places use .github/actions/setup-mise but this workflow
+      # can be run to generate reports for refs which do not have that action yet.
+      # This will be able to be updated when we stop producing reports for older versions.
       - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
         with:
           install: false
