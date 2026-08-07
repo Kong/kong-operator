@@ -1616,8 +1616,8 @@ spec:
                                     description: Path configuration.
                                     properties:
                                       pathParam:
-                                        description: The path param name to match
-                                          for routing.
+                                        description: The name of the regex capture
+                                          group defined in the route path for routing.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -1789,7 +1789,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -4489,8 +4489,8 @@ spec:
                                     description: Path configuration.
                                     properties:
                                       pathParam:
-                                        description: The path param name to match
-                                          for routing.
+                                        description: The name of the regex capture
+                                          group defined in the route path for routing.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -4662,7 +4662,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.

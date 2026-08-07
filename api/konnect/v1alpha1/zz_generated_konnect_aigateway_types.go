@@ -104,8 +104,8 @@ type KonnectAIGatewayAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// +kubebuilder:validation:Pattern=`^[0-9a-z-]+$`
+	Name string `json:"name,omitzero"`
 
 	// Array of proxy URLs associated with reaching the data-planes connected to a
 	// control-plane.

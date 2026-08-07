@@ -5,7 +5,7 @@ go 1.26.5
 require (
 	cloud.google.com/go/container v1.53.1
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.52.0
+	github.com/Kong/sdk-konnect-go v0.53.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.21.1
@@ -26,7 +26,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.42.0
+	github.com/kong/go-database-reconciler v1.42.1
 	github.com/kong/go-kong v0.77.0
 	github.com/kong/kubernetes-telemetry v0.1.14
 	github.com/kong/kubernetes-testing-framework v0.51.0

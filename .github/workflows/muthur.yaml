@@ -9,16 +9,18 @@ name: Muthur
 #
 # kong-operator is public and Kong/ksai is internal, so ksai actions are checked out locally
 # via sparse-checkout and referenced by path rather than by a remote `uses:`, which GitHub
-# won't resolve from a public repo into a private one. `ksai_ref` pins the kreview plugin to
-# the same commit as the action checkout; bump both to a release tag once Kong/ksai publishes
-# one.
+# won't resolve from a public repo into a private one. codeowners-authz, ai-reviewer-federated
+# and the kreview plugin each version independently in Kong/ksai, so each is pinned to its own
+# release tag, bumped by Renovate.
 
 on:
   issue_comment:
     types: [created]
 
 env:
-  KSAI_REF: cc39622c2138bd0f05faadc41faebf76eb1afe05
+  CODEOWNERS_AUTHZ_REF: codeowners-authz/v1.0.4
+  AI_REVIEWER_FEDERATED_REF: ai-reviewer-federated/v1.7.0
+  KREVIEW_PLUGIN_REF: plugins/kreview/v0.9.0
 
 jobs:
   # Authorization runs in its own job, before the review job's concurrency group, so an
@@ -52,7 +54,7 @@ jobs:
           token: ${{ steps.token.outputs.token }}
           path: _ksai-authz
           repository: Kong/ksai
-          ref: ${{ env.KSAI_REF }}
+          ref: ${{ env.CODEOWNERS_AUTHZ_REF }}
           sparse-checkout: |
             .github/actions/codeowners-authz
           persist-credentials: false
@@ -102,7 +104,7 @@ jobs:
           token: ${{ steps.kong-token.outputs.token }}
           path: _ksai-review
           repository: Kong/ksai
-          ref: ${{ env.KSAI_REF }}
+          ref: ${{ env.AI_REVIEWER_FEDERATED_REF }}
           sparse-checkout: |
             .github/actions/ai-reviewer-federated
           persist-credentials: false
@@ -111,7 +113,7 @@ jobs:
       # kreview plugin checkout to its own ref: ksai_ref pins the plugin explicitly instead.
       - uses: ./_ksai-review/.github/actions/ai-reviewer-federated
         with:
-          ksai_ref: ${{ env.KSAI_REF }}
+          ksai_ref: ${{ env.KREVIEW_PLUGIN_REF }}
           trigger_phrase: "/muthur"
           # GITHUB_TOKEN checks out the PR head, reacts, and posts the review comment.
           source_org_github_token: ${{ github.token }}
@@ -138,7 +140,7 @@ jobs:
           token: ${{ steps.kong-token.outputs.token }}
           path: _ksai-review
           repository: Kong/ksai
-          ref: ${{ env.KSAI_REF }}
+          ref: ${{ env.AI_REVIEWER_FEDERATED_REF }}
           sparse-checkout: |
             .github/actions/ai-reviewer-federated
           persist-credentials: false

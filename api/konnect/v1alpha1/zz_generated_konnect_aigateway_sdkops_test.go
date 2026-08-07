@@ -14,7 +14,7 @@ func TestKonnectAIGatewayAPISpec_ToCreateAIGatewayRequest(t *testing.T) {
 		Description: "test-value",
 		DisplayName: "test-value",
 		Labels:      PublicLabels{"test-key": "test-value"},
-		Name:        AIGatewayEntityIdentifier("test-value"),
+		Name:        "test-value",
 	}
 	result, err := spec.ToCreateAIGatewayRequest()
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestKonnectAIGatewayAPISpec_ToUpdateAIGatewayRequest(t *testing.T) {
 		Description: "test-value",
 		DisplayName: "test-value",
 		Labels:      PublicLabels{"test-key": "test-value"},
-		Name:        AIGatewayEntityIdentifier("test-value"),
+		Name:        "test-value",
 	}
 	result, err := spec.ToUpdateAIGatewayRequest()
 	require.NoError(t, err)
