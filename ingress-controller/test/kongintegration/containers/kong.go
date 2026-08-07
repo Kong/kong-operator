@@ -61,31 +61,40 @@ type Kong struct {
 // NewKong spawns a docker container running Kong (its image is determined by environment variables).
 // It sets up a cleanup function that will terminate the container when the test finishes.
 func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
-	req := testcontainers.ContainerRequest{
-		Image: kongImageUnderTest(t),
-		Env: map[string]string{
-			"KONG_DATABASE":      "off",
-			"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongAdminPort),
-			"KONG_PROXY_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongProxyPort),
-			"KONG_ROUTER_FLAVOR": defaultRouterFlavor,
-			"KONG_LICENSE_DATA":  testhelpers.KongLicenseData(),
-		},
-		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(kongAdminPort),
-			wait.ForListeningPort(kongProxyPort),
-		),
+	// newRequest is built fresh on every retry attempt so BindLocalPort picks a new
+	// host port each time. GetFreePort only proves a port was free at check time, not
+	// at bind time, so reusing a request whose ports were bound once means a retry
+	// would rebind the same doomed port. BindLocalPort also appends to
+	// req.ExposedPorts and chains req.HostConfigModifier, so calling it twice on the
+	// same req (rather than a fresh one) would accumulate stale bindings.
+	newRequest := func() testcontainers.ContainerRequest {
+		req := testcontainers.ContainerRequest{
+			Image: kongImageUnderTest(t),
+			Env: map[string]string{
+				"KONG_DATABASE":      "off",
+				"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongAdminPort),
+				"KONG_PROXY_LISTEN":  fmt.Sprintf("0.0.0.0:%s", kongProxyPort),
+				"KONG_ROUTER_FLAVOR": defaultRouterFlavor,
+				"KONG_LICENSE_DATA":  testhelpers.KongLicenseData(),
+			},
+			WaitingFor: wait.ForAll(
+				wait.ForListeningPort(kongAdminPort),
+				wait.ForListeningPort(kongProxyPort),
+			),
+		}
+		for _, opt := range opts {
+			opt(&req)
+		}
+		BindLocalPort(t, &req, kongAdminPort)
+		BindLocalPort(t, &req, kongProxyPort)
+		return req
 	}
-	for _, opt := range opts {
-		opt(&req)
-	}
-	BindLocalPort(t, &req, kongAdminPort)
-	BindLocalPort(t, &req, kongProxyPort)
 
 	kongC, err := retry.NewWithData[testcontainers.Container](
 		retry.Context(ctx),
-		retry.Attempts(100),
-		retry.Delay(10*time.Millisecond),
-		retry.DelayType(retry.FixedDelay),
+		retry.Attempts(10),
+		retry.Delay(200*time.Millisecond),
+		retry.DelayType(retry.BackOffDelay),
 		retry.LastErrorOnly(true),
 		retry.OnRetry(func(_ uint, err error) {
 			t.Logf("failed creating Kong container: %v", err)
@@ -93,7 +102,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	).Do(
 		func() (testcontainers.Container, error) {
 			return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-				ContainerRequest: req,
+				ContainerRequest: newRequest(),
 				Started:          true,
 			})
 		},
