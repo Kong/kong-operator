@@ -67,6 +67,9 @@
   [5160](https://github.com/Kong/kong-operator/pull/5160)
   [5163](https://github.com/Kong/kong-operator/pull/5163)
   [5164](https://github.com/Kong/kong-operator/pull/5164)
+- HybridGateway: Support GRPCRoute for hybrid
+  [5139](https://github.com/Kong/kong-operator/pull/5139)
+  [5141](https://github.com/Kong/kong-operator/pull/5141)
 
 ## [v2.3.0-rc.3]
 
