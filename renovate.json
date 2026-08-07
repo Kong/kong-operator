@@ -140,6 +140,39 @@
       "matchStrings": [
         "#\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+depName=(?<depName>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?(registryUrl=(?<registryUrl>.*)\\s+)?versioning=(?<versioning>.*?)\\n.+'(?<currentValue>.*?)'"
       ]
+    },
+    {
+      "description": "Bump CODEOWNERS_AUTHZ_REF in .github/workflows/muthur.yaml to the latest Kong/ksai codeowners-authz release",
+      "customType": "regex",
+      "fileMatch": ["^\\.github/workflows/muthur\\.yaml$"],
+      "matchStrings": ["CODEOWNERS_AUTHZ_REF:\\s*codeowners-authz/v(?<currentValue>[0-9.]+)"],
+      "depNameTemplate": "Kong/ksai/codeowners-authz",
+      "packageNameTemplate": "Kong/ksai",
+      "extractVersionTemplate": "^codeowners-authz/v(?<version>[0-9.]+)$",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    },
+    {
+      "description": "Bump AI_REVIEWER_FEDERATED_REF in .github/workflows/muthur.yaml to the latest Kong/ksai ai-reviewer-federated release",
+      "customType": "regex",
+      "fileMatch": ["^\\.github/workflows/muthur\\.yaml$"],
+      "matchStrings": ["AI_REVIEWER_FEDERATED_REF:\\s*ai-reviewer-federated/v(?<currentValue>[0-9.]+)"],
+      "depNameTemplate": "Kong/ksai/ai-reviewer-federated",
+      "packageNameTemplate": "Kong/ksai",
+      "extractVersionTemplate": "^ai-reviewer-federated/v(?<version>[0-9.]+)$",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    },
+    {
+      "description": "Bump KREVIEW_PLUGIN_REF in .github/workflows/muthur.yaml to the latest Kong/ksai kreview plugin release",
+      "customType": "regex",
+      "fileMatch": ["^\\.github/workflows/muthur\\.yaml$"],
+      "matchStrings": ["KREVIEW_PLUGIN_REF:\\s*plugins/kreview/v(?<currentValue>[0-9.]+)"],
+      "depNameTemplate": "Kong/ksai/plugins/kreview",
+      "packageNameTemplate": "Kong/ksai",
+      "extractVersionTemplate": "^plugins/kreview/v(?<version>[0-9.]+)$",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
