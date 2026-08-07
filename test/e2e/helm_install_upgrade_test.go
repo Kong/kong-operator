@@ -192,9 +192,9 @@ func TestHelmUpgrade(t *testing.T) {
 							},
 						},
 						{
-							Name: "DataPlane deployment is patched after operator upgrade (adjusting securityContext)",
+							Name: "DataPlane deployment is not patched after install",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -224,9 +224,9 @@ func TestHelmUpgrade(t *testing.T) {
 							},
 						},
 						{
-							Name: "DataPlane deployment is not patched after operator upgrade",
+							Name: "DataPlane deployment is patched after operator upgrade (adjusting securityContext)",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
