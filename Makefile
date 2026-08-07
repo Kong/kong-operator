@@ -70,6 +70,18 @@ mise-plugin-install: mise
 .PHONY: mise-install
 mise-install: mise
 	@[ -x "$(TOOL_BIN)" ] || MISE_DATA_DIR=$(PROJECT_DIR)/bin/ $(MISE) install -q $(DEP_VER)
+	@# keep only the pinned version of this tool. CI restores bin/installs
+	@# from a restore-keys prefix (see .github/actions/setup-mise), so without this
+	@# every tool bump carries the old version forward in the cache forever.
+	@rel="$(patsubst $(PROJECT_DIR)/bin/installs/%,%,$(TOOL_BIN))"; \
+	tool="$${rel%%/*}"; rest="$${rel#*/}"; ver="$${rest%%/*}"; \
+	dir="$(PROJECT_DIR)/bin/installs/$$tool"; \
+	if [ -n "$$tool" ] && [ -n "$$ver" ] && [ -d "$$dir/$$ver" ]; then \
+	  find "$$dir" -mindepth 1 -maxdepth 1 -type d ! -name "$$ver" \
+	    -exec echo "mise-install: removing stale $$tool version {}" \; -exec rm -rf {} +; \
+	  find "$$dir" -mindepth 1 -maxdepth 1 -type l ! -exec test -e {} \; \
+	    -exec echo "mise-install: removing dangling symlink {}" \; -exec rm -f {} +; \
+	fi
 
 # NOTE: some tools like helm are to be used by users inside the operator directory.
 # Installing them to bin/ will make them unavailable unless MISE_DATA_DIR env variable
