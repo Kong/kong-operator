@@ -42798,7 +42798,7 @@ spec:
                       This value is immutable after creation.
                     maxLength: 256
                     minLength: 1
-                    pattern: ^[A-Za-z0-9._-]{1,256}$
+                    pattern: ^[A-Za-z0-9._:-]{1,256}$
                     type: string
                   policies:
                     description: List of policy references.
@@ -43161,7 +43161,7 @@ spec:
                       This value is immutable after creation.
                     maxLength: 256
                     minLength: 1
-                    pattern: ^[A-Za-z0-9._-]{1,256}$
+                    pattern: ^[A-Za-z0-9._:-]{1,256}$
                     type: string
                   ttl:
                     description: |-
@@ -43456,7 +43456,7 @@ spec:
                       This value is immutable after creation.
                     maxLength: 256
                     minLength: 1
-                    pattern: ^[A-Za-z0-9._-]{1,256}$
+                    pattern: ^[A-Za-z0-9._:-]{1,256}$
                     type: string
                   policies:
                     description: List of policy references.
@@ -43759,7 +43759,7 @@ spec:
                       This value is immutable after creation.
                     maxLength: 256
                     minLength: 1
-                    pattern: ^[A-Za-z0-9._-]{1,256}$
+                    pattern: ^[A-Za-z0-9._:-]{1,256}$
                     type: string
                   policies:
                     description: List of policy references.
@@ -44134,7 +44134,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - displayName
@@ -44324,7 +44324,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - displayName
@@ -44619,6 +44619,46 @@ spec:
                                       type: string
                                     type: array
                                 type: object
+                              identityProviders:
+                                description: |-
+                                  List of identity providers for granting access to the MCP server.
+                                  At most 1 identity provider of each identity provider type can be
+                                  referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                    by name.
+                                  type: string
+                                maxItems: 1
+                                type: array
+                              metadata:
+                                description: OAuth 2.0 Protected Resource Metadata advertised for this MCP server.
+                                properties:
+                                  authorizationServers:
+                                    description: |-
+                                      List of authorization server issuer URLs that can issue tokens for this
+                                      resource.
+                                    items:
+                                      type: string
+                                    type: array
+                                  discoveryEndpoint:
+                                    description: The URL where the protected resource metadata is served.
+                                    maxLength: 253
+                                    type: string
+                                  endpoint:
+                                    description: The protected resource endpoint the metadata describes.
+                                    maxLength: 253
+                                    type: string
+                                  resource:
+                                    description: The protected resource's identifier (resource URI).
+                                    maxLength: 253
+                                    type: string
+                                  scopesSupported:
+                                    description: List of OAuth scopes supported by the protected resource.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                             type: object
                           oauthAccessToken:
                             description: Oauth configuration.
@@ -44665,6 +44705,46 @@ spec:
                                     type: array
                                   deny:
                                     description: List of consumer groups that are denied access.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              identityProviders:
+                                description: |-
+                                  List of identity providers for granting access to the MCP server.
+                                  At most 1 identity provider of each identity provider type can be
+                                  referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                    by name.
+                                  type: string
+                                maxItems: 1
+                                type: array
+                              metadata:
+                                description: OAuth 2.0 Protected Resource Metadata advertised for this MCP server.
+                                properties:
+                                  authorizationServers:
+                                    description: |-
+                                      List of authorization server issuer URLs that can issue tokens for this
+                                      resource.
+                                    items:
+                                      type: string
+                                    type: array
+                                  discoveryEndpoint:
+                                    description: The URL where the protected resource metadata is served.
+                                    maxLength: 253
+                                    type: string
+                                  endpoint:
+                                    description: The protected resource endpoint the metadata describes.
+                                    maxLength: 253
+                                    type: string
+                                  resource:
+                                    description: The protected resource's identifier (resource URI).
+                                    maxLength: 253
+                                    type: string
+                                  scopesSupported:
+                                    description: List of OAuth scopes supported by the protected resource.
                                     items:
                                       type: string
                                     type: array
@@ -45275,7 +45355,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -45738,7 +45818,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -46056,6 +46136,46 @@ spec:
                                       type: string
                                     type: array
                                 type: object
+                              identityProviders:
+                                description: |-
+                                  List of identity providers for granting access to the MCP server.
+                                  At most 1 identity provider of each identity provider type can be
+                                  referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                    by name.
+                                  type: string
+                                maxItems: 1
+                                type: array
+                              metadata:
+                                description: OAuth 2.0 Protected Resource Metadata advertised for this MCP server.
+                                properties:
+                                  authorizationServers:
+                                    description: |-
+                                      List of authorization server issuer URLs that can issue tokens for this
+                                      resource.
+                                    items:
+                                      type: string
+                                    type: array
+                                  discoveryEndpoint:
+                                    description: The URL where the protected resource metadata is served.
+                                    maxLength: 253
+                                    type: string
+                                  endpoint:
+                                    description: The protected resource endpoint the metadata describes.
+                                    maxLength: 253
+                                    type: string
+                                  resource:
+                                    description: The protected resource's identifier (resource URI).
+                                    maxLength: 253
+                                    type: string
+                                  scopesSupported:
+                                    description: List of OAuth scopes supported by the protected resource.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                             type: object
                           oauthAccessToken:
                             description: Oauth configuration.
@@ -46102,6 +46222,46 @@ spec:
                                     type: array
                                   deny:
                                     description: List of consumer groups that are denied access.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              identityProviders:
+                                description: |-
+                                  List of identity providers for granting access to the MCP server.
+                                  At most 1 identity provider of each identity provider type can be
+                                  referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                    by name.
+                                  type: string
+                                maxItems: 1
+                                type: array
+                              metadata:
+                                description: OAuth 2.0 Protected Resource Metadata advertised for this MCP server.
+                                properties:
+                                  authorizationServers:
+                                    description: |-
+                                      List of authorization server issuer URLs that can issue tokens for this
+                                      resource.
+                                    items:
+                                      type: string
+                                    type: array
+                                  discoveryEndpoint:
+                                    description: The URL where the protected resource metadata is served.
+                                    maxLength: 253
+                                    type: string
+                                  endpoint:
+                                    description: The protected resource endpoint the metadata describes.
+                                    maxLength: 253
+                                    type: string
+                                  resource:
+                                    description: The protected resource's identifier (resource URI).
+                                    maxLength: 253
+                                    type: string
+                                  scopesSupported:
+                                    description: List of OAuth scopes supported by the protected resource.
                                     items:
                                       type: string
                                     type: array
@@ -46701,7 +46861,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -47017,6 +47177,46 @@ spec:
                                       type: string
                                     type: array
                                 type: object
+                              identityProviders:
+                                description: |-
+                                  List of identity providers for granting access to the MCP server.
+                                  At most 1 identity provider of each identity provider type can be
+                                  referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                    by name.
+                                  type: string
+                                maxItems: 1
+                                type: array
+                              metadata:
+                                description: OAuth 2.0 Protected Resource Metadata advertised for this MCP server.
+                                properties:
+                                  authorizationServers:
+                                    description: |-
+                                      List of authorization server issuer URLs that can issue tokens for this
+                                      resource.
+                                    items:
+                                      type: string
+                                    type: array
+                                  discoveryEndpoint:
+                                    description: The URL where the protected resource metadata is served.
+                                    maxLength: 253
+                                    type: string
+                                  endpoint:
+                                    description: The protected resource endpoint the metadata describes.
+                                    maxLength: 253
+                                    type: string
+                                  resource:
+                                    description: The protected resource's identifier (resource URI).
+                                    maxLength: 253
+                                    type: string
+                                  scopesSupported:
+                                    description: List of OAuth scopes supported by the protected resource.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                             type: object
                           oauthAccessToken:
                             description: Oauth configuration.
@@ -47063,6 +47263,46 @@ spec:
                                     type: array
                                   deny:
                                     description: List of consumer groups that are denied access.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              identityProviders:
+                                description: |-
+                                  List of identity providers for granting access to the MCP server.
+                                  At most 1 identity provider of each identity provider type can be
+                                  referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                    by name.
+                                  type: string
+                                maxItems: 1
+                                type: array
+                              metadata:
+                                description: OAuth 2.0 Protected Resource Metadata advertised for this MCP server.
+                                properties:
+                                  authorizationServers:
+                                    description: |-
+                                      List of authorization server issuer URLs that can issue tokens for this
+                                      resource.
+                                    items:
+                                      type: string
+                                    type: array
+                                  discoveryEndpoint:
+                                    description: The URL where the protected resource metadata is served.
+                                    maxLength: 253
+                                    type: string
+                                  endpoint:
+                                    description: The protected resource endpoint the metadata describes.
+                                    maxLength: 253
+                                    type: string
+                                  resource:
+                                    description: The protected resource's identifier (resource URI).
+                                    maxLength: 253
+                                    type: string
+                                  scopesSupported:
+                                    description: List of OAuth scopes supported by the protected resource.
                                     items:
                                       type: string
                                     type: array
@@ -47733,7 +47973,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -48830,7 +49070,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -49544,7 +49784,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -49863,7 +50103,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -50182,7 +50422,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -50401,7 +50641,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -50620,7 +50860,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -50839,7 +51079,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -51058,7 +51298,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -51277,7 +51517,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -51591,7 +51831,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -51810,7 +52050,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -52029,7 +52269,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -52248,7 +52488,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -52467,7 +52707,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -52686,7 +52926,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -52905,7 +53145,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -53157,7 +53397,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -53401,7 +53641,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -53699,7 +53939,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -53918,7 +54158,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -54137,7 +54377,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                     required:
                     - config
@@ -55777,7 +56017,7 @@ spec:
                                     description: Path configuration.
                                     properties:
                                       pathParam:
-                                        description: The path param name to match for routing.
+                                        description: The name of the regex capture group defined in the route path for routing.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -55947,7 +56187,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -58424,7 +58664,7 @@ spec:
                                     description: Path configuration.
                                     properties:
                                       pathParam:
-                                        description: The path param name to match for routing.
+                                        description: The name of the regex capture group defined in the route path for routing.
                                         maxLength: 253
                                         minLength: 1
                                         type: string
@@ -58594,7 +58834,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -59996,7 +60236,7 @@ spec:
                       This value is immutable after creation.
                     maxLength: 256
                     minLength: 1
-                    pattern: ^[A-Za-z0-9._-]{1,256}$
+                    pattern: ^[A-Za-z0-9._:-]{1,256}$
                     type: string
                   type:
                     description: |-
@@ -60213,7 +60453,7 @@ spec:
                     description: The name for this AI Gateway. This value is immutable after creation.
                     maxLength: 256
                     minLength: 1
-                    pattern: ^[A-Za-z0-9._-]{1,256}$
+                    pattern: ^[0-9a-z-]+$
                     type: string
                   proxyUrls:
                     description: |-

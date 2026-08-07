@@ -468,7 +468,7 @@ func KonnectAIGateway(
 				},
 			},
 			APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
-				Name:        konnectv1alpha1.AIGatewayEntityIdentifier(name),
+				Name:        name,
 				DisplayName: "AI Gateway " + name,
 			},
 		},

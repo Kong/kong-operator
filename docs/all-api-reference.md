@@ -9974,7 +9974,6 @@ _Appears in:_
 - [AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
 - [AIGatewayModelProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
-- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
 
 #### AIGatewayGeminiEmbeddingsModelConfig
 
@@ -10170,6 +10169,8 @@ by name.
 _Appears in:_
 
 - [AIGatewayAgentAccess](#konnect-konghq-com-v1alpha1-types-aigatewayagentaccess)
+- [AIGatewayMCPServerListenerConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
+- [AIGatewayMCPServerListenerOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
 - [AIGatewayModelAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccess)
 
 
@@ -10242,6 +10243,8 @@ _Appears in:_
 - [AIGatewayMCPConversionToolAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpconversiontoolaccess)
 - [AIGatewayMCPServerBaseACLPropertiesConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)
 - [AIGatewayMCPServerBaseACLPropertiesOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)
+- [AIGatewayMCPServerListenerConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
+- [AIGatewayMCPServerListenerOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
 - [AIGatewayMCPToolBaseAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbaseaccess)
 - [AIGatewayMCPUpstreamToolAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpupstreamtoolaccess)
 
@@ -10319,9 +10322,6 @@ This feature is currently in beta and is subject to change.
 _Appears in:_
 
 - [AIGatewayMCPServerBaseACLProperties](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclproperties)
-- [AIGatewayMCPServerConversionListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
-- [AIGatewayMCPServerListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
-- [AIGatewayMCPServerPassthroughListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
 - [AIGatewayMCPServerUpstreamServerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)
 
 #### AIGatewayMCPServerBaseACLPropertiesOauth
@@ -10341,9 +10341,6 @@ This feature is currently in beta and is subject to change.
 _Appears in:_
 
 - [AIGatewayMCPServerBaseACLProperties](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclproperties)
-- [AIGatewayMCPServerConversionListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
-- [AIGatewayMCPServerListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
-- [AIGatewayMCPServerPassthroughListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
 - [AIGatewayMCPServerUpstreamServerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)
 
 #### AIGatewayMCPServerBaseACLPropertiesType
@@ -10445,8 +10442,8 @@ Only one of the fields should be set based on the AclAttributeType.
 | Field | Description |
 | --- | --- |
 | `aclAttributeType` _[AIGatewayMCPServerConversionListenerAccessType](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccesstype)_ | AclAttributeType designates the type of configuration. |
-| `consumer` _[AIGatewayMCPServerBaseACLPropertiesConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)_ | Consumer configuration. |
-| `oauthAccessToken` _[AIGatewayMCPServerBaseACLPropertiesOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)_ | Oauth configuration. |
+| `consumer` _[AIGatewayMCPServerListenerConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)_ | Consumer configuration. |
+| `oauthAccessToken` _[AIGatewayMCPServerListenerOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)_ | Oauth configuration. |
 
 _Appears in:_
 
@@ -10522,7 +10519,7 @@ _Appears in:_
 #### AIGatewayMCPServerListenerAccess
 
 
-AIGatewayMCPServerListenerAccess represents a union type for access.
+AIGatewayMCPServerListenerAccess represents a union type for AIGatewayMCPServerListenerAccess.
 Only one of the fields should be set based on the AclAttributeType.
 
 
@@ -10530,8 +10527,8 @@ Only one of the fields should be set based on the AclAttributeType.
 | Field | Description |
 | --- | --- |
 | `aclAttributeType` _[AIGatewayMCPServerListenerAccessType](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccesstype)_ | AclAttributeType designates the type of configuration. |
-| `consumer` _[AIGatewayMCPServerBaseACLPropertiesConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)_ | Consumer configuration. |
-| `oauthAccessToken` _[AIGatewayMCPServerBaseACLPropertiesOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)_ | Oauth configuration. |
+| `consumer` _[AIGatewayMCPServerListenerConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)_ | Consumer configuration. |
+| `oauthAccessToken` _[AIGatewayMCPServerListenerOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)_ | Oauth configuration. |
 
 _Appears in:_
 
@@ -10541,7 +10538,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-AIGatewayMCPServerListenerAccessType represents the type of access.
+AIGatewayMCPServerListenerAccessType represents the type of AIGatewayMCPServerListenerAccess.
 
 
 
@@ -10556,6 +10553,51 @@ Allowed values:
 | --- | --- |
 | `consumer` |  |
 | `oauthAccessToken` |  |
+
+#### AIGatewayMCPServerListenerConsumer
+
+
+AIGatewayMCPServerListenerConsumer **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Identity provider and OAuth 2.0 Protected Resource Metadata configuration
+for granting access to an MCP server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups. |
+| `defaultToolAcls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default access control rules for allowing or denying consumer groups to tools. |
+| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced. |
+| `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
+- [AIGatewayMCPServerListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
+- [AIGatewayMCPServerPassthroughListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
+
+#### AIGatewayMCPServerListenerOauth
+
+
+AIGatewayMCPServerListenerOauth **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Identity provider and OAuth 2.0 Protected Resource Metadata configuration
+for granting access to an MCP server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `accessTokenClaimField` _string_ | The claim in the OAuth2 access token to use as the subject for ACL evaluation when `acl_attribute_type` is set to `oauth_access_token`. Nested claim can be fetched by using a jq filter starts with dot, e.g., “.user.email”: https://jqlang.org/manual/#object-identifier-index |
+| `acls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups. |
+| `defaultToolAcls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default access control rules for allowing or denying consumer groups to tools. |
+| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced. |
+| `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
+- [AIGatewayMCPServerListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
+- [AIGatewayMCPServerPassthroughListenerAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
 
 #### AIGatewayMCPServerNoUpstreamConfig
 
@@ -10628,8 +10670,8 @@ Only one of the fields should be set based on the AclAttributeType.
 | Field | Description |
 | --- | --- |
 | `aclAttributeType` _[AIGatewayMCPServerPassthroughListenerAccessType](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccesstype)_ | AclAttributeType designates the type of configuration. |
-| `consumer` _[AIGatewayMCPServerBaseACLPropertiesConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)_ | Consumer configuration. |
-| `oauthAccessToken` _[AIGatewayMCPServerBaseACLPropertiesOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)_ | Oauth configuration. |
+| `consumer` _[AIGatewayMCPServerListenerConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)_ | Consumer configuration. |
+| `oauthAccessToken` _[AIGatewayMCPServerListenerOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)_ | Oauth configuration. |
 
 _Appears in:_
 
@@ -10654,6 +10696,29 @@ Allowed values:
 | --- | --- |
 | `consumer` |  |
 | `oauthAccessToken` |  |
+
+#### AIGatewayMCPServerProtectedResourceMetadata
+
+
+AIGatewayMCPServerProtectedResourceMetadata **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />OAuth 2.0 Protected Resource Metadata (RFC 9728) advertised for this MCP
+server, allowing clients to discover the authorization servers that
+protect it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authorizationServers` _[]string_ | List of authorization server issuer URLs that can issue tokens for this resource. |
+| `discoveryEndpoint` _string_ | The URL where the protected resource metadata is served. |
+| `endpoint` _string_ | The protected resource endpoint the metadata describes. |
+| `resource` _string_ | The protected resource's identifier (resource URI). |
+| `scopesSupported` _[]string_ | List of OAuth scopes supported by the protected resource. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerListenerConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
+- [AIGatewayMCPServerListenerOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
 
 
 
@@ -13345,7 +13410,7 @@ specific model using a path selector.
 
 | Field | Description |
 | --- | --- |
-| `pathParam` _string_ | The path param name to match for routing. |
+| `pathParam` _string_ | The name of the regex capture group defined in the route path for routing. |
 | `values` _[]string_ | The list of values that are matched against the path param value. If the path param value matches any of the specified values, the request will be routed to the corresponding model. |
 
 _Appears in:_
@@ -15237,7 +15302,7 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 | `description` _string_ | The description of the AI Gateway. |
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | The name for this AI Gateway. This value is immutable after creation. |
+| `name` _string_ | The name for this AI Gateway. This value is immutable after creation. |
 | `proxyUrls` _[][AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
 
 _Appears in:_

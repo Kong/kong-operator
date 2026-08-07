@@ -34,7 +34,7 @@ func TestKonnectAIGateway(t *testing.T) {
 						KonnectConfiguration: validKonnectConfiguration,
 						APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
 							DisplayName: "my-ai-gw",
-							Name:        konnectv1alpha1.AIGatewayEntityIdentifier("my-ai-gw"),
+							Name:        "my-ai-gw",
 						},
 					},
 				},
@@ -53,7 +53,7 @@ func TestKonnectAIGateway(t *testing.T) {
 						},
 						APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
 							DisplayName: "my-ai-gw",
-							Name:        konnectv1alpha1.AIGatewayEntityIdentifier("my-ai-gw"),
+							Name:        "my-ai-gw",
 						},
 					},
 				},
@@ -110,7 +110,7 @@ func TestKonnectAIGateway(t *testing.T) {
 						},
 						APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
 							DisplayName: "my-ai-gw",
-							Name:        konnectv1alpha1.AIGatewayEntityIdentifier("my-ai-gw"),
+							Name:        "my-ai-gw",
 						},
 					},
 				},
@@ -125,7 +125,7 @@ func TestKonnectAIGateway(t *testing.T) {
 						Source:               new(commonv1alpha1.EntitySourceOrigin),
 						APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
 							DisplayName: "my-ai-gw",
-							Name:        konnectv1alpha1.AIGatewayEntityIdentifier("my-ai-gw"),
+							Name:        "my-ai-gw",
 						},
 					},
 				},
