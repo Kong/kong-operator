@@ -37,7 +37,7 @@ func validAIGatewayMCPServer(ns string) *konnectv1alpha1.AIGatewayMCPServer {
 						DisplayName: "Test MCP Server",
 						Access: &konnectv1alpha1.AIGatewayMCPServerListenerAccess{
 							AclAttributeType: konnectv1alpha1.AIGatewayMCPServerListenerAccessTypeConsumer,
-							Consumer:         &konnectv1alpha1.AIGatewayMCPServerBaseACLPropertiesConsumer{},
+							Consumer:         &konnectv1alpha1.AIGatewayMCPServerListenerConsumer{},
 						},
 						Config: konnectv1alpha1.AIGatewayMCPServerNoUpstreamConfig{
 							Route: konnectv1alpha1.AIGatewayRouteConfig{
@@ -175,7 +175,7 @@ func validAIGatewayMCPServerConversionListener(ns string) *konnectv1alpha1.AIGat
 			DisplayName: "Test MCP Server Conversion Listener",
 			Access: &konnectv1alpha1.AIGatewayMCPServerConversionListenerAccess{
 				AclAttributeType: konnectv1alpha1.AIGatewayMCPServerConversionListenerAccessTypeConsumer,
-				Consumer:         &konnectv1alpha1.AIGatewayMCPServerBaseACLPropertiesConsumer{},
+				Consumer:         &konnectv1alpha1.AIGatewayMCPServerListenerConsumer{},
 			},
 			Config: konnectv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfig{
 				URL: "https://example.com/mcp",
@@ -194,7 +194,7 @@ func validAIGatewayMCPServerPassthroughListener(ns string) *konnectv1alpha1.AIGa
 			DisplayName: "Test MCP Server Passthrough Listener",
 			Access: &konnectv1alpha1.AIGatewayMCPServerPassthroughListenerAccess{
 				AclAttributeType: konnectv1alpha1.AIGatewayMCPServerPassthroughListenerAccessTypeConsumer,
-				Consumer:         &konnectv1alpha1.AIGatewayMCPServerBaseACLPropertiesConsumer{},
+				Consumer:         &konnectv1alpha1.AIGatewayMCPServerListenerConsumer{},
 			},
 			Config: konnectv1alpha1.AIGatewayMCPServerWithUpstreamConfig{
 				URL: "https://example.com/mcp",

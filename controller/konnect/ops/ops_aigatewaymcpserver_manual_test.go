@@ -34,9 +34,9 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 								ID:     "other-id",
 								Name:   "other-mcp-server",
 								Labels: map[string]string{KubernetesUIDLabelKey: "other-uid"},
-								Access: &sdkkonnectcomp.AIGatewayMCPServerBaseACLProperties{
-									Type:                                     sdkkonnectcomp.AIGatewayMCPServerBaseACLPropertiesTypeOauthAccessToken,
-									AIGatewayMCPServerBaseACLPropertiesOauth: &sdkkonnectcomp.AIGatewayMCPServerBaseACLPropertiesOauth{},
+								Access: &sdkkonnectcomp.AIGatewayMCPServerListenerAccess{
+									Type:                            sdkkonnectcomp.AIGatewayMCPServerListenerAccessTypeOauthAccessToken,
+									AIGatewayMCPServerListenerOauth: &sdkkonnectcomp.AIGatewayMCPServerListenerOauth{},
 								},
 							},
 							Type: sdkkonnectcomp.AIGatewayMCPServerTypeListener,
@@ -47,9 +47,9 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 								ID:     "matched-by-uid",
 								Name:   "different-name",
 								Labels: map[string]string{KubernetesUIDLabelKey: string(obj.GetUID())},
-								Access: &sdkkonnectcomp.AIGatewayMCPServerBaseACLProperties{
-									Type:                                     sdkkonnectcomp.AIGatewayMCPServerBaseACLPropertiesTypeOauthAccessToken,
-									AIGatewayMCPServerBaseACLPropertiesOauth: &sdkkonnectcomp.AIGatewayMCPServerBaseACLPropertiesOauth{},
+								Access: &sdkkonnectcomp.AIGatewayMCPServerListenerAccess{
+									Type:                            sdkkonnectcomp.AIGatewayMCPServerListenerAccessTypeOauthAccessToken,
+									AIGatewayMCPServerListenerOauth: &sdkkonnectcomp.AIGatewayMCPServerListenerOauth{},
 								},
 							},
 							Type: sdkkonnectcomp.AIGatewayMCPServerTypeListener,
@@ -89,9 +89,9 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 								Type: sdkkonnectcomp.AIGatewayMCPServerListenerAIGatewayMCPServerTypeListener,
 								ID:   "matched-by-name",
 								Name: "flights-mcp-server",
-								Access: &sdkkonnectcomp.AIGatewayMCPServerBaseACLProperties{
-									Type: sdkkonnectcomp.AIGatewayMCPServerBaseACLPropertiesTypeConsumer,
-									AIGatewayMCPServerBaseACLPropertiesConsumer: &sdkkonnectcomp.AIGatewayMCPServerBaseACLPropertiesConsumer{},
+								Access: &sdkkonnectcomp.AIGatewayMCPServerListenerAccess{
+									Type:                               sdkkonnectcomp.AIGatewayMCPServerListenerAccessTypeConsumer,
+									AIGatewayMCPServerListenerConsumer: &sdkkonnectcomp.AIGatewayMCPServerListenerConsumer{},
 								},
 							},
 							Type: sdkkonnectcomp.AIGatewayMCPServerTypeListener,
@@ -123,9 +123,9 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 								Type: sdkkonnectcomp.AIGatewayMCPServerListenerAIGatewayMCPServerTypeListener,
 								ID:   "other-id",
 								Name: "other-mcp-server",
-								Access: &sdkkonnectcomp.AIGatewayMCPServerBaseACLProperties{
-									Type: sdkkonnectcomp.AIGatewayMCPServerBaseACLPropertiesTypeConsumer,
-									AIGatewayMCPServerBaseACLPropertiesConsumer: &sdkkonnectcomp.AIGatewayMCPServerBaseACLPropertiesConsumer{},
+								Access: &sdkkonnectcomp.AIGatewayMCPServerListenerAccess{
+									Type:                               sdkkonnectcomp.AIGatewayMCPServerListenerAccessTypeConsumer,
+									AIGatewayMCPServerListenerConsumer: &sdkkonnectcomp.AIGatewayMCPServerListenerConsumer{},
 								},
 							},
 							Type: sdkkonnectcomp.AIGatewayMCPServerTypeListener,
