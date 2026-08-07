@@ -103,7 +103,7 @@ type AIGatewayConsumerCredentialAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 
 	// The API Key's time-to-live in seconds.

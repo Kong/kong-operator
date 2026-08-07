@@ -150,7 +150,7 @@ func setupProgrammedAIGWDP(
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{Name: "unused-auth"},
 			},
 			APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
-				Name:        konnectv1alpha1.AIGatewayEntityIdentifier(aigwcpName),
+				Name:        aigwcpName,
 				DisplayName: aigwcpName,
 			},
 		},

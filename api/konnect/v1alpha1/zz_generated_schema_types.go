@@ -569,7 +569,7 @@ type AIGatewayIdentityProviderKeyAuth struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -670,7 +670,7 @@ type AIGatewayIdentityProviderOpenIDConnect struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -1118,7 +1118,7 @@ type AIGatewayMCPServerConversionListener struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1143,11 +1143,11 @@ type AIGatewayMCPServerConversionListenerAccess struct {
 	// Consumer configuration.
 	//
 	// +optional
-	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
+	Consumer *AIGatewayMCPServerListenerConsumer `json:"consumer,omitempty"`
 	// Oauth configuration.
 	//
 	// +optional
-	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
+	Oauth *AIGatewayMCPServerListenerOauth `json:"oauthAccessToken,omitempty"`
 }
 
 // AIGatewayMCPServerConversionListenerAccessType represents the type of access.
@@ -1210,7 +1210,7 @@ func (u *AIGatewayMCPServerConversionListenerAccess) UnmarshalJSON(data []byte) 
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayMCPServerBaseACLPropertiesConsumer
+		var val AIGatewayMCPServerListenerConsumer
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerAccess consumer: %w", err)
 		}
@@ -1220,7 +1220,7 @@ func (u *AIGatewayMCPServerConversionListenerAccess) UnmarshalJSON(data []byte) 
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayMCPServerBaseACLPropertiesOauth
+		var val AIGatewayMCPServerListenerOauth
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerAccess oauth_access_token: %w", err)
 		}
@@ -1300,7 +1300,7 @@ type AIGatewayMCPServerConversionOnly struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1370,7 +1370,7 @@ type AIGatewayMCPServerListener struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1382,7 +1382,25 @@ type AIGatewayMCPServerListener struct {
 	Tools []AIGatewayMCPToolBase `json:"tools,omitempty"`
 }
 
-// AIGatewayMCPServerListenerAccess represents a union type for access.
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerListener) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListener: nil receiver")
+	}
+	type alias AIGatewayMCPServerListener
+	aux := alias{}
+	aux.Access = &AIGatewayMCPServerListenerAccess{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListener: %w", err)
+	}
+	if aux.Access != nil && aux.Access.AclAttributeType == "" && aux.Access.Consumer == nil && aux.Access.Oauth == nil {
+		aux.Access = nil
+	}
+	*s = AIGatewayMCPServerListener(aux)
+	return nil
+}
+
+// AIGatewayMCPServerListenerAccess represents a union type for AIGatewayMCPServerListenerAccess.
 // Only one of the fields should be set based on the AclAttributeType.
 type AIGatewayMCPServerListenerAccess struct {
 	// AclAttributeType designates the type of configuration.
@@ -1395,14 +1413,14 @@ type AIGatewayMCPServerListenerAccess struct {
 	// Consumer configuration.
 	//
 	// +optional
-	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
+	Consumer *AIGatewayMCPServerListenerConsumer `json:"consumer,omitempty"`
 	// Oauth configuration.
 	//
 	// +optional
-	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
+	Oauth *AIGatewayMCPServerListenerOauth `json:"oauthAccessToken,omitempty"`
 }
 
-// AIGatewayMCPServerListenerAccessType represents the type of access.
+// AIGatewayMCPServerListenerAccessType represents the type of AIGatewayMCPServerListenerAccess.
 type AIGatewayMCPServerListenerAccessType string
 
 // AIGatewayMCPServerListenerAccessType values.
@@ -1462,7 +1480,7 @@ func (u *AIGatewayMCPServerListenerAccess) UnmarshalJSON(data []byte) error {
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayMCPServerBaseACLPropertiesConsumer
+		var val AIGatewayMCPServerListenerConsumer
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerAccess consumer: %w", err)
 		}
@@ -1472,7 +1490,7 @@ func (u *AIGatewayMCPServerListenerAccess) UnmarshalJSON(data []byte) error {
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayMCPServerBaseACLPropertiesOauth
+		var val AIGatewayMCPServerListenerOauth
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerAccess oauth_access_token: %w", err)
 		}
@@ -1481,22 +1499,84 @@ func (u *AIGatewayMCPServerListenerAccess) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayMCPServerListener) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayMCPServerListener: nil receiver")
-	}
-	type alias AIGatewayMCPServerListener
-	aux := alias{}
-	aux.Access = &AIGatewayMCPServerListenerAccess{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayMCPServerListener: %w", err)
-	}
-	if aux.Access != nil && aux.Access.AclAttributeType == "" && aux.Access.Consumer == nil && aux.Access.Oauth == nil {
-		aux.Access = nil
-	}
-	*s = AIGatewayMCPServerListener(aux)
-	return nil
+// AIGatewayMCPServerListenerConsumer **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Identity provider and OAuth 2.0 Protected Resource Metadata configuration
+// for granting access to an MCP server.
+type AIGatewayMCPServerListenerConsumer struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Access control rules for allowing or denying consumer groups.
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Default access control rules for allowing or denying consumer groups to
+	// tools.
+	//
+	// +optional
+	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
+	// List of identity providers for granting access to the MCP server.
+	// At most 1 identity provider of each identity provider type can be
+	// referenced.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
+	// OAuth 2.0 Protected Resource Metadata advertised for this MCP server.
+	//
+	// +optional
+	Metadata AIGatewayMCPServerProtectedResourceMetadata `json:"metadata,omitzero"`
+}
+
+// AIGatewayMCPServerListenerOauth **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Identity provider and OAuth 2.0 Protected Resource Metadata configuration
+// for granting access to an MCP server.
+type AIGatewayMCPServerListenerOauth struct {
+	// The claim in the OAuth2 access token to use as the subject for ACL
+	// evaluation when `acl_attribute_type` is set to `oauth_access_token`.
+	// Nested claim can be fetched by using a jq filter starts with dot, e.g.,
+	// “.user.email”: https://jqlang.org/manual/#object-identifier-index
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	AccessTokenClaimField string `json:"accessTokenClaimField,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Access control rules for allowing or denying consumer groups.
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Default access control rules for allowing or denying consumer groups to
+	// tools.
+	//
+	// +optional
+	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
+	// List of identity providers for granting access to the MCP server.
+	// At most 1 identity provider of each identity provider type can be
+	// referenced.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
+	// OAuth 2.0 Protected Resource Metadata advertised for this MCP server.
+	//
+	// +optional
+	Metadata AIGatewayMCPServerProtectedResourceMetadata `json:"metadata,omitzero"`
 }
 
 // AIGatewayMCPServerNoUpstreamConfig **Pre-release Feature**
@@ -1606,7 +1686,7 @@ type AIGatewayMCPServerPassthroughListener struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1631,11 +1711,11 @@ type AIGatewayMCPServerPassthroughListenerAccess struct {
 	// Consumer configuration.
 	//
 	// +optional
-	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
+	Consumer *AIGatewayMCPServerListenerConsumer `json:"consumer,omitempty"`
 	// Oauth configuration.
 	//
 	// +optional
-	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
+	Oauth *AIGatewayMCPServerListenerOauth `json:"oauthAccessToken,omitempty"`
 }
 
 // AIGatewayMCPServerPassthroughListenerAccessType represents the type of access.
@@ -1698,7 +1778,7 @@ func (u *AIGatewayMCPServerPassthroughListenerAccess) UnmarshalJSON(data []byte)
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayMCPServerBaseACLPropertiesConsumer
+		var val AIGatewayMCPServerListenerConsumer
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayMCPServerPassthroughListenerAccess consumer: %w", err)
 		}
@@ -1708,7 +1788,7 @@ func (u *AIGatewayMCPServerPassthroughListenerAccess) UnmarshalJSON(data []byte)
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val AIGatewayMCPServerBaseACLPropertiesOauth
+		var val AIGatewayMCPServerListenerOauth
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling AIGatewayMCPServerPassthroughListenerAccess oauth_access_token: %w", err)
 		}
@@ -1733,6 +1813,39 @@ func (s *AIGatewayMCPServerPassthroughListener) UnmarshalJSON(data []byte) error
 	}
 	*s = AIGatewayMCPServerPassthroughListener(aux)
 	return nil
+}
+
+// AIGatewayMCPServerProtectedResourceMetadata **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// OAuth 2.0 Protected Resource Metadata (RFC 9728) advertised for this MCP
+// server, allowing clients to discover the authorization servers that
+// protect it.
+type AIGatewayMCPServerProtectedResourceMetadata struct {
+	// List of authorization server issuer URLs that can issue tokens for this
+	// resource.
+	//
+	// +optional
+	AuthorizationServers []string `json:"authorizationServers,omitempty"`
+	// The URL where the protected resource metadata is served.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DiscoveryEndpoint string `json:"discoveryEndpoint,omitzero"`
+	// The protected resource endpoint the metadata describes.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Endpoint string `json:"endpoint,omitzero"`
+	// The protected resource's identifier (resource URI).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Resource string `json:"resource,omitzero"`
+	// List of OAuth scopes supported by the protected resource.
+	//
+	// +optional
+	ScopesSupported []string `json:"scopesSupported,omitempty"`
 }
 
 // AIGatewayMCPServerServerConfigBase **Pre-release Feature**
@@ -1874,7 +1987,7 @@ type AIGatewayMCPServerUpstreamServer struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -3106,7 +3219,7 @@ type AIGatewayModelAPI struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -4695,7 +4808,7 @@ type AIGatewayModelModel struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -5044,7 +5157,7 @@ type AIGatewayModelProviderAnthropic struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5106,7 +5219,7 @@ type AIGatewayModelProviderAzure struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5288,7 +5401,7 @@ type AIGatewayModelProviderBedrock struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5462,7 +5575,7 @@ type AIGatewayModelProviderCerebras struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5522,7 +5635,7 @@ type AIGatewayModelProviderCohere struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5827,7 +5940,7 @@ type AIGatewayModelProviderDashscope struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5887,7 +6000,7 @@ type AIGatewayModelProviderDatabricks struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5947,7 +6060,7 @@ type AIGatewayModelProviderDeepseek struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6009,7 +6122,7 @@ type AIGatewayModelProviderGemini struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6183,7 +6296,7 @@ type AIGatewayModelProviderHuggingface struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6243,7 +6356,7 @@ type AIGatewayModelProviderKimi struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6303,7 +6416,7 @@ type AIGatewayModelProviderLlama2 struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6363,7 +6476,7 @@ type AIGatewayModelProviderMistral struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6423,7 +6536,7 @@ type AIGatewayModelProviderOllama struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6483,7 +6596,7 @@ type AIGatewayModelProviderOpenai struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6550,7 +6663,7 @@ type AIGatewayModelProviderSagemaker struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6725,7 +6838,7 @@ type AIGatewayModelProviderVercel struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6787,7 +6900,7 @@ type AIGatewayModelProviderVertex struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6961,7 +7074,7 @@ type AIGatewayModelProviderVllm struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -7021,7 +7134,7 @@ type AIGatewayModelProviderXai struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -7319,7 +7432,8 @@ type AIGatewayModelSelectorConfigHeaders struct {
 // AIGatewayModelSelectorConfigPath Configuration for routing requests to a
 // specific model using a path selector.
 type AIGatewayModelSelectorConfigPath struct {
-	// The path param name to match for routing.
+	// The name of the regex capture group defined in the route path for routing.
+	//
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1

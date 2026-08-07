@@ -228,6 +228,32 @@ func TestAIGatewayMCPServerListener_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayMCPServerListenerConsumer_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerListenerConsumer
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerListenerOauth_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerListenerOauth
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayMCPServerNoUpstreamConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -245,6 +271,19 @@ func TestAIGatewayMCPServerPassthroughListener_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayMCPServerPassthroughListener
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerProtectedResourceMetadata_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerProtectedResourceMetadata
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
