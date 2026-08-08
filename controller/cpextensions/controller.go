@@ -206,7 +206,7 @@ func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, contr
 					client.ObjectKeyFromObject(&ext), svcNN, client.ObjectKeyFromObject(v),
 				)
 				logger.Error(err, "failed to ensure metrics extension", "extension", client.ObjectKeyFromObject(&ext))
-				return err
+				return errors.Join(append(errs, err)...)
 			}
 			svcToExt[svcNN] = &ext
 		}
@@ -214,7 +214,7 @@ func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, contr
 
 	svcListWithManagedLabel, err := listServicesThatHavePluginsManagedByControlPlane(ctx, controlplane, r.Client)
 	if err != nil {
-		return err
+		return errors.Join(append(errs, err)...)
 	}
 
 	// Find all services with GatewayOperatorControlPlaneManagingPluginsLabel
