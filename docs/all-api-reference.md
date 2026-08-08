@@ -13,6 +13,7 @@
 - [incubator.ingress-controller.konghq.com/v1alpha1](#incubator-ingress-controller-konghq-com-v1alpha1)
 - [konnect.konghq.com/v1alpha1](#konnect-konghq-com-v1alpha1)
 - [konnect.konghq.com/v1alpha2](#konnect-konghq-com-v1alpha2)
+- [mcp.konghq.com/v1alpha1](#mcp-konghq-com-v1alpha1)
 
 ## aigateway.konghq.com/v1alpha1
 
@@ -17744,4 +17745,131 @@ _Appears in:_
 
 - [CertificateSecret](#konnect-konghq-com-v1alpha2-types-certificatesecret)
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha2-types-dataplaneclientauthstatus)
+
+## mcp.konghq.com/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the mcp.konghq.com v1alpha1 API group.
+
+- [MCPServerDataPlane](#mcp-konghq-com-v1alpha1-mcpserverdataplane)
+
+### MCPServerDataPlane
+
+
+MCPServerDataPlane is the Schema for the MCP Server data planes API.
+It manages a MCP Server Deployment that uses Konnect control plane configuration
+via a referenced MCPServer resource.
+
+<!-- mcp_server_data_plane description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `mcp.konghq.com/v1alpha1`
+| `kind` _string_ | `MCPServerDataPlane`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[MCPServerDataPlaneSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanespec)_ | Spec defines the desired state of MCPServerDataPlane. |
+| `status` _[MCPServerDataPlaneStatus](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanestatus)_ | Status defines the observed state of MCPServerDataPlane. |
+
+### Types
+
+In this section you will find types that the CRDs rely on.
+#### DeploymentOptions
+
+
+DeploymentOptions specifies options for the Deployment managed by the MCPServerDataPlane controller.
+
+
+
+| Field | Description |
+| --- | --- |
+| `replicas` _*int32_ | Replicas describes the number of desired pods. |
+
+_Appears in:_
+
+- [MCPServerDataPlaneSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanespec)
+
+#### KonnectNamespacedRef
+
+
+KonnectNamespacedRef is a reference to a MCPServer resource in the same namespace.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the MCPServer resource. |
+
+_Appears in:_
+
+- [MCPServerRef](#mcp-konghq-com-v1alpha1-types-mcpserverref)
+
+#### MCPServerDataPlaneSpec
+
+
+MCPServerDataPlaneSpec defines the desired state of MCPServerDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `mcpServerRef` _[MCPServerRef](#mcp-konghq-com-v1alpha1-types-mcpserverref)_ | MCPServerRef references the control plane this MCPServerDataPlane connects to. The type field identifies which kind of MCPServer is being referenced. Currently only konnectNamespacedRef is supported, which references a MCPServer resource in the same namespace. |
+| `deployment` _[DeploymentOptions](#mcp-konghq-com-v1alpha1-types-deploymentoptions)_ | Deployment configures the Deployment: image, replicas, resources, extra env vars, volume mounts, etc. |
+
+_Appears in:_
+
+- [MCPServerDataPlane](#mcp-konghq-com-v1alpha1-mcpserverdataplane)
+
+#### MCPServerDataPlaneStatus
+
+
+MCPServerDataPlaneStatus defines the observed state of MCPServerDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the MCPServerDataPlane. |
+| `readyReplicas` _int32_ | ReadyReplicas indicates how many replicas have reported to be ready. |
+| `replicas` _int32_ | Replicas indicates how many replicas have been set for the MCPServerDataPlane. |
+| `selector` _string_ | Selector is the label selector used by the scale subresource to match the Pods managed by the owned Deployment. |
+| `version` _string_ | Version indicates the version of the referenced, remote MCPServer. |
+
+_Appears in:_
+
+- [MCPServerDataPlane](#mcp-konghq-com-v1alpha1-mcpserverdataplane)
+
+#### MCPServerRef
+
+
+MCPServerRef identifies the control plane this DataPlane connects to.
+The Type field determines which sub-field is active.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[MCPServerRefType](#mcp-konghq-com-v1alpha1-types-mcpserverreftype)_ | Type indicates the type of the control plane being referenced. Currently only konnectNamespacedRef is supported. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#mcp-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a MCPServer resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+
+_Appears in:_
+
+- [MCPServerDataPlaneSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanespec)
+
+#### MCPServerRefType
+
+_Underlying type:_ `string`
+
+MCPServerRefType identifies the kind of control plane being referenced.
+
+
+
+
+_Appears in:_
+
+- [MCPServerRef](#mcp-konghq-com-v1alpha1-types-mcpserverref)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `konnectNamespacedRef` | MCPServerRefTypeKonnectNamespacedRef references a MCPServer<br />resource in the same namespace as the MCPServerDataPlane.<br /> |
 
