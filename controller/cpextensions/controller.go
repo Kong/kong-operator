@@ -2,6 +2,7 @@ package cpextensions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -176,10 +177,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 // ServiceSelector.MatchNames.
 func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, controlplane *gwtypes.ControlPlane) error {
 	logger := log.GetLogger(ctx, "controlplane_dataplanemetrics_extension", r.LoggingMode)
+
+	var errs []error
+
 	extensions, err := extensions.GetAllDataPlaneMetricExtensionsForControlPlane(ctx, r.Client, controlplane)
 	// In case there is an error, we don't want to return early because we still want to perform the cleanup.
 	if err != nil {
 		log.Error(logger, err, "failed to get DataPlaneMetricsExtensions for ControlPlane", "controlplane")
+		errs = append(errs, err)
 	}
 
 	if len(extensions) > 0 {
@@ -231,7 +236,8 @@ func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, contr
 		}
 		ensureKongPluginsAnnotationIsUnsetForPrometheusPlugin(&svc, prometheusPluginName)
 		if err := r.Patch(ctx, &svc, client.MergeFrom(old)); err != nil {
-			return fmt.Errorf("failed to Service %s: %w", client.ObjectKeyFromObject(&svc), err)
+			errs = append(errs, fmt.Errorf("failed to Service %s: %w", client.ObjectKeyFromObject(&svc), err))
+			continue
 		}
 
 		prometheusPlugin := configurationv1.KongPlugin{
@@ -240,8 +246,9 @@ func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, contr
 				Namespace: svc.Namespace,
 			},
 		}
-		if err := r.Delete(ctx, &prometheusPlugin); err != nil {
-			return fmt.Errorf("failed to delete Prometheus KongPlugin for Service %s: %w", client.ObjectKeyFromObject(&svc), err)
+		if err := client.IgnoreNotFound(r.Delete(ctx, &prometheusPlugin)); err != nil {
+			errs = append(errs, fmt.Errorf("failed to delete Prometheus KongPlugin for Service %s: %w", client.ObjectKeyFromObject(&svc), err))
+			continue
 		}
 	}
 
@@ -251,12 +258,14 @@ func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, contr
 		svc := corev1.Service{}
 		if err := r.Get(ctx, svcNN, &svc); err != nil {
 			logger.Error(err, "failed to get Service to enable metrics plugin on", "service", svcNN)
+			errs = append(errs, err)
 			continue
 		}
 
 		prometheusPlugin, err := r.ensurePrometheusPlugin(ctx, &svc, controlplane, ext)
 		if err != nil {
 			logger.Error(err, "failed to ensure Prometheus Plugin for Service", "service", svcNN)
+			errs = append(errs, err)
 			continue
 		}
 
@@ -270,10 +279,11 @@ func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, contr
 		ensureKongPluginsAnnotationIsSetForPrometheusPlugin(&svc, prometheusPlugin)
 		if err := r.Patch(ctx, &svc, client.MergeFrom(old)); err != nil {
 			logger.Error(err, "failed to patch Service to enable metrics plugin on", "service", svcNN)
+			errs = append(errs, err)
 			continue
 		}
 	}
-	return err
+	return errors.Join(errs...)
 }
 
 func listServicesThatHavePluginsManagedByControlPlane(
