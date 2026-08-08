@@ -86,6 +86,11 @@ type KongVaultSpec struct {
 	//
 	// It is only supported when Backend is `konnect`, and it is mutually exclusive
 	// with setting `config_store_id` in Config.
+	//
+	// KongVault is cluster-scoped and KonnectConfigStore is namespaced, so this
+	// reference always crosses a namespace boundary. Its authorization is not
+	// enforced yet: a KongReferenceGrant in the referenced namespace will become
+	// required in a future release, as it already is for ControlPlaneRef.
 	// +optional
 	ConfigStoreRef *KonnectConfigStoreRef `json:"configStoreRef,omitempty"`
 	// Tags are the tags associated to the vault for grouping and filtering.
@@ -115,6 +120,7 @@ type KonnectConfigStoreRef struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the referenced KonnectConfigStore. It is
@@ -123,6 +129,7 @@ type KonnectConfigStoreRef struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 	Namespace string `json:"namespace"`
 }
 

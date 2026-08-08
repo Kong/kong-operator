@@ -22495,6 +22495,11 @@ spec:
 
                   It is only supported when Backend is `konnect`, and it is mutually exclusive
                   with setting `config_store_id` in Config.
+
+                  KongVault is cluster-scoped and KonnectConfigStore is namespaced, so this
+                  reference always crosses a namespace boundary. Its authorization is not
+                  enforced yet: a KongReferenceGrant in the referenced namespace will become
+                  required in a future release, as it already is for ControlPlaneRef.
                 properties:
                   kind:
                     default: KonnectConfigStore
@@ -22504,6 +22509,7 @@ spec:
                     type: string
                   name:
                     description: Name is the name of the referenced KonnectConfigStore.
+                    maxLength: 253
                     minLength: 1
                     type: string
                   namespace:
@@ -22511,6 +22517,7 @@ spec:
                       Namespace is the namespace of the referenced KonnectConfigStore. It is
                       required because the referring object is cluster-scoped and hence has no
                       namespace of its own to default to.
+                    maxLength: 253
                     minLength: 1
                     type: string
                 required:
