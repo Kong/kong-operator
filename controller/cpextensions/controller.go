@@ -236,7 +236,7 @@ func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, contr
 		}
 		ensureKongPluginsAnnotationIsUnsetForPrometheusPlugin(&svc, prometheusPluginName)
 		if err := r.Patch(ctx, &svc, client.MergeFrom(old)); err != nil {
-			errs = append(errs, fmt.Errorf("failed to Service %s: %w", client.ObjectKeyFromObject(&svc), err))
+			errs = append(errs, fmt.Errorf("failed to patch Service %s: %w", client.ObjectKeyFromObject(&svc), err))
 			continue
 		}
 
