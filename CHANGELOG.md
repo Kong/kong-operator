@@ -75,6 +75,15 @@
   the behavior that already applied to every other Konnect entity.
   [#5207](https://github.com/Kong/kong-operator/pull/5207)
 
+### Fixes
+
+- DataPlaneMetricsExtension: the reconciler now returns an error (and gets
+  requeued with backoff) when it fails to create, update or delete the
+  Prometheus `KongPlugin` for a Service, instead of logging and giving up.
+  Previously a single transient failure (e.g. a rejected admission webhook
+  call) left the Service without its `konghq.com/plugins` annotation
+  indefinitely, since nothing else would trigger another reconcile.
+
 ## [v2.3.0-rc.3]
 
 > Release date: 2026-08-06
