@@ -276,6 +276,58 @@ func TestKongReferenceGrant(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("KongVault to KonnectConfigStore reference", func(t *testing.T) {
+		toKonnectConfigStore := configurationv1alpha1.ReferenceGrantTo{
+			Group: "konnect.konghq.com",
+			Kind:  "KonnectConfigStore",
+		}
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			kongReferenceGrantCase(withName, typeMeta, ns.Name, "", "configuration.konghq.com", "KongVault", toKonnectConfigStore),
+			kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "", "configuration.konghq.com", "KongVault", toKonnectConfigStore),
+			{
+				Name: "non-empty namespace is rejected",
+				TestObject: &configurationv1alpha1.KongReferenceGrant{
+					TypeMeta:   typeMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Namespace: configurationv1alpha1.Namespace("default"),
+								Kind:      "KongVault",
+								Group:     "configuration.konghq.com",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{toKonnectConfigStore},
+					},
+				},
+				ExpectedErrorMessage: new("namespace must be empty for KongVault and non-empty for other kinds"),
+			},
+			{
+				Name: "an unsupported target kind in the konnect group is rejected",
+				TestObject: &configurationv1alpha1.KongReferenceGrant{
+					TypeMeta:   typeMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Namespace: configurationv1alpha1.Namespace(""),
+								Kind:      "KongVault",
+								Group:     "configuration.konghq.com",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectConfigStoreTypo",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("kinds are supported for 'konnect.konghq.com' group"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("KongKey to KonnectGatewayControlPlane reference", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
 			kongReferenceGrantCase(withName, typeMeta, ns.Name, "other", "configuration.konghq.com", "KongKey", toKonnectCP),

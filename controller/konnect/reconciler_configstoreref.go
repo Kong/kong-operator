@@ -15,6 +15,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 )
 
 // configStoreRefResolver is implemented by entities that can reference a
@@ -47,6 +48,17 @@ func handleConfigStoreRef[T constraints.SupportedKonnectEntityType, TEnt constra
 	// which needs no Config Store ID. Blocking on an unresolvable reference here
 	// would leave the entity stuck with its finalizer.
 	deleting := !ent.GetDeletionTimestamp().IsZero()
+
+	// The referenced namespace has to consent to the reference. This is skipped
+	// while the entity is being deleted for the same reason as above: requiring
+	// the KongReferenceGrant to outlive the referring entity would make the grant
+	// impossible to remove without first getting the entity stuck.
+	if !deleting && nn.Namespace != ent.GetNamespace() {
+		res, granted, err := ensureConfigStoreRefGrant(ctx, cl, ent, nn)
+		if err != nil || !res.IsZero() || !granted {
+			return res, true, "", err
+		}
+	}
 
 	resolvedID, err := resolver.ResolveConfigStoreID(ctx, cl)
 	if err == nil {
@@ -89,6 +101,53 @@ func handleConfigStoreRef[T constraints.SupportedKonnectEntityType, TEnt constra
 	// Don't requeue: a change to the referenced KonnectConfigStore triggers the
 	// reconciliation, and an invalid reference needs a spec change to be fixed.
 	return ctrl.Result{}, true, "", nil
+}
+
+// ensureConfigStoreRefGrant reports whether a KongReferenceGrant in the referenced
+// namespace allows ent to reference the KonnectConfigStore nn, and records the
+// denial in the ConfigStoreRefValid condition when it does not.
+//
+// KongVault is cluster-scoped, so its namespace is empty and the matching grant
+// has to list `namespace: ""` in its `from` entry.
+//
+// The denial is reported on ConfigStoreRefValid rather than on the shared
+// ResolvedRefs condition, which the ControlPlane ref handler already owns for this
+// entity: both references of a cluster-scoped entity always cross a namespace
+// boundary, so the two handlers would otherwise overwrite each other's verdict on
+// every reconciliation. This mirrors what the KongPlugin ref handler does.
+func ensureConfigStoreRefGrant[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	ctx context.Context,
+	cl client.Client,
+	ent TEnt,
+	nn types.NamespacedName,
+) (_ ctrl.Result, granted bool, _ error) {
+	err := crossnamespace.CheckKongReferenceGrantForResource(
+		ctx,
+		cl,
+		ent.GetNamespace(),
+		nn.Namespace,
+		nn.Name,
+		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
+		metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind(configurationv1alpha1.KonnectConfigStoreKind)),
+	)
+	if err == nil {
+		return ctrl.Result{}, true, nil
+	}
+	if !crossnamespace.IsReferenceNotGranted(err) {
+		return ctrl.Result{}, false, err
+	}
+
+	// Don't requeue: the KongVault controller watches KongReferenceGrants, so
+	// creating the missing grant triggers a new reconciliation on its own.
+	res, errStatus := patch.StatusWithCondition(
+		ctx, cl, ent,
+		konnectv1alpha1.ConfigStoreRefValidConditionType,
+		metav1.ConditionFalse,
+		konnectv1alpha1.ConfigStoreRefReasonRefNotPermitted,
+		fmt.Sprintf("KongReferenceGrants do not allow access to %s %s",
+			configurationv1alpha1.KonnectConfigStoreKind, nn),
+	)
+	return res, false, errStatus
 }
 
 // configStoreRefFailure maps a reference resolution error to the reason and message

@@ -36,12 +36,14 @@ spec:
   apiSpec:
     name: tls-cert-keys
 ---
-# KongReferenceGrant that allows a cluster-scoped KongVault to reference
-# the KonnectGatewayControlPlane in the "default" namespace.
+# KongReferenceGrant that allows a cluster-scoped KongVault to reference the
+# KonnectGatewayControlPlane and the KonnectConfigStore in the "default"
+# namespace. Both references cross a namespace boundary because KongVault is
+# cluster-scoped, so both need to be granted by the referenced namespace.
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongReferenceGrant
 metadata:
-  name: allow-kongvault-to-konnectgatewaycontrolplane
+  name: allow-kongvault-to-konnect-resources
   namespace: default
 spec:
   from:
@@ -52,6 +54,11 @@ spec:
   to:
     - group: konnect.konghq.com
       kind: KonnectGatewayControlPlane
+    - group: konnect.konghq.com
+      kind: KonnectConfigStore
+      # Optional: without it, the grant covers every KonnectConfigStore in this
+      # namespace.
+      name: tls-cert-keys
 ---
 kind: KongVault
 apiVersion: configuration.konghq.com/v1alpha1
@@ -66,7 +73,8 @@ spec:
   configStoreRef:
     name: tls-cert-keys
     # KongVault is cluster scoped, so the namespace of the referenced
-    # KonnectConfigStore has to be specified.
+    # KonnectConfigStore has to be specified, and that namespace has to allow the
+    # reference with the KongReferenceGrant above.
     namespace: default
   controlPlaneRef:
     type: konnectNamespacedRef

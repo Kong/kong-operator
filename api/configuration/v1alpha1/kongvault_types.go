@@ -88,9 +88,12 @@ type KongVaultSpec struct {
 	// with setting `config_store_id` in Config.
 	//
 	// KongVault is cluster-scoped and KonnectConfigStore is namespaced, so this
-	// reference always crosses a namespace boundary. Its authorization is not
-	// enforced yet: a KongReferenceGrant in the referenced namespace will become
-	// required in a future release, as it already is for ControlPlaneRef.
+	// reference always crosses a namespace boundary and the referenced namespace
+	// has to allow it with a KongReferenceGrant granting `from` a KongVault in
+	// namespace "" (KongVault has no namespace of its own) `to` the
+	// KonnectConfigStore kind. Without a matching grant the KongVault reports
+	// ConfigStoreRefValid=False with reason RefNotPermitted and is not pushed to
+	// Konnect.
 	// +optional
 	ConfigStoreRef *KonnectConfigStoreRef `json:"configStoreRef,omitempty"`
 	// Tags are the tags associated to the vault for grouping and filtering.
