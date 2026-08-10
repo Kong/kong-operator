@@ -355,24 +355,24 @@ func (r *Reconciler) ensurePrometheusPlugin(
 	}
 
 	// If it exists, ensure it's up to date.
-	if !cmp.Equal(generatedPlugin.Config, &prometheusPluginActual.Config) ||
-		!cmp.Equal(generatedPlugin.Annotations, &prometheusPluginActual.Annotations) ||
-		!cmp.Equal(generatedPlugin.OwnerReferences, &prometheusPluginActual.OwnerReferences) ||
-		!cmp.Equal(generatedPlugin.Labels, &prometheusPluginActual.Labels) ||
-		!cmp.Equal(generatedPlugin.Finalizers, &prometheusPluginActual.Finalizers) ||
-		!cmp.Equal(generatedPlugin.InstanceName, &prometheusPluginActual.InstanceName) ||
-		!cmp.Equal(generatedPlugin.PluginName, &prometheusPluginActual.PluginName) ||
-		!cmp.Equal(generatedPlugin.Disabled, &prometheusPluginActual.Disabled) {
+	if !cmp.Equal(generatedPlugin.Annotations, prometheusPluginActual.Annotations) ||
+		!cmp.Equal(generatedPlugin.Disabled, prometheusPluginActual.Disabled) ||
+		!cmp.Equal(generatedPlugin.Finalizers, prometheusPluginActual.Finalizers) ||
+		!cmp.Equal(generatedPlugin.InstanceName, prometheusPluginActual.InstanceName) ||
+		!cmp.Equal(generatedPlugin.Labels, prometheusPluginActual.Labels) ||
+		!cmp.Equal(generatedPlugin.OwnerReferences, prometheusPluginActual.OwnerReferences) ||
+		!cmp.Equal(generatedPlugin.PluginName, prometheusPluginActual.PluginName) ||
+		!cmp.Equal(generatedPlugin.Config, prometheusPluginActual.Config) {
+		prometheusPluginActual.Annotations = generatedPlugin.Annotations
 		prometheusPluginActual.Config = generatedPlugin.Config
 		prometheusPluginActual.Disabled = generatedPlugin.Disabled
-		prometheusPluginActual.Annotations = generatedPlugin.Annotations
-		prometheusPluginActual.Labels = generatedPlugin.Labels
 		prometheusPluginActual.Finalizers = generatedPlugin.Finalizers
 		prometheusPluginActual.InstanceName = generatedPlugin.InstanceName
-		prometheusPluginActual.PluginName = generatedPlugin.PluginName
+		prometheusPluginActual.Labels = generatedPlugin.Labels
 		prometheusPluginActual.OwnerReferences = generatedPlugin.OwnerReferences
+		prometheusPluginActual.PluginName = generatedPlugin.PluginName
 		if err := r.Update(ctx, &prometheusPluginActual); err != nil {
-			return nil, fmt.Errorf("failed to updated Prometheus KongPlugin %s for Service %s: %w", pluginNN, svcNN, err)
+			return nil, fmt.Errorf("failed to update Prometheus KongPlugin %s for Service %s: %w", pluginNN, svcNN, err)
 		}
 	}
 
