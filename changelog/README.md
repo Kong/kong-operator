@@ -14,6 +14,17 @@ edit `CHANGELOG.md` directly in feature PRs.**
 4. CI fails if no fragment is present. Exempt a PR with the `skip-changelog`
    label, or use a non-releasable type (`docs`, `test`, `chore`, `ci`,
    `refactor`, `style`, `build`).
+5. The fragment must be named `<PR-number>.yml` (a `.yaml` sibling is not
+   recognized by the generator or the CI gate).
+6. A PR that only touches its own changelog fragment skips the expensive
+   test suite (kind/e2e jobs) entirely — the `changelog-gate` job still
+   schema-lints the fragment, so a malformed fragment (e.g. an invalid
+   `type`) still fails CI even on a fragment-only PR.
+7. `changelog-gate` reads the PR's live title/body/labels, not the payload
+   from when the workflow was triggered. So after fixing the title or adding
+   the `skip-changelog` label, no new commit is needed: someone with write
+   access can click "Re-run all jobs" on the `tests` workflow once and the
+   gate re-evaluates against the current PR state.
 
 ## Fragment schema
 
