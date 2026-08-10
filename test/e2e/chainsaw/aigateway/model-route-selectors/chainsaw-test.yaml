@@ -1,0 +1,171 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-model-route-selectors
+spec:
+  description: |
+    AIGatewayModel route selectors. Stands up a Konnect AIGateway
+    control plane, a shared OpenAI-compatible provider, and three AIGatewayModel
+    resources - one per `config.route.model` selector type (headers, body, path) -
+    then drives real chat-completions traffic to verify each selector type routes
+    requests to the correct target based on its configured alias `values`, and
+    that a non-matching alias is consistently rejected.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: 4-Create-provider-and-models
+      description: |
+        Create a shared provider and three AIGatewayModel resources, one per
+        `config.route.model` selector type (headers, body, path).
+      try:
+        - apply:
+            file: 01-provider-and-models.yaml
+        - assert:
+            file: 01-assert-programmed.yaml
+    - name: 5-Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+    - name: 6-Verify-headers-selector-routes-matching-alias
+      description: A request carrying the configured header alias is routed to the model.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /model-route/headers/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+    - name: 7-Verify-headers-selector-rejects-non-matching-alias
+      description: A request carrying an alias absent from the selector's `values` never resolves to the model.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /model-route/headers/chat
+              - name: MODEL_ALIAS
+                value: headers-alias-wrong
+              - name: EXPECT_SUCCESS
+                value: 'false'
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+    - name: 8-Verify-body-selector-routes-matching-alias
+      description: A request carrying the configured body property alias is routed to the model.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /model-route/body/chat
+              - name: MODEL_ALIAS
+                value: gemma3:270m
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+    - name: 9-Verify-path-selector-routes-matching-alias
+      description: A request whose path segment matches the selector's `values` is routed to the model.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /model-route/path/qwen2.5:0.5b/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+    - name: 10-Verify-body-selector-rejects-non-matching-alias
+      description: A request carrying a body property alias absent from the selector's `values` never resolves to the model.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /model-route/body/chat
+              - name: MODEL_ALIAS
+                value: body-alias-wrong
+              - name: EXPECT_SUCCESS
+                value: 'false'
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+    - name: 11-Verify-path-selector-rejects-non-matching-alias
+      description: A request whose path segment is absent from the selector's `values` never resolves to the model.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /model-route/path/path-alias-wrong/chat
+              - name: MODEL_ALIAS
+                value: path-alias-wrong
+              - name: EXPECT_SUCCESS
+                value: 'false'
+            content: |
+              bash ../../common/scripts/aigw_chat_completion.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-model-route-selectors
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

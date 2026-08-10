@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-provider-credentials
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  apikey: test-ai-gateway-key
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: openai-provider
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openai
+    openai:
+      name: openai-provider
+      displayName: OpenAI (mock)
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: secretRef
+                secretRef:
+                  name: openai-provider-credentials
+                  key: apikey
+---
+# headers selector: reused for the negative/non-matching-alias case.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-headers-selector
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-headers-selector
+      displayName: Model routed via headers selector
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            headerParam: X-Kong-LLM-Model
+            values:
+              - qwen2.5:0.5b
+          paths:
+            - /model-route/headers/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: openai-provider
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
+---
+# body selector: routes on the "model" property of the JSON request body.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-body-selector
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-body-selector
+      displayName: Model routed via body selector
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            bodyParam: model
+            values:
+              - gemma3:270m
+          paths:
+            - /model-route/body/chat
+      targets:
+        - name: gemma3:270m
+          provider:
+            name: openai-provider
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
+---
+# path selector: routes on a named capture group within the route's path regex.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-path-selector
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-path-selector
+      displayName: Model routed via path selector
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            pathParam: model_name
+            values:
+              - qwen2.5:0.5b
+          paths:
+            - ~/model-route/path/(?<model_name>[^/]+)/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: openai-provider
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
