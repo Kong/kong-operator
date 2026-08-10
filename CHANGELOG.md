@@ -79,6 +79,13 @@
   once the referenced `KonnectConfigStore` is programmed.
   [#5208](https://github.com/Kong/kong-operator/pull/5208)
   [#5211](https://github.com/Kong/kong-operator/pull/5211)
+- `KongVault`: `spec.configStoreRef` now requires the referenced namespace to
+  permit the reference with a `KongReferenceGrant`. `KongVault` is cluster-scoped,
+  so the grant's `from` entry has to use `namespace: ""`, and `KonnectConfigStore`
+  is now accepted as a `to` kind. Without a matching grant the `KongVault` reports
+  `ConfigStoreRefValid=False` with reason `RefNotPermitted` and is not pushed to
+  Konnect.
+  [#5221](https://github.com/Kong/kong-operator/pull/5221)
 
 ### Changed
 
