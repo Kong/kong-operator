@@ -525,7 +525,11 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 	}
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dpName, integration.GetClients().OperatorClient), waitTime, tickTime)
+	// NOTE: Wait longer for DataPlane to get ready as hitting Konnect with
+	// data plane certificate which has not yet been fully processed by Konnect can
+	// hit a path which will require an mtls plugin ttl to hit in order for the
+	// certificate to work.
+	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dpName, integration.GetClients().OperatorClient), 2*time.Minute, tickTime)
 
 	t.Logf("verifying dataplane %s has ingress service", dpName)
 	var dpIngressService corev1.Service
