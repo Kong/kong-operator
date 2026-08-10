@@ -37,7 +37,7 @@ jobs:
             make-target: verify.crd-breaking-changes
             fetch_depth: 0
           - name: changelog
-            make-target: verify.changelog
+            make-target: test.changelog
             fetch_depth: 1
     steps:
     - name: Harden Runner
