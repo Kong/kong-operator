@@ -28,6 +28,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration"
@@ -382,12 +383,11 @@ func checkDataPlaneStatus(
 		if assert.Len(c, dps.Items, 1) {
 			dp = dps.Items[0]
 		}
-		if !assert.Len(c, dp.Status.Conditions, 1) {
+
+		condition, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, &dp)
+		if !assert.True(c, ok, "Ready condition not present") {
 			return
 		}
-
-		condition := dp.Status.Conditions[0]
-		assert.EqualValues(c, kcfgdataplane.ReadyType, condition.Type)
 		assert.Equal(c, expectedConditionStatus, condition.Status)
 		assert.EqualValues(c, expectedConditionReason, condition.Reason)
 		assert.Equal(c, expectedConditionMessage, condition.Message)

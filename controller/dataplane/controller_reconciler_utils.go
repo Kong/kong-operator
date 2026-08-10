@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -227,7 +226,7 @@ func verifyKPIReadinessForDataPlane(
 	if err := c.Get(ctx, kpiNN, &kpi); err != nil {
 		if apierrors.IsNotFound(err) {
 			msg := fmt.Sprintf("referenced KongPluginInstallation %s not found", kpiNN)
-			markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, c, dataplane, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable, msg)
+			markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, c, dataplane, msg)
 			return kpi, false, markErr
 		} else {
 			return kpi, true, err
@@ -239,9 +238,7 @@ func verifyKPIReadinessForDataPlane(
 			c.Reason == string(operatorv1alpha1.KongPluginInstallationReasonPending)
 	}) {
 		msgPending := fmt.Sprintf("please wait, referenced KongPluginInstallation %s has not been fully reconciled yet", kpiNN)
-		markErr := ensureDataPlaneIsMarkedNotReady(
-			ctx, logger, c, dataplane, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable, msgPending,
-		)
+		markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, c, dataplane, msgPending)
 		return kpi, false, markErr
 	}
 	if lo.ContainsBy(kpi.Status.Conditions, func(c metav1.Condition) bool {
@@ -250,9 +247,7 @@ func verifyKPIReadinessForDataPlane(
 			c.Reason == string(operatorv1alpha1.KongPluginInstallationReasonFailed)
 	}) {
 		msgFailed := fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", kpiNN)
-		markErr := ensureDataPlaneIsMarkedNotReady(
-			ctx, logger, c, dataplane, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable, msgFailed,
-		)
+		markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, c, dataplane, msgFailed)
 		return kpi, false, markErr
 	}
 	return kpi, true, nil
@@ -264,7 +259,8 @@ func isSameDataPlaneCondition(condition1, condition2 metav1.Condition) bool {
 	return condition1.Type == condition2.Type &&
 		condition1.Status == condition2.Status &&
 		condition1.Reason == condition2.Reason &&
-		condition1.Message == condition2.Message
+		condition1.Message == condition2.Message &&
+		condition1.ObservedGeneration == condition2.ObservedGeneration
 }
 
 func ensureDataPlaneIsMarkedNotReady(
@@ -272,12 +268,12 @@ func ensureDataPlaneIsMarkedNotReady(
 	log logr.Logger,
 	c client.Client,
 	dataplane *operatorv1beta1.DataPlane,
-	reason kcfgconsts.ConditionReason, message string,
+	message string,
 ) error {
 	notReadyCondition := metav1.Condition{
 		Type:               string(kcfgdataplane.ReadyType),
 		Status:             metav1.ConditionFalse,
-		Reason:             string(reason),
+		Reason:             string(kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable),
 		Message:            message,
 		ObservedGeneration: dataplane.Generation,
 		LastTransitionTime: metav1.Now(),

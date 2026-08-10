@@ -218,6 +218,7 @@ func ensureDataPlaneReadyStatus(
 			),
 			dataplane,
 		)
+		setDeploymentRolledOutCondition(dataplane, nil, generation)
 		ensureDataPlaneReadinessStatus(dataplane, appsv1.DeploymentStatus{
 			Replicas:      0,
 			ReadyReplicas: 0,
@@ -252,6 +253,7 @@ func ensureDataPlaneReadyStatus(
 			),
 			dataplane,
 		)
+		setDeploymentRolledOutCondition(dataplane, &deployment, generation)
 		ensureDataPlaneReadinessStatus(dataplane, deployment.Status)
 		if _, err := patchDataPlaneStatus(ctx, cl, logger, dataplane); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed patching status (Deployment not ready) for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
@@ -279,6 +281,7 @@ func ensureDataPlaneReadyStatus(
 			),
 			dataplane,
 		)
+		setDeploymentRolledOutCondition(dataplane, &deployment, generation)
 		ensureDataPlaneReadinessStatus(dataplane, deployment.Status)
 		_, err := patchDataPlaneStatus(ctx, cl, logger, dataplane)
 		if err != nil {
@@ -308,6 +311,7 @@ func ensureDataPlaneReadyStatus(
 			),
 			dataplane,
 		)
+		setDeploymentRolledOutCondition(dataplane, &deployment, generation)
 		ensureDataPlaneReadinessStatus(dataplane, deployment.Status)
 		_, err := patchDataPlaneStatus(ctx, cl, logger, dataplane)
 		if err != nil {
@@ -316,17 +320,8 @@ func ensureDataPlaneReadyStatus(
 		return ctrl.Result{}, nil
 	}
 
-	readyGeneration := generation
-	if !isDeploymentRolledOut(&deployment) {
-		// The Deployment still has old replicas serving traffic for a previous
-		// generation of the DataPlane spec, so do not claim the current generation
-		// is ready. Ready.status does not flap; only observedGeneration lags until
-		// the rollout completes (or isDeploymentReady above catches a stalled one).
-		if c, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dataplane); ok && c.Status == metav1.ConditionTrue {
-			readyGeneration = c.ObservedGeneration
-		}
-	}
-	k8sutils.SetReadyWithGeneration(dataplane, readyGeneration)
+	k8sutils.SetReadyWithGeneration(dataplane, generation)
+	setDeploymentRolledOutCondition(dataplane, &deployment, generation)
 	ensureDataPlaneReadinessStatus(dataplane, deployment.Status)
 
 	if _, err := patchDataPlaneStatus(ctx, cl, logger, dataplane); err != nil {
@@ -395,7 +390,7 @@ func isDeploymentReady(deployment *appsv1.Deployment) (metav1.ConditionStatus, b
 	}
 
 	if c := getDeploymentCondition(deployment, appsv1.DeploymentProgressing); c != nil &&
-		c.Status == corev1.ConditionFalse && c.Reason == "ProgressDeadlineExceeded" {
+		c.Status == corev1.ConditionFalse && c.Reason == string(kcfgdataplane.DeploymentRolloutStalledReason) {
 		return metav1.ConditionFalse, false
 	}
 
@@ -425,4 +420,42 @@ func isDeploymentRolledOut(deployment *appsv1.Deployment) bool {
 	}
 	return deployment.Status.Replicas == deployment.Status.UpdatedReplicas &&
 		deployment.Status.AvailableReplicas == deployment.Status.UpdatedReplicas
+}
+
+// setDeploymentRolledOutCondition records whether the DataPlane's live Deployment
+// has fully rolled out the given generation of the DataPlane spec.
+// deployment is nil when no live Deployment exists yet.
+// This is deliberately kept separate from the Ready condition: Ready reports
+// whether the DataPlane is currently serving traffic (which stays true across a
+// rolling update as long as old replicas are still available), while this
+// condition reports whether the *current* generation's spec is what is actually
+// serving. It is recomputed from the Deployment on every reconcile, so unlike a
+// value inherited from a previous reconcile, it can never go stale.
+func setDeploymentRolledOutCondition(
+	dataplane *operatorv1beta1.DataPlane,
+	deployment *appsv1.Deployment,
+	generation int64,
+) {
+	status, reason, message := metav1.ConditionFalse,
+		kcfgdataplane.DeploymentRolloutProgressingReason,
+		"Waiting for the Deployment to roll out"
+
+	switch {
+	case deployment == nil:
+		message = "Deployment not present yet"
+	case isDeploymentRolledOut(deployment):
+		status, reason, message = metav1.ConditionTrue,
+			kcfgdataplane.DeploymentRolloutCompleteReason,
+			"All replicas run the current generation"
+	default:
+		if c := getDeploymentCondition(deployment, appsv1.DeploymentProgressing); c != nil &&
+			c.Status == corev1.ConditionFalse && c.Reason == string(kcfgdataplane.DeploymentRolloutStalledReason) {
+			reason, message = kcfgdataplane.DeploymentRolloutStalledReason, c.Message
+		}
+	}
+
+	k8sutils.SetCondition(
+		k8sutils.NewConditionWithGeneration(kcfgdataplane.DeploymentRolledOutType, status, reason, message, generation),
+		dataplane,
+	)
 }

@@ -261,7 +261,9 @@ func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGe
 func AreAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
 		switch condition.Type {
-		case string(kcfgdataplane.ReadyType), string(gatewayv1.GatewayConditionProgrammed):
+		case string(kcfgdataplane.ReadyType),
+			string(kcfgdataplane.DeploymentRolledOutType),
+			string(gatewayv1.GatewayConditionProgrammed):
 			continue
 		default:
 			if condition.Status != metav1.ConditionTrue {
