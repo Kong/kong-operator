@@ -22517,7 +22517,10 @@ spec:
                   namespace "" (KongVault has no namespace of its own) `to` the
                   KonnectConfigStore kind. Without a matching grant the KongVault reports
                   ConfigStoreRefValid=False with reason RefNotPermitted and is not pushed to
-                  Konnect.
+                  Konnect. If the grant is removed after the KongVault has been programmed,
+                  subsequent updates are stopped, but the existing Konnect vault (including
+                  its config_store_id) is not rolled back or removed solely because the grant
+                  was removed.
                 properties:
                   kind:
                     default: KonnectConfigStore

@@ -1,6 +1,8 @@
 package konnect
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -90,6 +93,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 		name                string
 		vault               *configurationv1alpha1.KongVault
 		objects             []client.Object
+		interceptors        interceptor.Funcs
 		expectStop          bool
 		expectErrorContains string
 		expectCondition     *metav1.Condition
@@ -216,6 +220,18 @@ func TestHandleConfigStoreRef(t *testing.T) {
 			},
 		},
 		{
+			name:    "a KongReferenceGrant list failure is returned, not treated as a denial",
+			vault:   vault(),
+			objects: []client.Object{programmedConfigStore()},
+			interceptors: interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return errors.New("list failed")
+				},
+			},
+			expectStop:          true,
+			expectErrorContains: "list failed",
+		},
+		{
 			name: "an unresolvable ref does not block deletion",
 			vault: vault(func(v *configurationv1alpha1.KongVault) {
 				v.DeletionTimestamp = &metav1.Time{Time: metav1.Now().Time}
@@ -244,6 +260,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 				WithScheme(scheme).
 				WithObjects(tc.vault).
 				WithObjects(tc.objects...).
+				WithInterceptorFuncs(tc.interceptors).
 				WithStatusSubresource(tc.vault).
 				Build()
 			require.NoError(t, fakeClient.Status().Update(t.Context(), tc.vault))
