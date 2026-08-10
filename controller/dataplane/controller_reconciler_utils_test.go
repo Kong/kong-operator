@@ -19,11 +19,13 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
@@ -744,4 +746,46 @@ func TestDataPlaneIngressServiceIsReady(t *testing.T) {
 			assert.Equal(t, tc.expected, res)
 		})
 	}
+}
+
+func TestEnsureDataPlaneIsMarkedNotReady(t *testing.T) {
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test",
+			Namespace:  "default",
+			Generation: 6,
+		},
+		Status: operatorv1beta1.DataPlaneStatus{
+			Conditions: []metav1.Condition{
+				k8sutils.NewConditionWithGeneration(
+					kcfgdataplane.ReadyType,
+					metav1.ConditionFalse,
+					kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+					"referenced KongPluginInstallation kpi-x not found",
+					5,
+				),
+			},
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.
+		NewClientBuilder().
+		WithStatusSubresource(dataplane).
+		WithScheme(scheme.Scheme).
+		WithObjects(dataplane).
+		Build()
+
+	// The same failure (identical message) persists across a generation bump:
+	// this must still refresh observedGeneration, otherwise a client polling
+	// Ready.observedGeneration == metadata.generation never sees this Ready
+	// condition catch up, even though it is correctly reporting False.
+	err := ensureDataPlaneIsMarkedNotReady(
+		t.Context(), logr.Discard(), fakeClient, dataplane,
+		"referenced KongPluginInstallation kpi-x not found",
+	)
+	require.NoError(t, err)
+
+	condition, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dataplane)
+	require.True(t, ok)
+	assert.EqualValues(t, 6, condition.ObservedGeneration)
 }

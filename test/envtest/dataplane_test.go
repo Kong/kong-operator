@@ -321,6 +321,11 @@ func TestDataPlane(t *testing.T) {
 			assert.Equal(ct, metav1.ConditionTrue, condition.Status)
 			assert.EqualValues(ct, 1, current.Status.ReadyReplicas)
 			assert.EqualValues(ct, 1, current.Status.Replicas)
+
+			rolledOut, ok := k8sutils.GetCondition(kcfgdataplane.DeploymentRolledOutType, current)
+			require.True(ct, ok)
+			assert.Equal(ct, metav1.ConditionTrue, rolledOut.Status)
+			assert.Equal(ct, current.Generation, rolledOut.ObservedGeneration)
 		}, waitTime, tickTime)
 
 		updated := &operatorv1beta1.DataPlane{}
@@ -346,6 +351,22 @@ func TestDataPlane(t *testing.T) {
 			assert.Greater(ct, deploymentList.Items[0].Generation, deployment.Generation)
 		}, waitTime, tickTime)
 
+		// Before the Deployment reports the new generation as rolled out,
+		// DeploymentRolledOut must reflect that, while Ready must not flap.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			current := &operatorv1beta1.DataPlane{}
+			require.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(dp), current))
+
+			rolledOut, ok := k8sutils.GetCondition(kcfgdataplane.DeploymentRolledOutType, current)
+			require.True(ct, ok)
+			assert.Equal(ct, metav1.ConditionFalse, rolledOut.Status)
+			assert.Equal(ct, current.Generation, rolledOut.ObservedGeneration)
+
+			condition, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, current)
+			require.True(ct, ok)
+			assert.Equal(ct, metav1.ConditionTrue, condition.Status)
+		}, waitTime, tickTime)
+
 		deployment = deploymentList.Items[0]
 		deployment.Status = appsv1.DeploymentStatus{
 			ObservedGeneration: deployment.Generation,
@@ -366,6 +387,11 @@ func TestDataPlane(t *testing.T) {
 			assert.Equal(ct, current.Generation, condition.ObservedGeneration)
 			assert.EqualValues(ct, 1, current.Status.ReadyReplicas)
 			assert.EqualValues(ct, 1, current.Status.Replicas)
+
+			rolledOut, ok := k8sutils.GetCondition(kcfgdataplane.DeploymentRolledOutType, current)
+			require.True(ct, ok)
+			assert.Equal(ct, metav1.ConditionTrue, rolledOut.Status)
+			assert.Equal(ct, current.Generation, rolledOut.ObservedGeneration)
 		}, waitTime, tickTime)
 	})
 }
