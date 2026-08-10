@@ -80,6 +80,8 @@ type DeploymentOptions struct {
 	// Replicas describes the number of desired pods.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 }
 
