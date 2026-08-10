@@ -10,16 +10,18 @@
 #
 # Inputs (env only):
 #   PR_JSON_FILE   Path to a GitHub PR JSON object (.title, .body,
-#                  .labels[].name, .number). Used by CI, since it avoids
-#                  passing a multiline PR body through a shell env var.
-#                  If set, PR_TITLE/PR_BODY/PR_LABELS/PR_NUMBER are ignored.
-#                  An unreadable file or invalid JSON is reported as
-#                  status=error (see below), not a non-zero exit -- a
-#                  transient `gh api` hiccup must not abort the caller.
+#                  .labels[].name, .number, .user.login). Used by CI, since
+#                  it avoids passing a multiline PR body through a shell env
+#                  var. If set, PR_TITLE/PR_BODY/PR_LABELS/PR_NUMBER/PR_AUTHOR
+#                  are ignored. An unreadable file or invalid JSON is
+#                  reported as status=error (see below), not a non-zero
+#                  exit -- a transient `gh api` hiccup must not abort the
+#                  caller.
 #   PR_TITLE       PR title. Used directly when PR_JSON_FILE is unset.
 #   PR_BODY        PR body (default "").
 #   PR_LABELS      Newline-separated label names (default "").
 #   PR_NUMBER      PR number (default "").
+#   PR_AUTHOR      PR author login (default ""), e.g. "renovate[bot]".
 #   FRAGMENT_DIR   Fragment directory (default changelog/unreleased/kong-operator).
 #
 # Outputs: `key=value` lines on stdout, and appended to $GITHUB_OUTPUT when
@@ -79,11 +81,13 @@ if [ -n "${PR_JSON_FILE:-}" ]; then
   body="$(jq -r '.body // ""' <<< "$pr_json")"
   labels="$(jq -r '.labels[]?.name // empty' <<< "$pr_json")"
   number="$(jq -r '.number // "" | tostring' <<< "$pr_json")"
+  author="$(jq -r '.user.login // ""' <<< "$pr_json")"
 else
   title="${PR_TITLE:-}"
   body="${PR_BODY:-}"
   labels="${PR_LABELS:-}"
   number="${PR_NUMBER:-}"
+  author="${PR_AUTHOR:-}"
 fi
 
 fragment_path=""
@@ -107,6 +111,34 @@ while IFS= read -r label; do
     exit 0
   fi
 done <<< "$labels"
+
+# Backport/cherry-pick PRs always win too, regardless of what follows the
+# bracket (a backport title like "[Backport release/2.2.x] fix: x" would
+# otherwise parse as a normal Conventional Commit). A backport/cherry-pick
+# PR cherry-picks a commit that already carries the *original* PR's
+# changelog fragment (changelog/unreleased/kong-operator/<originalPR>.yml).
+# Requiring a second fragment named after the backport/cherry-pick PR number
+# is simply wrong: generate.sh would drain both at release time and the same
+# change would appear twice in the release-branch CHANGELOG. These PRs are
+# also bot-created (tibdex/backport, or the cherry-pick job in
+# release-bot.yaml) with no human on the other end able to fix an
+# unmergeable title, so there is no self-healing path if we block them.
+# Anchored (^...) so a human PR merely mentioning "backport" mid-title
+# doesn't slip through -- it must be the literal start of the title. (Not
+# using a trailing \b word-boundary: glibc's regex treats it as a GNU
+# extension, but BSD/macOS regex -- used when running these tests locally on
+# macOS -- does not, so [[ =~ ]] silently fails to match at all there. The
+# anchor alone already rules out mid-title matches, which is the actual
+# requirement; every real title has a space or "]" right after "ackport"
+# anyway.)
+backport_re='^\[[Bb]ackport'
+cherry_pick_re='^\[cherry-pick\]'
+if [[ "$title" =~ $backport_re ]] || [[ "$title" =~ $cherry_pick_re ]]; then
+  emit status exempt
+  emit reason "backport/cherry-pick PR: the original PR's changelog fragment travels with the cherry-picked commit"
+  emit fragment_path "$fragment_path"
+  exit 0
+fi
 
 # JS: /^(\w+)(?:\(([^)]*)\))?(!)?:\s*(.+)$/
 # ERE translation: the non-capturing (?:...) becomes capturing, shifting
@@ -132,6 +164,27 @@ done <<< "$labels"
 # JS is more surgical and self-documenting at the point of use.
 title_re=$'^([A-Za-z0-9_]+)(\\(([^)]*)\\))?(!)?:[ \t\n\r\f\v]*(.+)$'
 if [[ ! "$title" =~ $title_re ]]; then
+  # Known-bot safety net, deliberately scoped to *this* branch only (titles
+  # that fail Conventional Commit parsing), not applied unconditionally
+  # before the regex above. Renovate/Dependabot frequently produce
+  # non-Conventional or flapping titles (e.g. renovate.json's
+  # semanticCommits default of "auto" before this fix, and Dependabot's bare
+  # "Bump x from a to b" -- dependabot.yml sets no commit-message.prefix) and
+  # there is no human on a bot-authored PR to fix an unmergeable title.
+  # Scoping it to the invalid_title branch (rather than checking $author
+  # first) means a bot PR whose title DOES parse -- e.g. Renovate's
+  # "chore(deps): ..." once semanticCommits is "enabled" -- still goes
+  # through normal classification below and still requires a fragment (the
+  # deps-scope override maps it to type=dependency); the exemption never
+  # becomes a blanket bypass for bot authors.
+  case "$author" in
+    renovate\[bot\]|dependabot\[bot\]|*'[bot]')
+      emit status exempt
+      emit reason "PR author '$author' is a known bot and its title is not a Conventional Commit"
+      emit fragment_path "$fragment_path"
+      exit 0
+      ;;
+  esac
   emit status invalid_title
   emit reason "PR title is not a Conventional Commit (e.g. 'fix(dataplane): ...'). Fix the title or add the 'skip-changelog' label."
   emit fragment_path "$fragment_path"
@@ -162,7 +215,19 @@ if [ -n "$cc_scope" ]; then
 fi
 
 # "!" or a "BREAKING CHANGE" body marker overrides everything else.
-if [ -n "$bang" ] || printf '%s' "$body" | grep -q "BREAKING CHANGE"; then
+#
+# Deliberately a pure-bash substring test, not `printf ... | grep -q`: under
+# `set -o pipefail` (this script's shebang line), `grep -q` exits as soon as
+# it finds its first match and closes its end of the pipe; `printf` then
+# gets SIGPIPE (exit 141) writing the rest of a body that hasn't been fully
+# consumed yet, so the pipeline's exit status is non-zero even though grep
+# DID match, and this `if` reads false. That is only reachable once the body
+# is larger than the pipe buffer (64 KiB) and the match is early in it --
+# GitHub's PR body limit is 65536 chars, so it is reachable in production.
+# Confirmed: a ~200KB body with "BREAKING CHANGE" on line 1 silently yielded
+# type=bugfix instead of type=breaking_change. `[[ ... == *...* ]]` never
+# forks a subprocess or opens a pipe, so there is nothing to SIGPIPE.
+if [ -n "$bang" ] || [[ "$body" == *"BREAKING CHANGE"* ]]; then
   type="breaking_change"
 fi
 

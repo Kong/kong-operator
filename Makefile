@@ -330,6 +330,10 @@ lint.actions: download.actionlint download.shellcheck
 	$(ACTIONLINT) -shellcheck $(SHELLCHECK) \
 		./.github/workflows/*
 	YQ_BIN=$(YQ) $(PROJECT_DIR)/scripts/verify-no-run-expressions.sh
+# actionlint -shellcheck covers inline run: blocks only; lint the changelog scripts directly.
+	$(SHELLCHECK) \
+		scripts/changelog/*.sh \
+		scripts/check-docs-only-changes.sh
 
 .PHONY: lint.markdownlint
 lint.markdownlint: download.markdownlint-cli2

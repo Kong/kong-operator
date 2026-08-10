@@ -43,18 +43,27 @@ jobs:
         if: ${{ steps.frag.outputs.status == 'required' }}
         env:
           NUM: ${{ github.event.pull_request.number }}
+          # Consume the script's own fragment_path output rather than
+          # re-deriving "changelog/unreleased/kong-operator/${NUM}.yml" by
+          # hand here: that was a second hardcoded copy of the exact path
+          # changelog-gate's "Enforce changelog fragment requirement" step
+          # (tests.yaml) compares against, and the two could silently drift.
+          FRAGMENT_PATH: ${{ steps.frag.outputs.fragment_path }}
           TYPE: ${{ steps.frag.outputs.type }}
           SCOPE: ${{ steps.frag.outputs.scope }}
           MESSAGE: ${{ steps.frag.outputs.message }}
         run: |
           set -euo pipefail
-          dir="changelog/unreleased/kong-operator"
-          file="${dir}/${NUM}.yml"
+          file="${FRAGMENT_PATH}"
+          if [ -z "$file" ]; then
+            echo "::error::pr-fragment-status.sh returned status=required but no fragment_path (missing PR number)."
+            exit 1
+          fi
           if [ -f "$file" ]; then
             echo "Fragment $file already exists; leaving author edits intact."
             exit 0
           fi
-          mkdir -p "$dir"
+          mkdir -p "$(dirname "$file")"
           # Build the fragment with yq so the PR-title-derived MESSAGE is safely
           # YAML-escaped (raw printf interpolation broke on titles containing ": "
           # or " #123", producing invalid or silently truncated YAML).
