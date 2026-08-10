@@ -100,6 +100,11 @@ func TestKongVaultToVaultInputConfigStoreRef(t *testing.T) {
 			vault:       konnectBackedVault("", ref),
 			expectedErr: "failed to resolve spec.configStoreRef",
 		},
+		{
+			name:           "a resolved configStoreRef is reused from the reconciliation context",
+			vault:          konnectBackedVault("", ref),
+			expectedConfig: map[string]any{"config_store_id": "resolved-id"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -109,7 +114,11 @@ func TestKongVaultToVaultInputConfigStoreRef(t *testing.T) {
 				WithObjects(tc.objects...).
 				Build()
 
-			input, err := kongVaultToVaultInput(t.Context(), cl, tc.vault)
+			ctx := t.Context()
+			if tc.name == "a resolved configStoreRef is reused from the reconciliation context" {
+				ctx = WithResolvedConfigStoreID(ctx, "resolved-id")
+			}
+			input, err := kongVaultToVaultInput(ctx, cl, tc.vault)
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, tc.expectedErr)
 				return

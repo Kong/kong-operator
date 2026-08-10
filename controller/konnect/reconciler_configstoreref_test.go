@@ -91,6 +91,15 @@ func TestHandleConfigStoreRef(t *testing.T) {
 			},
 		},
 		{
+			name: "a programmed config store does not update status during deletion",
+			vault: vault(func(v *configurationv1alpha1.KongVault) {
+				v.DeletionTimestamp = &metav1.Time{Time: metav1.Now().Time}
+				v.Finalizers = []string{KonnectCleanupFinalizer}
+			}),
+			objects:    []client.Object{programmedConfigStore()},
+			expectStop: false,
+		},
+		{
 			name:       "missing config store stops reconciliation with an Invalid condition",
 			vault:      vault(),
 			expectStop: true,
@@ -148,7 +157,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 				Build()
 			require.NoError(t, fakeClient.Status().Update(t.Context(), tc.vault))
 
-			res, stop, err := handleConfigStoreRef(t.Context(), fakeClient, tc.vault)
+			res, stop, _, err := handleConfigStoreRef(t.Context(), fakeClient, tc.vault)
 
 			if tc.expectErrorContains != "" {
 				require.ErrorContains(t, err, tc.expectErrorContains)

@@ -15,6 +15,22 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
+type resolvedConfigStoreIDContextKey struct{}
+
+// WithResolvedConfigStoreID makes a Config Store ID resolved during reference
+// handling available to the KongVault operation in the same reconciliation.
+func WithResolvedConfigStoreID(ctx context.Context, id string) context.Context {
+	if id == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, resolvedConfigStoreIDContextKey{}, id)
+}
+
+func resolvedConfigStoreIDFromContext(ctx context.Context) (string, bool) {
+	id, ok := ctx.Value(resolvedConfigStoreIDContextKey{}).(string)
+	return id, ok
+}
+
 func createVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
@@ -161,9 +177,13 @@ func kongVaultToVaultInput(
 			return sdkkonnectcomp.Vault{}, err
 		}
 	}
-	configStoreID, err := vault.ResolveConfigStoreID(ctx, cl)
-	if err != nil {
-		return sdkkonnectcomp.Vault{}, fmt.Errorf("failed to resolve spec.configStoreRef: %w", err)
+	configStoreID, resolved := resolvedConfigStoreIDFromContext(ctx)
+	if !resolved {
+		var err error
+		configStoreID, err = vault.ResolveConfigStoreID(ctx, cl)
+		if err != nil {
+			return sdkkonnectcomp.Vault{}, fmt.Errorf("failed to resolve spec.configStoreRef: %w", err)
+		}
 	}
 	if configStoreID != "" {
 		vaultConfig[configurationv1alpha1.KongVaultConfigStoreIDKey] = configStoreID

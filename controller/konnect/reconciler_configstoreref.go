@@ -33,14 +33,14 @@ func handleConfigStoreRef[T constraints.SupportedKonnectEntityType, TEnt constra
 	ctx context.Context,
 	cl client.Client,
 	ent TEnt,
-) (_ ctrl.Result, stop bool, _ error) {
+) (_ ctrl.Result, stop bool, resolvedID string, _ error) {
 	resolver, ok := any(ent).(configStoreRefResolver)
 	if !ok {
-		return ctrl.Result{}, false, nil
+		return ctrl.Result{}, false, "", nil
 	}
 	nn, hasRef := getConfigStoreRef(ent)
 	if !hasRef {
-		return ctrl.Result{}, false, nil
+		return ctrl.Result{}, false, "", nil
 	}
 
 	// While the entity is being deleted its Konnect counterpart has to be removed,
@@ -48,26 +48,32 @@ func handleConfigStoreRef[T constraints.SupportedKonnectEntityType, TEnt constra
 	// would leave the entity stuck with its finalizer.
 	deleting := !ent.GetDeletionTimestamp().IsZero()
 
-	_, err := resolver.ResolveConfigStoreID(ctx, cl)
+	resolvedID, err := resolver.ResolveConfigStoreID(ctx, cl)
 	if err == nil {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, ent,
-			konnectv1alpha1.ConfigStoreRefValidConditionType,
-			metav1.ConditionTrue,
-			konnectv1alpha1.ConfigStoreRefReasonValid,
-			fmt.Sprintf("Referenced KonnectConfigStore %s is programmed", nn),
-		); errStatus != nil || !res.IsZero() {
-			return res, true, errStatus
+		if !deleting {
+			if res, errStatus := patch.StatusWithCondition(
+				ctx, cl, ent,
+				konnectv1alpha1.ConfigStoreRefValidConditionType,
+				metav1.ConditionTrue,
+				konnectv1alpha1.ConfigStoreRefReasonValid,
+				fmt.Sprintf("Referenced KonnectConfigStore %s is programmed", nn),
+			); errStatus != nil || !res.IsZero() {
+				return res, true, resolvedID, errStatus
+			}
 		}
-		return ctrl.Result{}, false, nil
+		return ctrl.Result{}, false, resolvedID, nil
 	}
 	if deleting {
-		return ctrl.Result{}, false, nil
+		return ctrl.Result{}, false, "", nil
 	}
 
 	reason, message, expected := configStoreRefFailure(err, nn)
 	if !expected {
-		return ctrl.Result{}, true, err
+		// Reference errors are expected resource state and should be reflected in
+		// the condition. Other errors, such as Kubernetes API failures, must be
+		// returned so controller-runtime retries them instead of reporting a
+		// misleading invalid-reference condition.
+		return ctrl.Result{}, true, "", err
 	}
 
 	if res, errStatus := patch.StatusWithCondition(
@@ -77,12 +83,12 @@ func handleConfigStoreRef[T constraints.SupportedKonnectEntityType, TEnt constra
 		reason,
 		message,
 	); errStatus != nil || !res.IsZero() {
-		return res, true, errStatus
+		return res, true, "", errStatus
 	}
 
 	// Don't requeue: a change to the referenced KonnectConfigStore triggers the
 	// reconciliation, and an invalid reference needs a spec change to be fixed.
-	return ctrl.Result{}, true, nil
+	return ctrl.Result{}, true, "", nil
 }
 
 // configStoreRefFailure maps a reference resolution error to the reason and message
