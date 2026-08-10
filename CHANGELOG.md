@@ -57,6 +57,11 @@
 
 ### Fixes
 
+- Konnect entities whose cross-namespace `controlPlaneRef` was permitted by a
+  `KongReferenceGrant` no longer get stuck during deletion when that grant is
+  removed first. The grant is now enforced only while the entity is not being
+  deleted, allowing its Konnect counterpart and cleanup finalizer to be removed.
+  [#5229](https://github.com/Kong/kong-operator/pull/5229)
 - DataPlaneMetricsExtension: the reconciler now returns an error (and gets
   requeued with backoff) when it fails to create, update or delete the
   Prometheus `KongPlugin` for a Service, instead of logging and giving up.

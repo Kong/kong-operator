@@ -601,6 +601,79 @@ func TestKongService(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
 
+	t.Run("removing the KongReferenceGrant of a cross namespace ref does not block deletion", func(t *testing.T) {
+		const (
+			host = "grantless-delete.example.com"
+			id   = "service-grantless-delete"
+		)
+
+		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl2, client.InNamespace(ns2.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.ServiceOutput{
+						ID: new(id),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Creating the KongReferenceGrant that permits the cross namespace ControlPlane ref")
+		grant := deploy.KongReferenceGrant(t, ctx, clientNamespaced,
+			deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "KongService",
+				Namespace: configurationv1alpha1.Namespace(ns2.Name),
+			}),
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+				Kind:  "KonnectGatewayControlPlane",
+			}),
+		)
+
+		createdService := deploy.KongService(t, ctx, clientNamespaced2,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp, ns.Name),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for KongService to be programmed")
+		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			return ks.GetName() == createdService.GetName() && k8sutils.IsProgrammed(ks)
+		}, "KongService didn't get Programmed")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+
+		t.Log("Removing the KongReferenceGrant while the KongService still references the ControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, grant))
+
+		t.Log("Setting up SDK expectations on Service deletion")
+		sdk.ServicesSDK.EXPECT().
+			DeleteService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				id,
+			).
+			Return(&sdkkonnectops.DeleteServiceResponse{}, nil)
+
+		t.Log("Deleting the KongService must still clean up Konnect and drop the finalizer")
+		require.NoError(t, clientNamespaced2.Delete(ctx, createdService))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdService, waitTime, tickTime)
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
+	})
+
 	t.Run("network error on create sets Programmed condition to False", func(t *testing.T) {
 		const host = "network-error-test.com"
 
