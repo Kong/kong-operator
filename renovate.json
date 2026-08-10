@@ -25,6 +25,14 @@
     "fileMatch": ["^Dockerfile$", "^debug\\.Dockerfile$"]
   },
   "automerge": false,
+  // Emit Conventional Commit titles (e.g. "chore(deps): update ...")
+  // instead of the "auto" default, which flapped between Conventional and
+  // bare titles depending on the underlying manager. changelog-gate parses
+  // the PR title, so a flapping/non-Conventional title used to hard-block
+  // Renovate PRs (see the bot-author exemption in
+  // scripts/changelog/pr-fragment-status.sh, kept as a safety net for the
+  // transition and for Dependabot, which has no equivalent setting here).
+  "semanticCommits": "enabled",
   "separateMinorPatch": true,
   "labels": [
     "dependencies"

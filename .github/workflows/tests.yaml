@@ -110,6 +110,11 @@ jobs:
   # nothing to the critical path.
   changelog-gate:
     runs-on: ubuntu-latest
+    # Config-only job (checkout + a couple of API/script calls); it takes
+    # seconds, not the 360-minute default. Matches the short-job convention
+    # used for similarly small jobs elsewhere (e.g. charts-tests.yaml's
+    # lint/docs jobs use timeout-minutes: 10).
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: read
@@ -140,6 +145,15 @@ jobs:
       # a payload-based gate would keep failing after the author fixes the
       # title or a maintainer adds the skip-changelog label. Fetching live
       # means a plain "Re-run all jobs" is enough to pick up either fix.
+      # Retried (3 attempts, linear backoff) so a transient `gh api` blip
+      # doesn't fail the gate outright -- that would skip all 10 heavy jobs
+      # and redden `passed` for a problem that has nothing to do with the
+      # PR. This step deliberately never itself exits non-zero: on
+      # persistent failure it leaves no pr.json behind, so the next step's
+      # `pr-fragment-status.sh` degrades to status=error (its documented
+      # contract for a missing/unreadable PR_JSON_FILE), and the "Enforce"
+      # step below gives that its own actionable message rather than the
+      # generic "unexpected status" branch.
       - name: Resolve PR data
         if: ${{ github.event_name == 'pull_request' }}
         id: pr
@@ -147,8 +161,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          set -euo pipefail
-          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" > "${RUNNER_TEMP}/pr.json"
+          set -uo pipefail
+          max_attempts=3
+          for attempt in $(seq 1 "${max_attempts}"); do
+            if gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" > "${RUNNER_TEMP}/pr.json"; then
+              exit 0
+            fi
+            rm -f "${RUNNER_TEMP}/pr.json"
+            if [ "${attempt}" -lt "${max_attempts}" ]; then
+              backoff=$((attempt * 5))
+              echo "::warning::gh api call failed (attempt ${attempt}/${max_attempts}); retrying in ${backoff}s."
+              sleep "${backoff}"
+            fi
+          done
+          echo "::warning::gh api call failed after ${max_attempts} attempts; leaving no PR data so pr-fragment-status.sh reports status=error."
 
       # Never interpolate the PR title/body into a `run:` block -- that is a
       # script-injection vector. Pass the JSON file through instead; the
@@ -169,6 +195,16 @@ jobs:
         run: |
           set -euo pipefail
           case "${STATUS}" in
+            error)
+              # Distinct from the generic "unexpected status" branch below:
+              # this is the gh-api-couldn't-be-reached case (see the
+              # "Resolve PR data" step), not a title/label problem. Fail
+              # closed (this gate must never let expensive jobs start
+              # without having actually checked), but say so plainly so a
+              # maintainer doesn't waste time editing the PR title.
+              echo "::error::${REASON} This is an infrastructure failure (the gh api call to fetch PR data did not succeed after retries), not a problem with the PR itself -- re-run this job."
+              exit 1
+              ;;
             exempt)
               echo "Exempt: ${REASON}"
               ;;
@@ -615,6 +651,7 @@ jobs:
       - lint-markdownlint
       - govulncheck
       - verify
+      - matrix_k8s_node_versions
       - samples
       - install-with-kustomize
       - build

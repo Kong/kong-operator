@@ -173,16 +173,32 @@ else
 fi
 
 # --- pr-fragment-status: table-driven golden tests ---
-# Columns: name | PR_TITLE | PR_BODY | PR_LABELS | expected status | expected type | expected scope
-pfs_check() { # name title body labels expect_status expect_type expect_scope
-  local name="$1" title="$2" body="$3" labels="$4" exp_status="$5" exp_type="${6:-}" exp_scope="${7:-}"
-  local out status type scope
-  out="$(PR_TITLE="$title" PR_BODY="$body" PR_LABELS="$labels" PR_NUMBER=1 scripts/changelog/pr-fragment-status.sh)"
+# Columns: name | PR_TITLE | PR_BODY | PR_LABELS | expected status | expected
+# type | expected scope | expected author (optional, default "")
+#
+# Every call also asserts fragment_path against the default
+# FRAGMENT_DIR/1.yml (PR_NUMBER is always 1 here) -- this is I3's fix: a
+# reviewer once changed the script's `${number}.yml` to `${number}.yaml` and
+# the whole suite still passed because nothing pinned fragment_path, even
+# though that's the exact value the changelog-gate CI job compares against
+# an on-disk file. Asserting it on every row (not just a dedicated case)
+# means any future edit to fragment_path construction is caught everywhere,
+# not just in one narrow test.
+pfs_check() { # name title body labels expect_status expect_type expect_scope expect_author
+  local name="$1" title="$2" body="$3" labels="$4" exp_status="$5" exp_type="${6:-}" exp_scope="${7:-}" author="${8:-}"
+  local out status type scope fragment_path exp_fragment_path
+  exp_fragment_path="changelog/unreleased/kong-operator/1.yml"
+  out="$(PR_TITLE="$title" PR_BODY="$body" PR_LABELS="$labels" PR_NUMBER=1 PR_AUTHOR="$author" scripts/changelog/pr-fragment-status.sh)"
   status="$(echo "$out" | sed -n 's/^status=//p')"
   type="$(echo "$out" | sed -n 's/^type=//p')"
   scope="$(echo "$out" | sed -n 's/^scope=//p')"
+  fragment_path="$(echo "$out" | sed -n 's/^fragment_path=//p')"
   if [ "$status" != "$exp_status" ]; then
     echo "FAIL - pr-fragment-status: $name (status got '$status' want '$exp_status')"; echo "$out"; fail=1
+    return
+  fi
+  if [ "$fragment_path" != "$exp_fragment_path" ]; then
+    echo "FAIL - pr-fragment-status: $name (fragment_path got '$fragment_path' want '$exp_fragment_path')"; echo "$out"; fail=1
     return
   fi
   if [ "$exp_status" = "required" ]; then
@@ -214,6 +230,55 @@ pfs_check "multi-scope with deps still maps to dependency, scope blanked" \
   "fix(deps,ci): x" "" "" required dependency ""
 pfs_check "bang on a non-releasable type still forces breaking_change" \
   "docs!: x" "" "" required breaking_change ""
+
+# --- pr-fragment-status: P0 exemptions (bot-authored/backport PRs must not
+# hard-block, but the gate must stay meaningful for humans) ---
+pfs_check "backport PR title is exempt regardless of the inner commit type" \
+  "[Backport release/2.2.x] fix: fix reconcile compare bugs" "" "" exempt
+pfs_check "backport PR title is exempt (non-releasable inner type too)" \
+  "[Backport release/2.2.x] test(envtest): stabilize config error envtest event assertions" "" "" exempt
+pfs_check "cherry-pick PR title is exempt" \
+  "[cherry-pick] v2.4.0 - abc123def456789" "" "" exempt
+pfs_check "a human title merely mentioning backport mid-title is NOT exempt (anchored, no mid-title match)" \
+  "fix: revert accidental backport regression" "" "" required bugfix ""
+pfs_check "renovate[bot] with today's bare, non-Conventional title is exempt" \
+  "Update module github.com/kong/go-kong to v0.78.0 (main)" "" "" exempt "" "" "renovate[bot]"
+pfs_check "dependabot[bot] with a bare, non-Conventional title is exempt" \
+  "Bump github.com/foo/bar from 1.0.0 to 1.0.1" "" "" exempt "" "" "dependabot[bot]"
+pfs_check "any other GitHub App bot ('*[bot]') with a bare title is exempt" \
+  "Automated update" "" "" exempt "" "" "github-actions[bot]"
+pfs_check "a HUMAN with a non-Conventional title is still invalid_title -- the gate is not toothless" \
+  "not a conventional title" "" "" invalid_title "" "" "octocat"
+pfs_check "renovate[bot] with a parseable deps title (post semanticCommits:enabled) still requires a fragment" \
+  "chore(deps): update module github.com/kong/go-kong to v0.78.0" "" "" required dependency deps "renovate[bot]"
+
+# --- pr-fragment-status: SIGPIPE misclassification on a large body (I6) ---
+# Reproduces the real bug: `printf '%s' "$body" | grep -q "BREAKING CHANGE"`
+# under `set -o pipefail` -- grep exits as soon as it finds the match and
+# closes its end of the pipe, printf gets SIGPIPE (141) because it hasn't
+# finished writing a body bigger than the 64 KiB pipe buffer, and the `if`
+# reads that non-zero pipeline status as "not found". GitHub's PR body limit
+# (65536 chars) exceeds the pipe buffer, so this was reachable in
+# production. Confirmed manually: with the old grep-pipe pattern this exact
+# body classifies as bugfix; with the pure-bash `[[ == *...* ]]` fix it
+# correctly classifies as breaking_change.
+big_body="$(printf 'BREAKING CHANGE: this changes the wire format.\n'; head -c 70000 /dev/zero | tr '\0' 'x')"
+out="$(PR_TITLE="fix: x" PR_BODY="$big_body" PR_LABELS="" PR_NUMBER=1 scripts/changelog/pr-fragment-status.sh)"
+type="$(echo "$out" | sed -n 's/^type=//p')"
+if [ "$type" = "breaking_change" ]; then
+  echo "ok   - pr-fragment-status: BREAKING CHANGE detected in a >64KiB body (I6 SIGPIPE regression)"
+else
+  echo "FAIL - pr-fragment-status: BREAKING CHANGE not detected in a >64KiB body (type got '$type' want 'breaking_change')"; fail=1
+fi
+
+# --- pr-fragment-status: fragment_path honours a FRAGMENT_DIR override (I3) ---
+out="$(FRAGMENT_DIR="custom/dir" PR_TITLE="fix: x" PR_BODY="" PR_LABELS="" PR_NUMBER=7 scripts/changelog/pr-fragment-status.sh)"
+fragment_path="$(echo "$out" | sed -n 's/^fragment_path=//p')"
+if [ "$fragment_path" = "custom/dir/7.yml" ]; then
+  echo "ok   - pr-fragment-status: FRAGMENT_DIR override is reflected in fragment_path"
+else
+  echo "FAIL - pr-fragment-status: FRAGMENT_DIR override (fragment_path got '$fragment_path' want 'custom/dir/7.yml')"; fail=1
+fi
 
 # --- pr-fragment-status: PR_JSON_FILE mode ---
 # The PR_TITLE-mode cases above never touch the jq/PR_JSON_FILE code path,
@@ -254,6 +319,8 @@ pfs_json_check "missing PR_JSON_FILE degrades to error, not a crash" \
   "__MISSING__" error
 pfs_json_check "malformed PR_JSON_FILE degrades to error, not a crash" \
   'not json at all {{{' error
+pfs_json_check "bot author (.user.login) read from PR_JSON_FILE exempts a bare renovate title" \
+  '{"title":"Update module github.com/kong/go-kong to v0.78.0 (main)","body":"","labels":[],"number":1,"user":{"login":"renovate[bot]"}}' exempt
 
 # --- pr-fragment-status: locale-independence of the title regex ---
 # [[:alnum:]]/[[:space:]] are locale-sensitive under bash's [[ =~ ]]; under a
@@ -261,6 +328,11 @@ pfs_json_check "malformed PR_JSON_FILE degrades to error, not a crash" \
 # non-ASCII letters, diverging from the JS this script replaces (\w is
 # always ASCII-only). Assert the ASCII-only title_re now agrees with the JS
 # regardless of locale.
+# Returns 2 specifically when skipped (locale unavailable), so the caller
+# can tell "skip" apart from "ran and passed/failed" (see locale_exercised
+# below, I8's fix) -- otherwise this whole block can go green on a machine
+# that has neither locale installed, without ever re-exercising the
+# regression fixed in 0a0d4afd3.
 pfs_locale_check() { # name locale title expect_status
   local name="$1" loc="$2" title="$3" exp_status="$4"
   local out status
@@ -270,21 +342,39 @@ pfs_locale_check() { # name locale title expect_status
   # "not available". The subshell keeps that relaxation local to this check.
   if ! ( set +o pipefail; locale -a 2>/dev/null | grep -qx "$loc" ); then
     echo "skip - pr-fragment-status(locale): $name (locale '$loc' not available on this machine)"
-    return
+    return 2
   fi
   out="$(LC_ALL="$loc" PR_TITLE="$title" PR_BODY="" PR_LABELS="" PR_NUMBER=1 scripts/changelog/pr-fragment-status.sh)"
   status="$(echo "$out" | sed -n 's/^status=//p')"
   if [ "$status" != "$exp_status" ]; then
     echo "FAIL - pr-fragment-status(locale): $name [$loc] (status got '$status' want '$exp_status')"; echo "$out"; fail=1
-    return
+    return 0
   fi
   echo "ok   - pr-fragment-status(locale): $name [$loc]"
+  return 0
 }
 
+# I8: if neither locale is available anywhere on this machine, every case in
+# the loop below prints "skip" and (before this fix) the suite stayed green
+# with the locale-independence regression silently unexercised. Track
+# whether at least one case actually ran and fail loudly if not.
+locale_exercised=0
 for loc in C.UTF-8 en_US.UTF-8; do
-  pfs_locale_check "non-ASCII commit type matches JS (invalid_title)" "$loc" "féat: x" invalid_title
-  pfs_locale_check "plain ASCII commit type still required" "$loc" "feat: x" required
+  # `|| rc=$?` (not a bare call + `$?` on the next line) so that this
+  # script's own `set -e` doesn't abort the whole suite when a locale is
+  # missing and the function returns 2 -- a command on the left of `||` is
+  # exempt from errexit, but a bare non-zero return is not.
+  rc=0
+  pfs_locale_check "non-ASCII commit type matches JS (invalid_title)" "$loc" "féat: x" invalid_title || rc=$?
+  [ "$rc" -ne 2 ] && locale_exercised=1
+  rc=0
+  pfs_locale_check "plain ASCII commit type still required" "$loc" "feat: x" required || rc=$?
+  [ "$rc" -ne 2 ] && locale_exercised=1
 done
+if [ "$locale_exercised" -eq 0 ]; then
+  echo "FAIL - pr-fragment-status(locale): neither C.UTF-8 nor en_US.UTF-8 is installed on this machine -- the locale-independence regression test (fixed in 0a0d4afd3) ran zero times this run"
+  fail=1
+fi
 
 # --- skippable-paths: table-driven golden tests ---
 # Drives check-docs-only-changes.sh via the CHANGED_FILES override (no git

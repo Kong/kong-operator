@@ -64,7 +64,11 @@ jobs:
   # This job exists to satisfy the required check when only docs change
   passed:
     runs-on: ubuntu-latest
-    needs: [check-docs-only]
+    # `build` was missing here (pre-existing bug): with only `check-docs-only`
+    # in `needs`, `contains(needs.*.result, 'failure')` below can never see a
+    # build failure, so `passed` could go green while the actual build job
+    # failed.
+    needs: [check-docs-only, build]
     if: always()
     steps:
       - name: Harden Runner

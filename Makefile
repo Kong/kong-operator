@@ -308,6 +308,13 @@ lint.actions: download.actionlint download.shellcheck
 	SHELLCHECK_OPTS='--exclude=SC2086,SC2155,SC2046' \
 	$(ACTIONLINT) -shellcheck $(SHELLCHECK) \
 		./.github/workflows/*
+# actionlint's -shellcheck only lints the inline `run:` blocks above, not
+# standalone scripts invoked BY those blocks. The changelog gate/classifier
+# scripts decide whether expensive CI jobs run at all, so lint them directly
+# too.
+	$(SHELLCHECK) \
+		scripts/changelog/*.sh \
+		scripts/check-docs-only-changes.sh
 
 .PHONY: lint.markdownlint
 lint.markdownlint: download.markdownlint-cli2

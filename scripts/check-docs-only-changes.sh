@@ -4,7 +4,7 @@ set -e
 # Get changed files compared to the base. CHANGED_FILES can be pre-set in the
 # environment (used by the test suite to drive this classifier without git);
 # otherwise it's computed from git diff as before.
-CHANGED_FILES="${CHANGED_FILES:-$(git diff --name-only ${1:-$GITHUB_EVENT_PULL_REQUEST_BASE_SHA} ${2:-$GITHUB_SHA})}"
+CHANGED_FILES="${CHANGED_FILES:-$(git diff --name-only "${1:-$GITHUB_EVENT_PULL_REQUEST_BASE_SHA}" "${2:-$GITHUB_SHA}")}"
 
 # Check if all changed files are ones that cannot change a test outcome:
 # docs/license/template files, or a per-PR changelog fragment (schema-linted
@@ -18,6 +18,6 @@ for file in $CHANGED_FILES; do
   fi
 done
 
-echo "docs_only=$DOCS_ONLY" >> $GITHUB_OUTPUT
+echo "docs_only=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
 echo "Changed files: $CHANGED_FILES"
 echo "No-test-impact only (docs/license/fragment): $DOCS_ONLY"
