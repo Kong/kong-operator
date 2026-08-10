@@ -12,10 +12,10 @@ spec:
        traffic reaches the older backend.
     4. Attaching a second UDPRoute to the same listener and verifying GEP-2645
        listener AttachedRoutes=2 behavior.
-    5. Attaching a third UDPRoute to a different listener so it is pushed to
-       the DataPlane and refreshes object reports for the second route. Then
-       verify all routes report Accepted=True at the K8s status layer and UDP
-       traffic still flows to the older same-listener winner.
+    5. Attaching a third UDPRoute to a different listener so it is pushed to the 
+       DataPlane and refreshes object reports, but the Programmed condition for the 
+       second route should still be False. Then verify all routes report Accepted=True
+       at the K8s status layer and UDP traffic still flows to the older same-listener winner.
     6. Deleting the winner (older) UDPRoute and verifying AttachedRoutes drops
        to 1, the loser remains attached, and UDP traffic now reaches the
        newer backend (the loser is promoted to winner).
@@ -122,9 +122,8 @@ spec:
     - name: Create-third-udproute
       description: |
         Create a third UDPRoute attached to a different listener. This route is
-        pushed to the DataPlane and causes a config/report refresh, allowing the
-        second same-listener route to receive status even though it lost
-        arbitration.
+        pushed to the DataPlane and causes a config/report refresh, the second 
+        same-listener route should still with Programmed=False condition.
       try:
         - apply:
             file: 05-udproute-third.yaml
@@ -189,7 +188,8 @@ spec:
     - name: Delete-winner-udproute
       description: |
         Delete the original (older, winner) UDPRoute. The remaining (loser)
-        UDPRoute is now the sole attached route and gets promoted to winner;
+        UDPRoute is now the sole attached route and gets promoted to winner
+        and its Programmed condition should become True;
         the original listener's AttachedRoutes drops to 1.
       try:
         - delete:

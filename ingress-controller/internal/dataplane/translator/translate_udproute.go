@@ -44,12 +44,10 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 
 	// Group routes by l4ListenerKey.
 	attachments := make(map[l4ListenerKey][]*gatewayapi.UDPRoute)
-	attachedRoutes := make(map[*gatewayapi.UDPRoute]struct{})
 	for _, r := range valid {
 		listenerKeys := l4RouteListenerAttachments(r, t.logger, t.storer, listenersByGateway)
 		for _, k := range listenerKeys {
 			attachments[k] = append(attachments[k], r)
-			attachedRoutes[r] = struct{}{}
 		}
 	}
 
@@ -76,12 +74,14 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 		}
 	}
 
-	// Every UDPRoute that successfully attached to at least one listener (even
-	// if it lost arbitration on all of them) is reported as successfully
-	// translated — the route is "attached" per spec; arbitration is a
-	// translation-layer detail.
+	// Only the winner produced Kong entities, so only the winner is reported as
+	// successfully translated. A route that loses arbitration on every listener
+	// it attached to is left unreported (Programmed stays Unknown) - this way
+	// Programmed reflects the route's real dataplane status: it flips to True
+	// only once the route actually wins arbitration (e.g. after the current
+	// winner is deleted) and its config is genuinely pushed.
 	for _, r := range valid {
-		if _, ok := attachedRoutes[r]; ok {
+		if _, isWinner := winningPorts[r]; isWinner {
 			t.registerSuccessfullyTranslatedObject(r)
 		}
 	}

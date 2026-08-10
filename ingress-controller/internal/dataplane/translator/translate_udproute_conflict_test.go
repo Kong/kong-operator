@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
@@ -314,4 +315,65 @@ func TestUDPRouteListenerAttachments_Predicates(t *testing.T) {
 			assert.ElementsMatch(t, tc.wantTargets, got)
 		})
 	}
+}
+
+// TestIngressRulesFromUDPRoutes_ArbitrationReporting verifies that, for two
+// UDPRoutes attached to the same listener, only the GEP-2645 winner is reported
+// through registerSuccessfullyTranslatedObject (ConfiguredKubernetesObjects).
+// The loser must be left unreported entirely, so its Programmed condition stays
+// Unknown - reflecting that it has no real config on the dataplane - rather than
+// being reported as configured just because it's attached to a listener.
+func TestIngressRulesFromUDPRoutes_ArbitrationReporting(t *testing.T) {
+	gw := &gatewayapi.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "udp-gw"},
+		Spec: gatewayapi.GatewaySpec{
+			Listeners: []gatewayapi.Listener{{
+				Name:     "udp",
+				Protocol: gatewayapi.UDPProtocolType,
+				Port:     9999,
+			}},
+		},
+		Status: udpProgrammedStatus("udp"),
+	}
+	older := mkUDPRouteWithParents("default", parentRef("", "udp-gw", "", 0))
+	older.TypeMeta = udpRouteTypeMeta
+	older.Name = "older"
+	older.CreationTimestamp = metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+	older.Spec.Rules = []gatewayapi.UDPRouteRule{{
+		BackendRefs: []gatewayv1.BackendRef{{
+			BackendObjectReference: gatewayv1.BackendObjectReference{
+				Name: "svc-older", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(53)),
+			},
+		}},
+	}}
+	newer := mkUDPRouteWithParents("default", parentRef("", "udp-gw", "", 0))
+	newer.TypeMeta = udpRouteTypeMeta
+	newer.Name = "newer"
+	newer.CreationTimestamp = metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC))
+	newer.Spec.Rules = []gatewayapi.UDPRouteRule{{
+		BackendRefs: []gatewayv1.BackendRef{{
+			BackendObjectReference: gatewayv1.BackendObjectReference{
+				Name: "svc-newer", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(53)),
+			},
+		}},
+	}}
+
+	fakestore, err := store.NewFakeStore(store.FakeObjects{
+		GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+		Gateways:       []*gatewayapi.Gateway{gw},
+		UDPRoutes:      []*gatewayapi.UDPRoute{older, newer},
+		Services: []*corev1.Service{
+			{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-older"}},
+			{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-newer"}},
+		},
+	})
+	require.NoError(t, err)
+	tr := mustNewTranslator(t, fakestore)
+
+	tr.ingressRulesFromUDPRoutes()
+
+	configured := tr.popConfiguredKubernetesObjects()
+
+	assert.ElementsMatch(t, []client.Object{older}, configured,
+		"only the winner must be reported as successfully translated; the loser must not appear at all")
 }

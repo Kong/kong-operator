@@ -8,10 +8,12 @@ import (
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
@@ -824,4 +826,85 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestIngressRulesFromTCPRoutes_ArbitrationReporting verifies that, for two
+// TCPRoutes attached to the same listener, only the GEP-2645 winner is reported
+// through registerSuccessfullyTranslatedObject (ConfiguredKubernetesObjects).
+// The loser must be left unreported entirely, so its Programmed condition stays
+// Unknown - reflecting that it has no real config on the dataplane - rather than
+// being reported as configured just because it's attached to a listener.
+func TestIngressRulesFromTCPRoutes_ArbitrationReporting(t *testing.T) {
+	tcpRouteTypeMeta := metav1.TypeMeta{Kind: "TCPRoute", APIVersion: gatewayv1.GroupVersion.String()}
+
+	gw := &gatewayapi.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "tcp-gw"},
+		Spec: gatewayapi.GatewaySpec{
+			Listeners: []gatewayapi.Listener{{
+				Name:     "tcp",
+				Protocol: gatewayapi.TCPProtocolType,
+				Port:     9999,
+			}},
+		},
+		Status: tcpProgrammedStatus("tcp"),
+	}
+	older := &gatewayapi.TCPRoute{
+		TypeMeta: tcpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:         "default",
+			Name:              "older",
+			CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		},
+		Spec: gatewayapi.TCPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{Name: gatewayv1.ObjectName("tcp-gw")}},
+			},
+			Rules: []gatewayapi.TCPRouteRule{{
+				BackendRefs: []gatewayv1.BackendRef{{
+					BackendObjectReference: gatewayv1.BackendObjectReference{
+						Name: "svc-older", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(8080)),
+					},
+				}},
+			}},
+		},
+	}
+	newer := &gatewayapi.TCPRoute{
+		TypeMeta: tcpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:         "default",
+			Name:              "newer",
+			CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
+		},
+		Spec: gatewayapi.TCPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{Name: gatewayv1.ObjectName("tcp-gw")}},
+			},
+			Rules: []gatewayapi.TCPRouteRule{{
+				BackendRefs: []gatewayv1.BackendRef{{
+					BackendObjectReference: gatewayv1.BackendObjectReference{
+						Name: "svc-newer", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(9090)),
+					},
+				}},
+			}},
+		},
+	}
+
+	fakestore, err := store.NewFakeStore(store.FakeObjects{
+		GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+		Gateways:       []*gatewayapi.Gateway{gw},
+		TCPRoutes:      []*gatewayapi.TCPRoute{older, newer},
+		Services: []*corev1.Service{
+			{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-older"}},
+			{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-newer"}},
+		},
+	})
+	require.NoError(t, err)
+	tr := mustNewTranslator(t, fakestore)
+
+	tr.ingressRulesFromTCPRoutes()
+
+	configured := tr.popConfiguredKubernetesObjects()
+
+	assert.ElementsMatch(t, []client.Object{older}, configured,
+		"only the winner must be reported as successfully translated; the loser must not appear at all")
 }

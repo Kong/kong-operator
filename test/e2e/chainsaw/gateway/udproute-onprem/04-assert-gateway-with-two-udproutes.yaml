@@ -87,9 +87,6 @@ status:
         - status: 'True'
           reason: Accepted
       (conditions[?type == 'Programmed']):
-        # Loser UDPRoute won't be pushed to DataPlane, configuration won't be changed, status won't be reported
-        # Will be True until DataPlane's configuration change. (This case will be simulated by creating a third UDPRoute
-        # attached to a different listener.)
         - status: Unknown
           reason: Unknown
       (conditions[?type == 'ResolvedRefs']):
