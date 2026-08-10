@@ -43,7 +43,7 @@ require (
 	github.com/samber/mo v1.17.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.44.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
 	github.com/tidwall/gjson v1.19.0
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
