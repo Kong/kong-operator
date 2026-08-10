@@ -285,9 +285,11 @@ func TestDataPlane(t *testing.T) {
 
 		deployment := deploymentList.Items[0]
 		deployment.Status = appsv1.DeploymentStatus{
-			AvailableReplicas: 1,
-			ReadyReplicas:     1,
-			Replicas:          1,
+			ObservedGeneration: deployment.Generation,
+			UpdatedReplicas:    1,
+			AvailableReplicas:  1,
+			ReadyReplicas:      1,
+			Replicas:           1,
 		}
 		require.NoError(t, cl.Status().Update(ctx, &deployment))
 
@@ -325,6 +327,34 @@ func TestDataPlane(t *testing.T) {
 		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(dp), updated))
 		updated.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].LivenessProbe.PeriodSeconds = 2
 		require.NoError(t, cl.Update(ctx, updated))
+
+		// envtest does not run the Deployment controller, so nothing rolls the
+		// Deployment out or advances its Status on its own: wait for our controller
+		// to push the new PodTemplateSpec onto the Deployment (bumping its
+		// .Generation), then fake the rollout completing for that generation the
+		// same way a real Deployment controller would.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			require.NoError(ct, cl.List(ctx, &deploymentList,
+				client.InNamespace(ns.Name),
+				client.MatchingLabels{
+					"app":                                dp.Name,
+					consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+					consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
+				},
+			))
+			require.Len(ct, deploymentList.Items, 1)
+			assert.Greater(ct, deploymentList.Items[0].Generation, deployment.Generation)
+		}, waitTime, tickTime)
+
+		deployment = deploymentList.Items[0]
+		deployment.Status = appsv1.DeploymentStatus{
+			ObservedGeneration: deployment.Generation,
+			UpdatedReplicas:    1,
+			AvailableReplicas:  1,
+			ReadyReplicas:      1,
+			Replicas:           1,
+		}
+		require.NoError(t, cl.Status().Update(ctx, &deployment))
 
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			current := &operatorv1beta1.DataPlane{}
