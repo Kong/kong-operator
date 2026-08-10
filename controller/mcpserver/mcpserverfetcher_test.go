@@ -22,6 +22,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -152,13 +153,14 @@ func TestSyncMCPServers(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		servers         []sdkkonnectcomp.MCPServerCPInfo
-		existingObjects []client.Object
-		interceptFuncs  *interceptor.Funcs
-		expectError     bool
-		expectCreated   []string // MCPServer names expected to exist after sync
-		expectDeleted   []string // MCPServer names expected to be gone after sync
+		name             string
+		servers          []sdkkonnectcomp.MCPServerCPInfo
+		existingObjects  []client.Object
+		interceptFuncs   *interceptor.Funcs
+		expectError      bool
+		expectCreated    []string // MCPServer names expected to exist after sync
+		expectDeleted    []string // MCPServer names expected to be gone after sync
+		expectDataPlanes []string // MCPServerDataPlane names expected to exist after sync
 	}{
 		{
 			name:          "no servers, no existing objects is a no-op",
@@ -166,9 +168,10 @@ func TestSyncMCPServers(t *testing.T) {
 			expectCreated: []string{},
 		},
 		{
-			name:          "new server is created",
-			servers:       []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name", new("resource-id"))},
-			expectCreated: []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
+			name:             "new server is created",
+			servers:          []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name", new("resource-id"))},
+			expectCreated:    []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
+			expectDataPlanes: []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
 		},
 		{
 			name:            "existing server (by ID) is skipped without re-creating",
@@ -202,7 +205,8 @@ func TestSyncMCPServers(t *testing.T) {
 				generateMCPServerNN(namespace, cpName, "existing-id").Name,
 				generateMCPServerNN(namespace, cpName, "new-id").Name,
 			},
-			expectDeleted: []string{generateMCPServerNN(namespace, cpName, "stale-id").Name},
+			expectDeleted:    []string{generateMCPServerNN(namespace, cpName, "stale-id").Name},
+			expectDataPlanes: []string{generateMCPServerNN(namespace, cpName, "new-id").Name},
 		},
 		{
 			name:    "list error is returned",
@@ -218,9 +222,10 @@ func TestSyncMCPServers(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:          "new server is created without a resource ID assigned",
-			servers:       []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name", nil)},
-			expectCreated: []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
+			name:             "new server is created without a resource ID assigned",
+			servers:          []sdkkonnectcomp.MCPServerCPInfo{newServer("srv-id", "srv-name", nil)},
+			expectCreated:    []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
+			expectDataPlanes: []string{generateMCPServerNN(namespace, cpName, "srv-id").Name},
 		},
 	}
 
@@ -256,7 +261,7 @@ func TestSyncMCPServers(t *testing.T) {
 			reconcileEventCh := make(chan event.GenericEvent, TriggerChannelBufSize)
 			f := NewMCPServersFetcher(logging.DevelopmentMode, cl, nil, make(chan struct{}, 1), reconcileEventCh, controlPlane, s)
 
-			err := f.syncMCPServers(context.Background(), tt.servers)
+			err := f.syncMCPServers(t.Context(), tt.servers)
 			if tt.expectError {
 				require.Error(t, err)
 				return
@@ -269,7 +274,7 @@ func TestSyncMCPServers(t *testing.T) {
 			for _, expectedName := range tt.expectCreated {
 				var mcp konnectv1alpha1.MCPServer
 				require.NoError(t,
-					cl.Get(context.Background(), client.ObjectKey{Name: expectedName, Namespace: namespace}, &mcp),
+					cl.Get(t.Context(), client.ObjectKey{Name: expectedName, Namespace: namespace}, &mcp),
 					"expected MCPServer %q to exist", expectedName,
 				)
 				assert.Contains(t, mcp.Finalizers, mcpServerFinalizer,
@@ -283,9 +288,36 @@ func TestSyncMCPServers(t *testing.T) {
 			// check couldn't tell the difference.
 			for _, deletedName := range tt.expectDeleted {
 				var mcp konnectv1alpha1.MCPServer
-				err := cl.Get(context.Background(), client.ObjectKey{Name: deletedName, Namespace: namespace}, &mcp)
+				err := cl.Get(t.Context(), client.ObjectKey{Name: deletedName, Namespace: namespace}, &mcp)
 				require.True(t, apierrors.IsNotFound(err), "expected MCPServer %q to be fully deleted, got err=%v", deletedName, err)
 			}
+
+			// Verify the paired MCPServerDataPlane is created alongside every
+			// newly mirrored MCPServer, with the owner reference and
+			// spec.mcpServerRef pointing back at it.
+			for _, expectedName := range tt.expectDataPlanes {
+				var dp mcpv1alpha1.MCPServerDataPlane
+				require.NoError(t,
+					cl.Get(t.Context(), client.ObjectKey{Name: expectedName, Namespace: namespace}, &dp),
+					"expected MCPServerDataPlane %q to exist", expectedName,
+				)
+
+				require.NotNil(t, dp.Spec.MCPServerRef.KonnectNamespacedRef)
+				assert.Equal(t, mcpv1alpha1.MCPServerRefTypeKonnectNamespacedRef, dp.Spec.MCPServerRef.Type)
+				assert.Equal(t, expectedName, dp.Spec.MCPServerRef.KonnectNamespacedRef.Name)
+
+				require.Len(t, dp.OwnerReferences, 1)
+				assert.Equal(t, expectedName, dp.OwnerReferences[0].Name)
+				assert.Equal(t, "MCPServer", dp.OwnerReferences[0].Kind)
+				require.NotNil(t, dp.OwnerReferences[0].Controller)
+				assert.True(t, *dp.OwnerReferences[0].Controller)
+			}
+
+			// No MCPServerDataPlane beyond the expected ones: catches DataPlanes
+			// created for skipped/existing servers, or written to the wrong namespace.
+			var dpList mcpv1alpha1.MCPServerDataPlaneList
+			require.NoError(t, cl.List(t.Context(), &dpList, client.InNamespace(namespace)))
+			assert.Len(t, dpList.Items, len(tt.expectDataPlanes))
 		})
 	}
 }

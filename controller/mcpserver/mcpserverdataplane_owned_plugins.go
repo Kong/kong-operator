@@ -178,7 +178,7 @@ func generateKongPluginBinding(
 ) *configurationv1alpha1.KongPluginBinding {
 	return &configurationv1alpha1.KongPluginBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pluginName,
+			Name:      fmt.Sprintf("%s-%s", pluginName, serviceName),
 			Namespace: mcpDataPlane.Namespace,
 		},
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
