@@ -139,6 +139,13 @@
   tags in `KongPlugin`s' annotation to plugins in Konnect.
   [#5280](https://github.com/Kong/kong-operator/pull/5280)
   [#5284](https://github.com/Kong/kong-operator/pull/5284)
+- `DataPlane`: the `Ready` status condition no longer flaps to `False` while a
+  rolling update is in progress and the old `Deployment` replicas are still
+  serving. Its `observedGeneration` now only advances once the `Deployment`
+  has fully rolled out the new generation, and `Ready` is set to `False` if
+  Kubernetes reports the rollout as stalled
+  (`Progressing=False`/`ProgressDeadlineExceeded`).
+  [#3909](https://github.com/Kong/kong-operator/pull/3909)
 
 ## [v2.3.0-rc.3]
 

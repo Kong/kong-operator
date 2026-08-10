@@ -443,7 +443,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 		}
 	}
 
-	t.Run("dataplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
+	t.Run("dataplane does not report Ready for a generation that can not roll out", func(t *testing.T) {
 		require.Eventually(t,
 			testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
@@ -470,15 +470,19 @@ func TestDataPlaneUpdate(t *testing.T) {
 		dataplane, err := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(dataplaneName.Namespace).Get(ctx, dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		isNotReady := dataPlaneConditionPredicate(t, &metav1.Condition{
+		// The rollout of this generation can never complete (readiness probe always
+		// fails on the new replica), but the old replica keeps serving, so Ready.status
+		// must not flap to False for it. It also must never report this generation as
+		// the observedGeneration of a True Ready condition, since it was never rolled out.
+		readyAtCurrentGeneration := dataPlaneConditionPredicate(t, &metav1.Condition{
 			Type:               string(kcfgdataplane.ReadyType),
-			Status:             metav1.ConditionFalse,
-			Reason:             string(kcfgdataplane.WaitingToBecomeReadyReason),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(kcfgdataplane.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
-		require.Eventually(t,
-			testutils.DataPlanePredicate(t, ctx, dataplaneName, isNotReady, integration.GetClients().OperatorClient),
-			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
+		require.Never(t,
+			testutils.DataPlanePredicate(t, ctx, dataplaneName, readyAtCurrentGeneration, integration.GetClients().OperatorClient),
+			30*time.Second, testutils.DataPlaneCondTick,
 		)
 	})
 	t.Run("dataplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {

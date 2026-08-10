@@ -372,6 +372,137 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 				ReadyReplicas: 1,
 			},
 		},
+		{
+			// The Deployment is available (old replica still serving) but has not
+			// finished rolling out generation 102 yet: it must not be reported as
+			// Ready at generation 102, it must keep reporting the last generation
+			// that was actually rolled out (101).
+			name: "deployment available but not fully rolled out keeps previous observedGeneration",
+			dataPlane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:        "test-uid",
+					Name:       "test",
+					Namespace:  "default",
+					Generation: 102,
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: consts.DefaultDataPlaneImage,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					Conditions: []metav1.Condition{
+						k8sutils.NewConditionWithGeneration(
+							kcfgdataplane.ReadyType,
+							metav1.ConditionTrue,
+							kcfgdataplane.ResourceReadyReason,
+							"",
+							101,
+						),
+					},
+				},
+			},
+			objectLists: []client.ObjectList{
+				&appsv1.DeploymentList{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "DeploymentList",
+						APIVersion: "apps/v1",
+					},
+					Items: []appsv1.Deployment{
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "Deployment",
+								APIVersion: "apps/v1",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:       "dataplane-deployment-1",
+								Namespace:  "default",
+								Generation: 102,
+								Labels: map[string]string{
+									"app":                                "test",
+									consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
+								},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "gateway-operator.konghq.com/v1beta1",
+										Kind:       "DataPlane",
+										UID:        "test-uid",
+									},
+								},
+							},
+							Spec: appsv1.DeploymentSpec{
+								Replicas: new(int32(1)),
+							},
+							Status: appsv1.DeploymentStatus{
+								ObservedGeneration: 102,
+								Replicas:           2, // old + surging new replica.
+								UpdatedReplicas:    1, // new replica not available yet.
+								AvailableReplicas:  1, // old replica still serving.
+								ReadyReplicas:      1,
+							},
+						},
+					},
+				},
+				&corev1.ServiceList{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ServiceList",
+						APIVersion: "apps/v1",
+					},
+					Items: []corev1.Service{
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "Service",
+								APIVersion: "v1",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "dataplane-service-1",
+								Namespace: "default",
+								Labels: map[string]string{
+									"app":                             "test",
+									consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
+									consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+								},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "gateway-operator.konghq.com/v1beta1",
+										Kind:       "DataPlane",
+										UID:        "test-uid",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedError:  false,
+			expectedResult: ctrl.Result{},
+			expectedDataPlaneStatus: operatorv1beta1.DataPlaneStatus{
+				Conditions: []metav1.Condition{
+					k8sutils.NewConditionWithGeneration(
+						kcfgdataplane.ReadyType,
+						metav1.ConditionTrue,
+						kcfgdataplane.ResourceReadyReason,
+						"",
+						101,
+					),
+				},
+				Replicas:      2,
+				ReadyReplicas: 1,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -884,6 +1015,30 @@ func TestIsDeploymentReady(t *testing.T) {
 			},
 			expectedStatus: metav1.ConditionTrue,
 			expectedReady:  true,
+		},
+		{
+			// Old replicas keep the Deployment "available" during a rollout, but
+			// once Kubernetes gives up on the rollout (ProgressDeadlineExceeded)
+			// this must not be masked by the anti-flap replica check above.
+			name: "available replicas meet spec but rollout has stalled",
+			deployment: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(1)),
+				},
+				Status: appsv1.DeploymentStatus{
+					Replicas:          2,
+					AvailableReplicas: 1,
+					Conditions: []appsv1.DeploymentCondition{
+						{
+							Type:   appsv1.DeploymentProgressing,
+							Status: corev1.ConditionFalse,
+							Reason: "ProgressDeadlineExceeded",
+						},
+					},
+				},
+			},
+			expectedStatus: metav1.ConditionFalse,
+			expectedReady:  false,
 		},
 	}
 
