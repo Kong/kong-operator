@@ -24,7 +24,6 @@ COPY pkg/ pkg/
 COPY api/ api/
 COPY internal/ internal/
 COPY Makefile Makefile
-COPY .git/ .git/
 
 ARG TARGETPLATFORM
 ARG TARGETOS
