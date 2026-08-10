@@ -38,7 +38,10 @@ jobs:
           fetch-depth: 50
       - id: check-files
         name: Check if only documentation files changed
-        run: ./scripts/check-docs-only-changes.sh ${{ github.event.pull_request.base.sha || 'HEAD~1' }} ${{ github.sha }}
+        # merge_group.base_sha fallback: in a merge-queue group with several PRs, the
+        # branch is base + one squash commit per PR, so HEAD~1..HEAD would only see the
+        # LAST PR's diff and could wrongly mark the whole group as docs-only/skippable.
+        run: ./scripts/check-docs-only-changes.sh ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || 'HEAD~1' }} ${{ github.sha }}
 
   build:
     needs: [check-docs-only]
@@ -68,17 +71,8 @@ jobs:
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
-      - name: Check if docs-only changes
-        run: |
-          if [[ "${{ needs.check-docs-only.outputs.docs_only }}" == "true" ]]; then
-            echo "Only documentation files were changed, skipping build"
-            exit 0
-          fi
-
-      - name: Check build result
-        if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
+      - name: Check results
         run: |
           if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
-            echo "Build job failed or was cancelled."
-            exit 1
+            echo "Some jobs failed or were cancelled."; exit 1
           fi

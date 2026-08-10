@@ -41,7 +41,7 @@ jobs:
             fetch_depth: 0
             lint-cache: false
           - name: changelog
-            make-target: verify.changelog
+            make-target: test.changelog
             fetch_depth: 1
             lint-cache: false
     steps:
