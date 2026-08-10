@@ -27,6 +27,10 @@ import (
 const (
 	// KongVaultKind is the kind name of KongVault resource.
 	KongVaultKind = "KongVault"
+
+	// KonnectConfigStoreKind is the kind name of the KonnectConfigStore resource,
+	// the only kind KonnectConfigStoreRef can point at.
+	KonnectConfigStoreKind = "KonnectConfigStore"
 )
 
 // KongVault is the schema for kongvaults API which defines a custom Kong vault.
@@ -60,6 +64,7 @@ type KongVault struct {
 // KongVaultSpec defines specification of a custom Kong vault.
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
+// +kubebuilder:validation:XValidation:rule="!has(self.configStoreRef) ? true : self.backend == 'konnect'", message="spec.configStoreRef is only supported when spec.backend is 'konnect'"
 type KongVaultSpec struct {
 	// Backend is the type of the backend storing the secrets in the vault.
 	// The supported backends of Kong is listed here:
@@ -74,6 +79,20 @@ type KongVaultSpec struct {
 	Description string `json:"description,omitempty"`
 	// Config is the configuration of the vault. Varies for different backends.
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
+	// ConfigStoreRef is a reference to a KonnectConfigStore backing the Konnect
+	// vault backend. When set, the Konnect ID of the referenced KonnectConfigStore
+	// is used as the `config_store_id` of the vault configuration sent to Konnect,
+	// so that the Config Store ID does not have to be copied manually into Config.
+	//
+	// It is only supported when Backend is `konnect`, and it is mutually exclusive
+	// with setting `config_store_id` in Config.
+	//
+	// KongVault is cluster-scoped and KonnectConfigStore is namespaced, so this
+	// reference always crosses a namespace boundary. Its authorization is not
+	// enforced yet: a KongReferenceGrant in the referenced namespace will become
+	// required in a future release, as it already is for ControlPlaneRef.
+	// +optional
+	ConfigStoreRef *KonnectConfigStoreRef `json:"configStoreRef,omitempty"`
 	// Tags are the tags associated to the vault for grouping and filtering.
 	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongVault is associated with.
@@ -84,6 +103,34 @@ type KongVaultSpec struct {
 	// Adopt is the options for adopting a vault from an existing vault in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
+}
+
+// KonnectConfigStoreRef references a KonnectConfigStore in the cluster.
+// The referenced object's Konnect ID is used where the Konnect API expects a
+// Config Store ID.
+type KonnectConfigStoreRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=KonnectConfigStore
+	// +kubebuilder:default=KonnectConfigStore
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced KonnectConfigStore.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name"`
+
+	// Namespace is the namespace of the referenced KonnectConfigStore. It is
+	// required because the referring object is cluster-scoped and hence has no
+	// namespace of its own to default to.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace"`
 }
 
 // KongVaultStatus represents the current status of the KongVault resource.

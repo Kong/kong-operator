@@ -22476,6 +22476,44 @@ spec:
               config:
                 description: Config is the configuration of the vault. Varies for different backends.
                 x-kubernetes-preserve-unknown-fields: true
+              configStoreRef:
+                description: |-
+                  ConfigStoreRef is a reference to a KonnectConfigStore backing the Konnect
+                  vault backend. When set, the Konnect ID of the referenced KonnectConfigStore
+                  is used as the `config_store_id` of the vault configuration sent to Konnect,
+                  so that the Config Store ID does not have to be copied manually into Config.
+
+                  It is only supported when Backend is `konnect`, and it is mutually exclusive
+                  with setting `config_store_id` in Config.
+
+                  KongVault is cluster-scoped and KonnectConfigStore is namespaced, so this
+                  reference always crosses a namespace boundary. Its authorization is not
+                  enforced yet: a KongReferenceGrant in the referenced namespace will become
+                  required in a future release, as it already is for ControlPlaneRef.
+                properties:
+                  kind:
+                    default: KonnectConfigStore
+                    description: Kind is the kind of the referenced object.
+                    enum:
+                    - KonnectConfigStore
+                    type: string
+                  name:
+                    description: Name is the name of the referenced KonnectConfigStore.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referenced KonnectConfigStore. It is
+                      required because the referring object is cluster-scoped and hence has no
+                      namespace of its own to default to.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                - namespace
+                type: object
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a Konnect ControlPlane this KongVault is associated with.
                 properties:
@@ -22557,6 +22595,8 @@ spec:
               rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == ''konnectNamespacedRef'')'
             - message: Cannot set or unset spec.adopt in updates
               rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))
+            - message: spec.configStoreRef is only supported when spec.backend is 'konnect'
+              rule: '!has(self.configStoreRef) ? true : self.backend == ''konnect'''
           status:
             description: KongVaultStatus represents the current status of the KongVault resource.
             properties:

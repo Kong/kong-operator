@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -73,6 +74,118 @@ func TestKongVault(t *testing.T) {
 					v.Spec.Prefix += "-1"
 				},
 				ExpectedUpdateErrorMessage: new("The spec.prefix field is immutable"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("configStoreRef", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongVault]{
+			{
+				Name: "configStoreRef is allowed with the konnect backend",
+				TestObject: &configurationv1alpha1.KongVault{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongVaultSpec{
+						Backend: "konnect",
+						Prefix:  "certvault",
+						ConfigStoreRef: &configurationv1alpha1.KonnectConfigStoreRef{
+							Name:      "tls-cert-keys",
+							Namespace: ns.Name,
+						},
+					},
+				},
+			},
+			{
+				Name: "configStoreRef is not allowed with a non-konnect backend",
+				TestObject: &configurationv1alpha1.KongVault{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongVaultSpec{
+						Backend: "aws",
+						Prefix:  "aws-vault",
+						ConfigStoreRef: &configurationv1alpha1.KonnectConfigStoreRef{
+							Name:      "tls-cert-keys",
+							Namespace: ns.Name,
+						},
+					},
+				},
+				ExpectedErrorMessage: new("spec.configStoreRef is only supported when spec.backend is 'konnect'"),
+			},
+			{
+				Name: "configStoreRef requires a name",
+				TestObject: &configurationv1alpha1.KongVault{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongVaultSpec{
+						Backend: "konnect",
+						Prefix:  "certvault",
+						ConfigStoreRef: &configurationv1alpha1.KonnectConfigStoreRef{
+							Namespace: ns.Name,
+						},
+					},
+				},
+				ExpectedErrorMessage: new("spec.configStoreRef.name: Invalid value"),
+			},
+			{
+				Name: "configStoreRef requires a namespace as KongVault is cluster scoped",
+				TestObject: &configurationv1alpha1.KongVault{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongVaultSpec{
+						Backend: "konnect",
+						Prefix:  "certvault",
+						ConfigStoreRef: &configurationv1alpha1.KonnectConfigStoreRef{
+							Name: "tls-cert-keys",
+						},
+					},
+				},
+				ExpectedErrorMessage: new("spec.configStoreRef.namespace: Invalid value"),
+			},
+			{
+				Name: "configStoreRef kind defaults to KonnectConfigStore",
+				TestObject: &configurationv1alpha1.KongVault{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongVaultSpec{
+						Backend: "konnect",
+						Prefix:  "certvault",
+						ConfigStoreRef: &configurationv1alpha1.KonnectConfigStoreRef{
+							Name:      "tls-cert-keys",
+							Namespace: ns.Name,
+						},
+					},
+				},
+				Assert: func(t *testing.T, v *configurationv1alpha1.KongVault) {
+					require.Equal(t, configurationv1alpha1.KonnectConfigStoreKind, v.Spec.ConfigStoreRef.Kind)
+				},
+			},
+			{
+				Name: "configStoreRef rejects other kinds",
+				TestObject: &configurationv1alpha1.KongVault{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongVaultSpec{
+						Backend: "konnect",
+						Prefix:  "certvault",
+						ConfigStoreRef: &configurationv1alpha1.KonnectConfigStoreRef{
+							Kind:      "Secret",
+							Name:      "tls-cert-keys",
+							Namespace: ns.Name,
+						},
+					},
+				},
+				ExpectedErrorMessage: new("spec.configStoreRef.kind: Unsupported value"),
+			},
+			{
+				Name: "configStoreRef can be added to an existing konnect vault",
+				TestObject: &configurationv1alpha1.KongVault{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongVaultSpec{
+						Backend: "konnect",
+						Prefix:  "certvault",
+					},
+				},
+				Update: func(v *configurationv1alpha1.KongVault) {
+					v.Spec.ConfigStoreRef = &configurationv1alpha1.KonnectConfigStoreRef{
+						Name:      "tls-cert-keys",
+						Namespace: ns.Name,
+					}
+				},
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
