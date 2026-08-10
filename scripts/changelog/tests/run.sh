@@ -286,4 +286,40 @@ for loc in C.UTF-8 en_US.UTF-8; do
   pfs_locale_check "plain ASCII commit type still required" "$loc" "feat: x" required
 done
 
+# --- skippable-paths: table-driven golden tests ---
+# Drives check-docs-only-changes.sh via the CHANGED_FILES override (no git
+# needed). The NOT-skippable direction is the important half: it's what
+# stops a future well-meaning broadening of the regex from silently
+# disabling CI for real code.
+skp_check() { # name changed_files(newline-separated) expect_docs_only
+  local name="$1" files="$2" exp="$3"
+  local out docs_only
+  out="$(CHANGED_FILES="$files" GITHUB_OUTPUT=/dev/stdout scripts/check-docs-only-changes.sh)"
+  docs_only="$(echo "$out" | sed -n 's/^docs_only=//p')"
+  if [ "$docs_only" != "$exp" ]; then
+    echo "FAIL - skippable-paths: $name (docs_only got '$docs_only' want '$exp')"; echo "$out"; fail=1
+    return
+  fi
+  echo "ok   - skippable-paths: $name"
+}
+
+skp_check "per-PR fragment alone is skippable" \
+  "changelog/unreleased/kong-operator/4999.yml" true
+skp_check "a markdown file alone is skippable" \
+  "docs/some-page.md" true
+skp_check "fragment + markdown mix is skippable" \
+  "$(printf 'changelog/unreleased/kong-operator/4999.yml\ndocs/some-page.md')" true
+skp_check "a real script is not skippable" \
+  "scripts/changelog/verify.sh" false
+skp_check "the fragment-scaffolding workflow itself is not skippable" \
+  ".github/workflows/changelog-fragment.yaml" false
+skp_check "the schema template doc is not skippable" \
+  "changelog/unreleased/kong-operator/CHANGELOG_TEMPLATE.yaml" false
+skp_check "wrong extension (.yaml instead of .yml) is not skippable" \
+  "changelog/unreleased/kong-operator/4999.yaml" false
+skp_check "a Go file is not skippable" \
+  "controller/dataplane/controller.go" false
+skp_check "one non-skippable file poisons a fragment mix" \
+  "$(printf 'changelog/unreleased/kong-operator/4999.yml\ncontroller/dataplane/controller.go')" false
+
 exit "$fail"
