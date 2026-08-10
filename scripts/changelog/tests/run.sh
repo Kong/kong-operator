@@ -215,4 +215,75 @@ pfs_check "multi-scope with deps still maps to dependency, scope blanked" \
 pfs_check "bang on a non-releasable type still forces breaking_change" \
   "docs!: x" "" "" required breaking_change ""
 
+# --- pr-fragment-status: PR_JSON_FILE mode ---
+# The PR_TITLE-mode cases above never touch the jq/PR_JSON_FILE code path,
+# which is what the changelog-gate CI job actually uses (via `gh api ... >
+# pr.json`). Exercise that path directly, including the failure shapes a
+# transient/malformed `gh api` response can produce -- the script must
+# always exit 0 (policy belongs to callers) even then.
+pfs_json_check() { # name json_content_or_empty_for_missing expect_status
+  local name="$1" json="$2" exp_status="$3"
+  local jf out rc status
+  jf="$(mktemp)"
+  if [ "$json" = "__MISSING__" ]; then
+    rm -f "$jf"
+    jf="/nonexistent-path/does-not-exist-$$.json"
+  else
+    printf '%s' "$json" > "$jf"
+  fi
+  set +e
+  out="$(PR_JSON_FILE="$jf" scripts/changelog/pr-fragment-status.sh)"
+  rc=$?
+  set -e
+  [ "$json" != "__MISSING__" ] && rm -f "$jf"
+  if [ "$rc" -ne 0 ]; then
+    echo "FAIL - pr-fragment-status(json): $name (expected exit 0, got $rc)"; echo "$out"; fail=1
+    return
+  fi
+  status="$(echo "$out" | sed -n 's/^status=//p')"
+  if [ "$status" != "$exp_status" ]; then
+    echo "FAIL - pr-fragment-status(json): $name (status got '$status' want '$exp_status')"; echo "$out"; fail=1
+    return
+  fi
+  echo "ok   - pr-fragment-status(json): $name"
+}
+
+pfs_json_check "valid PR JSON produces expected decision" \
+  '{"title":"fix(dataplane): x","body":"","labels":[],"number":42}' required
+pfs_json_check "missing PR_JSON_FILE degrades to error, not a crash" \
+  "__MISSING__" error
+pfs_json_check "malformed PR_JSON_FILE degrades to error, not a crash" \
+  'not json at all {{{' error
+
+# --- pr-fragment-status: locale-independence of the title regex ---
+# [[:alnum:]]/[[:space:]] are locale-sensitive under bash's [[ =~ ]]; under a
+# UTF-8 locale (a common GitHub Actions runner default) they'd match
+# non-ASCII letters, diverging from the JS this script replaces (\w is
+# always ASCII-only). Assert the ASCII-only title_re now agrees with the JS
+# regardless of locale.
+pfs_locale_check() { # name locale title expect_status
+  local name="$1" loc="$2" title="$3" exp_status="$4"
+  local out status
+  # Scoped `set +o pipefail`: under this script's pipefail, `grep -q`
+  # closing the pipe on its first match sends SIGPIPE to `locale -a`, which
+  # then exits non-zero (141) even though the locale *was* found -- a false
+  # "not available". The subshell keeps that relaxation local to this check.
+  if ! ( set +o pipefail; locale -a 2>/dev/null | grep -qx "$loc" ); then
+    echo "skip - pr-fragment-status(locale): $name (locale '$loc' not available on this machine)"
+    return
+  fi
+  out="$(LC_ALL="$loc" PR_TITLE="$title" PR_BODY="" PR_LABELS="" PR_NUMBER=1 scripts/changelog/pr-fragment-status.sh)"
+  status="$(echo "$out" | sed -n 's/^status=//p')"
+  if [ "$status" != "$exp_status" ]; then
+    echo "FAIL - pr-fragment-status(locale): $name [$loc] (status got '$status' want '$exp_status')"; echo "$out"; fail=1
+    return
+  fi
+  echo "ok   - pr-fragment-status(locale): $name [$loc]"
+}
+
+for loc in C.UTF-8 en_US.UTF-8; do
+  pfs_locale_check "non-ASCII commit type matches JS (invalid_title)" "$loc" "féat: x" invalid_title
+  pfs_locale_check "plain ASCII commit type still required" "$loc" "feat: x" required
+done
+
 exit "$fail"
