@@ -9,18 +9,35 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
-func createVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
+type resolvedConfigStoreIDContextKey struct{}
+
+// WithResolvedConfigStoreID makes a Config Store ID resolved during reference
+// handling available to the KongVault operation in the same reconciliation.
+func WithResolvedConfigStoreID(ctx context.Context, id string) context.Context {
+	if id == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, resolvedConfigStoreIDContextKey{}, id)
+}
+
+func resolvedConfigStoreIDFromContext(ctx context.Context) (string, bool) {
+	id, ok := ctx.Value(resolvedConfigStoreIDContextKey{}).(string)
+	return id, ok
+}
+
+func createVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: CreateOp}
 	}
 
-	vaultInput, err := kongVaultToVaultInput(vault)
+	vaultInput, err := kongVaultToVaultInput(ctx, cl, vault)
 	if err != nil {
 		return fmt.Errorf("failed to convert KongVault to Konnect vault input: %w", err)
 	}
@@ -38,14 +55,14 @@ func createVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configu
 	return nil
 }
 
-func updateVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
+func updateVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: UpdateOp}
 	}
 
 	id := vault.GetKonnectID()
-	vaultInput, err := kongVaultToVaultInput(vault)
+	vaultInput, err := kongVaultToVaultInput(ctx, cl, vault)
 	if err != nil {
 		return fmt.Errorf("failed to convert KongVault to Konnect vault input: %w", err)
 	}
@@ -78,7 +95,7 @@ func deleteVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configu
 	return nil
 }
 
-func adoptVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
+func adoptVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
@@ -119,11 +136,15 @@ func adoptVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configur
 	case commonv1alpha1.AdoptModeOverride:
 		vaultCopy := vault.DeepCopy()
 		vaultCopy.SetKonnectID(konnectID)
-		if err = updateVault(ctx, sdk, vaultCopy); err != nil {
+		if err = updateVault(ctx, cl, sdk, vaultCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:
-		if !vaultMatch(resp.Vault, vault) {
+		matches, err := vaultMatch(ctx, cl, resp.Vault, vault)
+		if err != nil {
+			return err
+		}
+		if !matches {
 			return KonnectEntityAdoptionNotMatchError{
 				KonnectID: konnectID,
 			}
@@ -137,11 +158,35 @@ func adoptVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configur
 	return nil
 }
 
-func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectcomp.Vault, error) {
+// kongVaultToVaultInput converts a KongVault to the Konnect SDK vault input.
+//
+// When spec.configStoreRef is set, the Konnect ID of the referenced
+// KonnectConfigStore is resolved through cl and injected into the vault
+// configuration as config_store_id, so that users don't have to copy the
+// Konnect-generated ID into spec.config themselves.
+func kongVaultToVaultInput(
+	ctx context.Context,
+	cl client.Client,
+	vault *configurationv1alpha1.KongVault,
+) (sdkkonnectcomp.Vault, error) {
 	vaultConfig := map[string]any{}
-	err := json.Unmarshal(vault.Spec.Config.Raw, &vaultConfig)
-	if err != nil {
-		return sdkkonnectcomp.Vault{}, err
+	// spec.config is optional: a Konnect backed vault can be fully configured
+	// through spec.configStoreRef alone.
+	if len(vault.Spec.Config.Raw) > 0 {
+		if err := json.Unmarshal(vault.Spec.Config.Raw, &vaultConfig); err != nil {
+			return sdkkonnectcomp.Vault{}, err
+		}
+	}
+	configStoreID, resolved := resolvedConfigStoreIDFromContext(ctx)
+	if !resolved {
+		var err error
+		configStoreID, err = vault.ResolveConfigStoreID(ctx, cl)
+		if err != nil {
+			return sdkkonnectcomp.Vault{}, fmt.Errorf("failed to resolve spec.configStoreRef: %w", err)
+		}
+	}
+	if configStoreID != "" {
+		vaultConfig[configurationv1alpha1.KongVaultConfigStoreIDKey] = configStoreID
 	}
 	input := sdkkonnectcomp.Vault{
 		Config: vaultConfig,
@@ -155,20 +200,28 @@ func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectco
 	return input, nil
 }
 
-func vaultMatch(konnectVault *sdkkonnectcomp.Vault, vault *configurationv1alpha1.KongVault) bool {
+func vaultMatch(
+	ctx context.Context,
+	cl client.Client,
+	konnectVault *sdkkonnectcomp.Vault,
+	vault *configurationv1alpha1.KongVault,
+) (bool, error) {
 	if konnectVault == nil {
-		return false
+		return false, nil
 	}
 
-	expected, err := kongVaultToVaultInput(vault)
+	// The error is returned rather than reported as a mismatch: a KongVault whose
+	// spec cannot be converted is not "different from Konnect", it is unusable,
+	// and reporting it as a mismatch would hide the actual cause.
+	expected, err := kongVaultToVaultInput(ctx, cl, vault)
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	return konnectVault.Name == expected.Name &&
 		konnectVault.Prefix == expected.Prefix &&
 		equalWithDefault(konnectVault.Description, expected.Description, "") &&
-		vaultConfigMatch(konnectVault.Config, expected.Config)
+		vaultConfigMatch(konnectVault.Config, expected.Config), nil
 }
 
 func vaultConfigMatch(a map[string]any, b map[string]any) bool {

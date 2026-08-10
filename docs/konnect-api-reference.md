@@ -7880,14 +7880,6 @@ _Appears in:_
 
 - [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
 
-
-
-
-
-
-
-
-
 #### SAMLIdentityProviderMetadata
 
 _Underlying type:_ `string`

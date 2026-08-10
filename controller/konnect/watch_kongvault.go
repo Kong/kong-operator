@@ -57,6 +57,36 @@ func KongVaultReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder)
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&konnectv1alpha1.KonnectConfigStore{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKongVaultForKonnectConfigStore(cl),
+				),
+			)
+		},
+	}
+}
+
+// enqueueKongVaultForKonnectConfigStore enqueues the KongVaults referencing the
+// given KonnectConfigStore through spec.configStoreRef, so that they pick up its
+// Konnect ID as soon as it becomes programmed.
+func enqueueKongVaultForKonnectConfigStore(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		configStore, ok := obj.(*konnectv1alpha1.KonnectConfigStore)
+		if !ok {
+			return nil
+		}
+
+		var l configurationv1alpha1.KongVaultList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldKongVaultOnKonnectConfigStore: client.ObjectKeyFromObject(configStore).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
 	}
 }
 

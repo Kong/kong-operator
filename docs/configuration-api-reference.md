@@ -4656,10 +4656,6 @@ _Appears in:_
 - [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
 
-
-
-
-
 #### ReferenceGrantFrom
 
 
@@ -4694,10 +4690,6 @@ references.
 _Appears in:_
 
 - [KongReferenceGrantSpec](#configuration-konghq-com-v1alpha1-types-kongreferencegrantspec)
-
-
-
-
 
 #### SchemaRegistryAuthenticationBasic
 

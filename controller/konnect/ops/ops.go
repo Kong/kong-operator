@@ -115,7 +115,7 @@ func Create[
 	case *configurationv1alpha1.KongTarget:
 		err = createTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
-		err = createVault(ctx, sdk.GetVaultSDK(), ent)
+		err = createVault(ctx, cl, sdk.GetVaultSDK(), ent)
 	case *configurationv1alpha1.KongKey:
 		err = createKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:
@@ -544,7 +544,7 @@ func Update[
 	case *configurationv1alpha1.KongTarget:
 		err = updateTarget(ctx, sdk.GetTargetsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
-		err = updateVault(ctx, sdk.GetVaultSDK(), ent)
+		err = updateVault(ctx, cl, sdk.GetVaultSDK(), ent)
 	case *configurationv1alpha1.KongKey:
 		err = updateKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:
@@ -668,7 +668,7 @@ func Adopt[
 	case *configurationv1alpha1.KongSNI:
 		err = adoptSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
-		err = adoptVault(ctx, sdk.GetVaultSDK(), ent)
+		err = adoptVault(ctx, cl, sdk.GetVaultSDK(), ent)
 	case *configurationv1alpha1.KongKey:
 		err = adoptKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:

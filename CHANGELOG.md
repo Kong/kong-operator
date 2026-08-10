@@ -67,6 +67,18 @@
   [5160](https://github.com/Kong/kong-operator/pull/5160)
   [5163](https://github.com/Kong/kong-operator/pull/5163)
   [5164](https://github.com/Kong/kong-operator/pull/5164)
+- `KongVault`: added `spec.configStoreRef`, which references a `KonnectConfigStore`
+  by Kubernetes name instead of requiring the Konnect-generated Config Store ID to
+  be copied into `spec.config.config_store_id` by hand. The referenced store's
+  Konnect ID is resolved during reconciliation and sent to Konnect as the vault
+  backend's `config_store_id`. The field is only accepted when `spec.backend` is
+  `konnect` and is mutually exclusive with `config_store_id` in `spec.config`;
+  setting `config_store_id` directly keeps working unchanged. A new
+  `ConfigStoreRefValid` status condition reports a missing, invalid, or
+  not-yet-programmed reference, and the `KongVault` is reconciled automatically
+  once the referenced `KonnectConfigStore` is programmed.
+  [#5208](https://github.com/Kong/kong-operator/pull/5208)
+  [#5211](https://github.com/Kong/kong-operator/pull/5211)
 
 ### Changed
 
