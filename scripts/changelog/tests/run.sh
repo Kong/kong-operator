@@ -172,4 +172,47 @@ else
   echo "ok   - verify: rejects bad fragments"
 fi
 
+# --- pr-fragment-status: table-driven golden tests ---
+# Columns: name | PR_TITLE | PR_BODY | PR_LABELS | expected status | expected type | expected scope
+pfs_check() { # name title body labels expect_status expect_type expect_scope
+  local name="$1" title="$2" body="$3" labels="$4" exp_status="$5" exp_type="${6:-}" exp_scope="${7:-}"
+  local out status type scope
+  out="$(PR_TITLE="$title" PR_BODY="$body" PR_LABELS="$labels" PR_NUMBER=1 scripts/changelog/pr-fragment-status.sh)"
+  status="$(echo "$out" | sed -n 's/^status=//p')"
+  type="$(echo "$out" | sed -n 's/^type=//p')"
+  scope="$(echo "$out" | sed -n 's/^scope=//p')"
+  if [ "$status" != "$exp_status" ]; then
+    echo "FAIL - pr-fragment-status: $name (status got '$status' want '$exp_status')"; echo "$out"; fail=1
+    return
+  fi
+  if [ "$exp_status" = "required" ]; then
+    if [ "$type" != "$exp_type" ] || [ "$scope" != "$exp_scope" ]; then
+      echo "FAIL - pr-fragment-status: $name (type/scope got '$type'/'$scope' want '$exp_type'/'$exp_scope')"; echo "$out"; fail=1
+      return
+    fi
+  fi
+  echo "ok   - pr-fragment-status: $name"
+}
+
+pfs_check "deps scope on a chore title (historical drift bug)" \
+  "chore(deps): bump x" "" "" required dependency deps
+pfs_check "chore is exempt" \
+  "chore: x" "" "" exempt
+pfs_check "bang forces breaking_change" \
+  "feat!: x" "" "" required breaking_change ""
+pfs_check "BREAKING CHANGE in body forces breaking_change" \
+  "fix: x" "BREAKING CHANGE: yes" "" required breaking_change ""
+pfs_check "scoped perf maps to performance, scope kept" \
+  "perf(dataplane): x" "" "" required performance dataplane
+pfs_check "scope not in allowlist is blanked" \
+  "feat(weirdscope): x" "" "" required feature ""
+pfs_check "non-conventional title is invalid" \
+  "no colon here" "" "" invalid_title
+pfs_check "skip-changelog label exempts regardless of title" \
+  "no colon here" "" "skip-changelog" exempt
+pfs_check "multi-scope with deps still maps to dependency, scope blanked" \
+  "fix(deps,ci): x" "" "" required dependency ""
+pfs_check "bang on a non-releasable type still forces breaking_change" \
+  "docs!: x" "" "" required breaking_change ""
+
 exit "$fail"
