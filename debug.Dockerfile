@@ -54,7 +54,6 @@ COPY pkg/ pkg/
 COPY api/ api/
 COPY internal/ internal/
 COPY Makefile Makefile
-COPY .git/ .git/
 
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
