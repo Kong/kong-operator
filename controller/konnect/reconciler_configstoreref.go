@@ -39,15 +39,22 @@ func handleConfigStoreRef[T constraints.SupportedKonnectEntityType, TEnt constra
 	if !ok {
 		return ctrl.Result{}, false, "", nil
 	}
+	deleting := !ent.GetDeletionTimestamp().IsZero()
 	nn, hasRef := getConfigStoreRef(ent)
 	if !hasRef {
-		return ctrl.Result{}, false, "", nil
+		if deleting {
+			return ctrl.Result{}, false, "", nil
+		}
+		res, err := patch.StatusWithoutCondition(
+			ctx, cl, ent,
+			konnectv1alpha1.ConfigStoreRefValidConditionType,
+		)
+		return res, err != nil || !res.IsZero(), "", err
 	}
 
 	// While the entity is being deleted its Konnect counterpart has to be removed,
 	// which needs no Config Store ID. Blocking on an unresolvable reference here
 	// would leave the entity stuck with its finalizer.
-	deleting := !ent.GetDeletionTimestamp().IsZero()
 
 	// The referenced namespace has to consent to the reference. This is skipped
 	// while the entity is being deleted for the same reason as above: requiring

@@ -106,6 +106,32 @@ func TestHandleConfigStoreRef(t *testing.T) {
 			expectStop: false,
 		},
 		{
+			name: "no configStoreRef removes a stale False condition",
+			vault: vault(func(v *configurationv1alpha1.KongVault) {
+				v.Spec.ConfigStoreRef = nil
+				v.Status.Conditions = []metav1.Condition{{
+					Type:    konnectv1alpha1.ConfigStoreRefValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  konnectv1alpha1.ConfigStoreRefReasonNotProgrammed,
+					Message: "stale condition",
+				}}
+			}),
+			expectStop: false,
+		},
+		{
+			name: "no configStoreRef removes a stale True condition",
+			vault: vault(func(v *configurationv1alpha1.KongVault) {
+				v.Spec.ConfigStoreRef = nil
+				v.Status.Conditions = []metav1.Condition{{
+					Type:    konnectv1alpha1.ConfigStoreRefValidConditionType,
+					Status:  metav1.ConditionTrue,
+					Reason:  konnectv1alpha1.ConfigStoreRefReasonValid,
+					Message: "stale condition",
+				}}
+			}),
+			expectStop: false,
+		},
+		{
 			name:       "programmed config store sets the condition to True and continues",
 			vault:      vault(),
 			objects:    []client.Object{grant(), programmedConfigStore()},
@@ -121,9 +147,20 @@ func TestHandleConfigStoreRef(t *testing.T) {
 			vault: vault(func(v *configurationv1alpha1.KongVault) {
 				v.DeletionTimestamp = &metav1.Time{Time: metav1.Now().Time}
 				v.Finalizers = []string{KonnectCleanupFinalizer}
+				v.Status.Conditions = []metav1.Condition{{
+					Type:    konnectv1alpha1.ConfigStoreRefValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  konnectv1alpha1.ConfigStoreRefReasonNotProgrammed,
+					Message: "stale condition",
+				}}
 			}),
 			objects:    []client.Object{programmedConfigStore()},
 			expectStop: false,
+			expectCondition: &metav1.Condition{
+				Type:   konnectv1alpha1.ConfigStoreRefValidConditionType,
+				Status: metav1.ConditionFalse,
+				Reason: konnectv1alpha1.ConfigStoreRefReasonNotProgrammed,
+			},
 		},
 		{
 			name:       "missing config store stops reconciliation with an Invalid condition",
