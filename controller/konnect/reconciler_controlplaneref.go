@@ -181,6 +181,14 @@ func ensureKongReferenceGrant[
 	ent TEnt,
 	cpRef commonv1alpha1.ControlPlaneRef,
 ) (ctrl.Result, error) {
+	// While the entity is being deleted its Konnect counterpart has to be removed
+	// regardless of what the grants say. Blocking here would require every
+	// KongReferenceGrant to outlive the entities referencing through it, which
+	// would leave those entities stuck with their cleanup finalizer.
+	if !ent.GetDeletionTimestamp().IsZero() {
+		return ctrl.Result{}, nil
+	}
+
 	fromNamespace := ent.GetNamespace()
 	toNamespace := ""
 	if cpRef.KonnectNamespacedRef != nil {
