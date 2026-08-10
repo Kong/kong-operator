@@ -44,7 +44,13 @@ env:
 jobs:
   build-e2e-image:
     runs-on: ubuntu-latest
-    needs: [check-docs-only]
+    # NOTE: changelog-gate is listed here (and on every job below that
+    # depends, directly or transitively, on it) to fail the changelog
+    # fragment requirement. Adding `always()` to any of these jobs' `if:`
+    # would silently defeat that gate by running the job even when
+    # changelog-gate failed -- do not do that without re-reading why this
+    # comment exists.
+    needs: [check-docs-only, changelog-gate]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     env:
       IMG: kong-operator
@@ -95,6 +101,110 @@ jobs:
         # branch is base + one squash commit per PR, so HEAD~1..HEAD would only see the
         # LAST PR's diff and could wrongly mark the whole group as docs-only/skippable.
         run: ./scripts/check-docs-only-changes.sh ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || 'HEAD~1' }} ${{ github.sha }}
+
+  # Gates the expensive jobs below on a PR having either a changelog fragment
+  # (changelog/unreleased/kong-operator/<PR>.yml) or a documented exemption
+  # (skip-changelog label, or a non-releasable Conventional Commit type).
+  #
+  # No `needs:` on purpose: it runs in parallel with check-docs-only and adds
+  # nothing to the critical path.
+  changelog-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # merge_group/push/tag/workflow_dispatch runs have no PR payload, and any
+      # PR entering the merge queue already passed this gate on its last
+      # pull_request run. This step only logs; it never fails the job, so the
+      # job reports `success` (not `skipped`) on those events -- `passed`
+      # needs this job unconditionally and a `skipped` result there would
+      # read as "did not run" rather than "nothing to check", and would also
+      # leave a merge-queue run's gate row looking incomplete.
+      - name: No-op on non pull_request events
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          echo "event=${EVENT_NAME}: not a pull_request run, skipping fragment check (a PR already passed this gate before reaching this event)."
+
+      # Resolve PR data live via the API rather than reading
+      # github.event.pull_request from the (possibly stale) stored payload:
+      # re-running a workflow replays the payload from the original push, so
+      # a payload-based gate would keep failing after the author fixes the
+      # title or a maintainer adds the skip-changelog label. Fetching live
+      # means a plain "Re-run all jobs" is enough to pick up either fix.
+      - name: Resolve PR data
+        if: ${{ github.event_name == 'pull_request' }}
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" > "${RUNNER_TEMP}/pr.json"
+
+      # Never interpolate the PR title/body into a `run:` block -- that is a
+      # script-injection vector. Pass the JSON file through instead; the
+      # script itself never touches git/gh/the filesystem beyond that file.
+      - name: Compute fragment status
+        if: ${{ github.event_name == 'pull_request' }}
+        id: frag
+        env:
+          PR_JSON_FILE: ${{ runner.temp }}/pr.json
+        run: scripts/changelog/pr-fragment-status.sh
+
+      - name: Enforce changelog fragment requirement
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          STATUS: ${{ steps.frag.outputs.status }}
+          REASON: ${{ steps.frag.outputs.reason }}
+          FRAGMENT_PATH: ${{ steps.frag.outputs.fragment_path }}
+        run: |
+          set -euo pipefail
+          case "${STATUS}" in
+            exempt)
+              echo "Exempt: ${REASON}"
+              ;;
+            invalid_title)
+              echo "::error::${REASON} Fix the PR title (e.g. 'fix(dataplane): ...' or 'feat(gateway)!: ...'), or add the 'skip-changelog' label if this change needs no changelog entry. After either fix, this gate reads live PR state, so a maintainer clicking \"Re-run all jobs\" on the tests workflow is enough -- no new commit is required."
+              exit 1
+              ;;
+            required)
+              if [ -z "${FRAGMENT_PATH}" ]; then
+                echo "::error::Could not resolve a fragment path (missing PR number)."
+                exit 1
+              fi
+              if [ -f "${FRAGMENT_PATH}" ]; then
+                echo "Fragment present: ${FRAGMENT_PATH} (${REASON})"
+              else
+                yaml_sibling="${FRAGMENT_PATH%.yml}.yaml"
+                if [ -f "${yaml_sibling}" ]; then
+                  echo "::error::Found ${yaml_sibling}, but the fragment generator only recognises the '.yml' extension. Rename it to ${FRAGMENT_PATH}."
+                else
+                  echo "::error::Missing changelog fragment ${FRAGMENT_PATH} (${REASON}). On same-repo PRs the scaffolding bot should push it automatically after the title is valid; on forks, add it by hand. If this change needs no changelog entry, add the 'skip-changelog' label instead."
+                fi
+                echo "::notice::After adding the fragment or the 'skip-changelog' label, this gate reads live PR state -- someone with write access must click \"Re-run all jobs\" on the tests workflow once; no new commit is needed."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::Unexpected status '${STATUS}' from pr-fragment-status.sh."
+              exit 1
+              ;;
+          esac
+
+      # Ungated by check-docs-only/docs_only, so this is what keeps a
+      # malformed fragment (e.g. `type: bogus`) from shipping once
+      # fragment-only PRs start skipping the heavy suite.
+      - name: Lint changelog fragment schema
+        run: ./scripts/changelog/verify.sh changelog/unreleased/kong-operator
 
   ensure-actions-sha-pin:
     runs-on: ubuntu-latest
@@ -196,8 +306,10 @@ jobs:
 
   samples:
     runs-on: ubuntu-latest
+    # See the changelog-gate comment on build-e2e-image: keep this if: as-is.
     needs:
     - check-docs-only
+    - changelog-gate
     - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
@@ -241,8 +353,10 @@ jobs:
 
   install-with-kustomize:
     runs-on: ubuntu-latest
+    # See the changelog-gate comment on build-e2e-image: keep this if: as-is.
     needs:
     - check-docs-only
+    - changelog-gate
     - build-e2e-image
     - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
@@ -368,8 +482,10 @@ jobs:
     secrets: inherit
 
   CRDs:
+    # See the changelog-gate comment on build-e2e-image: keep this if: as-is.
     needs:
     - check-docs-only
+    - changelog-gate
     - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/__crdvalidation_tests.yaml
@@ -378,8 +494,10 @@ jobs:
       cluster_versions: ${{ needs.matrix_k8s_node_versions.outputs.matrix }}
 
   envtest-tests:
+    # See the changelog-gate comment on build-e2e-image: keep this if: as-is.
     needs:
     - check-docs-only
+    - changelog-gate
     - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/__envtest_tests.yaml
@@ -388,20 +506,24 @@ jobs:
       cluster_version: ${{ needs.matrix_k8s_node_versions.outputs.latest }}
   
   kongintegration-tests:
-    needs: [check-docs-only]
+    # See the changelog-gate comment on build-e2e-image: keep this if: as-is.
+    needs: [check-docs-only, changelog-gate]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/__kongintegration_tests.yaml
     secrets: inherit
 
   conformance-tests:
-    needs: [check-docs-only]
+    # See the changelog-gate comment on build-e2e-image: keep this if: as-is.
+    needs: [check-docs-only, changelog-gate]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/__conformance_tests.yaml
     secrets: inherit
 
   integration-tests:
+    # See the changelog-gate comment on build-e2e-image: keep this if: as-is.
     needs:
       - check-docs-only
+      - changelog-gate
       - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/__integration_tests.yaml
@@ -410,8 +532,12 @@ jobs:
       cluster_version: ${{ needs.matrix_k8s_node_versions.outputs.latest }}
 
   e2e-tests:
+    # changelog-gate is also listed explicitly here even though it would
+    # skip transitively via build-e2e-image -- see the changelog-gate
+    # comment on build-e2e-image; keep this if: as-is.
     needs:
       - check-docs-only
+      - changelog-gate
       - build-e2e-image
       - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
@@ -419,8 +545,12 @@ jobs:
     secrets: inherit
 
   e2e-tests-chainsaw:
+    # changelog-gate is also listed explicitly here even though it would
+    # skip transitively via build-e2e-image -- see the changelog-gate
+    # comment on build-e2e-image; keep this if: as-is.
     needs:
       - check-docs-only
+      - changelog-gate
       - build-e2e-image
       - matrix_k8s_node_versions
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
@@ -432,12 +562,17 @@ jobs:
   buildpulse-report:
     needs:
       - check-docs-only
+      - changelog-gate
       - unit-tests
       - envtest-tests
       - integration-tests
       - conformance-tests
       - e2e-tests
-    if: ${{ always() && needs.check-docs-only.outputs.docs_only != 'true' }}
+    # if: always() means this job would otherwise run (and fail noisily, with
+    # no test artifacts to upload) when changelog-gate failed and the test
+    # jobs above were skipped as a result. Require changelog-gate to have
+    # actually succeeded.
+    if: ${{ always() && needs.check-docs-only.outputs.docs_only != 'true' && needs.changelog-gate.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -473,6 +608,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - check-docs-only
+      - changelog-gate
       - ensure-actions-sha-pin
       - ossf-scorecard
       - lint
