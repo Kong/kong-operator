@@ -34,9 +34,8 @@ func ensureDataPlaneStatus(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane, deploym
 		ObservedGeneration: mcpDataPlane.Generation,
 	}
 
-	if deployment.Status.ReadyReplicas == 0 &&
-		mcpDataPlane.Spec.Deployment.Replicas != nil &&
-		*mcpDataPlane.Spec.Deployment.Replicas > 0 {
+	desiredReplicas := replicasOrDefault(deployment.Spec.Replicas)
+	if desiredReplicas > 0 && deployment.Status.ReadyReplicas == 0 {
 		ready.Status = metav1.ConditionFalse
 		ready.Reason = string(kcfgdataplane.DependenciesNotReadyReason)
 		ready.Message = kcfgdataplane.DependenciesNotReadyMessage
