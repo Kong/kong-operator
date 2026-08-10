@@ -1255,12 +1255,12 @@ func TestNameGenerationConsistency(t *testing.T) {
 }
 
 // TestRefactorGoldenNames locks in name strings captured from the pre-refactor implementation
-// of NewKongUpstreamNameFor{HTTP,TLS,TCP,UDP}RouteRule, NewKongServiceNameFor{HTTP,TLS,TCP,UDP}RouteRule,
-// NewKongRouteNameFor{TLS,TCP,UDP}RouteRule, NewKongRouteNameForMatch, and
-// NewKongRouteNameForGRPCRouteMatch, so that introducing the shared serviceLikeName/
-// kongRouteName helpers cannot silently rename existing Kong objects. The HTTPRoute cases cover
-// basic, multi-backend, zero-backend (fallback identity), and backendRequest-timeout-fold hashing,
-// since those are the paths unique to HTTPRoute's hashElementsForServiceLikeName wiring.
+// of NewKongUpstreamNameFor{HTTP,GRPC,TLS,TCP,UDP}RouteRule, NewKongServiceNameFor{HTTP,GRPC,TLS,TCP,UDP}RouteRule,
+// NewKongServiceNameFor{HTTP,GRPC}RouteRuleBackendNotFound, NewKongRouteNameFor{TLS,TCP,UDP}RouteRule,
+// NewKongRouteNameForMatch, and NewKongRouteNameForGRPCRouteMatch, so that introducing the shared
+// serviceLikeName/kongRouteName helpers cannot silently rename existing Kong objects. The HTTPRoute
+// cases cover basic, multi-backend, zero-backend (fallback identity), and backendRequest-timeout-fold
+// hashing, since those are the paths unique to HTTPRoute's hashElementsForServiceLikeName wiring.
 func TestRefactorGoldenNames(t *testing.T) {
 	cp := testControlPlaneRef("test-cp")
 	port := gwtypes.PortNumber(443)
@@ -1301,6 +1301,24 @@ func TestRefactorGoldenNames(t *testing.T) {
 	}
 	assert.Equal(t, "http.default-http-backend-8080.1.cp1fbfa93f.ea93d3e7", NewKongUpstreamNameForHTTPRouteRule(httpRouteForServiceLike, cp, timeoutRule))
 	assert.Equal(t, "http.default-http-backend-8080.1.cp1fbfa93f.ea93d3e7", NewKongServiceNameForHTTPRouteRule(httpRouteForServiceLike, cp, timeoutRule))
+
+	assert.Equal(t, "http.default-http-backend-8080.1.cp1fbfa93f.bnfa610931f.29652d0c", NewKongServiceNameForHTTPRouteRuleBackendNotFound(httpRouteForServiceLike, cp, basicRule))
+
+	grpcBackendRef := func(name string) gatewayv1.GRPCBackendRef {
+		return gatewayv1.GRPCBackendRef{
+			BackendRef: gatewayv1.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Name: gatewayv1.ObjectName(name),
+					Port: new(gatewayv1.PortNumber(8080)),
+				},
+			},
+		}
+	}
+	grpcRouteForServiceLike := &gwtypes.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Name: "grpc-route", Namespace: "default"}}
+	grpcBasicRule := gatewayv1.GRPCRouteRule{BackendRefs: []gatewayv1.GRPCBackendRef{grpcBackendRef("grpc-backend")}}
+	assert.Equal(t, "grpc.default-grpc-backend-8080.1.cp1fbfa93f.b6d9a138", NewKongUpstreamNameForGRPCRouteRule(grpcRouteForServiceLike, cp, grpcBasicRule))
+	assert.Equal(t, "grpc.default-grpc-backend-8080.1.cp1fbfa93f.b6d9a138", NewKongServiceNameForGRPCRouteRule(grpcRouteForServiceLike, cp, grpcBasicRule))
+	assert.Equal(t, "grpc.default-grpc-backend-8080.1.cp1fbfa93f.bnf3748ad33.b6d9a138", NewKongServiceNameForGRPCRouteRuleBackendNotFound(grpcRouteForServiceLike, cp, grpcBasicRule))
 
 	tlsRoute := &gwtypes.TLSRoute{ObjectMeta: metav1.ObjectMeta{Name: "tls-route", Namespace: "default"}}
 	tlsRule := gwtypes.TLSRouteRule{BackendRefs: []gwtypes.BackendRef{{
