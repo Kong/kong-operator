@@ -316,7 +316,17 @@ func ensureDataPlaneReadyStatus(
 		return ctrl.Result{}, nil
 	}
 
-	k8sutils.SetReadyWithGeneration(dataplane, generation)
+	readyGeneration := generation
+	if !isDeploymentRolledOut(&deployment) {
+		// The Deployment still has old replicas serving traffic for a previous
+		// generation of the DataPlane spec, so do not claim the current generation
+		// is ready. Ready.status does not flap; only observedGeneration lags until
+		// the rollout completes (or isDeploymentReady above catches a stalled one).
+		if c, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dataplane); ok && c.Status == metav1.ConditionTrue {
+			readyGeneration = c.ObservedGeneration
+		}
+	}
+	k8sutils.SetReadyWithGeneration(dataplane, readyGeneration)
 	ensureDataPlaneReadinessStatus(dataplane, deployment.Status)
 
 	if _, err := patchDataPlaneStatus(ctx, cl, logger, dataplane); err != nil {
@@ -367,6 +377,10 @@ func listDataPlaneLiveServices(
 // at least to the number of replicas specified in .Spec.Replicas, and .Status.Replicas is not 0.
 // This way, the DataPlane Ready status condition does not flap when a rolling update
 // is performed.
+// It will still return ConditionFalse if Kubernetes gave up on the rollout
+// (Progressing=False/ProgressDeadlineExceeded), so a stalled rollout (e.g. a broken
+// readiness probe on the new ReplicaSet) is eventually reported as not ready even
+// though the old replicas are still available.
 func isDeploymentReady(deployment *appsv1.Deployment) (metav1.ConditionStatus, bool) {
 	// We check if the Deployment is not Ready.
 	// This is the case when status has replicas set to 0 or status.availableReplicas
@@ -380,5 +394,35 @@ func isDeploymentReady(deployment *appsv1.Deployment) (metav1.ConditionStatus, b
 		return metav1.ConditionFalse, false
 	}
 
+	if c := getDeploymentCondition(deployment, appsv1.DeploymentProgressing); c != nil &&
+		c.Status == corev1.ConditionFalse && c.Reason == "ProgressDeadlineExceeded" {
+		return metav1.ConditionFalse, false
+	}
+
 	return metav1.ConditionTrue, true
+}
+
+// getDeploymentCondition returns the Deployment condition of the given type, or nil if absent.
+func getDeploymentCondition(deployment *appsv1.Deployment, condType appsv1.DeploymentConditionType) *appsv1.DeploymentCondition {
+	for i := range deployment.Status.Conditions {
+		if deployment.Status.Conditions[i].Type == condType {
+			return &deployment.Status.Conditions[i]
+		}
+	}
+	return nil
+}
+
+// isDeploymentRolledOut reports whether the Deployment has fully rolled out its current spec,
+// i.e. all replicas have been updated to the latest ReplicaSet and are available.
+// This mirrors the check `kubectl rollout status` performs.
+func isDeploymentRolledOut(deployment *appsv1.Deployment) bool {
+	if deployment.Status.ObservedGeneration < deployment.Generation {
+		return false
+	}
+	if specReplicas := deployment.Spec.Replicas; specReplicas != nil &&
+		deployment.Status.UpdatedReplicas < *specReplicas {
+		return false
+	}
+	return deployment.Status.Replicas == deployment.Status.UpdatedReplicas &&
+		deployment.Status.AvailableReplicas == deployment.Status.UpdatedReplicas
 }
