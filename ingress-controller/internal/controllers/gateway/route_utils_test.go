@@ -117,6 +117,33 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 			wantReady:             false,
 		},
 		{
+			name: "matching listener not programmed because ResolvedRefs is permanently false is not transient",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{udpListener},
+				[]gatewayapi.ListenerStatus{{
+					Name: "udp",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayapi.ListenerConditionResolvedRefs),
+							Status:             metav1.ConditionFalse,
+							ObservedGeneration: 1,
+							Reason:             string(gatewayapi.ListenerReasonInvalidCertificateRef),
+						},
+						{
+							Type:               string(gatewayapi.ListenerConditionProgrammed),
+							Status:             metav1.ConditionFalse,
+							ObservedGeneration: 1,
+							Reason:             "Pending",
+							Message:            "Listener references are not resolved yet.",
+						},
+					},
+				}},
+			),
+			listener:              "udp",
+			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			wantReady:             true,
+		},
+		{
 			name: "no section name ignores same protocol listener that did not attach",
 			gateway: programmedGatewayForRouteReadinessTest(
 				[]gatewayapi.Listener{

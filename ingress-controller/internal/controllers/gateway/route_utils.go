@@ -619,6 +619,13 @@ func isGatewayProgrammedForRoute(gateway supportedGatewayWithCondition) bool {
 		if err := listenerProgrammedInStatus(listenerName, gateway.gateway.Status.Listeners); err == nil {
 			return true
 		}
+
+		// A listener whose ResolvedRefs condition is explicitly False will never become Programmed
+		// until that reference is fixed. That's not a transient NotProgrammed, so treat it as Programmed
+		// to avoid waiting forever.
+		if gatewayapi.ListenerResolvedRefsFalse(listenerName, gateway.gateway.Status.Listeners) {
+			return true
+		}
 	}
 
 	return false

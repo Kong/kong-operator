@@ -144,6 +144,26 @@ func ListenerSupportsRouteInStatus[T RouteT](route T, listenerName SectionName, 
 	return nil
 }
 
+// ListenerResolvedRefsFalse reports whether listenerName's ResolvedRefs condition
+// in lss is explicitly False.
+func ListenerResolvedRefsFalse(listenerName SectionName, lss []ListenerStatus) bool {
+	listenerStatus, ok := lo.Find(lss, func(ls ListenerStatus) bool {
+		return ls.Name == listenerName
+	})
+	if !ok {
+		return false
+	}
+
+	resolvedRefs, ok := lo.Find(listenerStatus.Conditions, func(condition metav1.Condition) bool {
+		return condition.Type == string(ListenerConditionResolvedRefs)
+	})
+	if !ok {
+		return false
+	}
+
+	return resolvedRefs.Status == metav1.ConditionFalse
+}
+
 // ListenerProgrammed reports whether listenerName's Programmed condition in
 // lss is True.
 func ListenerProgrammed(listenerName SectionName, lss []ListenerStatus) error {
