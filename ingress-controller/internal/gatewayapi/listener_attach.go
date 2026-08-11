@@ -144,6 +144,49 @@ func ListenerSupportsRouteInStatus[T RouteT](route T, listenerName SectionName, 
 	return nil
 }
 
+// ListenerResolvedRefsFalse reports whether listenerName's ResolvedRefs condition
+// in lss is explicitly False as of generation (the Gateway's current generation).
+func ListenerResolvedRefsFalse(listenerName SectionName, generation int64, lss []ListenerStatus) bool {
+	listenerStatus, ok := lo.Find(lss, func(ls ListenerStatus) bool {
+		return ls.Name == listenerName
+	})
+	if !ok {
+		return false
+	}
+
+	resolvedRefs, ok := lo.Find(listenerStatus.Conditions, func(condition metav1.Condition) bool {
+		return condition.Type == string(ListenerConditionResolvedRefs)
+	})
+	if !ok {
+		return false
+	}
+
+	return resolvedRefs.Status == metav1.ConditionFalse && resolvedRefs.ObservedGeneration == generation
+}
+
+// ListenerProgrammedFalseForSettledReason reports whether listenerName's
+// Programmed condition in lss is False for a reason other than "Pending", as of
+// generation (the Gateway's current generation).
+func ListenerProgrammedFalseForSettledReason(listenerName SectionName, generation int64, lss []ListenerStatus) bool {
+	listenerStatus, ok := lo.Find(lss, func(ls ListenerStatus) bool {
+		return ls.Name == listenerName
+	})
+	if !ok {
+		return false
+	}
+
+	programmed, ok := lo.Find(listenerStatus.Conditions, func(condition metav1.Condition) bool {
+		return condition.Type == string(ListenerConditionProgrammed)
+	})
+	if !ok {
+		return false
+	}
+
+	return programmed.Status == metav1.ConditionFalse &&
+		programmed.ObservedGeneration == generation &&
+		programmed.Reason != string(ListenerReasonPending)
+}
+
 // ListenerProgrammed reports whether listenerName's Programmed condition in
 // lss is True.
 func ListenerProgrammed(listenerName SectionName, lss []ListenerStatus) error {

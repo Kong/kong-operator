@@ -164,6 +164,7 @@ const (
 	ListenerReasonInvalidCertificateRef   = gatewayv1.ListenerReasonInvalidCertificateRef
 	ListenerReasonInvalidRouteKinds       = gatewayv1.ListenerReasonInvalidRouteKinds
 	ListenerReasonNoConflicts             = gatewayv1.ListenerReasonNoConflicts
+	ListenerReasonPending                 = gatewayv1.ListenerReasonPending
 	ListenerReasonPortUnavailable         = gatewayv1.ListenerReasonPortUnavailable
 	ListenerReasonProgrammed              = gatewayv1.ListenerReasonProgrammed
 	ListenerReasonProtocolConflict        = gatewayv1.ListenerReasonProtocolConflict

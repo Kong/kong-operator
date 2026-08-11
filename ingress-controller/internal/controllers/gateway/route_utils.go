@@ -182,7 +182,6 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			allowedByAllowedRoutes  = false
 			allowedBySupportedKinds = false
 			allowedByListenerName   = false
-			listenerReady           = false
 
 			attachedListenerNames []gatewayapi.SectionName
 		)
@@ -208,13 +207,6 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				continue
 			} else {
 				allowedBySupportedKinds = true
-			}
-
-			if err := listenerProgrammedInStatus(listener.Name, gateway.Status.Listeners); err != nil {
-				listenerLogger.V(logging.DebugLevel).Info("Listener is not ready", "reason", err.Error())
-				continue
-			} else {
-				listenerReady = true
 			}
 
 			// Check if listener name matches.
@@ -262,8 +254,26 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				continue
 			}
 
-			matched = true
+			// Every structural check (AllowedRoutes, SupportedKinds, SectionName, Port,
+			// protocol, hostname) has passed for this listener - it's the listener this
+			// route would attach to, regardless of whether it's Programmed yet. Record it
+			// here, before the Programmed check, so a transiently-not-yet-Programmed
+			// listener (e.g. while the Gateway controller re-renders listener status) still
+			// shows up in attachedListenerNames. isGatewayProgrammedSettledForRoute relies on this
+			// to tell "no listener could ever attach this route" (terminal) apart from "the
+			// right listener exists but isn't Programmed yet" (transient, should wait).
 			attachedListenerNames = append(attachedListenerNames, listener.Name)
+
+			// Check listener readiness last: it must not gate any of the structural checks
+			// above, or a listener that structurally matches but is momentarily not
+			// Programmed would be indistinguishable, via attachedListenerNames, from a
+			// listener that never matched at all.
+			if err := listenerProgrammedInStatus(listener.Name, gateway.Status.Listeners); err != nil {
+				listenerLogger.V(logging.DebugLevel).Info("Listener is not ready", "reason", err.Error())
+				continue
+			}
+
+			matched = true
 		}
 
 		if matched {
@@ -307,8 +317,6 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				reason = gatewayapi.RouteReasonNoMatchingListenerHostname
 			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
 				reason = gatewayapi.RouteReasonNotAllowedByListeners
-			case !listenerReady:
-				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			case parentRef.SectionName != nil && !allowedByListenerName:
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
@@ -317,6 +325,9 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
 				reason = gatewayapi.RouteReasonNoMatchingParent
+			case len(attachedListenerNames) > 0:
+				// equals to listenerReady=false
+				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			}
 
 			var listenerName string
@@ -590,7 +601,12 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 	return false
 }
 
-func isGatewayProgrammedForRoute(gateway supportedGatewayWithCondition) bool {
+// isGatewayProgrammedSettledForRoute checks both programmed status of Gateway and its listeners,
+// settled means ready or permanently failed.
+// It returns false if it's intermittently failed, so that we should requeue and waiting.
+// And returns true if it's ready or permanently failed, then we should stop waiting and let
+// normal Accepted logic decide the terminal status.
+func isGatewayProgrammedSettledForRoute(gateway supportedGatewayWithCondition) bool {
 	if !isGatewayProgrammed(gateway.gateway) {
 		return false
 	}
@@ -603,13 +619,24 @@ func isGatewayProgrammedForRoute(gateway supportedGatewayWithCondition) bool {
 		return true
 	}
 
+	generation := gateway.gateway.Generation
+	transientNotProgrammed := false
 	for _, listenerName := range gateway.attachedListenerNames {
+		// Any one attached listener being Programmed is enough to proceed - mirrors `isRouteAccepted`.
 		if err := listenerProgrammedInStatus(listenerName, gateway.gateway.Status.Listeners); err == nil {
 			return true
 		}
+		// A listener whose ResolvedRefs condition is explicitly False will never
+		// become Programmed until that reference is fixed. The same holds for other
+		// listener validation failures with dedicated reasons.
+		if gatewayapi.ListenerResolvedRefsFalse(listenerName, generation, gateway.gateway.Status.Listeners) ||
+			gatewayapi.ListenerProgrammedFalseForSettledReason(listenerName, generation, gateway.gateway.Status.Listeners) {
+			continue
+		}
+		// Transient not Programmed - keep looking for a Programmed sibling first.
+		transientNotProgrammed = true
 	}
-
-	return false
+	return !transientNotProgrammed
 }
 
 // isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by a ReferenceGrant.
