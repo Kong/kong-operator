@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Bump operator's memory limits from `256Mi` to `512Mi` to prevent throttling and OOMKilled issues
+- Bump operator's memory limits from `256Mi` to `512Mi` to prevent OOM issues
   with default settings in environments with a lot of cluster resources.
   [#5248](https://github.com/Kong/kong-operator/pull/5248)
 
