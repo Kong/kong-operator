@@ -114,3 +114,147 @@ func TestGatewayClassControlledBy(t *testing.T) {
 	assert.True(t, GatewayClassControlledBy(gwc, "konghq.com/kic-gateway-controller"))
 	assert.False(t, GatewayClassControlledBy(gwc, "example.com/other-controller"))
 }
+
+func TestListenerResolvedRefsFalse(t *testing.T) {
+	t.Run("listener not found returns false", func(t *testing.T) {
+		assert.False(t, ListenerResolvedRefsFalse("tls", 1, nil))
+	})
+
+	t.Run("listener found but has no ResolvedRefs condition returns false", func(t *testing.T) {
+		lss := []ListenerStatus{{
+			Name:       "tls",
+			Conditions: []metav1.Condition{{Type: string(ListenerConditionProgrammed), Status: metav1.ConditionFalse}},
+		}}
+		assert.False(t, ListenerResolvedRefsFalse("tls", 1, lss))
+	})
+
+	t.Run("listener found with ResolvedRefs=True returns false", func(t *testing.T) {
+		lss := []ListenerStatus{{
+			Name: "tls",
+			Conditions: []metav1.Condition{
+				{Type: string(ListenerConditionResolvedRefs), Status: metav1.ConditionTrue, ObservedGeneration: 1},
+			},
+		}}
+		assert.False(t, ListenerResolvedRefsFalse("tls", 1, lss))
+	})
+
+	t.Run("listener found with ResolvedRefs=False at the current generation returns true", func(t *testing.T) {
+		lss := []ListenerStatus{{
+			Name: "tls",
+			Conditions: []metav1.Condition{
+				{
+					Type:               string(ListenerConditionResolvedRefs),
+					Status:             metav1.ConditionFalse,
+					Reason:             string(ListenerReasonInvalidCertificateRef),
+					ObservedGeneration: 1,
+				},
+			},
+		}}
+		assert.True(t, ListenerResolvedRefsFalse("tls", 1, lss))
+	})
+
+	t.Run("listener found with ResolvedRefs=False from a stale generation returns false", func(t *testing.T) {
+		// The Gateway spec may have been fixed since this condition was
+		// observed, and the controller just hasn't reconciled it yet - a stale
+		// False must not be treated as a settled, permanent failure.
+		lss := []ListenerStatus{{
+			Name: "tls",
+			Conditions: []metav1.Condition{
+				{
+					Type:               string(ListenerConditionResolvedRefs),
+					Status:             metav1.ConditionFalse,
+					Reason:             string(ListenerReasonInvalidCertificateRef),
+					ObservedGeneration: 1,
+				},
+			},
+		}}
+		assert.False(t, ListenerResolvedRefsFalse("tls", 2, lss))
+	})
+
+	t.Run("only matches the requested listener name", func(t *testing.T) {
+		lss := []ListenerStatus{
+			{
+				Name: "other",
+				Conditions: []metav1.Condition{
+					{Type: string(ListenerConditionResolvedRefs), Status: metav1.ConditionFalse, ObservedGeneration: 1},
+				},
+			},
+			{
+				Name: "tls",
+				Conditions: []metav1.Condition{
+					{Type: string(ListenerConditionResolvedRefs), Status: metav1.ConditionTrue, ObservedGeneration: 1},
+				},
+			},
+		}
+		assert.False(t, ListenerResolvedRefsFalse("tls", 1, lss))
+	})
+}
+
+func TestListenerProgrammedFalseForSettledReason(t *testing.T) {
+	t.Run("listener not found returns false", func(t *testing.T) {
+		assert.False(t, ListenerProgrammedFalseForSettledReason("tls", 1, nil))
+	})
+
+	t.Run("listener found but has no Programmed condition returns false", func(t *testing.T) {
+		lss := []ListenerStatus{{
+			Name:       "tls",
+			Conditions: []metav1.Condition{{Type: string(ListenerConditionResolvedRefs), Status: metav1.ConditionTrue}},
+		}}
+		assert.False(t, ListenerProgrammedFalseForSettledReason("tls", 1, lss))
+	})
+
+	t.Run("Programmed=True returns false", func(t *testing.T) {
+		lss := []ListenerStatus{{
+			Name: "tls",
+			Conditions: []metav1.Condition{
+				{Type: string(ListenerConditionProgrammed), Status: metav1.ConditionTrue, ObservedGeneration: 1},
+			},
+		}}
+		assert.False(t, ListenerProgrammedFalseForSettledReason("tls", 1, lss))
+	})
+
+	t.Run("Programmed=False with reason Pending returns false (transient, keep waiting)", func(t *testing.T) {
+		lss := []ListenerStatus{{
+			Name: "tls",
+			Conditions: []metav1.Condition{
+				{
+					Type:               string(ListenerConditionProgrammed),
+					Status:             metav1.ConditionFalse,
+					Reason:             string(ListenerReasonPending),
+					ObservedGeneration: 1,
+				},
+			},
+		}}
+		assert.False(t, ListenerProgrammedFalseForSettledReason("tls", 1, lss))
+	})
+
+	t.Run("Programmed=False with a settled reason at the current generation returns true", func(t *testing.T) {
+		lss := []ListenerStatus{{
+			Name: "tls",
+			Conditions: []metav1.Condition{
+				{
+					Type:               string(ListenerConditionProgrammed),
+					Status:             metav1.ConditionFalse,
+					Reason:             string(ListenerReasonInvalid),
+					ObservedGeneration: 1,
+				},
+			},
+		}}
+		assert.True(t, ListenerProgrammedFalseForSettledReason("tls", 1, lss))
+	})
+
+	t.Run("Programmed=False with a settled reason from a stale generation returns false", func(t *testing.T) {
+		lss := []ListenerStatus{{
+			Name: "tls",
+			Conditions: []metav1.Condition{
+				{
+					Type:               string(ListenerConditionProgrammed),
+					Status:             metav1.ConditionFalse,
+					Reason:             string(ListenerReasonInvalid),
+					ObservedGeneration: 1,
+				},
+			},
+		}}
+		assert.False(t, ListenerProgrammedFalseForSettledReason("tls", 2, lss))
+	})
+}

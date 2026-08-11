@@ -182,7 +182,6 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			allowedByAllowedRoutes  = false
 			allowedBySupportedKinds = false
 			allowedByListenerName   = false
-			listenerReady           = false
 
 			attachedListenerNames []gatewayapi.SectionName
 		)
@@ -273,7 +272,6 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				listenerLogger.V(logging.DebugLevel).Info("Listener is not ready", "reason", err.Error())
 				continue
 			}
-			listenerReady = true
 
 			matched = true
 		}
@@ -327,7 +325,8 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
 				reason = gatewayapi.RouteReasonNoMatchingParent
-			case len(attachedListenerNames) > 0 && !listenerReady:
+			case len(attachedListenerNames) > 0:
+				// equals to listenerReady=false
 				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			}
 
@@ -602,7 +601,7 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 	return false
 }
 
-func isGatewayProgrammedForRoute(gateway supportedGatewayWithCondition) bool {
+func isGatewaySettledForRoute(gateway supportedGatewayWithCondition) bool {
 	if !isGatewayProgrammed(gateway.gateway) {
 		return false
 	}
@@ -615,20 +614,29 @@ func isGatewayProgrammedForRoute(gateway supportedGatewayWithCondition) bool {
 		return true
 	}
 
+	generation := gateway.gateway.Generation
 	for _, listenerName := range gateway.attachedListenerNames {
+		// Any one attached listener being Programmed is enough to proceed - mirrors `isRouteAccepted.
 		if err := listenerProgrammedInStatus(listenerName, gateway.gateway.Status.Listeners); err == nil {
 			return true
 		}
 
-		// A listener whose ResolvedRefs condition is explicitly False will never become Programmed
-		// until that reference is fixed. That's not a transient NotProgrammed, so treat it as Programmed
-		// to avoid waiting forever.
-		if gatewayapi.ListenerResolvedRefsFalse(listenerName, gateway.gateway.Status.Listeners) {
-			return true
+		// A listener whose ResolvedRefs condition is explicitly False will never
+		// become Programmed until that reference is fixed.
+		if gatewayapi.ListenerResolvedRefsFalse(listenerName, generation, gateway.gateway.Status.Listeners) {
+			continue
 		}
+
+		// Other listener validation failures with dedicated reasons.
+		if gatewayapi.ListenerProgrammedFalseForSettledReason(listenerName, generation, gateway.gateway.Status.Listeners) {
+			continue
+		}
+
+		// Transient not Programmed.
+		return false
 	}
 
-	return false
+	return true
 }
 
 // isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by a ReferenceGrant.

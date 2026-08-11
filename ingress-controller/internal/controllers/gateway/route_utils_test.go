@@ -155,6 +155,103 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 			attachedListenerNames: []gatewayapi.SectionName{"udp-attached"},
 			wantReady:             false,
 		},
+		{
+			name: "two attached listeners, one programmed and one still transiently pending proceeds via the programmed one",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{
+					{Name: "udp-ready", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
+					{Name: "udp-pending", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
+				},
+				[]gatewayapi.ListenerStatus{
+					programmedListenerStatusForRouteReadinessTest("udp-ready", metav1.ConditionTrue),
+					programmedListenerStatusForRouteReadinessTest("udp-pending", metav1.ConditionFalse),
+				},
+			),
+			attachedListenerNames: []gatewayapi.SectionName{"udp-ready", "udp-pending"},
+			wantReady:             true,
+		},
+		{
+			name: "two attached listeners, one permanently broken and one still transiently pending waits for the pending one",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{
+					{Name: "udp-broken", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
+					{Name: "udp-pending", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
+				},
+				[]gatewayapi.ListenerStatus{
+					{
+						Name: "udp-broken",
+						Conditions: []metav1.Condition{
+							{
+								Type:               string(gatewayapi.ListenerConditionResolvedRefs),
+								Status:             metav1.ConditionFalse,
+								ObservedGeneration: 1,
+								Reason:             string(gatewayapi.ListenerReasonInvalidCertificateRef),
+							},
+							{
+								Type:               string(gatewayapi.ListenerConditionProgrammed),
+								Status:             metav1.ConditionFalse,
+								ObservedGeneration: 1,
+								Reason:             "Pending",
+							},
+						},
+					},
+					programmedListenerStatusForRouteReadinessTest("udp-pending", metav1.ConditionFalse),
+				},
+			),
+			attachedListenerNames: []gatewayapi.SectionName{"udp-broken", "udp-pending"},
+			wantReady:             false,
+		},
+		{
+			name: "two attached listeners, one programmed and one permanently broken proceeds via the programmed one",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{
+					{Name: "udp-ready", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
+					{Name: "udp-broken", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
+				},
+				[]gatewayapi.ListenerStatus{
+					programmedListenerStatusForRouteReadinessTest("udp-ready", metav1.ConditionTrue),
+					{
+						Name: "udp-broken",
+						Conditions: []metav1.Condition{
+							{
+								Type:               string(gatewayapi.ListenerConditionResolvedRefs),
+								Status:             metav1.ConditionFalse,
+								ObservedGeneration: 1,
+								Reason:             string(gatewayapi.ListenerReasonInvalidCertificateRef),
+							},
+							{
+								Type:               string(gatewayapi.ListenerConditionProgrammed),
+								Status:             metav1.ConditionFalse,
+								ObservedGeneration: 1,
+								Reason:             "Pending",
+							},
+						},
+					},
+				},
+			),
+			attachedListenerNames: []gatewayapi.SectionName{"udp-ready", "udp-broken"},
+			wantReady:             true,
+		},
+		{
+			name: "matching listener not programmed for a settled non-ResolvedRefs reason is not transient",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{udpListener},
+				[]gatewayapi.ListenerStatus{{
+					Name: "udp",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayapi.ListenerConditionProgrammed),
+							Status:             metav1.ConditionFalse,
+							ObservedGeneration: 1,
+							Reason:             string(gatewayapi.ListenerReasonInvalid),
+						},
+					},
+				}},
+			),
+			listener:              "udp",
+			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			wantReady:             true,
+		},
 	}
 
 	for _, tt := range testCases {
@@ -164,7 +261,7 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 				listenerName:          tt.listener,
 				attachedListenerNames: tt.attachedListenerNames,
 			}
-			assert.Equal(t, tt.wantReady, isGatewayProgrammedForRoute(gateway))
+			assert.Equal(t, tt.wantReady, isGatewaySettledForRoute(gateway))
 		})
 	}
 }
@@ -194,13 +291,17 @@ func programmedListenerStatusForRouteReadinessTest(
 	name gatewayapi.SectionName,
 	conditionStatus metav1.ConditionStatus,
 ) gatewayapi.ListenerStatus {
+	reason := string(gatewayapi.ListenerReasonProgrammed)
+	if conditionStatus != metav1.ConditionTrue {
+		reason = string(gatewayapi.ListenerReasonPending)
+	}
 	return gatewayapi.ListenerStatus{
 		Name: name,
 		Conditions: []metav1.Condition{{
 			Type:               string(gatewayapi.ListenerConditionProgrammed),
 			Status:             conditionStatus,
 			ObservedGeneration: 1,
-			Reason:             string(gatewayapi.ListenerReasonProgrammed),
+			Reason:             reason,
 		}},
 	}
 }
