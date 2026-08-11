@@ -48,6 +48,7 @@ gwapi-experimental-crds:
   enabled: false
 affinity: {}
 tolerations: []
+nodeSelector: {}
 # Customize gateway-operator livenessProbe.
 livenessProbe:
   httpGet:
