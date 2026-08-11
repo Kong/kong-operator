@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Bump operator's memory limits to prevent throttling and OOMKilled issues
+  with default settings in environments with a lot of cluster resources.
+
 ## 1.4.0-rc.2
 
 ### Changed
