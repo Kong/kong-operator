@@ -1,0 +1,305 @@
+# End-to-end test for a Konnect Config Store-backed KongVault.
+#
+# KongVault is cluster-scoped, so both of its namespaced references require a
+# KongReferenceGrant. The test grants the Control Plane reference first to
+# isolate and verify the Config Store reference denial, then adds the missing
+# grant and verifies that the Config Store ID is resolved and the Vault is
+# programmed.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongvault-config-store-ref
+spec:
+  description: |
+    Verifies the declarative Konnect Config Store-backed KongVault flow.
+
+    A KonnectConfigStore is created under a KonnectGatewayControlPlane. A
+    cluster-scoped KongVault references both resources, but initially only its
+    Control Plane reference is granted. The Vault must report
+    ConfigStoreRefValid=False/RefNotPermitted and remain unprogrammed. After a
+    second grant permits the KonnectConfigStore reference, the operator resolves
+    the generated Config Store ID and programs the Vault in Konnect.
+
+    The test then creates a KongCertificate with an inline public certificate
+    and a Vault-referenced private key. Finally, it removes the Config Store
+    grant and verifies that the Vault still deletes without a stuck finalizer.
+
+  bindings:
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_name
+      value: (join('-', [($namespace), 'konnect-api-auth']))
+    - name: cp_name
+      value: (join('-', [($namespace), 'cp']))
+    - name: config_store_name
+      value: (join('-', [($namespace), 'config-store']))
+    - name: vault_name
+      value: (join('-', [($namespace), 'vault']))
+    - name: cert_name
+      value: (join('-', [($namespace), 'cert']))
+    - name: cp_grant_name
+      value: (join('-', [($namespace), 'vault-to-cp']))
+    - name: config_store_grant_name
+      value: (join('-', [($namespace), 'vault-to-config-store']))
+
+  steps:
+    - name: 1-create-auth-config
+      description: Create a Konnect API authentication configuration.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-control-plane
+      description: Create the Konnect Control Plane that owns the Config Store and Vault.
+      bindings:
+        - name: cp_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 3-create-config-store
+      description: Create a Config Store and wait for its generated Konnect ID.
+      bindings:
+        - name: config_store_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectConfigStore.yaml
+
+    - name: 4-grant-control-plane-reference
+      description: Grant only the Vault-to-Control-Plane reference.
+      bindings:
+        - name: kong_reference_grant_name
+          value: ($cp_grant_name)
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongVault
+              namespace: ""
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 5-create-vault-with-ungranted-config-store-ref
+      description: Create a Vault whose Config Store reference is not granted yet.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongVault
+              metadata:
+                name: ($vault_name)
+              spec:
+                backend: konnect
+                prefix: ($vault_name)
+                configStoreRef:
+                  name: ($config_store_name)
+                  namespace: ($namespace)
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+                    namespace: ($namespace)
+
+    - name: 6-assert-config-store-reference-not-permitted
+      description: Verify that the missing Config Store grant blocks programming.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongVault
+              metadata:
+                name: ($vault_name)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ConfigStoreRefValid']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+
+    - name: 7-grant-config-store-reference
+      description: Add a grant permitting the Vault-to-Config-Store reference.
+      bindings:
+        - name: kong_reference_grant_name
+          value: ($config_store_grant_name)
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: KongVault
+              namespace: ""
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectConfigStore
+              name: ($config_store_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 8-assert-vault-programmed
+      description: Verify that the Config Store ID is resolved and the Vault is programmed.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongVault
+              metadata:
+                name: ($vault_name)
+              spec:
+                configStoreRef:
+                  kind: KonnectConfigStore
+                  name: ($config_store_name)
+                  namespace: ($namespace)
+                (config == null): true
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'ConfigStoreRefValid']):
+                  - status: 'True'
+                    reason: Valid
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.controlPlaneID != null): true
+                (konnect.id != null): true
+
+    - name: 9-create-certificate-with-vault-key
+      description: Create a certificate whose private key is only a Vault reference.
+      try:
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($cert_name)
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: cert_data
+                value: (json_parse($stdout).cert)
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert_name)
+                namespace: ($namespace)
+              spec:
+                type: inline
+                cert: ($cert_data)
+                key: (join('', ['{vault://', ($vault_name), '/tls-key}']))
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+                    namespace: ($namespace)
+
+    - name: 10-assert-certificate-programmed
+      description: Verify that Konnect accepts the Vault key reference unchanged.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert_name)
+                namespace: ($namespace)
+              spec:
+                key: (join('', ['{vault://', ($vault_name), '/tls-key}']))
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.id != null): true
+
+    - name: 11-remove-config-store-grant
+      description: Remove the Config Store grant before deleting the Vault.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: ($config_store_grant_name)
+              namespace: ($namespace)
+
+    - name: 12-assert-config-store-reference-no-longer-permitted
+      description: Verify that grant removal triggers Vault reconciliation.
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongVault
+              metadata:
+                name: ($vault_name)
+              status:
+                (conditions[?type == 'ConfigStoreRefValid']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+
+    - name: 13-cleanup-konnect-resources
+      description: Delete Konnect resources in dependency order and wait for finalizers.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              name: ($cert_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: ($cert_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongVault
+              name: ($vault_name)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongVault
+              metadata:
+                name: ($vault_name)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectConfigStore
+              name: ($config_store_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectConfigStore
+              metadata:
+                name: ($config_store_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
