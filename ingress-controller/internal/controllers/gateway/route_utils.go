@@ -259,7 +259,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			// route would attach to, regardless of whether it's Programmed yet. Record it
 			// here, before the Programmed check, so a transiently-not-yet-Programmed
 			// listener (e.g. while the Gateway controller re-renders listener status) still
-			// shows up in attachedListenerNames. isGatewayProgrammedForRoute relies on this
+			// shows up in attachedListenerNames. isGatewaySettledForRoute relies on this
 			// to tell "no listener could ever attach this route" (terminal) apart from "the
 			// right listener exists but isn't Programmed yet" (transient, should wait).
 			attachedListenerNames = append(attachedListenerNames, listener.Name)
@@ -615,28 +615,23 @@ func isGatewaySettledForRoute(gateway supportedGatewayWithCondition) bool {
 	}
 
 	generation := gateway.gateway.Generation
+	sawTransient := false
 	for _, listenerName := range gateway.attachedListenerNames {
-		// Any one attached listener being Programmed is enough to proceed - mirrors `isRouteAccepted.
+		// Any one attached listener being Programmed is enough to proceed - mirrors `isRouteAccepted`.
 		if err := listenerProgrammedInStatus(listenerName, gateway.gateway.Status.Listeners); err == nil {
 			return true
 		}
-
 		// A listener whose ResolvedRefs condition is explicitly False will never
-		// become Programmed until that reference is fixed.
-		if gatewayapi.ListenerResolvedRefsFalse(listenerName, generation, gateway.gateway.Status.Listeners) {
+		// become Programmed until that reference is fixed. The same holds for other
+		// listener validation failures with dedicated reasons.
+		if gatewayapi.ListenerResolvedRefsFalse(listenerName, generation, gateway.gateway.Status.Listeners) ||
+			gatewayapi.ListenerProgrammedFalseForSettledReason(listenerName, generation, gateway.gateway.Status.Listeners) {
 			continue
 		}
-
-		// Other listener validation failures with dedicated reasons.
-		if gatewayapi.ListenerProgrammedFalseForSettledReason(listenerName, generation, gateway.gateway.Status.Listeners) {
-			continue
-		}
-
-		// Transient not Programmed.
-		return false
+		// Transient not Programmed - keep looking for a Programmed sibling first.
+		sawTransient = true
 	}
-
-	return true
+	return !sawTransient
 }
 
 // isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by a ReferenceGrant.

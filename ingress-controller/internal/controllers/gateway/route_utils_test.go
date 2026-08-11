@@ -36,7 +36,7 @@ func init() {
 	}
 }
 
-func TestIsGatewayProgrammedForRoute(t *testing.T) {
+func TestIsGatewaySettledForRoute(t *testing.T) {
 	udpListener := gatewayapi.Listener{
 		Name:     "udp",
 		Protocol: gatewayapi.UDPProtocolType,
@@ -168,6 +168,21 @@ func TestIsGatewayProgrammedForRoute(t *testing.T) {
 				},
 			),
 			attachedListenerNames: []gatewayapi.SectionName{"udp-ready", "udp-pending"},
+			wantReady:             true,
+		},
+		{
+			name: "two attached listeners, pending one first and programmed one second still proceeds",
+			gateway: programmedGatewayForRouteReadinessTest(
+				[]gatewayapi.Listener{
+					{Name: "udp-pending", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
+					{Name: "udp-ready", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
+				},
+				[]gatewayapi.ListenerStatus{
+					programmedListenerStatusForRouteReadinessTest("udp-pending", metav1.ConditionFalse),
+					programmedListenerStatusForRouteReadinessTest("udp-ready", metav1.ConditionTrue),
+				},
+			),
+			attachedListenerNames: []gatewayapi.SectionName{"udp-pending", "udp-ready"},
 			wantReady:             true,
 		},
 		{
@@ -855,13 +870,6 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			},
 			{
-				// Regression test for https://github.com/Kong/kong-operator/issues/4507:
-				// the listener that the route would attach to structurally matches
-				// everything (AllowedRoutes, SupportedKinds, port, protocol, hostname) but
-				// is transiently not Programmed (e.g. while the Gateway controller
-				// re-renders listener status). attachedListenerNames must still contain it
-				// so isGatewayProgrammedForRoute can tell this apart from "no listener could
-				// ever attach" and wait, instead of writing a spurious Accepted=False.
 				name:  "basic HTTPRoute whose only matching listener is not yet Programmed stays in attachedListenerNames",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
