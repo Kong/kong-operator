@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Bump operator's memory limits from `256Mi` to `512Mi` to prevent OOM issues
+  with default settings in environments with a lot of cluster resources.
+  [#5248](https://github.com/Kong/kong-operator/pull/5248)
+
 ## 1.4.0-rc.2
 
 ### Changed
