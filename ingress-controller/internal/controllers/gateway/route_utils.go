@@ -210,13 +210,6 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				allowedBySupportedKinds = true
 			}
 
-			if err := listenerProgrammedInStatus(listener.Name, gateway.Status.Listeners); err != nil {
-				listenerLogger.V(logging.DebugLevel).Info("Listener is not ready", "reason", err.Error())
-				continue
-			} else {
-				listenerReady = true
-			}
-
 			// Check if listener name matches.
 			if parentRef.SectionName != nil {
 				if *parentRef.SectionName != "" && *parentRef.SectionName != listener.Name {
@@ -262,8 +255,27 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				continue
 			}
 
-			matched = true
+			// Every structural check (AllowedRoutes, SupportedKinds, SectionName, Port,
+			// protocol, hostname) has passed for this listener - it's the listener this
+			// route would attach to, regardless of whether it's Programmed yet. Record it
+			// here, before the Programmed check, so a transiently-not-yet-Programmed
+			// listener (e.g. while the Gateway controller re-renders listener status) still
+			// shows up in attachedListenerNames. isGatewayProgrammedForRoute relies on this
+			// to tell "no listener could ever attach this route" (terminal) apart from "the
+			// right listener exists but isn't Programmed yet" (transient, should wait).
 			attachedListenerNames = append(attachedListenerNames, listener.Name)
+
+			// Check listener readiness last: it must not gate any of the structural checks
+			// above, or a listener that structurally matches but is momentarily not
+			// Programmed would be indistinguishable, via attachedListenerNames, from a
+			// listener that never matched at all.
+			if err := listenerProgrammedInStatus(listener.Name, gateway.Status.Listeners); err != nil {
+				listenerLogger.V(logging.DebugLevel).Info("Listener is not ready", "reason", err.Error())
+				continue
+			}
+			listenerReady = true
+
+			matched = true
 		}
 
 		if matched {
@@ -307,8 +319,6 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				reason = gatewayapi.RouteReasonNoMatchingListenerHostname
 			case !allowedByAllowedRoutes || !allowedBySupportedKinds:
 				reason = gatewayapi.RouteReasonNotAllowedByListeners
-			case !listenerReady:
-				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			case parentRef.SectionName != nil && !allowedByListenerName:
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
@@ -317,6 +327,8 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
 				reason = gatewayapi.RouteReasonNoMatchingParent
+			case len(attachedListenerNames) > 0 && !listenerReady:
+				reason = gatewayapi.RouteReasonNotAllowedByListeners
 			}
 
 			var listenerName string

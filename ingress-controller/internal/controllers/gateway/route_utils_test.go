@@ -727,6 +727,32 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			},
 			{
+				// Regression test for https://github.com/Kong/kong-operator/issues/4507:
+				// the listener that the route would attach to structurally matches
+				// everything (AllowedRoutes, SupportedKinds, port, protocol, hostname) but
+				// is transiently not Programmed (e.g. while the Gateway controller
+				// re-renders listener status). attachedListenerNames must still contain it
+				// so isGatewayProgrammedForRoute can tell this apart from "no listener could
+				// ever attach" and wait, instead of writing a spurious Accepted=False.
+				name:  "basic HTTPRoute whose only matching listener is not yet Programmed stays in attachedListenerNames",
+				route: basicHTTPRoute(),
+				objects: []client.Object{
+					func() *gatewayapi.Gateway {
+						gw := gatewayWithHTTP80Ready()
+						gw.Status.Listeners[0].Conditions[0].Status = metav1.ConditionFalse
+						return gw
+					}(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition:             routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
+						attachedListenerNames: []gatewayapi.SectionName{"http"},
+					},
+				},
+			},
+			{
 				name: "basic HTTPRoute specifying non-existing port does not get Accepted",
 				route: func() *gatewayapi.HTTPRoute {
 					r := basicHTTPRoute()
