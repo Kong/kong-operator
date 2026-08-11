@@ -17,8 +17,10 @@ limitations under the License.
 package ssa
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -33,6 +35,7 @@ import (
 	kubespec3 "k8s.io/kube-openapi/pkg/spec3"
 	validationspec "k8s.io/kube-openapi/pkg/validation/spec"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -152,6 +155,29 @@ func Test_TypeConverterProvider_Rebuild_CachesUnchangedCRDVersions(t *testing.T)
 	assert.Equal(t, "2", p.specCache[key].rv)
 }
 
+func Test_TypeConverterProvider_Rebuild_SkipsNonServedVersions(t *testing.T) {
+	p := &TypeConverterProvider{
+		crdGroups: map[string]struct{}{"example.konghq.com": {}},
+		specCache: make(map[string]crdSpecCache),
+	}
+
+	crd := testCRD("example.konghq.com", "Widget", "v1", "1")
+	crd.Spec.Versions = append(crd.Spec.Versions, apiextensionsv1.CustomResourceDefinitionVersion{
+		Name:   "v1beta1",
+		Served: false,
+		Schema: &apiextensionsv1.CustomResourceValidation{
+			OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{Type: "object"},
+		},
+	})
+
+	require.NoError(t, p.Rebuild(t.Context(), logr.Discard(), []*apiextensionsv1.CustomResourceDefinition{crd}))
+
+	_, servedCached := p.specCache[crd.Name+"/v1"]
+	assert.True(t, servedCached, "served version should be built and cached")
+	_, nonServedCached := p.specCache[crd.Name+"/v1beta1"]
+	assert.False(t, nonServedCached, "non-served version should not be built or cached")
+}
+
 func Test_TypeConverterProvider_Rebuild_ConcurrentCallsDoNotRace(t *testing.T) {
 	p := &TypeConverterProvider{
 		crdGroups: map[string]struct{}{"example.konghq.com": {}},
@@ -206,6 +232,81 @@ func Test_listRelevantCRDs(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, crds, 1)
 	assert.Equal(t, relevant.Name, crds[0].Name)
+}
+
+// pagingReader is a client.Reader backed by a plain slice of CRDs that actually
+// honors client.Limit/client.Continue, unlike the fake client (which returns
+// every item in one page regardless of Limit). It lets tests prove that a
+// caller follows Continue tokens across multiple List calls instead of relying
+// on a single unpaginated List that happens to return everything at once.
+type pagingReader struct {
+	client.Reader
+
+	crds  []*apiextensionsv1.CustomResourceDefinition
+	calls int
+}
+
+func (r *pagingReader) List(_ context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	r.calls++
+
+	listOpts := &client.ListOptions{}
+	for _, opt := range opts {
+		opt.ApplyToList(listOpts)
+	}
+
+	start := 0
+	if listOpts.Continue != "" {
+		var err error
+		start, err = strconv.Atoi(listOpts.Continue)
+		if err != nil {
+			return err
+		}
+	}
+	limit := int(listOpts.Limit)
+	if limit <= 0 || limit > len(r.crds)-start {
+		limit = len(r.crds) - start
+	}
+	end := start + limit
+
+	page := list.(*apiextensionsv1.CustomResourceDefinitionList)
+	for _, crd := range r.crds[start:end] {
+		page.Items = append(page.Items, *crd)
+	}
+	if end < len(r.crds) {
+		page.Continue = strconv.Itoa(end)
+	}
+	return nil
+}
+
+// Test_listRelevantCRDs_Pagination exercises listRelevantCRDs across more CRDs than
+// crdListPageSize, using a pagingReader that actually hands back a Continue token,
+// so the test fails if listRelevantCRDs stops following pages after the first List.
+func Test_listRelevantCRDs_Pagination(t *testing.T) {
+	ctx := t.Context()
+
+	const total = crdListPageSize*2 + 7 // deliberately not a multiple of the page size
+	crds := make([]*apiextensionsv1.CustomResourceDefinition, 0, total)
+	wantNames := make(map[string]bool, total/2)
+	for i := range total {
+		group := "unrelated.example.com"
+		if i%2 == 0 {
+			group = "eventgateway.konghq.com"
+		}
+		crd := testCRD(group, fmt.Sprintf("Widget%d", i), "v1", "1")
+		if group == "eventgateway.konghq.com" {
+			wantNames[crd.Name] = true
+		}
+		crds = append(crds, crd)
+	}
+
+	r := &pagingReader{crds: crds}
+	got, err := listRelevantCRDs(ctx, r, map[string]struct{}{"eventgateway.konghq.com": {}})
+	require.NoError(t, err)
+	require.Len(t, got, len(wantNames))
+	require.Equal(t, 3, r.calls, "expected 3 List calls to page through %d CRDs with page size %d", total, crdListPageSize)
+	for _, crd := range got {
+		assert.True(t, wantNames[crd.Name], "unexpected CRD %q returned", crd.Name)
+	}
 }
 
 func Test_NewTypeConverterProvider_error(t *testing.T) {
