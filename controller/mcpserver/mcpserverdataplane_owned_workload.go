@@ -18,6 +18,7 @@ import (
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/controller/pkg/reservedkeys"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -79,7 +80,7 @@ func (r *MCPServerDataPlaneReconciler) ensureDeployment(
 		return nil, fmt.Errorf("remote MCPServer %s is missing container info", mcpMetadata.ID)
 	}
 
-	desired := generateDeployment(mcpDataPlane, mcpMetadata, apiAuth)
+	desired := generateDeployment(logger, mcpDataPlane, mcpMetadata, apiAuth)
 
 	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
@@ -110,6 +111,7 @@ func (r *MCPServerDataPlaneReconciler) ensureDeployment(
 
 // generateDeployment creates the desired Deployment spec for the given MCPServer.
 func generateDeployment(
+	logger logr.Logger,
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	mcpMetadata mcpServerMetadata,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
@@ -255,7 +257,44 @@ func generateDeployment(
 	k8sresources.LabelObjectAsMCPServerManaged(deployment)
 	k8sutils.SetOwnerForObject(deployment, mcpDataPlane)
 
+	addAnnotationsForMCPServerDataPlaneDeployment(logger, deployment, mcpDataPlane)
+	addLabelsForMCPServerDataPlaneDeployment(logger, deployment, mcpDataPlane)
+
 	return deployment
+}
+
+// mcpServerDataPlaneDeploymentReservedKeys reports whether a label/annotation key is
+// reserved for internal operator or Kubernetes use and must be dropped from any
+// spec.deployment.labels/annotations provided by the user.
+var mcpServerDataPlaneDeploymentReservedKeys = reservedkeys.NewChecker(
+	"app",
+	"deployment.kubernetes.io/revision",
+	mcpServerVersionAnnotationKey,
+)
+
+// addAnnotationsForMCPServerDataPlaneDeployment merges the user-provided
+// spec.deployment.annotations (with reserved keys filtered out) into the
+// Deployment's own metadata. It does not mutate the base annotations map so it
+// is safe to call even when the Deployment shares maps with other objects
+// (e.g. the Pod template).
+func addAnnotationsForMCPServerDataPlaneDeployment(logger logr.Logger, deployment *appsv1.Deployment, mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) {
+	if mcpDataPlane.Spec.Deployment == nil || len(mcpDataPlane.Spec.Deployment.Annotations) == 0 {
+		return
+	}
+	specAnnotations := reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, mcpDataPlane.Spec.Deployment.Annotations, mcpServerDataPlaneDeploymentReservedKeys)
+	deployment.Annotations = reservedkeys.Merge(deployment.Annotations, specAnnotations)
+}
+
+// addLabelsForMCPServerDataPlaneDeployment merges the user-provided
+// spec.deployment.labels (with reserved keys filtered out) into the
+// Deployment's own metadata. It does not mutate the base labels map, which is
+// shared with the Pod template, so the Pod template's labels are unaffected.
+func addLabelsForMCPServerDataPlaneDeployment(logger logr.Logger, deployment *appsv1.Deployment, mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) {
+	if mcpDataPlane.Spec.Deployment == nil || len(mcpDataPlane.Spec.Deployment.Labels) == 0 {
+		return
+	}
+	specLabels := reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, mcpDataPlane.Spec.Deployment.Labels, mcpServerDataPlaneDeploymentReservedKeys)
+	deployment.Labels = reservedkeys.Merge(deployment.Labels, specLabels)
 }
 
 // patEnvVarFromAuth builds a PAT environment variable from the given

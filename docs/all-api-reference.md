@@ -17786,6 +17786,8 @@ DeploymentOptions specifies options for the Deployment managed by the MCPServerD
 | Field | Description |
 | --- | --- |
 | `replicas` _*int32_ | Replicas describes the number of desired pods. |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the MCP server Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the MCP server Deployment metadata by the operator. |
 
 _Appears in:_
 

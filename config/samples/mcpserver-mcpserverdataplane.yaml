@@ -41,3 +41,7 @@ spec:
       name: mcpserver1
   deployment:
     replicas: 2
+    labels:
+      team: platform
+    annotations:
+      team-contact: platform@konghq.com

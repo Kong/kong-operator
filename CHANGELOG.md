@@ -151,6 +151,7 @@
   - `DataPlane` [#5037](https://github.com/Kong/kong-operator/pull/5037)
   - `AIGatewayDataPlane` [#5081](https://github.com/Kong/kong-operator/pull/5081)
   - `KegDataPlane` [#5088](https://github.com/Kong/kong-operator/pull/5088)
+  - `MCPServerDataPlane` [#5150](https://github.com/Kong/kong-operator/issues/5150)
   with safe managed-key removal so operator-managed keys are removed without
   clobbering external labels or annotations. This change causes a rolling
   restart of the underlying `Pod`s when updating operator to this version,

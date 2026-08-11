@@ -83,6 +83,20 @@ type DeploymentOptions struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	// Annotations are custom annotations that are propagated to the MCP server
+	// Deployment metadata by the operator.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Labels are custom labels that are propagated to the MCP server Deployment
+	// metadata by the operator.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // MCPServerDataPlaneStatus defines the observed state of MCPServerDataPlane.
