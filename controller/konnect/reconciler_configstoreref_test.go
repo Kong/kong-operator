@@ -1,6 +1,8 @@
 package konnect
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -34,6 +37,28 @@ func TestHandleConfigStoreRef(t *testing.T) {
 	}
 	notProgrammedConfigStore := &konnectv1alpha1.KonnectConfigStore{
 		ObjectMeta: metav1.ObjectMeta{Name: "tls-cert-keys", Namespace: "ns"},
+	}
+
+	// KongVault is cluster-scoped, hence the empty `from` namespace.
+	grant := func(mutate ...func(*configurationv1alpha1.KongReferenceGrant)) *configurationv1alpha1.KongReferenceGrant {
+		g := &configurationv1alpha1.KongReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{Name: "allow-kongvault", Namespace: "ns"},
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{
+					Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+					Kind:      configurationv1alpha1.Kind("KongVault"),
+					Namespace: configurationv1alpha1.Namespace(""),
+				}},
+				To: []configurationv1alpha1.ReferenceGrantTo{{
+					Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+					Kind:  configurationv1alpha1.Kind(configurationv1alpha1.KonnectConfigStoreKind),
+				}},
+			},
+		}
+		for _, m := range mutate {
+			m(g)
+		}
+		return g
 	}
 
 	// KongVault is cluster-scoped, so it carries no namespace of its own.
@@ -68,6 +93,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 		name                string
 		vault               *configurationv1alpha1.KongVault
 		objects             []client.Object
+		interceptors        interceptor.Funcs
 		expectStop          bool
 		expectErrorContains string
 		expectCondition     *metav1.Condition
@@ -82,7 +108,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 		{
 			name:       "programmed config store sets the condition to True and continues",
 			vault:      vault(),
-			objects:    []client.Object{programmedConfigStore()},
+			objects:    []client.Object{grant(), programmedConfigStore()},
 			expectStop: false,
 			expectCondition: &metav1.Condition{
 				Type:   konnectv1alpha1.ConfigStoreRefValidConditionType,
@@ -102,6 +128,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 		{
 			name:       "missing config store stops reconciliation with an Invalid condition",
 			vault:      vault(),
+			objects:    []client.Object{grant()},
 			expectStop: true,
 			expectCondition: &metav1.Condition{
 				Type:   konnectv1alpha1.ConfigStoreRefValidConditionType,
@@ -112,7 +139,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 		{
 			name:       "not programmed config store stops reconciliation with a NotProgrammed condition",
 			vault:      vault(),
-			objects:    []client.Object{notProgrammedConfigStore},
+			objects:    []client.Object{grant(), notProgrammedConfigStore},
 			expectStop: true,
 			expectCondition: &metav1.Condition{
 				Type:   konnectv1alpha1.ConfigStoreRefValidConditionType,
@@ -125,7 +152,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 			vault: vault(func(v *configurationv1alpha1.KongVault) {
 				v.Spec.Config = apiextensionsv1.JSON{Raw: []byte(`{"config_store_id":"manually-copied-id"}`)}
 			}),
-			objects:    []client.Object{programmedConfigStore()},
+			objects:    []client.Object{grant(), programmedConfigStore()},
 			expectStop: true,
 			expectCondition: &metav1.Condition{
 				Type:   konnectv1alpha1.ConfigStoreRefValidConditionType,
@@ -134,11 +161,91 @@ func TestHandleConfigStoreRef(t *testing.T) {
 			},
 		},
 		{
+			name:       "no KongReferenceGrant stops reconciliation with a RefNotPermitted condition",
+			vault:      vault(),
+			objects:    []client.Object{programmedConfigStore()},
+			expectStop: true,
+			expectCondition: &metav1.Condition{
+				Type:   konnectv1alpha1.ConfigStoreRefValidConditionType,
+				Status: metav1.ConditionFalse,
+				Reason: konnectv1alpha1.ConfigStoreRefReasonRefNotPermitted,
+			},
+		},
+		{
+			name:  "a KongReferenceGrant in another namespace does not permit the reference",
+			vault: vault(),
+			objects: []client.Object{
+				grant(func(g *configurationv1alpha1.KongReferenceGrant) {
+					g.Namespace = "other-ns"
+				}),
+				programmedConfigStore(),
+			},
+			expectStop: true,
+			expectCondition: &metav1.Condition{
+				Type:   konnectv1alpha1.ConfigStoreRefValidConditionType,
+				Status: metav1.ConditionFalse,
+				Reason: konnectv1alpha1.ConfigStoreRefReasonRefNotPermitted,
+			},
+		},
+		{
+			name:  "a KongReferenceGrant naming another KonnectConfigStore does not permit the reference",
+			vault: vault(),
+			objects: []client.Object{
+				grant(func(g *configurationv1alpha1.KongReferenceGrant) {
+					g.Spec.To[0].Name = new(configurationv1alpha1.ObjectName("another-config-store"))
+				}),
+				programmedConfigStore(),
+			},
+			expectStop: true,
+			expectCondition: &metav1.Condition{
+				Type:   konnectv1alpha1.ConfigStoreRefValidConditionType,
+				Status: metav1.ConditionFalse,
+				Reason: konnectv1alpha1.ConfigStoreRefReasonRefNotPermitted,
+			},
+		},
+		{
+			name:  "a KongReferenceGrant naming this KonnectConfigStore permits the reference",
+			vault: vault(),
+			objects: []client.Object{
+				grant(func(g *configurationv1alpha1.KongReferenceGrant) {
+					g.Spec.To[0].Name = new(configurationv1alpha1.ObjectName(configStoreRef.Name))
+				}),
+				programmedConfigStore(),
+			},
+			expectStop: false,
+			expectCondition: &metav1.Condition{
+				Type:   konnectv1alpha1.ConfigStoreRefValidConditionType,
+				Status: metav1.ConditionTrue,
+				Reason: konnectv1alpha1.ConfigStoreRefReasonValid,
+			},
+		},
+		{
+			name:    "a KongReferenceGrant list failure is returned, not treated as a denial",
+			vault:   vault(),
+			objects: []client.Object{programmedConfigStore()},
+			interceptors: interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return errors.New("list failed")
+				},
+			},
+			expectStop:          true,
+			expectErrorContains: "list failed",
+		},
+		{
 			name: "an unresolvable ref does not block deletion",
 			vault: vault(func(v *configurationv1alpha1.KongVault) {
 				v.DeletionTimestamp = &metav1.Time{Time: metav1.Now().Time}
 				v.Finalizers = []string{KonnectCleanupFinalizer}
 			}),
+			expectStop: false,
+		},
+		{
+			name: "a removed KongReferenceGrant does not block deletion",
+			vault: vault(func(v *configurationv1alpha1.KongVault) {
+				v.DeletionTimestamp = &metav1.Time{Time: metav1.Now().Time}
+				v.Finalizers = []string{KonnectCleanupFinalizer}
+			}),
+			objects:    []client.Object{programmedConfigStore()},
 			expectStop: false,
 		},
 	}
@@ -153,9 +260,16 @@ func TestHandleConfigStoreRef(t *testing.T) {
 				WithScheme(scheme).
 				WithObjects(tc.vault).
 				WithObjects(tc.objects...).
+				WithInterceptorFuncs(tc.interceptors).
 				WithStatusSubresource(tc.vault).
 				Build()
 			require.NoError(t, fakeClient.Status().Update(t.Context(), tc.vault))
+
+			// The KongReferenceGrant lookup matches on the referring object's GVK,
+			// which the controller-runtime client populates but the fake one doesn't.
+			tc.vault.GetObjectKind().SetGroupVersionKind(
+				configurationv1alpha1.GroupVersion.WithKind("KongVault"),
+			)
 
 			res, stop, _, err := handleConfigStoreRef(t.Context(), fakeClient, tc.vault)
 

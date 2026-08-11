@@ -67,17 +67,26 @@ func TestKongVault(t *testing.T) {
 	apiAuth2 := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced2)
 	cp2 := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced2, apiAuth2)
 
-	t.Log("Creating KongReferenceGrant for KongVault -> KonnectGatewayControlPlane")
+	// KongVault is cluster-scoped, hence the empty `from` namespace.
+	fromKongVault := deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+		Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+		Kind:      "KongVault",
+		Namespace: configurationv1alpha1.Namespace(""),
+	})
+
+	t.Log("Creating KongReferenceGrant for KongVault -> KonnectGatewayControlPlane and KonnectConfigStore")
 	_ = deploy.KongReferenceGrant(t, ctx, clientNamespaced,
-		deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
-			Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
-			Kind:      "KongVault",
-			Namespace: configurationv1alpha1.Namespace(""),
-		}),
-		deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
-			Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
-			Kind:  "KonnectGatewayControlPlane",
-		}),
+		fromKongVault,
+		deploy.KongReferenceGrantTos(
+			configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+				Kind:  "KonnectGatewayControlPlane",
+			},
+			configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+				Kind:  configurationv1alpha1.Kind(configurationv1alpha1.KonnectConfigStoreKind),
+			},
+		),
 	)
 
 	vaultWatch := envtest.SetupWatch[configurationv1alpha1.KongVaultList](t, ctx, cl)
@@ -266,6 +275,104 @@ func TestKongVault(t *testing.T) {
 
 		require.NoError(t, cl.Delete(ctx, vault))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, vault, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("configStoreRef to another namespace requires a KongReferenceGrant", func(t *testing.T) {
+		const (
+			vaultBackend  = "konnect"
+			vaultPrefix   = "certvault-grant"
+			vaultID       = "vault-config-store-grant-id"
+			configStoreID = "config-store-grant-12345"
+		)
+
+		t.Log("Creating a programmed KonnectConfigStore in a namespace that grants nothing")
+		configStore := deploy.KonnectConfigStore(t, ctx, clientNamespaced2, cp2)
+		deploy.MarkKonnectConfigStoreProgrammed(t, ctx, clientNamespaced2, configStore, configStoreID)
+
+		t.Log("Creating a KongVault referencing it through spec.configStoreRef")
+		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, nil, cp,
+			func(obj client.Object) {
+				obj.(*configurationv1alpha1.KongVault).Spec.ConfigStoreRef = &configurationv1alpha1.KonnectConfigStoreRef{
+					Name:      configStore.GetName(),
+					Namespace: configStore.GetNamespace(),
+				}
+			},
+		)
+
+		t.Log("Waiting for KongVault to report ConfigStoreRefValid=False with reason RefNotPermitted")
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+			if kv.GetName() != vault.GetName() {
+				return false
+			}
+			cond, ok := k8sutils.GetCondition(konnectv1alpha1.ConfigStoreRefValidConditionType, kv)
+			return ok &&
+				cond.Status == metav1.ConditionFalse &&
+				cond.Reason == konnectv1alpha1.ConfigStoreRefReasonRefNotPermitted &&
+				strings.Contains(cond.Message, configStore.GetName())
+		}, "KongVault didn't get ConfigStoreRefValid=False with reason RefNotPermitted")
+
+		t.Log("The vault must not be pushed to Konnect, so it must not be Programmed")
+		fetched := &configurationv1alpha1.KongVault{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(vault), fetched))
+		require.False(t, k8sutils.IsProgrammed(fetched))
+		require.Empty(t, fetched.GetKonnectID())
+
+		t.Log("Setting up mock SDK expecting config_store_id resolved from the KonnectConfigStore")
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
+			mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
+				return input.Name == vaultBackend &&
+					input.Prefix == vaultPrefix &&
+					input.Config["config_store_id"] == configStoreID
+			})).Return(&sdkkonnectops.CreateVaultResponse{
+			Vault: &sdkkonnectcomp.Vault{
+				ID: new(vaultID),
+			},
+		}, nil)
+
+		t.Log("Creating the KongReferenceGrant allowing KongVault -> KonnectConfigStore")
+		grant := deploy.KongReferenceGrant(t, ctx, clientNamespaced2,
+			fromKongVault,
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+				Kind:  configurationv1alpha1.Kind(configurationv1alpha1.KonnectConfigStoreKind),
+			}),
+		)
+
+		t.Log("Waiting for KongVault to be programmed now that the reference is permitted")
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+			if kv.GetName() != vault.GetName() {
+				return false
+			}
+			return kv.GetKonnectID() == vaultID &&
+				k8sutils.IsProgrammed(kv) &&
+				k8sutils.HasConditionTrue(konnectv1alpha1.ConfigStoreRefValidConditionType, kv)
+		}, "KongVault didn't get Programmed and ConfigStoreRefValid=True after the KongReferenceGrant was created")
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
+
+		t.Log("Removing the KongReferenceGrant")
+		require.NoError(t, clientNamespaced2.Delete(ctx, grant))
+
+		t.Log("Waiting for KongVault to report ConfigStoreRefValid=False with reason RefNotPermitted again")
+		envtest.WatchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+			if kv.GetName() != vault.GetName() {
+				return false
+			}
+			cond, ok := k8sutils.GetCondition(konnectv1alpha1.ConfigStoreRefValidConditionType, kv)
+			return ok &&
+				cond.Status == metav1.ConditionFalse &&
+				cond.Reason == konnectv1alpha1.ConfigStoreRefReasonRefNotPermitted
+		}, "KongVault didn't get ConfigStoreRefValid=False with reason RefNotPermitted after the KongReferenceGrant was removed")
+
+		t.Log("Setting up mock SDK for vault deletion")
+		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), vaultID).
+			Return(&sdkkonnectops.DeleteVaultResponse{}, nil)
+
+		t.Log("Deleting the KongVault must not get stuck even though the KongReferenceGrant is gone")
+		require.NoError(t, cl.Delete(ctx, vault))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, vault, consts.WaitTime, consts.TickTime)
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
 	})
 
 	t.Run("should correctly handle conflict on create", func(t *testing.T) {

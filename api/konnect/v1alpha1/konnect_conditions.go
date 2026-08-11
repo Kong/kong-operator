@@ -339,4 +339,8 @@ const (
 	// condition type indicating that the referenced KonnectConfigStore exists but has
 	// not been programmed in Konnect yet, so its Konnect ID is not known.
 	ConfigStoreRefReasonNotProgrammed = "NotProgrammed"
+	// ConfigStoreRefReasonRefNotPermitted is the reason used with the ConfigStoreRefValid
+	// condition type indicating that no KongReferenceGrant in the referenced namespace
+	// allows the cross-namespace reference to the KonnectConfigStore.
+	ConfigStoreRefReasonRefNotPermitted = "RefNotPermitted"
 )
