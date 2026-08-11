@@ -74,3 +74,4 @@ resources:
   - konnect.konghq.com_portalpages.yaml
   - konnect.konghq.com_portals.yaml
   - konnect.konghq.com_portalteams.yaml
+  - mcp.konghq.com_mcpserverdataplanes.yaml

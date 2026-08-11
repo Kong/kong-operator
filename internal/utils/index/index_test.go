@@ -76,7 +76,7 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 				expected: []string{"default/cp-1"},
 			},
 			{
-				name: "cross namespace references not supported",
+				name: "cross namespace ref is indexed as given, independent of the pointed-to CP's existence",
 				ent: &configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -92,7 +92,7 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 						},
 					},
 				},
-				expected: nil,
+				expected: []string{"different/cp-1"},
 			},
 		}
 
@@ -143,7 +143,7 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 				expected: []string{"default/cp-1"},
 			},
 			{
-				name: "cross namespace references not supported",
+				name: "cross namespace ref is indexed as given, independent of the pointed-to CP's existence",
 				ent: &configurationv1alpha1.KongRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -159,7 +159,7 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 						},
 					},
 				},
-				expected: nil,
+				expected: []string{"different/cp-1"},
 			},
 		}
 
